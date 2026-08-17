@@ -148,7 +148,7 @@ async function toStoredFields(
             hasStatuses: entryType.capabilities.statuses !== false,
         }),
         resource: { kind: 'entry', record: null },
-        user: getCurrentUser(),
+        user: await getCurrentUser(),
         lookups: createEntryLookups(storage, { type: entryType.id, locale }),
         ...(resourceValidate ? { resourceValidate } : {}),
     });
