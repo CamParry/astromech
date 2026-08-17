@@ -14,7 +14,7 @@ import {
 import { getCurrentUser } from '@/request-context/index';
 import { getEntryStorage } from '../storage/registry';
 import { loadAndAssertType } from './records';
-import type { Entry } from '@/types/index';
+import type { Entry, EntryUpdateData } from '@/types/index';
 
 export function hasEntryHooks(...events: string[]): boolean {
     return events.some((event) => hasHookHandlers(event));
@@ -22,6 +22,30 @@ export function hasEntryHooks(...events: string[]): boolean {
 
 export async function loadEntrySnapshot(type: string, id: string): Promise<Entry> {
     return loadAndAssertType(getEntryStorage(type), type, id);
+}
+
+/**
+ * Runs an update with `entry:beforeUpdate`/`entry:afterUpdate` around it.
+ * Snapshots are loaded per id only when a plugin actually subscribes.
+ */
+export async function runUpdateWithHooks<T>(
+    type: string,
+    ids: readonly string[],
+    data: EntryUpdateData,
+    op: () => Promise<T>
+): Promise<T> {
+    if (!hasEntryHooks('entry:beforeUpdate', 'entry:afterUpdate')) return op();
+
+    const user = getCurrentUser();
+    const before = await Promise.all(ids.map((id) => loadEntrySnapshot(type, id)));
+    for (const entry of before) {
+        await runBeforeHooks('entry:beforeUpdate', { type, entry, data, user }, user);
+    }
+    const result = await op();
+    for (const entry of before) {
+        await runAfterHooks('entry:afterUpdate', { type, entry, data, user }, user);
+    }
+    return result;
 }
 
 /**
