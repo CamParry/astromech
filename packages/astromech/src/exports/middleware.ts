@@ -1,4 +1,4 @@
 /** `astromech/middleware` — the Astro request middleware. */
 
-export * from '@/middleware';
-export { default } from '@/middleware';
+export * from '@/integrations/astro/middleware';
+export { default } from '@/integrations/astro/middleware';

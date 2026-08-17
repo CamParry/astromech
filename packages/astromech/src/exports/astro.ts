@@ -1,3 +1,3 @@
 /** `astromech/astro` — the Astro integration. */
 
-export * from '@/boot/astro';
+export * from '@/integrations/astro/index';

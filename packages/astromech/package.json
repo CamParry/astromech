@@ -31,8 +31,8 @@
             "default": "./dist/methods.js"
         },
         "./astro": {
-            "types": "./dist/boot/astro.d.ts",
-            "default": "./dist/boot/astro.js"
+            "types": "./dist/integrations/astro/index.d.ts",
+            "default": "./dist/integrations/astro/index.js"
         },
         "./local": {
             "types": "./dist/local/index.d.ts",
@@ -46,7 +46,7 @@
             "types": "./dist/middleware.d.ts",
             "default": "./src/exports/middleware.ts"
         },
-        "./routes/handler.ts": "./src/routes/handler.ts",
+        "./routes/handler.ts": "./src/integrations/astro/handler.ts",
         "./media/image/sharp": {
             "types": "./dist/media/image/drivers/sharp.d.ts",
             "default": "./dist/media/image/drivers/sharp.js"
@@ -149,8 +149,8 @@
                 "default": "./dist/methods.js"
             },
             "./astro": {
-                "types": "./dist/boot/astro.d.ts",
-                "default": "./dist/boot/astro.js"
+                "types": "./dist/integrations/astro/index.d.ts",
+                "default": "./dist/integrations/astro/index.js"
             },
             "./local": {
                 "types": "./dist/local/index.d.ts",
@@ -164,7 +164,7 @@
                 "types": "./dist/middleware.d.ts",
                 "default": "./dist/middleware.js"
             },
-            "./routes/handler.ts": "./src/routes/handler.ts",
+            "./routes/handler.ts": "./src/integrations/astro/handler.ts",
             "./media/image/sharp": {
                 "types": "./dist/media/image/drivers/sharp.d.ts",
                 "default": "./dist/media/image/drivers/sharp.js"

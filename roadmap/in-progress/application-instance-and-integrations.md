@@ -271,25 +271,28 @@ and streaming still work through the Hono response path.
 
 Mostly a relocation, which is why it comes after the behavioural stages.
 
-- [ ] Move `boot/astro.ts`, split into `index.ts`, `vite.ts` and `routes.ts`.
-- [ ] Move `boot/route-registration.ts` → `integrations/astro/routes.ts`.
-- [ ] Move `src/middleware.ts` → `integrations/astro/middleware.ts`.
-- [ ] Move `src/routes/handler.ts` → `integrations/astro/handler.ts`. Stages 5,
+- [x] Move `boot/astro.ts`, split into `index.ts`, `vite.ts` and `routes.ts`.
+- [x] Move `boot/route-registration.ts` → `integrations/astro/routes.ts`.
+- [x] Move `src/middleware.ts` → `integrations/astro/middleware.ts`.
+- [x] Move `src/routes/handler.ts` → `integrations/astro/handler.ts`. Stages 5,
       6 and 7 already collapsed the three entrypoints into this one, so what is
       left here is the move.
-- [ ] Update the `exports` map and the tsup entry keys together; published
+- [x] Update the `exports` map and the tsup entry keys together; published
       specifiers do not change. Keep `check:exports` green.
-- [ ] Remove `routes` from `LAYERS`, add `integrations`.
-- [ ] Tidiness on the touched files: the dynamic re-import of `fileURLToPath`
+- [x] Remove `routes` from `LAYERS`, add `integrations`.
+- [x] Tidiness on the touched files: the dynamic re-import of `fileURLToPath`
       (already imported statically), a `virtualModule(name, load)` helper for the
       three identical Vite virtual-module plugins, one hoisted `plugins` local
       for the four `config.plugins ?? []` repeats, and the `@param` JSDoc that
       restates its own types in `route-registration.ts`.
 
-**Cautions.** `dist/boot/config-resolver.js`'s absolute path breaks here for the
-second time in this work, because the integration module that computes it
-relative to its own `import.meta.url` has moved. `check:boot` after this commit,
-without exception.
+**Cautions.** `pkgSrc` is what breaks here: the integration computes it from its
+own `import.meta.url`, and the built output moves from `dist/boot/astro.js` to
+`dist/integrations/astro/index.js`, one level deeper, so the number of `..`
+segments changes with it. `check:boot` after this commit, without exception.
+Stage 1 removed the other half of this landmine: the generated
+`virtual:astromech/config` module now only re-exports the site's own config file
+and writes no path into `dist/`.
 
 ## Stage 9 — `integrations/cloudflare/`
 

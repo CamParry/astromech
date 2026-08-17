@@ -52,7 +52,7 @@ all.
 
 ### Does the admin ship built, or as source? — as source, and it cannot ship built
 
-`boot/astro.ts` computes `pkgSrc` from its own module URL, and everything the
+`integrations/astro/index.ts` computes `pkgSrc` from its own module URL, and everything the
 integration registers points at package source: the four `injectRoute` calls,
 the `@/` alias, the three `astromech/ui*` aliases, and
 `TanStackRouterVite({ routesDirectory: pkgSrc + '/admin/pages' })`. The alias
@@ -163,8 +163,8 @@ already closed.
 - The `pkgSrc` alias survives the split. Even with a config-free kit, the app
   and the kit still share context hooks (`useFieldValue`,
   `useAstromechPlugin`), so one module instance is still required and
-  `boot/astro.ts` still has to alias the admin package's source into the
-  consumer's Vite graph.
+  `integrations/astro/vite.ts` still has to alias the admin package's source
+  into the consumer's Vite graph.
 - A worktree cannot verify this. `.claude/worktrees/*` resolve `node_modules`
   and `dist` to the main checkout, so a new package would not resolve there.
   Verify on `main`.

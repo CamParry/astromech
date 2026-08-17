@@ -37,7 +37,7 @@ The source is a modular screaming-architecture DAG. Imports may only point
 one another:
 
 ```
-routes · admin · boot · codegen                entrypoints & composition root
+integrations · admin · boot · codegen          entrypoints & composition root
 transport (http · local · mcp · cli · tools)   delivery — http/client/ is the fetch Client (astromech/fetch), over the wire
 policies                                       permission/confirmation wrappers over the manifest
 entries · media · users · settings ·           domains — siblings, never import each other
@@ -152,11 +152,10 @@ packages/
 ├── astromech/       # the published `astromech` core package
 │   ├── src/
 │   │   ├── index.ts        # public framework-agnostic entry (re-exported via exports/)
-│   │   ├── middleware.ts   # Astro middleware entry; boots the runtime on the first request (astromech/middleware)
 │   │   │
 │   │   │   ── entrypoints & composition root ──────────────────────────────────
-│   │   ├── boot/           # composition root — application.ts (createAstromech/getAstromech) · lifecycle.ts (the ordered phases) · migrations.ts; Astro integration (astromech/astro)
-│   │   ├── routes/         # handler.ts — the one Astro APIRoute entrypoint behind every pattern the integration injects (api / media)
+│   │   ├── integrations/   # framework and runtime glue — astro/ (index.ts the integration, astromech/astro · vite.ts · virtual-module.ts · routes.ts the injectRoute calls · middleware.ts, astromech/middleware · handler.ts, the one APIRoute behind every injected pattern)
+│   │   ├── boot/           # composition root — application.ts (createAstromech/getAstromech) · lifecycle.ts (the ordered phases) · migrations.ts
 │   │   ├── admin/          # React admin SPA (TanStack Router; deep-imports the *.shared.ts domain leaves) — components/dev/ is import.meta.env.DEV-gated
 │   │   ├── codegen/        # type generator + plugin-client manifest + method manifest (.astro/astromech.methods.json, plus manifest-registry.ts — the boot-generated copy)
 │   │   │
@@ -230,7 +229,7 @@ Two layers keep a driver out of a plugin's hands, and they do different jobs. `R
 
 **A plugin's server code runs in a different module graph from core's, and `ctx` is the only bridge across it.** This is an invariant, not a convention — the alternative does not merely violate a rule, it throws.
 
-The integration takes a config **path** and the site's `astromech.config.ts` is evaluated twice. Once in **plain Node at config time**, inside `astro:config:setup` (`config/load.ts`), which is what route registration, the admin config, codegen and the build-time migration run read; and once in the **Vite SSR graph**, where `virtual:astromech/config` re-exports the same file. Every `plugin()` factory runs in both, so a plugin package is evaluated in two module registries and module-level state in it is not shared between them. The evaluation that boots is the SSR one: the injected middleware hands that module's `rawConfig` to `createAstromech`, so the registered `PluginDefinition`, with `rawRoutes[].handler`, service methods and hooks hanging off it, is the SSR-graph copy. Core's runtime code is the opposite: every subpath Vite loads — `astromech/middleware`, `astromech/local`, the injected `astromech/routes/*.ts` and `astromech/admin/shell.astro`, and `astromech/ui*` — resolves through `exports` to package **source**, which `boot/astro.ts` compiles via the `@/` Vite alias it registers against `pkgSrc`.
+The integration takes a config **path** and the site's `astromech.config.ts` is evaluated twice. Once in **plain Node at config time**, inside `astro:config:setup` (`config/load.ts`), which is what route registration, the admin config, codegen and the build-time migration run read; and once in the **Vite SSR graph**, where `virtual:astromech/config` re-exports the same file. Every `plugin()` factory runs in both, so a plugin package is evaluated in two module registries and module-level state in it is not shared between them. The evaluation that boots is the SSR one: the injected middleware hands that module's `rawConfig` to `createAstromech`, so the registered `PluginDefinition`, with `rawRoutes[].handler`, service methods and hooks hanging off it, is the SSR-graph copy. Core's runtime code is the opposite: every subpath Vite loads — `astromech/middleware`, `astromech/local`, the injected `astromech/routes/handler.ts` and `astromech/admin/shell.astro`, and `astromech/ui*` — resolves through `exports` to package **source**, which `integrations/astro/vite.ts` compiles via the `@/` Vite alias it registers against `pkgSrc`.
 
 The config-time evaluation is the constraint. A plugin package has to load under plain Node, with no Vite in the process:
 

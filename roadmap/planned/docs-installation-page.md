@@ -8,7 +8,7 @@ This surfaced because the integration's signature changed and there was nothing
 to update. `astromech()` takes a config **path** now — it defaults to
 `./astromech.config.ts` and accepts `{ configFile }` to point elsewhere — and
 that option is documented only in the docblock at the top of
-`packages/astromech/src/boot/astro.ts`.
+`packages/astromech/src/integrations/astro/index.ts`.
 
 ## What it has to cover
 

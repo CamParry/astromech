@@ -13,7 +13,7 @@ export default defineConfig([
             fields: 'src/exports/fields.ts',
             columns: 'src/exports/columns.ts',
             methods: 'src/exports/methods.ts',
-            'boot/astro': 'src/exports/astro.ts',
+            'integrations/astro/index': 'src/exports/astro.ts',
             'local/index': 'src/exports/local.ts',
             'fetch/index': 'src/exports/fetch.ts',
             middleware: 'src/exports/middleware.ts',

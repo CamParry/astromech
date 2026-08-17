@@ -26,7 +26,7 @@ Nested `AGENTS.md` files cover `packages/astromech`, `packages/plugins`, `apps/d
   middleware.
 - **Never `--no-verify`.** If the hook fails, fix the cause.
 - **pnpm is the package manager**, pinned by `packageManager` in the root `package.json`. `npm install` here builds a flat tree that hides undeclared dependencies, which is the failure mode pnpm exists to catch — so every package declares what it imports.
-- **`pnpm-workspace.yaml` holds the workspace globs and the hoist list.** `publicHoistPattern` is not a convenience: the admin ships as source and the host app's Vite has to resolve its client dependencies from the app root, so that list must stay in step with `optimizeDeps.include` in `packages/astromech/src/boot/astro.ts`. A server dependency Vite cannot resolve gets inlined into the build instead of externalised, and anything loading a native binding by dynamic `require` breaks at request time when that happens.
+- **`pnpm-workspace.yaml` holds the workspace globs and the hoist list.** `publicHoistPattern` is not a convenience: the admin ships as source and the host app's Vite has to resolve its client dependencies from the app root, so that list must stay in step with `optimizeDeps.include` in `packages/astromech/src/integrations/astro/vite.ts`. A server dependency Vite cannot resolve gets inlined into the build instead of externalised, and anything loading a native binding by dynamic `require` breaks at request time when that happens.
 - Common commands: `pnpm run build`, `typecheck`, `test:run`, `lint`, `lint:deps`, `check:docs`, `check:boot`, `format`, `db:generate`, `db:init`.
 
 ## Documentation

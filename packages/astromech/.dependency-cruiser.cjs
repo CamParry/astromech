@@ -48,7 +48,7 @@
  * in this file hand-enumerates a sibling directory.
  */
 const LAYERS = [
-    ['routes', 'admin', 'boot', 'codegen'],
+    ['integrations', 'admin', 'boot', 'codegen'],
     ['transport', 'policies'],
     ['entries', 'media', 'users', 'settings', 'notifications'],
     [
@@ -88,7 +88,8 @@ const UNLAYERED = ['exports'];
  * Sources exempt from their layer's generated no-upward rule.
  *
  * - `transport/cli/` is a standalone entrypoint: it resolves its own config and
- *   boots itself, so it reaches `boot/` and `codegen/` the way `routes/` does.
+ *   boots itself, so it reaches `boot/` and `codegen/` the way `integrations/`
+ *   does.
  * - `transport/tools/` and `transport/mcp/` read the generated method manifest
  *   from `codegen/`. The manifest is data the transports project, not
  *   composition — it moves out from under `codegen/` in
