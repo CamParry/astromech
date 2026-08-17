@@ -21,7 +21,7 @@ import { flattenEntryFields } from '@/fields/flatten';
 import { parseFields } from '@/fields/pipeline';
 import { ValidationError } from '@/errors/index';
 import { getConfig } from '@/config/registry';
-import type { EntryStorage, StorageDb } from '../storage/types';
+import type { EntryStorage, EntryWrite, StorageDb } from '../storage/types';
 import type {
     Entry,
     EntryStatus,
@@ -41,6 +41,10 @@ type FieldContext = {
     user: User | null;
 };
 
+/**
+ * Create an entry of the given type: validate the input, fill defaults, run
+ * the entry create hooks, and write the row with its relationship index.
+ */
 export async function create(params: {
     type: string;
     title?: string;
@@ -81,16 +85,19 @@ export async function create(params: {
     const locale = params.locale ?? getDefaultLocale();
     const localeGroup = params.localeGroup;
 
-    // Slug — needs both permission and a source. A titleless type has no title
-    // to derive one from, so it stays null rather than slugifying `''` into a
-    // run of `-2`, `-3` collisions.
-    const slugSource = entryType.capabilities.slug
-        ? (validated.slug ?? (titled ? slugify(title) : null))
-        : null;
-    const slug = slugSource ? await storage.uniqueSlug(type, locale, slugSource) : null;
+    // Slug
+    const slug = await deriveSlug({
+        storage,
+        entryType,
+        type,
+        locale,
+        titled,
+        title,
+        slug: validated.slug,
+    });
 
     // Fields
-    const fieldContext: FieldContext = {
+    const fields = await toStoredFields(validated.fields ?? {}, {
         entryType,
         storage,
         type,
@@ -98,11 +105,9 @@ export async function create(params: {
         localeGroup,
         status,
         user,
-    };
-    const fields = await toStoredFields(validated.fields ?? {}, fieldContext);
+    });
 
-    // Hooks — `data` is the row itself, so a handler that assigns to it changes
-    // what is written and what the relationship index derives from.
+    // Data
     const data = {
         title,
         slug,
@@ -112,27 +117,36 @@ export async function create(params: {
         status,
         publishedAt,
     };
+
+    // Hooks
     await runBeforeHooks('entry:beforeCreate', { type, data, user }, user);
 
-    // Persist — the row and its derived relationship rows go in together or not
-    // at all. Storages that cannot open a transaction fall back to sequential
-    // writes.
-    const persist = async (
-        txStorage: EntryStorage,
-        txDb: StorageDb | undefined
-    ): Promise<Entry> => {
-        const entry = asEntry(await txStorage.create({ type, ...data }));
-        await indexEntryRelationships(entry, data.fields, type, txDb);
-        return entry;
-    };
-
-    const entry = storage.transaction
-        ? await storage.transaction(persist)
-        : await persist(storage, undefined);
-
+    // Persist
+    const entry = await persistEntry(storage, type, data);
     await runAfterHooks('entry:afterCreate', { type, data, user, entry }, user);
 
     return entry;
+}
+
+/**
+ * The slug the new entry stores: the caller's, else one slugified from a
+ * titled type's title, made unique per (type, locale). Null when the type has
+ * no slug capability or there is nothing to slugify.
+ */
+async function deriveSlug(params: {
+    storage: EntryStorage;
+    entryType: ResolvedEntryType;
+    type: string;
+    locale: string;
+    titled: boolean;
+    title: string;
+    slug: string | undefined;
+}): Promise<string | null> {
+    const { storage, entryType, type, locale, titled, title, slug } = params;
+    if (!entryType.capabilities.slug) return null;
+    const source = slug ?? (titled ? slugify(title) : null);
+    if (!source) return null;
+    return storage.uniqueSlug(type, locale, source);
 }
 
 /**
@@ -197,4 +211,24 @@ async function inheritSharedFields(
         if (sibling.fields[name] !== undefined) inherited[name] = sibling.fields[name];
     }
     return { ...values, ...inherited };
+}
+
+/**
+ * Write the row and its relationship index rows, in one transaction when the
+ * storage has one and sequentially when it does not.
+ */
+async function persistEntry(
+    storage: EntryStorage,
+    type: string,
+    data: EntryWrite & { fields: JsonObject }
+): Promise<Entry> {
+    const write = async (
+        txStorage: EntryStorage,
+        txDb: StorageDb | undefined
+    ): Promise<Entry> => {
+        const entry = asEntry(await txStorage.create({ type, ...data }));
+        await indexEntryRelationships(entry, data.fields, type, txDb);
+        return entry;
+    };
+    return storage.transaction ? storage.transaction(write) : write(storage, undefined);
 }
