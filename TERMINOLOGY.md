@@ -310,8 +310,9 @@ A **`ToolDefinition`** is one manifest method projected into a model-callable to
 The **application** is the booted runtime a process holds: the object
 `createAstromech({ config })` returns and `getAstromech()` reads back. It carries
 the resolved config and the domain services, and it is the one front door — a
-process has exactly one, held in a `globalThis` slot because tsup emits several
-entry chunks and a module-scoped memo would boot twice.
+process has exactly one, held in a `globalThis` slot because one module can be
+instantiated more than once in a process and a module-scoped memo would boot
+twice. `packages/astromech/src/utilities/registry.ts` records why.
 
 The pair is split on purpose, following Laravel (`bootstrap/app.php` creates,
 `app()` only reads). `createAstromech` initialises and is idempotent: a second

@@ -229,9 +229,11 @@ The behavioural core of the HTTP work. Files stay where they are.
       **real absolute paths** from the resolved config.
 - [x] The per-request `Astromech.config` reads inside its middlewares become
       construction-time values, since config now exists when the app is built.
-- [x] `app.fetch(request)` on the instance, wired in the boot lifecycle.
-- [x] `src/routes/api.ts` loses the URL surgery and becomes one line. It stays
-      in `src/routes/` for now; stage 8 moves it.
+- [x] `app.fetch(request)` on the instance. Built in `boot()` from the resolved
+      config the phases return, not as a phase of its own in `lifecycle.ts`.
+- [x] The Astro entrypoint loses the URL surgery and becomes one line. It stays
+      in `src/routes/` for now; stage 8 moves it. Stage 7 renamed it to
+      `src/routes/handler.ts` when media started pointing at it too.
 
 **Cautions.** This is the stage that makes the surgery deletable. Moving the
 route file without this just relocates the smell, which is why the move is a
@@ -410,3 +412,10 @@ genuinely differ (local returns full rows, the wire returns public projections).
   put media behind the app's middleware and error handling, so the serving route
   now answers with API error envelopes, carries
   `Cross-Origin-Resource-Policy: same-origin`, and still accepts every method.
+- **Nothing checks the served OpenAPI document.** Since stage 5 the real app
+  registers at absolute paths, so `app.doc` emits `${basePath}/api/...` keys,
+  while `tests/transport/http/routes/openapi-document.test.ts` composes its own
+  five-router app at bare paths and asserts against those. Neither is wrong, but
+  no test compares the document the app actually serves with anything, so the
+  served spec can drift silently. Worth a parity check against the method
+  manifest rather than a second hand-written expectation.
