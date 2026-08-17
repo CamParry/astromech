@@ -121,16 +121,13 @@ const publishAtField = z
     .optional();
 
 /**
- * Per-type create schema factory. For titled types (`titleField: 'title'`) the
- * returned schema is byte-identical in behavior to the legacy `createEntrySchema`
- * (same "Title is required" message, same 422s). For titleless types the title
- * is optional — the entries service normalizes a missing title to `''` downstream.
+ * Per-type create schema. A titled type requires a title; a titleless one takes
+ * it as optional, and `create` normalizes a missing title to `''` downstream.
  */
-export function createEntrySchemaFor(titleField: 'title' | false) {
-    const title =
-        titleField === false
-            ? z.string().optional().openapi({ example: 'My Post' })
-            : z.string().min(1, 'Title is required').openapi({ example: 'My Post' });
+export function createEntrySchema({ titled }: { titled: boolean }) {
+    const title = titled
+        ? z.string().min(1, 'Title is required').openapi({ example: 'My Post' })
+        : z.string().optional().openapi({ example: 'My Post' });
     return z
         .object({
             title,
@@ -148,15 +145,13 @@ export function createEntrySchemaFor(titleField: 'title' | false) {
 }
 
 /**
- * Per-type update schema factory. For titled types this matches the legacy
- * `updateEntrySchema` ("Title cannot be empty"); titleless types drop the
- * non-empty constraint while keeping title optional.
+ * Per-type update schema. Title is always optional; a titled type additionally
+ * refuses an empty one ("Title cannot be empty").
  */
-export function updateEntrySchemaFor(titleField: 'title' | false) {
-    const title =
-        titleField === false
-            ? z.string().optional()
-            : z.string().min(1, 'Title cannot be empty').optional();
+export function updateEntrySchema({ titled }: { titled: boolean }) {
+    const title = titled
+        ? z.string().min(1, 'Title cannot be empty').optional()
+        : z.string().optional();
     return z
         .object({
             title,
@@ -168,11 +163,8 @@ export function updateEntrySchemaFor(titleField: 'title' | false) {
         .openapi('UpdateEntry');
 }
 
-/** Titled-type create schema. Kept for OpenAPI registration and bulk paths. */
-export const createEntrySchema = createEntrySchemaFor('title');
-
-/** Titled-type update schema. Kept for OpenAPI registration and bulk paths. */
-export const updateEntrySchema = updateEntrySchemaFor('title');
+/** Titled-type update schema, for the bulk paths that address no single type. */
+export const titledUpdateEntrySchema = updateEntrySchema({ titled: true });
 
 const sortDirection = z.enum(['asc', 'desc']);
 

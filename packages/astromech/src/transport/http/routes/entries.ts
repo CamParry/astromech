@@ -41,10 +41,10 @@ import {
     type EntryMethodName,
 } from '@/entries/methods';
 import {
-    createEntrySchemaFor,
+    createEntrySchema,
     entrySortSchema,
+    titledUpdateEntrySchema,
     updateEntrySchema,
-    updateEntrySchemaFor,
 } from '@/entries/schema';
 import { PublicTrashedReadError, StagedEntryExistsError } from '@/entries/errors';
 import { resolveEntryType } from '@/utilities/entry-type-ids';
@@ -271,7 +271,7 @@ const CONTRACTS_BY_TYPE = new WeakMap<
  * the titled schemas are the documented default.
  */
 const DOCUMENTED_CONTRACTS: ContractCatalogue = Object.fromEntries(
-    entryMethodContracts({ typeId: '{type}', titleField: 'title' }).map((contract) => [
+    entryMethodContracts({ typeId: '{type}', titled: true }).map((contract) => [
         contract.method,
         contract,
     ])
@@ -288,7 +288,7 @@ function entryContracts(
     const catalogue: Record<string, EntryMethodContract> = {};
     for (const contract of entryMethodContracts({
         typeId,
-        titleField: resolved.titleField,
+        titled: resolved.titleField !== false,
     })) {
         catalogue[contract.method] = contract;
     }
@@ -383,7 +383,7 @@ function fieldCapabilitiesDenied(
 
 const bulkUpdateSchema = z.object({
     ids: z.array(z.string().min(1)).min(1),
-    data: updateEntrySchema,
+    data: titledUpdateEntrySchema,
 });
 
 /** The six handlers the table cannot express, each with the reason. */
@@ -461,7 +461,9 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         const raw = await c.req.json().catch(() => undefined);
         if (raw === undefined) return badRequest(c, 'Invalid JSON body');
 
-        const parsed = createEntrySchemaFor(resolved.titleField).safeParse(raw);
+        const parsed = createEntrySchema({
+            titled: resolved.titleField !== false,
+        }).safeParse(raw);
         // The per-type body schema answers the same envelope OpenAPIHono's
         // request validator did, so a titled type behaves as it always has.
         if (!parsed.success) return requestSchemaError(c, parsed.error);
@@ -535,10 +537,12 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
 
         // Two stages, as this route has always had: the request schema the
         // document declares answers 400, and the per-type schema answers 422.
-        const envelope = updateEntrySchemaFor(false).safeParse(raw);
+        const envelope = updateEntrySchema({ titled: false }).safeParse(raw);
         if (!envelope.success) return requestSchemaError(c, envelope.error);
 
-        const parsed = updateEntrySchemaFor(resolved.titleField).safeParse(raw);
+        const parsed = updateEntrySchema({
+            titled: resolved.titleField !== false,
+        }).safeParse(raw);
         if (!parsed.success) return fromZodError(c, parsed.error);
 
         const refused = fieldCapabilitiesDenied(c, type, resolved, parsed.data);

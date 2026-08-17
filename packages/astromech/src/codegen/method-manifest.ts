@@ -178,7 +178,7 @@ function buildEntriesMethods(
     for (const [type, cfg] of Object.entries(config.entries)) {
         for (const contract of entryMethodContracts({
             typeId: type,
-            titleField: cfg.titleField,
+            titled: cfg.titleField !== false,
         })) {
             // Gate capability-bound methods: `publish` needs versioning; the
             // staged-entry/preview methods need the `staging` capability.
@@ -203,7 +203,7 @@ function buildEntriesMethods(
             const typeId = qualifyEntryType(pluginName, type);
             for (const contract of entryMethodContracts({
                 typeId,
-                titleField: cfg.titleField,
+                titled: cfg.titleField !== false,
             })) {
                 // Same capability gating as root entry types.
                 if (!methodCapabilityMet(contract.requires, cfg.capabilities)) {

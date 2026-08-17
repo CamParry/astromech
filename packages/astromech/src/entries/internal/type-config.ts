@@ -25,8 +25,9 @@ export function getDefaultLocale(): string {
     return resolveContentLocale(requested, locales) ?? locales[0] ?? requested;
 }
 
-export function getTitleField(typeName: string): 'title' | false {
-    return resolveEntryType(getConfig(), typeName)?.titleField ?? 'title';
+/** Whether the type carries a title. Unknown types are titled, like the default. */
+export function isTitled(typeName: string): boolean {
+    return resolveEntryType(getConfig(), typeName)?.titleField !== false;
 }
 
 export function isVersioningEnabled(typeName: string): boolean {

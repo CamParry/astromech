@@ -1,13 +1,13 @@
 import { getCurrentUser } from '@/request-context/index';
 import { runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime';
 import { slugify } from '@/utilities/strings';
-import { createEntrySchemaFor } from '../schema';
+import { createEntrySchema } from '../schema';
 import { getEntryStorage } from '../storage/registry';
 import { validate } from '../internal/validate';
 import {
     getDefaultLocale,
     getNonTranslatableFieldNames,
-    getTitleField,
+    isTitled,
 } from '../internal/type-config';
 import { indexEntryRelationships } from '../internal/relationships';
 import { pruneDanglingRelations } from '../internal/dangling-relations';
@@ -22,7 +22,19 @@ import { parseFields } from '@/fields/pipeline';
 import { ValidationError } from '@/errors/index';
 import { getConfig } from '@/config/registry';
 import type { EntryStorage, StorageDb } from '../storage/types';
+import type { ResolvedEntryType, User } from '@/types/index';
 import type { Entry, EntryStatus, JsonObject } from '@/types/index';
+
+/** What both field helpers below need to know about the write in progress. */
+type FieldContext = {
+    entryType: ResolvedEntryType;
+    storage: EntryStorage;
+    type: string;
+    locale: string;
+    localeGroup: string | undefined;
+    status: EntryStatus;
+    user: User | null;
+};
 
 export async function create(params: {
     type: string;
@@ -34,19 +46,16 @@ export async function create(params: {
     status?: EntryStatus;
     publishAt?: Date | null;
 }): Promise<Entry> {
-    // Reject public-branded fields
     if (params.fields !== undefined && isPublicBranded(params.fields)) {
         throw new PublicShapeWriteError();
     }
 
-    // Validate type or throw
     const type = params.type;
     const entryType = resolveEntryType(getConfig(), type);
     if (!entryType) throw new UnknownEntryTypeError(type);
 
-    // Validate data
-    const titleField = getTitleField(type);
-    const validated = validate(createEntrySchemaFor(titleField), {
+    const titled = isTitled(type);
+    const validated = validate(createEntrySchema({ titled }), {
         title: params.title,
         slug: params.slug,
         fields: params.fields,
@@ -55,50 +64,76 @@ export async function create(params: {
     });
 
     const storage = getEntryStorage(type);
-
-    // Set defaults
+    const user = getCurrentUser();
     const title = validated.title ?? '';
-    const status = validated.status || 'unpublished';
+    const status = validated.status ?? 'unpublished';
     const publishedAt =
         status === 'published' ? new Date() : (validated.publishAt ?? null);
     const locale = params.locale ?? getDefaultLocale();
-    const slug =
-        validated.slug || titleField
-            ? await storage.uniqueSlug(type, locale, validated.slug ?? slugify(title))
-            : null;
 
-    const user = getCurrentUser();
+    const slugSource = validated.slug ?? (titled ? slugify(title) : null);
+    const slug = slugSource ? await storage.uniqueSlug(type, locale, slugSource) : null;
 
-    // Handle Fields
-    const fieldDefs = flattenEntryFields(entryType.fields);
-    // Non-translatable fields belong to the locale group, not to this row, so a
-    // new translation inherits them from an existing sibling rather than taking
-    // whatever the form sent. Runs before validation so an inherited value is
-    // validated like any other.
-    let incomingFields = (validated.fields ?? {}) as Record<string, unknown>;
-    if (params.localeGroup !== undefined && storage.translatable) {
-        const shared = getNonTranslatableFieldNames(
-            type,
-            fieldDefs.map((field) => field.name)
-        );
-        if (shared.length > 0) {
-            const [sibling] = await storage.translatable.siblings(params.localeGroup);
-            if (sibling) {
-                const siblingFields: Record<string, unknown> = sibling.fields;
-                const inherited: Record<string, unknown> = {};
-                for (const name of shared) {
-                    if (siblingFields[name] !== undefined) {
-                        inherited[name] = siblingFields[name];
-                    }
-                }
-                incomingFields = { ...incomingFields, ...inherited };
-            }
-        }
-    }
+    const context: FieldContext = {
+        entryType,
+        storage,
+        type,
+        locale,
+        localeGroup: params.localeGroup,
+        status,
+        user,
+    };
+    const fields = await resolveFields(validated.fields ?? {}, context);
+
+    const data = {
+        title,
+        slug,
+        locale,
+        localeGroup: params.localeGroup,
+        fields,
+        status,
+        publishedAt,
+    };
+
+    // `data` is the row itself, so a handler that assigns to it changes what is
+    // written and what the relationship index derives from.
+    await runBeforeHooks('entry:beforeCreate', { type, data, user }, user);
+
+    // The row and its derived relationship rows go in together or not at all.
+    // Storages that cannot open a transaction fall back to sequential writes.
+    const persist = async (
+        txStorage: EntryStorage,
+        txDb: StorageDb | undefined
+    ): Promise<Entry> => {
+        const entry = asEntry(await txStorage.create({ type, ...data }));
+        await indexEntryRelationships(entry, data.fields, type, txDb);
+        return entry;
+    };
+
+    const entry = storage.transaction
+        ? await storage.transaction(persist)
+        : await persist(storage, undefined);
+
+    await runAfterHooks('entry:afterCreate', { type, data, user, entry }, user);
+
+    return entry;
+}
+
+/**
+ * Field values as they will be stored: the locale group's shared values
+ * inherited, every value coerced and validated, dead relation ids dropped.
+ * Throws a 422 if a field or the type's own validator reports.
+ */
+async function resolveFields(
+    values: Record<string, unknown>,
+    context: FieldContext
+): Promise<JsonObject> {
+    const { entryType, storage, type, locale, status, user } = context;
+    const definitions = flattenEntryFields(entryType.fields);
+    const inherited = await inheritSharedFields(values, definitions, context);
 
     const resourceValidate = entryType.validate;
-
-    const processed = await parseFields(incomingFields, fieldDefs, {
+    const parsed = await parseFields(inherited, definitions, {
         operation: 'create',
         validation: entryValidationMode({
             status,
@@ -109,47 +144,41 @@ export async function create(params: {
         lookups: createEntryLookups(storage, { type, locale }),
         ...(resourceValidate ? { resourceValidate } : {}),
     });
-    if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
-        throw ValidationError.fromFieldErrors(processed.errors, processed.form);
+
+    const hasErrors = Object.keys(parsed.errors).length > 0 || parsed.form.length > 0;
+    if (hasErrors) {
+        throw ValidationError.fromFieldErrors(parsed.errors, parsed.form);
     }
-    // After `parseFields` (its minted item ids are what the traversal needs)
-    // and before the row is written, so the index derives from the pruned values.
-    const pruned = await pruneDanglingRelations(
-        fieldDefs,
-        processed.values as JsonObject
+
+    const pruned = await pruneDanglingRelations(definitions, parsed.values as JsonObject);
+    return pruned.values;
+}
+
+/**
+ * Values with the locale group's shared fields taken from an existing sibling.
+ * A field marked `translatable: false` belongs to the group, so a new
+ * translation takes the sibling's value over whatever the caller sent.
+ */
+async function inheritSharedFields(
+    values: Record<string, unknown>,
+    definitions: { name: string }[],
+    context: FieldContext
+): Promise<Record<string, unknown>> {
+    const { storage, type, localeGroup } = context;
+    if (localeGroup === undefined || !storage.translatable) return values;
+
+    const shared = getNonTranslatableFieldNames(
+        type,
+        definitions.map((field) => field.name)
     );
-    const processedFields = pruned.values;
+    if (shared.length === 0) return values;
 
-    const data = {
-        title,
-        slug,
-        locale,
-        localeGroup: params.localeGroup,
-        fields: processedFields,
-        status,
-        publishedAt,
-    };
+    const [sibling] = await storage.translatable.siblings(localeGroup);
+    if (!sibling) return values;
 
-    // Run before create hook
-    await runBeforeHooks('entry:beforeCreate', { type, data, user }, user);
-
-    // Save row and it's derived relationships
-    const persist = async (
-        txStorage: EntryStorage,
-        txDb: StorageDb | undefined
-    ): Promise<Entry> => {
-        const entry = asEntry(await txStorage.create({ type, ...data }));
-        await indexEntryRelationships(entry, data.fields, type, txDb);
-        return entry;
-    };
-
-    // Create entry
-    const entry = storage.transaction
-        ? await storage.transaction(persist)
-        : await persist(storage, undefined);
-
-    // Run after create hook
-    await runAfterHooks('entry:afterCreate', { type, data, user, entry }, user);
-
-    return entry;
+    const inherited: Record<string, unknown> = {};
+    for (const name of shared) {
+        if (sibling.fields[name] !== undefined) inherited[name] = sibling.fields[name];
+    }
+    return { ...values, ...inherited };
 }
