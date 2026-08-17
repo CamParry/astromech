@@ -46,7 +46,6 @@
             "types": "./dist/middleware.d.ts",
             "default": "./src/exports/middleware.ts"
         },
-        "./routes/auth-handler.ts": "./src/routes/auth-handler.ts",
         "./routes/api.ts": "./src/routes/api.ts",
         "./routes/media-handler.ts": "./src/routes/media-handler.ts",
         "./media/image/sharp": {
@@ -166,7 +165,6 @@
                 "types": "./dist/middleware.d.ts",
                 "default": "./dist/middleware.js"
             },
-            "./routes/auth-handler.ts": "./src/routes/auth-handler.ts",
             "./routes/api.ts": "./src/routes/api.ts",
             "./routes/media-handler.ts": "./src/routes/media-handler.ts",
             "./media/image/sharp": {

@@ -52,8 +52,8 @@ has failed even if the gate is green.
 
 ## Where this stands
 
-Stages 1 to 5 are on `main`. **Stage 6 is next**, and with 5 landed, stages 6,
-7, 8, 9, 10, 11 and 12 are all unblocked and independent of each other.
+Stages 1 to 6 are on `main`. Stages 7, 8, 9, 10, 11 and 12 are all unblocked
+and independent of each other, so they can land in any order.
 
 Two things learned the expensive way, both worth carrying into every remaining
 stage:
@@ -241,9 +241,9 @@ a special case.
 
 ## Stage 6 — Better Auth into Hono
 
-- [ ] Mount the Better Auth catch-all inside the Hono app at
+- [x] Mount the Better Auth catch-all inside the Hono app at
       `${basePath}/api/auth/*`, delegating to `auth.handler(c.req.raw)`.
-- [ ] Delete the separately injected auth route and, with it, the requirement
+- [x] Delete the separately injected auth route and, with it, the requirement
       that it be registered **before** the API catch-all — an ordering contract
       nothing enforces today.
 

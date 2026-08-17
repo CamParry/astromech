@@ -1,6 +1,7 @@
 /**
- * The two handlers the composed app declares itself — `GET /setup/check` and
- * `GET /me` — plus the `requireAuth` boundary they sit either side of.
+ * The handlers the composed app declares itself — `GET /setup/check`,
+ * `GET /me` and the Better Auth catch-all — plus the `requireAuth` boundary
+ * they sit either side of.
  *
  * These are the only route tests that mount the whole `transport/http` app, so
  * they are also where the 401 for an unauthenticated request is pinned.
@@ -95,6 +96,23 @@ describe('GET /me', () => {
         expect(Object.keys(body.data).sort()).toEqual(['role', 'user']);
         expect(body.data.user.id).toBe(user.id);
         expect(body.data.role.slug).toBe('admin');
+    });
+});
+
+describe('the Better Auth catch-all', () => {
+    it('is reachable without a session', async () => {
+        const app = await freshApp();
+        const res = await app.request(`${api}/auth/sign-in/email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: 'not-an-email', password: 'x' }),
+        });
+
+        // Better Auth's own 400. A 401 with our `UNAUTHORIZED` code would mean
+        // `requireAuth` swallowed the route and sign-in is unreachable.
+        expect(res.status).toBe(400);
+        const body = (await res.json()) as { code?: string };
+        expect(body.code).toBe('INVALID_EMAIL');
     });
 });
 

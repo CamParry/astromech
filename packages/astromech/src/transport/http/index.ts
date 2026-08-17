@@ -22,6 +22,7 @@ import { pluginsRouter } from './routes/plugins';
 import { notificationsRouter } from './routes/notifications';
 import { rpcRouter } from './routes/rpc';
 import { Astromech } from '@/transport/local/index';
+import { getAuth } from '@/users/index';
 import type { ResolvedConfig } from '@/types/index';
 
 type AppEnv = { Variables: AuthVariables };
@@ -95,6 +96,11 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
         const result = await Astromech.users.query({ limit: 'all' });
         return c.json({ needsSetup: result.data.length === 0 });
     });
+
+    // A catch-all because Better Auth owns its route surface — see
+    // `decisions/0056-better-auth-owns-the-users-format-not-its-ddl.md`. Built
+    // per request: at construction it would open a dialect in the CLI and MCP.
+    app.on(['GET', 'POST'], `${api}/auth/*`, (c) => getAuth().handler(c.req.raw));
 
     // ========================================================================
     // Plugin RPC + raw routes — enforce access per-method (incl. public), so
