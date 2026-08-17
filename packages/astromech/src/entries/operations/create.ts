@@ -71,7 +71,12 @@ export async function create(params: {
         status === 'published' ? new Date() : (validated.publishAt ?? null);
     const locale = params.locale ?? getDefaultLocale();
 
-    const slugSource = validated.slug ?? (titled ? slugify(title) : null);
+    // A slug needs both permission and a source. A titleless type has no title
+    // to derive one from, so it stays null rather than slugifying `''` into a
+    // run of `-2`, `-3` collisions.
+    const slugSource = entryType.capabilities.slug
+        ? (validated.slug ?? (titled ? slugify(title) : null))
+        : null;
     const slug = slugSource ? await storage.uniqueSlug(type, locale, slugSource) : null;
 
     const context: FieldContext = {
