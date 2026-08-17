@@ -406,16 +406,7 @@ genuinely differ (local returns full rows, the wire returns public projections).
 
 - `roadmap/planned/role-resolution-fails-open.md` — filed, not in scope.
 - Default visibility shape for host-page queries, if stage 11 does not settle it.
-- **`Cross-Origin-Resource-Policy` on media.** Stage 7 put media behind the
-  app-wide `secureHeaders`, whose Hono default is `same-origin`. Media carried
-  no such header before, so a browser on another origin embedding
-  `<img src="…/_media/…">` is now blocked where it previously loaded. That cuts
-  against the reason media keeps its own top-level prefix — it is long-cached,
-  public, and ends up in third-party caches and other people's links. Decide
-  whether media sets `cross-origin`, and whether that follows `media.access`
-  rather than being fixed.
-- **`app.all` on the media prefix.** Carried over verbatim from the Astro
-  route's `export const ALL`, and the handler ignores the method, so a `POST` to
-  a media URL returns the image with a 200. Narrowing to `GET`/`HEAD` and
-  letting `onNotFound` answer the rest is the likely fix; it is a behaviour
-  change and was left out of stage 7 deliberately.
+- `roadmap/planned/media-serving-responses.md` — filed, not in scope. Stage 7
+  put media behind the app's middleware and error handling, so the serving route
+  now answers with API error envelopes, carries
+  `Cross-Origin-Resource-Policy: same-origin`, and still accepts every method.
