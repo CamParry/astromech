@@ -2,9 +2,9 @@ import { getConfig } from '@/config/registry';
 import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
 import { ValidationError } from '@/errors/validation';
-import { fieldReadsFromRecords } from '@/fields/field-reads';
+import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenFieldNodes } from '@/fields/flatten';
-import { processFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/pipeline';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { getCurrentUser } from '@/request-context/index';
 import type { JsonObject, Media } from '@/types/index';
@@ -42,11 +42,11 @@ export async function update(params: {
             current?.fields as Record<string, unknown> | null | undefined,
             patch
         );
-        const processed = await processFields(merged, fieldDefs, {
+        const processed = await parseFields(merged, fieldDefs, {
             operation: 'update',
-            host: { kind: 'media', record: current },
+            resource: { kind: 'media', record: current },
             user: getCurrentUser(),
-            reads: fieldReadsFromRecords({
+            lookups: fieldLookupsFromRecords({
                 load: async () => (await query({ limit: 'all' })).data,
                 getId: (r) => r.id,
                 getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
@@ -59,7 +59,7 @@ export async function update(params: {
         if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
             throw ValidationError.fromFieldErrors(processed.errors, processed.form);
         }
-        // After `processFields` (its minted item ids are what the traversal
+        // After `parseFields` (its minted item ids are what the traversal
         // needs) and before the write, so the index derives from the pruned
         // values.
         const pruned = await pruneDanglingRelations(

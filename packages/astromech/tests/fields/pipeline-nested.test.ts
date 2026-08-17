@@ -8,22 +8,22 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { Field, FieldValidationContext, ValidationStage } from '@/types/fields';
-import { processFields } from '@/fields/pipeline';
+import type { Field, FieldValidationContext, ValidationMode } from '@/types/fields';
+import { parseFields } from '@/fields/pipeline';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function fakeCtx(operation: 'create' | 'update' = 'create', stage?: ValidationStage) {
+function fakeCtx(operation: 'create' | 'update' = 'create', validation?: ValidationMode) {
     return {
         operation,
-        // `exactOptionalPropertyTypes`: an omitted stage must be absent, not
+        // `exactOptionalPropertyTypes`: an omitted validation must be absent, not
         // present-and-undefined.
-        ...(stage !== undefined ? { stage } : {}),
-        host: { kind: 'entry' as const, record: {} },
+        ...(validation !== undefined ? { validation } : {}),
+        resource: { kind: 'entry' as const, record: {} },
         user: null,
-        reads: { isUnique: async () => true },
+        lookups: { isUnique: async () => true },
     };
 }
 
@@ -59,12 +59,12 @@ describe('group', () => {
     });
 
     it('required child missing → error keyed "seo.title"', async () => {
-        const { errors } = await processFields({ seo: {} }, [seo], fakeCtx());
+        const { errors } = await parseFields({ seo: {} }, [seo], fakeCtx());
         expect(errors['seo.title']).toEqual(['This field is required']);
     });
 
     it('required child present → no error', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { seo: { title: 'Hello' } },
             [seo],
             fakeCtx()
@@ -73,13 +73,13 @@ describe('group', () => {
     });
 
     it('absent group value → normalized to {} and children still validated', async () => {
-        const { values, errors } = await processFields({}, [seo], fakeCtx());
+        const { values, errors } = await parseFields({}, [seo], fakeCtx());
         expect(errors['seo.title']).toEqual(['This field is required']);
         expect(values.seo).toEqual({});
     });
 
     it('non-object group value → normalized to {}, does not throw', async () => {
-        const { values, errors } = await processFields(
+        const { values, errors } = await parseFields(
             { seo: 'not-an-object' },
             [seo],
             fakeCtx()
@@ -91,7 +91,7 @@ describe('group', () => {
 
     it('does not mutate the input value object', async () => {
         const input = { seo: { rank: '  42  ' } };
-        const { values } = await processFields(
+        const { values } = await parseFields(
             {
                 ...input,
             },
@@ -111,7 +111,7 @@ describe('group', () => {
     });
 
     it('nested group inside a group → dotted path chains', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             {},
             [
                 field({
@@ -134,7 +134,7 @@ describe('group', () => {
     });
 
     it('a layout field inside a group stays flat', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             {},
             [
                 field({
@@ -157,7 +157,7 @@ describe('group', () => {
     });
 
     it('group defaults apply to children on create', async () => {
-        const { values } = await processFields(
+        const { values } = await parseFields(
             { seo: {} },
             [
                 field({
@@ -187,7 +187,7 @@ describe('repeater', () => {
     });
 
     it('item error keyed "sections[<id>].title"', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { sections: [{ _id: 'a1', title: '' }] },
             [sections],
             fakeCtx()
@@ -196,7 +196,7 @@ describe('repeater', () => {
     });
 
     it('only the offending item errors', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             {
                 sections: [
                     { _id: 'a1', title: 'ok' },
@@ -210,7 +210,7 @@ describe('repeater', () => {
     });
 
     it('mints a missing _id and keys the error by it', async () => {
-        const { values, errors } = await processFields(
+        const { values, errors } = await parseFields(
             { sections: [{ title: '' }] },
             [sections],
             fakeCtx()
@@ -222,7 +222,7 @@ describe('repeater', () => {
     });
 
     it('mints an _id when the stored one is empty or not a string', async () => {
-        const { values } = await processFields(
+        const { values } = await parseFields(
             {
                 sections: [
                     { _id: '', title: 'a' },
@@ -240,7 +240,7 @@ describe('repeater', () => {
     });
 
     it('keeps an existing _id untouched', async () => {
-        const { values } = await processFields(
+        const { values } = await parseFields(
             { sections: [{ _id: 'keep-me', title: 'a' }] },
             [sections],
             fakeCtx()
@@ -250,12 +250,12 @@ describe('repeater', () => {
 
     it('does not mutate the input items', async () => {
         const input = [{ title: 'a' }];
-        await processFields({ sections: input }, [sections], fakeCtx());
+        await parseFields({ sections: input }, [sections], fakeCtx());
         expect(input[0]).toEqual({ title: 'a' });
     });
 
     it('coerce and default apply inside items', async () => {
-        const { values } = await processFields(
+        const { values } = await parseFields(
             { sections: [{ _id: 'a1', rank: '  42  ' }] },
             [
                 field({
@@ -277,7 +277,7 @@ describe('repeater', () => {
     });
 
     it('declarative rules run inside items', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { sections: [{ _id: 'a1', title: 'hi' }] },
             [
                 field({
@@ -298,18 +298,18 @@ describe('repeater', () => {
     });
 
     it('empty container → no child errors even when children are required', async () => {
-        const { errors } = await processFields({ sections: [] }, [sections], fakeCtx());
+        const { errors } = await parseFields({ sections: [] }, [sections], fakeCtx());
         expect(errors).toEqual({});
     });
 
     it('absent container → normalized to [] with no child errors', async () => {
-        const { values, errors } = await processFields({}, [sections], fakeCtx());
+        const { values, errors } = await parseFields({}, [sections], fakeCtx());
         expect(values.sections).toEqual([]);
         expect(errors).toEqual({});
     });
 
     it('required + empty container → the container itself errors', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { sections: [] },
             [
                 field({
@@ -325,7 +325,7 @@ describe('repeater', () => {
     });
 
     it('non-array value → normalized to [], does not throw', async () => {
-        const { values, errors } = await processFields(
+        const { values, errors } = await parseFields(
             { sections: 'nope' },
             [sections],
             fakeCtx()
@@ -335,7 +335,7 @@ describe('repeater', () => {
     });
 
     it('non-object items pass through untouched and produce no errors', async () => {
-        const { values, errors } = await processFields(
+        const { values, errors } = await parseFields(
             { sections: ['a string', 3, null] },
             [sections],
             fakeCtx()
@@ -345,7 +345,7 @@ describe('repeater', () => {
     });
 
     it('_disabled items ARE validated (no special case)', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { sections: [{ _id: 'a1', _disabled: true, title: '' }] },
             [sections],
             fakeCtx()
@@ -354,7 +354,7 @@ describe('repeater', () => {
     });
 
     it('repeater inside a repeater → "sections[a].items[b].title"', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             {
                 sections: [
                     {
@@ -384,7 +384,7 @@ describe('repeater', () => {
     });
 
     it('group inside a repeater → "sections[a].meta.title"', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { sections: [{ _id: 'a', meta: {} }] },
             [
                 field({
@@ -428,7 +428,7 @@ describe('blocks', () => {
     });
 
     it('validates each item against ITS block definition', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             {
                 content: [
                     { _id: 'h1', _type: 'hero', heading: '' },
@@ -443,7 +443,7 @@ describe('blocks', () => {
     });
 
     it('a field from another block type is not applied', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { content: [{ _id: 'q1', _type: 'quote', cite: 'ok' }] },
             [content],
             fakeCtx()
@@ -453,7 +453,7 @@ describe('blocks', () => {
     });
 
     it('unknown _type → error on the container path, no child errors', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { content: [{ _id: 'x1', _type: 'mystery', heading: '' }] },
             [content],
             fakeCtx()
@@ -463,7 +463,7 @@ describe('blocks', () => {
     });
 
     it('unknown _type items are still normalized into the value', async () => {
-        const { values } = await processFields(
+        const { values } = await parseFields(
             { content: [{ _type: 'mystery', heading: 'kept' }] },
             [content],
             fakeCtx()
@@ -474,7 +474,7 @@ describe('blocks', () => {
     });
 
     it('several unknown types are listed once each', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             {
                 content: [
                     { _id: 'x1', _type: 'mystery' },
@@ -489,7 +489,7 @@ describe('blocks', () => {
     });
 
     it('a missing _type counts as unknown', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { content: [{ _id: 'x1' }] },
             [content],
             fakeCtx()
@@ -498,7 +498,7 @@ describe('blocks', () => {
     });
 
     it('mints missing _ids and keys child errors by them', async () => {
-        const { values, errors } = await processFields(
+        const { values, errors } = await parseFields(
             { content: [{ _type: 'hero', heading: '' }] },
             [content],
             fakeCtx()
@@ -511,7 +511,7 @@ describe('blocks', () => {
     });
 
     it('blocks inside a block → path chains through both items', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             {
                 content: [
                     {
@@ -558,7 +558,7 @@ describe('blocks', () => {
     });
 
     it('empty blocks value → no unknown-type error', async () => {
-        const { errors } = await processFields({ content: [] }, [content], fakeCtx());
+        const { errors } = await parseFields({ content: [] }, [content], fakeCtx());
         expect(errors).toEqual({});
     });
 });
@@ -575,7 +575,7 @@ describe('tree', () => {
     });
 
     it('root node error keyed "nav[<id>].label"', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { nav: [{ _id: 'n1', label: '' }] },
             [nav],
             fakeCtx()
@@ -584,7 +584,7 @@ describe('tree', () => {
     });
 
     it('_children is never a path segment — depth 2 stays flat', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             {
                 nav: [
                     {
@@ -602,7 +602,7 @@ describe('tree', () => {
     });
 
     it('depth 3 nodes also address as "nav[<id>].label"', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             {
                 nav: [
                     {
@@ -625,7 +625,7 @@ describe('tree', () => {
     });
 
     it('mints _id at every depth', async () => {
-        const { values } = await processFields(
+        const { values } = await parseFields(
             { nav: [{ label: 'a', _children: [{ label: 'b' }] }] },
             [nav],
             fakeCtx()
@@ -638,7 +638,7 @@ describe('tree', () => {
     });
 
     it('coerce applies to nested nodes', async () => {
-        const { values } = await processFields(
+        const { values } = await parseFields(
             {
                 nav: [
                     {
@@ -664,12 +664,12 @@ describe('tree', () => {
 
     it('does not mutate the input tree', async () => {
         const input = [{ label: 'a', _children: [{ label: 'b' }] }];
-        await processFields({ nav: input }, [nav], fakeCtx());
+        await parseFields({ nav: input }, [nav], fakeCtx());
         expect(input).toEqual([{ label: 'a', _children: [{ label: 'b' }] }]);
     });
 
     it('non-array _children is left alone', async () => {
-        const { values, errors } = await processFields(
+        const { values, errors } = await parseFields(
             { nav: [{ _id: 'n1', label: 'a', _children: 'oops' }] },
             [nav],
             fakeCtx()
@@ -684,7 +684,7 @@ describe('tree', () => {
         for (let i = 0; i < 200; i += 1) {
             node = { label: '', _children: [node] };
         }
-        const { errors } = await processFields({ nav: [node] }, [nav], fakeCtx());
+        const { errors } = await parseFields({ nav: [node] }, [nav], fakeCtx());
         // Every node has an empty required label, so an uncapped walk would
         // report 201 errors. The cap keeps it far below that.
         const count = Object.keys(errors).length;
@@ -707,7 +707,7 @@ describe('container item counts', () => {
     });
 
     it('below min → "Must have at least 2 items"', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { sections: [{ _id: 'a1', title: 'a' }] },
             [bounded],
             fakeCtx()
@@ -716,7 +716,7 @@ describe('container item counts', () => {
     });
 
     it('above max → "Must have at most 3 items"', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             {
                 sections: [{ _id: 'a1' }, { _id: 'a2' }, { _id: 'a3' }, { _id: 'a4' }],
             },
@@ -727,7 +727,7 @@ describe('container item counts', () => {
     });
 
     it('within bounds → no error', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { sections: [{ _id: 'a1' }, { _id: 'a2' }] },
             [bounded],
             fakeCtx()
@@ -736,12 +736,12 @@ describe('container item counts', () => {
     });
 
     it('min fires on an empty (optional) container', async () => {
-        const { errors } = await processFields({ sections: [] }, [bounded], fakeCtx());
+        const { errors } = await parseFields({ sections: [] }, [bounded], fakeCtx());
         expect(errors.sections).toEqual(['Must have at least 2 items']);
     });
 
     it('required + empty wins over the count message', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { sections: [] },
             [
                 field({
@@ -758,7 +758,7 @@ describe('container item counts', () => {
     });
 
     it('applies to blocks', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { content: [{ _id: 'b1', _type: 'hero' }] },
             [
                 field({
@@ -774,7 +774,7 @@ describe('container item counts', () => {
     });
 
     it('applies to tree root nodes', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { nav: [{ _id: 'n1', _children: [{ _id: 'n2' }, { _id: 'n3' }] }] },
             [field({ name: 'nav', type: 'tree', min: 2, fields: [] })],
             fakeCtx()
@@ -783,7 +783,7 @@ describe('container item counts', () => {
     });
 
     it('does NOT apply to group (not an array)', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { seo: { title: 'a' } },
             [
                 field({
@@ -800,7 +800,7 @@ describe('container item counts', () => {
     });
 
     it('does NOT apply to a non-container type', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { tags: ['a'] },
             [field({ name: 'tags', type: 'multiselect', min: 3 })],
             fakeCtx()
@@ -824,28 +824,28 @@ describe('stage below a container', () => {
     });
 
     it("'save' skips a required child, keyed by its _id path", async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { sections: [{ _id: 'a1', title: '' }] },
             [sections],
-            fakeCtx('create', 'save')
+            fakeCtx('create', 'partial')
         );
         expect(errors).toEqual({});
     });
 
     it("'publish' reports the same required child at its _id path", async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { sections: [{ _id: 'a1', title: '' }] },
             [sections],
-            fakeCtx('create', 'publish')
+            fakeCtx('create', 'complete')
         );
         expect(errors['sections[a1].title']).toEqual(['This field is required']);
     });
 
     it("a correctness failure inside an item still fires on 'save'", async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { sections: [{ _id: 'a1', title: '', link: 'not-a-url' }] },
             [sections],
-            fakeCtx('create', 'save')
+            fakeCtx('create', 'partial')
         );
         expect(errors).toEqual({ 'sections[a1].link': ['Must be a valid URL'] });
     });
@@ -858,7 +858,7 @@ describe('stage below a container', () => {
 describe('scope resolution', () => {
     it('ctx.values inside an item is the ITEM, not the root record', async () => {
         const captured: Record<string, unknown>[] = [];
-        await processFields(
+        await parseFields(
             {
                 password: 'root-secret',
                 sections: [{ _id: 'a1', password: 'item-secret', confirm: 'x' }],
@@ -893,7 +893,7 @@ describe('scope resolution', () => {
     });
 
     it('a cross-field rule compares siblings within its own item', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             {
                 sections: [
                     { _id: 'a1', a: 'x', b: 'x' },
@@ -927,7 +927,7 @@ describe('scope resolution', () => {
 
     it('ctx.path is the segment list for the field', async () => {
         let path: unknown;
-        await processFields(
+        await parseFields(
             { sections: [{ _id: 'a1', title: 'x' }] },
             [
                 field({
@@ -960,7 +960,7 @@ describe('scope resolution', () => {
 
     it('a top-level ctx.path is a single field segment', async () => {
         let path: unknown;
-        await processFields(
+        await parseFields(
             { title: 'x' },
             [
                 field({
@@ -988,7 +988,7 @@ describe('scope resolution', () => {
 
 describe('top-level error keys', () => {
     it('a top-level field still keys by its bare name', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { title: '' },
             [field({ name: 'title', type: 'text', required: true })],
             fakeCtx()
@@ -997,7 +997,7 @@ describe('top-level error keys', () => {
     });
 
     it('a container error keys by the container name alone', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             {},
             [
                 field({
@@ -1020,7 +1020,7 @@ describe('top-level error keys', () => {
 describe('invalid field names', () => {
     it('a top-level name containing a dot throws, naming the field and the rule', async () => {
         await expect(
-            processFields(
+            parseFields(
                 { 'user.email': 'x' },
                 [field({ name: 'user.email', type: 'email' })],
                 fakeCtx()
@@ -1032,13 +1032,13 @@ describe('invalid field names', () => {
 
     it('a bracket in a name throws the same way', async () => {
         await expect(
-            processFields({}, [field({ name: 'answers[0]', type: 'text' })], fakeCtx())
+            parseFields({}, [field({ name: 'answers[0]', type: 'text' })], fakeCtx())
         ).rejects.toThrow(/Field name 'answers\[0\]'/);
     });
 
     it('a name nested inside a container throws too', async () => {
         await expect(
-            processFields(
+            parseFields(
                 { seo: {} },
                 [
                     field({
@@ -1054,7 +1054,7 @@ describe('invalid field names', () => {
 
     it('an empty name throws, saying it must not be empty', async () => {
         await expect(
-            processFields({}, [field({ name: '', type: 'text' })], fakeCtx())
+            parseFields({}, [field({ name: '', type: 'text' })], fakeCtx())
         ).rejects.toThrow(
             "Field name '' (type 'text') cannot be used: field names must not be empty"
         );

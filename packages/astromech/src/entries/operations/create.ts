@@ -14,11 +14,11 @@ import { pruneDanglingRelations } from '../internal/dangling-relations';
 import { asEntry } from '../internal/records';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility';
 import { UnknownEntryTypeError } from '../errors';
-import { createEntryFieldReads } from '../reads';
+import { createEntryLookups } from '../lookups';
 import { resolveEntryType } from '@/utilities/entry-type-ids';
-import { entryValidationStage } from '../validation-stage.shared';
+import { entryValidationMode } from '../validation-mode.shared';
 import { flattenEntryFields } from '@/fields/flatten';
-import { processFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/pipeline';
 import { ValidationError } from '@/errors/index';
 import { getConfig } from '@/config/registry';
 import type { EntryStorage, StorageDb } from '../storage/types';
@@ -98,21 +98,21 @@ export async function create(params: {
 
     const resourceValidate = entryType.validate;
 
-    const processed = await processFields(incomingFields, fieldDefs, {
+    const processed = await parseFields(incomingFields, fieldDefs, {
         operation: 'create',
-        stage: entryValidationStage({
+        validation: entryValidationMode({
             status,
             hasStatuses: entryType.capabilities.statuses !== false,
         }),
-        host: { kind: 'entry', record: null },
+        resource: { kind: 'entry', record: null },
         user,
-        reads: createEntryFieldReads(storage, { type, locale }),
+        lookups: createEntryLookups(storage, { type, locale }),
         ...(resourceValidate ? { resourceValidate } : {}),
     });
     if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
         throw ValidationError.fromFieldErrors(processed.errors, processed.form);
     }
-    // After `processFields` (its minted item ids are what the traversal needs)
+    // After `parseFields` (its minted item ids are what the traversal needs)
     // and before the row is written, so the index derives from the pruned values.
     const pruned = await pruneDanglingRelations(
         fieldDefs,

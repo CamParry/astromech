@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { processFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/pipeline';
 import { compileFormFields } from '../../../../plugins/forms/src/fields/compile';
 
 describe('compileFormFields', () => {
@@ -182,7 +182,7 @@ describe('compileFormFields', () => {
     });
 
     // A form saved before the builder enforced its `name` pattern can still hold
-    // a name the field-path grammar cannot address. `processFields` throws on one,
+    // a name the field-path grammar cannot address. `parseFields` throws on one,
     // so compiling it would turn every submission into a 500 — skip it instead.
     it.each(['user.email', 'answers[0]', 'a]b'])(
         'skips an instance whose name breaks the field-path grammar (%s)',
@@ -201,11 +201,11 @@ describe('compileFormFields', () => {
             { _type: 'email', name: 'user.email', label: 'Email', required: true },
             { _type: 'text', name: 'message', label: 'Message', required: true },
         ]);
-        const { errors } = await processFields({ message: '' }, definitions, {
+        const { errors } = await parseFields({ message: '' }, definitions, {
             operation: 'create',
-            host: { kind: 'entry', record: {} },
+            resource: { kind: 'entry', record: {} },
             user: null,
-            reads: { isUnique: async () => true },
+            lookups: { isUnique: async () => true },
         });
         expect(errors).toEqual({ message: ['This field is required'] });
     });

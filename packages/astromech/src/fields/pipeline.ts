@@ -4,7 +4,7 @@
  * Pure logic: no domain/DB imports. The `reads` handle on `ctx` is the
  * injection point for any async checks (uniqueness, references).
  *
- * Public API via `astromech/fields` (`processFields`). Entries is not its
+ * Public API via `astromech/fields` (`parseFields`). Entries is not its
  * only consumer: any plugin that composes `Field[]` at runtime can
  * validate through the same coerce → default → validate path as core.
  *
@@ -15,9 +15,9 @@
  * `sections[a1].items[b2].title` and a top-level one stays the bare field name.
  * Nothing here switches on field type.
  *
- * Validation splits in two along `ctx.stage`. COMPLETENESS — `required` and a
- * container's `min` item count — answers "is this finished?" and runs only at
- * `'publish'`, so a draft save can leave work half-done. CORRECTNESS —
+ * Validation splits in two along `ctx.validation`. COMPLETENESS — `required` and a
+ * container's `min` item count — answers "is this finished?" and runs only when
+ * `'complete'`, so a draft save can leave work half-done. CORRECTNESS —
  * everything else, including a container's `max` — answers "is what you typed
  * valid?" and runs on every write, because storing a malformed URL is a
  * data-integrity problem rather than an incomplete one.
@@ -62,7 +62,7 @@ import type {
     FieldValidationContext,
     ResourceValidator,
     ValidationRule,
-    ValidationStage,
+    ValidationMode,
 } from '@/types/fields';
 import { getFieldType } from './field-type-registry';
 import { formatInstancePath, isValidFieldName } from './field-path';
@@ -188,7 +188,7 @@ async function runRule(
     }
 
     if ('unique' in rule) {
-        const isUniq = await ctx.reads.isUnique(ctx.field, value);
+        const isUniq = await ctx.lookups.isUnique(ctx.field, value);
         if (!isUniq) return 'Already in use';
         return null;
     }
@@ -209,15 +209,15 @@ async function runRule(
 // ---------------------------------------------------------------------------
 
 /**
- * The host-supplied half of the validation context — everything not per-field.
- * `stage` and `collectWarnings` are optional for callers and concrete inside
- * (see `processFields`).
+ * The caller-supplied half of the validation context — everything not per-field.
+ * `validation` and `collectWarnings` are optional for callers and concrete inside
+ * (see `parseFields`).
  */
 type PipelineContext = Omit<
     FieldValidationContext,
-    'value' | 'values' | 'field' | 'path' | 'stage'
+    'value' | 'values' | 'field' | 'path' | 'validation'
 > & {
-    stage?: ValidationStage;
+    validation?: ValidationMode;
     /** Evaluate warning-severity rules. Default `false`. */
     collectWarnings?: boolean;
     /** Whole-resource validator, run after every field. */
@@ -229,7 +229,7 @@ type PipelineContext = Omit<
     coerceOnly?: ReadonlySet<string>;
 };
 
-/** The same context once `stage` and `collectWarnings` are concrete. */
+/** The same context once `validation` and `collectWarnings` are concrete. */
 type ScopeContext = Omit<
     FieldValidationContext,
     'value' | 'values' | 'field' | 'path'
@@ -313,22 +313,22 @@ async function processScope(
         let error: string | null = null;
         let warning: string | null = null;
 
-        if (ctx.stage === 'publish' && field.required === true && isEmpty(v)) {
+        if (ctx.validation === 'complete' && field.required === true && isEmpty(v)) {
             // 1. Required + empty: skips all other rules, warnings included — a
             // field the author has not filled in should not also be nagged
-            // about. A completeness check, so a `'save'` write never reaches
+            // about. A completeness check, so a `'partial'` write never reaches
             // this branch.
             error = 'This field is required';
         } else {
             // 2. `min`/`max` on a container mean ITEM COUNTS, not numeric bounds
             // — checked outside the `isEmpty` guard so that `min` still fires on
             // an empty (but not required) container, which is its whole point.
-            // `min` is completeness (publish only); `max` is correctness, so it
+            // `min` is completeness (complete only); `max` is correctness, so it
             // runs on a draft save too — no write should store more items than
             // the type permits.
             if (fieldType?.children !== undefined && Array.isArray(v)) {
                 if (
-                    ctx.stage === 'publish' &&
+                    ctx.validation === 'complete' &&
                     field.min !== undefined &&
                     v.length < field.min
                 ) {
@@ -347,10 +347,10 @@ async function processScope(
                     field,
                     path: segments,
                     operation: ctx.operation,
-                    stage: ctx.stage,
-                    host: ctx.host,
+                    validation: ctx.validation,
+                    resource: ctx.resource,
                     user: ctx.user,
-                    reads: ctx.reads,
+                    lookups: ctx.lookups,
                 };
 
                 // 3. The type's own validator, BEFORE the author's rules: an
@@ -396,7 +396,7 @@ async function processScope(
 }
 
 /**
- * Run every field definition over `values`, then the resource validator.
+ * Run every field definition over `fields`, then the resource validator.
  * Returns the coerced values plus blocking `errors`, advisory `warnings` and
  * form-level `form` messages.
  *
@@ -405,8 +405,8 @@ async function processScope(
  * means the schema is unknown here, not that there are no fields, so nothing is
  * dropped in that case.
  */
-export async function processFields(
-    values: Record<string, unknown>,
+export async function parseFields(
+    fields: Record<string, unknown>,
     definitions: Field[],
     ctx: PipelineContext
 ): Promise<{
@@ -419,18 +419,18 @@ export async function processFields(
     // `projectToSchema` hands back its input when the schema is unknown, and the
     // pipeline mutates what it is given, so that case still needs a copy.
     const result =
-        declared.length === 0 ? { ...values } : projectToSchema(values, declared);
+        declared.length === 0 ? { ...fields } : projectToSchema(fields, declared);
     const errors: FieldErrors = {};
     const warnings: FieldErrors = {};
-    // Default to `'publish'`, i.e. today's behaviour: media, users and settings
+    // Default to `'complete'`, i.e. today's behaviour: media, users and settings
     // have no draft concept, so completeness must keep applying to them.
-    const stage: ValidationStage = ctx.stage ?? 'publish';
+    const validation: ValidationMode = ctx.validation ?? 'complete';
     const collectWarnings = ctx.collectWarnings ?? false;
     await processScope(
         result,
         definitions,
         [],
-        { ...ctx, stage, collectWarnings },
+        { ...ctx, validation, collectWarnings },
         errors,
         warnings
     );
@@ -443,10 +443,10 @@ export async function processFields(
             values: result,
             definitions,
             operation: ctx.operation,
-            stage,
-            host: ctx.host,
+            validation,
+            resource: ctx.resource,
             user: ctx.user,
-            reads: ctx.reads,
+            lookups: ctx.lookups,
         });
         if (typeof reported === 'string') {
             if (reported !== '') form.push(reported);

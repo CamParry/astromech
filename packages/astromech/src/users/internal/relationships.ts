@@ -13,7 +13,7 @@ import type { JsonObject } from '@/types/index';
 import { createUserStorage } from '../storage';
 
 /**
- * Re-index a user's relationship fields. `fields` must be post-`processFields`
+ * Re-index a user's relationship fields. `fields` must be post-`parseFields`
  * values — item ids are minted during that pass.
  */
 export async function indexUserRelationships(
@@ -30,7 +30,7 @@ export async function indexUserRelationships(
 /**
  * Every user as a relationship source, with the edges its STORED field data
  * holds. The rebuild side of `indexUserRelationships`. Stored data has already
- * been through `processFields`, so the traversal mints no ids here.
+ * been through `parseFields`, so the traversal mints no ids here.
  */
 export async function collectUserRelationshipSources(): Promise<
     RelationshipIndexSource[]

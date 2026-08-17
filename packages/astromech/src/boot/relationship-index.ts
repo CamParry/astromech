@@ -15,7 +15,7 @@
  * ## Only ever recompute from STORED data
  *
  * The edge traversal mints a missing item `_id` with `crypto.randomUUID()`, so
- * it is non-deterministic on data that has never been through `processFields`.
+ * it is non-deterministic on data that has never been through `parseFields`.
  * A rebuild is safe only because every collector reads stored rows, whose items
  * already carry their ids — re-deriving from raw input would invent fresh ids
  * on every run and produce instance paths that address nothing.

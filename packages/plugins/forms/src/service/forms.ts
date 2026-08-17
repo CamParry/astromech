@@ -4,9 +4,9 @@
  * so neither may assume a session, and both report failure as a result shape.
  */
 
-import type { Field, FieldErrors, FieldReads } from 'astromech';
+import type { Field, FieldErrors, FieldLookups } from 'astromech';
 import { defineServiceMethod, z } from 'astromech';
-import { processFields } from 'astromech/fields';
+import { parseFields } from 'astromech/fields';
 import { compileFormFields } from '../fields/compile';
 import {
     AFTER_SUBMIT,
@@ -99,14 +99,14 @@ export function buildFormsService(
                 if (form === null) return formError(NOT_ACCEPTING);
 
                 const definitions = compileFormFields(entryFields(form)['fields']);
-                const { values, errors } = await processFields(
+                const { values, errors } = await parseFields(
                     isRecord(input?.data) ? input.data : {},
                     definitions,
                     {
                         operation: 'create',
-                        host: { kind: 'entry', record: null },
+                        resource: { kind: 'entry', record: null },
                         user: ctx.user,
-                        reads: noReads,
+                        lookups: noReads,
                     }
                 );
                 // Validation runs BEFORE the spam gate so a legitimate user
@@ -199,11 +199,11 @@ const NOT_ACCEPTING = 'This form is not accepting submissions';
 const TOO_MANY = 'Too many submissions — please try again shortly';
 
 /**
- * `processFields` only reaches this port for DB-backed rules, which the form
+ * `parseFields` only reaches this port for DB-backed rules, which the form
  * compiler never emits. It throws rather than answering `true` so a compiler
  * change that does emit one fails loudly.
  */
-const noReads: FieldReads = {
+const noReads: FieldLookups = {
     isUnique: () => {
         throw new Error(
             '[@astromech/forms] a compiled form field emitted a read-backed validation rule, ' +

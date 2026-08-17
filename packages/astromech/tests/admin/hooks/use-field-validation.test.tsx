@@ -3,7 +3,7 @@
  *
  * The browser-side validation runner and, more importantly, its REVEAL policy.
  *
- * The runner itself is the server's own `processFields`, so what is wrong is
+ * The runner itself is the server's own `parseFields`, so what is wrong is
  * already covered by the pipeline's own tests. What is only testable here is
  * *when* the author is told: a pristine field stays silent on blur (tabbing
  * through a form to survey it must not turn it red), a dirty one speaks up, and
@@ -92,11 +92,11 @@ async function settle(): Promise<void> {
 /** Run `validateAll` inside `act` so the reveal it performs is flushed. */
 async function validateAll(
     mounted: Mounted,
-    stage: 'save' | 'publish'
+    validation: 'partial' | 'complete'
 ): Promise<FieldErrors> {
     let errors: FieldErrors = {};
     await act(async () => {
-        errors = await mounted.handle().validateAll(stage);
+        errors = await mounted.handle().validateAll(validation);
     });
     return errors;
 }
@@ -205,17 +205,17 @@ describe('required', () => {
         m.unmount();
     });
 
-    it('should be absent from a save-stage validateAll', async () => {
+    it('should be absent from a partial validateAll', async () => {
         const m = mountValidation([titleField], { title: '' });
 
-        expect(await validateAll(m, 'save')).toEqual({});
+        expect(await validateAll(m, 'partial')).toEqual({});
         m.unmount();
     });
 
-    it('should be present in a publish-stage validateAll', async () => {
+    it('should be present in a complete validateAll', async () => {
         const m = mountValidation([titleField], { title: '' });
 
-        expect(await validateAll(m, 'publish')).toEqual({
+        expect(await validateAll(m, 'complete')).toEqual({
             title: ['This field is required'],
         });
         expect(m.errors()).toEqual({ title: ['This field is required'] });
@@ -236,7 +236,7 @@ describe('server-only rules', () => {
         };
         const m = mountValidation([slug], { slug: 'already-taken' });
 
-        expect(await validateAll(m, 'publish')).toEqual({});
+        expect(await validateAll(m, 'complete')).toEqual({});
         m.unmount();
     });
 
@@ -256,7 +256,7 @@ describe('server-only rules', () => {
         };
         const m = mountValidation([code], { code: 'anything' });
 
-        expect(await validateAll(m, 'publish')).toEqual({});
+        expect(await validateAll(m, 'complete')).toEqual({});
         m.unmount();
     });
 });
@@ -322,7 +322,7 @@ describe('warnings', () => {
     it('should file a warning-severity rule under warnings, not errors', async () => {
         const m = mountValidation([summary], { summary: TOO_LONG });
 
-        await validateAll(m, 'publish');
+        await validateAll(m, 'complete');
 
         expect(m.errors()).toEqual({});
         expect(m.warnings()).toEqual({ summary: ['Must be at most 10 characters'] });
@@ -332,7 +332,7 @@ describe('warnings', () => {
     it('should not block a submit', async () => {
         const m = mountValidation([summary], { summary: TOO_LONG });
 
-        expect(await validateAll(m, 'publish')).toEqual({});
+        expect(await validateAll(m, 'complete')).toEqual({});
         m.unmount();
     });
 
@@ -367,7 +367,7 @@ describe('warnings', () => {
         };
         const m = mountValidation([both], { summary: TOO_LONG });
 
-        await validateAll(m, 'publish');
+        await validateAll(m, 'complete');
 
         // Both are reported; `FieldWrapper` is what drops the warning in favour
         // of the error (see field-wrapper-warning.test.tsx).
@@ -420,7 +420,7 @@ describe('server errors', () => {
         const m = mountValidation([linkField], { link: INVALID_URL });
         act(() => m.handle().setServerErrors({ link: ['Already in use'] }));
 
-        await validateAll(m, 'publish');
+        await validateAll(m, 'complete');
 
         expect(m.errors()).toEqual({ link: ['Must be a valid URL'] });
         m.unmount();
@@ -451,7 +451,7 @@ describe('form state', () => {
         const values: Record<string, unknown> = {};
         const m = mountValidation([withDefault], values, 'create');
 
-        await validateAll(m, 'publish');
+        await validateAll(m, 'complete');
 
         expect(values).toEqual({});
         m.unmount();

@@ -30,7 +30,7 @@ import type {
 } from '../../types/index';
 // Deep import of a pure leaf: the browser must pick the same stage the server
 // will, and the entries barrel would drag a domain service into the bundle.
-import { entryValidationStage } from '@/entries/validation-stage.shared';
+import { entryValidationMode } from '@/entries/validation-mode.shared';
 import { AstromechApiError } from '../../transport/http/client/index';
 
 // ============================================================================
@@ -153,7 +153,7 @@ export function useEntryForm({
             // so the browser and the server agree in every case, including a
             // statuses-off type whose payload carries no status at all.
             const errors = await validation.validateAll(
-                entryValidationStage({ status: payload.status, hasStatuses })
+                entryValidationMode({ status: payload.status, hasStatuses })
             );
             if (Object.keys(errors).length > 0) {
                 toast({ message: validationMessage(errors), variant: 'error' });

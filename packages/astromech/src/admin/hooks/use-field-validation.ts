@@ -1,7 +1,7 @@
 /**
  * Client-side field validation for the entry form.
  *
- * This is not a second rule engine. It runs the SAME `processFields` the server
+ * This is not a second rule engine. It runs the SAME `parseFields` the server
  * runs, over the same `Field[]` the server was given — the admin
  * config is built from the very same definitions and shipped to the browser.
  * There is therefore nothing to keep in sync: a new rule, a new field type or a
@@ -23,9 +23,9 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Field, FieldErrors, FieldReads, ValidationStage } from '@/types/index';
+import type { Field, FieldErrors, FieldLookups, ValidationMode } from '@/types/index';
 // Deep import: the `fields/` barrel reaches server code (virtual config / DB).
-import { processFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/pipeline';
 
 /**
  * Data-dependent checks are server-only and are skipped in silence.
@@ -38,7 +38,7 @@ import { processFields } from '@/fields/pipeline';
  * None is surfaced as a "pending" state: the server runs them all on submit and
  * answers with a 422.
  */
-const CLIENT_READS: FieldReads = { isUnique: () => Promise.resolve(true) };
+const CLIENT_LOOKUPS: FieldLookups = { isUnique: () => Promise.resolve(true) };
 
 export type FieldValidationHandle = {
     /** What the UI should render: server errors, overlaid by revealed client ones. */
@@ -49,8 +49,8 @@ export type FieldValidationHandle = {
     markDirty: (path: string) => void;
     /** Focus left this field. */
     reportBlur: (path: string) => void;
-    /** Reveal everything at `stage` and hand back the full error map. */
-    validateAll: (stage: ValidationStage) => Promise<FieldErrors>;
+    /** Reveal everything at `validation` and hand back the full error map. */
+    validateAll: (validation: ValidationMode) => Promise<FieldErrors>;
     setServerErrors: (errors: FieldErrors) => void;
     resetServerErrors: () => void;
 };
@@ -106,20 +106,20 @@ export function useFieldValidation({
     // Monotonic run id: a slower earlier run must not overwrite a later one.
     const runIdRef = useRef(0);
 
-    const run = useCallback(async (stage: ValidationStage): Promise<RunResult> => {
+    const run = useCallback(async (validation: ValidationMode): Promise<RunResult> => {
         // `structuredClone` is belt-and-braces. The pipeline clones on its
         // way in, but it also writes coerced values and (on 'create') seeded
         // defaults back into what it was handed, and none of that may leak
         // into the live form state. Only the message maps are used.
-        const { errors, warnings } = await processFields(
+        const { errors, warnings } = await parseFields(
             structuredClone(valuesRef.current),
             definitionsRef.current,
             {
                 operation: operationRef.current,
-                stage,
-                host: { kind: 'entry', record: null },
+                validation,
+                resource: { kind: 'entry', record: null },
                 user: null,
-                reads: CLIENT_READS,
+                lookups: CLIENT_LOOKUPS,
                 collectWarnings: true,
             }
         );
@@ -147,7 +147,7 @@ export function useFieldValidation({
             // `revealedSubset`, so a revealed path with nothing to say is silent.
             revealedRef.current.add(path);
             const runId = ++runIdRef.current;
-            void run('save').then(({ errors, warnings }) => {
+            void run('partial').then(({ errors, warnings }) => {
                 if (runId !== runIdRef.current) return;
                 setClientErrors(revealedSubset(errors, revealedRef.current));
                 setClientWarnings(revealedSubset(warnings, revealedRef.current));
@@ -162,7 +162,7 @@ export function useFieldValidation({
     useEffect(() => {
         if (revealedRef.current.size === 0) return;
         const runId = ++runIdRef.current;
-        void run('save').then(({ errors, warnings }) => {
+        void run('partial').then(({ errors, warnings }) => {
             if (runId !== runIdRef.current) return;
             for (const path of [...revealedRef.current]) {
                 if (errors[path] === undefined && warnings[path] === undefined)
@@ -174,9 +174,9 @@ export function useFieldValidation({
     }, [values, run]);
 
     const validateAll = useCallback(
-        async (stage: ValidationStage): Promise<FieldErrors> => {
+        async (validation: ValidationMode): Promise<FieldErrors> => {
             const runId = ++runIdRef.current;
-            const { errors, warnings } = await run(stage);
+            const { errors, warnings } = await run(validation);
             // The caller awaited THIS run and acts on its result, so it is
             // returned either way; only the revealed state defers to a newer run.
             if (runId === runIdRef.current) {
@@ -206,8 +206,8 @@ export function useFieldValidation({
     // now, where the server's answer describes the last submitted value.
     //
     // `required` can never appear here through `reportBlur`: the field is empty,
-    // so it fails the dirty gate, and the 'save' stage skips completeness checks
-    // anyway. It reaches the UI only via `validateAll('publish')`.
+    // so it fails the dirty gate, and the 'partial' mode skips completeness checks
+    // anyway. It reaches the UI only via `validateAll('complete')`.
     const errors = useMemo(
         () => ({ ...serverErrors, ...clientErrors }),
         [serverErrors, clientErrors]

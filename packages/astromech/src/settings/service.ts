@@ -14,10 +14,10 @@ import { createSettingsStorage } from './storage';
 import type { SettingRow } from './schema';
 import { mergeLocaleSetting } from './page-values.shared';
 import { isPublicSettingKey } from './visibility';
-import { processFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/pipeline';
 import { flattenEntryFields } from '@/fields/flatten';
 import { existingEntryTypes } from '@/database/storage/resource-existence';
-import { fieldReadsFromRecords } from '@/fields/field-reads';
+import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { getCurrentUser } from '@/request-context/index';
 import { ValidationError } from '@/errors/validation';
 
@@ -102,14 +102,14 @@ export const settingsService: SettingsService = {
             const resourceValidate = config.admin?.pages?.find(
                 (p) => p.path === page.path
             )?.validate;
-            const processed = await processFields(
+            const processed = await parseFields(
                 effectiveValue as Record<string, unknown>,
                 presentDefs,
                 {
                     operation: 'update',
-                    host: { kind: 'setting', record: null },
+                    resource: { kind: 'setting', record: null },
                     user: getCurrentUser(),
-                    reads: fieldReadsFromRecords({
+                    lookups: fieldLookupsFromRecords({
                         load: async () =>
                             (await settingsService.all({ full: true })).filter(
                                 (s) =>

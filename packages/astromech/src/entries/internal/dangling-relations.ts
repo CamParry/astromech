@@ -29,7 +29,7 @@ type ExistingIds = (ids: string[]) => Promise<Set<string>>;
 
 /**
  * Field values with dead relation ids removed, plus what was dropped. `values`
- * MUST be post-`processFields`: the traversal mints a missing item `_id`, so on
+ * MUST be post-`parseFields`: the traversal mints a missing item `_id`, so on
  * raw input it invents ids and addresses nothing. Never logs — the count is the
  * caller's to report.
  */

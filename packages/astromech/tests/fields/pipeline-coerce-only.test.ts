@@ -6,9 +6,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { Field, ValidationStage } from '@/types/fields';
+import type { Field, ValidationMode } from '@/types/fields';
 import { registerFieldType } from '@/fields/field-type-registry';
-import { processFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/pipeline';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -16,16 +16,16 @@ import { processFields } from '@/fields/pipeline';
 
 type CtxOverrides = Partial<{
     operation: 'create' | 'update';
-    stage: ValidationStage;
+    validation: ValidationMode;
     coerceOnly: ReadonlySet<string>;
 }>;
 
 function fakeCtx(overrides: CtxOverrides = {}) {
     return {
         operation: 'update' as const,
-        host: { kind: 'entry' as const, record: {} },
+        resource: { kind: 'entry' as const, record: {} },
         user: null,
-        reads: { isUnique: async () => true },
+        lookups: { isUnique: async () => true },
         ...overrides,
     };
 }
@@ -55,12 +55,12 @@ describe('coerceOnly — root fields', () => {
     ];
 
     it('coerces everything when absent', async () => {
-        const { values } = await processFields({ a: 'x', b: 'y' }, defs, fakeCtx());
+        const { values } = await parseFields({ a: 'x', b: 'y' }, defs, fakeCtx());
         expect(values).toEqual({ a: 'x!', b: 'y!' });
     });
 
     it('coerces only the named fields', async () => {
-        const { values } = await processFields(
+        const { values } = await parseFields(
             { a: 'x', b: 'y' },
             defs,
             fakeCtx({ coerceOnly: new Set(['a']) })
@@ -69,7 +69,7 @@ describe('coerceOnly — root fields', () => {
     });
 
     it('an empty set coerces nothing', async () => {
-        const { values } = await processFields(
+        const { values } = await parseFields(
             { a: 'x', b: 'y' },
             defs,
             fakeCtx({ coerceOnly: new Set<string>() })
@@ -97,7 +97,7 @@ describe('coerceOnly — container subtrees', () => {
     ];
 
     it('a patched container coerces its whole subtree', async () => {
-        const { values } = await processFields(
+        const { values } = await parseFields(
             {
                 sections: [{ _id: 'a1', label: 'one' }],
                 other: [{ _id: 'b1', label: 'two' }],
@@ -118,7 +118,7 @@ describe('coerceOnly — container subtrees', () => {
 
 describe('coerceOnly — validation still covers every field', () => {
     it('an uncoerced field is still validated', async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { title: '' },
             [field({ name: 'title', type: 'text', required: true })],
             fakeCtx({ coerceOnly: new Set<string>() })
@@ -127,7 +127,7 @@ describe('coerceOnly — validation still covers every field', () => {
     });
 
     it('an uncoerced container is still normalized by children()', async () => {
-        const { values } = await processFields(
+        const { values } = await parseFields(
             { sections: [{ label: 'one' }] },
             [
                 field({

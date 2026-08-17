@@ -28,15 +28,15 @@ import { createStorage } from '@/database/storage/create-storage';
 import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { entriesTable } from '@/entries/schema';
 import { getEntryStorage, hasEntryStorageOverride } from '@/entries/storage/registry';
-import { createEntryFieldReads } from '@/entries/reads';
+import { createEntryLookups } from '@/entries/lookups';
 import { qualifyEntryType, resolveEntryType } from '@/utilities/entry-type-ids';
-import { entryValidationStage } from '@/entries/validation-stage.shared';
+import { entryValidationMode } from '@/entries/validation-mode.shared';
 import { createMediaStorage } from '@/media/storage';
 import { createUserStorage } from '@/users/storage';
 import { settingsService } from '@/settings/service';
-import { fieldReadsFromRecords } from '@/fields/field-reads';
+import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenEntryFields, flattenFieldNodes } from '@/fields/flatten';
-import { processFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/pipeline';
 import type { EntryStatus, JsonObject, ResourceType } from '@/types/index';
 import type { FieldErrors } from '@/types/fields';
 
@@ -146,18 +146,18 @@ async function checkEntryRow(
     report.rowsChecked += 1;
     const definitions = flattenEntryFields(entryType.fields);
     const resourceValidate = entryType.validate;
-    const processed = await processFields(
+    const processed = await parseFields(
         row.fields as Record<string, unknown>,
         definitions,
         {
             operation: 'update',
-            stage: entryValidationStage({
+            validation: entryValidationMode({
                 status: row.status,
                 hasStatuses: entryType.capabilities.statuses !== false,
             }),
-            host: { kind: 'entry', record: row.record },
+            resource: { kind: 'entry', record: row.record },
             user: null,
-            reads: createEntryFieldReads(getEntryStorage(row.type), {
+            lookups: createEntryLookups(getEntryStorage(row.type), {
                 type: row.type,
                 locale: row.locale,
                 excludeId: row.id,
@@ -211,16 +211,16 @@ async function checkMedia(report: ValidationReport): Promise<void> {
 
     for (const row of rows) {
         report.rowsChecked += 1;
-        const processed = await processFields(
+        const processed = await parseFields(
             (row.fields ?? {}) as Record<string, unknown>,
             definitions,
             {
                 operation: 'update',
-                host: { kind: 'media', record: row },
+                resource: { kind: 'media', record: row },
                 user: null,
                 // Built per row: `excludeId` is what keeps a row from colliding
                 // with itself, and only the load behind it is shared.
-                reads: fieldReadsFromRecords({
+                lookups: fieldLookupsFromRecords({
                     load,
                     getId: (record) => record.id,
                     getFields: (record) =>
@@ -252,14 +252,14 @@ async function checkUsers(report: ValidationReport): Promise<void> {
 
     for (const row of rows) {
         report.rowsChecked += 1;
-        const processed = await processFields(
+        const processed = await parseFields(
             (row.fields ?? {}) as Record<string, unknown>,
             definitions,
             {
                 operation: 'update',
-                host: { kind: 'user', record: row },
+                resource: { kind: 'user', record: row },
                 user: null,
-                reads: fieldReadsFromRecords({
+                lookups: fieldLookupsFromRecords({
                     load,
                     getId: (record) => record.id,
                     getFields: (record) =>
@@ -307,11 +307,11 @@ async function checkSettings(report: ValidationReport): Promise<void> {
         const resourceValidate = getConfig().admin?.pages?.find(
             (candidate) => candidate.path === page.path
         )?.validate;
-        const processed = await processFields(value, definitions, {
+        const processed = await parseFields(value, definitions, {
             operation: 'update',
-            host: { kind: 'setting', record: null },
+            resource: { kind: 'setting', record: null },
             user: null,
-            reads: fieldReadsFromRecords({
+            lookups: fieldLookupsFromRecords({
                 // The filter is per row (it keys on this row's `baseKey`); the
                 // load behind it is the pass's single snapshot.
                 load: async () =>

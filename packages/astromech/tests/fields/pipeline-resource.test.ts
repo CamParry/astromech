@@ -7,9 +7,9 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import type { Field, ResourceValidator, ValidationStage } from '@/types/fields';
+import type { Field, ResourceValidator, ValidationMode } from '@/types/fields';
 import type { ResourceType } from '@/types/domain';
-import { processFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/pipeline';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -17,19 +17,19 @@ import { processFields } from '@/fields/pipeline';
 
 type CtxOverrides = Partial<{
     operation: 'create' | 'update';
-    stage: ValidationStage;
+    validation: ValidationMode;
     resourceValidate: ResourceValidator;
-    host: { kind: ResourceType; record: unknown };
+    resource: { kind: ResourceType; record: unknown };
     user: null;
-    reads: { isUnique: (field: Field, value: unknown) => Promise<boolean> };
+    lookups: { isUnique: (field: Field, value: unknown) => Promise<boolean> };
 }>;
 
 function fakeCtx(overrides: CtxOverrides = {}) {
     return {
         operation: 'create' as const,
-        host: { kind: 'entry' as const, record: {} },
+        resource: { kind: 'entry' as const, record: {} },
         user: null,
-        reads: { isUnique: async () => true },
+        lookups: { isUnique: async () => true },
         ...overrides,
     };
 }
@@ -46,7 +46,7 @@ const title = field({ name: 'title', type: 'text' });
 
 describe('resource validator results', () => {
     it('a string becomes a form-level message and leaves errors empty', async () => {
-        const { errors, form } = await processFields(
+        const { errors, form } = await parseFields(
             { title: 'hello' },
             [title],
             fakeCtx({
@@ -58,7 +58,7 @@ describe('resource validator results', () => {
     });
 
     it('an object lands in errors under its keys', async () => {
-        const { errors, form } = await processFields(
+        const { errors, form } = await parseFields(
             { title: 'hello' },
             [title],
             fakeCtx({
@@ -74,7 +74,7 @@ describe('resource validator results', () => {
     // `Promise<void>` and does not type-check as a `ResourceValidator`.
     it('an explicit undefined reports nothing', async () => {
         const valid: ResourceValidator = async () => undefined;
-        const { errors, form } = await processFields(
+        const { errors, form } = await parseFields(
             { title: 'hello' },
             [title],
             fakeCtx({ resourceValidate: valid })
@@ -85,7 +85,7 @@ describe('resource validator results', () => {
 
     it('null reports nothing', async () => {
         const valid: ResourceValidator = async () => null;
-        const { errors, form } = await processFields(
+        const { errors, form } = await parseFields(
             { title: 'hello' },
             [title],
             fakeCtx({ resourceValidate: valid })
@@ -101,7 +101,7 @@ describe('resource validator results', () => {
 
 describe('resource validator and field errors', () => {
     it("a field's own error keeps a key the resource validator also claims", async () => {
-        const { errors } = await processFields(
+        const { errors } = await parseFields(
             { title: 'ab' },
             [field({ name: 'title', type: 'text', validation: [{ minLength: 5 }] })],
             fakeCtx({
@@ -113,7 +113,7 @@ describe('resource validator and field errors', () => {
 
     it('it still runs when a field failed', async () => {
         const resourceValidate = vi.fn(async () => 'Form-level problem');
-        const { errors, form } = await processFields(
+        const { errors, form } = await parseFields(
             { title: 'ab' },
             [field({ name: 'title', type: 'text', validation: [{ minLength: 5 }] })],
             fakeCtx({ resourceValidate })
@@ -131,7 +131,7 @@ describe('resource validator and field errors', () => {
 describe('resource validation context', () => {
     it('receives the coerced values', async () => {
         let seen: Record<string, unknown> | undefined;
-        const { values } = await processFields(
+        const { values } = await parseFields(
             { rank: ' 42 ' },
             [field({ name: 'rank', type: 'number' })],
             fakeCtx({
@@ -145,34 +145,34 @@ describe('resource validation context', () => {
         expect(seen?.rank).toBe(42);
     });
 
-    it('receives a concrete stage when the caller passed one', async () => {
-        let seen: ValidationStage | undefined;
-        await processFields(
+    it('receives a concrete mode when the caller passed one', async () => {
+        let seen: ValidationMode | undefined;
+        await parseFields(
             { title: 'hello' },
             [title],
             fakeCtx({
-                stage: 'save',
+                validation: 'partial',
                 resourceValidate: async (ctx) => {
-                    seen = ctx.stage;
+                    seen = ctx.validation;
                     return undefined;
                 },
             })
         );
-        expect(seen).toBe('save');
+        expect(seen).toBe('partial');
     });
 
-    it('receives the publish default when the caller passed none', async () => {
-        let seen: ValidationStage | undefined;
-        await processFields(
+    it('receives the complete default when the caller passed none', async () => {
+        let seen: ValidationMode | undefined;
+        await parseFields(
             { title: 'hello' },
             [title],
             fakeCtx({
                 resourceValidate: async (ctx) => {
-                    seen = ctx.stage;
+                    seen = ctx.validation;
                     return undefined;
                 },
             })
         );
-        expect(seen).toBe('publish');
+        expect(seen).toBe('complete');
     });
 });

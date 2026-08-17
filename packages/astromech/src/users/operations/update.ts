@@ -2,9 +2,9 @@ import { getConfig } from '@/config/registry';
 import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
 import { ValidationError } from '@/errors/validation';
-import { fieldReadsFromRecords } from '@/fields/field-reads';
+import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenFieldNodes } from '@/fields/flatten';
-import { processFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/pipeline';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { getCurrentUser } from '@/request-context/index';
 import type { JsonObject, User } from '@/types/index';
@@ -42,11 +42,11 @@ export async function update(params: {
             current?.fields as Record<string, unknown> | null | undefined,
             patch
         );
-        const processed = await processFields(merged, fieldDefs, {
+        const processed = await parseFields(merged, fieldDefs, {
             operation: 'update',
-            host: { kind: 'user', record: current },
+            resource: { kind: 'user', record: current },
             user: getCurrentUser(),
-            reads: fieldReadsFromRecords({
+            lookups: fieldLookupsFromRecords({
                 load: async () => (await query({ limit: 'all' })).data,
                 getId: (r) => r.id,
                 getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
@@ -59,7 +59,7 @@ export async function update(params: {
         if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
             throw ValidationError.fromFieldErrors(processed.errors, processed.form);
         }
-        // After `processFields`, before the write — same ordering as create.
+        // After `parseFields`, before the write — same ordering as create.
         const pruned = await pruneDanglingRelations(
             fieldDefs,
             projectToSchema(processed.values, fieldDefs) as JsonObject
