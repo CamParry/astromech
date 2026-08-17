@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createElement } from 'react';
 import type {
     EmailMessage,
+    EntryCreateContext,
+    EntryUpdateContext,
     PluginContext,
     PluginDefinition,
     ResolvedConfig,
@@ -295,7 +297,12 @@ describe('runBeforeHooks', () => {
             config
         );
 
-        await runBeforeHooks('entry:beforeCreate', { type: 'posts' }, user);
+        // Dispatch never reads the context, so a partial stands in for a full one.
+        await runBeforeHooks(
+            'entry:beforeCreate',
+            { type: 'posts' } as EntryCreateContext,
+            user
+        );
         expect(seen).toEqual([{ event: { type: 'posts' }, user }]);
     });
 
@@ -314,9 +321,9 @@ describe('runBeforeHooks', () => {
             config
         );
 
-        await expect(runBeforeHooks('entry:beforeCreate', {}, null)).rejects.toThrow(
-            'blocked'
-        );
+        await expect(
+            runBeforeHooks('entry:beforeCreate', {} as EntryCreateContext, null)
+        ).rejects.toThrow('blocked');
     });
 });
 
@@ -348,7 +355,7 @@ describe('runAfterHooks', () => {
         );
 
         await expect(
-            runAfterHooks('entry:afterUpdate', {}, null)
+            runAfterHooks('entry:afterUpdate', {} as EntryUpdateContext, null)
         ).resolves.toBeUndefined();
         expect(secondRan).toBe(true);
         expect(errorSpy).toHaveBeenCalledWith(
