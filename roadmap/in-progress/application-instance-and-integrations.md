@@ -322,14 +322,30 @@ grow.
 
 Independent investigation and fix. Nothing else depends on it.
 
-- [ ] Six subpaths resolve `types` from `dist` and `default` from `src`, so a
-      source edit is live while its types are whatever the last build emitted.
-      `check:exports` compares key sets, not conditions, so it cannot see this.
-- [ ] Agreed fix pending feasibility: give the `src/exports/*` shims relative
-      imports instead of `@/`, then point `types` at `src` too. Plugin tsconfigs
-      clear `paths`, which is why the `@/` imports fail there.
-- [ ] If the fix lands, extend `check:exports` to compare conditions so the trap
-      cannot return.
+- [x] Six subpaths resolved `types` from `dist` and `default` from `src`, so a
+      source edit was live while its types were whatever the last build emitted.
+      `check:exports` compared key sets, not conditions, so it could not see it.
+- [x] The fix this file proposed — relative specifiers in the `src/exports/*`
+      shims, then `types` at `src` — was measured and dropped. It moves the `@/`
+      failures one hop deeper into `src/admin/components/**`, where they escape
+      `admin/` at once. De-aliasing the graph those subpaths reach is 825 `@/`
+      specifiers across 257 files, and Node subpath imports (the one mechanism
+      that resolves for a consumer whose tsconfig clears `paths`) need `.js`
+      suffixes, so 1298 specifiers.
+      `decisions/0060-exports-conditions-agree-within-an-entry.md` records all
+      three.
+- [x] Instead, conditions within an entry now agree. `./ui`, `./ui/fields`,
+      `./ui/layout` and `./ui/app` point both conditions at `dist`, matching
+      their `publishConfig` entries — `src/integrations/astro/vite.ts` aliases
+      all four to package source, so no host Vite graph reads the map for them.
+      `./middleware` becomes a bare string at `src`: nothing imports it as a
+      module, so it has no type surface to state.
+- [x] `check:exports` compares conditions within an entry, both `dist/` or both
+      `src/`, over both maps. It never compares across the maps — `src` here and
+      `dist` on npm is the point of the two-map design.
+- [ ] `./local` is deliberately left mixed, with a named exemption in the check.
+      It is the one subpath the trap has actually bitten, and stage 12 deletes
+      it; the exemption goes with it.
 
 ## Stage 11 — Lazy identity
 

@@ -99,3 +99,4 @@ Distinct from the neighbouring directories:
 - [0057](0057-one-application-instance-thin-framework-integrations.md) — `getAstromech()` fronts one application instance; framework glue lives in `integrations/` and stays thin
 - [0058](0058-one-name-for-the-publish-timestamp.md) — one name for the publish timestamp: the `publishAt` input alias collapses into `publishedAt`
 - [0059](0059-the-worker-entry-is-a-cloudflare-integration.md) — `createWorkerEntry` returns both Worker handlers from `integrations/cloudflare/`, superseding 0053 on placement
+- [0060](0060-exports-conditions-agree-within-an-entry.md) — an `exports` entry's `types` and `default` resolve into the same tree, and `check:exports` enforces it

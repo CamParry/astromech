@@ -42,10 +42,7 @@
             "types": "./dist/fetch/index.d.ts",
             "default": "./dist/fetch/index.js"
         },
-        "./middleware": {
-            "types": "./dist/middleware.d.ts",
-            "default": "./src/exports/middleware.ts"
-        },
+        "./middleware": "./src/exports/middleware.ts",
         "./routes/handler.ts": "./src/integrations/astro/handler.ts",
         "./media/image/sharp": {
             "types": "./dist/media/image/drivers/sharp.d.ts",
@@ -83,7 +80,7 @@
         "./media/Image": "./src/media/serving/image/Image.astro",
         "./ui": {
             "types": "./dist/admin/components/ui/index.d.ts",
-            "default": "./src/exports/admin/ui.ts"
+            "default": "./dist/admin/components/ui/index.js"
         },
         "./database/schema": {
             "types": "./dist/database/schema.d.ts",
@@ -119,15 +116,15 @@
         },
         "./ui/fields": {
             "types": "./dist/admin/components/fields/index.d.ts",
-            "default": "./src/exports/admin/ui-fields.ts"
+            "default": "./dist/admin/components/fields/index.js"
         },
         "./ui/layout": {
             "types": "./dist/admin/components/ui/layout.d.ts",
-            "default": "./src/exports/admin/ui-layout.ts"
+            "default": "./dist/admin/components/ui/layout.js"
         },
         "./ui/app": {
             "types": "./dist/admin/components/ui/app.d.ts",
-            "default": "./src/exports/admin/ui-app.ts"
+            "default": "./dist/admin/components/ui/app.js"
         }
     },
     "publishConfig": {

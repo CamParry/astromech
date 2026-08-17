@@ -82,8 +82,9 @@ Key invariants:
   over a single `globalThis.__astromech` namespace, but never a shared type. A hub
   carrying every driver would have to import every domain's types, which is what
   this DAG exists to prevent. globalThis is not a taste choice — the package ships
-  two tsup builds and six `exports` subpaths that can resolve to either `src` or
-  `dist`, so one module can be instantiated more than once in a process and the
+  two tsup builds, `exports` subpaths that resolve to `src` in the repo and
+  `dist` for npm, and Vite aliases that reach package source regardless of the
+  map, so one module can be instantiated more than once in a process and the
   global is the only slot every copy shares. `createRegistry`
   is a single-value slot: required ones resolve-or-throw, genuinely optional ones
   expose `peek()` and no `get()` at all. `createKeyedRegistry` is the same slot keyed
@@ -274,9 +275,13 @@ Cadence lives in the **database**, not in deploy config, because schedules are r
 
 Consumers import from subpaths, never deep into `src/`. The published surface is
 defined by `exports` in `package.json` — that's canonical. In the repo, the
-subpaths Vite loads resolve to `src/` so a core edit reaches `apps/demo` without
-a rebuild; `publishConfig.exports` restores the full `dist/` map for npm, and
-`pnpm run check:exports` holds the two key sets identical. The ones to know:
+Astro-loaded subpaths (`./routes/handler.ts`, `./middleware`, `./admin/shell.astro`,
+`./media/Image`, `./local`) resolve to `src/` so a core edit reaches `apps/demo`
+without a rebuild; `astromech/ui*` gets the same effect from the Vite aliases in
+`packages/astromech/src/integrations/astro/vite.ts`, not from the map.
+`publishConfig.exports` restores the full `dist/` map for npm.
+`pnpm run check:exports` holds the two key sets identical and requires an entry's
+`types` and `default` to resolve into the same tree. The ones to know:
 `astromech` (core helpers + types, incl. the plugin-authoring API — there is no
 separate `plugin-kit` subpath), `astromech/astro` (integration),
 `astromech/local` & `astromech/fetch` (the two API consumers — local exports
@@ -309,7 +314,7 @@ used.
 | `pnpm run lint:deps`          | dependency-cruiser — enforces the modular DAG within `packages/astromech/src`: no upward edges, pure leaves, every top-level directory in a layer, and the browser boundary the admin and `*.shared.ts` files sit on                                  |
 | `pnpm run check:config`       | `tsx astromech.config.ts` in the demo — loads the site config the way Astro does, catching a config-time import that reaches a domain service                                                                                                         |
 | `pnpm run check:node-imports` | spawns plain `node` against built `dist` and imports each plugin-facing subpath. Needs `dist`, so it runs after `build`. See "Plugin runtime boundary"                                                                                                |
-| `pnpm run check:exports`      | asserts `exports` and `publishConfig.exports` name the same subpaths, so a new one cannot be added to the repo map and forgotten in the published one                                                                                                 |
+| `pnpm run check:exports`      | asserts `exports` and `publishConfig.exports` name the same subpaths, so a new one cannot be added to the repo map and forgotten in the published one, and that an entry's `types` and `default` resolve into the same tree                           |
 | `pnpm run check:docs`         | resolves every repo-relative link and backticked path in markdown. Skips `specs/` and `roadmap/planned/`, which name files that do not exist yet                                                                                                      |
 | `pnpm run check:boot`         | builds `apps/demo`, starts `dist/server/entry.mjs` against a scratch database, and asserts `/` 200, `/cms` 200, `/cms/api/entries/post` 401 and one config evaluation. Run on demand and in CI — a full build is far too slow for the pre-commit hook |
 
