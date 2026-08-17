@@ -3,11 +3,7 @@ import { runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime'
 import { updateEntrySchema } from '../schema';
 import { getEntryStorage } from '../storage/registry';
 import { validate } from '../internal/validate';
-import {
-    isTitled,
-    isVersioningEnabled,
-    getNonTranslatableFieldNames,
-} from '../internal/type-config';
+import { getNonTranslatableFieldNames } from '../internal/type-config';
 import { indexEntryRelationships } from '../internal/relationships';
 import { pruneDanglingRelations } from '../internal/dangling-relations';
 import { asEntry, loadAndAssertType } from '../internal/records';
@@ -15,6 +11,7 @@ import { deepEqual } from '../internal/deep-equal';
 import { runBulk } from '../internal/bulk';
 import { hasEntryHooks, loadEntrySnapshot } from '../internal/hooks';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility';
+import { UnknownEntryTypeError } from '../errors';
 import { createEntryLookups } from '../lookups';
 import { resolveEntryType } from '@/utilities/entry-type-ids';
 import { entryValidationMode } from '../validation-mode.shared';
@@ -24,26 +21,33 @@ import { mergePatch, projectToSchema } from '@/fields/values';
 import { ValidationError } from '@/errors/index';
 import { getConfig } from '@/config/registry';
 import type { EntryStorage, StorageDb } from '../storage/types';
-import type { Entry, EntryUpdateData, JsonObject } from '@/types/index';
+import type {
+    Entry,
+    EntryUpdateData,
+    JsonObject,
+    ResolvedEntryType,
+} from '@/types/index';
 
 /** Update a single entry (policy; persistence via storage). */
 export async function updateOne(
     storage: EntryStorage,
     db: StorageDb | undefined,
-    type: string,
+    entryType: ResolvedEntryType,
     id: string,
     data: EntryUpdateData
 ): Promise<Entry> {
-    const validatedData = validate(updateEntrySchema({ titled: isTitled(type) }), data);
-    const currentEntry = await loadAndAssertType(storage, type, id);
+    const validatedData = validate(
+        updateEntrySchema({ titled: entryType.titleField !== false }),
+        data
+    );
+    const currentEntry = await loadAndAssertType(storage, entryType.id, id);
 
     // Root field names the caller actually sent — needed after the block too,
     // for the translatable propagation.
     let patchedFieldNames: string[] = [];
 
     if (validatedData.fields !== undefined) {
-        const entryType = resolveEntryType(getConfig(), type);
-        const fieldDefs = entryType ? flattenEntryFields(entryType.fields) : [];
+        const fieldDefs = flattenEntryFields(entryType.fields);
 
         // A canonical and its staged copy are one logical entry as far as
         // uniqueness is concerned, so each has to be invisible to the other's
@@ -53,7 +57,7 @@ export async function updateOne(
         // `list`, so today only the staged-row side changes any outcome; the
         // canonical side holds the invariant for a storage that doesn't.)
         const excludeIds = [id];
-        const canStage = entryType?.capabilities.staging === true;
+        const canStage = entryType.capabilities.staging === true;
         const hasUniqueField = fieldDefs.some((field) =>
             field.validation?.some((rule) => 'unique' in rule)
         );
@@ -63,7 +67,7 @@ export async function updateOne(
             if (paired) excludeIds.push(paired);
         }
 
-        const resourceValidate = entryType?.validate;
+        const resourceValidate = entryType.validate;
 
         // `fields` is a patch, not a replacement: an omitted field keeps its
         // stored value, an explicit `null` stores null, and an array or
@@ -82,12 +86,12 @@ export async function updateOne(
             // editing an already-published entry still enforces completeness.
             validation: entryValidationMode({
                 status: validatedData.status ?? currentEntry.status,
-                hasStatuses: entryType ? entryType.capabilities.statuses !== false : true,
+                hasStatuses: entryType.capabilities.statuses !== false,
             }),
             resource: { kind: 'entry', record: currentEntry },
             user: getCurrentUser(),
             lookups: createEntryLookups(storage, {
-                type,
+                type: entryType.id,
                 locale: currentEntry.locale,
                 excludeId: excludeIds,
             }),
@@ -107,7 +111,7 @@ export async function updateOne(
         validatedData.fields = pruned.values;
     }
 
-    if (isVersioningEnabled(type) && storage.versions) {
+    if (entryType.capabilities.versioning && storage.versions) {
         const titleChanged =
             validatedData.title !== undefined &&
             validatedData.title !== currentEntry.title;
@@ -137,7 +141,7 @@ export async function updateOne(
 
     let slug = validatedData.slug;
     if (slug && slug !== currentEntry.slug) {
-        slug = await storage.uniqueSlug(type, currentEntry.locale, slug, id);
+        slug = await storage.uniqueSlug(entryType.id, currentEntry.locale, slug, id);
     }
 
     const updated = await storage.update(id, {
@@ -152,7 +156,7 @@ export async function updateOne(
         await indexEntryRelationships(
             updated,
             validatedData.fields as JsonObject,
-            type,
+            entryType.id,
             db
         );
     }
@@ -161,7 +165,7 @@ export async function updateOne(
         // Only what the caller sent: the merged resource holds every field, and
         // propagating an untouched one would overwrite its sibling locales.
         const nonTranslatableNames = getNonTranslatableFieldNames(
-            type,
+            entryType.id,
             patchedFieldNames
         );
         if (nonTranslatableNames.length > 0) {
@@ -191,6 +195,10 @@ export async function update(params: {
     if (params.data.fields !== undefined && isPublicBranded(params.data.fields)) {
         throw new PublicShapeWriteError();
     }
+    const entryType = resolveEntryType(getConfig(), params.type);
+    if (!entryType) {
+        throw new UnknownEntryTypeError(params.type);
+    }
     const user = getCurrentUser();
     const hooksActive = hasEntryHooks('entry:beforeUpdate', 'entry:afterUpdate');
     const storage = getEntryStorage(params.type);
@@ -213,7 +221,7 @@ export async function update(params: {
             );
         }
         const results = await runBulk(params.type, params.id, (txStorage, txDb, id) =>
-            updateOne(txStorage, txDb, params.type, id, params.data)
+            updateOne(txStorage, txDb, entryType, id, params.data)
         );
         for (const entry of before) {
             await runAfterHooks(
@@ -234,7 +242,7 @@ export async function update(params: {
             user
         );
     }
-    const updated = await updateOne(storage, undefined, params.type, id, params.data);
+    const updated = await updateOne(storage, undefined, entryType, id, params.data);
     if (before) {
         await runAfterHooks(
             'entry:afterUpdate',
