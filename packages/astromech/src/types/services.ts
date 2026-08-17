@@ -72,6 +72,24 @@ export type MediaUsage = {
     sourceStaged: boolean;
 };
 
+/** Caller input for `create`, validated by the per-type schema at runtime. */
+export type EntryCreateParams = {
+    type: string;
+    /**
+     * Required for titled types (runtime-enforced by the per-type schema,
+     * identical 422). Optional for `titleField: false` types; Phase 3 typegen
+     * restores per-type static strictness.
+     */
+    title?: string;
+    slug?: string;
+    locale?: string;
+    /** Existing localeGroup to join. Omit for a fresh group (ULID generated). */
+    localeGroup?: string;
+    fields?: JsonObject;
+    status?: EntryStatus;
+    publishedAt?: Date | null;
+};
+
 /** Update payload fragment — fields that can be modified after creation. */
 export type EntryUpdateData = Partial<{
     title: string;
@@ -112,22 +130,7 @@ export type EntriesService = {
         staged?: boolean;
     }): Promise<Entry | null>;
 
-    create(params: {
-        type: string;
-        /**
-         * Required for titled types (runtime-enforced by the per-type schema,
-         * identical 422). Optional for `titleField: false` types; Phase 3 typegen
-         * restores per-type static strictness.
-         */
-        title?: string;
-        slug?: string;
-        locale?: string;
-        /** Existing localeGroup to join. Omit for a fresh group (ULID generated). */
-        localeGroup?: string;
-        fields?: JsonObject;
-        status?: EntryStatus;
-        publishedAt?: Date | null;
-    }): Promise<Entry>;
+    create(params: EntryCreateParams): Promise<Entry>;
 
     update(params: { type: string; id: string; data: EntryUpdateData }): Promise<Entry>;
     update(params: {
