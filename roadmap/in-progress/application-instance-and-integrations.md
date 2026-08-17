@@ -298,16 +298,20 @@ and writes no path into `dist/`.
 
 Depends only on stage 3. Can land any time after it.
 
-- [ ] `integrations/cloudflare/index.ts` — `createWorkerEntry(astroEntry)`
+- [x] `integrations/cloudflare/index.ts` — `createWorkerEntry(astroEntry)`
       returning `{ fetch, scheduled }`, replacing `boot/scheduled.ts` and the
       hand-written `scheduled()` boilerplate the current setup asks of site
       authors.
-- [ ] `defaultScheduler()` stops sniffing `navigator.userAgent`; the integration
-      supplies the default. The sniff stays only for Cloudflare binding
+- [x] `defaultScheduler()` stops sniffing `navigator.userAgent`; the integration
+      supplies the default, through a `setDefaultScheduler` slot in
+      `cron/registry.ts`. The sniff stays only for Cloudflare binding
       resolution, where no config can answer.
-- [ ] Update `apps/demo`'s worker entry.
-- [ ] This supersedes `decisions/0053-scheduled-entrypoints-live-in-boot.md` on
-      placement while keeping its principle.
+- [x] Nothing to update in `apps/demo`: it deploys on `@astrojs/node` and has no
+      worker entry. This stage therefore has no `check:boot` coverage — the boot
+      check only proves the Node scheduler path still resolves `interval()`.
+- [x] This supersedes `decisions/0053-scheduled-entrypoints-live-in-boot.md` on
+      placement while keeping its principle —
+      `decisions/0059-the-worker-entry-is-a-cloudflare-integration.md`.
 
 **Cautions.** The acceptance test for an integration is four moves: capture the
 input, get the app, hand it over, emit the result. An integration needing a new

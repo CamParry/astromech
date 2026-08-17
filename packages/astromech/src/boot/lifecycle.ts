@@ -3,7 +3,7 @@
  * resolve config → register drivers → register plugins → boot plugins → ready.
  */
 
-import type { AstromechConfig, ResolvedConfig, SchedulerDriver } from '@/types/index';
+import type { AstromechConfig, ResolvedConfig } from '@/types/index';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { setMethodManifest } from '@/codegen/manifest-registry';
 import { setConfig } from '@/config/registry';
@@ -20,9 +20,7 @@ import { buildAIConfig } from '@/ai/middleware';
 import { registerBuiltInEntryJobs } from '@/entries/jobs/index';
 import { wireEntryAccess } from '@/entries/plugin-access';
 import { wireNotifyAccess } from '@/notifications/plugin-access';
-import { setSchedulerDriver } from '@/cron/registry';
-import { cloudflareCron, interval } from '@/cron/drivers/index';
-import { isWorkersRuntime } from '@/cloudflare/bindings';
+import { resolveSchedulerDriver, setSchedulerDriver } from '@/cron/registry';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { entryAccess } from '@/plugins/runtime/entry-access';
 
@@ -57,15 +55,6 @@ export async function runBootPhases(config: AstromechConfig): Promise<ResolvedCo
     return resolved;
 }
 
-/**
- * The scheduler used when the config names none. On Workers, platform cron
- * fires `scheduled()` and a Worker must not own a timer, so the no-op
- * Cloudflare driver stands in for the in-process ticker.
- */
-export function defaultScheduler(): SchedulerDriver {
-    return isWorkersRuntime() ? cloudflareCron() : interval();
-}
-
 /** Resolve the author's config once and publish it to the registries. */
 function resolvePhase(config: AstromechConfig): ResolvedConfig {
     const resolved = resolveConfig(config);
@@ -96,7 +85,7 @@ async function registerDrivers(config: AstromechConfig): Promise<void> {
     }
 
     registerBuiltInEntryJobs();
-    setSchedulerDriver(config.scheduler ?? defaultScheduler());
+    setSchedulerDriver(resolveSchedulerDriver(config.scheduler));
     await checkMigrationDrift(db, config.plugins ?? []);
 }
 

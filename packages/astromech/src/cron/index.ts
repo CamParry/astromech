@@ -3,7 +3,7 @@
  *
  * Import once during integration setup. Built-in job registration is handled
  * by the entries domain — see `@/entries/index.js`. The scheduled entrypoints
- * that boot the runtime live in `@/boot/scheduled`.
+ * that boot the runtime live in `@/integrations/cloudflare/index`.
  */
 
 export { onTick, runDue } from '@/cron/runner';

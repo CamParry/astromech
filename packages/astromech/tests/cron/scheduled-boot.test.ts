@@ -1,6 +1,6 @@
 /**
- * A Cron Trigger fires `scheduled()`, never `fetch()`, so `handleScheduled` is
- * reached with nothing booted. Its own file because it mocks
+ * A Cron Trigger fires `scheduled()`, never `fetch()`, so the worker entry's
+ * scheduled handler is reached with nothing booted. Its own file because it mocks
  * `virtual:astromech/config` to feed the real boot, where the rest of the suite
  * publishes a resolved config through the harness.
  */
@@ -11,7 +11,7 @@ import type { Updateable } from 'kysely';
 import { createTestDb, makeTestConfig } from '@tests/harness';
 import { registerCronJob } from '@/cron/registry';
 import { interval } from '@/cron/drivers/index';
-import { handleScheduled } from '@/boot/scheduled';
+import { createWorkerEntry } from '@/integrations/cloudflare/index';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/schema';
 import type { DB } from '@/database/types';
@@ -53,6 +53,7 @@ beforeEach(async () => {
     delete globalThis.__astromech?.application;
     delete globalThis.__astromech?.cronJobs;
     delete globalThis.__astromech?.scheduler;
+    delete globalThis.__astromech?.defaultScheduler;
     globals().cronTickRunning = false;
     globals().cronUnscheduledWarned = new Set<string>();
     globals().cronInterval = undefined;
@@ -63,15 +64,23 @@ afterEach(() => {
     delete globalThis.__astromech?.application;
     delete globalThis.__astromech?.cronJobs;
     delete globalThis.__astromech?.scheduler;
+    delete globalThis.__astromech?.defaultScheduler;
     globals().cronTickRunning = false;
     globals().cronUnscheduledWarned = new Set<string>();
     globals().cronInterval = undefined;
 });
 
-describe('handleScheduled on an unbooted runtime', () => {
-    it('boots the runtime instead of throwing for the unset db', async () => {
+/** A stand-in for the Astro adapter's worker entry. */
+function astroEntry(): { fetch: () => Response } {
+    return { fetch: () => new Response('astro') };
+}
+
+describe('createWorkerEntry().scheduled on an uncreated application', () => {
+    it('creates the application instead of throwing for the unset db', async () => {
         await expect(
-            handleScheduled({ scheduledTime: Date.parse('2024-06-01T12:00:00.000Z') })
+            createWorkerEntry(astroEntry()).scheduled({
+                scheduledTime: Date.parse('2024-06-01T12:00:00.000Z'),
+            })
         ).resolves.toBeUndefined();
 
         const { getDb } = await import('@/database/registry');
@@ -90,8 +99,10 @@ describe('handleScheduled on an unbooted runtime', () => {
 
         const seedTime = new Date('2024-06-01T12:00:00.000Z');
 
-        // First tick boots and seeds the table; nextRun lands after seedTime.
-        await handleScheduled({ scheduledTime: seedTime.getTime() });
+        // First tick creates the application and seeds the table; nextRun lands
+        // after seedTime.
+        const worker = createWorkerEntry(astroEntry());
+        await worker.scheduled({ scheduledTime: seedTime.getTime() });
         expect(ran).toBe(false);
 
         await db
@@ -105,7 +116,7 @@ describe('handleScheduled on an unbooted runtime', () => {
             .where('name', '=', 'boot-test-job')
             .execute();
 
-        await handleScheduled({ scheduledTime: seedTime.getTime() });
+        await worker.scheduled({ scheduledTime: seedTime.getTime() });
         expect(ran).toBe(true);
     });
 });

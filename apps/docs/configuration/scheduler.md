@@ -37,14 +37,16 @@ export default defineConfig({
 ### `interval()` — in-process timer
 
 `astromech/scheduler/interval`. Ticks once a minute from the serving process.
-The default on Node, and the right choice for any long-running host. The timer
-never holds the event loop open, and repeated boots never stack timers.
+The default when nothing else supplies one, and the right choice for any
+long-running host. The timer never holds the event loop open, and repeated
+boots never stack timers.
 
 ### `cloudflareCron()` — Cloudflare Cron Triggers
 
 `astromech/scheduler/cloudflare`. The driver itself is a no-op declaration:
 the tick comes from the platform, through the Worker's `scheduled()` handler.
-Wire both halves:
+`createWorkerEntry` selects it for you, so naming it in the config is only
+needed if you write the Worker entry by hand. Wire both halves:
 
 1. Give the Worker a frequent cron trigger in `wrangler.jsonc` — frequent,
    because it is only the poke; real cadence is due-evaluation's:
@@ -55,20 +57,22 @@ Wire both halves:
     }
     ```
 
-2. Call `handleScheduled` from the Worker entry. It boots the Astromech
-   runtime if the tick is the first thing the isolate runs — a cron trigger
-   fires `scheduled()`, never `fetch()`, so it cannot rely on a request having
-   booted anything:
+2. Build the Worker entry with `createWorkerEntry`. It returns both handlers:
+   `fetch` is the Astro adapter's, unchanged, and `scheduled` creates the
+   Astromech application if the tick is the first thing the isolate runs — a
+   cron trigger fires `scheduled()`, never `fetch()`, so it cannot rely on a
+   request having created anything:
 
     ```ts
-    import { handleScheduled } from 'astromech/scheduler/cloudflare';
+    // src/worker.ts
+    import astro from '@astrojs/cloudflare/entrypoints/server';
+    import { createWorkerEntry } from 'astromech/cloudflare';
 
-    export default {
-        async scheduled(event) {
-            await handleScheduled(event);
-        },
-    };
+    export default createWorkerEntry(astro);
     ```
+
+    Point `main` in `wrangler.jsonc` at that file instead of at
+    `@astrojs/cloudflare/entrypoints/server`.
 
 ### `webhook()` — an external poke
 
