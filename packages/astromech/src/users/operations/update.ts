@@ -1,10 +1,9 @@
 import { getConfig } from '@/config/registry';
 import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
-import { ValidationError } from '@/errors/validation';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenFieldNodes } from '@/fields/flatten';
-import { parseFields } from '@/fields/pipeline';
+import { assertNoFieldErrors, parseFields } from '@/fields/pipeline';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { getCurrentUser } from '@/request-context/index';
 import type { JsonObject, User } from '@/types/index';
@@ -56,9 +55,7 @@ export async function update(params: {
             coerceOnly: new Set(patchedNames),
             ...(resourceValidate ? { resourceValidate } : {}),
         });
-        if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
-            throw ValidationError.fromFieldErrors(processed.errors, processed.form);
-        }
+        assertNoFieldErrors(processed);
         // After `parseFields`, before the write — same ordering as create.
         const pruned = await pruneDanglingRelations(
             fieldDefs,

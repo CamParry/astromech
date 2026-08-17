@@ -7,8 +7,7 @@ import { createEntryLookups } from '../../lookups';
 import { resolveEntryType } from '@/utilities/entry-type-ids';
 import { entryValidationMode } from '../../validation-mode.shared';
 import { flattenEntryFields } from '@/fields/flatten';
-import { parseFields } from '@/fields/pipeline';
-import { ValidationError } from '@/errors/index';
+import { assertNoFieldErrors, parseFields } from '@/fields/pipeline';
 import { getConfig } from '@/config/registry';
 import type { EntryStorage, StorageDb } from '../../storage/types';
 import type { Entry, JsonObject } from '@/types/index';
@@ -51,9 +50,7 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
             ...(resourceValidate ? { resourceValidate } : {}),
         }
     );
-    if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
-        throw ValidationError.fromFieldErrors(processed.errors, processed.form);
-    }
+    assertNoFieldErrors(processed);
     const mergedFields = processed.values as JsonObject;
 
     const versioningOn = isVersioningEnabled(type);

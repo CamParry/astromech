@@ -3,11 +3,12 @@ import { runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime'
 import { updateEntrySchema } from '../schema';
 import { getEntryStorage } from '../storage/registry';
 import { validate } from '../internal/validate';
-import { getNonTranslatableFieldNames } from '../internal/type-config';
 import { indexEntryRelationships } from '../internal/relationships';
 import { pruneDanglingRelations } from '../internal/dangling-relations';
 import { asEntry, loadAndAssertType } from '../internal/records';
-import { deepEqual } from '../internal/deep-equal';
+import { uniqueSlugIfChanged } from '../internal/slug';
+import { propagateSharedFields } from '../internal/translatable';
+import { changesVersionedContent, snapshotVersion } from '../internal/versions';
 import { runBulk } from '../internal/bulk';
 import { hasEntryHooks, loadEntrySnapshot } from '../internal/hooks';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility';
@@ -16,9 +17,8 @@ import { createEntryLookups } from '../lookups';
 import { resolveEntryType } from '@/utilities/entry-type-ids';
 import { entryValidationMode } from '../validation-mode.shared';
 import { flattenEntryFields } from '@/fields/flatten';
-import { parseFields } from '@/fields/pipeline';
+import { assertNoFieldErrors, parseFields } from '@/fields/pipeline';
 import { mergePatch, projectToSchema } from '@/fields/values';
-import { ValidationError } from '@/errors/index';
 import { getConfig } from '@/config/registry';
 import type { EntryStorage, StorageDb } from '../storage/types';
 import type {
@@ -98,9 +98,7 @@ export async function updateOne(
             coerceOnly: new Set(patchedFieldNames),
             ...(resourceValidate ? { resourceValidate } : {}),
         });
-        if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
-            throw ValidationError.fromFieldErrors(processed.errors, processed.form);
-        }
+        assertNoFieldErrors(processed);
         // After `parseFields` (its minted item ids are what the traversal
         // needs) and before the write, so the index derives from pruned values.
         const pruned = await pruneDanglingRelations(
@@ -111,27 +109,16 @@ export async function updateOne(
         validatedData.fields = pruned.values;
     }
 
-    if (entryType.capabilities.versioning && storage.versions) {
-        const titleChanged =
-            validatedData.title !== undefined &&
-            validatedData.title !== currentEntry.title;
-        const slugChanged =
-            validatedData.slug !== undefined && validatedData.slug !== currentEntry.slug;
-        const fieldsChanged =
-            validatedData.fields !== undefined &&
-            !deepEqual(currentEntry.fields, validatedData.fields);
-
-        if (titleChanged || slugChanged || fieldsChanged) {
-            const latestNumber = await storage.versions.latestNumber(id);
-            await storage.versions.create({
-                entryId: id,
-                versionNumber: latestNumber + 1,
-                title: currentEntry.title,
-                slug: currentEntry.slug,
-                fields: currentEntry.fields,
-                createdBy: null,
-            });
-        }
+    if (
+        entryType.capabilities.versioning &&
+        storage.versions &&
+        changesVersionedContent(currentEntry, {
+            title: validatedData.title,
+            slug: validatedData.slug,
+            fields: validatedData.fields as JsonObject | undefined,
+        })
+    ) {
+        await snapshotVersion(storage.versions, currentEntry);
     }
 
     let publishedAt = validatedData.publishedAt;
@@ -139,10 +126,12 @@ export async function updateOne(
         publishedAt = new Date();
     }
 
-    let slug = validatedData.slug;
-    if (slug && slug !== currentEntry.slug) {
-        slug = await storage.uniqueSlug(entryType.id, currentEntry.locale, slug, id);
-    }
+    const slug = await uniqueSlugIfChanged(
+        storage,
+        entryType.id,
+        currentEntry,
+        validatedData.slug
+    );
 
     const updated = await storage.update(id, {
         title: validatedData.title,
@@ -161,26 +150,14 @@ export async function updateOne(
         );
     }
 
-    if (validatedData.fields && storage.translatable) {
-        // Only what the caller sent: the merged resource holds every field, and
-        // propagating an untouched one would overwrite its sibling locales.
-        const nonTranslatableNames = getNonTranslatableFieldNames(
-            entryType.id,
-            patchedFieldNames
-        );
-        if (nonTranslatableNames.length > 0) {
-            const nonTranslatableValues: JsonObject = {};
-            const fields = validatedData.fields as JsonObject;
-            for (const name of nonTranslatableNames) {
-                const value = fields[name];
-                if (value !== undefined) nonTranslatableValues[name] = value;
-            }
-            await storage.translatable.propagateFields(
-                currentEntry.localeGroup,
-                id,
-                nonTranslatableValues
-            );
-        }
+    if (validatedData.fields) {
+        await propagateSharedFields({
+            storage,
+            entryType,
+            entry: currentEntry,
+            fields: validatedData.fields as JsonObject,
+            patchedFieldNames,
+        });
     }
 
     return asEntry(updated);
