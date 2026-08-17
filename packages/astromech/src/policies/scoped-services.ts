@@ -74,8 +74,11 @@ type ServiceFn = (...args: unknown[]) => unknown;
  * Refused outright when nobody is signed in: the method's subject comes from the
  * session, and there is no sensible subject for a caller that has none.
  */
-function sessionInput(id: string, input: unknown): Record<string, unknown> {
-    const user = getCurrentUser();
+async function sessionInput(
+    id: string,
+    input: unknown
+): Promise<Record<string, unknown>> {
+    const user = await getCurrentUser();
     if (user === null) {
         throw new PermissionDeniedError(
             id,
@@ -104,9 +107,9 @@ function resolvePermission(
  * refuses. Hiding the key instead would turn "you may not" into "no such
  * method", which reads as a bug to every caller and to an AI tool-loop alike.
  *
- * A refusal THROWS rather than returning a rejected promise, so the wrapper can
- * cover a synchronous method as honestly as an async one. `await service.x()`
- * catches it either way.
+ * A permission refusal THROWS rather than returning a rejected promise, so the
+ * wrapper can cover a synchronous method as honestly as an async one. A
+ * session-scoped method rejects instead — its subject needs an await.
  *
  * @param domain Name the method ids are built from (`users` → `users.create`).
  */
@@ -135,11 +138,14 @@ export function scopeMethods<S extends object>(
                 throw new PermissionDeniedError(id, resolvePermission(contract, input));
             }
             // Called on the service so a method reaching for a sibling through
-            // `this` keeps working.
-            return fn.apply(
-                service,
-                contract.sessionScoped === true ? [sessionInput(id, input)] : args
-            );
+            // `this` keeps working. Only the session-scoped branch is async —
+            // resolving the subject needs an await, and such a method is async
+            // anyway.
+            if (contract.sessionScoped === true) {
+                return (async (): Promise<unknown> =>
+                    fn.apply(service, [await sessionInput(id, input)]))();
+            }
+            return fn.apply(service, args);
         };
     }
 

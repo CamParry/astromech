@@ -14,11 +14,11 @@ import { createHttpApp } from '@/transport/http/index';
 import { Astromech } from '@/transport/local/index';
 import type { Role, User } from '@/types/index';
 
-vi.mock('@/users/session', () => ({ resolveSessionUser: vi.fn() }));
+vi.mock('@/users/session', () => ({ getSession: vi.fn() }));
 
-import { resolveSessionUser } from '@/users/session';
+import { getSession } from '@/users/session';
 
-const mockResolveSessionUser = vi.mocked(resolveSessionUser);
+const mockGetSession = vi.mocked(getSession);
 
 const adminRole: Role = {
     slug: 'admin',
@@ -30,10 +30,10 @@ const adminRole: Role = {
 /** Answer `requireAuth` with a session, or with none. */
 function signIn(user: User | null): void {
     if (user === null) {
-        mockResolveSessionUser.mockResolvedValue(null);
+        mockGetSession.mockResolvedValue(null);
         return;
     }
-    mockResolveSessionUser.mockResolvedValue({
+    mockGetSession.mockResolvedValue({
         user: user as never,
         role: adminRole,
         session: { id: 's1', userId: user.id } as never,
@@ -51,7 +51,7 @@ async function freshApp(): Promise<OpenAPIHono> {
 }
 
 beforeEach(() => {
-    mockResolveSessionUser.mockReset();
+    mockGetSession.mockReset();
     signIn(null);
 });
 

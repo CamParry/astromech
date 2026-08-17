@@ -13,32 +13,35 @@ import { getCurrentUser } from '@/request-context/index';
 import type { Notification, NotificationsService } from '@/types/index';
 
 /** The signed-in user's id, or a loud failure naming what is missing. */
-function currentUserId(): string {
-    const user = getCurrentUser();
+async function currentUserId(): Promise<string> {
+    const user = await getCurrentUser();
     if (user === null) {
         throw new Error(
             '[Astromech] notifications are session-scoped: they act on the signed-in ' +
                 "user's own rows, and there is no request context here to name one. " +
-                'Use `ctx.notify` to emit, or call this inside `runWithContext`.'
+                'Use `ctx.notify` to emit, or call this inside `runWithRequest`.'
         );
     }
     return user.id;
 }
 
 export const localNotificationsService: NotificationsService = {
-    list(): Promise<Notification[]> {
-        return notificationsService.list({ userId: currentUserId() });
+    async list(): Promise<Notification[]> {
+        return notificationsService.list({ userId: await currentUserId() });
     },
 
-    count(): Promise<number> {
-        return notificationsService.count({ userId: currentUserId() });
+    async count(): Promise<number> {
+        return notificationsService.count({ userId: await currentUserId() });
     },
 
-    dismiss(params: { id: string }): Promise<void> {
-        return notificationsService.dismiss({ userId: currentUserId(), id: params.id });
+    async dismiss(params: { id: string }): Promise<void> {
+        return notificationsService.dismiss({
+            userId: await currentUserId(),
+            id: params.id,
+        });
     },
 
-    dismissAll(): Promise<void> {
-        return notificationsService.dismissAll({ userId: currentUserId() });
+    async dismissAll(): Promise<void> {
+        return notificationsService.dismissAll({ userId: await currentUserId() });
     },
 };

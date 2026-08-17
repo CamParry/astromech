@@ -41,7 +41,7 @@ function send(clientAddress?: string): Promise<SubmitResult> {
     ) => Promise<SubmitResult>;
     return handler(
         { slug: 'contact', data: { name: 'Ada' } },
-        createPluginContext(identity, null, clientAddress)
+        createPluginContext(identity, null, null, clientAddress)
     );
 }
 

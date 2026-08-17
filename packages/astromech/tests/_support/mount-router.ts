@@ -7,7 +7,8 @@
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
-import type { Hono } from 'hono';
+import type { Context, Hono, Next } from 'hono';
+import { runWithContext } from '@/request-context/index';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { Role, User } from '@/types/index';
 
@@ -45,16 +46,16 @@ export function mountRouter(
     user: User = testUser
 ): OpenAPIHono<RouteEnv> {
     const app = new OpenAPIHono<RouteEnv>();
-    app.use(`${basePath}/*`, async (c, next) => {
+    // Seeds the request scope as well as the context variables: a session-scoped
+    // method takes its subject from the scope, and a pre-filled user is what
+    // keeps a resolve from being attempted.
+    const stub = (c: Context<RouteEnv>, next: Next): Promise<void> => {
         c.set('user', user);
         c.set('role', role);
-        return next();
-    });
-    app.use(basePath, async (c, next) => {
-        c.set('user', user);
-        c.set('role', role);
-        return next();
-    });
+        return runWithContext({ request: c.req.raw, user, role }, () => next());
+    };
+    app.use(`${basePath}/*`, stub);
+    app.use(basePath, stub);
     app.route(basePath, router);
     return app;
 }

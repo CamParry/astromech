@@ -32,7 +32,7 @@ export async function create(params: {
         {
             operation: 'create',
             resource: { kind: 'user', record: null },
-            user: getCurrentUser(),
+            user: await getCurrentUser(),
             lookups: fieldLookupsFromRecords({
                 load: async () => (await query({ limit: 'all' })).data,
                 getId: (r) => r.id,

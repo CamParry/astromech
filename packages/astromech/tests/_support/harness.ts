@@ -263,11 +263,15 @@ export function setupTestConfig(
 }
 
 /**
- * Run `fn` with `user` as the request-scoped identity. Tests that need no
- * identity need no reset — outside `runWithContext` there simply is no user.
+ * Run `fn` with `user` as the request-scoped identity. Seeding `user` means no
+ * session resolve happens; tests that need no identity need no reset, because
+ * outside a scope there simply is no user.
  */
 export function runAsUser<T>(user: User | null, fn: () => T): T {
-    return runWithContext({ user, role: null }, fn);
+    return runWithContext(
+        { request: new Request('http://localhost/'), user, role: null },
+        fn
+    );
 }
 
 /**

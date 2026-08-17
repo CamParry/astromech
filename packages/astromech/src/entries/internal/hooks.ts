@@ -38,7 +38,7 @@ export async function runDeleteWithHooks(
         await op();
         return;
     }
-    const user = getCurrentUser();
+    const user = await getCurrentUser();
     const ids = Array.isArray(id) ? Array.from(id) : [id as string];
     const before = await Promise.all(
         ids.map((entryId) => loadEntrySnapshot(type, entryId))

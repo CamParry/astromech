@@ -11,10 +11,13 @@ import type {
     NotificationsService,
     PluginServiceNamespace,
     ResolvedConfig,
+    Role,
     SettingsService,
     TypedEntriesService,
+    User,
     UsersService,
 } from '@/types/index';
+import { getCurrentRole, getCurrentUser } from '@/request-context/index';
 import { runBootPhases } from '@/boot/lifecycle';
 import { getSchedulerDriver } from '@/cron/registry';
 import { onTick } from '@/cron/runner';
@@ -31,6 +34,12 @@ export type Astromech = {
     settings: SettingsService;
     notifications: NotificationsService;
     plugins: PluginServiceNamespace;
+
+    /** The acting user for the current request, or null outside one. */
+    getCurrentUser(): Promise<User | null>;
+
+    /** The acting role for the current request, or null outside one. */
+    getCurrentRole(): Promise<Role | null>;
 
     /** Serve one HTTP request from the application's own routes. */
     fetch(request: Request): Promise<Response>;
@@ -103,6 +112,8 @@ async function boot(config: AstromechConfig): Promise<Astromech> {
         settings: services.settings,
         notifications: services.notifications,
         plugins: services.plugins,
+        getCurrentUser,
+        getCurrentRole,
         fetch: async (request: Request): Promise<Response> => http.fetch(request),
         scheduled: (at?: Date): Promise<void> => onTick(at ?? new Date()),
         startScheduler: async (): Promise<void> => {

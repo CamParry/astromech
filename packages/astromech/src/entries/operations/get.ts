@@ -32,7 +32,7 @@ export async function get(params: {
     if (result.type === undefined) result.type = type;
 
     const shape: VisibilityShape = params.full ? 'full' : 'public';
-    const user = getCurrentUser();
+    const user = await getCurrentUser();
     const audience = { roleSlug: user?.roleSlug ?? null, now: new Date() };
     const entryTypeCfg = resolveEntryType(getConfig(), type);
     const fields = entryTypeCfg ? flattenEntryFields(entryTypeCfg.fields) : [];

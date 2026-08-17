@@ -1,19 +1,27 @@
 /**
  * Request-scoped context.
  *
- * The point of this suite is the concurrency case: identity must be scoped to
- * the request, not to the module. The module-level `currentUser` variable this
- * replaced passed every other test here and failed only under interleaving.
+ * Two things are pinned here: identity is scoped to the request, not to the
+ * module (the concurrency case, which the module-level `currentUser` this
+ * replaced failed only under interleaving), and a request that never asks who
+ * the caller is resolves no session at all.
  */
 
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     getCurrentRole,
     getCurrentUser,
     getRequestContext,
     runWithContext,
+    runWithRequest,
 } from '@/request-context/index';
 import type { Role, User } from '@/types/index';
+
+vi.mock('@/users/session', () => ({ getSession: vi.fn() }));
+
+import { getSession } from '@/users/session';
+
+const mockGetSession = vi.mocked(getSession);
 
 function makeUser(id: string): User {
     return {
@@ -45,25 +53,74 @@ function deferred(): { promise: Promise<void>; resolve: () => void } {
     return { promise, resolve };
 }
 
+/** Answer the next session resolve with `user` under `adminRole`, or with none. */
+function signIn(user: User | null): void {
+    mockGetSession.mockResolvedValue(
+        user === null
+            ? null
+            : { user, role: adminRole, session: { id: 's1', userId: user.id } as never }
+    );
+}
+
+const request = (): Request => new Request('http://localhost/');
+
+beforeEach(() => {
+    mockGetSession.mockReset();
+    signIn(null);
+});
+
 describe('request context', () => {
-    it('has no user outside a context', () => {
-        expect(getCurrentUser()).toBeNull();
-        expect(getCurrentRole()).toBeNull();
+    it('has no user outside a context, and resolves no session to say so', async () => {
+        expect(await getCurrentUser()).toBeNull();
+        expect(await getCurrentRole()).toBeNull();
+        expect(getRequestContext()).toBeUndefined();
+        expect(mockGetSession).not.toHaveBeenCalled();
+    });
+
+    it('resolves nothing for a request that never asks who the caller is', async () => {
+        const seen = await runWithRequest(request(), async () => 'served');
+
+        expect(seen).toBe('served');
+        expect(mockGetSession).not.toHaveBeenCalled();
+    });
+
+    it('resolves identity on the first ask and reuses it for the rest', async () => {
+        const user = makeUser('a');
+        signIn(user);
+
+        await runWithRequest(request(), async () => {
+            expect(await getCurrentUser()).toBe(user);
+            expect(await getCurrentRole()).toBe(adminRole);
+            expect(await getCurrentUser()).toBe(user);
+        });
+
+        expect(mockGetSession).toHaveBeenCalledTimes(1);
+        expect(await getCurrentUser()).toBeNull();
         expect(getRequestContext()).toBeUndefined();
     });
 
-    it('exposes the user inside the callback and nowhere after it', () => {
-        const user = makeUser('a');
-
-        const seen = runWithContext({ user, role: adminRole }, () => {
-            expect(getRequestContext()).toEqual({ user, role: adminRole });
-            expect(getCurrentRole()).toBe(adminRole);
-            return getCurrentUser();
+    it('caches a missing session too, rather than retrying it', async () => {
+        await runWithRequest(request(), async () => {
+            expect(await getCurrentUser()).toBeNull();
+            expect(await getCurrentRole()).toBeNull();
         });
 
+        expect(mockGetSession).toHaveBeenCalledTimes(1);
+    });
+
+    it('takes a seeded user without resolving one', async () => {
+        const user = makeUser('a');
+
+        const seen = await runWithContext(
+            { request: request(), user, role: adminRole },
+            async () => {
+                expect(await getCurrentRole()).toBe(adminRole);
+                return getCurrentUser();
+            }
+        );
+
         expect(seen).toBe(user);
-        expect(getCurrentUser()).toBeNull();
-        expect(getRequestContext()).toBeUndefined();
+        expect(mockGetSession).not.toHaveBeenCalled();
     });
 
     it("keeps concurrent requests from seeing each other's user", async () => {
@@ -77,42 +134,54 @@ describe('request context', () => {
         const bEntered = deferred();
         const aResumed = deferred();
 
-        const requestA = runWithContext({ user: userA, role: null }, async () => {
-            expect(getCurrentUser()).toBe(userA);
-            await bEntered.promise;
-            const afterSuspension = getCurrentUser();
-            aResumed.resolve();
-            return afterSuspension;
-        });
+        const requestA = runWithContext(
+            { request: request(), user: userA, role: null },
+            async () => {
+                expect(await getCurrentUser()).toBe(userA);
+                await bEntered.promise;
+                const afterSuspension = await getCurrentUser();
+                aResumed.resolve();
+                return afterSuspension;
+            }
+        );
 
-        const requestB = runWithContext({ user: userB, role: null }, async () => {
-            expect(getCurrentUser()).toBe(userB);
-            bEntered.resolve();
-            await aResumed.promise;
-            return getCurrentUser();
-        });
+        const requestB = runWithContext(
+            { request: request(), user: userB, role: null },
+            async () => {
+                expect(await getCurrentUser()).toBe(userB);
+                bEntered.resolve();
+                await aResumed.promise;
+                return getCurrentUser();
+            }
+        );
 
         const [seenByA, seenByB] = await Promise.all([requestA, requestB]);
 
         expect(seenByA).toBe(userA);
         expect(seenByB).toBe(userB);
-        expect(getCurrentUser()).toBeNull();
+        expect(await getCurrentUser()).toBeNull();
     });
 
-    it('restores the outer context after a nested one returns', () => {
+    it('restores the outer context after a nested one returns', async () => {
         const outer = makeUser('outer');
         const inner = makeUser('inner');
 
-        runWithContext({ user: outer, role: null }, () => {
-            expect(getCurrentUser()).toBe(outer);
+        await runWithContext(
+            { request: request(), user: outer, role: null },
+            async () => {
+                expect(await getCurrentUser()).toBe(outer);
 
-            runWithContext({ user: inner, role: adminRole }, () => {
-                expect(getCurrentUser()).toBe(inner);
-                expect(getCurrentRole()).toBe(adminRole);
-            });
+                await runWithContext(
+                    { request: request(), user: inner, role: adminRole },
+                    async () => {
+                        expect(await getCurrentUser()).toBe(inner);
+                        expect(await getCurrentRole()).toBe(adminRole);
+                    }
+                );
 
-            expect(getCurrentUser()).toBe(outer);
-            expect(getCurrentRole()).toBeNull();
-        });
+                expect(await getCurrentUser()).toBe(outer);
+                expect(await getCurrentRole()).toBeNull();
+            }
+        );
     });
 });

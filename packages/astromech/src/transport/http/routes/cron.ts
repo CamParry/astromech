@@ -11,7 +11,7 @@
 
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { unauthorized } from '@/transport/http/middleware/errors';
-import { resolveSessionUser } from '@/users/index';
+import { getCurrentRole } from '@/request-context/index';
 import { onTick } from '@/cron/runner';
 
 const router = new OpenAPIHono();
@@ -28,13 +28,9 @@ router.post('/run', async (c) => {
     const authHeader = c.req.header('authorization');
     const bearerOk = secret !== undefined && authHeader === `Bearer ${secret}`;
 
-    let sessionOk = false;
-    if (!bearerOk) {
-        const resolved = await resolveSessionUser(c.req.raw.headers);
-        sessionOk = resolved?.role.slug === 'admin';
-    }
-
-    if (!bearerOk && !sessionOk) return unauthorized(c);
+    // Short-circuits: a bearer poke carries no session, so asking for a role
+    // would resolve one nobody sent.
+    if (!bearerOk && (await getCurrentRole())?.slug !== 'admin') return unauthorized(c);
 
     await onTick(new Date());
     return c.json({ success: true });

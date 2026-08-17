@@ -16,13 +16,13 @@ import { usersService } from '@/users/index';
 import { entriesService } from '@/entries/index';
 import { mediaService } from '@/media/index';
 import { settingsService } from '@/settings/index';
-import { runWithContext } from '@/request-context/index';
+import { runWithContext, runWithRequest } from '@/request-context/index';
 import { setPluginClient, setPluginMethods } from '@/plugins/runtime/plugin-runtime';
 import { localNotificationsService } from '@/transport/local/notifications';
 import { localPlugins } from '@/transport/local/plugins';
 import { buildScopedTools } from '@/transport/tools/scoped-tools';
 
-export { runWithContext };
+export { runWithContext, runWithRequest };
 
 // ============================================================================
 // Assemble the Local API

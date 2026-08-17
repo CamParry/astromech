@@ -16,11 +16,11 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import type { AstromechConfig, PluginDefinition, Role, User } from '@/types/index';
 
-vi.mock('@/users/session', () => ({ resolveSessionUser: vi.fn() }));
+vi.mock('@/users/session', () => ({ getSession: vi.fn() }));
 
-import { resolveSessionUser } from '@/users/session';
+import { getSession } from '@/users/session';
 
-const mockResolveSessionUser = vi.mocked(resolveSessionUser);
+const mockGetSession = vi.mocked(getSession);
 
 const probePlugin: PluginDefinition = {
     package: 'probe',
@@ -76,7 +76,9 @@ async function freshApp(): Promise<OpenAPIHono> {
     setupTestConfig(configWithProbe());
     vi.resetModules();
     const { pluginsRouter } = await import('@/transport/http/routes/plugins');
+    const { runWithRequest } = await import('@/request-context/index');
     const app = new OpenAPIHono();
+    app.use('*', (c, next) => runWithRequest(c.req.raw, () => next()));
     app.route('/plugins', pluginsRouter);
     return app;
 }
@@ -84,10 +86,10 @@ async function freshApp(): Promise<OpenAPIHono> {
 /** Answer `optionalAuth` with a session holding `permissions`, or with none. */
 function signIn(permissions: string[] | null): void {
     if (permissions === null) {
-        mockResolveSessionUser.mockResolvedValue(null);
+        mockGetSession.mockResolvedValue(null);
         return;
     }
-    mockResolveSessionUser.mockResolvedValue({
+    mockGetSession.mockResolvedValue({
         user: signedInUser as never,
         role: roleWith(permissions),
         session: { id: 's1', userId: 'u1' } as never,
@@ -95,7 +97,7 @@ function signIn(permissions: string[] | null): void {
 }
 
 beforeEach(() => {
-    mockResolveSessionUser.mockReset();
+    mockGetSession.mockReset();
     signIn(null);
 });
 

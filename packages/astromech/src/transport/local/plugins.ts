@@ -13,7 +13,7 @@
  */
 
 import type { PluginContext, PluginServiceNamespace } from '@/types/index';
-import { getCurrentUser } from '@/request-context/index';
+import { getCurrentRole, getCurrentUser } from '@/request-context/index';
 import {
     createPluginContext,
     getPluginIdentity,
@@ -44,7 +44,11 @@ export const localPlugins: PluginServiceNamespace = new Proxy(
                     return async (input?: unknown): Promise<unknown> =>
                         (method.handler as (i: unknown, c: PluginContext) => unknown)(
                             input,
-                            createPluginContext(resolved, getCurrentUser())
+                            createPluginContext(
+                                resolved,
+                                await getCurrentUser(),
+                                await getCurrentRole()
+                            )
                         );
                 },
             });

@@ -29,7 +29,6 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { PermissionDeniedError } from '@/errors/index';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { scopedServices } from '@/policies/scoped-services';
-import { runWithContext } from '@/request-context/index';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import {
     badRequest,
@@ -182,7 +181,7 @@ async function handleRestRoute(
     }
 
     try {
-        const result = await invoke(c, route.id, contract, parsed.data);
+        const result = await invoke(c, route.id, parsed.data);
         if (route.notFound !== undefined && (result === null || result === undefined)) {
             return notFound(c, route.notFound(c));
         }
@@ -195,25 +194,16 @@ async function handleRestRoute(
 }
 
 /** Call `<domain>.<method>` on the handle scoped to the caller's role. */
-function invoke(
-    c: Context<Env>,
-    id: string,
-    contract: ServiceMethodContract,
-    args: unknown
-): Promise<unknown> {
+function invoke(c: Context<Env>, id: string, args: unknown): Promise<unknown> {
     const handle = scopedServices(c.var.role) as unknown as Record<string, ServiceRecord>;
     const fn = handle[domainName(id)]?.[methodName(id)];
     if (typeof fn !== 'function') {
         throw new Error(`Method '${id}' is absent from the scoped services handle.`);
     }
 
-    const call = (): Promise<unknown> => Promise.resolve(fn(args));
-    // A session-scoped method takes its subject from the request context rather
-    // than from its arguments, so the call runs under the identity the auth
-    // middleware attached, whichever layer established the context.
-    return contract.sessionScoped === true
-        ? runWithContext({ user: c.var.user, role: c.var.role }, call)
-        : call();
+    // A session-scoped method takes its subject from the request scope rather
+    // than from its arguments; the scope is already established here.
+    return Promise.resolve(fn(args));
 }
 
 /** Wrap a result in the route's envelope. */

@@ -85,7 +85,7 @@ export async function updateOne(
                 hasStatuses: entryType ? entryType.capabilities.statuses !== false : true,
             }),
             resource: { kind: 'entry', record: currentEntry },
-            user: getCurrentUser(),
+            user: await getCurrentUser(),
             lookups: createEntryLookups(storage, {
                 type,
                 locale: currentEntry.locale,
@@ -191,7 +191,7 @@ export async function update(params: {
     if (params.data.fields !== undefined && isPublicBranded(params.data.fields)) {
         throw new PublicShapeWriteError();
     }
-    const user = getCurrentUser();
+    const user = await getCurrentUser();
     const hooksActive = hasEntryHooks('entry:beforeUpdate', 'entry:afterUpdate');
     const storage = getEntryStorage(params.type);
 

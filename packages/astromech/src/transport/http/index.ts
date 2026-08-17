@@ -22,6 +22,7 @@ import { pluginsRouter } from './routes/plugins';
 import { notificationsRouter } from './routes/notifications';
 import { rpcRouter } from './routes/rpc';
 import { Astromech } from '@/transport/local/index';
+import { runWithRequest } from '@/request-context/index';
 import { getAuth } from '@/users/index';
 import { handleMediaRequest } from '@/media/serving/handler';
 import type { ResolvedConfig } from '@/types/index';
@@ -43,6 +44,15 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
 
     app.onError(onError);
     app.notFound(onNotFound);
+
+    // ========================================================================
+    // Request scope — identity resolves from the request, on first ask
+    // ========================================================================
+
+    // `app.fetch` is a public entry point, so the app establishes its own scope
+    // rather than requiring an ambient one. Nesting inside the Astro
+    // middleware's is free: a request nobody asks about resolves nothing.
+    app.use('*', (c, next) => runWithRequest(c.req.raw, () => next()));
 
     // ========================================================================
     // Security headers — applied to all responses

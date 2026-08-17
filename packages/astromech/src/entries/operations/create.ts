@@ -53,7 +53,7 @@ export async function create(params: EntryCreateParams): Promise<Entry> {
 
     // Lookups
     const storage = getEntryStorage(type);
-    const user = getCurrentUser();
+    const user = await getCurrentUser();
 
     // Validation
     const titled = entryType.titleField !== false;

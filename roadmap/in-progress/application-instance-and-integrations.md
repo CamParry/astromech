@@ -351,23 +351,41 @@ Independent investigation and fix. Nothing else depends on it.
 
 Depends only on stage 5.
 
-- [ ] `RequestContext` becomes `{ request, user? }`. The store holds the
-      request; identity resolves on first ask and caches for that request.
-- [ ] `getCurrentUser()` and `getCurrentRole()` become async — 21 call sites
-      across 18 files, all already inside async functions.
-- [ ] Collapse the four independent session resolvers (Astro middleware, Hono's
+- [x] `RequestContext` becomes `{ request, user?, role? }`. The store holds the
+      request; identity resolves on first ask and caches for that request. The
+      `role?` field is the stopgap `specs/application-architecture-map.md`
+      already names: one resolve returns both, and it goes away when the role map
+      is computed during config resolution.
+- [x] `getCurrentUser()` and `getCurrentRole()` become async — 17
+      `getCurrentUser` and 2 `getCurrentRole` call sites across 17 files, not the
+      21 across 18 this file claimed. Three of them were not already inside async
+      functions: `PluginContext.role`'s synchronous getter, `sessionInput` in
+      `policies/scoped-services.ts`, and `currentUserId` in
+      `transport/local/notifications.ts`.
+- [x] Collapse the four independent session resolvers (Astro middleware, Hono's
       `requireAuth`, Hono's `optionalAuth`, the cron poke route) into one. Their
       "has someone already done this?" branches get **deleted**, not relocated.
-- [ ] The Astro middleware stops writing `Astro.locals` entirely, and
+      What replaces them is a scope, not a resolver: the Astro middleware and
+      `createHttpApp`'s root middleware both call `runWithRequest`, because
+      `Astromech.fetch` is a public entry point and may not require an ambient
+      store.
+- [x] The Astro middleware stops writing `Astro.locals` entirely, and
       `src/env.d.ts` stops declaring `App.Locals`. Nothing reads either, and the
-      declaration merge breaks any host site that declares its own `user`.
-- [ ] `resolveSessionUser` → `getSession` (Better Auth's vocabulary).
+      declaration merge breaks any host site that declares its own `user`. The
+      file survives holding only its `astro/client` reference, which is what
+      types the `import.meta.env` reads across `src/`.
+- [x] `resolveSessionUser` → `getSession` (Better Auth's vocabulary).
+- [x] `Astromech` gains `getCurrentUser()` and `getCurrentRole()`. With
+      `Astro.locals` gone, a host `.astro` page has no other path to identity.
 
 **Cautions.** Do not solve draft visibility by blanking the user.
 `entries/operations/query.ts` already has `VisibilityShape`, `applyVisibility`
 and `markPublic`; whatever a host page should see by default is decided at that
-seam. If it is not obvious when this stage lands, raise it as its own item
-rather than deciding it here.
+seam. It did not come up while this stage landed.
+
+`decisions/0061-identity-resolves-on-demand.md` records the plugin-context
+decision (an eager `role` parameter over a promised `ctx.role`, which would
+break every plugin) and the `scopeMethods` invariant that survived it.
 
 ## Stage 12 — Drop the transport mirror
 

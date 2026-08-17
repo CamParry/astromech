@@ -13,24 +13,26 @@ import type { Kysely } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { registerCronJob } from '@/cron/registry';
 import { cronRouter } from '@/transport/http/routes/cron';
+import { runWithRequest } from '@/request-context/index';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/schema';
 import type { DB } from '@/database/types';
 
-// Mock resolveSessionUser so tests control the session branch without a real
+// Mock getSession so tests control the session branch without a real
 // Better Auth stack.
 vi.mock('@/users/session', () => ({
-    resolveSessionUser: vi.fn(),
+    getSession: vi.fn(),
 }));
 
-import { resolveSessionUser } from '@/users/session';
+import { getSession } from '@/users/session';
 import { globals } from '@/utilities/registry';
 
-const mockResolveSessionUser = vi.mocked(resolveSessionUser);
+const mockGetSession = vi.mocked(getSession);
 
-/** Minimal app: just the cron router. */
+/** Minimal app: a request scope, then the cron router. */
 function makeApp(): OpenAPIHono {
     const app = new OpenAPIHono();
+    app.use('*', (c, next) => runWithRequest(c.req.raw, () => next()));
     app.route('/cron', cronRouter);
     return app;
 }
@@ -54,8 +56,8 @@ beforeEach(async () => {
     globals().cronUnscheduledWarned = new Set<string>();
 
     // Reset session mock.
-    mockResolveSessionUser.mockReset();
-    mockResolveSessionUser.mockResolvedValue(null);
+    mockGetSession.mockReset();
+    mockGetSession.mockResolvedValue(null);
 
     // Reset env secret.
     originalSecret = process.env.ASTROMECH_CRON_SECRET;
@@ -169,7 +171,7 @@ describe('POST /cron/run — auth branches', () => {
     });
 
     it('200 with admin session (no bearer) — due handler RUNS', async () => {
-        mockResolveSessionUser.mockResolvedValue({
+        mockGetSession.mockResolvedValue({
             user: { id: 'u1', email: 'admin@test.dev' } as never,
             role: { slug: 'admin', name: 'Admin', permissions: [], isBuiltIn: true },
             session: { id: 's1', userId: 'u1' } as never,
@@ -184,9 +186,9 @@ describe('POST /cron/run — auth branches', () => {
         expect(ref.ran).toBe(true);
     });
 
-    it('bearer path succeeds even when resolveSessionUser returns null', async () => {
+    it('bearer path succeeds even when getSession returns null', async () => {
         process.env.ASTROMECH_CRON_SECRET = SECRET;
-        // resolveSessionUser is already mocked to return null in beforeEach.
+        // getSession is already mocked to return null in beforeEach.
 
         const ref = await seedDueJob();
 
@@ -195,7 +197,7 @@ describe('POST /cron/run — auth branches', () => {
 
         expect(res.status).toBe(200);
         expect(ref.ran).toBe(true);
-        // Bearer path must NOT have called resolveSessionUser.
-        expect(mockResolveSessionUser).not.toHaveBeenCalled();
+        // Bearer path must NOT have called getSession.
+        expect(mockGetSession).not.toHaveBeenCalled();
     });
 });

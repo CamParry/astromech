@@ -94,8 +94,15 @@ const UNLAYERED = ['exports'];
  *   from `codegen/`. The manifest is data the transports project, not
  *   composition — it moves out from under `codegen/` in
  *   `roadmap/completed/manifest-driven-transports.md`.
+ * - `request-context/request-context.ts` reaches `users/session` for the one
+ *   thing it needs: turning request headers into an identity. The edge is a
+ *   DYNAMIC import inside the async getter, which is what keeps the module
+ *   service-free at load time — a port would put the implementation in a
+ *   registry slot, and `decisions/0061-identity-resolves-on-demand.md` records
+ *   why this one does not get a slot.
  */
-const NO_UPWARD_EXEMPT = '^src/transport/(cli|tools|mcp)/';
+const NO_UPWARD_EXEMPT =
+    '^src/(transport/(cli|tools|mcp)/|request-context/request-context\\.ts$)';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The browser boundary

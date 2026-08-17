@@ -26,11 +26,11 @@ import type {
     User,
 } from '@/types/index';
 
-vi.mock('@/users/session', () => ({ resolveSessionUser: vi.fn() }));
+vi.mock('@/users/session', () => ({ getSession: vi.fn() }));
 
-import { resolveSessionUser } from '@/users/session';
+import { getSession } from '@/users/session';
 
-const mockResolveSessionUser = vi.mocked(resolveSessionUser);
+const mockGetSession = vi.mocked(getSession);
 
 // ============================================================================
 // Fixture — a plugin covers the two refusals only a plugin method produces
@@ -81,10 +81,10 @@ let api: string;
 /** Answer `requireAuth` with `user` under `role`, or with no session at all. */
 function signIn(user: User | null, role: Role): void {
     if (user === null) {
-        mockResolveSessionUser.mockResolvedValue(null);
+        mockGetSession.mockResolvedValue(null);
         return;
     }
-    mockResolveSessionUser.mockResolvedValue({
+    mockGetSession.mockResolvedValue({
         user: user as never,
         role,
         session: { id: 's1', userId: user.id } as never,
@@ -120,7 +120,7 @@ async function call(app: OpenAPIHono, id: string, args: unknown = {}): Promise<R
 type ErrorBody = { error: { code: string; message: string } };
 
 beforeEach(() => {
-    mockResolveSessionUser.mockReset();
+    mockGetSession.mockReset();
 });
 
 // ============================================================================

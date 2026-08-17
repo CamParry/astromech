@@ -183,7 +183,7 @@ packages/
 │   │   ├── cloudflare/     # binding-name resolution across Workers and Node
 │   │   ├── permissions/    # permission model: roles, grammar, BUILT_IN_ROLES, can()
 │   │   ├── fields/         # field/column builder, formatters, rich-text, helpers
-│   │   ├── request-context/ # the AsyncLocalStorage request store: index.ts (barrel) + request-context.ts (the service-free leaf)
+│   │   ├── request-context/ # the AsyncLocalStorage request store, holding the Request that identity resolves from on first ask: index.ts (barrel) + request-context.ts (the service-free leaf)
 │   │   ├── email/          # email drivers
 │   │   ├── ai/             # model access: getModel / hasModel over the configured models
 │   │   ├── cron/           # scheduled-job infrastructure

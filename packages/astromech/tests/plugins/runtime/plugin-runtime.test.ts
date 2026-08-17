@@ -11,7 +11,6 @@ import type {
     User,
 } from '@/types/index';
 import { setEmailDriver } from '@/email/registry';
-import { runWithContext } from '@/request-context/request-context';
 import {
     bootPlugins,
     createPluginContext,
@@ -172,7 +171,8 @@ describe('createPluginContext', () => {
         registerPlugins([def({ package: '@astromech/seo' })], config);
         const ctx = createPluginContext(
             resolvePluginIdentity(def({ package: '@astromech/seo' })),
-            user
+            user,
+            null
         );
 
         expect(ctx.user).toBe(user);
@@ -181,30 +181,26 @@ describe('createPluginContext', () => {
         expect(ctx.config.entryTypesWithField('nope')).toEqual([]);
     });
 
-    it('has a null role outside a request context', () => {
+    it('has a null role when the caller names none', () => {
         registerPlugins([def({ package: '@astromech/seo' })], config);
         const ctx = createPluginContext(
             resolvePluginIdentity(def({ package: '@astromech/seo' })),
-            user
+            user,
+            null
         );
 
         expect(ctx.role).toBeNull();
     });
 
-    // Lazy, so a context built before the store is established still reads the
-    // role — and drops back to null once the request is over.
-    it('reads the role from the request-scoped store', () => {
+    it('exposes the role it was built with', () => {
         registerPlugins([def({ package: '@astromech/seo' })], config);
         const ctx = createPluginContext(
             resolvePluginIdentity(def({ package: '@astromech/seo' })),
-            user
+            user,
+            adminRole
         );
 
-        runWithContext({ user, role: adminRole }, () => {
-            expect(ctx.role).toBe(adminRole);
-        });
-
-        expect(ctx.role).toBeNull();
+        expect(ctx.role).toBe(adminRole);
     });
 
     // The port is injected by the Local API at module load, so a context that
@@ -214,7 +210,8 @@ describe('createPluginContext', () => {
         registerPlugins([def({ package: '@astromech/seo' })], config);
         const ctx = createPluginContext(
             resolvePluginIdentity(def({ package: '@astromech/seo' })),
-            user
+            user,
+            null
         );
 
         expect(() => ctx.methods.tools()).toThrow(
@@ -222,19 +219,17 @@ describe('createPluginContext', () => {
         );
     });
 
-    it('calls the injected port with the current role and the given options', () => {
+    it("calls the injected port with the context's role and the given options", () => {
         registerPlugins([def({ package: '@astromech/seo' })], config);
         const tools = vi.fn(() => []);
         setPluginMethods({ tools });
         const ctx = createPluginContext(
             resolvePluginIdentity(def({ package: '@astromech/seo' })),
-            user
+            user,
+            adminRole
         );
 
-        runWithContext({ user, role: adminRole }, () => {
-            expect(ctx.methods.tools({ readOnly: true })).toEqual([]);
-        });
-
+        expect(ctx.methods.tools({ readOnly: true })).toEqual([]);
         expect(tools).toHaveBeenCalledWith(adminRole, { readOnly: true });
     });
 
@@ -251,7 +246,8 @@ describe('createPluginContext', () => {
         });
         const ctx = createPluginContext(
             resolvePluginIdentity(def({ package: '@astromech/seo' })),
-            user
+            user,
+            null
         );
 
         await ctx.email.send(
@@ -270,7 +266,8 @@ describe('createPluginContext', () => {
         registerPlugins([def({ package: '@astromech/seo' })], config);
         const ctx = createPluginContext(
             resolvePluginIdentity(def({ package: '@astromech/seo' })),
-            user
+            user,
+            null
         );
 
         await expect(

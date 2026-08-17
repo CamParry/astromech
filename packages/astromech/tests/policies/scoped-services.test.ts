@@ -177,7 +177,10 @@ function scopeSession(service: ReturnType<typeof makeService>) {
 
 /** Run `fn` as `id`, the way a request-scoped transport would. */
 function asUser<T>(id: string, fn: () => T): T {
-    return runWithContext({ user: { id } as User, role: null }, fn);
+    return runWithContext(
+        { request: new Request('http://localhost/'), user: { id } as User, role: null },
+        fn
+    );
 }
 
 describe('scopeMethods — session-scoped', () => {
@@ -197,17 +200,13 @@ describe('scopeMethods — session-scoped', () => {
         expect(service.read).toHaveBeenCalledWith({ userId: 'user-1' });
     });
 
-    it('refuses when nobody is signed in, without entering the service', () => {
+    // Rejects rather than throws: resolving the subject needs an await, so only
+    // this branch of the wrapper is async. The permission check still throws.
+    it('refuses when nobody is signed in, without entering the service', async () => {
         const service = makeService();
         const scoped = scopeSession(service);
 
-        try {
-            scoped.read({});
-            expect.unreachable('a session-scoped method needs a signed-in user');
-        } catch (e) {
-            expect(e).toBeInstanceOf(PermissionDeniedError);
-            expect((e as Error).message).toContain('session-scoped');
-        }
+        await expect(scoped.read({})).rejects.toThrow(PermissionDeniedError);
         expect(service.read).not.toHaveBeenCalled();
     });
 

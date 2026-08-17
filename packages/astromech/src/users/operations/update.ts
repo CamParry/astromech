@@ -45,7 +45,7 @@ export async function update(params: {
         const processed = await parseFields(merged, fieldDefs, {
             operation: 'update',
             resource: { kind: 'user', record: current },
-            user: getCurrentUser(),
+            user: await getCurrentUser(),
             lookups: fieldLookupsFromRecords({
                 load: async () => (await query({ limit: 'all' })).data,
                 getId: (r) => r.id,

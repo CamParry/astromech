@@ -41,7 +41,7 @@ export async function issuePreviewToken(params: {
     }
     const token = generatePreviewSecret();
     const hash = await hashPreviewToken(token);
-    const user = getCurrentUser();
+    const user = await getCurrentUser();
     // Coerced, not trusted: a JSON transport (MCP, the AI tool-loop) sends an
     // ISO string, and this column is a date. `schedule` validates `publishedAt`
     // the same way for the same reason.
