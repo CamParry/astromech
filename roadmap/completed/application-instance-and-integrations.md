@@ -1,17 +1,14 @@
 # Application Instance & Integrations Layer
 
-One reorganization of the entry-point layer, on one branch, in small staged
-commits. `decisions/0057-one-application-instance-thin-framework-integrations.md`
-holds the rationale and the rejected alternatives.
-`specs/application-architecture-map.md` holds the target tree, every new file
-with its signatures, and the list of places this work supersedes 0057. **Read
-the spec before starting any stage** — it is the contract each stage is built
-against, and several of its decisions reverse what 0057 says.
+One reorganization of the entry-point layer, shipped in small staged commits.
+`decisions/0057-one-application-instance-thin-framework-integrations.md` holds
+the original rationale and the rejected alternatives;
+`decisions/0063-what-the-application-reorganization-changed.md` records where the
+work landed differently from it. The design spec held the target tree and every
+new file's signatures, and was deleted on ship (stage 14).
 
-Prerequisite for `roadmap/planned/multi-runtime-and-framework-adapters.md`,
-which plans per-framework glue but has no application object for it to plug
-into. That file still says "adapter"; reconcile it to "integration" as part of
-this work.
+Prerequisite for `roadmap/planned/multi-runtime-and-framework-integrations.md`,
+which plans per-framework glue on the application object this work created.
 
 ## Why, in short
 
@@ -50,13 +47,10 @@ has failed even if the gate is green.
 - Work in a worktree at `../Astromech-worktrees/<branch>`, with `pnpm install`,
   a copy of `apps/demo/.env`, and its own `pnpm run build`.
 
-## Where this stands
+## Where this landed
 
-Stages 1 to 7 are on `main`. Stages 8, 9, 10, 11 and 12 are all unblocked
-and independent of each other, so they can land in any order.
-
-Two things learned the expensive way, both worth carrying into every remaining
-stage:
+All fourteen stages shipped to `main`. Two things learned the expensive way,
+worth carrying into the follow-on integration work:
 
 - **`check:boot` is not optional, and it is the slow one.** Stage 3 passed nine
   gate checks on a build whose homepage hung: a module-scope config read threw
@@ -343,9 +337,9 @@ Independent investigation and fix. Nothing else depends on it.
 - [x] `check:exports` compares conditions within an entry, both `dist/` or both
       `src/`, over both maps. It never compares across the maps — `src` here and
       `dist` on npm is the point of the two-map design.
-- [ ] `./local` is deliberately left mixed, with a named exemption in the check.
-      It is the one subpath the trap has actually bitten, and stage 12 deletes
-      it; the exemption goes with it.
+- [x] `./local` was deliberately left mixed, with a named exemption in the check.
+      It is the one subpath the trap has actually bitten, and stage 12 deleted
+      it; the exemption went with it.
 
 ## Stage 11 — Lazy identity
 
@@ -444,19 +438,19 @@ result.
 
 ## Stage 14 — Docs and the gate
 
-- [ ] `ARCHITECTURE.md` — the `integrations/` layer. `config/`, the narrowed
+- [x] `ARCHITECTURE.md` — the `integrations/` layer. `config/`, the narrowed
       boot layer, the moved leaf symbols and the read-config-at-call-time
       invariant went in as stages 1–3 landed, because that file is a map of the
       present and cannot wait for stage 14.
-- [ ] `TERMINOLOGY.md` — an entry for "integration". "Application" is written;
+- [x] `TERMINOLOGY.md` — an entry for "integration". "Application" is written;
       "local API" never appeared in the file.
-- [ ] A decision record for what this work changed against 0057 — the spec's
-      "What changed after 0057" table is its source.
-- [ ] Reconcile `roadmap/planned/multi-runtime-and-framework-adapters.md` to the
-      integration vocabulary.
-- [ ] `apps/docs` — the `basePath` config change is user-facing.
-- [ ] Delete `specs/application-architecture-map.md`.
-- [ ] Full gate plus `check:boot`, `check:config`, `check:node-imports`,
+- [x] A decision record for what this work changed against 0057:
+      `decisions/0063-what-the-application-reorganization-changed.md`.
+- [x] Reconcile `roadmap/planned/multi-runtime-and-framework-integrations.md` to
+      the integration vocabulary (renamed from `-adapters.md`).
+- [x] `apps/docs` — the `basePath` config change went in with stage 4.
+- [x] Delete the design spec.
+- [x] Full gate plus `check:boot`, `check:config`, `check:node-imports`,
       `check:exports`, `lint:deps`; `db:generate` reports no schema changes.
 
 ## Follow-ups this work creates

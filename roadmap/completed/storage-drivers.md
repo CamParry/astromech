@@ -173,7 +173,7 @@ honestly on the docs page rather than papered over.
   cover the `setBindingEnv` bypass and the error surfaces only.
 - **`initRuntime` still ends with a `process.env` write** (`kernel/boot.ts`),
   which a Workers boot will trip over. Expected to surface with the runtime
-  adapter — see `roadmap/planned/multi-runtime-and-framework-adapters.md`.
+  integration — see `roadmap/planned/multi-runtime-and-framework-integrations.md`.
 - **The S3 driver has never been run against a real endpoint.** Its tests stub
   `fetch` and assert on the signed `Request`.
 

@@ -327,6 +327,27 @@ that both initialise would be two front doors, which is what this replaced.
 
 ---
 
+## Integration
+
+An **integration** is the glue that lets one host — an Astro site, a Cloudflare
+Worker — serve an Astromech application. It carries no domain logic:
+`packages/astromech/src/integrations/` holds two, `astro/` (the `astromech()`
+Astro integration, its Vite wiring, the injected routes, the middleware, and the
+one-line request handler) and `cloudflare/` (`createWorkerEntry`, which returns a
+Worker's `fetch` and `scheduled`).
+
+An integration makes four moves: capture the request in the host's native form,
+get the application (`getAstromech`), hand it over (`app.fetch`), and emit the
+result. One that needs a new branch in core is reporting a missing application
+capability, not a reason to grow.
+
+"Integration" rather than "adapter": Astro already uses "adapter" for its deploy
+targets, and `decisions/0012-driver-not-adapter.md` reserved "driver" for our own
+pluggable backends, so "adapter" is taken twice here. Better Auth's framework
+glue and Astro's own vocabulary both say integration.
+
+---
+
 ## Approval vs Confirmation
 
 Both stop a mutating call to put it to a human, and they are different mechanisms at different altitudes.
