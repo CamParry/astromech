@@ -97,7 +97,7 @@ export function createAstromech(options: {
     return app;
 }
 
-/** Get's the Astromech instance. Throws if it does not exist. */
+/** Gets the Astromech instance. Throws if it does not exist. */
 export function getAstromech(): Promise<Astromech> {
     const existing = registry.peek();
     if (existing === null) {
