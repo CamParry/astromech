@@ -17,7 +17,7 @@ import { loadConfigFile } from '@/config/load';
 import { createViteConfig } from '@/integrations/astro/vite';
 import { registerRoutes } from '@/integrations/astro/routes';
 import { collectPluginFieldTypes } from '@/plugins/runtime/plugin-fields';
-import { runMigrations } from '@/boot/migrations';
+import { runMigrations } from '@/database/migrations';
 
 export type AstromechIntegrationOptions = {
     /** Path to the site's astromech.config.ts, resolved against the Astro project root. */

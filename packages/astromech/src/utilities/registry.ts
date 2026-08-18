@@ -5,7 +5,7 @@
  * separate tsup builds, and six `exports` subpaths can resolve to either `src`
  * or `dist`, so one module can be instantiated more than once in a process. The
  * global is the only slot every copy shares. The application slot in
- * `src/boot/application.ts` depends on that: two copies of it would boot the
+ * `src/astromech.ts` depends on that: two copies of it would boot the
  * runtime twice.
  *
  * Each domain declares its own slot rather than sharing one central context

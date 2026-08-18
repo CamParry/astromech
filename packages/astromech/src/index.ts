@@ -26,8 +26,8 @@ export * from '@/types/index';
 // The application: an integration creates it, everything else reads it. Config
 // reaches the runtime through `createAstromech`, so nothing under here carries a
 // `virtual:` import and this barrel still loads in plain Node.
-export { createAstromech, getAstromech } from '@/boot/application';
-export type { Astromech } from '@/boot/application';
+export { createAstromech, getAstromech } from '@/astromech';
+export type { Astromech } from '@/astromech';
 // Model access, so a plugin can reach a configured model without taking its own
 // SDK dependency. Absent unless the site configures `ai` — hence `undefined`.
 export { getModel, hasModel } from '@/ai/index';

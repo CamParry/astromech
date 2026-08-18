@@ -1,16 +1,16 @@
 /**
- * `createAstromech`: the application slot's semantics, and the HOST entry-type
- * storage the boot mounts.
+ * `createAstromech`: the application registry's semantics, and the HOST
+ * entry-type storage the create sequence mounts.
  *
- * Runs the real boot rather than the harness's `setupTestConfig`, which mirrors
- * the sequence instead of running it — a mirror cannot fail when the boot loop
- * is deleted or moved above `registerPlugins`, which opens by clearing every
- * storage override.
+ * Runs the real create sequence rather than the harness's `setupTestConfig`,
+ * which mirrors the sequence instead of running it — a mirror cannot fail when
+ * the host-storage loop is deleted or moved above `registerPlugins`, which opens
+ * by clearing every storage override.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb } from '@tests/harness';
-import { createAstromech, getAstromech } from '@/boot/application';
+import { createAstromech, getAstromech } from '@/astromech';
 import { getEntryStorage } from '@/entries/storage/registry';
 import { entriesService } from '@/entries/service';
 import type { EntryStorage } from '@/entries/storage/types';
@@ -89,7 +89,7 @@ describe('createAstromech — host entry storage', () => {
         const db = await createTestDb();
         const config = makeConfig(() => db);
         // One application per process, and each case builds its own config.
-        delete globalThis.__astromech?.application;
+        delete globalThis.__astromech?.astromech;
         await createAstromech({ config });
     });
 
@@ -112,12 +112,12 @@ describe('createAstromech — host entry storage', () => {
     });
 });
 
-describe('createAstromech — the application slot', () => {
+describe('createAstromech — the application registry', () => {
     let db: Kysely<DB>;
 
     beforeEach(async () => {
         db = await createTestDb();
-        delete globalThis.__astromech?.application;
+        delete globalThis.__astromech?.astromech;
     });
 
     it('returns the same instance for the same config object', async () => {

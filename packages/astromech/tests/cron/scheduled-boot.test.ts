@@ -50,7 +50,7 @@ beforeEach(async () => {
     // boot fills is empty, including the db `createTestDb` just set.
     delete globalThis.__astromech?.db;
     delete globalThis.__astromech?.config;
-    delete globalThis.__astromech?.application;
+    delete globalThis.__astromech?.astromech;
     delete globalThis.__astromech?.cronJobs;
     delete globalThis.__astromech?.scheduler;
     delete globalThis.__astromech?.defaultScheduler;
@@ -61,7 +61,7 @@ beforeEach(async () => {
 
 afterEach(() => {
     interval().stop?.();
-    delete globalThis.__astromech?.application;
+    delete globalThis.__astromech?.astromech;
     delete globalThis.__astromech?.cronJobs;
     delete globalThis.__astromech?.scheduler;
     delete globalThis.__astromech?.defaultScheduler;

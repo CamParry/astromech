@@ -299,7 +299,7 @@ export function getPluginRawRoutes(): RegisteredRawRoute[] {
     return state().rawRoutes;
 }
 
-/** Injected by `boot/plugin-access.ts`, which owns the implementation. */
+/** Injected by `plugin-access.ts`, which owns the implementation. */
 export function setPluginClient(client: ClientAccess): void {
     state().client = client;
 }
@@ -313,7 +313,7 @@ function requireClient(): ClientAccess {
     return client;
 }
 
-/** Injected by `boot/plugin-access.ts`, for the same reason as the client. */
+/** Injected by `plugin-access.ts`, for the same reason as the client. */
 export function setPluginMethods(access: PluginMethodsAccess): void {
     state().methods = access;
 }

@@ -8,7 +8,7 @@
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { loadConfig, loadRawConfig } from '@/transport/cli/config';
-import { createAstromech } from '@/boot/application';
+import { createAstromech } from '@/astromech';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { filterMethods, type MethodFilter } from '@/policies/method-filter';
 import type { ConfirmOptions } from '@/policies/confirmation';

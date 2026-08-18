@@ -10,7 +10,7 @@
  * export default createWorkerEntry(astro);
  */
 
-import { createAstromech } from '@/boot/application';
+import { createAstromech } from '@/astromech';
 import { cloudflareCron } from '@/cron/drivers/index';
 import { setDefaultScheduler } from '@/cron/registry';
 

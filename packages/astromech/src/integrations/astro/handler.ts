@@ -4,7 +4,7 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getAstromech } from '@/boot/application';
+import { getAstromech } from '@/astromech';
 
 export const prerender = false;
 

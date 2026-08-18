@@ -1,8 +1,10 @@
 /**
- * The application instance — one front door to a booted Astromech.
+ * The Astromech application — one front door to a booted runtime.
  *
  * `createAstromech` initialises and `getAstromech` only ever reads, so there is
- * exactly one place a runtime starts.
+ * exactly one place a runtime starts. The create sequence lives here: resolve
+ * the config, register the drivers and plugin runtime, boot the plugins, then
+ * assemble the instance.
  */
 
 import type {
@@ -18,17 +20,22 @@ import type {
     UsersService,
 } from '@/types/index';
 import { getCurrentRole, getCurrentUser } from '@/request-context/index';
-import { runBootPhases } from '@/boot/lifecycle';
+import { registerDrivers, registerPluginRuntime } from '@/registrations';
+import { checkMigrationDrift } from '@/database/migrations';
 import { getSchedulerDriver } from '@/cron/registry';
 import { onTick } from '@/cron/runner';
-import { entriesService } from '@/entries/index';
+import { resolveConfig } from '@/config/resolve';
+import { setConfig } from '@/config/registry';
+import { registerBuiltInEntryJobs, typedEntriesService } from '@/entries/index';
 import { mediaService } from '@/media/index';
 import { currentUserNotificationsService } from '@/notifications/index';
 import { settingsService } from '@/settings/index';
 import { usersService } from '@/users/index';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
+import { bootPlugins } from '@/plugins/runtime/plugin-runtime';
 import { createHttpApp } from '@/transport/http/index';
 import { createRegistry } from '@/utilities/registry';
+import { stopwatch } from '@/utilities/timing';
 
 export type Astromech = {
     config: ResolvedConfig;
@@ -56,12 +63,12 @@ export type Astromech = {
     startScheduler(): Promise<void>;
 };
 
-type Slot = { config: AstromechConfig; app: Promise<Astromech> };
+type Registered = { config: AstromechConfig; app: Promise<Astromech> };
 
-// A `globalThis` slot rather than a module-level one: the package ships two
-// tsup builds and six `exports` subpaths that can resolve to `src` or `dist`, so
-// one module can be instantiated more than once. See `utilities/registry.ts`.
-const slot = createRegistry<Slot>('application', { required: false });
+// A `globalThis` registry rather than a module-level variable: the package ships
+// two tsup builds and six `exports` subpaths that can resolve to `src` or `dist`,
+// so one module can be instantiated more than once. See `utilities/registry.ts`.
+const registry = createRegistry<Registered>('astromech', { required: false });
 
 /**
  * Initialise. The slot is filled synchronously with the in-flight promise, so a
@@ -73,7 +80,7 @@ const slot = createRegistry<Slot>('application', { required: false });
 export function createAstromech(options: {
     config: AstromechConfig;
 }): Promise<Astromech> {
-    const existing = slot.peek();
+    const existing = registry.peek();
     if (existing !== null) {
         if (existing.config !== options.config) {
             throw new Error(
@@ -84,17 +91,17 @@ export function createAstromech(options: {
         return existing.app;
     }
 
-    const app = boot(options.config).catch((error: unknown) => {
-        slot.clear();
+    const app = build(options.config).catch((error: unknown) => {
+        registry.clear();
         throw error;
     });
-    slot.set({ config: options.config, app });
+    registry.set({ config: options.config, app });
     return app;
 }
 
 /** The created application. Never creates one; throws when none exists. */
 export function getAstromech(): Promise<Astromech> {
-    const existing = slot.peek();
+    const existing = registry.peek();
     if (existing === null) {
         throw new Error(
             '[Astromech] no application has been created. An integration calls ' +
@@ -104,14 +111,31 @@ export function getAstromech(): Promise<Astromech> {
     return existing.app;
 }
 
-/** Run the phases, then assemble the instance from what they registered. */
-async function boot(config: AstromechConfig): Promise<Astromech> {
-    const resolved = await runBootPhases(config);
+/** Resolve the config, register everything, boot the plugins, assemble the app. */
+async function build(config: AstromechConfig): Promise<Astromech> {
+    const clock = stopwatch();
+    const plugins = config.plugins ?? [];
+    const db = config.db.getInstance();
+
+    const resolved = await clock.step('resolve config', () => {
+        const c = resolveConfig(config);
+        setConfig(c);
+        return c;
+    });
+    await clock.step('register drivers', () => registerDrivers(config, db));
+    await clock.step('register jobs', () => registerBuiltInEntryJobs());
+    await clock.step('check migrations', () => checkMigrationDrift(db, plugins));
+    await clock.step('register plugins', () => registerPluginRuntime(config, resolved));
+    await clock.step('boot plugins', () => bootPlugins(plugins));
+
     const http = createHttpApp(resolved);
+
+    // stderr, because the MCP server owns stdout for JSON-RPC.
+    console.error(`[astromech] ready in ${clock.summary()}`);
 
     return {
         config: resolved,
-        entries: entriesService as unknown as TypedEntriesService,
+        entries: typedEntriesService,
         media: mediaService,
         users: usersService,
         settings: settingsService,

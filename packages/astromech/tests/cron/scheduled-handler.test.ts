@@ -51,14 +51,14 @@ beforeEach(async () => {
     // `setupTestConfig` mirrors the boot rather than running it, so the slot
     // the scheduled handler reads is filled by hand. The created path is covered in
     // `scheduled-boot.test.ts`.
-    globals().application = {
+    globals().astromech = {
         config,
         app: Promise.resolve({ scheduled: (at?: Date) => onTick(at ?? new Date()) }),
     };
 });
 
 afterEach(() => {
-    delete globalThis.__astromech?.application;
+    delete globalThis.__astromech?.astromech;
     delete globalThis.__astromech?.cronJobs;
     globals().cronTickRunning = false;
     globals().cronUnscheduledWarned = new Set<string>();
