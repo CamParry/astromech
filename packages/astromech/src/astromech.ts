@@ -19,6 +19,7 @@ import type {
     User,
     UsersService,
 } from '@/types/index';
+import { AstromechError } from '@/errors/index';
 import { getCurrentRole, getCurrentUser } from '@/request-context/index';
 import { registerDrivers, registerPluginRuntime } from '@/registrations';
 import { checkMigrationDrift } from '@/database/migrations';
@@ -81,8 +82,8 @@ export function createAstromech(options: {
     const existing = registry.peek();
     if (existing !== null) {
         if (existing.config !== options.config) {
-            throw new Error(
-                '[Astromech] createAstromech() was called with a different config than ' +
+            throw new AstromechError(
+                'createAstromech() was called with a different config than ' +
                     'the one this process was created with. A process holds one application.'
             );
         }
@@ -101,8 +102,8 @@ export function createAstromech(options: {
 export function getAstromech(): Promise<Astromech> {
     const existing = registry.peek();
     if (existing === null) {
-        throw new Error(
-            '[Astromech] no application has been created. An integration calls ' +
+        throw new AstromechError(
+            'no application has been created. An integration calls ' +
                 'createAstromech({ config }) before anything reads the app.'
         );
     }

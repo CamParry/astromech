@@ -13,6 +13,7 @@ import {
     resolvePluginIdentity,
     resolvePluginPermission,
 } from '@/plugins/runtime/plugin-identity';
+import { AstromechError } from '@/errors/index';
 
 /**
  * Turn a plugin's asset specifier into one this module can emit an `import()`
@@ -111,8 +112,8 @@ export function generatePluginClientManifest(
         const identity = resolvePluginIdentity(def);
         (def.admin?.slots ?? []).forEach((slot: AdminSlotContribution, index: number) => {
             if (!(slot.slot in slotRows)) {
-                throw new Error(
-                    `[Astromech] Plugin "${identity.package}" declares an unknown admin slot "${slot.slot}". Valid slots: ${SLOT_NAMES.join(', ')}.`
+                throw new AstromechError(
+                    `Plugin "${identity.package}" declares an unknown admin slot "${slot.slot}". Valid slots: ${SLOT_NAMES.join(', ')}.`
                 );
             }
             const permission =

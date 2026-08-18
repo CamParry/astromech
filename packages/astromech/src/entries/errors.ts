@@ -101,7 +101,7 @@ export class StagedEntryExistsError extends Error {
 export class PublicTrashedReadError extends Error {
     constructor() {
         super(
-            '[astromech] entries.query: trashed reads require the full shape — a ' +
+            'entries.query: trashed reads require the full shape — a ' +
                 'public read never returns trashed entries. Pass full: true (and ' +
                 'authenticate).'
         );
@@ -125,7 +125,7 @@ export class InvalidReferencesFilterError extends Error {
         const known =
             args.knownPaths.length > 0 ? args.knownPaths.join(', ') : '(none declared)';
         super(
-            `[astromech] entries.query: ${args.detail} ` +
+            `entries.query: ${args.detail} ` +
                 `Queried types: ${args.entryTypes.join(', ')}. ` +
                 `Known relationship paths: ${known}.`
         );
@@ -164,7 +164,7 @@ export class UnknownWhereKeyError extends Error {
 
     constructor(key: string) {
         super(
-            `[astromech] entries.query: unrecognized where key '${key}'. Column ` +
+            `entries.query: unrecognized where key '${key}'. Column ` +
                 `filters are 'status', 'slug', 'title' and 'id'; relationships use ` +
                 `where: { references: { path, id } }.`
         );
@@ -184,7 +184,7 @@ export class UnknownSortKeyError extends Error {
 
     constructor(key: string, sortableFields: readonly string[]) {
         super(
-            `[astromech] entries.query: unrecognized sort key '${key}'. Sortable ` +
+            `entries.query: unrecognized sort key '${key}'. Sortable ` +
                 `fields are ${sortableFields.map((f) => `'${f}'`).join(', ')}.`
         );
         this.name = 'UnknownSortKeyError';

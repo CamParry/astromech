@@ -28,7 +28,7 @@ describe('resolveBinding()', () => {
         setBindingEnv({ DB: {}, ASSETS: {} });
 
         await expect(resolveBinding('MEDIA')).rejects.toThrow(
-            "[Astromech] Cloudflare binding 'MEDIA' not found. Available bindings: DB, ASSETS."
+            "Cloudflare binding 'MEDIA' not found. Available bindings: DB, ASSETS."
         );
     });
 
@@ -36,7 +36,7 @@ describe('resolveBinding()', () => {
         setBindingEnv({});
 
         await expect(resolveBinding('MEDIA')).rejects.toThrow(
-            "[Astromech] Cloudflare binding 'MEDIA' not found. Available bindings: (none)."
+            "Cloudflare binding 'MEDIA' not found. Available bindings: (none)."
         );
     });
 

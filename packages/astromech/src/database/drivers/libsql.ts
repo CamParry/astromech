@@ -22,6 +22,7 @@ import { Kysely, CamelCasePlugin } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import type { DB } from '@/database/types';
 import type { DbDump } from '@/types/config';
+import { AstromechError } from '@/errors/index';
 
 export type LibsqlOptions = {
     url?: string;
@@ -78,8 +79,8 @@ export function libsql(options?: LibsqlOptions) {
     function assertFileUrl(): void {
         const url = resolveUrl();
         if (!url.startsWith('file:')) {
-            throw new Error(
-                '[astromech] libsql dump/restore is only supported for local file databases (file:...), not remote libsql/Turso.'
+            throw new AstromechError(
+                'libsql dump/restore is only supported for local file databases (file:...), not remote libsql/Turso.'
             );
         }
     }
@@ -133,8 +134,8 @@ export function libsql(options?: LibsqlOptions) {
                             : '';
                     const ok = checkRows.length === 1 && firstStr === 'ok';
                     if (!ok)
-                        throw new Error(
-                            '[astromech] restore: backup failed integrity check'
+                        throw new AstromechError(
+                            'restore: backup failed integrity check'
                         );
                     const tablesResult = await c.execute(
                         `SELECT name FROM restore_src.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`

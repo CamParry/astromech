@@ -3,3 +3,4 @@
 // owning domain — import them from @/entries/errors.js.
 export { ValidationError } from './validation';
 export { PermissionDeniedError } from './permission';
+export { AstromechError } from './astromech-error';

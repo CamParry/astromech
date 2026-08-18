@@ -88,3 +88,7 @@ not be re-derived.
 - [ ] Entry **creation** routes (`new.tsx`) and **version-history** routes (`versions.tsx`) declare no AI context. A `{ kind: 'entries', type }` with no `id` renders as "Entry list for type X" via `describeReference`, which would describe a creation screen as a list — actively misleading, so they were left undeclared. Needs either a new `AIContextKind` or an extra wording branch in `utilities/ai-context.ts` before they can be wired
 - [ ] **Modal-driven detail views declare nothing** — opening a media item from the library (`MediaDetailModal` on the media index) still reports only the library at depth 0. The reference should be declared by whatever is actually in view, not by the route alone; a modal is the first case where those differ
 - [ ] No **field-level** reference yet. Depth 1 is the deepest anything declares, so "this field" has nothing to resolve against. The ordered-list design already accommodates it (a focused field editor at depth 2); the open question is what withdraws the reference on blur without thrashing the store
+
+### Console logging follow-ups
+
+- [ ] Browser-safe `log`. `utilities/log.ts` writes to stderr via `console.error` (Node/serving side). Two admin browser-side calls still hardcode the `[Astromech]`/`[astromech]` prefix — `admin/i18n.ts` and `admin/support/ui-instance-guard.ts` — because stderr routing is wrong in a browser. Needs a browser log variant before they can move off the hardcoded string. See `decisions/0066-the-astromech-prefix-is-a-log-device.md`

@@ -18,6 +18,7 @@ import { createViteConfig } from '@/integrations/astro/vite';
 import { registerRoutes } from '@/integrations/astro/routes';
 import { collectPluginFieldTypes } from '@/plugins/runtime/plugin-fields';
 import { runMigrations } from '@/database/migrations';
+import { AstromechError } from '@/errors/index';
 
 export type AstromechIntegrationOptions = {
     /** Path to the site's astromech.config.ts, resolved against the Astro project root. */
@@ -32,8 +33,8 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
 
     function requireLoaded(): { config: AstromechConfig; resolved: ResolvedConfig } {
         if (loaded === undefined) {
-            throw new Error(
-                '[Astromech] Config not loaded — the astro:config:setup hook has not run.'
+            throw new AstromechError(
+                'Config not loaded — the astro:config:setup hook has not run.'
             );
         }
         return loaded;

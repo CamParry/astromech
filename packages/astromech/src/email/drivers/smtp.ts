@@ -1,4 +1,5 @@
 import type { EmailDriver } from '@/types/index';
+import { AstromechError } from '@/errors/index';
 
 export type SmtpOptions = {
     host: string;
@@ -27,8 +28,8 @@ export function smtp({ from, ...transport }: SmtpOptions): EmailDriver {
                 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                 // @ts-ignore
                 const nodemailer = (await import('nodemailer').catch(() => {
-                    throw new Error(
-                        '[Astromech] smtp() requires nodemailer: npm install nodemailer'
+                    throw new AstromechError(
+                        'smtp() requires nodemailer: npm install nodemailer'
                     );
                 })) as {
                     createTransport: (opts: unknown) => {

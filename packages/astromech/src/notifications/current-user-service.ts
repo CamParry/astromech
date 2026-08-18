@@ -11,13 +11,14 @@
 import { notificationsService } from '@/notifications/service';
 import { getCurrentUser } from '@/request-context/request-context';
 import type { Notification, NotificationsService } from '@/types/index';
+import { AstromechError } from '@/errors/index';
 
 /** The signed-in user's id, or a loud failure naming what is missing. */
 async function currentUserId(): Promise<string> {
     const user = await getCurrentUser();
     if (user === null) {
-        throw new Error(
-            '[Astromech] notifications are session-scoped: they act on the signed-in ' +
+        throw new AstromechError(
+            'notifications are session-scoped: they act on the signed-in ' +
                 "user's own rows, and there is no request context here to name one. " +
                 'Use `ctx.notify` to emit, or call this inside `runWithRequest`.'
         );

@@ -8,6 +8,7 @@ import { resolveConfig } from '@/config/resolve';
 import { loadConfigFile } from '@/config/load';
 import { setConfig } from '@/config/registry';
 import type { AstromechConfig, ResolvedConfig } from '@/types/index';
+import { log } from '@/utilities/log';
 
 export async function loadRawConfig(configPath?: string): Promise<AstromechConfig> {
     return loadConfigFile(process.cwd(), configPath);
@@ -45,8 +46,8 @@ export function assertLocalDatabase(config: AstromechConfig, allowRemote: boolea
     if (allowRemote) return;
     if (config.db.isRemote?.() !== true) return;
 
-    console.error(
-        `[astromech] refusing to open the "${config.db.type}" database: it is remote, ` +
+    log.error(
+        `refusing to open the "${config.db.type}" database: it is remote, ` +
             'and a CLI command run against a remote database writes to whatever it ' +
             'is pointed at. Re-run with --allow-remote if that is what you intend.'
     );

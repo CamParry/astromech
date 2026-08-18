@@ -30,6 +30,7 @@ import {
     type QueryResult,
 } from 'kysely';
 import { D1Introspector } from './d1-introspector';
+import { AstromechError } from '@/errors/index';
 
 /** Structural subset of Cloudflare's D1Database we depend on. */
 export type D1DatabaseLike = {
@@ -50,7 +51,7 @@ export type D1ResultLike<T = unknown> = {
 };
 
 const NO_TRANSACTIONS_ERROR =
-    '[Astromech] Cloudflare D1 has no interactive transactions (batch() is its only ' +
+    'Cloudflare D1 has no interactive transactions (batch() is its only ' +
     'atomicity primitive). The d1() driver declares supportsTransactions: false so entry ' +
     'storage degrades to sequential writes — reaching this error means something called ' +
     'db.transaction() directly.';
@@ -103,15 +104,15 @@ class D1Driver implements Driver {
     }
 
     async beginTransaction(): Promise<void> {
-        throw new Error(NO_TRANSACTIONS_ERROR);
+        throw new AstromechError(NO_TRANSACTIONS_ERROR);
     }
 
     async commitTransaction(): Promise<void> {
-        throw new Error(NO_TRANSACTIONS_ERROR);
+        throw new AstromechError(NO_TRANSACTIONS_ERROR);
     }
 
     async rollbackTransaction(): Promise<void> {
-        throw new Error(NO_TRANSACTIONS_ERROR);
+        throw new AstromechError(NO_TRANSACTIONS_ERROR);
     }
 
     async releaseConnection(): Promise<void> {
@@ -138,7 +139,7 @@ class D1Connection implements DatabaseConnection {
         }
         const result = await statement.all<R>();
         if (result.error !== undefined) {
-            throw new Error(`[Astromech] D1 query failed: ${result.error}`);
+            throw new AstromechError(`D1 query failed: ${result.error}`);
         }
 
         const meta = result.meta;
@@ -157,6 +158,6 @@ class D1Connection implements DatabaseConnection {
     }
 
     streamQuery<R>(): AsyncIterableIterator<QueryResult<R>> {
-        throw new Error('[Astromech] The D1 driver does not support streaming queries.');
+        throw new AstromechError('The D1 driver does not support streaming queries.');
     }
 }

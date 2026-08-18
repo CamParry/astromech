@@ -4,6 +4,7 @@
 
 import type { MediaAccess } from '@/types/index';
 import { CLOUDFLARE_IMAGES_DRIVER } from '@/utilities/image-drivers';
+import { AstromechError } from '@/errors/index';
 
 /**
  * `media.access: 'private'` and the Cloudflare Images driver cannot coexist.
@@ -17,8 +18,8 @@ export function assertMediaAccessCompatible(
     imageDriverName: string | undefined
 ): void {
     if (access !== 'private' || imageDriverName !== CLOUDFLARE_IMAGES_DRIVER) return;
-    throw new Error(
-        `[Astromech] \`media.access: 'private'\` cannot be combined with the ` +
+    throw new AstromechError(
+        `\`media.access: 'private'\` cannot be combined with the ` +
             `\`${CLOUDFLARE_IMAGES_DRIVER}\` image driver: it transforms by URL, so ` +
             `Cloudflare's network must be able to fetch your media route, which a ` +
             `private route refuses. Either set \`media.access: 'public'\`, or use a ` +

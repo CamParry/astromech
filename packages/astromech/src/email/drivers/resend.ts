@@ -1,4 +1,5 @@
 import type { EmailDriver } from '@/types/index';
+import { AstromechError } from '@/errors/index';
 
 export type ResendOptions = {
     apiKey: string;
@@ -23,7 +24,7 @@ export function resend({ apiKey, from }: ResendOptions): EmailDriver {
             });
             if (!res.ok) {
                 const body = await res.text();
-                throw new Error(`[Astromech] Resend error ${res.status}: ${body}`);
+                throw new AstromechError(`Resend error ${res.status}: ${body}`);
             }
         },
     };

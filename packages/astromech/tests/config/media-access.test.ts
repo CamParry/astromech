@@ -93,7 +93,7 @@ describe('resolveConfig media.access × image driver', () => {
     it("throws on 'private' + the Cloudflare Images driver", () => {
         expect(() =>
             resolveConfig(configWith({ access: 'private' }, cloudflareImages()))
-        ).toThrow(/\[Astromech\].*cloudflare-images/s);
+        ).toThrow(/cloudflare-images/s);
     });
 
     it('names both ways out in the error', () => {

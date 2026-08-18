@@ -9,6 +9,7 @@ import type { PluginDefinition } from '@/types/index';
 import { migrateToLatest, mergeMigrationProviders } from '@astromech/schema-engine';
 import { collectPluginMigrations } from '@/database/plugin-migrations';
 import { loadAppMigrations } from '@/database/app-migrations';
+import { log } from '@/utilities/log';
 
 export type MigrationLogger = {
     info: (message: string) => void;
@@ -62,8 +63,8 @@ export async function checkMigrationDrift(
     );
     if (pending.length === 0) return;
 
-    console.warn(
-        `[astromech] ${pending.length} migration(s) have not been applied to this ` +
+    log.warn(
+        `${pending.length} migration(s) have not been applied to this ` +
             `database: ${pending.map((migration) => migration.name).join(', ')}. ` +
             'Run `astromech db:init`.'
     );

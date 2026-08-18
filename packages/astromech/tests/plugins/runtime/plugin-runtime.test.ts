@@ -215,7 +215,7 @@ describe('createPluginContext', () => {
         );
 
         expect(() => ctx.methods.tools()).toThrow(
-            '[Astromech] Plugin methods are not available in this context.'
+            'Plugin methods are not available in this context.'
         );
     });
 
@@ -272,7 +272,7 @@ describe('createPluginContext', () => {
 
         await expect(
             ctx.email.send('to@example.com', 'Subject', createElement('p'))
-        ).rejects.toThrow('[Astromech] Email is not configured');
+        ).rejects.toThrow('Email is not configured');
     });
 });
 
