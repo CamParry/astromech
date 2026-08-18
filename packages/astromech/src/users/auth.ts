@@ -10,6 +10,7 @@ import { createRegistry } from '@/utilities/registry';
 import { getDatabaseDriver } from '@/database/driver-registry';
 import { getConfig } from '@/config/registry';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
+import { log } from '@/utilities/log';
 
 const authRegistry = createRegistry<Auth<BetterAuthOptions>>('auth', {
     required: false,
@@ -106,9 +107,7 @@ function buildAuth(): Auth<BetterAuthOptions> {
                 const { getEmailOverride } = await import('@/email/email-overrides');
                 const driver = getEmailDriver();
                 if (!driver) {
-                    console.log(
-                        `[Astromech] Password reset URL for ${user.email}: ${url}`
-                    );
+                    log.info(`Password reset URL for ${user.email}: ${url}`);
                     return;
                 }
                 const subject = 'Reset your password';

@@ -34,6 +34,7 @@ import type {
     StorageRange,
     StorageStat,
 } from '@/types/index';
+import { AstromechError } from '@/errors/index';
 
 export type S3Options = {
     /** Falls back to `S3_ENDPOINT` on Node. Required on Workers. */
@@ -63,8 +64,8 @@ function envVar(name: string): string | undefined {
 function required(value: string | undefined, option: string, envName: string): string {
     const resolved = value ?? envVar(envName);
     if (resolved === undefined || resolved === '') {
-        throw new Error(
-            `[Astromech] s3(): missing '${option}'. Pass it to s3({ ${option}: … }) ` +
+        throw new AstromechError(
+            `s3(): missing '${option}'. Pass it to s3({ ${option}: … }) ` +
                 `or set ${envName} (Node only — on Workers it must be passed explicitly).`
         );
     }
@@ -74,8 +75,8 @@ function required(value: string | undefined, option: string, envName: string): s
 /** S3 errors are XML, so the body is the only readable part of a failure. */
 async function s3Error(op: string, target: string, res: Response): Promise<Error> {
     const body = await res.text().catch(() => '');
-    return new Error(
-        `[Astromech] s3 ${op} failed for '${target}': ${res.status} ${res.statusText}` +
+    return new AstromechError(
+        `s3 ${op} failed for '${target}': ${res.status} ${res.statusText}` +
             (body === '' ? '' : ` — ${body}`)
     );
 }

@@ -101,7 +101,7 @@ describe('bootPlugins – removed-plugin warning', () => {
             { package: '@astromech/backups', version: '1.0.0' },
         ]);
 
-        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+        const warn = vi.spyOn(console, 'error').mockImplementation(() => undefined);
         let messages: string[];
         try {
             await bootPlugins([{ package: '@astromech/redirects', version: '1.0.0' }]);
@@ -119,7 +119,7 @@ describe('bootPlugins – removed-plugin warning', () => {
     it('does not warn while every tracked plugin is still configured', async () => {
         await bootPlugins([{ package: '@astromech/backups', version: '1.0.0' }]);
 
-        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+        const warn = vi.spyOn(console, 'error').mockImplementation(() => undefined);
         let calls: number;
         try {
             await bootPlugins([{ package: '@astromech/backups', version: '1.0.0' }]);

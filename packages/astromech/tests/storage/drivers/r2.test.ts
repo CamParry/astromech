@@ -434,7 +434,7 @@ describe('r2()', () => {
 
             const driver = r2({ binding: 'MEDIA' });
             await expect(driver.get('any-key')).rejects.toThrow(
-                "[Astromech] Cloudflare binding 'MEDIA' not found."
+                "Cloudflare binding 'MEDIA' not found."
             );
         });
 

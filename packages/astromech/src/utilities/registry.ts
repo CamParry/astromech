@@ -13,6 +13,8 @@
  * types, turning this leaf into a hub. The registry stays type-agnostic.
  */
 
+import { AstromechError } from '@/errors/index';
+
 /**
  * The shared namespace. Registry slots take arbitrary string keys; the named
  * keys are process guards, read directly rather than through a registry object.
@@ -75,7 +77,7 @@ export function createRegistry<T>(
             const value = globals()[name];
             if (value === undefined) {
                 const hint = opts?.hint === undefined ? '' : ` ${opts.hint}`;
-                throw new Error(`[Astromech] '${name}' is not configured.${hint}`);
+                throw new AstromechError(`'${name}' is not configured.${hint}`);
             }
             return value as T;
         },
@@ -118,7 +120,7 @@ export function createKeyedRegistry<T>(name: string): KeyedRegistry<T> {
         get: (key: string): T => {
             const value = slot().get(key);
             if (value === undefined) {
-                throw new Error(`[Astromech] '${name}' has no entry for '${key}'.`);
+                throw new AstromechError(`'${name}' has no entry for '${key}'.`);
             }
             return value;
         },

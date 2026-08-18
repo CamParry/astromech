@@ -36,6 +36,7 @@
 
 import type { Insertable, Updateable } from 'kysely';
 import type { KyselyOf, Table, TableSelect } from '@/database/define-table';
+import { AstromechError } from '@/errors/index';
 
 // ── Plugin tables (registered at boot) ──────────────────────────────────────
 
@@ -67,8 +68,8 @@ export function kyselyTableKey(sqlName: string): string {
 export function registerTableCodec(kyselyKey: string, table: Table): void {
     const existing = PLUGIN_TABLES.get(kyselyKey);
     if (existing && !sameTable(existing, table)) {
-        throw new Error(
-            `[astromech] Two different tables are registered for "${kyselyKey}" ` +
+        throw new AstromechError(
+            `Two different tables are registered for "${kyselyKey}" ` +
                 `("${existing.name}" and "${table.name}"). Plugin tables are namespaced by ` +
                 `alias — check for a duplicate or mis-aliased plugin.`
         );

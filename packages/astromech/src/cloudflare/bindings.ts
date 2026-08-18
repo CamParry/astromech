@@ -23,6 +23,7 @@
  */
 
 import { createRegistry } from '@/utilities/registry';
+import { AstromechError } from '@/errors/index';
 
 type BindingEnv = Record<string, unknown>;
 
@@ -79,8 +80,8 @@ async function detectEnv(): Promise<BindingEnv> {
         wrangler = (await import(/* @vite-ignore */ spec)) as WranglerModule;
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        throw new Error(
-            '[Astromech] Resolving a Cloudflare binding outside a Worker needs wrangler. ' +
+        throw new AstromechError(
+            'Resolving a Cloudflare binding outside a Worker needs wrangler. ' +
                 'Install it as a devDependency and make sure a wrangler.jsonc config exists. ' +
                 `(${message})`,
             { cause: err }
@@ -109,8 +110,8 @@ export async function resolveBinding<T>(name: string): Promise<T> {
     if (!(name in env)) {
         const available = Object.keys(env);
         const list = available.length > 0 ? available.join(', ') : '(none)';
-        throw new Error(
-            `[Astromech] Cloudflare binding '${name}' not found. Available bindings: ${list}. ` +
+        throw new AstromechError(
+            `Cloudflare binding '${name}' not found. Available bindings: ${list}. ` +
                 'Check the `bindings` section of your wrangler config.'
         );
     }

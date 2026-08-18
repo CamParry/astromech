@@ -65,6 +65,8 @@ import {
     withDefaultSettingsShape,
 } from '@/utilities/with-default-shape';
 import { createRegistry } from '@/utilities/registry';
+import { AstromechError } from '@/errors/index';
+import { log } from '@/utilities/log';
 
 // ============================================================================
 // Registry (globalThis — shared across the package's entry chunks)
@@ -239,8 +241,8 @@ async function trackPlugin(
     try {
         await createPluginTrackingStorage().track(pkg, namespace, version);
     } catch (error) {
-        console.warn(
-            `[astromech] Could not record plugin "${pkg}" in _astromech_plugins: ` +
+        log.warn(
+            `Could not record plugin "${pkg}" in _astromech_plugins: ` +
                 `${error instanceof Error ? error.message : String(error)}`
         );
     }
@@ -256,8 +258,8 @@ async function warnOnUntrackedRemovals(configured: string[]): Promise<void> {
         const tracked = await createPluginTrackingStorage().packages();
         for (const pkg of tracked) {
             if (configured.includes(pkg)) continue;
-            console.warn(
-                `[astromech] Plugin "${pkg}" is still tracked in the database but is no ` +
+            log.warn(
+                `Plugin "${pkg}" is still tracked in the database but is no ` +
                     `longer in \`config.plugins\`. Its tables and migrations remain — run ` +
                     `\`astromech plugin:purge ${pkg}\` to remove them.`
             );
@@ -308,7 +310,7 @@ export function setPluginClient(client: ClientAccess): void {
 function requireClient(): ClientAccess {
     const client = state().client;
     if (!client) {
-        throw new Error('[Astromech] Plugin client is not available in this context.');
+        throw new AstromechError('Plugin client is not available in this context.');
     }
     return client;
 }
@@ -322,7 +324,7 @@ export function setPluginMethods(access: PluginMethodsAccess): void {
 function requireMethods(): PluginMethodsAccess {
     const methods = state().methods;
     if (!methods) {
-        throw new Error('[Astromech] Plugin methods are not available in this context.');
+        throw new AstromechError('Plugin methods are not available in this context.');
     }
     return methods;
 }
@@ -396,9 +398,7 @@ async function sendPluginEmail(
 ): Promise<void> {
     const driver = getEmailDriver();
     if (!driver) {
-        throw new Error(
-            '[Astromech] Email is not configured; cannot send from a plugin.'
-        );
+        throw new AstromechError('Email is not configured; cannot send from a plugin.');
     }
     const { html, text } = await renderEmail(element);
     await driver.send({ to, subject, html, text });

@@ -55,6 +55,7 @@ import {
     encodeWith,
     kyselyTableKey,
 } from '@/database/codec';
+import { AstromechError } from '@/errors/index';
 import type {
     ColumnRuntime,
     Table,
@@ -232,8 +233,8 @@ export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
     function column(name: string): ColumnRuntime {
         const col = columns[name];
         if (!col) {
-            throw new Error(
-                `[astromech] createStorage("${table.name}"): unknown column "${name}"`
+            throw new AstromechError(
+                `createStorage("${table.name}"): unknown column "${name}"`
             );
         }
         return col;
@@ -243,8 +244,8 @@ export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
     function idColumn(): string {
         const [only] = primaryKey;
         if (primaryKey.length !== 1 || only === undefined) {
-            throw new Error(
-                `[astromech] createStorage("${table.name}"): update/delete by id ` +
+            throw new AstromechError(
+                `createStorage("${table.name}"): update/delete by id ` +
                     `needs exactly one primary-key column, found ${primaryKey.length}. ` +
                     `Use updateMany/deleteMany with an explicit where.`
             );
@@ -315,8 +316,8 @@ export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
                     out.push(eb(key, 'like', operand));
                     break;
                 default:
-                    throw new Error(
-                        `[astromech] createStorage("${table.name}"): ` +
+                    throw new AstromechError(
+                        `createStorage("${table.name}"): ` +
                             `unknown operator "${op}" on column "${key}"`
                     );
             }
@@ -331,8 +332,8 @@ export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
         operand: unknown
     ): unknown[] {
         if (!Array.isArray(operand)) {
-            throw new Error(
-                `[astromech] createStorage("${table.name}"): "${op}" on column ` +
+            throw new AstromechError(
+                `createStorage("${table.name}"): "${op}" on column ` +
                     `"${key}" expects an array`
             );
         }
@@ -438,8 +439,8 @@ export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
             .returningAll()
             .executeTakeFirst();
         if (!row) {
-            throw new Error(
-                `[astromech] createStorage("${table.name}"): insert returned no row`
+            throw new AstromechError(
+                `createStorage("${table.name}"): insert returned no row`
             );
         }
         return decodeRow(row);
@@ -454,9 +455,8 @@ export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
             .returningAll()
             .executeTakeFirst();
         if (!row) {
-            throw new Error(
-                `[astromech] createStorage("${table.name}"): no row found for ` +
-                    `${idCol} "${id}"`
+            throw new AstromechError(
+                `createStorage("${table.name}"): no row found for ` + `${idCol} "${id}"`
             );
         }
         return decodeRow(row);
@@ -493,8 +493,8 @@ export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
     ): Promise<TableSelect<D>> {
         const target = opts?.target ?? primaryKey;
         if (target.length === 0) {
-            throw new Error(
-                `[astromech] createStorage("${table.name}"): upsert needs a ` +
+            throw new AstromechError(
+                `createStorage("${table.name}"): upsert needs a ` +
                     `conflict target — the table has no primary key, so pass \`target\`.`
             );
         }
@@ -507,8 +507,8 @@ export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
                 ? omit(values, target)
                 : encodeUpdate(opts.set as object);
         if (Object.keys(setValues).length === 0) {
-            throw new Error(
-                `[astromech] createStorage("${table.name}"): upsert has nothing ` +
+            throw new AstromechError(
+                `createStorage("${table.name}"): upsert has nothing ` +
                     `to set on conflict — pass \`set\`.`
             );
         }
@@ -519,8 +519,8 @@ export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
             .returningAll()
             .executeTakeFirst();
         if (!row) {
-            throw new Error(
-                `[astromech] createStorage("${table.name}"): upsert returned no row`
+            throw new AstromechError(
+                `createStorage("${table.name}"): upsert returned no row`
             );
         }
         return decodeRow(row);

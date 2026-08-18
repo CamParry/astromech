@@ -43,6 +43,7 @@ import type {
     ReferenceTarget,
     Table,
 } from '@/database/define-table';
+import { AstromechError } from '@/errors/index';
 
 export type {
     Snapshot,
@@ -88,17 +89,15 @@ export function resolveReferenceTarget(target: ReferenceTarget): {
 } {
     if (typeof target === 'string') return { table: target, column: 'id' };
     if (target.primaryKey !== undefined) {
-        throw new Error(
-            `[Astromech] reference target "${target.name}" has a composite primary key ` +
+        throw new AstromechError(
+            `reference target "${target.name}" has a composite primary key ` +
                 `(${target.primaryKey.join(', ')}); a single-column reference cannot ` +
                 `address it. Reference a table with a single-column key instead.`
         );
     }
     const pkKey = Object.entries(target.columns).find(([, col]) => col.primaryKey)?.[0];
     if (pkKey === undefined) {
-        throw new Error(
-            `[Astromech] reference target "${target.name}" has no primary key`
-        );
+        throw new AstromechError(`reference target "${target.name}" has no primary key`);
     }
     return { table: target.name, column: toSnakeCase(pkKey) };
 }

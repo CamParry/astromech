@@ -22,7 +22,7 @@ describe('createRegistry', () => {
 
     it('omits the trailing space when there is no hint', () => {
         const reg = createRegistry<Driver>('test.noHint');
-        expect(() => reg.get()).toThrow("[Astromech] 'test.noHint' is not configured.");
+        expect(() => reg.get()).toThrow("'test.noHint' is not configured.");
     });
 
     it('peek() returns null when unset', () => {
