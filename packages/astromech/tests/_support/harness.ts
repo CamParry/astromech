@@ -46,7 +46,7 @@ import { resolveConfig } from '@/config/resolve';
 import { setConfig } from '@/config/registry';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { setEntryAccess } from '@/entries/plugin-access';
-import { setPluginAccess } from '@/boot/plugin-access';
+import { setPluginAccess } from '@/plugin-access';
 import { runWithContext } from '@/request-context/index';
 import type {
     AstromechConfig,
@@ -59,7 +59,7 @@ import type {
 } from '@/types/index';
 
 // Wire the plugin runtime's ports once for every harness-based test, before any
-// registerPlugins call below, as `runBootPhases` does. `setNotifyAccess` is
+// registerPlugins call below, as `registerPluginRuntime` does. `setNotifyAccess` is
 // left out: no harness-based test emits a notification from a plugin context.
 setEntryAccess();
 setPluginAccess();

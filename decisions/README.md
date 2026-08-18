@@ -103,3 +103,4 @@ Distinct from the neighbouring directories:
 - [0061](0061-identity-resolves-on-demand.md) — the request store holds the request, identity resolves on the first ask, and `App.Locals` is gone
 - [0062](0062-the-app-is-the-surface-not-a-shared-contract.md) — the application is the in-process surface, the fetch client is typed by the wire, and the shared `AstromechClient` contract is deleted
 - [0063](0063-what-the-application-reorganization-changed.md) — where the application reorganization landed differently from 0057: the `createAstromech`/`getAstromech` split, `config/` in the capabilities layer, the CLI shim deleted, one `basePath`, and Hono built at boot
+- [0064](0064-the-composition-root-is-astromech-at-the-source-root.md) — the composition root moves to a root-level `astromech.ts`, `boot/` dissolves, the boot sequence inlines into `createAstromech`, "phase" is dropped, and migrations move to `database/`

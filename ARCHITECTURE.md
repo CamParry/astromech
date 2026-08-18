@@ -37,8 +37,8 @@ The source is a modular screaming-architecture DAG. Imports may only point
 one another:
 
 ```
-integrations · admin · boot · codegen          entrypoints & composition root
-transport (http · local · mcp · cli · tools)   delivery — http/client/ is the fetch Client (astromech/fetch), over the wire
+astromech.ts · integrations · admin · codegen  entrypoints & composition root
+transport (http · mcp · cli · tools)           delivery — http/client/ is the fetch Client (astromech/fetch), over the wire
 policies                                       permission/confirmation wrappers over the manifest
 entries · media · users · settings ·           domains — siblings, never import each other
   notifications
@@ -114,7 +114,7 @@ Key invariants:
   contract only one layer implements lives with that layer, and a file the admin
   bundle also holds carries the `*.shared.ts` marker.
 - **The application is the in-process surface; the fetch client is its own.**
-  `boot/application.ts` composes the domain services onto the instance an
+  `astromech.ts` composes the domain services onto the instance an
   integration creates, and `transport/http/client/` is a standalone REST wrapper
   typed by what the wire returns. Parity between them is enforced by mechanism —
   the HTTP routes derive from the same services through the method manifest — and
@@ -157,10 +157,12 @@ packages/
 ├── astromech/       # the published `astromech` core package
 │   ├── src/
 │   │   ├── index.ts        # public framework-agnostic entry (re-exported via exports/)
+│   │   ├── astromech.ts    # composition root — createAstromech/getAstromech, the Astromech type, the instance registry, and the create sequence
+│   │   ├── registrations.ts # the register steps the create sequence runs (drivers · plugin runtime)
+│   │   ├── plugin-access.ts # fills the plugin runtime's client and methods ports
 │   │   │
-│   │   │   ── entrypoints & composition root ──────────────────────────────────
+│   │   │   ── entrypoints ─────────────────────────────────────────────────────
 │   │   ├── integrations/   # framework and runtime glue — astro/ (index.ts the integration, astromech/astro · vite.ts · virtual-module.ts · routes.ts the injectRoute calls · middleware.ts, astromech/middleware · handler.ts, the one APIRoute behind every injected pattern) · cloudflare/ (index.ts, createWorkerEntry, astromech/cloudflare)
-│   │   ├── boot/           # composition root — application.ts (createAstromech/getAstromech) · lifecycle.ts (the ordered phases) · plugin-access.ts (fills the runtime's client and methods ports) · migrations.ts
 │   │   ├── admin/          # React admin SPA (TanStack Router; deep-imports the *.shared.ts domain leaves) — components/dev/ is import.meta.env.DEV-gated
 │   │   ├── codegen/        # type generator + plugin-client manifest + method manifest (.astro/astromech.methods.json, plus manifest-registry.ts — the boot-generated copy)
 │   │   │
@@ -182,7 +184,7 @@ packages/
 │   │   │
 │   │   │   ── capabilities ───────────────────────────────────────────────
 │   │   ├── config/         # the config pipeline: load (jiti) · resolve (orchestration) + its named steps · validate/ · admin-config · registry (setConfig/getConfig)
-│   │   ├── database/       # Kysely client/drivers + schema.ts aggregator
+│   │   ├── database/       # Kysely client/drivers + schema.ts aggregator + migrations.ts (runMigrations / drift check)
 │   │   ├── storage/        # blob-storage registry + drivers/ (filesystem, r2, s3)
 │   │   ├── cloudflare/     # binding-name resolution across Workers and Node
 │   │   ├── permissions/    # permission model: roles, grammar, BUILT_IN_ROLES, can()
@@ -247,7 +249,7 @@ So a plugin that imports a core module reaching `virtual:astromech/config` — w
 
 **The rule this produces: a plugin package imports `astromech`, `astromech/ui` and `astromech/ui/app`, and nothing else from core.** `astromech` loads under plain Node, and so does `astromech/ui` — the component kit, whose components take their inputs from their props. `astromech/ui/app` does not: it carries the admin surface that needs the running admin (`useAstromechPlugin`, the `CommandPalette` module, the AI-context hooks, `ApiErrorPanel`), which reaches `virtual:astromech/admin-config` and the fetch client. The rule survives because a plugin's Node-loaded entry never imports it: only the plugin's source-shipped `./admin/*` components do, and those are compiled by the consumer's Vite, where the virtual module resolves. `packages/astromech/scripts/check-node-imports.mjs` spawns Node against the kit's built entry — the file npm resolves `astromech/ui` to — which is the check that keeps the two halves apart. Type-only imports from any subpath are fine, because they erase. Everything else arrives on `ctx`. New platform capabilities are therefore added as a capability port (above), never as a published subpath a plugin is expected to import — `ctx.methods.tools()` is the worked example, and `decisions/0007-plugin-core-boundary.md` holds the mechanism with the rejected alternatives. The **root `astromech` barrel** is the sanctioned third route: it is already the one barrel a plugin may import, so a capability whose surface is a pure function over a registry can ship from there and needs neither a port nor a subpath — `getModel`/`hasModel` do.
 
-A port's implementation must be a **Vite-graph closure**, and it is registered by an explicit call rather than by an import side effect — the package is `sideEffects: false`, so a bare `import './plugin-access'` is tree-shaken away and the port never registers. `boot/lifecycle.ts` makes the three calls (`wireEntryAccess`, `wireNotifyAccess`, `wirePluginAccess`) in `registerPluginRuntime`, before `registerPlugins`. It is reached through `createAstromech`, which the injected middleware and the Cloudflare `scheduled()` handler both call in the serving process, so the graph that evaluates it is the graph the plugin's `ctx.entries` runs in.
+A port's implementation must be a **Vite-graph closure**, and it is registered by an explicit call rather than by an import side effect — the package is `sideEffects: false`, so a bare `import './plugin-access'` is tree-shaken away and the port never registers. `registrations.ts` makes the three calls (`setEntryAccess`, `setNotifyAccess`, `setPluginAccess`) in `registerPluginRuntime`, before `registerPlugins`. It is reached through `createAstromech`, which the injected middleware and the Cloudflare `scheduled()` handler both call in the serving process, so the graph that evaluates it is the graph the plugin's `ctx.entries` runs in.
 
 `ssr.noExternal` does **not** fix this, and neither does teaching Node to resolve `virtual:` with module customization hooks. `decisions/0007-plugin-core-boundary.md` records why each fails.
 

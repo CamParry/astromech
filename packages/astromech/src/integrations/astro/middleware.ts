@@ -6,7 +6,7 @@
 
 import type { MiddlewareHandler } from 'astro';
 import { rawConfig } from 'virtual:astromech/config';
-import { createAstromech } from '@/boot/application';
+import { createAstromech } from '@/astromech';
 import { runWithRequest } from '@/request-context/index';
 
 export const onRequest: MiddlewareHandler = async (context, next) => {

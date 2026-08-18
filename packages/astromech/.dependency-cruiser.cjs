@@ -19,7 +19,9 @@
  * This config scans CORE ONLY (`src/`). Cross-package isolation is enforced by
  * package `exports` boundaries, not this scan.
  *
- * The boot layer is the composition root and may import from any layer below it.
+ * The composition root is the root-level src modules (astromech.ts,
+ * registrations.ts, plugin-access.ts) — not a layer directory. It sits at the
+ * top of the DAG and may import from any layer below it.
  *
  * Domains may read one another. The module split is for organisation, not
  * isolation: a reverse lookup that needs an entry's title and a user's name is
@@ -48,7 +50,7 @@
  * in this file hand-enumerates a sibling directory.
  */
 const LAYERS = [
-    ['integrations', 'admin', 'boot', 'codegen'],
+    ['integrations', 'admin', 'codegen'],
     ['transport', 'policies'],
     ['entries', 'media', 'users', 'settings', 'notifications'],
     [
@@ -83,6 +85,16 @@ const HAND_WRITTEN_NO_UPWARD = new Set(['database', 'types', 'utilities', 'error
  * which re-export from every layer by design.
  */
 const UNLAYERED = ['exports'];
+
+/**
+ * The composition root: root-level src modules (not in any layer directory).
+ * `astromech.ts` is the front door (createAstromech/getAstromech); `registrations.ts`
+ * and `plugin-access.ts` are the wiring it calls. They sit at the top of the DAG:
+ * they may import any layer, no layer below the entrypoints tier may import them,
+ * and no browser bundle may hold them (they drag `virtual:astromech/config` and the
+ * whole driver graph with them).
+ */
+const COMPOSITION_ROOT = '^src/(astromech|registrations|plugin-access)\\.ts$';
 
 /**
  * Sources exempt from their layer's generated no-upward rule.
@@ -126,14 +138,13 @@ const BROWSER_SAFE = new Set([...LAYERS[4], 'fields']);
  * Everything a browser bundle may NOT hold — the domains, the server-side
  * capabilities, the transports, the policies and the composition root. Pulling
  * any of these into the admin drags `virtual:astromech/config` (and with it the
- * whole driver and plugin graph) into the client bundle.
+ * whole driver and plugin graph) into the client bundle. The composition root is
+ * enforced separately via `COMPOSITION_ROOT` in the browser rules below, since it
+ * is root-level files rather than a layer directory.
  */
-const SERVER_ONLY = [
-    'boot',
-    ...LAYERS.slice(1)
-        .flat()
-        .filter((directory) => !BROWSER_SAFE.has(directory)),
-];
+const SERVER_ONLY = LAYERS.slice(1)
+    .flat()
+    .filter((directory) => !BROWSER_SAFE.has(directory));
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Generation
@@ -154,7 +165,7 @@ const layerRules = LAYERS.flatMap((layer, index) => {
         comment: `Generated from the LAYERS table. The ${LAYER_NAMES[index]} layer (${layer.join(', ')}) sits below ${above.join(', ')} and must not import any of them. Fix the direction rather than the rule: an upward edge is a port waiting to be declared, the way plugins/runtime/entry-access.ts declares the entries slice the plugin runtime needs. Exemptions are listed on NO_UPWARD_EXEMPT with their reason.`,
         severity: 'error',
         from: { path: under(from), pathNot: NO_UPWARD_EXEMPT },
-        to: { path: under(above) },
+        to: { path: `${under(above)}|${COMPOSITION_ROOT}` },
     };
 });
 
@@ -206,7 +217,7 @@ module.exports = {
             comment:
                 'Cyclic dependencies break the acyclic layer graph and tree-shaking. Scoped to the clean capability/delivery spine: the whole capability and delivery layers, plus the composition root. The five domains stay out of scope for now (their own internal cycles are a separate cleanup).',
             severity: 'warn',
-            from: { path: under(['boot', ...LAYERS[1], ...LAYERS[3]]) },
+            from: { path: `${COMPOSITION_ROOT}|${under([...LAYERS[1], ...LAYERS[3]])}` },
             to: { circular: true },
         },
 
@@ -227,7 +238,7 @@ module.exports = {
             severity: 'error',
             from: { path: '^src/admin/' },
             to: {
-                path: under(SERVER_ONLY),
+                path: `${under(SERVER_ONLY)}|${COMPOSITION_ROOT}`,
                 pathNot: `${SHARED_MARKER}|^src/transport/http/client/`,
             },
         },
@@ -237,7 +248,7 @@ module.exports = {
                 'A *.shared.ts file is a domain leaf the admin bundle is allowed to hold, so it may import only what the admin itself may import: pure leaves, fields, and other *.shared.ts files. Without this, the marker is a way to launder a server module into the browser — rename a file that reaches a service and the whole config graph follows it into the bundle.',
             severity: 'error',
             from: { path: SHARED_MARKER },
-            to: { path: under(SERVER_ONLY), pathNot: SHARED_MARKER },
+            to: { path: `${under(SERVER_ONLY)}|${COMPOSITION_ROOT}`, pathNot: SHARED_MARKER },
         },
         {
             name: 'client-is-over-the-wire',
@@ -246,7 +257,7 @@ module.exports = {
             severity: 'error',
             from: { path: '^src/transport/http/client/' },
             to: {
-                path: `${under([...SERVER_ONLY, 'admin'])}|^src/fields/`,
+                path: `${under([...SERVER_ONLY, 'admin'])}|^src/fields/|${COMPOSITION_ROOT}`,
                 pathNot: `${SHARED_MARKER}|^src/transport/http/client/`,
             },
         },

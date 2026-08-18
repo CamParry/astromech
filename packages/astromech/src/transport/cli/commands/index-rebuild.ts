@@ -1,7 +1,7 @@
 import { defineCommand } from 'citty';
 import { loadConfig, loadRawConfig } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
-import { createAstromech } from '@/boot/application';
+import { createAstromech } from '@/astromech';
 import {
     checkRelationshipIndex,
     rebuildRelationshipIndex,
