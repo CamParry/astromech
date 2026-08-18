@@ -6,7 +6,7 @@ import {
     validateStoredContent,
     type ValidationFinding,
     type ValidationReport,
-} from '@/boot/validate-stored-content';
+} from '@/transport/cli/validate-stored-content';
 
 export default defineCommand({
     meta: {

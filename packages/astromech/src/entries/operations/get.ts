@@ -34,8 +34,8 @@ export async function get(params: {
     const shape: VisibilityShape = params.full ? 'full' : 'public';
     const user = await getCurrentUser();
     const audience = { roleSlug: user?.roleSlug ?? null, now: new Date() };
-    const entryTypeCfg = resolveEntryType(getConfig(), type);
-    const fields = entryTypeCfg ? flattenEntryFields(entryTypeCfg.fields) : [];
+    const entryType = resolveEntryType(getConfig(), type);
+    const fields = entryType ? flattenEntryFields(entryType.fields) : [];
 
     const filtered = applyVisibility(result, { shape, fields, audience });
 

@@ -7,11 +7,6 @@
  * recomputes and diffs without writing. Neither runs automatically at startup —
  * an automatic repair hides the drift it papers over.
  *
- * Boot owns them because they compose all three source domains, which no
- * domain may do. Do NOT import this module from `astro.ts` or `boot.ts`: it
- * pulls in domain services and their `virtual:astromech/config`, which does not
- * resolve during Astro's plain-Node config load.
- *
  * ## Only ever recompute from STORED data
  *
  * The edge traversal mints a missing item `_id` with `crypto.randomUUID()`, so

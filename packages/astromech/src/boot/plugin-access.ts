@@ -5,11 +5,11 @@
  * plugin runtime — the domains and `transport/tools/` — so the composition root
  * hands them down.
  *
- * Exposed as an explicit `wirePluginAccess()` CALL rather than an import
+ * Exposed as an explicit `setPluginAccess()` CALL rather than an import
  * side-effect: the package is `sideEffects: false`, so a bare
  * `import './plugin-access'` would be tree-shaken out of the build and the ports
  * would never register. `runBootPhases` calls this once before `registerPlugins`,
- * next to `wireEntryAccess()` and `wireNotifyAccess()`.
+ * next to `setEntryAccess()` and `setNotifyAccess()`.
  *
  * What is injected is the named slice, never the application instance: the six
  * handles carry no `config`, no `fetch` and no `scheduled`, so a plugin cannot
@@ -26,8 +26,8 @@ import { setPluginClient, setPluginMethods } from '@/plugins/runtime/plugin-runt
 import { buildScopedTools } from '@/transport/tools/scoped-tools';
 import type { TypedEntriesService } from '@/types/index';
 
-/** Wire the client and methods ports into the plugin runtime. Idempotent. */
-export function wirePluginAccess(): void {
+/** Set the client and methods ports on the plugin runtime. Idempotent. */
+export function setPluginAccess(): void {
     setPluginClient({
         entries: entriesService as unknown as TypedEntriesService,
         media: mediaService,

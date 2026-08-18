@@ -8,7 +8,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { validateStoredContent } from '@/boot/validate-stored-content';
+import { validateStoredContent } from '@/transport/cli/validate-stored-content';
 import { createStorage } from '@/database/storage/create-storage';
 import { entriesTable } from '@/entries/schema';
 import { entriesService as api } from '@/entries/service';

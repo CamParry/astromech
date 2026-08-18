@@ -1,6 +1,4 @@
 /**
- * Method Manifest Generator
- *
  * Produces a JSON catalogue of every service-method contract: core domain
  * methods (users, media, settings, notifications), per-type entry methods, and plugin
  * service methods. Pure function — callers are responsible for writing the
@@ -175,14 +173,14 @@ function buildEntriesMethods(
     }
 
     // Root entry types — addressed by their bare id.
-    for (const [type, cfg] of Object.entries(config.entries)) {
+    for (const [type, entryType] of Object.entries(config.entries)) {
         for (const contract of entryMethodContracts({
             typeId: type,
-            titled: cfg.titleField !== false,
+            titled: entryType.titleField !== false,
         })) {
             // Gate capability-bound methods: `publish` needs versioning; the
             // staged-entry/preview methods need the `staging` capability.
-            if (!methodCapabilityMet(contract.requires, cfg.capabilities)) {
+            if (!methodCapabilityMet(contract.requires, entryType.capabilities)) {
                 continue;
             }
 
@@ -199,14 +197,14 @@ function buildEntriesMethods(
     // Plugin entry types — addressed by their qualified id (`<namespace>/<type>`).
     for (const [pluginName, types] of Object.entries(config.pluginEntries)) {
         const permissionNamespace = pluginNsMap.get(pluginName) ?? pluginName;
-        for (const [type, cfg] of Object.entries(types)) {
+        for (const [type, entryType] of Object.entries(types)) {
             const typeId = qualifyEntryType(pluginName, type);
             for (const contract of entryMethodContracts({
                 typeId,
-                titled: cfg.titleField !== false,
+                titled: entryType.titleField !== false,
             })) {
                 // Same capability gating as root entry types.
-                if (!methodCapabilityMet(contract.requires, cfg.capabilities)) {
+                if (!methodCapabilityMet(contract.requires, entryType.capabilities)) {
                     continue;
                 }
 

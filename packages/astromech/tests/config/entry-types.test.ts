@@ -1,61 +1,61 @@
 import { describe, expect, it } from 'vitest';
 import type { EntryType } from '@/types/index';
 import { BUILT_IN_SUPPORTS } from '@/utilities/entry-capabilities';
-import { resolveEntryCapabilities, assertEntryTypeValid } from '@/config/entry-types';
+import { toResolvedEntryCapabilities, assertEntryTypeValid } from '@/config/entry-types';
 
 // ============================================================================
-// resolveEntryCapabilities — defaults
+// toResolvedEntryCapabilities — defaults
 // ============================================================================
 
-describe('resolveEntryCapabilities — defaults', () => {
+describe('toResolvedEntryCapabilities — defaults', () => {
     const emptyCfg: EntryType = {
         single: 'Item',
         plural: 'Items',
     };
 
     it('statuses defaults ON with built-in storage', () => {
-        const caps = resolveEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
+        const caps = toResolvedEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
         expect(caps.statuses).toBe(true);
     });
 
     it('slug defaults ON with built-in storage', () => {
-        const caps = resolveEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
+        const caps = toResolvedEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
         expect(caps.slug).toBe(true);
     });
 
     it('trash defaults ON with built-in storage', () => {
-        const caps = resolveEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
+        const caps = toResolvedEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
         expect(caps.trash).toBe(true);
     });
 
     it('versioning defaults OFF', () => {
-        const caps = resolveEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
+        const caps = toResolvedEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
         expect(caps.versioning).toBe(false);
     });
 
     it('translatable defaults OFF', () => {
-        const caps = resolveEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
+        const caps = toResolvedEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
         expect(caps.translatable).toBe(false);
     });
 
     it('staging defaults OFF', () => {
-        const caps = resolveEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
+        const caps = toResolvedEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
         expect(caps.staging).toBe(false);
     });
 });
 
 // ============================================================================
-// resolveEntryCapabilities — explicit opt-outs
+// toResolvedEntryCapabilities — explicit opt-outs
 // ============================================================================
 
-describe('resolveEntryCapabilities — explicit opt-outs', () => {
+describe('toResolvedEntryCapabilities — explicit opt-outs', () => {
     it('statuses:false resolves off', () => {
         const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             statuses: false,
         };
-        expect(resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS).statuses).toBe(false);
+        expect(toResolvedEntryCapabilities(cfg, BUILT_IN_SUPPORTS).statuses).toBe(false);
     });
 
     it('slug:false resolves off', () => {
@@ -64,7 +64,7 @@ describe('resolveEntryCapabilities — explicit opt-outs', () => {
             plural: 'Items',
             slug: false,
         };
-        expect(resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS).slug).toBe(false);
+        expect(toResolvedEntryCapabilities(cfg, BUILT_IN_SUPPORTS).slug).toBe(false);
     });
 
     it('trash:false resolves off', () => {
@@ -73,22 +73,22 @@ describe('resolveEntryCapabilities — explicit opt-outs', () => {
             plural: 'Items',
             trash: false,
         };
-        expect(resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS).trash).toBe(false);
+        expect(toResolvedEntryCapabilities(cfg, BUILT_IN_SUPPORTS).trash).toBe(false);
     });
 });
 
 // ============================================================================
-// resolveEntryCapabilities — versioning boolean + object forms
+// toResolvedEntryCapabilities — versioning boolean + object forms
 // ============================================================================
 
-describe('resolveEntryCapabilities — versioning', () => {
+describe('toResolvedEntryCapabilities — versioning', () => {
     it('versioning:true resolves on', () => {
         const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             versioning: true,
         };
-        expect(resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS).versioning).toBe(true);
+        expect(toResolvedEntryCapabilities(cfg, BUILT_IN_SUPPORTS).versioning).toBe(true);
     });
 
     it('versioning:false resolves off', () => {
@@ -97,7 +97,9 @@ describe('resolveEntryCapabilities — versioning', () => {
             plural: 'Items',
             versioning: false,
         };
-        expect(resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS).versioning).toBe(false);
+        expect(toResolvedEntryCapabilities(cfg, BUILT_IN_SUPPORTS).versioning).toBe(
+            false
+        );
     });
 
     it('versioning object resolves on', () => {
@@ -106,22 +108,22 @@ describe('resolveEntryCapabilities — versioning', () => {
             plural: 'Items',
             versioning: { maxVersions: 10 },
         };
-        expect(resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS).versioning).toBe(true);
+        expect(toResolvedEntryCapabilities(cfg, BUILT_IN_SUPPORTS).versioning).toBe(true);
     });
 });
 
 // ============================================================================
-// resolveEntryCapabilities — staging (independent of versioning)
+// toResolvedEntryCapabilities — staging (independent of versioning)
 // ============================================================================
 
-describe('resolveEntryCapabilities — staging', () => {
+describe('toResolvedEntryCapabilities — staging', () => {
     it('staging:true resolves on with built-in storage', () => {
         const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             staging: true,
         };
-        expect(resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS).staging).toBe(true);
+        expect(toResolvedEntryCapabilities(cfg, BUILT_IN_SUPPORTS).staging).toBe(true);
     });
 
     it('staging:false resolves off', () => {
@@ -130,7 +132,7 @@ describe('resolveEntryCapabilities — staging', () => {
             plural: 'Items',
             staging: false,
         };
-        expect(resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS).staging).toBe(false);
+        expect(toResolvedEntryCapabilities(cfg, BUILT_IN_SUPPORTS).staging).toBe(false);
     });
 
     it('staging is independent of versioning (on without versioning)', () => {
@@ -140,7 +142,7 @@ describe('resolveEntryCapabilities — staging', () => {
             staging: true,
             versioning: false,
         };
-        const caps = resolveEntryCapabilities(cfg, BUILT_IN_SUPPORTS);
+        const caps = toResolvedEntryCapabilities(cfg, BUILT_IN_SUPPORTS);
         expect(caps.staging).toBe(true);
         expect(caps.versioning).toBe(false);
     });
@@ -151,7 +153,7 @@ describe('resolveEntryCapabilities — staging', () => {
             plural: 'Items',
             staging: true,
         };
-        expect(resolveEntryCapabilities(cfg, ['statuses']).staging).toBe(false);
+        expect(toResolvedEntryCapabilities(cfg, ['statuses']).staging).toBe(false);
     });
 
     it('assertEntryTypeValid throws when staging is requested but unsupported', () => {
@@ -165,17 +167,17 @@ describe('resolveEntryCapabilities — staging', () => {
 });
 
 // ============================================================================
-// resolveEntryCapabilities — narrower storageSupports
+// toResolvedEntryCapabilities — narrower storageSupports
 // ============================================================================
 
-describe('resolveEntryCapabilities — narrower storageSupports', () => {
+describe('toResolvedEntryCapabilities — narrower storageSupports', () => {
     const emptyCfg: EntryType = {
         single: 'Item',
         plural: 'Items',
     };
 
     it('unrequested capabilities default off when not in storageSupports', () => {
-        const caps = resolveEntryCapabilities(emptyCfg, []);
+        const caps = toResolvedEntryCapabilities(emptyCfg, []);
         expect(caps.statuses).toBe(false);
         expect(caps.slug).toBe(false);
         expect(caps.trash).toBe(false);
@@ -184,7 +186,7 @@ describe('resolveEntryCapabilities — narrower storageSupports', () => {
     });
 
     it('partial supports: only supported capabilities use their defaults', () => {
-        const caps = resolveEntryCapabilities(emptyCfg, ['statuses']);
+        const caps = toResolvedEntryCapabilities(emptyCfg, ['statuses']);
         expect(caps.statuses).toBe(true);
         expect(caps.slug).toBe(false);
         expect(caps.trash).toBe(false);

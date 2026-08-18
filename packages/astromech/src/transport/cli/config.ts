@@ -1,6 +1,4 @@
 /**
- * CLI Config Loader
- *
  * Loads astromech.config.ts using jiti (so TypeScript files are supported
  * without a pre-build step) and initialises the DB registry so service methods work.
  */

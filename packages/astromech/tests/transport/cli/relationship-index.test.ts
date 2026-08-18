@@ -13,7 +13,7 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import {
     checkRelationshipIndex,
     rebuildRelationshipIndex,
-} from '@/boot/relationship-index';
+} from '@/transport/cli/relationship-index';
 import { createStorage } from '@/database/storage/create-storage';
 import { createRelationshipStorage } from '@/database/storage/relationships';
 import { relationshipsTable, type RelationshipRow } from '@/database/schema';

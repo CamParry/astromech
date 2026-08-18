@@ -164,11 +164,11 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
 
         // Register per-type custom storages under the qualified id.
         const access = entryAccess();
-        for (const [type, cfg] of pluginEntryTypes(def)) {
-            if (cfg.storage) {
+        for (const [type, entryType] of pluginEntryTypes(def)) {
+            if (entryType.storage) {
                 access.setEntryStorage(
                     access.qualifyEntryType(identity.namespace, type),
-                    cfg.storage
+                    entryType.storage
                 );
             }
         }

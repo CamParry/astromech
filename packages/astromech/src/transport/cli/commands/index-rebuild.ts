@@ -6,7 +6,7 @@ import {
     checkRelationshipIndex,
     rebuildRelationshipIndex,
     type DriftReport,
-} from '@/boot/relationship-index';
+} from '@/transport/cli/relationship-index';
 
 export default defineCommand({
     meta: {

@@ -67,14 +67,14 @@ export function titleCaseNamespace(namespace: string): string {
  * shape the resolver, nav, and storage registry consume.
  */
 export function pluginEntryTypes(def: PluginDefinition): [string, EntryType][] {
-    return (def.entries ?? []).map((cfg) => {
-        if (!cfg.type) {
+    return (def.entries ?? []).map((entryType) => {
+        if (!entryType.type) {
             throw new Error(
                 `Astromech plugin "${def.package}" declares an entry type without a "type". ` +
                     `Plugin entry configs must set their own \`type\` key.`
             );
         }
-        return [cfg.type, cfg];
+        return [entryType.type, entryType];
     });
 }
 

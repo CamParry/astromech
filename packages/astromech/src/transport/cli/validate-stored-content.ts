@@ -5,9 +5,6 @@
  * stored. `validateStoredContent` walks stored content and reports every row
  * whose field data the CURRENT rules would reject. It writes nothing.
  *
- * Boot owns it because it spans entries, media, users and settings, which no
- * single domain may do — `relationship-index.ts` is the same case.
- *
  * ## Staying inert
  *
  * The pipeline's returned values are DISCARDED. It copies its input, but the

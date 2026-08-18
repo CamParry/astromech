@@ -23,7 +23,7 @@ import {
  * When storage does NOT support a capability and the user has not explicitly
  * requested it, the capability defaults to false (Phase 3: narrower sets).
  */
-export function resolveEntryCapabilities(
+export function toResolvedEntryCapabilities(
     entryType: EntryType,
     storageSupports: readonly Capability[]
 ): ResolvedEntryCapabilities {
@@ -121,7 +121,7 @@ export function toResolvedEntryType(
     entryType: EntryType,
     storageSupports: readonly Capability[]
 ): ResolvedEntryType {
-    const capabilities = resolveEntryCapabilities(entryType, storageSupports);
+    const capabilities = toResolvedEntryCapabilities(entryType, storageSupports);
     assertEntryTypeValid(typeKey, entryType, storageSupports);
 
     const resolvedFields = toResolvedFields(entryType.fields);

@@ -26,7 +26,7 @@ export type AstromechIntegrationOptions = {
 
 export function astromech(options: AstromechIntegrationOptions = {}): AstroIntegration {
     // dist/integrations/astro/index.js — go up three levels to reach package src/
-    const pkgSrc = fileURLToPath(new URL('../../../src', import.meta.url));
+    const packageSource = fileURLToPath(new URL('../../../src', import.meta.url));
 
     let loaded: { config: AstromechConfig; resolved: ResolvedConfig } | undefined;
 
@@ -58,7 +58,7 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
 
                 updateConfig({
                     vite: createViteConfig({
-                        pkgSrc,
+                        packageSource,
                         root: astroConfig.root,
                         configFile: options.configFile,
                         config,

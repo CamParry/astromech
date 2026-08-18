@@ -7,11 +7,11 @@ import type { AdminEntryType, Entry } from '@/types/index';
  * `titleField: false` (e.g. redirects) carry no `title`, so fall back to the
  * first non-empty searchable / column field value, then slug, then id.
  */
-export function entryLabel(entry: Entry, cfg: AdminEntryType | undefined): string {
+export function entryLabel(entry: Entry, entryType: AdminEntryType | undefined): string {
     if (typeof entry.title === 'string' && entry.title.trim() !== '') return entry.title;
     const keys = [
-        ...(cfg?.search ?? []),
-        ...(cfg?.adminColumns ?? []).map((c) => c.field),
+        ...(entryType?.search ?? []),
+        ...(entryType?.adminColumns ?? []).map((c) => c.field),
     ];
     for (const key of keys) {
         const value = entry.fields?.[key];

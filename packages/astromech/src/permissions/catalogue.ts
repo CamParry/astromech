@@ -104,9 +104,9 @@ function buildEntryPermissions(
     }
 
     // Root entry types
-    for (const [type, cfg] of Object.entries(config.entries)) {
+    for (const [type, entryType] of Object.entries(config.entries)) {
         for (const { action, requires } of ENTRY_ACTIONS) {
-            if (!actionCapabilityMet(requires, cfg.capabilities)) continue;
+            if (!actionCapabilityMet(requires, entryType.capabilities)) continue;
             entries.push({
                 permission: rootEntryPermission(type, action),
                 label: entryPermissionLabel(action, type),
@@ -119,9 +119,9 @@ function buildEntryPermissions(
     // Plugin entry types
     for (const [pluginName, types] of Object.entries(config.pluginEntries)) {
         const permissionNamespace = pluginNsMap.get(pluginName) ?? pluginName;
-        for (const [type, cfg] of Object.entries(types)) {
+        for (const [type, entryType] of Object.entries(types)) {
             for (const { action, requires } of ENTRY_ACTIONS) {
-                if (!actionCapabilityMet(requires, cfg.capabilities)) continue;
+                if (!actionCapabilityMet(requires, entryType.capabilities)) continue;
                 entries.push({
                     permission: pluginEntryPermission(permissionNamespace, type, action),
                     label: entryPermissionLabel(action, type),

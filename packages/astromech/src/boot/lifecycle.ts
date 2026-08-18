@@ -18,9 +18,9 @@ import { setEmailDriver } from '@/email/registry';
 import { setAIConfig } from '@/ai/registry';
 import { buildAIConfig } from '@/ai/middleware';
 import { registerBuiltInEntryJobs } from '@/entries/jobs/index';
-import { wireEntryAccess } from '@/entries/plugin-access';
-import { wireNotifyAccess } from '@/notifications/plugin-access';
-import { wirePluginAccess } from '@/boot/plugin-access';
+import { setEntryAccess } from '@/entries/plugin-access';
+import { setNotifyAccess } from '@/notifications/plugin-access';
+import { setPluginAccess } from '@/boot/plugin-access';
 import { resolveSchedulerDriver, setSchedulerDriver } from '@/cron/registry';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { entryAccess } from '@/plugins/runtime/entry-access';
@@ -95,9 +95,9 @@ async function registerDrivers(config: AstromechConfig): Promise<void> {
  * their methods, and record the manifest those methods are dispatched from.
  */
 function registerPluginRuntime(config: AstromechConfig, resolved: ResolvedConfig): void {
-    wireEntryAccess();
-    wireNotifyAccess();
-    wirePluginAccess();
+    setEntryAccess();
+    setNotifyAccess();
+    setPluginAccess();
     registerPlugins(config.plugins ?? [], resolved);
 
     // Host entry types declaring their own storage, mounted after

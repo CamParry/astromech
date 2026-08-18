@@ -91,8 +91,8 @@ export async function query(
         // without a type. Stamp it from the query so every returned entry is
         // complete (consumers build links / resolve icons from `entry.type`).
         if (entry.type === undefined) entry.type = rowType;
-        const rowTypeCfg = resolveEntryType(getConfig(), rowType);
-        const rowFields = rowTypeCfg ? flattenEntryFields(rowTypeCfg.fields) : [];
+        const rowEntryType = resolveEntryType(getConfig(), rowType);
+        const rowFields = rowEntryType ? flattenEntryFields(rowEntryType.fields) : [];
 
         const filtered = applyVisibility(entry, {
             shape,

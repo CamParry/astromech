@@ -357,24 +357,24 @@ export function CommandPalette(): React.ReactElement {
             // (keyed directly in `adminConfig.entries`). Plugin entries arrive
             // with a qualified id (`{plugin}/{type}`) but `plugin.entries` is
             // keyed by the BARE type — so parse the id before looking it up.
-            let cfg: AdminEntryType | undefined =
+            let entryType: AdminEntryType | undefined =
                 typeof entry.type === 'string'
                     ? adminConfig.entries[entry.type]
                     : undefined;
-            if (cfg === undefined && typeof entry.type === 'string') {
+            if (entryType === undefined && typeof entry.type === 'string') {
                 const parsed = parseEntryTypeId(entry.type);
                 if (parsed) {
                     const plugin = adminConfig.plugins.find(
                         (p) => p.namespace === parsed.plugin
                     );
-                    const pluginCfg = plugin?.entries[parsed.type];
-                    if (plugin && pluginCfg) {
-                        cfg = pluginCfg;
+                    const pluginEntryType = plugin?.entries[parsed.type];
+                    if (plugin && pluginEntryType) {
+                        entryType = pluginEntryType;
                     }
                 }
             }
-            const label = entryLabel(entry, cfg);
-            const iconName = cfg?.icon;
+            const label = entryLabel(entry, entryType);
+            const iconName = entryType?.icon;
             const to = entryAdminPath(
                 typeof entry.type === 'string' ? entry.type : '',
                 entry.id
@@ -386,7 +386,9 @@ export function CommandPalette(): React.ReactElement {
                 to,
                 group: 'LiveEntries' as const,
                 typeId: typeof entry.type === 'string' ? entry.type : '',
-                ...(cfg?.plural !== undefined ? { typeLabel: cfg.plural } : {}),
+                ...(entryType?.plural !== undefined
+                    ? { typeLabel: entryType.plural }
+                    : {}),
                 Icon: () => <EntryTypeIcon name={iconName} size={15} />,
             };
         });

@@ -36,12 +36,12 @@ export function assertQualifiedRelationshipTargets(
         checkNodes(ownerKey, fields.sidebar);
     };
 
-    for (const [typeKey, cfg] of Object.entries(config.entries)) {
-        check(typeKey, cfg.fields);
+    for (const [typeKey, entryType] of Object.entries(config.entries)) {
+        check(typeKey, entryType.fields);
     }
     for (const [plugin, types] of Object.entries(config.pluginEntries)) {
-        for (const [type, cfg] of Object.entries(types)) {
-            check(`${plugin}/${type}`, cfg.fields);
+        for (const [type, entryType] of Object.entries(types)) {
+            check(`${plugin}/${type}`, entryType.fields);
         }
     }
 }

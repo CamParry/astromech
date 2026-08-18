@@ -26,10 +26,10 @@ import {
 import { defineHook } from '@/index';
 // This test drives registerPlugins directly (no harness), so wire the
 // entry-access port that registerPlugins now depends on.
-import { wireEntryAccess } from '@/entries/plugin-access';
+import { setEntryAccess } from '@/entries/plugin-access';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 
-wireEntryAccess();
+setEntryAccess();
 import { getCronJobs } from '@/cron/registry';
 import { globals } from '@/utilities/registry';
 

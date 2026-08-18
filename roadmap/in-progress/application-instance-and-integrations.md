@@ -430,16 +430,16 @@ result.
 
 ## Stage 13 — Moves, renames and the comment pass
 
-- [ ] `boot/relationship-index.ts` and `boot/validate-stored-content.ts` →
+- [x] `boot/relationship-index.ts` and `boot/validate-stored-content.ts` →
       `transport/cli/`, beside the only commands that call them. **Fix the stale
       header in `relationship-index.ts`** that still asserts a cross-domain rule
       `.dependency-cruiser.cjs` reversed.
-- [ ] Renames per the spec's table: `wireEntryAccess` / `wireNotifyAccess` →
+- [x] Renames per the spec's table: `wireEntryAccess` / `wireNotifyAccess` →
       `setX`, `cfg` → `entryType`, `pkgSrc` and `mod` spelled out.
-- [ ] Sentence-style file headers throughout (three files still use Title Case
+- [x] Sentence-style file headers throughout (three files still use Title Case
       labels). One verb for one operation (`toResolvedX` beside `resolveX` in
       the same file).
-- [ ] Comment pass per restructured module, as the acceptance bar for the whole
+- [x] Comment pass per restructured module, as the acceptance bar for the whole
       work. See the rules at the top of this file.
 
 ## Stage 14 — Docs and the gate

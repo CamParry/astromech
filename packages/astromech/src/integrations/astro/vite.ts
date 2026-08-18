@@ -20,7 +20,7 @@ type ViteConfig = NonNullable<
 
 export type ViteConfigOptions = {
     /** Absolute path to this package's `src/`, the target of the aliases. */
-    pkgSrc: string;
+    packageSource: string;
     /** The Astro project root. */
     root: URL;
     /** The site's config file path, as passed to the integration. */
@@ -31,7 +31,7 @@ export type ViteConfigOptions = {
 
 /** Build the `vite` half of the Astro config update. */
 export function createViteConfig({
-    pkgSrc,
+    packageSource,
     root,
     configFile,
     config,
@@ -46,11 +46,12 @@ export function createViteConfig({
             // share module identity (React context, hooks) with the admin app.
             // Specific keys first — bare `astromech/ui` would shadow them.
             alias: {
-                'astromech/ui/fields': pkgSrc + '/admin/components/fields/index.ts',
-                'astromech/ui/layout': pkgSrc + '/admin/components/ui/layout.ts',
-                'astromech/ui/app': pkgSrc + '/admin/components/ui/app.ts',
-                'astromech/ui': pkgSrc + '/admin/components/ui/index.ts',
-                '@/': pkgSrc + '/',
+                'astromech/ui/fields':
+                    packageSource + '/admin/components/fields/index.ts',
+                'astromech/ui/layout': packageSource + '/admin/components/ui/layout.ts',
+                'astromech/ui/app': packageSource + '/admin/components/ui/app.ts',
+                'astromech/ui': packageSource + '/admin/components/ui/index.ts',
+                '@/': packageSource + '/',
             },
         },
         ssr: {
@@ -78,8 +79,8 @@ export function createViteConfig({
         },
         plugins: [
             TanStackRouterVite({
-                routesDirectory: pkgSrc + '/admin/pages',
-                generatedRouteTree: pkgSrc + '/admin/routeTree.gen.ts',
+                routesDirectory: packageSource + '/admin/pages',
+                generatedRouteTree: packageSource + '/admin/routeTree.gen.ts',
                 routeToken: 'route',
             }),
             virtualModule('virtual:astromech/config', () =>

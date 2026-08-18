@@ -1,6 +1,4 @@
 /**
- * Config File Loader
- *
  * Loads the author's astromech.config.ts as a module in Node, using jiti
  * so TypeScript files work without a pre-build step. Shared by the CLI
  * and the Astro integration.
@@ -17,10 +15,10 @@ export async function loadConfigFile(
     configFile?: string
 ): Promise<AstromechConfig> {
     const jiti = createJiti(import.meta.url);
-    const mod = (await jiti.import(resolveConfigPath(rootDir, configFile))) as {
+    const configModule = (await jiti.import(resolveConfigPath(rootDir, configFile))) as {
         default: AstromechConfig;
     };
-    return mod.default;
+    return configModule.default;
 }
 
 /**
