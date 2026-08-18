@@ -50,7 +50,7 @@ arrived through:
 
 Each is individually justified. Collectively there is no single answer to "is
 this method gated", and the count scales with transports times domains as the
-adapters in `roadmap/planned/multi-runtime-and-framework-adapters.md` land.
+integrations in `roadmap/planned/multi-runtime-and-framework-integrations.md` land.
 
 `policies/scoped-services.ts` states the constraint this work has to respect:
 `permissionsFor` stays the seam for checks carrying logic a contract cannot
