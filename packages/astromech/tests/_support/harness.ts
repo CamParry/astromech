@@ -52,17 +52,9 @@ import { decodeWith, encodeWith } from '@/database/codec';
 import { setDatabaseDriver } from '@/database/driver-registry';
 import { setDb } from '@/database/registry';
 import { usersTable } from '@/database/schema';
-import { setEntryAccess } from '@/entries/plugin-access';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
-import { setPluginAccess } from '@/plugin-access';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { runWithContext } from '@/request-context/index';
-
-// Wire the plugin runtime's ports once for every harness-based test, before any
-// registerPlugins call below, as `build` does. `setNotifyAccess` is left out: no
-// harness-based test emits a notification from a plugin context.
-setEntryAccess();
-setPluginAccess();
 
 type Db = Kysely<DB>;
 

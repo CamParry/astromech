@@ -143,7 +143,7 @@ export type ValidationMode = 'partial' | 'complete';
 /**
  * Lookups handed to a field validator for async checks (uniqueness,
  * references). Exposes the sanctioned reads for the field's resource
- * (built on the entry-access port for entries; per-domain reads elsewhere). The
+ * (built on entry storage for entries; per-domain reads elsewhere). The
  * common uniqueness case is the one-line `isUnique` helper.
  */
 export type FieldLookups = {

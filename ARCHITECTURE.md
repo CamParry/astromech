@@ -157,8 +157,6 @@ packages/
 │   ├── src/
 │   │   ├── index.ts        # public framework-agnostic entry (re-exported via exports/)
 │   │   ├── astromech.ts    # composition root — createAstromech/getAstromech, the Astromech type, the instance registry, and the create sequence
-│   │   ├── registrations.ts # the register steps the create sequence runs (drivers · plugin runtime)
-│   │   ├── plugin-access.ts # fills the plugin runtime's client and methods ports
 │   │   │
 │   │   │   ── entrypoints ─────────────────────────────────────────────────────
 │   │   ├── integrations/   # framework and runtime glue — astro/ (index.ts the integration, astromech/astro · vite.ts · virtual-module.ts · routes.ts the injectRoute calls · middleware.ts, astromech/middleware · handler.ts, the one APIRoute behind every injected pattern) · cloudflare/ (index.ts, createWorkerEntry, astromech/cloudflare)
@@ -172,7 +170,7 @@ packages/
 │   │   ├── policies/       # authorization policies over the manifest — what an actor may do, not a per-request guard — enforcement (scoped-services), method filtering, manifest annotation and confirmation; no domain logic here
 │   │   │
 │   │   │   ── plugin runtime (capability) ──────────────────────────────────
-│   │   ├── plugins/        # plugins/runtime (hook engine) only — first-party plugins live in packages/plugins/; entry-access · notify-access · client-access are its ports onto the layers above
+│   │   ├── plugins/        # plugins/runtime (hook engine) only — first-party plugins live in packages/plugins/; it imports the domains directly to build PluginContext
 │   │   │
 │   │   │   ── domains ────────────────────────────────────────────────────
 │   │   ├── entries/        # entries domain: service (assembler) · operations/ · internal/ · schema · methods · visibility · url.shared
@@ -244,15 +242,15 @@ The config-time evaluation is the constraint. A plugin package has to load under
 | core runtime     | Vite-compiled from `src`             | yes                        |
 | a plugin package | Node-loaded from `dist`, config time | **no**                     |
 
-So a plugin that imports a core module reaching `virtual:astromech/config` — which every domain service does — dies with `ERR_UNSUPPORTED_ESM_URL_SCHEME` under Node's ESM loader. **`astromech/methods` is unreachable from a plugin package for exactly this reason**, and it fails at _import_ time rather than at call time, because `exports/methods.ts` statically re-exports `scopedServices` and so loads the whole service graph.
+The only static import of `virtual:astromech/config` is the injected Astro middleware — domain services read config at call time from the registry — so the constraint bites where a module holds the virtual import, not across the service graph. `astromech/methods` stays off-limits to a plugin package by rule (`decisions/0007-plugin-core-boundary.md`), not by a load-time failure.
 
 **The rule this produces: a plugin package imports `astromech`, `astromech/ui` and `astromech/ui/app`, and nothing else from core.** `astromech` loads under plain Node, and so does `astromech/ui` — the component kit, whose components take their inputs from their props. `astromech/ui/app` does not: it carries the admin surface that needs the running admin (`useAstromechPlugin`, the `CommandPalette` module, the AI-context hooks, `ApiErrorPanel`), which reaches `virtual:astromech/admin-config` and the fetch client. The rule survives because a plugin's Node-loaded entry never imports it: only the plugin's source-shipped `./admin/*` components do, and those are compiled by the consumer's Vite, where the virtual module resolves. `packages/astromech/scripts/check-node-imports.mjs` spawns Node against the kit's built entry — the file npm resolves `astromech/ui` to — which is the check that keeps the two halves apart. Type-only imports from any subpath are fine, because they erase. Everything else arrives on `ctx`. New platform capabilities are therefore added as a capability port (above), never as a published subpath a plugin is expected to import — `ctx.methods.tools()` is the worked example, and `decisions/0007-plugin-core-boundary.md` holds the mechanism with the rejected alternatives. The **root `astromech` barrel** is the sanctioned third route: it is already the one barrel a plugin may import, so a capability whose surface is a pure function over a registry can ship from there and needs neither a port nor a subpath — `getModel`/`hasModel` do.
 
-A port's implementation must be a **Vite-graph closure**, and it is registered by an explicit call rather than by an import side effect — the package is `sideEffects: false`, so a bare `import './plugin-access'` is tree-shaken away and the port never registers. `registrations.ts` makes the three calls (`setEntryAccess`, `setNotifyAccess`, `setPluginAccess`) in `registerPluginRuntime`, before `registerPlugins`. It is reached through `createAstromech`, which the injected middleware and the Cloudflare `scheduled()` handler both call in the serving process, so the graph that evaluates it is the graph the plugin's `ctx.entries` runs in.
+The plugin runtime imports the domain services directly, and the two-graph split is why that is safe: the service objects are stateless — every driver, override and registration lives in `globalThis.__astromech` — so whichever module-graph copy a caller holds behaves the same. Hooks only dispatch in the serving graph, reached through `createAstromech`.
 
 `ssr.noExternal` does **not** fix this, and neither does teaching Node to resolve `virtual:` with module customization hooks. `decisions/0007-plugin-core-boundary.md` records why each fails.
 
-Two consequences for anything loaded at config time — `plugin-runtime.ts`, the integration itself: imports must stay lazy where they reach a service (`request-context/request-context.ts` exists for this), and `pnpm run check:config` loads the demo config the way Astro does to catch a regression before a plugin is wired up. `pnpm run check:node-imports` covers the other half, asserting the plugin-facing subpaths still load under plain Node.
+Anything loaded at config time still has to load under plain Node. `pnpm run check:config` loads the demo config the way Astro does, and `pnpm run check:node-imports` asserts the plugin-facing subpaths do too.
 
 ## App-owned migration model
 

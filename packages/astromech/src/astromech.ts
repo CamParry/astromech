@@ -39,14 +39,11 @@ import { checkMigrationDrift } from '@/database/migrations';
 import { setDb } from '@/database/registry';
 import { setEmailDriver } from '@/email/registry';
 import { entryJobs, typedEntriesService } from '@/entries/index';
-import { setEntryAccess } from '@/entries/plugin-access';
+import { setEntryStorage } from '@/entries/storage/registry';
 import { AstromechError } from '@/errors/index';
 import { mediaService } from '@/media/index';
 import { setImageConfig } from '@/media/serving/image/registry';
 import { currentUserNotificationsService } from '@/notifications/index';
-import { setNotifyAccess } from '@/notifications/plugin-access';
-import { setPluginAccess } from '@/plugin-access';
-import { entryAccess } from '@/plugins/runtime/entry-access';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { getCurrentRole, getCurrentUser } from '@/request-context/index';
@@ -172,16 +169,13 @@ async function build(config: AstromechConfig): Promise<Astromech> {
     // Built-in cron jobs
     registerBuiltInJobs();
 
-    // Plugin runtime: bind the ports plugins reach the domains through
-    setEntryAccess();
-    setNotifyAccess();
-    setPluginAccess();
+    // Plugin runtime
     registerPlugins(plugins, resolved);
     // Host entry types declaring their own storage, mounted after
     // `registerPlugins` because that opens by clearing every override. Keyed by
     // the bare type name; plugin types are qualified instead.
     for (const [type, entryType] of Object.entries(config.entries)) {
-        if (entryType.storage) entryAccess().setEntryStorage(type, entryType.storage);
+        if (entryType.storage) setEntryStorage(type, entryType.storage);
     }
     // The method manifest those plugins dispatch from, generated here because
     // this is the only site holding both the resolved config and the raw
