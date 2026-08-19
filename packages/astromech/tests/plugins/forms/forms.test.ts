@@ -40,7 +40,7 @@ import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { setEmailDriver } from '@/email/registry';
 import { entriesService as localEntries } from '@/entries/service';
-import { defineHook } from '@/index';
+import { defineHook } from '@/plugins/define-hook';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { resetRateLimit } from '../../../../plugins/forms/src/service/rate-limit';
 

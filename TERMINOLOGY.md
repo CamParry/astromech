@@ -35,7 +35,7 @@ An **adapter** is a different thing: it reshapes one internal interface into ano
 
 ## Driver vs port
 
-A **driver** is what the host configures. It goes in a capability slot in
+A **driver** is what the host configures. It goes in a capability registry in
 `astromech.config.ts` (`db`, `storage`, `email`, `media.image`, `scheduler`), and
 core reads it back from that capability's registry rather than off the config.
 Swapping one is a site's decision, and every driver of a kind satisfies the same
@@ -310,15 +310,15 @@ A **`ToolDefinition`** is one manifest method projected into a model-callable to
 The **application** is the booted runtime a process holds: the object
 `createAstromech({ config })` returns and `getAstromech()` reads back. It carries
 the resolved config and the domain services, and it is the one front door — a
-process has exactly one, held in a `globalThis` slot because one module can be
+process has exactly one, held in a `globalThis`-backed registry because one module can be
 instantiated more than once in a process and a module-scoped memo would boot
 twice. `packages/astromech/src/registry.ts` records why.
 
 The pair is split on purpose, following Laravel (`bootstrap/app.php` creates,
 `app()` only reads). `createAstromech` initialises and is idempotent: a second
 call with the same config object returns the existing instance, a different one
-throws, and a failed boot clears the slot so the next caller retries.
-`getAstromech()` never creates and throws when the slot is empty. Two functions
+throws, and a failed boot clears the registry so the next caller retries.
+`getAstromech()` never creates and throws when the registry is empty. Two functions
 that both initialise would be two front doors, which is what this replaced.
 
 "Application" rather than "app" (which reads as `apps/`, the deployed sites),

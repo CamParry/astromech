@@ -1,23 +1,19 @@
 /**
- * Registry — the one mechanism behind every boot-wired driver slot.
+ * Registry — the primitive every subsystem registry is built on.
  *
  * Backed by `globalThis`, never a module-level singleton: the package ships two
  * separate tsup builds, and six `exports` subpaths can resolve to either `src`
  * or `dist`, so one module can be instantiated more than once in a process. The
- * global is the only slot every copy shares. The application slot in
- * `src/astromech.ts` depends on that: two copies of it would boot the
- * runtime twice.
- *
- * Each domain declares its own slot rather than sharing one central context
- * object: a context holding every driver would have to import every domain's
- * types, turning this leaf into a hub. The registry stays type-agnostic.
+ * global namespace is the only thing every copy shares. The application
+ * registry in `src/astromech.ts` depends on that: two copies of it would boot
+ * the runtime twice.
  */
 
 import { AstromechError } from '@/errors/index';
 
 /**
- * The shared namespace. Registry slots take arbitrary string keys; the named
- * keys are process guards, read directly rather than through a registry object.
+ * The shared namespace. Registries take arbitrary string keys; the named keys
+ * are process guards, read directly rather than through a registry.
  * Their types are all built-ins, so naming them here imports nothing.
  */
 type AstromechGlobals = Record<string, unknown> & {
@@ -46,7 +42,7 @@ export type RequiredRegistry<T> = {
     getOrThrow(): T;
     /** The value, or null when unset. */
     get(): T | null;
-    /** Return the slot to its unset state. */
+    /** Return the registry to its unset state. */
     clear(): void;
 };
 
@@ -85,7 +81,7 @@ export function createRegistry<T>(
         get: (): T | null => (globals()[name] ?? null) as T | null,
         clear: (): void => {
             // Assign rather than `delete` — `get()` reads `?? null`, so an
-            // undefined slot is already indistinguishable from an absent one.
+            // undefined value is already indistinguishable from an absent one.
             globals()[name] = undefined;
         },
     };
@@ -99,16 +95,16 @@ export type KeyedRegistry<T> = {
     get(key: string): T | null;
     has(key: string): boolean;
     keys(): string[];
-    /** Drop every entry, leaving the slot usable. */
+    /** Drop every entry, leaving the registry usable. */
     clear(): void;
 };
 
 /**
- * Many values under one slot name, backed by a `Map` — the same mechanism as
- * `createRegistry`, keyed. Stays type-agnostic for the same reason.
+ * Many values under one registry name, backed by a `Map` — the same mechanism
+ * as `createRegistry`, keyed.
  */
 export function createKeyedRegistry<T>(name: string): KeyedRegistry<T> {
-    const slot = (): Map<string, T> => {
+    const map = (): Map<string, T> => {
         const namespace = globals();
         namespace[name] ??= new Map<string, T>();
         return namespace[name] as Map<string, T>;
@@ -116,20 +112,20 @@ export function createKeyedRegistry<T>(name: string): KeyedRegistry<T> {
 
     return {
         set: (key: string, value: T): void => {
-            slot().set(key, value);
+            map().set(key, value);
         },
         getOrThrow: (key: string): T => {
-            const value = slot().get(key);
+            const value = map().get(key);
             if (value === undefined) {
                 throw new AstromechError(`'${name}' has no entry for '${key}'.`);
             }
             return value;
         },
-        get: (key: string): T | null => slot().get(key) ?? null,
-        has: (key: string): boolean => slot().has(key),
-        keys: (): string[] => [...slot().keys()],
+        get: (key: string): T | null => map().get(key) ?? null,
+        has: (key: string): boolean => map().has(key),
+        keys: (): string[] => [...map().keys()],
         clear: (): void => {
-            slot().clear();
+            map().clear();
         },
     };
 }

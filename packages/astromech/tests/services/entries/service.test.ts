@@ -17,7 +17,7 @@ import { decodeWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { entriesTable } from '@/database/schema';
 import { entriesService } from '@/entries/index';
-import { defineHook } from '@/index';
+import { defineHook } from '@/plugins/define-hook';
 
 const api = entriesService;
 

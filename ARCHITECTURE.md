@@ -80,27 +80,27 @@ Key invariants:
 - **Capabilities sit below domains.** They expose primitives (`storage`, `database`,
   `fields`, `permissions`, `request-context`, `email`, `ai`, `cron`, `cloudflare`) and may
   not orchestrate domain logic.
-- **Each capability owns its own driver slot; there is no central context object.**
-  Every driver and override slot shares one mechanism (`registry.ts`)
+- **Each capability owns its own driver registry; there is no central context object.**
+  Every driver and override registry shares one mechanism (`registry.ts`)
   over a single `globalThis.__astromech` namespace, but never a shared type. A hub
   carrying every driver would have to import every domain's types, which is what
   this DAG exists to prevent. globalThis is not a taste choice — the package ships
   two tsup builds, `exports` subpaths that resolve to `src` in the repo and
   `dist` for npm, and Vite aliases that reach package source regardless of the
   map, so one module can be instantiated more than once in a process and the
-  global is the only slot every copy shares. `createRegistry` is a single-value
-  slot: `get()` returns the value or `null`, and required slots add a
+  global is the only namespace every copy shares. `createRegistry` holds a single
+  value: `get()` returns the value or `null`, and required registries add a
   `getOrThrow()` that genuinely optional ones do not have. `createKeyedRegistry`
-  is the same slot keyed by string, for the per-type and per-name override maps.
+  is the same mechanism keyed by string, for the per-type and per-name override maps.
   The namespace also carries a few **process guards** — a cron tick lock and
   interval handle, the duplicate-admin-UI check — as plain keys read directly
-  rather than through a registry object. They share the duplicate-copy hazard
-  without sharing the slot shape.
-- **Process-wide state lives in a registry slot; module-scope singletons are not
+  rather than through a registry. They share the duplicate-copy hazard without
+  sharing the registry shape.
+- **Process-wide state lives in a registry; module-scope singletons are not
   used.** That covers memoised values as well as boot-wired drivers: Better Auth
-  builds on first ask inside `getAuth()` and holds the result in an optional slot
-  (`users/auth.ts`), because a `let` at module scope is per-copy state that a
-  second copy of the module cannot see.
+  builds on first ask inside `getAuth()` and holds the result in an optional
+  registry (`users/auth.ts`), because a `let` at module scope is per-copy state
+  that a second copy of the module cannot see.
 - **Config is read at call time, never at module scope.** `createAstromech`
   resolves the author's config once and puts it in `config/registry.ts`; every
   reader calls `getConfig()` inside the function that needs it. A module-scope
@@ -167,9 +167,8 @@ published.
 packages/
 ├── astromech/       # the published `astromech` core package
 │   ├── src/
-│   │   ├── index.ts        # public framework-agnostic entry (re-exported via exports/)
 │   │   ├── astromech.ts    # composition root — createAstromech/getAstromech, the Astromech type, the instance registry, and the create sequence
-│   │   ├── registry.ts     # the globalThis-backed slot primitive (createRegistry/createKeyedRegistry) every subsystem registry is built on
+│   │   ├── registry.ts     # the globalThis-backed registry primitive (createRegistry/createKeyedRegistry) every subsystem registry is built on
 │   │   │
 │   │   │   ── entrypoints ─────────────────────────────────────────────────────
 │   │   ├── integrations/   # framework and runtime glue — astro/ (index.ts the integration, astromech/astro · vite.ts · virtual-module.ts · routes.ts the injectRoute calls · middleware.ts, astromech/middleware · handler.ts, the one APIRoute behind every injected pattern) · cloudflare/ (index.ts, createWorkerEntry, astromech/cloudflare)
@@ -210,7 +209,7 @@ packages/
 │   │   ├── errors/         # base error classes
 │   │   │
 │   │   │   ── public surface ───────────────────────────────────────────
-│   │   └── exports/        # thin re-export barrels; tsup builds from here — internals are private
+│   │   └── exports/        # thin re-export barrels, index.ts being the root `astromech` subpath; tsup builds from here — internals are private
 │   ├── tests/              # mirrors src/
 │   ├── scripts/
 │   └── (tsup|vitest).config.ts · tsconfig*.json
