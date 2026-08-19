@@ -4,12 +4,12 @@
  * collector that enumerates every user as a source.
  */
 
+import type { RelationshipIndexSource } from '@/database/storage/relationships';
+import type { JsonObject } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { createRelationshipStorage } from '@/database/storage/relationships';
-import type { RelationshipIndexSource } from '@/database/storage/relationships';
-import { collectRelationshipEdges } from '@/fields/relationship-edges';
 import { flattenFieldNodes } from '@/fields/flatten';
-import type { JsonObject } from '@/types/index';
+import { collectRelationshipEdges } from '@/fields/relationship-edges';
 import { createUserStorage } from '../storage';
 
 /**

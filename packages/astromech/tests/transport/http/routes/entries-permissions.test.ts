@@ -9,13 +9,13 @@
  * resolved on every route, the cross-type `POST /query` included.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { mountRouter, roleWith } from '@tests/mount-router';
-import { entriesService as api } from '@/entries/service';
-import { createEntriesRouter } from '@/transport/http/routes/entries';
 import type { EntryAction } from '@/permissions/index';
 import type { AstromechConfig } from '@/types/index';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { mountRouter, roleWith } from '@tests/mount-router';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { entriesService as api } from '@/entries/service';
+import { createEntriesRouter } from '@/transport/http/routes/entries';
 
 const ACTIONS: EntryAction[] = ['read', 'create', 'update', 'delete', 'publish'];
 

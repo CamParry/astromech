@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cloudflareCron } from '@/cron/drivers/cloudflare';
 import { interval } from '@/cron/drivers/interval';
 import { webhook } from '@/cron/drivers/webhook';
-import { cloudflareCron } from '@/cron/drivers/cloudflare';
 import { globals } from '@/utilities/registry';
 
 describe('interval', () => {

@@ -6,32 +6,32 @@
  * Plugin custom field types are NOT registered here; FormField falls through
  * to the lazy plugin-field path when getFieldComponent returns undefined.
  */
-import { registerField } from './field-registry';
-import { TextField } from '@/admin/components/fields/text-field';
-import { TextareaField } from '@/admin/components/fields/textarea-field';
-import { RichtextField } from '@/admin/components/fields/richtext-field';
-import { NumberField } from '@/admin/components/fields/number-field';
+import { BlocksField } from '@/admin/components/fields/blocks-field';
 import { BooleanField } from '@/admin/components/fields/boolean-field';
+import { CheckboxGroupField } from '@/admin/components/fields/checkbox-group-field';
+import { ColorField } from '@/admin/components/fields/color-field';
 import { DateField } from '@/admin/components/fields/date-field';
 import { DatetimeField } from '@/admin/components/fields/datetime-field';
-import { SelectField } from '@/admin/components/fields/select-field';
-import { MultiselectField } from '@/admin/components/fields/multiselect-field';
+import { EmailField } from '@/admin/components/fields/email-field';
+import { GroupField } from '@/admin/components/fields/group-field';
+import { JsonField } from '@/admin/components/fields/json-field';
+import { KeyValueField } from '@/admin/components/fields/key-value-field';
+import { LinkField } from '@/admin/components/fields/link-field';
 import { MediaField } from '@/admin/components/fields/media-field';
+import { MultiselectField } from '@/admin/components/fields/multiselect-field';
+import { NumberField } from '@/admin/components/fields/number-field';
+import { RadioGroupField } from '@/admin/components/fields/radio-group-field';
+import { RangeField } from '@/admin/components/fields/range-field';
 import { RelationshipField } from '@/admin/components/fields/relationship-field';
 import { RepeaterField } from '@/admin/components/fields/repeater-field';
-import { EmailField } from '@/admin/components/fields/email-field';
-import { UrlField } from '@/admin/components/fields/url-field';
-import { ColorField } from '@/admin/components/fields/color-field';
+import { RichtextField } from '@/admin/components/fields/richtext-field';
+import { SelectField } from '@/admin/components/fields/select-field';
 import { SlugField } from '@/admin/components/fields/slug-field';
-import { JsonField } from '@/admin/components/fields/json-field';
-import { GroupField } from '@/admin/components/fields/group-field';
-import { RangeField } from '@/admin/components/fields/range-field';
-import { CheckboxGroupField } from '@/admin/components/fields/checkbox-group-field';
-import { RadioGroupField } from '@/admin/components/fields/radio-group-field';
-import { LinkField } from '@/admin/components/fields/link-field';
-import { KeyValueField } from '@/admin/components/fields/key-value-field';
-import { BlocksField } from '@/admin/components/fields/blocks-field';
+import { TextField } from '@/admin/components/fields/text-field';
+import { TextareaField } from '@/admin/components/fields/textarea-field';
 import { TreeField } from '@/admin/components/fields/tree-field';
+import { UrlField } from '@/admin/components/fields/url-field';
+import { registerField } from './field-registry';
 
 registerField('text', TextField);
 registerField('textarea', TextareaField);

@@ -12,18 +12,19 @@
  * (`transport/cli/commands/db-generate.ts`) is the only caller.
  */
 
-import {
-    generateMigrations as engineGenerate,
-    generateMigrationFromOps as engineGenerateFromOps,
-    rebaselineMigrations as engineRebaseline,
-} from '@astromech/schema-engine/generate';
-import { createSnapshot, type SqlDialect } from '@/database/table-snapshot';
 import type { Table } from '@/database/define-table';
+import type { SqlDialect } from '@/database/table-snapshot';
 import type {
     GenerateResult,
     MigrationOpsAuthor,
     RebaselineResult,
 } from '@astromech/schema-engine/generate';
+import {
+    generateMigrations as engineGenerate,
+    generateMigrationFromOps as engineGenerateFromOps,
+    rebaselineMigrations as engineRebaseline,
+} from '@astromech/schema-engine/generate';
+import { createSnapshot } from '@/database/table-snapshot';
 
 export type { GenerateResult, MigrationOpsAuthor, RebaselineResult };
 

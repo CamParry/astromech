@@ -8,14 +8,14 @@
  * DDL/DML, so `:memory:` is fine).
  */
 
-import { describe, expect, it } from 'vitest';
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createClient } from '@libsql/client';
-import { Kysely, sql } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
+import { Kysely, sql } from 'kysely';
+import { describe, expect, it } from 'vitest';
 import { generateMigrationFromOps, generateMigrations } from '../src/generate';
 import { col, index, snap, table } from './_support/tables';
 

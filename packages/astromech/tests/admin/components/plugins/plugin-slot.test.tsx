@@ -6,11 +6,11 @@
  * (same approach as tests/admin/context/ai-context.test.tsx).
  */
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createRoot } from 'react-dom/client';
-import { act } from 'react';
-import { slots } from 'virtual:astromech/plugins/components';
 import type { AdminSlotName } from '@/types/config';
+import { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { slots } from 'virtual:astromech/plugins/components';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PluginSlot } from '@/admin/components/plugins/PluginSlot';
 
 const granted = vi.hoisted(() => ({ permissions: [] as string[] }));

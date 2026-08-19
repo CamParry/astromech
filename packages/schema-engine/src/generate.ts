@@ -12,18 +12,14 @@
  * chain, so a divergent parallel generation run surfaces as a `snapshot.json`
  * merge conflict rather than a silent hash mismatch.
  */
-
+import type { TableOp } from './diff';
+import type { Snapshot, SnapshotTable, SqlDialect } from './model';
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { diffSnapshots, type TableOp } from './diff';
-import { renderMigrationFile, renderStatementLine } from './render';
 import { renderTableStatements } from './ddl';
-import {
-    serializeSnapshot,
-    type Snapshot,
-    type SnapshotTable,
-    type SqlDialect,
-} from './model';
+import { diffSnapshots } from './diff';
+import { serializeSnapshot } from './model';
+import { renderMigrationFile, renderStatementLine } from './render';
 
 export type GenerateResult =
     | { status: 'no-changes' }

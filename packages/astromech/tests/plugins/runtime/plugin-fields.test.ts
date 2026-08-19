@@ -1,11 +1,10 @@
+import type { PluginDefinition, ResolvedConfig } from '@/types/index';
 import { describe, expect, it } from 'vitest';
-import type { PluginDefinition } from '@/types/index';
+import { generateClientTypes } from '@/codegen/type-generator';
 import {
     assertNoFieldTypeCollisions,
     collectPluginFieldTypes,
 } from '@/plugins/runtime/plugin-fields';
-import { generateClientTypes } from '@/codegen/type-generator';
-import type { ResolvedConfig } from '@/types/index';
 
 const def = (
     partial: Partial<PluginDefinition> & { package: string }

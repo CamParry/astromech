@@ -4,9 +4,9 @@
  * Input is untrusted stored JSON, so every step here is defensive.
  */
 
+import type { FormFieldKind, StoredFormField } from '../types';
 import type { Field, Label, SelectOption, ValidationRule } from 'astromech';
 import * as fields from 'astromech/fields';
-import type { FormFieldKind, StoredFormField } from '../types';
 
 /**
  * A form's stored blocks as a flat list of leaf fields — a submission is a flat

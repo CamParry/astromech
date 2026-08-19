@@ -11,14 +11,14 @@
  * which types and plugins exist.
  */
 
-import type { PluginDefinition, ResolvedConfig } from '@/types/index';
 import type { PermissionDeclarations } from '@/permissions/define';
-import { CORE_PERMISSIONS } from '@/permissions/index';
+import type { EntryAction } from '@/permissions/entry-permission';
+import type { PluginDefinition, ResolvedConfig } from '@/types/index';
 import {
-    type EntryAction,
     pluginEntryPermission,
     rootEntryPermission,
 } from '@/permissions/entry-permission';
+import { CORE_PERMISSIONS } from '@/permissions/index';
 import {
     resolvePluginIdentity,
     resolvePluginPermission,

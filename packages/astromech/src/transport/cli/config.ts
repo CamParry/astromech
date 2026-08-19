@@ -3,11 +3,11 @@
  * without a pre-build step) and initialises the DB registry so service methods work.
  */
 
-import { setDb } from '@/database/registry';
-import { resolveConfig } from '@/config/resolve';
+import type { AstromechConfig, ResolvedConfig } from '@/types/index';
 import { loadConfigFile } from '@/config/load';
 import { setConfig } from '@/config/registry';
-import type { AstromechConfig, ResolvedConfig } from '@/types/index';
+import { resolveConfig } from '@/config/resolve';
+import { setDb } from '@/database/registry';
 import { log } from '@/utilities/log';
 
 export async function loadRawConfig(configPath?: string): Promise<AstromechConfig> {

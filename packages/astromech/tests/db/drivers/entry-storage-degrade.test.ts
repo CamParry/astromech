@@ -4,15 +4,15 @@
  * their `transaction` method rather than exposing one that would fail.
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
+import type { DB } from '@/database/types';
+import type { DatabaseDriver } from '@/types/index';
 import type { Dialect, Kysely } from 'kysely';
 import { createTestDb } from '@tests/harness';
+import { afterEach, describe, expect, it } from 'vitest';
+import { defineTable } from '@/database/define-table';
 import { setDatabaseDriver } from '@/database/driver-registry';
 import { createBuiltInEntryStorage } from '@/entries/storage/built-in';
 import { tableStorage } from '@/entries/storage/table';
-import { defineTable } from '@/database/define-table';
-import type { DatabaseDriver } from '@/types/index';
-import type { DB } from '@/database/types';
 
 const scratchTable = defineTable('degrade_scratch', ({ col }) => ({
     id: col.id(),

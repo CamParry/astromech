@@ -6,11 +6,6 @@
  * hatch.
  */
 
-import type { ComponentType, ReactElement } from 'react';
-import type { z } from '@hono/zod-openapi';
-import type { Kysely, MigrationProvider } from 'kysely';
-import type { DB } from '@/database/types';
-import type { Table } from '@/database/define-table';
 import type {
     AdminPage,
     AdminSlotContribution,
@@ -19,18 +14,23 @@ import type {
     ResolvedConfig,
     StorageObject,
 } from './config';
+import type { NotifyInput, Permission, Role, User } from './domain';
 import type { Field, FieldValidator } from './fields';
-import type { Role, User, NotifyInput, Permission } from './domain';
 import type { PluginHooks } from './hooks';
-import type { TypedEntriesService } from './typed-entries';
+import type { ServiceMethodEffect, ToolDefinition } from './methods';
 import type {
     MediaService,
     NotificationsService,
     SettingsService,
     UsersService,
 } from './services';
-import type { ServiceMethodEffect, ToolDefinition } from './methods';
+import type { TypedEntriesService } from './typed-entries';
+import type { Table } from '@/database/define-table';
+import type { DB } from '@/database/types';
 import type { PermissionDeclarations } from '@/permissions/define';
+import type { z } from '@hono/zod-openapi';
+import type { Kysely, MigrationProvider } from 'kysely';
+import type { ComponentType, ReactElement } from 'react';
 
 // ============================================================================
 // Email overrides (carried over from the prior plugin surface)

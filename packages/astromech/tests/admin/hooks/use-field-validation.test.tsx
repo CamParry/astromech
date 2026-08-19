@@ -21,12 +21,12 @@
  * directly (same approach as container-field-editing.test.tsx).
  */
 
-import { describe, expect, it } from 'vitest';
-import { createRoot } from 'react-dom/client';
-import React, { act } from 'react';
-import type { Field, FieldErrors, ValidationRule } from '@/types/index';
-import { useFieldValidation } from '@/admin/hooks/use-field-validation';
 import type { FieldValidationHandle } from '@/admin/hooks/use-field-validation';
+import type { Field, FieldErrors, ValidationRule } from '@/types/index';
+import React, { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { describe, expect, it } from 'vitest';
+import { useFieldValidation } from '@/admin/hooks/use-field-validation';
 
 type Mounted = {
     handle: () => FieldValidationHandle;

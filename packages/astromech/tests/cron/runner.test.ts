@@ -5,17 +5,16 @@
  * Croner returns whole-minute boundaries, so for nextRun comparisons we compare
  * at second resolution (truncate ms) to be safe.
  */
-
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Updateable } from 'kysely';
-import { Cron } from 'croner';
-import type { Kysely } from 'kysely';
+import type { CronRow } from '@/database/schema';
+import type { DB } from '@/database/types';
+import type { Kysely, Updateable } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { Cron } from 'croner';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { registerCronJob } from '@/cron/registry';
 import { onTick, runDue } from '@/cron/runner';
-import { encodePatchWith, decodeWith } from '@/database/codec';
-import type { DB } from '@/database/types';
-import { cronTable, type CronRow } from '@/database/schema';
+import { decodeWith, encodePatchWith } from '@/database/codec';
+import { cronTable } from '@/database/schema';
 import { globals } from '@/utilities/registry';
 
 // Truncate to second resolution to match DB storage.

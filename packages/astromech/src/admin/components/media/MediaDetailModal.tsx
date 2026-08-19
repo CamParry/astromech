@@ -7,9 +7,20 @@
  * adjacent to the one people aim for.
  */
 
-import React from 'react';
+import type { Media } from '@/types/index';
 import { useForm, useStore } from '@tanstack/react-form';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { FileTypeIcon, versionedMediaUrl } from '@/admin/utilities/media';
+import { formatBytes } from '@/utilities/bytes';
+import { formatDatetime } from '@/utilities/dates';
+import {
+    useDeleteMedia,
+    useMediaItem,
+    useMediaUsage,
+    useReplaceMedia,
+    useUpdateMedia,
+} from '../../hooks/media';
 import {
     Button,
     EmptyState,
@@ -19,18 +30,7 @@ import {
     UploadButton,
     useConfirm,
 } from '../ui/index';
-import {
-    useMediaItem,
-    useUpdateMedia,
-    useDeleteMedia,
-    useReplaceMedia,
-    useMediaUsage,
-} from '../../hooks/media';
-import { formatBytes } from '@/utilities/bytes';
 import { MediaUsagePanel } from './media-usage-panel';
-import { formatDatetime } from '@/utilities/dates';
-import { FileTypeIcon, versionedMediaUrl } from '@/admin/utilities/media';
-import type { Media } from '@/types/index';
 
 export type MediaDetailModalProps = {
     mediaId: string | null;

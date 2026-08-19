@@ -21,14 +21,14 @@
  * descriptor is *state*, not history; reverting is a fresh forward migration).
  */
 
+import type { TableOp } from './diff';
+import type { SqlDialect } from './model';
 import {
     renderColumnClause,
     renderCreateIndex,
     renderCreateTable,
     renderLiteral,
 } from './ddl';
-import type { SqlDialect } from './model';
-import type { TableOp } from './diff';
 
 /** Render one op's SQL statement(s), in apply order. */
 export function renderOpStatements(op: TableOp, dialect: SqlDialect): string[] {

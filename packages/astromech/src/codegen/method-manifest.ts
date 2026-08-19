@@ -11,34 +11,34 @@
  *
  * Schema version: 2
  */
-
-import { z } from '@hono/zod-openapi';
+import type { EntryMethodContract } from '@/entries/methods';
 import type {
-    PluginDefinition,
     AnyServiceMethod,
-    PluginAccess,
-    ServiceMethodContract,
     CoreManifestMethod,
     EntriesManifestMethod,
     JsonSchemaObject,
     ManifestAccess,
     ManifestMethod,
     MethodManifest,
+    PluginAccess,
+    PluginDefinition,
     PluginManifestMethod,
+    ResolvedConfig,
+    ResolvedEntryCapabilities,
+    ServiceMethodContract,
 } from '@/types/index';
-import type { ResolvedConfig } from '@/types/index';
-import { usersContract } from '@/users/methods';
-import { mediaContract } from '@/media/methods';
-import { settingsContract } from '@/settings/methods';
-import { notificationsContract } from '@/notifications/methods';
-import { entryMethodContracts, type EntryMethodContract } from '@/entries/methods';
 import type { Capability } from '@/utilities/entry-capabilities';
-import type { ResolvedEntryCapabilities } from '@/types/index';
-import { qualifyEntryType } from '@/utilities/entry-type-ids';
+import { z } from '@hono/zod-openapi';
+import { entryMethodContracts } from '@/entries/methods';
+import { mediaContract } from '@/media/methods';
+import { notificationsContract } from '@/notifications/methods';
 import {
     resolvePluginIdentity,
     resolvePluginPermission,
 } from '@/plugins/runtime/plugin-identity';
+import { settingsContract } from '@/settings/methods';
+import { usersContract } from '@/users/methods';
+import { qualifyEntryType } from '@/utilities/entry-type-ids';
 
 /**
  * Filename of the emitted manifest (lands in the project's `.astro/` dir).

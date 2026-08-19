@@ -9,10 +9,10 @@
  *  (e) No duplicates when page key and publicSettings overlap
  */
 
+import type { AstromechConfig, DatabaseDriver, StorageDriver } from '@/types/index';
 import { describe, expect, it } from 'vitest';
 import { resolveConfig } from '@/config/resolve';
 import { isPublicSettingKey } from '@/settings/visibility';
-import type { AstromechConfig, DatabaseDriver, StorageDriver } from '@/types/index';
 
 const driver: DatabaseDriver = {
     type: 'test',

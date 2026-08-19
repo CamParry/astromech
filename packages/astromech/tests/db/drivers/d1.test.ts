@@ -6,21 +6,23 @@
  * that reopens a connection.
  */
 
-import * as fs from 'node:fs';
-import * as os from 'node:os';
-import * as path from 'node:path';
-import { randomUUID } from 'node:crypto';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { createClient, type Client, type InValue } from '@libsql/client';
-import { sql, type Kysely, type MigrationProvider } from 'kysely';
-import { migrateToLatest } from '@astromech/schema-engine';
-import { d1 } from '@/database/drivers/d1';
 import type {
     D1DatabaseLike,
     D1PreparedStatementLike,
     D1ResultLike,
 } from '@/database/drivers/d1-dialect';
+import type { Client, InValue } from '@libsql/client';
+import type { Kysely, MigrationProvider } from 'kysely';
+import { randomUUID } from 'node:crypto';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { migrateToLatest } from '@astromech/schema-engine';
+import { createClient } from '@libsql/client';
+import { sql } from 'kysely';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { resetBindingEnv, setBindingEnv } from '@/cloudflare/bindings';
+import { d1 } from '@/database/drivers/d1';
 
 // ---------------------------------------------------------------------------
 // Fake D1Database — real SQLite underneath via libsql, D1 result shape on top

@@ -12,12 +12,12 @@
  *     its `public` RPC method stays reachable.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { OpenAPIHono } from '@hono/zod-openapi';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { createEntriesRouter } from '@/transport/http/routes/entries';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { AstromechConfig, PluginDefinition, Role, User } from '@/types/index';
+import { OpenAPIHono } from '@hono/zod-openapi';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createEntriesRouter } from '@/transport/http/routes/entries';
 
 const widgetsPlugin: PluginDefinition = {
     package: 'widgets',

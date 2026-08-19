@@ -22,10 +22,17 @@
  * methods work without a session.
  */
 
-import { Hono } from 'hono';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import { optionalAuth } from '@/transport/http/middleware/auth';
-import { forbidden, notFound, unauthorized } from '@/transport/http/middleware/errors';
+import type {
+    Permission,
+    PluginAccess,
+    PluginContext,
+    ResolvedPluginIdentity,
+} from '@/types/index';
+import type { Context } from 'hono';
+import { Hono } from 'hono';
+import { permissionsFor } from '@/permissions/permissions-for';
+import { resolvePluginPermission } from '@/plugins/runtime/plugin-identity';
 import {
     createPluginContext,
     getPluginIdentity,
@@ -33,15 +40,8 @@ import {
     getPluginServiceMethods,
 } from '@/plugins/runtime/plugin-runtime';
 import { getClientAddress } from '@/transport/http/client-address';
-import { permissionsFor } from '@/permissions/permissions-for';
-import { resolvePluginPermission } from '@/plugins/runtime/plugin-identity';
-import type { Context } from 'hono';
-import type {
-    Permission,
-    PluginAccess,
-    PluginContext,
-    ResolvedPluginIdentity,
-} from '@/types/index';
+import { optionalAuth } from '@/transport/http/middleware/auth';
+import { forbidden, notFound, unauthorized } from '@/transport/http/middleware/errors';
 
 type PluginEnv = { Variables: Partial<AuthVariables> };
 

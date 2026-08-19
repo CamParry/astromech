@@ -7,9 +7,9 @@
 
 import { spawnSync } from 'node:child_process';
 import console from 'node:console';
+import { dirname, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
 
 const SUBPATHS = [
     'astromech',

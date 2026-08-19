@@ -6,29 +6,29 @@
  * delete actions.
  */
 
-import React, { useEffect } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { useTranslation } from 'react-i18next';
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-    Button,
-    Spinner,
-    EmptyState,
-    Table,
-    Dropdown,
     Avatar,
-    useConfirm,
+    Button,
+    Dropdown,
+    EmptyState,
     Page,
+    PageContent,
     PageHeader,
     PageTitle,
-    PageContent,
+    Pagination,
+    SearchInput,
+    Spinner,
+    Table,
     Toolbar,
     ToolbarStart,
-    SearchInput,
-    Pagination,
+    useConfirm,
 } from '@/admin/components/ui/index';
-import { usePermissions, useUsersQuery, useDeleteUser } from '@/admin/hooks/index';
 import { useAIContext } from '@/admin/context/ai-context';
+import { useDeleteUser, usePermissions, useUsersQuery } from '@/admin/hooks/index';
 import { formatDate } from '@/utilities/dates';
 
 const PER_PAGE = 20;

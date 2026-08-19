@@ -20,11 +20,11 @@
 import { typedEntriesService } from '@/entries/index';
 import { mediaService } from '@/media/index';
 import { currentUserNotificationsService } from '@/notifications/index';
-import { settingsService } from '@/settings/index';
-import { usersService } from '@/users/index';
-import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { setPluginClient, setPluginMethods } from '@/plugins/runtime/plugin-runtime';
+import { pluginServices } from '@/plugins/runtime/plugin-services';
+import { settingsService } from '@/settings/index';
 import { buildScopedTools } from '@/transport/tools/scoped-tools';
+import { usersService } from '@/users/index';
 
 /** Set the client and methods ports on the plugin runtime. Idempotent. */
 export function setPluginAccess(): void {

@@ -12,8 +12,8 @@
  * multiple bundle entry points.
  */
 
-import { createRegistry } from '@/utilities/registry';
 import type { EntryType } from '@/types/index';
+import { createRegistry } from '@/utilities/registry';
 
 export type EntryAccess = {
     /**

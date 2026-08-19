@@ -1,5 +1,5 @@
-import React from 'react';
 import { Switch } from '@base-ui/react/switch';
+import React from 'react';
 import { useFieldControl } from '@/admin/components/fields/field-control-context';
 
 type ToggleProps = {

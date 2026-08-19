@@ -13,17 +13,17 @@
  * through the EntriesService-typed local transport.
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { JsonObject } from '@/types/index';
+import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { rmSync } from 'node:fs';
-import { setupTestConfig, makeTestConfig, createFileTestDb } from '@tests/harness';
+import { createFileTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getDb } from '@/database/registry';
-import { entriesService as api } from '@/entries/service';
 import { createRelationshipStorage } from '@/database/storage/relationships';
+import { CapabilityError, StagedEntryExistsError } from '@/entries/errors';
+import { entriesService as api } from '@/entries/service';
 import { getEntryStorage } from '@/entries/storage/registry';
-import { StagedEntryExistsError, CapabilityError } from '@/entries/errors';
-import type { JsonObject } from '@/types/index';
 
 let dbCounter = 0;
 let dbPath = '';

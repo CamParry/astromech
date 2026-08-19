@@ -2,8 +2,8 @@
  * Avatar component built on Base UI Avatar primitives.
  */
 
-import React from 'react';
 import { Avatar as BaseAvatar } from '@base-ui/react/avatar';
+import React from 'react';
 
 type AvatarProps = {
     name: string;

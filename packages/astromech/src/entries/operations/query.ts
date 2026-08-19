@@ -1,20 +1,21 @@
-import { getConfig } from '@/config/registry';
-import { flattenEntryFields } from '@/fields/flatten';
-import { collectRelationshipSchemaPaths } from '@/fields/relationship-edges';
-import { getCurrentUser } from '@/request-context/index';
-import { resolveEntryType } from '@/utilities/entry-type-ids';
-import { getEntryStorage } from '../storage/registry';
-import { getDefaultLocale } from '../internal/type-config';
-import { asEntry } from '../internal/records';
-import { runPreviewQuery } from './preview/read';
-import { InvalidReferencesFilterError, PublicTrashedReadError } from '../errors';
-import { applyVisibility, markPublic, type VisibilityShape } from '../visibility';
+import type { VisibilityShape } from '../visibility';
 import type {
     Entry,
     EntryQueryParams,
     QueryResult,
     ReferencesFilter,
 } from '@/types/index';
+import { getConfig } from '@/config/registry';
+import { flattenEntryFields } from '@/fields/flatten';
+import { collectRelationshipSchemaPaths } from '@/fields/relationship-edges';
+import { getCurrentUser } from '@/request-context/index';
+import { resolveEntryType } from '@/utilities/entry-type-ids';
+import { InvalidReferencesFilterError, PublicTrashedReadError } from '../errors';
+import { asEntry } from '../internal/records';
+import { getDefaultLocale } from '../internal/type-config';
+import { getEntryStorage } from '../storage/registry';
+import { applyVisibility, markPublic } from '../visibility';
+import { runPreviewQuery } from './preview/read';
 
 export async function query(
     params: EntryQueryParams & { type: string | readonly string[] }

@@ -5,21 +5,6 @@
  * file, so a dropped re-export is a broken package, not a broken import here.
  */
 
-import { describe, expect, it } from 'vitest';
-import * as methods from '@/exports/methods';
-import { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch';
-import { buildScopedTools } from '@/transport/tools/scoped-tools';
-import { filterMethods } from '@/policies/method-filter';
-import { annotateManifest } from '@/policies/annotate-manifest';
-import { scopedServices } from '@/policies/scoped-services';
-import {
-    CONFIRM_KEY,
-    evaluateConfirmation,
-    triggersConfirmation,
-} from '@/policies/confirmation';
-import { getMethodManifest } from '@/codegen/manifest-registry';
-import { formatAIContextMessage } from '@/utilities/ai-context';
-
 // Types, asserted structurally: an unexported one fails the typecheck, not this.
 import type {
     ConfirmDecision,
@@ -30,6 +15,20 @@ import type {
     ScopedServices,
     ToolDefinition,
 } from '@/exports/methods';
+import { describe, expect, it } from 'vitest';
+import { getMethodManifest } from '@/codegen/manifest-registry';
+import * as methods from '@/exports/methods';
+import { annotateManifest } from '@/policies/annotate-manifest';
+import {
+    CONFIRM_KEY,
+    evaluateConfirmation,
+    triggersConfirmation,
+} from '@/policies/confirmation';
+import { filterMethods } from '@/policies/method-filter';
+import { scopedServices } from '@/policies/scoped-services';
+import { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch';
+import { buildScopedTools } from '@/transport/tools/scoped-tools';
+import { formatAIContextMessage } from '@/utilities/ai-context';
 
 export type Exported = [
     ConfirmDecision,

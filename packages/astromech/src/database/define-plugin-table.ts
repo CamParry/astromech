@@ -1,3 +1,16 @@
+import type {
+    AnyCols,
+    ColFactory,
+    IndexFactory,
+    IndexSpec,
+    KyselyOf,
+    Table,
+} from '@/database/define-table';
+import type { PluginIdentity } from '@/types/plugins';
+import type { PluginNamespace } from '@/utilities/plugin-namespace';
+import { defineTable } from '@/database/define-table';
+import { pluginNamespace } from '@/utilities/plugin-namespace';
+
 /**
  * `definePluginTable` — the scoped table factory a plugin package uses to
  * declare one of its own tables.
@@ -32,18 +45,6 @@
  * identically to authoring a core one. Index names are prefixed too — two
  * plugins may both want `idx_lookup`.
  */
-
-import {
-    defineTable,
-    type AnyCols,
-    type ColFactory,
-    type IndexFactory,
-    type IndexSpec,
-    type KyselyOf,
-    type Table,
-} from '@/database/define-table';
-import { pluginNamespace, type PluginNamespace } from '@/utilities/plugin-namespace';
-import type { PluginIdentity } from '@/types/plugins';
 
 /** Accepted first argument: the package name, or any object carrying one. */
 type PackageSource = string | PluginIdentity;

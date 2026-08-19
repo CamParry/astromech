@@ -1,6 +1,6 @@
 import type { Media, MediaQueryParams, QueryResult } from '@/types/index';
-import { createMediaStorage } from '../storage';
 import { toMedia } from '../internal/to-media';
+import { createMediaStorage } from '../storage';
 
 /** List media items, paginated unless `limit: 'all'` asks for the lot. */
 export async function query(params?: MediaQueryParams): Promise<QueryResult<Media>> {

@@ -8,8 +8,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { defineTable } from '@/database/define-table';
 import { decodeWith, encodeWith } from '@/database/codec';
+import { defineTable } from '@/database/define-table';
 
 const WHEN = new Date('2024-03-04T05:06:07.000Z');
 

@@ -6,12 +6,13 @@
  * over stdio. All logging goes to stderr — stdout is the JSON-RPC channel.
  */
 
+import type { ConfirmOptions } from '@/policies/confirmation';
+import type { MethodFilter } from '@/policies/method-filter';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { loadConfig, loadRawConfig } from '@/transport/cli/config';
 import { createAstromech } from '@/astromech';
 import { generateMethodManifest } from '@/codegen/method-manifest';
-import { filterMethods, type MethodFilter } from '@/policies/method-filter';
-import type { ConfirmOptions } from '@/policies/confirmation';
+import { filterMethods } from '@/policies/method-filter';
+import { loadConfig, loadRawConfig } from '@/transport/cli/config';
 import { createMcpServer } from './server';
 
 /** Above this many exclusions, the per-method lines stop being readable. */

@@ -16,11 +16,12 @@
  * `false` (no config object) — omit them to keep the default (enabled).
  */
 
-import StarterKit from '@tiptap/starter-kit';
-import TextAlign from '@tiptap/extension-text-align';
-import { Placeholder } from '@tiptap/extension-placeholder';
-import { Extension, type Extensions } from '@tiptap/core';
 import type { RichTextAllow } from '@/types/fields';
+import type { Extensions } from '@tiptap/core';
+import { Extension } from '@tiptap/core';
+import { Placeholder } from '@tiptap/extension-placeholder';
+import TextAlign from '@tiptap/extension-text-align';
+import StarterKit from '@tiptap/starter-kit';
 
 // ============================================================================
 // TextBalance extension — inline style; always on

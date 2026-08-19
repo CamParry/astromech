@@ -8,20 +8,14 @@
  *   GET  /settings/:key    → settings.get (bespoke)
  *   PUT  /settings/:key    → settings.set
  */
-
-import { OpenAPIHono } from '@hono/zod-openapi';
-import { settingsService } from '@/settings/index';
-import { forbidden, notFound } from '@/transport/http/middleware/errors';
+import type { RestRoute } from './rest-route';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
+import { OpenAPIHono } from '@hono/zod-openapi';
 import { permissionsFor } from '@/permissions/permissions-for';
-import { settingsContract } from '@/settings/index';
+import { settingsContract, settingsService } from '@/settings/index';
+import { forbidden, notFound } from '@/transport/http/middleware/errors';
 import { SETTINGS_ROUTE_SPECS } from './http-routes.shared';
-import {
-    attachHandlers,
-    documentBespokeRoutes,
-    mountRestRoutes,
-    type RestRoute,
-} from './rest-route';
+import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 
 type Env = { Variables: AuthVariables };
 

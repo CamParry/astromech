@@ -7,20 +7,20 @@
  * `relationships` index (that is `internal/relationships.ts`).
  */
 
+import type { StorageDb } from '../storage/types';
+import type { RelationshipDeclaration, TargetKind } from '@/fields/relationship-edges';
+import type { Field } from '@/types/fields';
+import type { JsonObject } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { existingResourceIds } from '@/database/storage/resource-existence';
+import { parseInstancePath } from '@/fields/field-path';
 import {
     collectRelationshipDeclarations,
     collectRelationshipEdges,
 } from '@/fields/relationship-edges';
-import type { RelationshipDeclaration, TargetKind } from '@/fields/relationship-edges';
-import { parseInstancePath } from '@/fields/field-path';
 import { RESERVED_KEY } from '@/fields/reserved-keys';
-import { getEntryStorage, hasEntryStorageOverride } from '../storage/registry';
 import { resolveEntryType } from '@/utilities/entry-type-ids';
-import type { Field } from '@/types/fields';
-import type { JsonObject } from '@/types/index';
-import type { StorageDb } from '../storage/types';
+import { getEntryStorage, hasEntryStorageOverride } from '../storage/registry';
 
 const TARGET_KINDS = ['entry', 'user', 'media'] as const satisfies readonly TargetKind[];
 

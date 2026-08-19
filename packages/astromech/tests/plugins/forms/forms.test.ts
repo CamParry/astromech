@@ -19,22 +19,6 @@
  * emitted from the table alongside it.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
-import { sql } from 'kysely';
-import type { Kysely } from 'kysely';
-import { defineHook } from '@/index';
-import { setEmailDriver } from '@/email/registry';
-import {
-    createTestDb,
-    makeTestConfig,
-    registerTestPlugins,
-    setupTestConfig,
-} from '@tests/harness';
-import { pluginServices } from '@/plugins/runtime/plugin-services';
-import { entriesService as localEntries } from '@/entries/service';
-import { forms, turnstile } from '@astromech/forms';
-import { resetRateLimit } from '../../../../plugins/forms/src/service/rate-limit';
-import type { FormsOptions, PublicForm, SubmitResult } from '@astromech/forms';
 import type { DB } from '@/database/types';
 import type {
     AstromechConfig,
@@ -43,6 +27,22 @@ import type {
     PluginDefinition,
     ResolvedConfig,
 } from '@/types/index';
+import type { FormsOptions, PublicForm, SubmitResult } from '@astromech/forms';
+import type { Kysely } from 'kysely';
+import { forms, turnstile } from '@astromech/forms';
+import {
+    createTestDb,
+    makeTestConfig,
+    registerTestPlugins,
+    setupTestConfig,
+} from '@tests/harness';
+import { sql } from 'kysely';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { setEmailDriver } from '@/email/registry';
+import { entriesService as localEntries } from '@/entries/service';
+import { defineHook } from '@/index';
+import { pluginServices } from '@/plugins/runtime/plugin-services';
+import { resetRateLimit } from '../../../../plugins/forms/src/service/rate-limit';
 
 const FORM = 'forms/form';
 

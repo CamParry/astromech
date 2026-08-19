@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react';
-import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { clsx } from 'clsx';
+import { ChevronDown, ChevronsUpDown, ChevronUp } from 'lucide-react';
 
 // ============================================================================
 // Types

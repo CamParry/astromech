@@ -4,8 +4,10 @@
  * under their plugin name.
  */
 
-import type { PluginDefinition } from '@/types/plugins';
 import type { ResolvedEntryType } from '@/types/index';
+import type { PluginDefinition } from '@/types/plugins';
+import { toResolvedEntryType } from '@/config/entry-types';
+import { assertNoFieldTypeCollisions } from '@/plugins/runtime/plugin-fields';
 import {
     assertNoPluginCollisions,
     checkPluginDependencies,
@@ -13,9 +15,7 @@ import {
     resolvePluginIdentity,
 } from '@/plugins/runtime/plugin-identity';
 import { assertPluginTablePrefixes } from '@/plugins/runtime/plugin-tables';
-import { assertNoFieldTypeCollisions } from '@/plugins/runtime/plugin-fields';
 import { BUILT_IN_SUPPORTS } from '@/utilities/entry-capabilities';
-import { toResolvedEntryType } from '@/config/entry-types';
 
 /**
  * Access-key collisions, dependencies (existence + basic semver range), table

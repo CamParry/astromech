@@ -6,8 +6,8 @@
  * Uses Better Auth endpoints via fetch with `credentials: 'include'`.
  */
 
-import React, { createContext, useContext } from 'react';
 import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { createContext, useContext } from 'react';
 
 declare const __ASTROMECH_BASE_PATH__: string;
 

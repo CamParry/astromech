@@ -1,12 +1,12 @@
-import { describe, expect, it } from 'vitest';
-import { resolveConfig } from '@/config/resolve';
-import { defineAdminPage } from '@/index';
 import type {
     AdminPage,
     AstromechConfig,
     DatabaseDriver,
     StorageDriver,
 } from '@/types/index';
+import { describe, expect, it } from 'vitest';
+import { resolveConfig } from '@/config/resolve';
+import { defineAdminPage } from '@/index';
 
 const driver: DatabaseDriver = {
     type: 'test',

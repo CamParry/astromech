@@ -12,12 +12,12 @@
  * authorization check, so it gets its own assertion.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { DB } from '@/database/types';
+import type { Notification } from '@/types/index';
 import type { Kysely } from 'kysely';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { notificationsService, notify } from '@/notifications/service';
-import type { Notification } from '@/types/index';
-import type { DB } from '@/database/types';
 
 let db: Kysely<DB>;
 let admin: string;

@@ -8,12 +8,12 @@
  */
 
 import type { Entry, EntryStatus, EntryVersion, JsonObject } from './domain';
+import type { EntryQueryParams, QueryResult } from './query';
 import type {
     EntriesService,
     EntryDuplicateOverrides,
     EntryUpdateData,
 } from './services';
-import type { EntryQueryParams, QueryResult } from './query';
 
 // ============================================================================
 // Typed Entry

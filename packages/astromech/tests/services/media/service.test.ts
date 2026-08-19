@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb, setupTestConfig, makeTestConfig } from '@tests/harness';
-import { setStorageDriver } from '@/storage/registry';
-import { mediaService } from '@/media/service';
 import type { StorageDriver } from '@/types/index';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { mediaService } from '@/media/service';
+import { setStorageDriver } from '@/storage/registry';
 
 // Minimal 1x1 JPEG (SOI + APP0 + SOF0 + EOI) — an optimisable raster image.
 function jpegBytes(): Uint8Array {

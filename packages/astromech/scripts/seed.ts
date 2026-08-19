@@ -4,12 +4,12 @@
  * Run from the repo root: `npm run db:seed`.
  */
 
-import { fileURLToPath } from 'node:url';
-import { hashPassword } from 'better-auth/crypto';
-import { collectRelationshipEdges } from 'astromech';
 import type { Field } from 'astromech';
-import * as schema from 'astromech/database/schema';
+import { fileURLToPath } from 'node:url';
+import { collectRelationshipEdges } from 'astromech';
 import { libsql } from 'astromech/database/libsql';
+import * as schema from 'astromech/database/schema';
+import { hashPassword } from 'better-auth/crypto';
 import config from '../../../apps/demo/astromech.config';
 
 // Resolved against this file, not the cwd: `npm run db:seed` delegates with

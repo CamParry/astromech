@@ -5,14 +5,14 @@
  * this hook, so the params it hands the transport are the shared contract.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import React from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, renderHook, waitFor } from '@testing-library/react';
-import { useMediaBrowser } from '@/admin/hooks/use-media-browser';
 import type { MediaBrowserResult } from '@/admin/hooks/use-media-browser';
 import type { MediaBrowserQuery } from '@/admin/types/media';
 import type { Media, MediaQueryParams } from '@/types/index';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { cleanup, renderHook, waitFor } from '@testing-library/react';
+import React from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useMediaBrowser } from '@/admin/hooks/use-media-browser';
 
 const { mediaQuery } = vi.hoisted(() => ({ mediaQuery: vi.fn() }));
 

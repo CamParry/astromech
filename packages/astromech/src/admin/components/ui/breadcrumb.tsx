@@ -1,5 +1,5 @@
-import React from 'react';
 import { Link } from '@tanstack/react-router';
+import React from 'react';
 
 type BreadcrumbItem = { label: string; to?: string };
 type BreadcrumbProps = { items: BreadcrumbItem[] };

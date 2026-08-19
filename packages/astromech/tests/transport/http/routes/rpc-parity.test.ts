@@ -8,17 +8,6 @@
  * method the manifest advertises and the transport cannot serve.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { z } from 'zod';
-import type { OpenAPIHono } from '@hono/zod-openapi';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { adminRole, roleWith } from '@tests/mount-router';
-import { setMethodManifest } from '@/codegen/manifest-registry';
-import { generateMethodManifest } from '@/codegen/method-manifest';
-import { buildScopedDispatch } from '@/transport/tools/dispatch';
-import { createHttpApp } from '@/transport/http/index';
-import { entriesService } from '@/entries/index';
-import { usersService } from '@/users/index';
 import type {
     AstromechConfig,
     MethodManifest,
@@ -26,10 +15,20 @@ import type {
     Role,
     User,
 } from '@/types/index';
+import type { OpenAPIHono } from '@hono/zod-openapi';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { adminRole, roleWith } from '@tests/mount-router';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
+import { setMethodManifest } from '@/codegen/manifest-registry';
+import { generateMethodManifest } from '@/codegen/method-manifest';
+import { entriesService } from '@/entries/index';
+import { createHttpApp } from '@/transport/http/index';
+import { buildScopedDispatch } from '@/transport/tools/dispatch';
+import { usersService } from '@/users/index';
+import { getSession } from '@/users/session';
 
 vi.mock('@/users/session', () => ({ getSession: vi.fn() }));
-
-import { getSession } from '@/users/session';
 
 const mockGetSession = vi.mocked(getSession);
 

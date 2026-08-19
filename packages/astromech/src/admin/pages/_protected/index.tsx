@@ -2,26 +2,26 @@
  * Dashboard page — summary stat cards and recent activity.
  */
 
-import React from 'react';
-import { createFileRoute, Link } from '@tanstack/react-router';
+import type { Entry } from '@/types/index';
 import { useQuery } from '@tanstack/react-query';
+import { createFileRoute, Link } from '@tanstack/react-router';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import {
-    Panel,
     Badge,
     EmptyState,
-    Skeleton,
     Page,
-    PageTitle,
-    SectionTitle,
-    PageLoading,
-    PageHeader,
     PageContent,
+    PageHeader,
+    PageLoading,
+    PageTitle,
+    Panel,
+    SectionTitle,
+    Skeleton,
 } from '@/admin/components/ui/index';
-import { astromechClient } from '@/transport/http/client/index';
 import { useAIContext } from '@/admin/context/ai-context';
-import type { Entry } from '@/types/index';
+import { astromechClient } from '@/transport/http/client/index';
 import { formatDate } from '@/utilities/dates';
 
 // ============================================================================

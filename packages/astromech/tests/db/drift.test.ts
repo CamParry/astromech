@@ -8,12 +8,12 @@
  * `db:generate` (or committing its output) — the fix is to run
  * `npm run db:generate` and commit the result, not to edit this test.
  */
-
-import { describe, expect, it } from 'vitest';
+import type { Snapshot } from '@/database/table-snapshot';
 import { readFile } from 'node:fs/promises';
 import { diffSnapshots } from '@astromech/schema-engine';
-import { createSnapshot, type Snapshot } from '@/database/table-snapshot';
+import { describe, expect, it } from 'vitest';
 import { CORE_TABLES } from '@/database/schema';
+import { createSnapshot } from '@/database/table-snapshot';
 
 describe('migrations/snapshot.json drift gate', () => {
     it('the committed snapshot matches the live tables — db:generate would produce nothing', async () => {

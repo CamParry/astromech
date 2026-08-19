@@ -3,8 +3,8 @@
  */
 
 import type { MediaAccess } from '@/types/index';
-import { CLOUDFLARE_IMAGES_DRIVER } from '@/utilities/image-drivers';
 import { AstromechError } from '@/errors/index';
+import { CLOUDFLARE_IMAGES_DRIVER } from '@/utilities/image-drivers';
 
 /**
  * `media.access: 'private'` and the Cloudflare Images driver cannot coexist.

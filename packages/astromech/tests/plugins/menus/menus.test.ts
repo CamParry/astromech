@@ -8,16 +8,16 @@
  * - generated pages/nav appear for each configured menu; none for unconfigured keys
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { pluginServices } from '@/plugins/runtime/plugin-services';
-import { entriesService } from '@/entries/index';
-import { settingsService } from '@/settings/index';
-import { menus } from '@astromech/menus';
-import type { MenuItem } from '@astromech/menus';
 import type { AstromechConfig, JsonValue } from '@/types/index';
-import { derivePluginPages, derivePluginNav } from '@/plugins/runtime/plugin-admin';
+import type { MenuItem } from '@astromech/menus';
+import { menus } from '@astromech/menus';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { entriesService } from '@/entries/index';
+import { derivePluginNav, derivePluginPages } from '@/plugins/runtime/plugin-admin';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
+import { pluginServices } from '@/plugins/runtime/plugin-services';
+import { settingsService } from '@/settings/index';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 

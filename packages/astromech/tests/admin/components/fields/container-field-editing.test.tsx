@@ -19,10 +19,10 @@
  * and real inputs directly (same approach as container-field-seeding.test.tsx).
  */
 
-import { describe, expect, it } from 'vitest';
-import { createRoot } from 'react-dom/client';
-import { act } from 'react';
 import type { Field } from '@/types/index';
+import { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { describe, expect, it } from 'vitest';
 import '@/admin/rendering/register-fields';
 import { FormField } from '@/admin/components/fields/form-field';
 

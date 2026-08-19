@@ -5,9 +5,9 @@
  * Astromech integration. Mirrors the storage registry pattern.
  */
 
-import { createRegistry } from '@/utilities/registry';
-import type { Kysely } from 'kysely';
 import type { DB } from '@/database/types';
+import type { Kysely } from 'kysely';
+import { createRegistry } from '@/utilities/registry';
 
 type AnyDb = Kysely<DB>;
 

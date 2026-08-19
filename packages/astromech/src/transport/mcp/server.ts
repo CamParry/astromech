@@ -4,15 +4,15 @@
  * Wires a low-level MCP Server instance with ListTools + CallTool handlers
  * built from the method manifest.
  */
-
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import {
-    ListToolsRequestSchema,
-    CallToolRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
-import { buildTools, type McpToolDef, type SkippedMethod } from './tools';
+import type { McpToolDef, SkippedMethod } from './tools';
 import type { ConfirmOptions } from '@/policies/confirmation';
 import type { MethodManifest } from '@/types/index';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import {
+    CallToolRequestSchema,
+    ListToolsRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
+import { buildTools } from './tools';
 
 // ============================================================================
 // Types

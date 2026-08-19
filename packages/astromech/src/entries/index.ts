@@ -3,7 +3,7 @@ import type { TypedEntriesService } from '@/types/index';
 import { entriesService } from './service';
 
 export { entriesService } from './service';
-export { registerBuiltInEntryJobs } from './jobs/index';
+export { entryJobs } from './jobs/index';
 
 /**
  * `entriesService` under its typed facade. `TypedEntriesService` layers

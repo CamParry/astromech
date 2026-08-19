@@ -1,5 +1,5 @@
-import React from 'react';
 import { clsx } from 'clsx';
+import React from 'react';
 
 type SpinnerProps = { size?: 'sm' | 'md' | 'lg'; className?: string };
 type SkeletonProps = { className?: string; style?: React.CSSProperties };

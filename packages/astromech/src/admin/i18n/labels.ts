@@ -8,8 +8,8 @@
  *   - omitted             → `Titlecase(name)`
  */
 
-import type { TFunction } from 'i18next';
 import type { Label } from '@/types/index';
+import type { TFunction } from 'i18next';
 
 /**
  * The fallback an omitted `Label` resolves to. Exported so anything building a

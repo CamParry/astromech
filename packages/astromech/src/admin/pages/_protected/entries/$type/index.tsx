@@ -6,19 +6,16 @@
  * and renders the shared `EntriesListPage`. A qualified type redirects to the
  * plugin route.
  */
-
-import React from 'react';
+import type { EntriesMount } from '@/admin/components/entries/mount';
+import type { EntriesService } from '@/types/index';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { astromechClient } from '@/transport/http/client/index';
+import React from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntriesListPage } from '@/admin/components/entries/entries-list-page';
-import type { EntriesService } from '@/types/index';
-import {
-    validateEntriesListSearch,
-    type EntriesMount,
-} from '@/admin/components/entries/mount';
+import { validateEntriesListSearch } from '@/admin/components/entries/mount';
 import { useAIContext } from '@/admin/context/ai-context';
 import { pluginEntryRouteParams } from '@/admin/utilities/entry-admin-path';
+import { astromechClient } from '@/transport/http/client/index';
 
 function EntryIndexPage(): React.ReactElement {
     const { type } = Route.useParams();

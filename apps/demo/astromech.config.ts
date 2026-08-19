@@ -1,21 +1,21 @@
 // The config is loaded in plain Node before Vite, so `.env` has not reached
 // `import.meta.env` yet. AI SDK providers read `process.env`, which this fills.
 import 'dotenv/config';
+import { anthropic } from '@ai-sdk/anthropic';
+import { assistant } from '@astromech/assistant';
+import { backups } from '@astromech/backups';
+import { forms } from '@astromech/forms';
+import { menus } from '@astromech/menus';
+import { redirects } from '@astromech/redirects';
+import { seo, seoSection } from '@astromech/seo';
 import { builtInRole, defineAdminPage, defineConfig, entryPermissions } from 'astromech';
 import { libsql } from 'astromech/database/libsql';
 import { consoleEmail } from 'astromech/email/console';
+import * as fields from 'astromech/fields';
 import { sharp } from 'astromech/media/image/sharp';
 import { filesystem } from 'astromech/storage/filesystem';
-import * as fields from 'astromech/fields';
-import { anthropic } from '@ai-sdk/anthropic';
-import { assistant } from '@astromech/assistant';
-import { redirects } from '@astromech/redirects';
-import { seo, seoSection } from '@astromech/seo';
-import { menus } from '@astromech/menus';
-import { backups } from '@astromech/backups';
-import { forms } from '@astromech/forms';
-import { rating } from './src/plugins/rating/index';
 import { author } from './src/entries/author';
+import { rating } from './src/plugins/rating/index';
 
 // This file is evaluated twice in development — once by plain Node at config
 // time and once in the SSR graph — and exactly once in a serving process. A

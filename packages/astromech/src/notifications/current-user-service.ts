@@ -8,10 +8,10 @@
  * rather than four stubs claiming the methods do not exist.
  */
 
-import { notificationsService } from '@/notifications/service';
-import { getCurrentUser } from '@/request-context/request-context';
 import type { Notification, NotificationsService } from '@/types/index';
 import { AstromechError } from '@/errors/index';
+import { notificationsService } from '@/notifications/service';
+import { getCurrentUser } from '@/request-context/request-context';
 
 /** The signed-in user's id, or a loud failure naming what is missing. */
 async function currentUserId(): Promise<string> {

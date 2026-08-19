@@ -1,8 +1,8 @@
-import { defineAdminPage } from 'astromech';
+import type { MenuConfig } from '../types';
 import type { AdminPage } from 'astromech';
+import { defineAdminPage } from 'astromech';
 import * as fields from 'astromech/fields';
 import { menuItemFields } from '../fields/menu-item';
-import type { MenuConfig } from '../types';
 
 /** One auto-rendered settings page per configured menu, at `/menus/<key>`. */
 export function buildMenuPages(configs: MenuConfig[]): AdminPage[] {

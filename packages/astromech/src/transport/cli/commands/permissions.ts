@@ -1,8 +1,8 @@
 import { defineCommand } from 'citty';
-import { loadConfig, loadRawConfig } from '../config';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { buildPermissionCatalogue } from '@/permissions/catalogue';
+import { loadConfig, loadRawConfig } from '../config';
 import { printError } from '../output';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
     meta: { name: 'permissions', description: 'List grantable permissions' },

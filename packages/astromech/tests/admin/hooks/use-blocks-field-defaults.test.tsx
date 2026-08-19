@@ -7,12 +7,13 @@
  * otherwise reach the server bare and its declared `defaultValue`s would never
  * land. `useBlocksField` seeds them at the point the block is added.
  */
-
-import { describe, expect, it, vi } from 'vitest';
-import { createRoot, type Root } from 'react-dom/client';
-import { act } from 'react';
+import type { BlockWithId } from '@/admin/hooks/use-blocks-field';
 import type { Block } from '@/types/index';
-import { useBlocksField, type BlockWithId } from '@/admin/hooks/use-blocks-field';
+import type { Root } from 'react-dom/client';
+import { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { describe, expect, it, vi } from 'vitest';
+import { useBlocksField } from '@/admin/hooks/use-blocks-field';
 
 const BLOCK_DEFS: Block[] = [
     {

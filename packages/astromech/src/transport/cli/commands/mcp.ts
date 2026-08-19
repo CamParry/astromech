@@ -1,9 +1,9 @@
-import { defineCommand } from 'citty';
-import { filterArgs, toMethodFilter } from '../filter-args';
-import { confirmArgs, toConfirmOptions } from '../confirm-args';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
-import type { MethodFilter } from '@/policies/method-filter';
 import type { ConfirmOptions } from '@/policies/confirmation';
+import type { MethodFilter } from '@/policies/method-filter';
+import { defineCommand } from 'citty';
+import { confirmArgs, toConfirmOptions } from '../confirm-args';
+import { filterArgs, toMethodFilter } from '../filter-args';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 type RunMcpServer = (
     configPath?: string,

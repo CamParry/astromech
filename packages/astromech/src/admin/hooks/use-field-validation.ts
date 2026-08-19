@@ -22,8 +22,8 @@
  * wire representation. They exist solely here, alongside the errors.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Field, FieldErrors, FieldLookups, ValidationMode } from '@/types/index';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 // Deep import: the `fields/` barrel reaches server code (virtual config / DB).
 import { parseFields } from '@/fields/pipeline';
 

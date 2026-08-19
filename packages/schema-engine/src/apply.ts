@@ -1,3 +1,6 @@
+import type { Kysely, Migration, MigrationProvider } from 'kysely';
+import { Migrator } from 'kysely';
+
 /**
  * Kysely migration runner.
  *
@@ -8,8 +11,6 @@
  * app's `migrations/index.ts`, optionally merged with plugin-owned providers by
  * `mergeMigrationProviders`.
  */
-
-import { Migrator, type Kysely, type Migration, type MigrationProvider } from 'kysely';
 
 /**
  * Runs `provider` to the latest migration.

@@ -5,12 +5,12 @@
  * the cache invalidation, so the library kept showing files that were gone.
  */
 
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, renderHook, screen, waitFor } from '@testing-library/react';
 import i18n from 'i18next';
+import React from 'react';
 import { initReactI18next } from 'react-i18next';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/admin/components/ui/toast';
 import { useBulkDeleteMedia } from '@/admin/hooks/media';
 import { queryKeys } from '@/admin/hooks/use-query-keys';

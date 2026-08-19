@@ -8,13 +8,13 @@
  * README recipes.
  */
 
-import { definePlugin } from 'astromech';
 import type { ServiceInterface } from 'astromech';
-import { seoPermissions } from './permissions/seo';
+import { definePlugin } from 'astromech';
 import { seoPreviewField } from './fields/seo-preview';
-import { seoService } from './service/seo';
 import { overviewPage } from './pages/overview';
 import { settingsPage } from './pages/settings';
+import { seoPermissions } from './permissions/seo';
+import { seoService } from './service/seo';
 
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions

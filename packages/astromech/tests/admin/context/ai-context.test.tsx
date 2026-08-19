@@ -10,11 +10,10 @@
  * React root directly (same approach as use-field-validation.test.tsx).
  */
 
-import { describe, expect, it } from 'vitest';
-import { createRoot } from 'react-dom/client';
+import type { AIContextItem, AIContextReference } from '@/types/ai-context';
 import React, { act } from 'react';
-import type { AIContextReference } from '@/types/ai-context';
-import type { AIContextItem } from '@/types/ai-context';
+import { createRoot } from 'react-dom/client';
+import { describe, expect, it } from 'vitest';
 import {
     AIContextProvider,
     createAIContextStore,

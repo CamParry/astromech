@@ -4,18 +4,18 @@
  * slices; this module wires up the cron job and the permission declarations.
  */
 
-import { definePlugin, withDefaults } from 'astromech';
-import type { PluginContext, ServiceInterface } from 'astromech';
-import { BACKUPS_PACKAGE } from './types';
 import type { BackupsOptions } from './types';
+import type { PluginContext, ServiceInterface } from 'astromech';
+import { definePlugin, withDefaults } from 'astromech';
 import { migrationProvider } from '../migrations/index';
-import { backupRunsTable } from './tables/runs';
-import { backupsPermissions } from './permissions/backups';
 import { performBackup, resolveKeep } from './backup';
-import { buildBackupsService } from './service/backups';
-import { buildBackupRoutes } from './routes/backups';
 import { backupsPage } from './pages/backups';
 import { settingsPage } from './pages/settings';
+import { backupsPermissions } from './permissions/backups';
+import { buildBackupRoutes } from './routes/backups';
+import { buildBackupsService } from './service/backups';
+import { backupRunsTable } from './tables/runs';
+import { BACKUPS_PACKAGE } from './types';
 
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions

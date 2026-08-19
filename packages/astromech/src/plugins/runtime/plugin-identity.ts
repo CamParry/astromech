@@ -1,3 +1,7 @@
+import type { EntryType, PluginDefinition, ResolvedPluginIdentity } from '@/types/index';
+import type { PluginNamespace } from '@/utilities/plugin-namespace';
+import { pluginNamespace, pluginServiceKey } from '@/utilities/plugin-namespace';
+
 /**
  * Plugin identity derivation and validation.
  *
@@ -17,13 +21,6 @@
  * npm is the uniqueness authority for `package`; the lossy steps below it are
  * policed by {@link assertNoPluginCollisions}.
  */
-
-import {
-    pluginNamespace,
-    pluginServiceKey,
-    type PluginNamespace,
-} from '@/utilities/plugin-namespace';
-import type { EntryType, PluginDefinition, ResolvedPluginIdentity } from '@/types/index';
 
 /**
  * The derivation itself lives in a pure leaf: `database/define-plugin-table`

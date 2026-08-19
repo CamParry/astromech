@@ -1,4 +1,3 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
     LanguageModelV4,
     LanguageModelV4GenerateResult,
@@ -6,6 +5,7 @@ import type {
     LanguageModelV4StreamResult,
     LanguageModelV4Usage,
 } from '@ai-sdk/provider';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getModel, hasModel } from '@/ai/index';
 import { buildAIConfig } from '@/ai/middleware';
 import { setAIConfig } from '@/ai/registry';

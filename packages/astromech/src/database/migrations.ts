@@ -1,15 +1,16 @@
+import type { DB } from '@/database/types';
+import type { PluginDefinition } from '@/types/index';
+import type { Kysely, MigrationProvider } from 'kysely';
+import { mergeMigrationProviders, migrateToLatest } from '@astromech/schema-engine';
+import { Migrator } from 'kysely';
+import { loadAppMigrations } from '@/database/app-migrations';
+import { collectPluginMigrations } from '@/database/plugin-migrations';
+import { log } from '@/utilities/log';
+
 /**
  * Migrations at the two moments the runtime touches them: applying the chain on
  * demand, and reporting drift when the application boots.
  */
-
-import { Migrator, type Kysely, type MigrationProvider } from 'kysely';
-import type { DB } from '@/database/types';
-import type { PluginDefinition } from '@/types/index';
-import { migrateToLatest, mergeMigrationProviders } from '@astromech/schema-engine';
-import { collectPluginMigrations } from '@/database/plugin-migrations';
-import { loadAppMigrations } from '@/database/app-migrations';
-import { log } from '@/utilities/log';
 
 export type MigrationLogger = {
     info: (message: string) => void;

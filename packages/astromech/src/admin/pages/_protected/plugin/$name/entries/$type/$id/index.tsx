@@ -6,15 +6,15 @@
  * client, addressing the type by its qualified id.
  */
 
-import React from 'react';
+import type { EntriesService } from '@/types/index';
 import { createFileRoute } from '@tanstack/react-router';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { astromechClient } from '@/transport/http/client/index';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntryEditPage } from '@/admin/components/entries/entry-edit-page';
 import { buildPluginEntriesMount } from '@/admin/components/entries/mount';
 import { EmptyState, Page, PageContent } from '@/admin/components/ui/index';
-import type { EntriesService } from '@/types/index';
+import { astromechClient } from '@/transport/http/client/index';
 
 function PluginEntryEditPage(): React.ReactElement {
     const { name, type, id } = Route.useParams();

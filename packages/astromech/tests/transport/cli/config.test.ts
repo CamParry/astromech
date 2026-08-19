@@ -6,9 +6,9 @@
  * cannot open a production database by accident.
  */
 
+import type { AstromechConfig, DatabaseDriver } from '@/types/index';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { assertLocalDatabase } from '@/transport/cli/config';
-import type { AstromechConfig, DatabaseDriver } from '@/types/index';
 
 /** A config carrying nothing but the driver — the guard reads only `db`. */
 function configWith(db: Partial<DatabaseDriver>): AstromechConfig {

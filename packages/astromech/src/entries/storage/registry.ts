@@ -13,16 +13,16 @@
  * copy while the entries service reads another.
  */
 
+import type { EntryStorage } from './types';
 import { createKeyedRegistry, createRegistry } from '@/utilities/registry';
 import { createBuiltInEntryStorage } from './built-in';
-import type { EntryStorage } from './types';
 
 const builtIn = createRegistry<EntryStorage>('entryStorageBuiltIn', { required: false });
 const overrides = createKeyedRegistry<EntryStorage>('entryStorageOverrides');
 
 /** The shared built-in storage, constructed on first use. */
 function getBuiltIn(): EntryStorage {
-    const existing = builtIn.peek();
+    const existing = builtIn.tryGet();
     if (existing) return existing;
     const created = createBuiltInEntryStorage();
     builtIn.set(created);
@@ -30,7 +30,7 @@ function getBuiltIn(): EntryStorage {
 }
 
 export function getEntryStorage(type: string): EntryStorage {
-    return overrides.peek(type) ?? getBuiltIn();
+    return overrides.tryGet(type) ?? getBuiltIn();
 }
 
 export function setEntryStorage(type: string, storage: EntryStorage): void {

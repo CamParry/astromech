@@ -11,8 +11,8 @@
  * stay service-free (no transitive `virtual:astromech/config`).
  */
 
-import type { MigrationProvider } from 'kysely';
 import type { PluginDefinition } from '@/types/index';
+import type { MigrationProvider } from 'kysely';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 
 /**

@@ -7,9 +7,9 @@
  * — what is prefixed, and what is passed through untouched.
  */
 
+import type { Table } from '@/database/define-table';
 import { describe, expect, it } from 'vitest';
 import { definePluginTable } from '@/database/define-plugin-table';
-import type { Table } from '@/database/define-table';
 
 const backups = { package: '@astromech/backups' } as const;
 const redirects = { package: '@astromech/redirects' } as const;

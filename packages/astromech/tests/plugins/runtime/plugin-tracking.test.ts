@@ -7,14 +7,14 @@
  * original `installedAt`, and booting without a previously-tracked plugin warns
  * (pointing at `plugin:purge`) rather than cleaning up behind the user's back.
  */
-
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createTestDb } from '@tests/harness';
-import { bootPlugins } from '@/plugins/runtime/plugin-runtime';
-import { pluginsTable, type PluginTrackingRow } from '@/database/schema';
-import { decodeWith } from '@/database/codec';
+import type { PluginTrackingRow } from '@/database/schema';
 import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
+import { createTestDb } from '@tests/harness';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { decodeWith } from '@/database/codec';
+import { pluginsTable } from '@/database/schema';
+import { bootPlugins } from '@/plugins/runtime/plugin-runtime';
 
 type Db = Kysely<DB>;
 

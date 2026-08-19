@@ -28,7 +28,6 @@
  * index op so a rebuilt table's fresh indexes are never redundantly touched.
  */
 
-import { MAX_IDENTIFIER_BYTES } from './identifiers';
 import type {
     Snapshot,
     SnapshotColumn,
@@ -36,6 +35,7 @@ import type {
     SnapshotIndex,
     SnapshotTable,
 } from './model';
+import { MAX_IDENTIFIER_BYTES } from './identifiers';
 
 export type TableOp =
     | { kind: 'createTable'; table: SnapshotTable }

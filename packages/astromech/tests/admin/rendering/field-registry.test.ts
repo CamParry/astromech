@@ -1,6 +1,6 @@
+import type { FieldComponent } from '@/admin/rendering/field-registry';
 import React from 'react';
 import { describe, expect, it } from 'vitest';
-import type { FieldComponent } from '@/admin/rendering/field-registry';
 import { getFieldComponent, registerField } from '@/admin/rendering/field-registry';
 
 describe('field-registry', () => {

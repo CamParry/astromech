@@ -9,9 +9,9 @@ service methods. Non-AI affordances only — AI metadata writing is a future pha
 
 ```ts
 // astromech.config.ts
+import { seo, seoSection } from '@astromech/seo';
 import { defineConfig } from 'astromech';
 import * as fields from 'astromech/fields';
-import { seo, seoSection } from '@astromech/seo';
 
 export default defineConfig({
     plugins: [seo()],
@@ -58,8 +58,8 @@ every other role opts in by naming the key.
 
 ```ts
 // astromech.config.ts
-import { builtInRole, defineConfig } from 'astromech';
 import { seo } from '@astromech/seo';
+import { builtInRole, defineConfig } from 'astromech';
 
 export default defineConfig({
     plugins: [seo()],

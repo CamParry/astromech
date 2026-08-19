@@ -3,10 +3,10 @@
  * per-instance builder.
  */
 
+import type { RedirectFields, RedirectMatch, RedirectStatus } from '../types';
 import type { Entry } from 'astromech';
 import { defineServiceMethod, z } from 'astromech';
 import { REDIRECT_TYPE } from '../types';
-import type { RedirectFields, RedirectMatch, RedirectStatus } from '../types';
 
 export const redirectsService = {
     // Resolve a request path to its redirect target. Public so a frontend

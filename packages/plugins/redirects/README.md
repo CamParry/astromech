@@ -42,8 +42,8 @@ prefix, so the table declares the bare name `redirects`.
 
 ```ts
 // astromech.config.ts
-import { defineConfig } from 'astromech';
 import { redirects } from '@astromech/redirects';
+import { defineConfig } from 'astromech';
 
 export default defineConfig({
     plugins: [redirects()],
@@ -91,8 +91,8 @@ There are no bundles; enumeration is the point of an opt-in model.
 
 ```ts
 // astromech.config.ts
-import { builtInRole, defineConfig, entryPermissions } from 'astromech';
 import { redirects } from '@astromech/redirects';
+import { builtInRole, defineConfig, entryPermissions } from 'astromech';
 
 export default defineConfig({
     plugins: [redirects()],

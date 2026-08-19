@@ -6,11 +6,11 @@
  * shape, not a query, so it stays in the service.
  */
 
-import { createStorage } from '@/database/storage/create-storage';
-import { settingsTable } from '@/database/schema';
+import type { SettingRow } from './schema';
 import type { Db } from '@/database/types';
 import type { JsonValue } from '@/types/index';
-import type { SettingRow } from './schema';
+import { settingsTable } from '@/database/schema';
+import { createStorage } from '@/database/storage/create-storage';
 
 export type SettingsStorage = ReturnType<typeof createSettingsStorage>;
 

@@ -9,12 +9,12 @@
  * that loses its `beforeLoad` fails here.
  */
 
-import { describe, expect, it } from 'vitest';
 import { isRedirect } from '@tanstack/react-router';
-import { Route as listRoute } from '@/admin/pages/_protected/entries/$type/index';
-import { Route as newRoute } from '@/admin/pages/_protected/entries/$type/new';
+import { describe, expect, it } from 'vitest';
 import { Route as editRoute } from '@/admin/pages/_protected/entries/$type/$id/index';
 import { Route as versionsRoute } from '@/admin/pages/_protected/entries/$type/$id/versions';
+import { Route as listRoute } from '@/admin/pages/_protected/entries/$type/index';
+import { Route as newRoute } from '@/admin/pages/_protected/entries/$type/new';
 
 type BeforeLoad = (arg: {
     params: Record<string, string>;

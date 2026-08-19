@@ -35,8 +35,8 @@ backups/
 
 ```ts
 // astromech.config.ts
-import { defineConfig } from 'astromech';
 import { backups } from '@astromech/backups';
+import { defineConfig } from 'astromech';
 
 export default defineConfig({
     plugins: [

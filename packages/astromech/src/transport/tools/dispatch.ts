@@ -19,6 +19,7 @@
  * reason so the server can log deliberate omissions as deliberate.
  */
 
+import type { ScopedServices } from '@/policies/scoped-services';
 import type {
     CoreManifestMethod,
     EntriesManifestMethod,
@@ -28,7 +29,6 @@ import type {
     Role,
     ToolDefinition,
 } from '@/types/index';
-import type { ScopedServices } from '@/policies/scoped-services';
 import { confirmMessage } from '@/policies/confirmation';
 
 // ============================================================================

@@ -1,10 +1,10 @@
+import { mergeMigrationProviders, migrateToLatest } from '@astromech/schema-engine';
 import { defineCommand } from 'citty';
+import { loadAppMigrations } from '@/database/app-migrations';
+import { collectPluginMigrations } from '@/database/plugin-migrations';
+import { getDb } from '@/database/registry';
 import { loadConfig, loadRawConfig } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
-import { getDb } from '@/database/registry';
-import { migrateToLatest, mergeMigrationProviders } from '@astromech/schema-engine';
-import { collectPluginMigrations } from '@/database/plugin-migrations';
-import { loadAppMigrations } from '@/database/app-migrations';
 
 export default defineCommand({
     meta: { name: 'db:init', description: 'Run database migrations' },

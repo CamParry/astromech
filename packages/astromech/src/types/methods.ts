@@ -9,8 +9,8 @@
  * it needed" drifted from the emitter within one change.
  */
 
-import type { z } from '@hono/zod-openapi';
 import type { Permission } from './domain';
+import type { z } from '@hono/zod-openapi';
 
 /**
  * MCP-aligned effect hints (ai-integration §3.6). `mutates` is the query/command

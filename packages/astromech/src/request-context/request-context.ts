@@ -4,11 +4,11 @@
  * `virtual:astromech/config` resolves, so the session module is imported lazily.
  */
 
+import type { Role, User } from '@/types/index';
 import { AsyncLocalStorage } from 'node:async_hooks';
 // `@/utilities/registry` imports nothing, which is what keeps this module
 // service-free and loadable before `virtual:astromech/config` resolves.
 import { createRegistry } from '@/utilities/registry';
-import type { Role, User } from '@/types/index';
 
 export type RequestContext = {
     request: Request;
@@ -29,7 +29,7 @@ const requestContext = createRegistry<AsyncLocalStorage<RequestContext>>(
  * second, EMPTY store. Constructed here on first use rather than in the slot.
  */
 function store(): AsyncLocalStorage<RequestContext> {
-    const existing = requestContext.peek();
+    const existing = requestContext.tryGet();
     if (existing) return existing;
     const created = new AsyncLocalStorage<RequestContext>();
     requestContext.set(created);

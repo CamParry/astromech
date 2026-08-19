@@ -5,37 +5,37 @@
  * Metadata sidebar shows joined date and last updated.
  */
 
-import React, { useEffect } from 'react';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useForm, useStore } from '@tanstack/react-form';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import adminConfig from 'virtual:astromech/admin-config';
 import {
-    Button,
-    Panel,
-    Breadcrumb,
-    Input,
-    Select,
     Avatar,
-    PageLoading,
-    useConfirm,
-    Page,
-    PageHeader,
-    PageTitle,
-    PageContent,
+    Breadcrumb,
+    Button,
     FormLayout,
+    Input,
+    Page,
+    PageContent,
+    PageHeader,
+    PageLoading,
+    PageTitle,
+    Panel,
+    Select,
     Stack,
+    useConfirm,
 } from '@/admin/components/ui/index';
-import { formatDatetime } from '@/utilities/dates';
-import {
-    usePermissions,
-    useUser,
-    useUpdateUser,
-    useDeleteUser,
-} from '@/admin/hooks/index';
-import { userQueryOptions } from '@/admin/hooks/users';
 import { useAIContext } from '@/admin/context/ai-context';
 import { useAuth } from '@/admin/context/auth';
-import adminConfig from 'virtual:astromech/admin-config';
+import {
+    useDeleteUser,
+    usePermissions,
+    useUpdateUser,
+    useUser,
+} from '@/admin/hooks/index';
+import { userQueryOptions } from '@/admin/hooks/users';
+import { formatDatetime } from '@/utilities/dates';
 
 // ============================================================================
 // Helpers

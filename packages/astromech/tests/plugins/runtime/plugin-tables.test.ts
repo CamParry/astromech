@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import type { Table } from '@/database/define-table';
 import type { PluginDefinition } from '@/types/index';
-import { defineTable, type Table } from '@/database/define-table';
+import { describe, expect, it } from 'vitest';
+import { defineTable } from '@/database/define-table';
 import {
     assertPluginTablePrefixes,
     collectPluginTables,

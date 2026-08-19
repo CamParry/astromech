@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { CORE_FIELD_TYPES } from '@/types/fields';
 import type { Field } from '@/types/fields';
+import { describe, expect, it } from 'vitest';
 import { getFieldType } from '@/fields/field-type-registry';
+import { CORE_FIELD_TYPES } from '@/types/fields';
 
 const LAYOUT_TYPES = new Set(['section', 'tabs', 'tab', 'accordion']);
 

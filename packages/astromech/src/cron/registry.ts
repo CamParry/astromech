@@ -5,11 +5,11 @@
  * one entry chunk is visible to the runner reached through another.
  */
 
-import { createRegistry } from '@/utilities/registry';
-import { interval } from '@/cron/drivers/interval';
-import type { Kysely } from 'kysely';
 import type { DB } from '@/database/types';
 import type { ResolvedConfig, SchedulerDriver } from '@/types/index';
+import type { Kysely } from 'kysely';
+import { interval } from '@/cron/drivers/interval';
+import { createRegistry } from '@/utilities/registry';
 
 export type CronContext = {
     db: Kysely<DB>;
@@ -30,19 +30,19 @@ export type CronJob = {
 const jobs = createRegistry<CronJob[]>('cronJobs', { required: false });
 
 export function registerCronJob(job: CronJob): void {
-    const list = jobs.peek() ?? [];
+    const list = jobs.tryGet() ?? [];
     list.push(job);
     jobs.set(list);
 }
 
 export function getCronJobs(): CronJob[] {
-    return jobs.peek() ?? [];
+    return jobs.tryGet() ?? [];
 }
 
 const scheduler = createRegistry<SchedulerDriver>('scheduler', { required: false });
 
 export const setSchedulerDriver = scheduler.set;
-export const getSchedulerDriver = scheduler.peek;
+export const getSchedulerDriver = scheduler.tryGet;
 
 /**
  * The driver factory an integration nominates for a config naming no scheduler.
@@ -58,5 +58,5 @@ export const setDefaultScheduler = defaultScheduler.set;
 
 /** The config's driver, else the integration's default, else the in-process ticker. */
 export function resolveSchedulerDriver(configured?: SchedulerDriver): SchedulerDriver {
-    return configured ?? defaultScheduler.peek()?.() ?? interval();
+    return configured ?? defaultScheduler.tryGet()?.() ?? interval();
 }

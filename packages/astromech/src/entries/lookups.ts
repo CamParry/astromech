@@ -1,7 +1,7 @@
 import type { EntryStorage } from './storage/types';
+import type { FieldLookups } from '@/types/fields';
 import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
-import type { FieldLookups } from '@/types/fields';
 
 /**
  * Field lookups for entry validation. `isUnique` checks no OTHER entry of

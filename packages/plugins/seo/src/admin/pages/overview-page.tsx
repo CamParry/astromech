@@ -4,13 +4,13 @@
  * `overview` service method.
  */
 
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import type { SeoOverview } from '../../types';
+import type { LengthStatus } from '../../utilities/length';
 import type { BadgeVariant } from 'astromech/ui';
+import { useQuery } from '@tanstack/react-query';
 import { Badge, EmptyState, Spinner, Table } from 'astromech/ui';
 import { useAstromechPlugin } from 'astromech/ui/app';
-import type { LengthStatus } from '../../utilities/length';
-import type { SeoOverview } from '../../types';
+import React from 'react';
 import './overview-page.css';
 
 const STATUS_VARIANTS: Record<LengthStatus, BadgeVariant> = {

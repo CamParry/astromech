@@ -6,9 +6,9 @@
  * validator stay error-only and suppress warnings on the same field.
  */
 
-import { describe, expect, it, vi } from 'vitest';
-import type { Field, ValidationMode } from '@/types/fields';
 import type { ResourceType } from '@/types/domain';
+import type { Field, ValidationMode } from '@/types/fields';
+import { describe, expect, it, vi } from 'vitest';
 import { parseFields } from '@/fields/pipeline';
 
 // ---------------------------------------------------------------------------

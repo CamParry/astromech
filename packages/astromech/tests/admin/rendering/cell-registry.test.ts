@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import type { CellRenderer } from '@/types/index';
+import { describe, expect, it } from 'vitest';
 import { getCellRenderer, registerCell } from '@/admin/rendering/cell-registry';
 
 describe('cell-registry', () => {

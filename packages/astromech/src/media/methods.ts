@@ -7,8 +7,8 @@
  * that shape rather than declaring the body alone.
  */
 
-import { z } from '@hono/zod-openapi';
 import type { ServiceMethodContract } from '@/types/index';
+import { z } from '@hono/zod-openapi';
 import { mediaQuerySchema, updateMediaSchema } from './schema';
 
 export const mediaContract = {

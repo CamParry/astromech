@@ -19,25 +19,25 @@
  * camelCase).
  */
 
-import type { Kysely, Transaction } from 'kysely';
 import type { KyselyOf } from '@/database/define-table';
 // Every table comes through the `database/schema.ts` aggregator rather than
 // from each domain directly — that indirection is the whole reason the
 // aggregator exists, and it keeps the rest of `database/` below the domains in
 // the dependency graph (see the `database-no-upward-except-aggregate` rule).
 import type {
-    rolesTable,
-    usersTable,
-    entriesTable,
-    entryVersionsTable,
-    entryPreviewTokensTable,
-    mediaTable,
-    settingsTable,
-    notificationsTable,
-    relationshipsTable,
     cronTable,
+    entriesTable,
+    entryPreviewTokensTable,
+    entryVersionsTable,
+    mediaTable,
+    notificationsTable,
     pluginsTable,
+    relationshipsTable,
+    rolesTable,
+    settingsTable,
+    usersTable,
 } from '@/database/schema';
+import type { Kysely, Transaction } from 'kysely';
 
 export type DB = {
     // ── 11 ours — derived from defineTable tables ───────────────────────────

@@ -248,7 +248,10 @@ module.exports = {
                 'A *.shared.ts file is a domain leaf the admin bundle is allowed to hold, so it may import only what the admin itself may import: pure leaves, fields, and other *.shared.ts files. Without this, the marker is a way to launder a server module into the browser — rename a file that reaches a service and the whole config graph follows it into the bundle.',
             severity: 'error',
             from: { path: SHARED_MARKER },
-            to: { path: `${under(SERVER_ONLY)}|${COMPOSITION_ROOT}`, pathNot: SHARED_MARKER },
+            to: {
+                path: `${under(SERVER_ONLY)}|${COMPOSITION_ROOT}`,
+                pathNot: SHARED_MARKER,
+            },
         },
         {
             name: 'client-is-over-the-wire',

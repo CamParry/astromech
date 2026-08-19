@@ -5,9 +5,9 @@
  * absent and the caller goes unmetered.
  */
 
+import type { TrustProxy } from '@/types/index';
 import type { Context } from 'hono';
 import { getRuntimeKey } from 'hono/adapter';
-import type { TrustProxy } from '@/types/index';
 import { getConfig } from '@/config/registry';
 
 /**

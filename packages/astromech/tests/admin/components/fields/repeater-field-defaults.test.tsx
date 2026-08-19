@@ -12,10 +12,10 @@
  * and clicks the real add button (same approach as repeater-field-seeding).
  */
 
-import { describe, expect, it, vi } from 'vitest';
-import { createRoot } from 'react-dom/client';
-import { act } from 'react';
 import type { Field } from '@/types/index';
+import { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { describe, expect, it, vi } from 'vitest';
 import '@/admin/rendering/register-fields';
 import { FormField } from '@/admin/components/fields/form-field';
 

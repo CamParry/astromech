@@ -1,6 +1,6 @@
-import { getEntryStorage } from '../../storage/registry';
-import { loadAndAssertType } from '../../internal/records';
 import type { EntryVersion } from '@/types/index';
+import { loadAndAssertType } from '../../internal/records';
+import { getEntryStorage } from '../../storage/registry';
 
 export async function listVersions(params: {
     type: string;

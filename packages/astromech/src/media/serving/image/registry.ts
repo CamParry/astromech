@@ -1,5 +1,5 @@
-import { createRegistry } from '@/utilities/registry';
 import type { ImageDriver } from '@/types/index';
+import { createRegistry } from '@/utilities/registry';
 
 export type ResolvedImageConfig = {
     driver: ImageDriver;
@@ -11,4 +11,4 @@ export type ResolvedImageConfig = {
 const image = createRegistry<ResolvedImageConfig>('image', { required: false });
 
 export const setImageConfig = image.set;
-export const getImageConfig = image.peek;
+export const getImageConfig = image.tryGet;

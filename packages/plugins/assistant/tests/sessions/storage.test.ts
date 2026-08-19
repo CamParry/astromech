@@ -3,10 +3,9 @@
  * replaced, and the size cap that skips a write rather than trimming one.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { MAX_SESSION_CHARS, createSessionsStorage } from '../../src/sessions/storage';
 import type { ChatMessage } from '../../src/types';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createSessionsStorage, MAX_SESSION_CHARS } from '../../src/sessions/storage';
 
 type StoredRow = { userId: string; messages: ChatMessage[] };
 

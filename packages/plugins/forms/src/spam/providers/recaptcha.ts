@@ -3,8 +3,8 @@
  * numeric `score` this checks against `minScore`; v2 passes on `success` alone.
  */
 
-import { siteverify } from '../siteverify';
 import type { SpamProvider } from '../types';
+import { siteverify } from '../siteverify';
 
 const VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify';
 

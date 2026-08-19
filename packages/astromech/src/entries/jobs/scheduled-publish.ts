@@ -5,8 +5,8 @@
  * then updates them to status = 'published'.
  */
 
-import { createEntryMaintenanceStorage } from '../storage/maintenance';
 import type { CronJob } from '@/cron/registry';
+import { createEntryMaintenanceStorage } from '../storage/maintenance';
 
 export const scheduledPublishJob: CronJob = {
     name: 'scheduled-publish',

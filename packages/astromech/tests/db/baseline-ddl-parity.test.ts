@@ -9,15 +9,15 @@
  * migration chain and the tables it was generated from never silently
  * drift apart.
  */
-
-import { describe, expect, it } from 'vitest';
+import type { SchemaRow } from '@astromech/schema-engine';
+import { dumpSchema } from '@astromech/schema-engine';
 import { createClient } from '@libsql/client';
-import { Kysely, sql } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
-import { dumpSchema, type SchemaRow } from '@astromech/schema-engine';
 import { createTestDb } from '@tests/harness';
-import { emitTableStatements } from '@/database/table-snapshot';
+import { Kysely, sql } from 'kysely';
+import { describe, expect, it } from 'vitest';
 import { CORE_TABLES } from '@/database/schema';
+import { emitTableStatements } from '@/database/table-snapshot';
 
 const TABLE_NAMES = CORE_TABLES.map((table) => table.name);
 

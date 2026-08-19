@@ -1,3 +1,6 @@
+import type { Kysely } from 'kysely';
+import { sql } from 'kysely';
+
 /**
  * Baseline migration — the whole schema as one forward migration.
  *
@@ -5,8 +8,6 @@
  * descriptors describe is emitter output, a table they do not is copied verbatim
  * from the previous baseline. Rewriting history is legal only before a release.
  */
-
-import { sql, type Kysely } from 'kysely';
 
 export async function up(db: Kysely<unknown>): Promise<void> {
     // ── roles ──────────────────────────────────────────────────────────────

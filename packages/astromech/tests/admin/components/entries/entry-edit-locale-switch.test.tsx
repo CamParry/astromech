@@ -16,31 +16,31 @@
  * writes it rather than only at submit.
  */
 
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, act, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import type { AuthUser } from '@/admin/context/auth';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
+    createMemoryHistory,
+    createRootRoute,
+    createRoute,
+    createRouter,
     Outlet,
     RouterProvider,
-    createMemoryHistory,
-    createRoute,
-    createRootRoute,
-    createRouter,
     useParams,
 } from '@tanstack/react-router';
+import { act, cleanup, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { ToastProvider } from '@/admin/components/ui/toast';
-import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
-import type { AuthUser } from '@/admin/context/auth';
-import { ConfirmProvider } from '@/admin/components/ui/confirm';
-import { AIContextProvider } from '@/admin/context/ai-context';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EntryEditPage } from '@/admin/components/entries/entry-edit-page';
+import { ConfirmProvider } from '@/admin/components/ui/confirm';
+import { ToastProvider } from '@/admin/components/ui/toast';
+import { AIContextProvider } from '@/admin/context/ai-context';
+import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
 import '@/admin/rendering/register-fields';
 import type { EntriesMount } from '@/admin/components/entries/mount';
 import type * as AdminHooks from '@/admin/hooks/index';
-import type { AdminEntryType, Entry, EntriesService, EntryStatus } from '@/types/index';
+import type { AdminEntryType, EntriesService, Entry, EntryStatus } from '@/types/index';
 
 // The shim declares one locale; the switcher needs two to have anywhere to go.
 vi.mock('virtual:astromech/admin-config', () => ({

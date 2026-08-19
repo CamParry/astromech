@@ -7,14 +7,14 @@
  * covered by the characterization suite in src/services/entries/service.test.ts.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { DB } from '@/database/types';
 import type { Insertable } from 'kysely';
 import { createTestDb, setupTestConfig } from '@tests/harness';
-import { createBuiltInEntryStorage } from '@/entries/storage/built-in';
-import { BUILT_IN_SUPPORTS } from '@/utilities/entry-capabilities';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { encodeWith } from '@/database/codec';
 import { entriesTable } from '@/database/schema';
-import type { DB } from '@/database/types';
+import { createBuiltInEntryStorage } from '@/entries/storage/built-in';
+import { BUILT_IN_SUPPORTS } from '@/utilities/entry-capabilities';
 
 let storage: ReturnType<typeof createBuiltInEntryStorage>;
 let db: Awaited<ReturnType<typeof createTestDb>>;

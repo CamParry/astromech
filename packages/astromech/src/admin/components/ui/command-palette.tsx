@@ -9,6 +9,12 @@
  * performed via React Query across entries, users, and media in parallel.
  */
 
+import type { AdminEntryType, Entry, Media, User } from '@/types/index';
+import type { LucideIcon } from 'lucide-react';
+import { Dialog } from '@base-ui/react/dialog';
+import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from '@tanstack/react-router';
+import { icons, Image, LayoutDashboard, Puzzle, Users } from 'lucide-react';
 import React, {
     createContext,
     useCallback,
@@ -19,20 +25,14 @@ import React, {
     useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@base-ui/react/dialog';
-import { useNavigate } from '@tanstack/react-router';
-import { Image, LayoutDashboard, Users, Puzzle, icons } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
 import adminConfig from 'virtual:astromech/admin-config';
+import { entryLabel } from '@/admin/components/entries/entry-label';
+import { entryAdminPath } from '@/admin/utilities/entry-admin-path';
 import { astromechClient } from '@/transport/http/client/index';
 import { parseEntryTypeId } from '@/utilities/entry-type-ids';
-import { entryAdminPath } from '@/admin/utilities/entry-admin-path';
-import { entryLabel } from '@/admin/components/entries/entry-label';
 import { usePermissions } from '../../hooks/index';
 import { useDebounce } from '../../hooks/use-debounce';
 import { EntryTypeIcon } from './entry-type-icon';
-import type { AdminEntryType, Entry, Media, User } from '@/types/index';
 
 // ============================================================================
 // Lucide icon helper

@@ -1,7 +1,7 @@
-import React from 'react';
-import { File, FileText, Music, Video } from 'lucide-react';
 import type { TypeFilter } from '../types/media';
 import type { Media } from '@/types/index';
+import { File, FileText, Music, Video } from 'lucide-react';
+import React from 'react';
 
 export function matchesTypeFilter(mimeType: string, filter: TypeFilter): boolean {
     if (filter === 'all') return true;

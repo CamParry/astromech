@@ -5,9 +5,9 @@
  * without pulling the AI SDK into a site's config load.
  */
 
-import type { ToolDefinition } from 'astromech';
 import type { ApprovalRow } from '../tables/approvals';
 import type { ApprovalRequest } from '../types';
+import type { ToolDefinition } from 'astromech';
 
 /**
  * The wire request for one row, worded by the tool core built it from. A tool

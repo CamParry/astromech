@@ -1,3 +1,19 @@
+import type { Table, TableInsert, TableSelect } from '@/database/define-table';
+import { defineTable } from '@/database/define-table';
+import {
+    entriesTable,
+    entryPreviewTokensTable,
+    entryVersionsTable,
+} from '@/entries/schema';
+import { mediaTable } from '@/media/schema';
+import { notificationsTable } from '@/notifications/schema';
+import { settingsTable } from '@/settings/schema';
+// `export { x } from '...'` (below) re-exports without binding `x` locally —
+// these value imports are ONLY so `CORE_TABLES` (bottom of file) can
+// reference the tables; the `export {...} from` blocks stay the public
+// re-export surface.
+import { rolesTable, usersTable } from '@/users/schema';
+
 /**
  * Aggregate schema surface for Astromech.
  *
@@ -9,26 +25,6 @@
  * `DB`) and `astromech/database/schema`. NOT by `database/codec.ts` — the codec
  * is keyed by `Table`, so every caller passes the one it already holds.
  */
-
-import {
-    defineTable,
-    type Table,
-    type TableSelect,
-    type TableInsert,
-} from '@/database/define-table';
-// `export { x } from '...'` (below) re-exports without binding `x` locally —
-// these value imports are ONLY so `CORE_TABLES` (bottom of file) can
-// reference the tables; the `export {...} from` blocks stay the public
-// re-export surface.
-import { rolesTable, usersTable } from '@/users/schema';
-import {
-    entriesTable,
-    entryVersionsTable,
-    entryPreviewTokensTable,
-} from '@/entries/schema';
-import { mediaTable } from '@/media/schema';
-import { settingsTable } from '@/settings/schema';
-import { notificationsTable } from '@/notifications/schema';
 
 // ============================================================================
 // Users / RBAC

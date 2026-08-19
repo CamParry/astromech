@@ -6,10 +6,10 @@
 
 import type { EntryType } from 'astromech';
 import { tableStorage } from 'astromech';
+import * as columns from 'astromech/columns';
+import * as fields from 'astromech/fields';
 import { submissionsTable } from '../tables/submissions';
 import { SUBMISSION_TYPE } from '../types';
-import * as fields from 'astromech/fields';
-import * as columns from 'astromech/columns';
 
 export const submissionEntryType: EntryType = {
     type: SUBMISSION_TYPE,

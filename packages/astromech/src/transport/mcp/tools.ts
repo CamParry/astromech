@@ -4,19 +4,15 @@
  * Pure function — takes the parsed method manifest and returns the MCP tool
  * list plus a dispatch map keyed by tool name. No I/O; unit-testable.
  */
-
+import type { ConfirmOptions } from '@/policies/confirmation';
+import type { DispatchResult, ToolAnnotations } from '@/transport/tools/dispatch';
 import type { JsonSchemaObject, ManifestMethod, MethodManifest } from '@/types/index';
 import {
     CONFIRM_KEY,
     evaluateConfirmation,
     triggersConfirmation,
-    type ConfirmOptions,
 } from '@/policies/confirmation';
-import {
-    buildDispatch,
-    type DispatchResult,
-    type ToolAnnotations,
-} from '@/transport/tools/dispatch';
+import { buildDispatch } from '@/transport/tools/dispatch';
 
 // ============================================================================
 // Types

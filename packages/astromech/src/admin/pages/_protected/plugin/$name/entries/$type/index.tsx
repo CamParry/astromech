@@ -8,10 +8,10 @@
  * standard not-found UI.
  */
 
-import React from 'react';
+import type { EntriesService } from '@/types/index';
 import { createFileRoute } from '@tanstack/react-router';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { astromechClient } from '@/transport/http/client/index';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntriesListPage } from '@/admin/components/entries/entries-list-page';
 import {
@@ -20,7 +20,7 @@ import {
 } from '@/admin/components/entries/mount';
 import { EmptyState, Page, PageContent } from '@/admin/components/ui/index';
 import { useAIContext } from '@/admin/context/ai-context';
-import type { EntriesService } from '@/types/index';
+import { astromechClient } from '@/transport/http/client/index';
 
 function PluginEntryListPage(): React.ReactElement {
     const { name, type } = Route.useParams();

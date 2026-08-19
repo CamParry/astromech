@@ -3,16 +3,16 @@
  * upkeep used by the scheduled-publish and trash-purge CRON jobs.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { Db } from '@/database/types';
+import type { ResolvedConfig } from '@/types/index';
 import { createTestDb, setupTestConfig } from '@tests/harness';
-import { createBuiltInEntryStorage } from '@/entries/storage/built-in';
-import { createEntryMaintenanceStorage } from '@/entries/storage/maintenance';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { entriesTable } from '@/database/schema';
 import { createStorage } from '@/database/storage/create-storage';
 import { createRelationshipStorage } from '@/database/storage/relationships';
 import { trashPurgeJob } from '@/entries/jobs/trash-purge';
-import { entriesTable } from '@/database/schema';
-import type { Db } from '@/database/types';
-import type { ResolvedConfig } from '@/types/index';
+import { createBuiltInEntryStorage } from '@/entries/storage/built-in';
+import { createEntryMaintenanceStorage } from '@/entries/storage/maintenance';
 
 let db: Db;
 let config: ResolvedConfig;

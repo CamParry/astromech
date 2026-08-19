@@ -6,9 +6,9 @@
  * no shaping — because its one caller deletes author data on a `false`.
  */
 
-import { getDb } from '@/database/registry';
 import type { Db } from '@/database/types';
 import type { TargetKind } from '@/fields/relationship-edges';
+import { getDb } from '@/database/registry';
 
 /** D1 caps a query at 100 bound parameters, and each id binds one. */
 const ID_CHUNK = 100;

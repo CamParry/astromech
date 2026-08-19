@@ -11,12 +11,12 @@
  * driver, image decoding or real bytes are involved.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { MediaMimeTypeFilter, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { setStorageDriver } from '@/storage/registry';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { mediaService } from '@/media/service';
 import { createMediaStorage } from '@/media/storage';
-import type { MediaMimeTypeFilter, StorageDriver } from '@/types/index';
+import { setStorageDriver } from '@/storage/registry';
 
 const noopStorage: StorageDriver = {
     name: 'noop',

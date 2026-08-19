@@ -8,16 +8,17 @@
  * `where`, handed out by `query()`, so the two share one predicate.
  */
 
-import type { ExpressionBuilder, Expression, SqlBool } from 'kysely';
-import { getDb } from '@/database/registry';
-import { decodeWith } from '@/database/codec';
-import { createStorage, type Patch } from '@/database/storage/create-storage';
-import { createRelationshipStorage } from '@/database/storage/relationships';
-import { usersTable } from '@/database/schema';
-import type { Db } from '@/database/types';
-import type { TableInsert } from '@/database/define-table';
-import type { SortOption } from '@/types/index';
 import type { UserRow } from './schema';
+import type { TableInsert } from '@/database/define-table';
+import type { Patch } from '@/database/storage/create-storage';
+import type { Db } from '@/database/types';
+import type { SortOption } from '@/types/index';
+import type { Expression, ExpressionBuilder, SqlBool } from 'kysely';
+import { decodeWith } from '@/database/codec';
+import { getDb } from '@/database/registry';
+import { usersTable } from '@/database/schema';
+import { createStorage } from '@/database/storage/create-storage';
+import { createRelationshipStorage } from '@/database/storage/relationships';
 
 type UsersEb = ExpressionBuilder<Record<string, Record<string, unknown>>, string>;
 

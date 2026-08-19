@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import type { FieldPathSegment } from '@/fields/field-path';
+import { describe, expect, it } from 'vitest';
 import {
     formatInstancePath,
     formatSchemaPath,

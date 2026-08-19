@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import type { EntryType } from '@/types/index';
 import type { Field } from '@/types/fields';
+import type { EntryType } from '@/types/index';
+import { describe, expect, it } from 'vitest';
 import {
     accordion,
     block,

@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
-import type { Field, FieldValidationContext, ValidationMode } from '@/types/fields';
 import type { ResourceType } from '@/types/domain';
+import type { Field, FieldValidationContext, ValidationMode } from '@/types/fields';
+import { describe, expect, it, vi } from 'vitest';
 import { registerFieldType } from '@/fields/field-type-registry';
 import { parseFields } from '@/fields/pipeline';
 

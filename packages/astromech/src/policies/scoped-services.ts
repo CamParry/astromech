@@ -23,7 +23,10 @@
  * Those routes keep asking; this handle is for callers that should not be asked
  * to.
  */
-
+import type { EntryMethodName } from '@/entries/methods';
+import type { NotificationsDomainService } from '@/notifications/service';
+import type { EntryAction } from '@/permissions/entry-permission';
+import type { Permissions } from '@/permissions/permissions-for';
 import type {
     EntriesService,
     MediaService,
@@ -32,22 +35,21 @@ import type {
     SettingsService,
     UsersService,
 } from '@/types/index';
-import { PermissionDeniedError } from '@/errors/index';
-import { entryPermission, type EntryAction } from '@/permissions/entry-permission';
-import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/index';
-import { permissionsFor, type Permissions } from '@/permissions/permissions-for';
-import { getCurrentUser } from '@/request-context/index';
-import { usersService } from '@/users/service';
-import { usersContract } from '@/users/methods';
-import { mediaService } from '@/media/service';
-import { mediaContract } from '@/media/methods';
-import { settingsService } from '@/settings/service';
-import { settingsContract } from '@/settings/methods';
-import { notificationsService } from '@/notifications/service';
-import type { NotificationsDomainService } from '@/notifications/service';
-import { notificationsContract } from '@/notifications/methods';
+import { ENTRY_METHOD_ACTIONS } from '@/entries/methods';
 import { entriesService } from '@/entries/service';
-import { ENTRY_METHOD_ACTIONS, type EntryMethodName } from '@/entries/methods';
+import { PermissionDeniedError } from '@/errors/index';
+import { mediaContract } from '@/media/methods';
+import { mediaService } from '@/media/service';
+import { notificationsContract } from '@/notifications/methods';
+import { notificationsService } from '@/notifications/service';
+import { entryPermission } from '@/permissions/entry-permission';
+import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/index';
+import { permissionsFor } from '@/permissions/permissions-for';
+import { getCurrentUser } from '@/request-context/index';
+import { settingsContract } from '@/settings/methods';
+import { settingsService } from '@/settings/service';
+import { usersContract } from '@/users/methods';
+import { usersService } from '@/users/service';
 
 /**
  * A domain's contract catalogue, keyed by service method name.

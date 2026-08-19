@@ -7,9 +7,9 @@
 
 import type { AstromechConfig, ResolvedConfig } from '@/types/config';
 import type { Permission, Role } from '@/types/domain';
-
 import { defineAbsolutePermissions } from '@/permissions/define';
 import { hasPermission as hasPermissionImpl } from '@/utilities/permission-match';
+
 export { hasPermission, matchesPermission } from '@/utilities/permission-match';
 export { definePermissions } from '@/permissions/define';
 export type { PermissionDeclaration, PermissionDeclarations } from '@/permissions/define';

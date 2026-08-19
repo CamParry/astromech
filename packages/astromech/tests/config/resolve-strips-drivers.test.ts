@@ -7,8 +7,6 @@
  * `PluginConfigView` picks `media` whole.
  */
 
-import { describe, expect, it } from 'vitest';
-import { resolveConfig } from '@/config/resolve';
 import type {
     AstromechConfig,
     DatabaseDriver,
@@ -18,6 +16,8 @@ import type {
     SchedulerDriver,
     StorageDriver,
 } from '@/types/index';
+import { describe, expect, it } from 'vitest';
+import { resolveConfig } from '@/config/resolve';
 
 const dbDriver = {
     type: 'test',

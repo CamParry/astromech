@@ -6,10 +6,10 @@
  * is optional — reads probe rather than throw.
  */
 
-import { createRegistry } from '@/utilities/registry';
 import type { EmailDriver } from '@/types/index';
+import { createRegistry } from '@/utilities/registry';
 
 const email = createRegistry<EmailDriver>('email', { required: false });
 
 export const setEmailDriver = email.set;
-export const getEmailDriver = email.peek;
+export const getEmailDriver = email.tryGet;

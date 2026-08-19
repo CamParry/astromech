@@ -9,9 +9,9 @@
  * Dependency rule: this module imports only ./fields.js and ./domain.js — never
  * ./config.js (config.ts imports CellKind from here; the dependency is one-way).
  */
-import type * as React from 'react';
 import type { Entry } from './domain';
 import type { Field, Label } from './fields';
+import type * as React from 'react';
 
 export const CELL_KINDS = [
     'text',

@@ -1,10 +1,10 @@
+import type { Media } from '@/types/index';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Checkbox, Table } from '@/admin/components/ui/index';
-import { MediaThumb } from './media-thumb';
 import { formatBytes } from '@/utilities/bytes';
 import { formatDatetime } from '@/utilities/dates';
-import type { Media } from '@/types/index';
+import { MediaThumb } from './media-thumb';
 
 export type MediaRowProps = {
     item: Media;

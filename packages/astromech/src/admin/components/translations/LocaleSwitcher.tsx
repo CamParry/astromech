@@ -7,11 +7,11 @@
  * with the source's localeGroup, joining the new row to the existing group.
  */
 
-import React, { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Select } from '../ui/index';
 import { useCreateTranslation } from '../../hooks/entries';
+import { Select } from '../ui/index';
 
 // ============================================================================
 // Types

@@ -6,10 +6,10 @@
  * 'site' (global / non-translatable) or 'site:<locale>' (per-locale).
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { settingsService } from '@/settings/service';
 import type { AstromechConfig } from '@/types/index';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { settingsService } from '@/settings/service';
 
 // ---------------------------------------------------------------------------
 // Config

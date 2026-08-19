@@ -16,7 +16,6 @@
  */
 
 import type { Db } from '@/database/types';
-import type { Capability } from '@/utilities/entry-capabilities';
 import type {
     EntryStatus,
     EntryVersion,
@@ -24,6 +23,7 @@ import type {
     SortOption,
     WhereFilters,
 } from '@/types/index';
+import type { Capability } from '@/utilities/entry-capabilities';
 
 export type StorageDb = Db;
 

@@ -1,5 +1,5 @@
-import React from 'react';
 import { Checkbox as BaseCheckbox } from '@base-ui/react/checkbox';
+import React from 'react';
 import { useFieldControl } from '@/admin/components/fields/field-control-context';
 
 type CheckboxProps = {

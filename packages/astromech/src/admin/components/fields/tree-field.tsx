@@ -1,38 +1,38 @@
-import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { clsx } from 'clsx';
-import {
-    DndContext,
-    PointerSensor,
-    KeyboardSensor,
-    useSensor,
-    useSensors,
-    closestCenter,
-} from '@dnd-kit/core';
+import type { TreeNode } from '@/admin/hooks/use-tree-field';
+import type { BaseFieldProps, Field } from '@/types/index';
 import type { DragEndEvent, Modifier } from '@dnd-kit/core';
-import {
-    SortableContext,
-    useSortable,
-    verticalListSortingStrategy,
-    sortableKeyboardCoordinates,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { Collapsible } from '@base-ui/react';
 import {
-    GripVertical,
-    ChevronUp,
+    closestCenter,
+    DndContext,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core';
+import {
+    SortableContext,
+    sortableKeyboardCoordinates,
+    useSortable,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { clsx } from 'clsx';
+import {
     ChevronDown,
+    ChevronUp,
     Copy,
-    Trash2,
-    EyeOff,
     Eye,
-    Plus,
-    IndentIncrease,
+    EyeOff,
+    GripVertical,
     IndentDecrease,
+    IndentIncrease,
+    Plus,
+    Trash2,
 } from 'lucide-react';
-import type { BaseFieldProps, Field } from '@/types/index';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FormField } from '@/admin/components/fields/form-field';
-import type { TreeNode } from '@/admin/hooks/use-tree-field';
 import { useTreeField } from '@/admin/hooks/use-tree-field';
 // Deep import: the `fields/` barrel reaches server code (virtual config / DB).
 import { formatInstancePath, parseInstancePath } from '@/fields/field-path';

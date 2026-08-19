@@ -8,11 +8,11 @@
  */
 
 import type { UsersService } from '@/types/index';
-import { query } from './operations/query';
-import { get } from './operations/get';
 import { create } from './operations/create';
-import { update } from './operations/update';
 import { deleteUser } from './operations/delete';
+import { get } from './operations/get';
+import { query } from './operations/query';
+import { update } from './operations/update';
 
 export const usersService: UsersService = {
     query,

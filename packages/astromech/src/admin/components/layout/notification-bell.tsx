@@ -5,17 +5,17 @@
  * lazily — only when the dropdown is open.
  */
 
-import React, { useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { useTranslation } from 'react-i18next';
-import { Menu } from '@base-ui/react/menu';
-import { Bell, X } from 'lucide-react';
 import type { Notification } from '@/types/index';
+import { Menu } from '@base-ui/react/menu';
+import { useNavigate } from '@tanstack/react-router';
+import { Bell, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-    useNotificationCount,
-    useNotifications,
     useDismiss,
     useDismissAll,
+    useNotificationCount,
+    useNotifications,
 } from '../../hooks/notifications';
 
 declare const __ASTROMECH_BASE_PATH__: string;

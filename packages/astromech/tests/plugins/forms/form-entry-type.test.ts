@@ -12,8 +12,8 @@
  * `compile.test.ts` does: `@astromech/forms` has no vitest instance of its own.
  */
 
-import { describe, expect, it } from 'vitest';
 import type { Field } from '@/types/fields';
+import { describe, expect, it } from 'vitest';
 import { parseFields } from '@/fields/pipeline';
 import { formEntryType } from '../../../../plugins/forms/src/entries/form';
 

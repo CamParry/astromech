@@ -6,9 +6,9 @@
  * - 4xx / unknown: not handled here; individual mutation onError handlers show toasts.
  */
 
+import type { AstromechApiError } from '@/transport/http/client/index';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { AstromechApiError } from '@/transport/http/client/index';
 import { Badge } from './badge';
 import { Button } from './button';
 import { Modal } from './modal';

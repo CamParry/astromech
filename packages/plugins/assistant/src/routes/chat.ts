@@ -3,10 +3,6 @@
  * model loop back as server-sent events, which RPC-JSON cannot carry.
  */
 
-import { getModel } from 'astromech';
-import type { AIContextItem, PluginContext, PluginRawRoute } from 'astromech';
-import { createApprovalsStorage } from '../approvals/storage';
-import { createSessionsStorage } from '../sessions/storage';
 import type {
     ApprovalDecision,
     ChatEvent,
@@ -14,6 +10,10 @@ import type {
     ChatRequest,
     ResolvedAssistantOptions,
 } from '../types';
+import type { AIContextItem, PluginContext, PluginRawRoute } from 'astromech';
+import { getModel } from 'astromech';
+import { createApprovalsStorage } from '../approvals/storage';
+import { createSessionsStorage } from '../sessions/storage';
 
 /** The plugin's raw routes: the streaming chat endpoint. */
 export function chatRoutes(options: ResolvedAssistantOptions): PluginRawRoute[] {

@@ -3,11 +3,11 @@
  * invitation when it isn't.
  */
 
+import type { MediaBrowserQuery } from '@/admin/types/media';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, UploadZone } from '@/admin/components/ui/index';
 import { TYPE_FILTER_KEYS } from '@/admin/types/media';
-import type { MediaBrowserQuery } from '@/admin/types/media';
 
 export type MediaEmptyProps = {
     query: MediaBrowserQuery;

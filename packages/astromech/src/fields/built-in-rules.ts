@@ -5,8 +5,8 @@
  */
 
 import type { Field, FieldValidationContext, FieldValidator } from '@/types/fields';
-import { isUnsafeHref } from './rich-text/safe-links';
 import { slugify } from '@/utilities/strings';
+import { isUnsafeHref } from './rich-text/safe-links';
 
 // ---------------------------------------------------------------------------
 // email

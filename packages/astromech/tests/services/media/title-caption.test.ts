@@ -6,12 +6,12 @@
  * point of these is that a write is READ BACK, not merely accepted.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { setStorageDriver } from '@/storage/registry';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { mediaService } from '@/media/service';
 import { createMediaStorage } from '@/media/storage';
-import type { StorageDriver } from '@/types/index';
+import { setStorageDriver } from '@/storage/registry';
 
 const noopStorage: StorageDriver = {
     name: 'noop',

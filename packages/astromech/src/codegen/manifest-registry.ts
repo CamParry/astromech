@@ -10,8 +10,8 @@
  * generated once at boot and read here rather than written to disk.
  */
 
-import { createRegistry } from '@/utilities/registry';
 import type { MethodManifest } from '@/types/index';
+import { createRegistry } from '@/utilities/registry';
 
 const manifest = createRegistry<MethodManifest>('methodManifest', { required: false });
 
@@ -20,5 +20,5 @@ export const setMethodManifest = manifest.set;
 
 /** The boot-generated manifest, or undefined when boot has not run. */
 export function getMethodManifest(): MethodManifest | undefined {
-    return manifest.peek() ?? undefined;
+    return manifest.tryGet() ?? undefined;
 }

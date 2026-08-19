@@ -12,8 +12,8 @@
  * body schemas directly — nothing here changes what the wire accepts.
  */
 
-import { z } from '@hono/zod-openapi';
 import type { ServiceMethodContract } from '@/types/index';
+import { z } from '@hono/zod-openapi';
 import { createUserSchema, updateUserSchema, userQuerySchema } from './schema';
 
 export const usersContract = {

@@ -6,12 +6,12 @@
  * collapses via CSS :empty.
  */
 
+import type { AdminSlotName } from '@/types/config';
 import React from 'react';
 import { slots } from 'virtual:astromech/plugins/components';
-import type { AdminSlotName } from '@/types/config';
-import { usePermissions } from '@/admin/hooks/index';
-import { PluginUiProvider } from '@/admin/context/plugin';
 import { ComponentErrorBoundary } from '@/admin/components/pages/ComponentErrorBoundary';
+import { PluginUiProvider } from '@/admin/context/plugin';
+import { usePermissions } from '@/admin/hooks/index';
 
 type LazySlot = React.LazyExoticComponent<React.ComponentType>;
 const lazyCache = new Map<string, LazySlot>();

@@ -6,15 +6,15 @@
  * `entries.incomingRelationships` returns, so this only groups and links.
  */
 
+import type { MediaUsage } from '@/types/index';
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import { Spinner } from '../ui/index';
-import { Link } from '@/admin/rendering/cells/link';
 import { useMediaUsage } from '@/admin/hooks/media';
+import { Link } from '@/admin/rendering/cells/link';
 import { entryAdminPath } from '@/admin/utilities/entry-admin-path';
 import { parseEntryTypeId } from '@/utilities/entry-type-ids';
-import type { MediaUsage } from '@/types/index';
+import { Spinner } from '../ui/index';
 
 export type MediaUsagePanelProps = {
     mediaId: string;

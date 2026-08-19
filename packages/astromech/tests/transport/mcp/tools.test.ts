@@ -2,8 +2,6 @@
  * Unit tests for buildTools — pure function, no I/O, no service invocation.
  */
 
-import { describe, it, expect } from 'vitest';
-import { buildTools } from '@/transport/mcp/tools';
 import type {
     CoreManifestMethod,
     EntriesManifestMethod,
@@ -11,6 +9,8 @@ import type {
     MethodManifest,
     PluginManifestMethod,
 } from '@/types/index';
+import { describe, expect, it } from 'vitest';
+import { buildTools } from '@/transport/mcp/tools';
 
 // ============================================================================
 // Sample manifest

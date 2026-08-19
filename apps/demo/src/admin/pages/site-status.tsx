@@ -1,6 +1,6 @@
-import React from 'react';
 import { useToast } from 'astromech/ui';
 import { Panel } from 'astromech/ui/layout';
+import React from 'react';
 
 export default function SiteStatusPage(): React.ReactElement {
     const { toast } = useToast();

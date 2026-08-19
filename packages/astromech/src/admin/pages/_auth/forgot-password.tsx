@@ -1,13 +1,14 @@
+import type { FormEvent } from 'react';
+import { createFileRoute, Link } from '@tanstack/react-router';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { AuthCard } from '@/admin/components/auth/AuthCard';
+import { Button } from '@/admin/components/ui/button';
+import { Input } from '@/admin/components/ui/input';
+
 /**
  * Forgot password page for the Astromech admin SPA.
  */
-
-import { useState, type FormEvent } from 'react';
-import { createFileRoute, Link } from '@tanstack/react-router';
-import { useTranslation } from 'react-i18next';
-import { AuthCard } from '@/admin/components/auth/AuthCard';
-import { Input } from '@/admin/components/ui/input';
-import { Button } from '@/admin/components/ui/button';
 
 declare const __ASTROMECH_BASE_PATH__: string;
 

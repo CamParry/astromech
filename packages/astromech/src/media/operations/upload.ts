@@ -1,10 +1,10 @@
+import type { Media } from '@/types/index';
 import { ulid } from 'ulidx';
 import { getStorageDriver } from '@/storage/registry';
-import type { Media } from '@/types/index';
-import { createMediaStorage } from '../storage';
 import { originalKey } from '../internal/keys';
 import { storeFile } from '../internal/store-file';
 import { toMedia } from '../internal/to-media';
+import { createMediaStorage } from '../storage';
 
 /** Store a new file and insert the row describing it. */
 export async function upload(params: { file: File }): Promise<Media> {

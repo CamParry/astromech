@@ -4,16 +4,14 @@
  * All tests call the functions directly with hand-built Entry + Field[]
  * — no client, no virtual:astromech/config, no getDb().
  */
-
-import { describe, expect, it } from 'vitest';
+import type { AudienceContext, VisibilityOptions } from '@/entries/visibility';
 import type { Entry, Field } from '@/types/index';
+import { describe, expect, it } from 'vitest';
 import {
     applyVisibility,
     isPublicBranded,
     markPublic,
     PublicShapeWriteError,
-    type AudienceContext,
-    type VisibilityOptions,
 } from '@/entries/visibility';
 
 // ============================================================================

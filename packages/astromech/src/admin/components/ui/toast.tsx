@@ -6,8 +6,8 @@
  *   toast({ message: 'Saved', variant: 'success' });
  */
 
-import React from 'react';
 import { Toast } from '@base-ui/react/toast';
+import React from 'react';
 
 // ============================================================================
 // Types

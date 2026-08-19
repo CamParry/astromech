@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { r2 } from '@/storage/drivers/r2';
 import type { R2BucketLike } from '@/storage/drivers/r2';
-import { setBindingEnv, resetBindingEnv } from '@/cloudflare/bindings';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { resetBindingEnv, setBindingEnv } from '@/cloudflare/bindings';
+import { r2 } from '@/storage/drivers/r2';
 
 // ---------------------------------------------------------------------------
 // In-memory R2 fake

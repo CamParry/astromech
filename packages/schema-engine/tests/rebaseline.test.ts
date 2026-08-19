@@ -8,17 +8,17 @@
  * observable. The apply test runs the rewritten chain against a real libsql db.
  */
 
-import { describe, expect, it } from 'vitest';
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createClient } from '@libsql/client';
-import { Kysely, sql } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
+import { Kysely, sql } from 'kysely';
+import { describe, expect, it } from 'vitest';
 import { rebaselineMigrations } from '../src/generate';
-import { renderMigrationFile } from '../src/render';
 import { serializeSnapshot } from '../src/model';
+import { renderMigrationFile } from '../src/render';
 import { col, index, snap, table } from './_support/tables';
 
 const FOREIGN_BLOCK = [

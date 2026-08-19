@@ -11,8 +11,8 @@
  * multiple bundle entry points. Same shape as `entry-access.ts`.
  */
 
-import { createRegistry } from '@/utilities/registry';
 import type { NotifyInput } from '@/types/index';
+import { createRegistry } from '@/utilities/registry';
 
 export type NotifyAccess = {
     /** Deliver one notification to every user the target names. */

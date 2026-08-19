@@ -9,12 +9,12 @@
  * where Payload's stale-relationship bug lives. The index is small and
  * rebuildable, so the extra write volume is the cheaper side of that trade.
  */
-
-import { getDb } from '@/database/registry';
+import type { RelationshipRow } from '@/database/schema';
 import type { Db } from '@/database/types';
-import { encodeWith } from '@/database/codec';
-import { relationshipsTable, type RelationshipRow } from '@/database/schema';
 import type { RelationshipEdge, TargetKind } from '@/fields/relationship-edges';
+import { encodeWith } from '@/database/codec';
+import { getDb } from '@/database/registry';
+import { relationshipsTable } from '@/database/schema';
 import { createStorage } from './create-storage';
 
 export type RelationshipStorage = ReturnType<typeof createRelationshipStorage>;

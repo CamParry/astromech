@@ -1,3 +1,4 @@
+import type { JsonObject, Media } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
@@ -6,12 +7,11 @@ import { flattenFieldNodes } from '@/fields/flatten';
 import { assertNoFieldErrors, parseFields } from '@/fields/pipeline';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { getCurrentUser } from '@/request-context/index';
-import type { JsonObject, Media } from '@/types/index';
-import { updateMediaSchema } from '../schema';
-import { createMediaStorage } from '../storage';
-import { validate } from '../internal/validate';
 import { indexMediaRelationships } from '../internal/relationships';
 import { toMedia } from '../internal/to-media';
+import { validate } from '../internal/validate';
+import { updateMediaSchema } from '../schema';
+import { createMediaStorage } from '../storage';
 import { get } from './get';
 import { query } from './query';
 

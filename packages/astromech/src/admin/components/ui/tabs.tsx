@@ -1,6 +1,6 @@
-import React from 'react';
 import { Tabs as BaseTabs } from '@base-ui/react/tabs';
 import { clsx } from 'clsx';
+import React from 'react';
 
 type Tab = { label: string; value: string };
 

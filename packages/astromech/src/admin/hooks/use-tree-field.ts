@@ -1,3 +1,12 @@
+// ============================================================================
+// Hook
+// ============================================================================
+
+import type { Field } from '@/types/index';
+import { useCallback, useRef, useState } from 'react';
+// Deep import: the `fields/` barrel reaches server code (virtual config / DB).
+import { buildDefaultValues } from '@/fields/defaults';
+
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- idiomatic non-null assertions in tree-field traversal */
 /**
  * useTreeField — state management for the tree field component.
@@ -90,15 +99,6 @@ function deepCloneNode(node: TreeNode): TreeNode {
     }
     return cloned;
 }
-
-// ============================================================================
-// Hook
-// ============================================================================
-
-import { useState, useCallback, useRef } from 'react';
-import type { Field } from '@/types/index';
-// Deep import: the `fields/` barrel reaches server code (virtual config / DB).
-import { buildDefaultValues } from '@/fields/defaults';
 
 type UseTreeFieldOptions = {
     name: string;

@@ -5,9 +5,9 @@
  * able to tell "not generated yet" from a manifest, not get a throw.
  */
 
+import type { CoreManifestMethod, MethodManifest } from '@/types/index';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { getMethodManifest, setMethodManifest } from '@/codegen/manifest-registry';
-import type { CoreManifestMethod, MethodManifest } from '@/types/index';
 
 beforeEach(() => {
     globalThis.__astromech = undefined;

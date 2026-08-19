@@ -9,14 +9,14 @@
  * declares rather than called on a guessed subject.
  */
 
+import type { ManifestMethod, ToolDefinition } from '@/types/index';
 import { defineCommand } from 'citty';
 import { z } from 'zod';
-import { loadConfig, loadRawConfig } from '../config';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { buildDispatch, dispatchArgs } from '@/transport/tools/dispatch';
-import type { ManifestMethod, ToolDefinition } from '@/types/index';
+import { loadConfig, loadRawConfig } from '../config';
 import { parseJsonArg, printError } from '../output';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
     meta: { name: 'call', description: 'Call a method-manifest entry by id' },

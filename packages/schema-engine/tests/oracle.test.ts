@@ -6,10 +6,10 @@
  * and implicit rows.
  */
 
-import { describe, expect, it } from 'vitest';
 import { createClient } from '@libsql/client';
-import { Kysely, sql } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
+import { Kysely, sql } from 'kysely';
+import { describe, expect, it } from 'vitest';
 import { dumpSchema } from '../src/oracle';
 
 async function makeDb(statements: string[]): Promise<Kysely<unknown>> {

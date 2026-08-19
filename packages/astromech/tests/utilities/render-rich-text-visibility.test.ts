@@ -4,14 +4,10 @@
  * Public shape → HTML string.
  * Full shape   → JSON unchanged.
  */
-
-import { describe, expect, it } from 'vitest';
+import type { AudienceContext, VisibilityOptions } from '@/entries/visibility';
 import type { Entry, Field, JsonObject, JsonValue } from '@/types/index';
-import {
-    applyVisibility,
-    type AudienceContext,
-    type VisibilityOptions,
-} from '@/entries/visibility';
+import { describe, expect, it } from 'vitest';
+import { applyVisibility } from '@/entries/visibility';
 
 const NOW = new Date('2026-06-15T12:00:00Z');
 

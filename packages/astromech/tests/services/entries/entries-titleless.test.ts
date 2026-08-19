@@ -16,10 +16,10 @@
  *   one, so this is a tolerant-not-strict choice.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
-import { ValidationError } from '@/errors/validation';
 import { createTestDb, setupTestConfig } from '@tests/harness';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService } from '@/entries/index';
+import { ValidationError } from '@/errors/validation';
 
 const api = entriesService;
 

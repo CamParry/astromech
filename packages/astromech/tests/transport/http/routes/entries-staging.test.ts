@@ -14,16 +14,16 @@
  * which poisons the harness `:memory:` base connection on later reads.
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { OpenAPIHono } from '@hono/zod-openapi';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { rmSync } from 'node:fs';
-import { setupTestConfig, makeTestConfig, createFileTestDb } from '@tests/harness';
-import { entriesService as api } from '@/entries/service';
-import { createEntriesRouter } from '@/transport/http/routes/entries';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { Role, User } from '@/types/index';
+import { rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { OpenAPIHono } from '@hono/zod-openapi';
+import { createFileTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { entriesService as api } from '@/entries/service';
+import { createEntriesRouter } from '@/transport/http/routes/entries';
 
 const fakeUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;
 

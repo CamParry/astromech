@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import { flattenTree, buildTree } from '@/admin/hooks/use-tree-field';
 import type { TreeNode } from '@/admin/hooks/use-tree-field';
+import { describe, expect, it } from 'vitest';
+import { buildTree, flattenTree } from '@/admin/hooks/use-tree-field';
 
 // ============================================================================
 // flattenTree

@@ -15,26 +15,26 @@
  *   [slug]                      → PageView     (404 if page not found)
  *   anything else               → 404
  */
-import HomeView from '../components/views/HomeView.astro';
-import PageView from '../components/views/PageView.astro';
-import BlogList from '../components/views/BlogList.astro';
-import PostDetail from '../components/views/PostDetail.astro';
-import CategoryArchive from '../components/views/CategoryArchive.astro';
-import TagArchive from '../components/views/TagArchive.astro';
-import CustomersList from '../components/views/CustomersList.astro';
-import CaseStudyDetail from '../components/views/CaseStudyDetail.astro';
-import { locales, defaultLocale } from '../lib/site.ts';
-import {
-    getPageBySlug,
-    getPostBySlug,
-    getCategoryBySlug,
-    getPostsByCategory,
-    getTagBySlug,
-    getPostsByTag,
-    getCaseStudyBySlug,
-} from '../lib/data.ts';
 import type { Locale } from '../lib/site.ts';
 import type { Entry } from 'astromech';
+import BlogList from '../components/views/BlogList.astro';
+import CaseStudyDetail from '../components/views/CaseStudyDetail.astro';
+import CategoryArchive from '../components/views/CategoryArchive.astro';
+import CustomersList from '../components/views/CustomersList.astro';
+import HomeView from '../components/views/HomeView.astro';
+import PageView from '../components/views/PageView.astro';
+import PostDetail from '../components/views/PostDetail.astro';
+import TagArchive from '../components/views/TagArchive.astro';
+import {
+    getCaseStudyBySlug,
+    getCategoryBySlug,
+    getPageBySlug,
+    getPostBySlug,
+    getPostsByCategory,
+    getPostsByTag,
+    getTagBySlug,
+} from '../lib/data.ts';
+import { defaultLocale, locales } from '../lib/site.ts';
 
 const rawPath = Astro.params.path ?? '';
 const segments = rawPath.split('/').filter(Boolean);

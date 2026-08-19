@@ -7,8 +7,7 @@
  */
 
 import type { Hook, JsonObject } from 'astromech';
-import { defineHook } from 'astromech';
-import { resolveEntryPath } from 'astromech';
+import { defineHook, resolveEntryPath } from 'astromech';
 import { REDIRECT_TYPE } from '../types';
 
 export const slugChangeHook: Hook = defineHook(

@@ -1,9 +1,9 @@
-import { getEntryStorage } from '../../storage/registry';
+import type { Entry, JsonObject } from '@/types/index';
 import { asEntry, loadAndAssertType } from '../../internal/records';
 import { indexEntryRelationships } from '../../internal/relationships';
 import { uniqueSlugIfChanged } from '../../internal/slug';
 import { snapshotVersion } from '../../internal/versions';
-import type { Entry, JsonObject } from '@/types/index';
+import { getEntryStorage } from '../../storage/registry';
 
 export async function restoreVersion(params: {
     type: string;

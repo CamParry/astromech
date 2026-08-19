@@ -6,15 +6,15 @@
  * many that is, and it can only be raised once a file has been chosen.
  */
 
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Media, MediaUsage } from '@/types/index';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { ConfirmProvider } from '@/admin/components/ui/confirm';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MediaDetailModal } from '@/admin/components/media/MediaDetailModal';
+import { ConfirmProvider } from '@/admin/components/ui/confirm';
 import en from '@/admin/locales/en.json';
-import type { Media, MediaUsage } from '@/types/index';
 
 const { replaceMutate } = vi.hoisted(() => ({ replaceMutate: vi.fn() }));
 

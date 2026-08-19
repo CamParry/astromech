@@ -4,9 +4,9 @@
  * and the Astro integration.
  */
 
-import { createJiti } from 'jiti';
-import { resolve } from 'node:path';
 import type { AstromechConfig } from '@/types/index';
+import { resolve } from 'node:path';
+import { createJiti } from 'jiti';
 
 export const DEFAULT_CONFIG_FILE = './astromech.config.ts';
 

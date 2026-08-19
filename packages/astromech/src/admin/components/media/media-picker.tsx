@@ -3,6 +3,8 @@
  * tiles, pagination. Query state is owned by the host.
  */
 
+import type { MediaBrowserQuery } from '@/admin/types/media';
+import type { Media } from '@/types/index';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -16,14 +18,12 @@ import {
     ToolbarStart,
     UploadButton,
 } from '@/admin/components/ui/index';
-import { MediaCard } from './MediaCard';
+import { useMediaBrowser, usePermissions, useUploadMedia } from '@/admin/hooks/index';
+import { MEDIA_ACCEPT } from '@/admin/types/media';
 import { MediaEmpty } from './media-empty';
 import { MediaFilters } from './media-filters';
 import { MediaSortSelect } from './media-sort-select';
-import { useMediaBrowser, usePermissions, useUploadMedia } from '@/admin/hooks/index';
-import { MEDIA_ACCEPT } from '@/admin/types/media';
-import type { MediaBrowserQuery } from '@/admin/types/media';
-import type { Media } from '@/types/index';
+import { MediaCard } from './MediaCard';
 
 const DEFAULT_PER_PAGE = 24;
 

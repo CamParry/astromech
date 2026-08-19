@@ -14,9 +14,9 @@
  * directly (same approach as field-error-aria.test.tsx).
  */
 
-import { describe, expect, it } from 'vitest';
-import { createRoot } from 'react-dom/client';
 import React, { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { describe, expect, it } from 'vitest';
 import { FieldWrapper } from '@/admin/components/fields/field-wrapper';
 // Through the public barrel: the point of the test is that plugins can reach it.
 import { useFieldControl } from '@/admin/components/fields/index';

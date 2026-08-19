@@ -27,27 +27,8 @@
  * inserts never set `createdBy`/`updatedBy` (both nullable), so no user row is
  * required for the entry flows — `createTestUser` is provided for completeness.
  */
-
-import * as fs from 'node:fs';
-import * as os from 'node:os';
-import * as path from 'node:path';
-import { createClient } from '@libsql/client';
-import { Kysely, CamelCasePlugin } from 'kysely';
-import type { Dialect, MigrationProvider } from 'kysely';
-import { LibsqlDialect } from '@libsql/kysely-libsql';
-import { setDb } from '@/database/registry';
-import { setDatabaseDriver } from '@/database/driver-registry';
-import { mergeMigrationProviders, migrateToLatest } from '@astromech/schema-engine';
-import { decodeWith, encodeWith } from '@/database/codec';
+import type { UserRow } from '@/database/schema';
 import type { DB } from '@/database/types';
-import { usersTable, type UserRow } from '@/database/schema';
-import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
-import { resolveConfig } from '@/config/resolve';
-import { setConfig } from '@/config/registry';
-import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
-import { setEntryAccess } from '@/entries/plugin-access';
-import { setPluginAccess } from '@/plugin-access';
-import { runWithContext } from '@/request-context/index';
 import type {
     AstromechConfig,
     DatabaseDriver,
@@ -57,6 +38,25 @@ import type {
     StorageList,
     User,
 } from '@/types/index';
+import type { Dialect, MigrationProvider } from 'kysely';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { mergeMigrationProviders, migrateToLatest } from '@astromech/schema-engine';
+import { createClient } from '@libsql/client';
+import { LibsqlDialect } from '@libsql/kysely-libsql';
+import { CamelCasePlugin, Kysely } from 'kysely';
+import { setConfig } from '@/config/registry';
+import { resolveConfig } from '@/config/resolve';
+import { decodeWith, encodeWith } from '@/database/codec';
+import { setDatabaseDriver } from '@/database/driver-registry';
+import { setDb } from '@/database/registry';
+import { usersTable } from '@/database/schema';
+import { setEntryAccess } from '@/entries/plugin-access';
+import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
+import { setPluginAccess } from '@/plugin-access';
+import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
+import { runWithContext } from '@/request-context/index';
 
 // Wire the plugin runtime's ports once for every harness-based test, before any
 // registerPlugins call below, as `registerPluginRuntime` does. `setNotifyAccess` is

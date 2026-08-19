@@ -6,17 +6,17 @@
  * would reject is exactly what the report exists to find.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { AstromechConfig, JsonObject } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { validateStoredContent } from '@/transport/cli/validate-stored-content';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { createStorage } from '@/database/storage/create-storage';
 import { entriesTable } from '@/entries/schema';
 import { entriesService as api } from '@/entries/service';
 import { settingsService } from '@/settings/service';
 import { createSettingsStorage } from '@/settings/storage';
+import { validateStoredContent } from '@/transport/cli/validate-stored-content';
 import { usersService } from '@/users/service';
 import { createUserStorage } from '@/users/storage';
-import type { AstromechConfig, JsonObject } from '@/types/index';
 
 /**
  * `article` carries a bounded number and a unique code; `report` carries the

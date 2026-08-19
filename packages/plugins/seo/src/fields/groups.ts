@@ -5,9 +5,9 @@
  * built from core `text`/`textarea` fields plus a presentational preview.
  */
 
-import { group, section, text, textarea } from 'astromech/fields';
-import { t } from 'astromech';
 import type { Field, Label, MessageRef } from 'astromech';
+import { t } from 'astromech';
+import { group, section, text, textarea } from 'astromech/fields';
 import { SEO_FIELD_NAME } from '../types';
 import { SEO_DESCRIPTION_RANGE, SEO_TITLE_RANGE } from '../utilities/length';
 

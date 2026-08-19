@@ -1,12 +1,12 @@
+import type { DriftReport } from '@/transport/cli/relationship-index';
 import { defineCommand } from 'citty';
-import { loadConfig, loadRawConfig } from '../config';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { createAstromech } from '@/astromech';
 import {
     checkRelationshipIndex,
     rebuildRelationshipIndex,
-    type DriftReport,
 } from '@/transport/cli/relationship-index';
+import { loadConfig, loadRawConfig } from '../config';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
     meta: {

@@ -13,13 +13,13 @@
  * directly (same approach as container-field-seeding.test.tsx).
  */
 
-import { describe, expect, it } from 'vitest';
-import { createRoot } from 'react-dom/client';
-import { act } from 'react';
 import type { Field } from '@/types/index';
+import { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { describe, expect, it } from 'vitest';
 import '@/admin/rendering/register-fields';
-import { FormField } from '@/admin/components/fields/form-field';
 import { FieldErrorsProvider } from '@/admin/components/fields/field-errors-context';
+import { FormField } from '@/admin/components/fields/form-field';
 
 /** Render one FormField under an error map and return the resulting HTML. */
 function renderField(

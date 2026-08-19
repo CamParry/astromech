@@ -30,17 +30,15 @@
  * instance to the Kysely tx handle.
  */
 
-import type { ExpressionBuilder, Updateable } from 'kysely';
-import { getDb } from '@/database/registry';
-import { existingResourceIds } from '@/database/storage/resource-existence';
-import { supportsTransactions } from '@/database/capabilities';
-import { encodePatchWith, decodeWith } from '@/database/codec';
-import { createStorage } from '@/database/storage/create-storage';
-import { entriesTable } from '@/database/schema';
-import type { DB, Db } from '@/database/types';
 import type { EntryRow } from '../schema';
-import { createVersionStorage } from './versions';
-import { UnknownSortKeyError, UnknownWhereKeyError } from '../errors';
+import type {
+    Capability,
+    EntryStorage,
+    EntryWrite,
+    ListParams,
+    NewEntryVersionSnapshot,
+} from './types';
+import type { DB, Db } from '@/database/types';
 import type {
     Entry,
     EntryStatus,
@@ -49,14 +47,16 @@ import type {
     ReferencesFilter,
     SortOption,
 } from '@/types/index';
+import type { ExpressionBuilder, Updateable } from 'kysely';
+import { supportsTransactions } from '@/database/capabilities';
+import { decodeWith, encodePatchWith } from '@/database/codec';
+import { getDb } from '@/database/registry';
+import { entriesTable } from '@/database/schema';
+import { createStorage } from '@/database/storage/create-storage';
+import { existingResourceIds } from '@/database/storage/resource-existence';
 import { BUILT_IN_SUPPORTS } from '@/utilities/entry-capabilities';
-import type {
-    Capability,
-    EntryStorage,
-    EntryWrite,
-    ListParams,
-    NewEntryVersionSnapshot,
-} from './types';
+import { UnknownSortKeyError, UnknownWhereKeyError } from '../errors';
+import { createVersionStorage } from './versions';
 
 // ============================================================================
 // Query helpers

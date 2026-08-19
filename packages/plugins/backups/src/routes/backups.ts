@@ -12,13 +12,13 @@
  * resolvePluginPermission(namespace, key) which auto-namespaces them to
  * `plugin:backups:<key>` since they contain no colon.
  */
-
+import type { BackupRunRow } from '../tables/runs';
+import type { PluginContext, PluginRawRoute } from 'astromech';
 import { Readable } from 'node:stream';
 import { createGunzip } from 'node:zlib';
-import type { PluginContext, PluginRawRoute } from 'astromech';
-import { backupRunsTable, type BackupRunRow } from '../tables/runs';
-import { createBackupRunsStorage } from '../storage';
 import { isBackupRunning, performBackup, resolveKeep } from '../backup';
+import { createBackupRunsStorage } from '../storage';
+import { backupRunsTable } from '../tables/runs';
 
 /**
  * The table's **SQL** name, for the restore driver's `preserve` list — that is a

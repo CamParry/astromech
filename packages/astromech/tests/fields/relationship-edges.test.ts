@@ -4,12 +4,12 @@
  * alone → the query allow-list). No db, no config.
  */
 
+import type { Field } from '@/types/index';
 import { describe, expect, it } from 'vitest';
 import {
     collectRelationshipEdges,
     collectRelationshipSchemaPaths,
 } from '@/fields/relationship-edges';
-import type { Field } from '@/types/index';
 
 describe('collectRelationshipEdges — top-level fields', () => {
     it('yields one edge for a single relationship', () => {

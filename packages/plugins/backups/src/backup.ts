@@ -6,12 +6,12 @@
  * Workers) overlap is NOT guarded in v1 — single-instance self-hosted assumption.
  */
 
+import type { BackupRunRow } from './tables/runs';
+import type { PluginContext } from 'astromech';
 import { Readable } from 'node:stream';
 import { createGzip } from 'node:zlib';
-import type { PluginContext } from 'astromech';
-import { createBackupRunsStorage } from './storage';
 import { BACKUPS_SETTINGS_PATH } from './pages/settings';
-import type { BackupRunRow } from './tables/runs';
+import { createBackupRunsStorage } from './storage';
 
 // ============================================================================
 // In-process overlap guard

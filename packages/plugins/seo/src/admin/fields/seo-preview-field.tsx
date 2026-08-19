@@ -4,10 +4,10 @@
  * Stores no data of its own. Composes public `astromech/ui` only (spec §8).
  */
 
-import React from 'react';
 import type { BaseFieldProps } from 'astromech';
 import { useFieldValue } from 'astromech/ui';
 import { useAstromechPlugin } from 'astromech/ui/app';
+import React from 'react';
 import { SEO_DESCRIPTION_RANGE, SEO_TITLE_RANGE } from '../../utilities/length';
 import './seo-preview-field.css';
 

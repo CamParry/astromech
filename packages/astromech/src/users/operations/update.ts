@@ -1,3 +1,4 @@
+import type { JsonObject, User } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
@@ -6,12 +7,11 @@ import { flattenFieldNodes } from '@/fields/flatten';
 import { assertNoFieldErrors, parseFields } from '@/fields/pipeline';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { getCurrentUser } from '@/request-context/index';
-import type { JsonObject, User } from '@/types/index';
-import { updateUserSchema } from '../schema';
-import { createUserStorage } from '../storage';
-import { validate } from '../internal/validate';
 import { indexUserRelationships } from '../internal/relationships';
 import { toUser } from '../internal/to-user';
+import { validate } from '../internal/validate';
+import { updateUserSchema } from '../schema';
+import { createUserStorage } from '../storage';
 import { get } from './get';
 import { query } from './query';
 

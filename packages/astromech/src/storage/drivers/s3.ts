@@ -26,7 +26,6 @@
  * covers every target. Do not "fix" this.
  */
 
-import { AwsClient } from 'aws4fetch';
 import type {
     StorageDriver,
     StorageList,
@@ -34,6 +33,7 @@ import type {
     StorageRange,
     StorageStat,
 } from '@/types/index';
+import { AwsClient } from 'aws4fetch';
 import { AstromechError } from '@/errors/index';
 
 export type S3Options = {

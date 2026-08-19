@@ -13,8 +13,8 @@
  * between the model deciding and the write landing.
  */
 
-import type { ArgsDef } from 'citty';
 import type { ConfirmOptions, ConfirmTrigger } from '@/policies/confirmation';
+import type { ArgsDef } from 'citty';
 
 /** citty arg definition. Spread into a command's `args`. */
 export const confirmArgs = {

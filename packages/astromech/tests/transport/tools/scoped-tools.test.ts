@@ -4,19 +4,18 @@
  * four seams are applied. Each seam's own behaviour is tested beside it.
  */
 
+import type { ManifestMethod, Role, ToolDefinition } from '@/types/index';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getMethodManifest } from '@/codegen/manifest-registry';
+import { annotateManifest } from '@/policies/annotate-manifest';
+import { filterMethods } from '@/policies/method-filter';
+import { buildScopedDispatch } from '@/transport/tools/dispatch';
+import { buildScopedTools } from '@/transport/tools/scoped-tools';
 
 vi.mock('@/codegen/manifest-registry', () => ({ getMethodManifest: vi.fn() }));
 vi.mock('@/policies/method-filter', () => ({ filterMethods: vi.fn() }));
 vi.mock('@/policies/annotate-manifest', () => ({ annotateManifest: vi.fn() }));
 vi.mock('@/transport/tools/dispatch', () => ({ buildScopedDispatch: vi.fn() }));
-
-import { getMethodManifest } from '@/codegen/manifest-registry';
-import { filterMethods } from '@/policies/method-filter';
-import { annotateManifest } from '@/policies/annotate-manifest';
-import { buildScopedDispatch } from '@/transport/tools/dispatch';
-import { buildScopedTools } from '@/transport/tools/scoped-tools';
-import type { ManifestMethod, Role, ToolDefinition } from '@/types/index';
 
 // ---------------------------------------------------------------------------
 // Fixtures

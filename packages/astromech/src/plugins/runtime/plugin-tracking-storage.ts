@@ -7,9 +7,9 @@
  * `plugin-runtime.ts`, next to the warning text that explains the failure.
  */
 
-import { createStorage } from '@/database/storage/create-storage';
-import { pluginsTable } from '@/database/schema';
 import type { Db } from '@/database/types';
+import { pluginsTable } from '@/database/schema';
+import { createStorage } from '@/database/storage/create-storage';
 
 export type PluginTrackingStorage = ReturnType<typeof createPluginTrackingStorage>;
 

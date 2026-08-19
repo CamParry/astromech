@@ -2,12 +2,12 @@
  * Reset password page for the Astromech admin SPA.
  */
 
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import React, { useState } from 'react';
-import { createFileRoute, useNavigate, Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { AuthCard } from '@/admin/components/auth/AuthCard';
-import { Input } from '@/admin/components/ui/input';
 import { Button } from '@/admin/components/ui/button';
+import { Input } from '@/admin/components/ui/input';
 
 declare const __ASTROMECH_BASE_PATH__: string;
 

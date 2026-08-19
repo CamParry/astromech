@@ -1,3 +1,6 @@
+import type { Kysely } from 'kysely';
+import { sql } from 'kysely';
+
 /**
  * Schema oracle — a normalized `sqlite_master` dump.
  *
@@ -15,8 +18,6 @@
  * Auto-created internal rows are excluded — anything named `sqlite_*`, plus the
  * NULL-`sql` rows SQLite records for implicit indexes.
  */
-
-import { sql, type Kysely } from 'kysely';
 
 export type SchemaRow = {
     type: 'table' | 'index';

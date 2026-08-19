@@ -1,6 +1,7 @@
-import { z } from 'zod';
+import type { TableInsert, TableSelect } from '@/database/define-table';
 import type { JsonValue } from '@/types/index';
-import { defineTable, type TableSelect, type TableInsert } from '@/database/define-table';
+import { z } from 'zod';
+import { defineTable } from '@/database/define-table';
 
 export const settingsTable = defineTable('settings', ({ col }) => ({
     key: col.text({ primaryKey: true }),

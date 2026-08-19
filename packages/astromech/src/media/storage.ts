@@ -1,3 +1,15 @@
+import type { MediaRow, NewMediaRow } from './schema';
+import type { Patch, QueryHandle } from '@/database/storage/create-storage';
+import type { Db } from '@/database/types';
+import type { MediaMimeTypeFilter, MediaQueryParams, SortOption } from '@/types/index';
+import type { Expression, SqlBool } from 'kysely';
+import { sql } from 'kysely';
+import { decodeWith } from '@/database/codec';
+import { getDb } from '@/database/registry';
+import { mediaTable } from '@/database/schema';
+import { createStorage } from '@/database/storage/create-storage';
+import { createRelationshipStorage } from '@/database/storage/relationships';
+
 /**
  * Media storage — the only place Kysely touches the `media` table.
  *
@@ -12,20 +24,6 @@
  * The file-storage driver calls (`put`/`delete`, variant cleanup) stay in the
  * service: they are not database access.
  */
-
-import { sql, type Expression, type SqlBool } from 'kysely';
-import { decodeWith } from '@/database/codec';
-import {
-    createStorage,
-    type Patch,
-    type QueryHandle,
-} from '@/database/storage/create-storage';
-import { createRelationshipStorage } from '@/database/storage/relationships';
-import { mediaTable } from '@/database/schema';
-import { getDb } from '@/database/registry';
-import type { Db } from '@/database/types';
-import type { MediaMimeTypeFilter, MediaQueryParams, SortOption } from '@/types/index';
-import type { MediaRow, NewMediaRow } from './schema';
 
 type Predicate = ReturnType<QueryHandle<typeof mediaTable>['where']>;
 type MediaEb = Parameters<Predicate>[0];

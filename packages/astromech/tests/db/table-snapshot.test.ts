@@ -9,23 +9,23 @@
  * in `@astromech/schema-engine` and is tested there — the emit wrappers are
  * checked only for the `Table`→statement wiring.
  */
-
+import type { Table } from '@/database/define-table';
+import { serializeSnapshot } from '@astromech/schema-engine';
 import { describe, expect, it } from 'vitest';
-import { defineTable, type Table } from '@/database/define-table';
+import { defineTable } from '@/database/define-table';
+import { cronTable, relationshipsTable } from '@/database/schema';
 import {
     columnType,
     createSnapshot,
-    toSnapshotTable,
     emitCreateIndexes,
     emitCreateTable,
     emitTableStatements,
     resolveReferenceTarget,
     toSnakeCase,
+    toSnapshotTable,
 } from '@/database/table-snapshot';
-import { serializeSnapshot } from '@astromech/schema-engine';
-import { rolesTable } from '@/users/schema';
 import { entriesTable, entryPreviewTokensTable } from '@/entries/schema';
-import { relationshipsTable, cronTable } from '@/database/schema';
+import { rolesTable } from '@/users/schema';
 
 describe('toSnakeCase', () => {
     it('converts camelCase keys to snake_case identifiers', () => {

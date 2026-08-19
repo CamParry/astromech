@@ -3,11 +3,11 @@
  * plugin_redirects_redirects and the DELETE cleanup runs without error.
  */
 
-import { describe, it, expect, beforeAll } from 'vitest';
-import { sql } from 'kysely';
+import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
 import { createTestDb } from '@tests/harness';
-import type { DB } from '@/database/types';
+import { sql } from 'kysely';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 let db: Kysely<DB>;
 

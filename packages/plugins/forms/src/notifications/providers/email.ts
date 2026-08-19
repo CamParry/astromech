@@ -4,11 +4,11 @@
  * resolving to the submitter's address makes it a confirmation.
  */
 
+import type { NotificationProvider } from '../types';
 import { renderRichText } from 'astromech';
 import * as fields from 'astromech/fields';
 import { applyMergeTags, applyMergeTagsInRichText } from '../merge-tags';
 import { SubmissionEmail } from '../templates/submission-email';
-import type { NotificationProvider } from '../types';
 
 export const EMAIL_NOTIFICATION = 'email';
 

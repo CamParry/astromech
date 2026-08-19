@@ -1,4 +1,3 @@
-import { describe, expect, it } from 'vitest';
 import type {
     AstromechConfig,
     DatabaseDriver,
@@ -6,19 +5,20 @@ import type {
     Role,
     StorageDriver,
 } from '@/types/index';
+import { describe, expect, it } from 'vitest';
+import { resolveConfig } from '@/config/resolve';
+import { definePlugin } from '@/index';
+import { buildPermissionCatalogue } from '@/permissions/catalogue';
 import {
-    hasPermission,
-    can,
-    builtInRole,
     BUILT_IN_ROLES,
+    builtInRole,
+    can,
     CORE_PERMISSIONS,
     definePermissions,
     entryPermissions,
+    hasPermission,
     resolveRoles,
 } from '@/permissions/index';
-import { buildPermissionCatalogue } from '@/permissions/catalogue';
-import { resolveConfig } from '@/config/resolve';
-import { definePlugin } from '@/index';
 
 // ============================================================================
 // hasPermission — new grammar (resource[:identifier]:action, action last)

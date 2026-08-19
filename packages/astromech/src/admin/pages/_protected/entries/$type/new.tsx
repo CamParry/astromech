@@ -6,14 +6,14 @@
  * qualified type redirects to the plugin route.
  */
 
-import React from 'react';
+import type { EntriesMount } from '@/admin/components/entries/mount';
+import type { EntriesService } from '@/types/index';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { astromechClient } from '@/transport/http/client/index';
+import React from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntryNewPage } from '@/admin/components/entries/entry-new-page';
-import type { EntriesService } from '@/types/index';
-import type { EntriesMount } from '@/admin/components/entries/mount';
 import { pluginEntryRouteParams } from '@/admin/utilities/entry-admin-path';
+import { astromechClient } from '@/transport/http/client/index';
 
 type SearchParams = {
     locale?: string;

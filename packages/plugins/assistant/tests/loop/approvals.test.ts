@@ -4,18 +4,17 @@
  * come off the server's row, never off the transcript that was posted back.
  */
 
-import { describe, expect, it, vi } from 'vitest';
-
+import type { ChatMessage } from '../../src/types';
 import type { TextPart, ToolCallPart, ToolResultPart } from 'ai';
 import type { ToolDefinition } from 'astromech';
+import { describe, expect, it, vi } from 'vitest';
 import {
     answerUnansweredCalls,
     mutatingCalls,
-    pauseForApproval,
     pausedToolCalls,
+    pauseForApproval,
     resumePausedTurn,
 } from '../../src/loop/approvals';
-import type { ChatMessage } from '../../src/types';
 import { approvalRow, fakeApprovals } from './fake-approvals';
 
 /** A tool that records what it was invoked with. */

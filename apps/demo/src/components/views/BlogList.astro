@@ -1,8 +1,8 @@
 ---
+import type { Locale } from '../../lib/site.ts';
 import Site from '../../layouts/Site.astro';
 import { getPosts } from '../../lib/data.ts';
-import { t, localizedPath } from '../../lib/site.ts';
-import type { Locale } from '../../lib/site.ts';
+import { localizedPath, t } from '../../lib/site.ts';
 
 interface Props {
     locale: Locale;

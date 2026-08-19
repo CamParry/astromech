@@ -6,14 +6,14 @@
  * (spec §11) and in the host app's own `admin.pages`.
  */
 
-import { fileURLToPath } from 'node:url';
 import type { AdminPage, AdminSlotContribution, AdminSlotName } from '@/types/config';
 import type { PluginDefinition, PluginFieldTypeRegistration } from '@/types/plugins';
+import { fileURLToPath } from 'node:url';
+import { AstromechError } from '@/errors/index';
 import {
     resolvePluginIdentity,
     resolvePluginPermission,
 } from '@/plugins/runtime/plugin-identity';
-import { AstromechError } from '@/errors/index';
 
 /**
  * Turn a plugin's asset specifier into one this module can emit an `import()`

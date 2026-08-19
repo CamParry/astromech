@@ -9,8 +9,8 @@
  * `runDue` passes; these assert the single-winner election on its own.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb } from '@tests/harness';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { createCronStorage } from '@/cron/storage';
 
 const NOW = new Date('2024-06-01T12:00:00.000Z');

@@ -1,12 +1,12 @@
 // This file is evaluated by plain Node before Vite, so `.env` has not reached
 // `import.meta.env` yet. `SITE_URL` is read from `process.env`, which this fills.
 import 'dotenv/config';
-import { defineConfig } from 'astro/config';
-import react from '@astrojs/react';
 import node from '@astrojs/node';
+import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
-import { astromech } from 'astromech/astro';
 import icon from 'astro-icon';
+import { defineConfig } from 'astro/config';
+import { astromech } from 'astromech/astro';
 
 export default defineConfig({
     // The deployment's own origin: canonical URLs, `og:url` and the sitemap all

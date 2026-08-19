@@ -10,28 +10,22 @@
  *   PUT    /users/:id     → users.update (bespoke)
  *   DELETE /users/:id     → users.delete (bespoke)
  */
-
-import { OpenAPIHono, z } from '@hono/zod-openapi';
+import type { RestRoute } from './rest-route';
+import type { AuthVariables } from '@/transport/http/middleware/auth';
+import type { JsonObject, SortDirection, UserQueryParams } from '@/types/index';
 import type { Context } from 'hono';
-import { usersService } from '@/users/index';
+import { OpenAPIHono, z } from '@hono/zod-openapi';
+import { permissionsFor } from '@/permissions/permissions-for';
 import {
     badRequest,
     forbidden,
     fromZodError,
     notFound,
 } from '@/transport/http/middleware/errors';
-import type { AuthVariables } from '@/transport/http/middleware/auth';
-import { permissionsFor } from '@/permissions/permissions-for';
-import { updateUserSchema, usersContract } from '@/users/index';
+import { updateUserSchema, usersContract, usersService } from '@/users/index';
 import { createUserStorage } from '@/users/storage';
-import type { JsonObject, SortDirection, UserQueryParams } from '@/types/index';
 import { USERS_ROUTE_SPECS } from './http-routes.shared';
-import {
-    attachHandlers,
-    documentBespokeRoutes,
-    mountRestRoutes,
-    type RestRoute,
-} from './rest-route';
+import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 
 type Env = { Variables: AuthVariables };
 

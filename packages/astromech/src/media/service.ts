@@ -9,12 +9,12 @@
  */
 
 import type { MediaService } from '@/types/index';
-import { query } from './operations/query';
-import { get } from './operations/get';
-import { upload } from './operations/upload';
-import { update } from './operations/update';
 import { deleteMedia } from './operations/delete';
+import { get } from './operations/get';
+import { query } from './operations/query';
 import { replace } from './operations/replace';
+import { update } from './operations/update';
+import { upload } from './operations/upload';
 import { usedBy } from './operations/used-by';
 
 export const mediaService: MediaService = {

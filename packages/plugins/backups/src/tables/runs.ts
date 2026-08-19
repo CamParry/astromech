@@ -4,8 +4,8 @@
  * comes out as `plugin_backups_runs`.
  */
 
-import { definePluginTable } from 'astromech';
 import type { TableInsert, TableSelect } from 'astromech';
+import { definePluginTable } from 'astromech';
 import { BACKUPS_PACKAGE } from '../types';
 
 export const backupRunsTable = definePluginTable(BACKUPS_PACKAGE, 'runs', ({ col }) => ({

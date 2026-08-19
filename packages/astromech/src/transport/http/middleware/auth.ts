@@ -6,10 +6,10 @@
  * the session, so a route mounted below one of these is the first to pay for it.
  */
 
+import type { Role, User } from '@/types/index';
 import { createMiddleware } from 'hono/factory';
 import { getCurrentRole, getCurrentUser } from '@/request-context/index';
 import { unauthorized } from './errors';
-import type { User, Role } from '@/types/index';
 
 export type AuthVariables = {
     user: User;

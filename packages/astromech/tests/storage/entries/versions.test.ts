@@ -5,11 +5,11 @@
  * wrapper does not expose.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { Db } from '@/database/types';
 import { createTestDb, setupTestConfig } from '@tests/harness';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { createBuiltInEntryStorage } from '@/entries/storage/built-in';
 import { createVersionStorage } from '@/entries/storage/versions';
-import type { Db } from '@/database/types';
 
 let db: Db;
 let entryStorage: ReturnType<typeof createBuiltInEntryStorage>;

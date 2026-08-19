@@ -10,9 +10,9 @@
  * `methods.ts` declare that with `sessionScoped`; `decisions/0037` is why.
  */
 
+import type { NotificationRow } from './schema';
 import type { Notification, NotifyInput } from '@/types/index';
 import { createUserStorage } from '@/users/storage';
-import type { NotificationRow } from './schema';
 import { createNotificationStorage } from './storage';
 
 /** The verbs, with the user each acts for named. */

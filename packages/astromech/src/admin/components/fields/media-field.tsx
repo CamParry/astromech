@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useFieldControl } from '@/admin/components/fields/field-control-context';
-import { useTranslation } from 'react-i18next';
+import type { MediaBrowserQuery } from '@/admin/types/media';
+import type { BaseFieldProps } from '@/types/index';
 import {
     ChevronDown,
     ChevronUp,
@@ -11,12 +10,13 @@ import {
     Video,
     X,
 } from 'lucide-react';
-import type { BaseFieldProps } from '@/types/index';
-import { astromechClient } from '@/transport/http/client/index';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useFieldControl } from '@/admin/components/fields/field-control-context';
+import { MediaPicker } from '@/admin/components/media/media-picker';
 import { Modal } from '@/admin/components/ui/modal';
 import { Spinner } from '@/admin/components/ui/spinner';
-import { MediaPicker } from '@/admin/components/media/media-picker';
-import type { MediaBrowserQuery } from '@/admin/types/media';
+import { astromechClient } from '@/transport/http/client/index';
 import './media-field.css';
 
 type MediaItem = {

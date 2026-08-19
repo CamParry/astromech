@@ -1,3 +1,4 @@
+import type { JsonObject, User } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
@@ -5,12 +6,11 @@ import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { assertNoFieldErrors, parseFields } from '@/fields/pipeline';
 import { getCurrentUser } from '@/request-context/index';
-import type { JsonObject, User } from '@/types/index';
-import { createUserSchema } from '../schema';
-import { createUserStorage } from '../storage';
-import { validate } from '../internal/validate';
 import { indexUserRelationships } from '../internal/relationships';
 import { toUser } from '../internal/to-user';
+import { validate } from '../internal/validate';
+import { createUserSchema } from '../schema';
+import { createUserStorage } from '../storage';
 import { query } from './query';
 
 /** Create a CMS user, running its custom fields through the field pipeline. */

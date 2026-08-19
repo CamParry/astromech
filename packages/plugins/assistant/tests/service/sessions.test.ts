@@ -3,16 +3,15 @@
  * a new conversation does to the calls the last one left held.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-import type { PluginContext, ToolDefinition } from 'astromech';
-import { buildSessionsService } from '../../src/service/sessions';
 import type { ChatSession } from '../../src/service/sessions';
 import type { ChatMessage, ResolvedAssistantOptions } from '../../src/types';
-import { approvalRow, fakeApprovals } from '../loop/fake-approvals';
 import type { FakeApprovals } from '../loop/fake-approvals';
-import { fakeSessions } from '../sessions/fake-sessions';
 import type { FakeSessions } from '../sessions/fake-sessions';
+import type { PluginContext, ToolDefinition } from 'astromech';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildSessionsService } from '../../src/service/sessions';
+import { approvalRow, fakeApprovals } from '../loop/fake-approvals';
+import { fakeSessions } from '../sessions/fake-sessions';
 
 vi.mock('astromech', () => ({
     defineServiceMethod: (method: unknown) => method,

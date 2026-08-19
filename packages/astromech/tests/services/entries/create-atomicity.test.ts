@@ -5,14 +5,14 @@
  * rolled back and no orphaned record is left in the database.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
-import { rmSync } from 'node:fs';
-import { createFileTestDb, setupTestConfig } from '@tests/harness';
-import { entriesService } from '@/entries/index';
-import { getDb } from '@/database/registry';
 import type * as RelationshipStorageModule from '@/database/storage/relationships';
+import { rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createFileTestDb, setupTestConfig } from '@tests/harness';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getDb } from '@/database/registry';
+import { entriesService } from '@/entries/index';
 
 // `create` persists the row and its index rows inside a storage transaction.
 // Fail `replaceForSource` so the transaction rolls back; everything else

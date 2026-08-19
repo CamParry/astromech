@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { writeFile, unlink } from 'node:fs/promises';
-import { parseJsonArg, printResult, printError } from '@/transport/cli/output';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { parseJsonArg, printError, printResult } from '@/transport/cli/output';
 
 afterEach(() => {
     process.exitCode = 0;

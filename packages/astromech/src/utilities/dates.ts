@@ -8,7 +8,7 @@
  * locale is used.
  */
 
-import { formatDistanceToNow, parseISO, isValid } from 'date-fns';
+import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
 
 let displayLocale: string | undefined;
 const formatterCache = new Map<string, Intl.DateTimeFormat>();

@@ -17,8 +17,8 @@ under the name `assistant`:
 ```ts
 // astromech.config.ts
 import { anthropic } from '@ai-sdk/anthropic';
-import { defineConfig } from 'astromech';
 import { assistant } from '@astromech/assistant';
+import { defineConfig } from 'astromech';
 
 export default defineConfig({
     ai: { models: { assistant: anthropic('claude-opus-5') } },
@@ -106,8 +106,8 @@ every other role opts in by naming the key.
 
 ```ts
 // astromech.config.ts
-import { builtInRole, defineConfig } from 'astromech';
 import { assistant } from '@astromech/assistant';
+import { builtInRole, defineConfig } from 'astromech';
 
 export default defineConfig({
     plugins: [assistant()],

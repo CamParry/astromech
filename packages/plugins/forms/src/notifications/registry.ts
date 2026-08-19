@@ -3,9 +3,9 @@
  * block to the form editor and a delivery path to `sendNotifications`.
  */
 
+import type { NotificationProvider } from './types';
 import type { Block } from 'astromech';
 import { emailNotification } from './providers/email';
-import type { NotificationProvider } from './types';
 
 export const NOTIFICATION_PROVIDERS: readonly NotificationProvider[] = [
     emailNotification,

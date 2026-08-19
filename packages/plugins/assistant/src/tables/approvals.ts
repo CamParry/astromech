@@ -4,8 +4,8 @@
  * name and comes out as `plugin_assistant_approvals`.
  */
 
-import { definePluginTable } from 'astromech';
 import type { TableInsert, TableSelect } from 'astromech';
+import { definePluginTable } from 'astromech';
 import { ASSISTANT_PACKAGE } from '../types';
 
 export const approvalsTable = definePluginTable(

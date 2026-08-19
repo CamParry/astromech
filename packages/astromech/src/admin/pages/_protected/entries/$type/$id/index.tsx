@@ -6,15 +6,15 @@
  * plugin route.
  */
 
-import React from 'react';
+import type { EntriesMount } from '@/admin/components/entries/mount';
+import type { EntriesService } from '@/types/index';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { astromechClient } from '@/transport/http/client/index';
+import React from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntryEditPage } from '@/admin/components/entries/entry-edit-page';
 import { entryQueryOptions } from '@/admin/hooks/entries';
-import type { EntriesService } from '@/types/index';
-import type { EntriesMount } from '@/admin/components/entries/mount';
 import { pluginEntryRouteParams } from '@/admin/utilities/entry-admin-path';
+import { astromechClient } from '@/transport/http/client/index';
 
 function EntryEditRoutePage(): React.ReactElement {
     const { type, id } = Route.useParams();

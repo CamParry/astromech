@@ -47,15 +47,6 @@
  * predicate returns too many rows.
  */
 
-import type { Expression, ExpressionBuilder, Kysely, SqlBool } from 'kysely';
-import { getDb } from '@/database/registry';
-import {
-    decodeWith,
-    encodePatchWith,
-    encodeWith,
-    kyselyTableKey,
-} from '@/database/codec';
-import { AstromechError } from '@/errors/index';
 import type {
     ColumnRuntime,
     Table,
@@ -64,6 +55,15 @@ import type {
     TableUpdate,
 } from '@/database/define-table';
 import type { Db } from '@/database/types';
+import type { Expression, ExpressionBuilder, Kysely, SqlBool } from 'kysely';
+import {
+    decodeWith,
+    encodePatchWith,
+    encodeWith,
+    kyselyTableKey,
+} from '@/database/codec';
+import { getDb } from '@/database/registry';
+import { AstromechError } from '@/errors/index';
 
 // ============================================================================
 // Query-layer types

@@ -1,11 +1,11 @@
+import type { ImageFormat } from '@/media/serving/image/url.shared';
+import type { ImageDriver, ImageSource, StorageDriver } from '@/types/index';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb, setupTestConfig, makeTestConfig } from '@tests/harness';
-import { setStorageDriver } from '@/storage/registry';
-import { setImageConfig } from '@/media/serving/image/registry';
 import { mediaService } from '@/media/service';
 import { handleMediaRequest } from '@/media/serving/handler';
-import type { StorageDriver, ImageDriver, ImageSource } from '@/types/index';
-import type { ImageFormat } from '@/media/serving/image/url.shared';
+import { setImageConfig } from '@/media/serving/image/registry';
+import { setStorageDriver } from '@/storage/registry';
 
 // ---------------------------------------------------------------------------
 // Minimal JPEG header bytes (SOF0 marker with 1x1 dimensions)

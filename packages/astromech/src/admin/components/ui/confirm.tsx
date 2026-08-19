@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { AlertDialog } from '@base-ui/react/alert-dialog';
-import { Button } from './button';
 import type { ButtonVariant } from './button';
+import { AlertDialog } from '@base-ui/react/alert-dialog';
+import React, { createContext, useCallback, useContext, useState } from 'react';
+import { Button } from './button';
 
 type ConfirmOptions = {
     title: string;

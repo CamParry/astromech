@@ -34,8 +34,8 @@
  * values (e.g. a setting `value` of `"123"`).
  */
 
-import type { Insertable, Updateable } from 'kysely';
 import type { KyselyOf, Table, TableSelect } from '@/database/define-table';
+import type { Insertable, Updateable } from 'kysely';
 import { AstromechError } from '@/errors/index';
 
 // ── Plugin tables (registered at boot) ──────────────────────────────────────

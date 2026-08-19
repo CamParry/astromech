@@ -2,8 +2,8 @@
  * Slider — range input built on Base UI Slider.
  */
 
-import React from 'react';
 import { Slider as BaseSlider } from '@base-ui/react/slider';
+import React from 'react';
 import { useFieldControl } from '@/admin/components/fields/field-control-context';
 
 type SliderProps = {

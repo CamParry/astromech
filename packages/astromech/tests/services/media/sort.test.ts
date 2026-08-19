@@ -7,12 +7,12 @@
  * ordering: an unknown column must fall back, never reach the query builder.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { SortOption, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { setStorageDriver } from '@/storage/registry';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { mediaService } from '@/media/service';
 import { createMediaStorage } from '@/media/storage';
-import type { SortOption, StorageDriver } from '@/types/index';
+import { setStorageDriver } from '@/storage/registry';
 
 const noopStorage: StorageDriver = {
     name: 'noop',

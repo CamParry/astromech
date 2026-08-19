@@ -5,8 +5,8 @@ a model can reach one; leave it out and nothing breaks, the features that need a
 model just stay off.
 
 ```ts
-import { defineConfig } from 'astromech';
 import { anthropic } from '@ai-sdk/anthropic';
+import { defineConfig } from 'astromech';
 
 export default defineConfig({
     ai: {
@@ -104,8 +104,8 @@ ai: {
 ## Reaching the model from your own code
 
 ```ts
-import { getModel, hasModel } from 'astromech';
 import { generateText } from 'ai';
+import { getModel, hasModel } from 'astromech';
 
 const model = getModel('my-plugin');
 if (model === undefined) return; // no `ai` block — the feature is off

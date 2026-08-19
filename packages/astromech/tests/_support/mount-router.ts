@@ -6,11 +6,11 @@
  * exercises the router's own permission checks against the real DB.
  */
 
-import { OpenAPIHono } from '@hono/zod-openapi';
-import type { Context, Hono, Next } from 'hono';
-import { runWithContext } from '@/request-context/index';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { Role, User } from '@/types/index';
+import type { Context, Hono, Next } from 'hono';
+import { OpenAPIHono } from '@hono/zod-openapi';
+import { runWithContext } from '@/request-context/index';
 
 export type RouteEnv = { Variables: AuthVariables };
 

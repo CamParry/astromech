@@ -7,12 +7,10 @@
  * schema path is exercised end to end.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
-import { sql } from 'kysely';
+import type { AstromechConfig, PluginDefinition } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { entriesService as api } from '@/entries/service';
-import { createMediaStorage } from '@/media/storage';
-import { tableStorage } from '@/entries/storage/table';
+import { sql } from 'kysely';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { defineTable } from '@/database/define-table';
 import {
     InvalidReferencesFilterError,
@@ -20,7 +18,9 @@ import {
     UnknownSortKeyError,
     UnknownWhereKeyError,
 } from '@/entries/errors';
-import type { AstromechConfig, PluginDefinition } from '@/types/index';
+import { entriesService as api } from '@/entries/service';
+import { tableStorage } from '@/entries/storage/table';
+import { createMediaStorage } from '@/media/storage';
 
 const linksTable = defineTable('test_links', ({ col }) => ({
     id: col.id(),

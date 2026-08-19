@@ -8,8 +8,8 @@
  * definition shared by the list page and the cells that emit links
  * (title-cell, translations-cell).
  */
-import { Link as RouterLink } from '@tanstack/react-router';
 import type * as React from 'react';
+import { Link as RouterLink } from '@tanstack/react-router';
 
 export type LinkProps = Omit<React.ComponentProps<typeof RouterLink>, 'to' | 'search'> & {
     to: string;

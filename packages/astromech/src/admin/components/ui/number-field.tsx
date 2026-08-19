@@ -3,9 +3,9 @@
  * Built on Base UI NumberField.
  */
 
-import React from 'react';
 import { NumberField as BaseNumberField } from '@base-ui/react/number-field';
 import { clsx } from 'clsx';
+import React from 'react';
 
 type NumberFieldProps = {
     id?: string;

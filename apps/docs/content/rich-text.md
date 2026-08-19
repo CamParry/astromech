@@ -65,7 +65,7 @@ Both ship from the `astromech` barrel, and both run over the same extension set
 the editor and the schema use, so nothing can drift between them.
 
 ```ts
-import { renderRichText, parseRichText } from 'astromech';
+import { parseRichText, renderRichText } from 'astromech';
 ```
 
 **`renderRichText(json, allow?)`** turns a document into a sanitized HTML

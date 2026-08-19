@@ -15,32 +15,8 @@ import type {
     FieldType,
     FieldValidator,
 } from '@/types/fields';
-import { RESERVED_KEY } from './reserved-keys';
 import {
-    coerceEmail,
-    validateEmail,
-    coerceUrl,
-    validateUrl,
-    validateSlug,
-    validateJson,
-    coerceKeyValue,
-    validateKeyValue,
-    validateChoice,
-    validateMultiChoice,
-    coerceNumber,
-    validateNumber,
-    validateBoolean,
-    coerceDate,
-    validateDate,
-    validateReference,
-    validateText,
-    validateColor,
-    validateLink,
-    validateGroup,
-    validateItemList,
-} from './built-in-rules';
-import { coerceRichText, validateRichText } from './rich-text/validate';
-import {
+    blocks,
     boolean,
     checkboxGroup,
     color,
@@ -64,9 +40,33 @@ import {
     text,
     textarea,
     tree,
-    blocks,
     url,
 } from '@/fields/builder';
+import {
+    coerceDate,
+    coerceEmail,
+    coerceKeyValue,
+    coerceNumber,
+    coerceUrl,
+    validateBoolean,
+    validateChoice,
+    validateColor,
+    validateDate,
+    validateEmail,
+    validateGroup,
+    validateItemList,
+    validateJson,
+    validateKeyValue,
+    validateLink,
+    validateMultiChoice,
+    validateNumber,
+    validateReference,
+    validateSlug,
+    validateText,
+    validateUrl,
+} from './built-in-rules';
+import { RESERVED_KEY } from './reserved-keys';
+import { coerceRichText, validateRichText } from './rich-text/validate';
 
 // ---------------------------------------------------------------------------
 // Container children — normalization + scope discovery

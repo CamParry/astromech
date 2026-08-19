@@ -1,39 +1,39 @@
-import React, { useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { clsx } from 'clsx';
-import {
-    DndContext,
-    PointerSensor,
-    KeyboardSensor,
-    useSensor,
-    useSensors,
-    closestCenter,
-} from '@dnd-kit/core';
+import type { BaseFieldProps, Field } from '@/types/index';
 import type { DragEndEvent, Modifier } from '@dnd-kit/core';
-import {
-    SortableContext,
-    useSortable,
-    verticalListSortingStrategy,
-    sortableKeyboardCoordinates,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { Collapsible } from '@base-ui/react';
 import {
-    GripVertical,
-    ChevronUp,
+    closestCenter,
+    DndContext,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core';
+import {
+    SortableContext,
+    sortableKeyboardCoordinates,
+    useSortable,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { clsx } from 'clsx';
+import {
     ChevronDown,
+    ChevronUp,
     Copy,
-    Trash2,
-    EyeOff,
     Eye,
+    EyeOff,
+    GripVertical,
     Plus,
+    Trash2,
 } from 'lucide-react';
-import type { BaseFieldProps, Field } from '@/types/index';
+import React, { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FormField } from '@/admin/components/fields/form-field';
 import { InlineTitle } from '@/admin/components/fields/inline-title';
+import { buildDefaultValues } from '@/fields/defaults';
 // Deep import: the `fields/` barrel reaches server code (virtual config / DB).
 import { formatInstancePath, parseInstancePath } from '@/fields/field-path';
-import { buildDefaultValues } from '@/fields/defaults';
 import './repeater-field.css';
 
 // Lock dragging to the vertical axis — verticalListSortingStrategy only governs

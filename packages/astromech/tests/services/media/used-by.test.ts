@@ -6,14 +6,14 @@
  * pointing at a media item was ever written and this panel could not exist.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { AstromechConfig, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { setStorageDriver } from '@/storage/registry';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService } from '@/entries/service';
 import { mediaService } from '@/media/service';
 import { createMediaStorage } from '@/media/storage';
+import { setStorageDriver } from '@/storage/registry';
 import { usersService } from '@/users/service';
-import type { AstromechConfig, StorageDriver } from '@/types/index';
 
 const noopStorage: StorageDriver = {
     name: 'noop',

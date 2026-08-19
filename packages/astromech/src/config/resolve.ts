@@ -9,14 +9,14 @@ import type {
     ResolvedConfig,
     ResolvedEntryType,
 } from '@/types/index';
-import { BUILT_IN_SUPPORTS } from '@/utilities/entry-capabilities';
-import { toResolvedEntryType } from '@/config/entry-types';
 import { resolveAdminPage } from '@/config/admin-pages';
+import { toResolvedEntryType } from '@/config/entry-types';
 import { assertPluginsValid, resolvePluginEntries } from '@/config/plugin-entries';
 import { resolvePublicSettingKeys } from '@/config/public-settings';
-import { assertQualifiedRelationshipTargets } from '@/config/validate/relationships';
 import { assertMediaAccessCompatible } from '@/config/validate/media-access';
+import { assertQualifiedRelationshipTargets } from '@/config/validate/relationships';
 import { resolveRoles } from '@/permissions/index';
+import { BUILT_IN_SUPPORTS } from '@/utilities/entry-capabilities';
 
 /** Resolve the config with defaults and plugin merging. */
 export function resolveConfig(config: AstromechConfig): ResolvedConfig {

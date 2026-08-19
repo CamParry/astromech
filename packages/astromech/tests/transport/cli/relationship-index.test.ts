@@ -6,25 +6,25 @@
  * stored data. Everything else here is repair behaviour — detecting a deleted
  * row, a bogus row, staying idempotent, and staying inside a `--type` scope.
  */
-
-import { beforeEach, describe, expect, it } from 'vitest';
-import { sql } from 'kysely';
+import type { RelationshipRow } from '@/database/schema';
+import type { AstromechConfig, PluginDefinition, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { sql } from 'kysely';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { defineTable } from '@/database/define-table';
+import { relationshipsTable } from '@/database/schema';
+import { createStorage } from '@/database/storage/create-storage';
+import { createRelationshipStorage } from '@/database/storage/relationships';
+import { entriesService as api } from '@/entries/service';
+import { tableStorage } from '@/entries/storage/table';
+import { mediaService } from '@/media/service';
+import { createMediaStorage } from '@/media/storage';
+import { setStorageDriver } from '@/storage/registry';
 import {
     checkRelationshipIndex,
     rebuildRelationshipIndex,
 } from '@/transport/cli/relationship-index';
-import { createStorage } from '@/database/storage/create-storage';
-import { createRelationshipStorage } from '@/database/storage/relationships';
-import { relationshipsTable, type RelationshipRow } from '@/database/schema';
-import { entriesService as api } from '@/entries/service';
-import { mediaService } from '@/media/service';
-import { createMediaStorage } from '@/media/storage';
 import { usersService } from '@/users/service';
-import { tableStorage } from '@/entries/storage/table';
-import { defineTable } from '@/database/define-table';
-import { setStorageDriver } from '@/storage/registry';
-import type { AstromechConfig, PluginDefinition, StorageDriver } from '@/types/index';
 
 /** Media reads resolve a public URL through the driver; nothing here needs bytes. */
 const noopStorage: StorageDriver = {

@@ -8,8 +8,8 @@
  * body schema alone would describe half the call.
  */
 
-import { z } from 'zod';
 import type { ServiceMethodContract } from '@/types/index';
+import { z } from 'zod';
 import { setSettingSchema } from './schema';
 
 export const settingsContract = {

@@ -7,11 +7,11 @@
  * identity through the request scope instead of hand-building a user shape.
  */
 
+import type { Role, User } from '@/types/index';
 import { getConfig } from '@/config/registry';
+import { resolveRole } from '@/permissions/index';
 import { getAuth } from './auth';
 import { createUserStorage } from './storage';
-import { resolveRole } from '@/permissions/index';
-import type { User, Role } from '@/types/index';
 
 /** What Better Auth's `getSession` resolves to — null when there is no session. */
 type GetSessionResult = Awaited<

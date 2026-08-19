@@ -1,5 +1,3 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createElement } from 'react';
 import type {
     EmailMessage,
     EntryCreateContext,
@@ -10,7 +8,15 @@ import type {
     Role,
     User,
 } from '@/types/index';
+import { createElement } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getCronJobs } from '@/cron/registry';
 import { setEmailDriver } from '@/email/registry';
+// This test drives registerPlugins directly (no harness), so wire the
+// entry-access port that registerPlugins now depends on.
+import { setEntryAccess } from '@/entries/plugin-access';
+import { defineHook } from '@/index';
+import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import {
     bootPlugins,
     createPluginContext,
@@ -23,15 +29,9 @@ import {
     runBeforeHooks,
     setPluginMethods,
 } from '@/plugins/runtime/plugin-runtime';
-import { defineHook } from '@/index';
-// This test drives registerPlugins directly (no harness), so wire the
-// entry-access port that registerPlugins now depends on.
-import { setEntryAccess } from '@/entries/plugin-access';
-import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
+import { globals } from '@/utilities/registry';
 
 setEntryAccess();
-import { getCronJobs } from '@/cron/registry';
-import { globals } from '@/utilities/registry';
 
 const config: ResolvedConfig = {
     basePath: '/cms',
