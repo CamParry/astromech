@@ -2,12 +2,12 @@
  * Search and type controls for a media surface, rendered inside its toolbar.
  */
 
+import type { MediaBrowserQuery, TypeFilter } from '@/admin/types/media';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SearchInput, Select } from '@/admin/components/ui/index';
 import { useDebounce } from '@/admin/hooks/use-debounce';
 import { TYPE_FILTER_KEYS, TYPE_FILTER_VALUES } from '@/admin/types/media';
-import type { MediaBrowserQuery, TypeFilter } from '@/admin/types/media';
 
 const SEARCH_DEBOUNCE_MS = 250;
 

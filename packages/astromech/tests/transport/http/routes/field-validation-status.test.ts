@@ -25,7 +25,8 @@
  * worked; they are not what is under test here.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AuthVariables } from '@/transport/http/middleware/auth';
+import type { AstromechConfig, Role, StorageDriver, User } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import {
     createTestDb,
@@ -33,17 +34,16 @@ import {
     makeTestConfig,
     setupTestConfig,
 } from '@tests/harness';
-import { setStorageDriver } from '@/storage/registry';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { entriesService } from '@/entries/index';
-import { mediaService } from '@/media/index';
-import { onError } from '@/transport/http/middleware/errors';
 import { ValidationError } from '@/errors/validation';
+import { mediaService } from '@/media/index';
+import { setStorageDriver } from '@/storage/registry';
+import { onError } from '@/transport/http/middleware/errors';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
-import { usersRouter } from '@/transport/http/routes/users';
 import { mediaRouter } from '@/transport/http/routes/media';
 import { settingsRouter } from '@/transport/http/routes/settings';
-import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { AstromechConfig, Role, StorageDriver, User } from '@/types/index';
+import { usersRouter } from '@/transport/http/routes/users';
 
 // ---------------------------------------------------------------------------
 // Harness

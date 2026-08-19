@@ -9,16 +9,16 @@
  * export default defineConfig({ integrations: [astromech()] });
  */
 
-import { fileURLToPath } from 'node:url';
-import type { AstroIntegration } from 'astro';
 import type { AstromechConfig, ResolvedConfig } from '@/types/index';
-import { resolveConfig } from '@/config/resolve';
+import type { AstroIntegration } from 'astro';
+import { fileURLToPath } from 'node:url';
 import { loadConfigFile } from '@/config/load';
-import { createViteConfig } from '@/integrations/astro/vite';
-import { registerRoutes } from '@/integrations/astro/routes';
-import { collectPluginFieldTypes } from '@/plugins/runtime/plugin-fields';
+import { resolveConfig } from '@/config/resolve';
 import { runMigrations } from '@/database/migrations';
 import { AstromechError } from '@/errors/index';
+import { registerRoutes } from '@/integrations/astro/routes';
+import { createViteConfig } from '@/integrations/astro/vite';
+import { collectPluginFieldTypes } from '@/plugins/runtime/plugin-fields';
 
 export type AstromechIntegrationOptions = {
     /** Path to the site's astromech.config.ts, resolved against the Astro project root. */

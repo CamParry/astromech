@@ -1,8 +1,8 @@
-import { getStorageDriver } from '@/storage/registry';
 import { deletePrefix } from '@/storage/prefix';
-import { createMediaStorage } from '../storage';
+import { getStorageDriver } from '@/storage/registry';
 import { originalKey } from '../internal/keys';
 import { variantPrefix } from '../serving/image/url.shared';
+import { createMediaStorage } from '../storage';
 
 /** Delete a media row along with its original bytes and every derived variant. */
 export async function deleteMedia(params: { id: string }): Promise<void> {

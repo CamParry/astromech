@@ -5,11 +5,11 @@
  * Pure: builds a schema from the same extensions the renderer uses.
  */
 
-import { Node } from '@tiptap/pm/model';
-import type { JSONContent } from '@tiptap/core';
-import { schemaFor } from './schema';
-import { findUnsafeLink } from './safe-links';
 import type { FieldValidator, RichTextAllow } from '@/types/fields';
+import type { JSONContent } from '@tiptap/core';
+import { Node } from '@tiptap/pm/model';
+import { findUnsafeLink } from './safe-links';
+import { schemaFor } from './schema';
 
 /**
  * Reject anything that is not a valid rich-text document for this field.

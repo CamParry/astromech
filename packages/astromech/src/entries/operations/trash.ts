@@ -1,10 +1,10 @@
+import type { EntryStorage } from '../storage/types';
 import { createRelationshipStorage } from '@/database/storage/relationships';
-import { getEntryStorage } from '../storage/registry';
-import { loadAndAssertType } from '../internal/records';
-import { assertCapability } from '../internal/type-config';
 import { runBulkVoid } from '../internal/bulk';
 import { runDeleteWithHooks } from '../internal/hooks';
-import type { EntryStorage } from '../storage/types';
+import { loadAndAssertType } from '../internal/records';
+import { assertCapability } from '../internal/type-config';
+import { getEntryStorage } from '../storage/registry';
 
 /** Soft-delete a single entry (policy). */
 async function trashOne(

@@ -3,12 +3,12 @@
  * call, and resolving the paused turn the next request carries back.
  */
 
-import type { ToolCallPart, ToolResultPart } from 'ai';
-import type { ToolDefinition } from 'astromech';
-import { invokeTool } from './tools';
-import { toApprovalRequest } from '../approvals/request';
 import type { ApprovalsStorage, ClaimedApproval } from '../approvals/storage';
 import type { ApprovalDecision, ApprovalRequest, ChatMessage } from '../types';
+import type { ToolCallPart, ToolResultPart } from 'ai';
+import type { ToolDefinition } from 'astromech';
+import { toApprovalRequest } from '../approvals/request';
+import { invokeTool } from './tools';
 
 /** A mutating call the model made, paired with the tool it named. */
 type MutatingCall = { call: ToolCallPart; tool: ToolDefinition };

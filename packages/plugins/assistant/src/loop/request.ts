@@ -3,10 +3,10 @@
  * the AI context placed where the API accepts it.
  */
 
-import type { ModelMessage } from 'ai';
-import { formatAIContextMessage } from 'astromech';
-import type { AIContextItem } from 'astromech';
 import type { ChatMessage } from '../types';
+import type { ModelMessage } from 'ai';
+import type { AIContextItem } from 'astromech';
+import { formatAIContextMessage } from 'astromech';
 
 /**
  * The system prompt and turns to send. AI context goes after the final user

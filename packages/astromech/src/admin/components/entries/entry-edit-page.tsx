@@ -11,12 +11,12 @@
  * sidebar right.
  */
 
-import React from 'react';
-import { useNavigate, Link as RouterLink } from '@tanstack/react-router';
+import type { EntriesMount } from './mount';
+import type { EntryStatus } from '@/types/index';
+import { Menu } from '@base-ui/react/menu';
 import { useStore } from '@tanstack/react-form';
 import { useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { Menu } from '@base-ui/react/menu';
+import { Link as RouterLink, useNavigate } from '@tanstack/react-router';
 import {
     ArrowLeft,
     Copy,
@@ -27,59 +27,59 @@ import {
     MoreHorizontal,
     Trash2,
 } from 'lucide-react';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import {
-    Button,
-    Badge,
-    Panel,
-    Breadcrumb,
-    Input,
-    PageLoading,
-    useToast,
-    Page,
-    PageHeader,
-    PageHeaderActions,
-    PageTitle,
-    Tooltip,
-    FormLayout,
-    FormLayoutContent,
-    Stack,
-    PageContent,
-    useConfirm,
-} from '@/admin/components/ui/index';
 import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal';
-import { entryLabel } from '@/admin/components/entries/entry-label';
 import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer';
+import { entryLabel } from '@/admin/components/entries/entry-label';
+import { PublishPanel } from '@/admin/components/entries/PublishPanel';
 import {
     FieldErrorsProvider,
     FieldWarningsProvider,
 } from '@/admin/components/fields/field-errors-context';
-import { EntryFormErrors } from './entry-form-errors';
 import { FieldValidationProvider } from '@/admin/components/fields/field-validation-context';
-import { EntryNamespaceProvider, namespaceForScope } from '@/admin/i18n/entry-namespace';
 import { LocaleSwitcher } from '@/admin/components/translations/LocaleSwitcher';
-import { PublishPanel } from '@/admin/components/entries/PublishPanel';
 import {
-    useEntryForm,
-    usePermissions,
-    useEntry,
-    useEntryVersions,
-    useTrashEntry,
-    useDuplicateEntry,
-    useGetStaged,
+    Badge,
+    Breadcrumb,
+    Button,
+    FormLayout,
+    FormLayoutContent,
+    Input,
+    Page,
+    PageContent,
+    PageHeader,
+    PageHeaderActions,
+    PageLoading,
+    PageTitle,
+    Panel,
+    Stack,
+    Tooltip,
+    useConfirm,
+    useToast,
+} from '@/admin/components/ui/index';
+import { useAIContext } from '@/admin/context/ai-context';
+import {
     useCreateStaged,
-    useMergeStaged,
     useDeleteStaged,
+    useDuplicateEntry,
+    useEntry,
+    useEntryForm,
+    useEntryVersions,
+    useGetStaged,
     useIssuePreviewToken,
+    useMergeStaged,
+    usePermissions,
     useRevokePreviewToken,
+    useTrashEntry,
 } from '@/admin/hooks/index';
 import { scopedEntryKeys } from '@/admin/hooks/use-query-keys';
-import type { EntryStatus } from '@/types/index';
-import { resolveEntryUrl } from '@/entries/utils/url.shared';
+import { EntryNamespaceProvider, namespaceForScope } from '@/admin/i18n/entry-namespace';
 import { resolveAdminEntryType, resolveForm } from '@/admin/rendering/resolve';
+import { resolveEntryUrl } from '@/entries/utils/url.shared';
 import { resolveContentLocale } from '@/utilities/locale';
-import { useAIContext } from '@/admin/context/ai-context';
-import type { EntriesMount } from './mount';
+import { EntryFormErrors } from './entry-form-errors';
 
 // Surface link bases are runtime strings; address `Link` by string `to`.
 type LinkProps = Omit<React.ComponentProps<typeof RouterLink>, 'to'> & { to: string };

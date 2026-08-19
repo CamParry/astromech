@@ -7,16 +7,15 @@
  * they are also where the 401 for an unauthenticated request is pinned.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Role, User } from '@/types/index';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHttpApp } from '@/transport/http/index';
 import { usersService } from '@/users/index';
-import type { Role, User } from '@/types/index';
+import { getSession } from '@/users/session';
 
 vi.mock('@/users/session', () => ({ getSession: vi.fn() }));
-
-import { getSession } from '@/users/session';
 
 const mockGetSession = vi.mocked(getSession);
 

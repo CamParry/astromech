@@ -14,9 +14,20 @@
  * contract change that an adapter fails to follow fails here.
  */
 
+import type {
+    AstromechConfig,
+    DatabaseDriver,
+    MethodManifest,
+    PluginDefinition,
+    StorageDriver,
+} from '@/types/index';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { generateMethodManifest } from '@/codegen/method-manifest';
+import { resolveConfig } from '@/config/resolve';
+import { filterMethods } from '@/policies/method-filter';
+import { buildTools } from '@/transport/mcp/tools';
+import { buildDispatch } from '@/transport/tools/dispatch';
 
 // The dispatcher resolves the entries service at CALL time, so a stub here is
 // enough to observe exactly what arguments a tool passes it — which is the only
@@ -26,17 +37,6 @@ vi.mock('@/entries/service', () => ({
         get: async (params: unknown) => params,
     },
 }));
-import { resolveConfig } from '@/config/resolve';
-import { filterMethods } from '@/policies/method-filter';
-import { buildDispatch } from '@/transport/tools/dispatch';
-import { buildTools } from '@/transport/mcp/tools';
-import type {
-    AstromechConfig,
-    DatabaseDriver,
-    MethodManifest,
-    PluginDefinition,
-    StorageDriver,
-} from '@/types/index';
 
 // ============================================================================
 // Stubs — resolveConfig requires a db + storage but never calls them here

@@ -5,10 +5,10 @@
  * column. Root types are unaffected.
  */
 
-import { beforeAll, describe, expect, it } from 'vitest';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { entriesService } from '@/entries/service';
 import type { AstromechConfig, PluginDefinition } from '@/types/index';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { entriesService } from '@/entries/service';
 
 const redirectsPlugin: PluginDefinition = {
     package: '@astromech/redirects',

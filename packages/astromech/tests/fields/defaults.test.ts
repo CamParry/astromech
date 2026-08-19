@@ -5,8 +5,8 @@
  * defaults on `create` only (`fields/pipeline.ts`).
  */
 
-import { describe, expect, it } from 'vitest';
 import type { Field } from '@/types/fields';
+import { describe, expect, it } from 'vitest';
 import { buildDefaultValues } from '@/fields/defaults';
 
 function field(def: Partial<Field> & { name: string; type: string }): Field {

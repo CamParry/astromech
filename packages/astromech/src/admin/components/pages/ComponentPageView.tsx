@@ -9,10 +9,9 @@
  * has no plugin identity, so it gets no `PluginUiProvider` and its components
  * must not call `useAstromechPlugin()`.
  */
-
+import type { PluginUiIdentity } from '@/admin/context/plugin';
 import React from 'react';
 import { ComponentErrorBoundary } from '@/admin/components/pages/ComponentErrorBoundary';
-import { PluginUiProvider, type PluginUiIdentity } from '@/admin/context/plugin';
 import {
     Page,
     PageContent,
@@ -20,6 +19,7 @@ import {
     PageTitle,
     Spinner,
 } from '@/admin/components/ui/index';
+import { PluginUiProvider } from '@/admin/context/plugin';
 
 export type ComponentPageViewProps = {
     /** Stable key for the module-level React.lazy cache. */

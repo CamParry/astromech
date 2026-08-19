@@ -1,12 +1,12 @@
+import type {
+    ValidationFinding,
+    ValidationReport,
+} from '@/transport/cli/validate-stored-content';
 import { defineCommand } from 'citty';
+import { createAstromech } from '@/astromech';
+import { validateStoredContent } from '@/transport/cli/validate-stored-content';
 import { loadConfig, loadRawConfig } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
-import { createAstromech } from '@/astromech';
-import {
-    validateStoredContent,
-    type ValidationFinding,
-    type ValidationReport,
-} from '@/transport/cli/validate-stored-content';
 
 export default defineCommand({
     meta: {

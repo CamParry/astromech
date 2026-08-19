@@ -6,8 +6,8 @@
  * same prefix.
  */
 
-import { beforeAll, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { getAuth } from '@/users/auth';
 
 // `getAuth()` builds once and memoises into the registry slot, so the slot is

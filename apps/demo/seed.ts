@@ -11,15 +11,15 @@
  *   tsx demo/seed.ts
  */
 
-import { hashPassword } from 'better-auth/crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
-import sharpLib from 'sharp';
-import * as schema from 'astromech/database/schema';
-import { libsql } from 'astromech/database/libsql';
-import { collectRelationshipEdges, encodeWith } from 'astromech';
 import type { Field, PluginDB } from 'astromech';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { redirectsTable } from '@astromech/redirects/tables';
-import { readImageDimensions, contentVersion, sharp } from 'astromech/media/image/sharp';
+import { collectRelationshipEdges, encodeWith } from 'astromech';
+import { libsql } from 'astromech/database/libsql';
+import * as schema from 'astromech/database/schema';
+import { contentVersion, readImageDimensions, sharp } from 'astromech/media/image/sharp';
+import { hashPassword } from 'better-auth/crypto';
+import sharpLib from 'sharp';
 import config from './astromech.config';
 
 // ProseMirror JSON builders for richtext seed content (StarterKit schema)

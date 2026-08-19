@@ -16,7 +16,7 @@
 
 import { registerEntryAccess } from '@/plugins/runtime/entry-access';
 import { qualifyEntryType } from '@/utilities/entry-type-ids';
-import { setEntryStorage, resetEntryStorageOverrides } from './storage/registry';
+import { resetEntryStorageOverrides, setEntryStorage } from './storage/registry';
 
 /** Set the entries implementation on the plugin runtime port. Idempotent. */
 export function setEntryAccess(): void {

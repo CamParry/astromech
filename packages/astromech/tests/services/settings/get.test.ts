@@ -10,10 +10,10 @@
  * values round-trip verbatim.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { settingsService } from '@/settings/service';
 import type { AstromechConfig } from '@/types/index';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { settingsService } from '@/settings/service';
 
 /** `site` and every `site:<locale>` variant are public; `secret` is not. */
 function makePublicConfig(): AstromechConfig {

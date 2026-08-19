@@ -10,14 +10,14 @@
  * suite stays well under the runtime budget.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
-import { defineHook } from '@/index';
-import { createTestDb, registerTestPlugins, setupTestConfig } from '@tests/harness';
-import { entriesService } from '@/entries/index';
-import { getDb } from '@/database/registry';
-import { decodeWith } from '@/database/codec';
-import { entriesTable } from '@/database/schema';
 import type { Entry, PluginDefinition } from '@/types/index';
+import { createTestDb, registerTestPlugins, setupTestConfig } from '@tests/harness';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { decodeWith } from '@/database/codec';
+import { getDb } from '@/database/registry';
+import { entriesTable } from '@/database/schema';
+import { entriesService } from '@/entries/index';
+import { defineHook } from '@/index';
 
 const api = entriesService;
 

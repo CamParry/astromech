@@ -1,7 +1,7 @@
 import { defineCommand } from 'citty';
+import { entriesService } from '@/entries/service';
 import { loadConfig } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
-import { entriesService } from '@/entries/service';
 
 export default defineCommand({
     meta: { name: 'entries:delete', description: 'Permanently delete an entry' },

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
 import { UploadCloud } from 'lucide-react';
+import React, { useState } from 'react';
 
 export type DropZoneProps = {
     onUpload: (files: File[]) => void;

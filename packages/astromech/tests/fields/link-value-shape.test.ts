@@ -8,10 +8,10 @@
  * pinned by tests/admin/components/fields/link-field-value.test.tsx.
  */
 
-import { describe, expect, it } from 'vitest';
 import type { FieldValidationContext } from '@/types/fields';
-import { getFieldType } from '@/fields/field-type-registry';
+import { describe, expect, it } from 'vitest';
 import { validateLink } from '@/fields/built-in-rules';
+import { getFieldType } from '@/fields/field-type-registry';
 
 function ctx(value: unknown): FieldValidationContext {
     return {

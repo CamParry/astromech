@@ -9,9 +9,9 @@
  * directly (same approach as use-field-control.test.tsx).
  */
 
-import { describe, expect, it } from 'vitest';
-import { createRoot } from 'react-dom/client';
 import React, { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { describe, expect, it } from 'vitest';
 import { FieldWrapper } from '@/admin/components/fields/field-wrapper';
 import { useFieldControl } from '@/admin/components/fields/index';
 

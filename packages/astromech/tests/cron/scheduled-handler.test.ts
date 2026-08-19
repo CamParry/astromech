@@ -3,23 +3,22 @@
  * driver wiring it nominates.
  */
 
-import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import type { Updateable } from 'kysely';
-import type { Kysely } from 'kysely';
+import type { DB } from '@/database/types';
+import type { Kysely, Updateable } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cloudflareCron, interval, webhook } from '@/cron/drivers/index';
 import {
+    getSchedulerDriver,
     registerCronJob,
     resolveSchedulerDriver,
     setDefaultScheduler,
     setSchedulerDriver,
-    getSchedulerDriver,
 } from '@/cron/registry';
-import { createWorkerEntry } from '@/integrations/cloudflare/index';
-import { cloudflareCron, interval, webhook } from '@/cron/drivers/index';
 import { onTick, runDue } from '@/cron/runner';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/schema';
-import type { DB } from '@/database/types';
+import { createWorkerEntry } from '@/integrations/cloudflare/index';
 import { globals } from '@/utilities/registry';
 
 // The scheduled handler reads the config it creates the application from out of

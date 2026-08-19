@@ -5,14 +5,14 @@
  * enforces.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { Media, Role, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { adminRole, mountRouter, roleWith } from '@tests/mount-router';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { mediaService } from '@/media/service';
+import { createMediaStorage } from '@/media/storage';
 import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
-import { createMediaStorage } from '@/media/storage';
-import { mediaService } from '@/media/service';
-import type { Media, Role, StorageDriver } from '@/types/index';
 
 const noopStorage: StorageDriver = {
     name: 'noop',

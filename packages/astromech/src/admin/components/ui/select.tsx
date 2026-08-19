@@ -1,7 +1,7 @@
-import React from 'react';
 import { Select as BaseSelect } from '@base-ui/react/select';
-import { Check, ChevronDown } from 'lucide-react';
 import { clsx } from 'clsx';
+import { Check, ChevronDown } from 'lucide-react';
+import React from 'react';
 import { useFieldControl } from '@/admin/components/fields/field-control-context';
 
 export type SelectOption = {

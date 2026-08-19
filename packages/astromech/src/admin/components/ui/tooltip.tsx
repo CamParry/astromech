@@ -1,5 +1,5 @@
-import React from 'react';
 import { Tooltip as BaseTooltip } from '@base-ui/react/tooltip';
+import React from 'react';
 
 type TooltipProps = {
     content: string;

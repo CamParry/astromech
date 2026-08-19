@@ -3,16 +3,16 @@
  * search list derived from it.
  */
 
+import type { EntryFields, Field, ResolvedEntryFields } from '@/types/fields';
 import type {
     EntryType,
     ResolvedEntryCapabilities,
     ResolvedEntryType,
 } from '@/types/index';
-import type { EntryFields, Field, ResolvedEntryFields } from '@/types/fields';
 import type { Capability } from '@/utilities/entry-capabilities';
 import {
-    LAYOUT_TYPES,
     assertUniqueDataNames,
+    LAYOUT_TYPES,
     validateFieldTree,
 } from '@/config/validate/field-tree';
 

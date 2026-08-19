@@ -4,8 +4,8 @@
  * comes out as `plugin_redirects_redirects`.
  */
 
-import { definePluginTable } from 'astromech';
 import type { TableInsert, TableSelect } from 'astromech';
+import { definePluginTable } from 'astromech';
 import { REDIRECTS_PACKAGE } from '../types';
 
 export const redirectsTable = definePluginTable(

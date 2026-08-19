@@ -7,6 +7,7 @@
  * the caller is resolves no session at all.
  */
 
+import type { Role, User } from '@/types/index';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     getCurrentRole,
@@ -15,11 +16,9 @@ import {
     runWithContext,
     runWithRequest,
 } from '@/request-context/index';
-import type { Role, User } from '@/types/index';
+import { getSession } from '@/users/session';
 
 vi.mock('@/users/session', () => ({ getSession: vi.fn() }));
-
-import { getSession } from '@/users/session';
 
 const mockGetSession = vi.mocked(getSession);
 

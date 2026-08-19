@@ -4,10 +4,10 @@
  * overriding whatever the caller supplied for those keys.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { entriesService } from '@/entries/index';
 import type { AstromechConfig, Entry } from '@/types/index';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { entriesService } from '@/entries/index';
 
 const api = entriesService;
 

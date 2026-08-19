@@ -8,12 +8,13 @@
  * otherwise reach the server bare and its declared `defaultValue`s would never
  * land. `useTreeField` seeds them at the point the node is added.
  */
-
-import { describe, expect, it, vi } from 'vitest';
-import { createRoot, type Root } from 'react-dom/client';
-import { act } from 'react';
+import type { TreeNode } from '@/admin/hooks/use-tree-field';
 import type { Field } from '@/types/index';
-import { useTreeField, type TreeNode } from '@/admin/hooks/use-tree-field';
+import type { Root } from 'react-dom/client';
+import { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { describe, expect, it, vi } from 'vitest';
+import { useTreeField } from '@/admin/hooks/use-tree-field';
 
 const FIELDS: Field[] = [
     { name: 'label', type: 'text' },

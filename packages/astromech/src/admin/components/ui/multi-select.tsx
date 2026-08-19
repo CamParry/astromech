@@ -1,6 +1,6 @@
 import { Combobox } from '@base-ui/react/combobox';
-import React, { useRef, useId } from 'react';
 import { CheckIcon, ChevronDownIcon, XIcon } from 'lucide-react';
+import React, { useId, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFieldControl } from '@/admin/components/fields/field-control-context';
 

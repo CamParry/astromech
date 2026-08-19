@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import type { PluginDefinition } from '@/types/index';
+import { describe, expect, it } from 'vitest';
 import {
     assertNoPluginCollisions,
     checkPluginDependencies,

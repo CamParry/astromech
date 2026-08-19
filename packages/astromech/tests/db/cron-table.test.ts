@@ -1,10 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { sql } from 'kysely';
+import type { DB } from '@/database/types';
 import type { Insertable } from 'kysely';
 import { createTestDb } from '@tests/harness';
-import { encodeWith, decodeWith } from '@/database/codec';
+import { sql } from 'kysely';
+import { describe, expect, it } from 'vitest';
+import { decodeWith, encodeWith } from '@/database/codec';
 import { cronTable } from '@/database/schema';
-import type { DB } from '@/database/types';
 
 describe('_astromech_cron table', () => {
     it('is created by the package migrations', async () => {

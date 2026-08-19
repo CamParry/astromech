@@ -5,11 +5,11 @@
  * the published date when the entry is live.
  */
 
+import type { EntryStatus } from '../../../types/index';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Panel, Select, Input } from '../ui/index';
 import { formatDatetime } from '@/utilities/dates';
-import type { EntryStatus } from '../../../types/index';
+import { Input, Panel, Select } from '../ui/index';
 
 // ============================================================================
 // Types

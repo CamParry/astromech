@@ -7,13 +7,13 @@
  * envelope: `count`'s `{ data: { count } }` and the 204s.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { Notification, User } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { mountRouter, roleWith } from '@tests/mount-router';
-import { usersService } from '@/users/index';
-import { notify, notificationsService } from '@/notifications/service';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { notificationsService, notify } from '@/notifications/service';
 import { notificationsRouter } from '@/transport/http/routes/notifications';
-import type { Notification, User } from '@/types/index';
+import { usersService } from '@/users/index';
 
 /** No permission holds any authority here — the session is the whole of it. */
 const noPermissions = roleWith([]);

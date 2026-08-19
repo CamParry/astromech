@@ -2,17 +2,17 @@
  * Query and mutation hooks for users.
  */
 
+import type { User, UserQueryParams } from '@/types/index';
 import {
-    useQuery,
-    useMutation,
-    useQueryClient,
     queryOptions,
+    useMutation,
+    useQuery,
+    useQueryClient,
 } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { astromechClient } from '@/transport/http/client/index';
-import { queryKeys } from './use-query-keys';
 import { useToast } from '../components/ui/index';
-import type { User, UserQueryParams } from '@/types/index';
+import { queryKeys } from './use-query-keys';
 
 // ============================================================================
 // Query hooks

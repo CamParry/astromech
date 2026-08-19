@@ -8,19 +8,6 @@
  * create and edit can use different endpoints while sharing everything else.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useForm, useStore } from '@tanstack/react-form';
-import { useMutation } from '@tanstack/react-query';
-import type { UseMutationResult } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { useHotkeys } from './index';
-import { useFieldValidation } from './use-field-validation';
-import { useToast } from '../components/ui/index';
-import {
-    fieldErrorNames,
-    validationSummaryMessage,
-} from '@/admin/components/fields/field-error-summary';
-import { resolveLabel } from '@/admin/i18n/labels';
 import type {
     Entry,
     EntryStatus,
@@ -28,10 +15,23 @@ import type {
     FieldErrors,
     JsonObject,
 } from '../../types/index';
+import type { UseMutationResult } from '@tanstack/react-query';
+import { useForm, useStore } from '@tanstack/react-form';
+import { useMutation } from '@tanstack/react-query';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+    fieldErrorNames,
+    validationSummaryMessage,
+} from '@/admin/components/fields/field-error-summary';
+import { resolveLabel } from '@/admin/i18n/labels';
 // Deep import of a pure leaf: the browser must pick the same stage the server
 // will, and the entries barrel would drag a domain service into the bundle.
 import { entryValidationMode } from '@/entries/validation-mode.shared';
 import { AstromechApiError } from '../../transport/http/client/index';
+import { useToast } from '../components/ui/index';
+import { useHotkeys } from './index';
+import { useFieldValidation } from './use-field-validation';
 
 // ============================================================================
 // Types

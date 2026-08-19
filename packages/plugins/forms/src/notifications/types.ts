@@ -3,8 +3,8 @@
  * of one notification kind: the block an editor fills in, and its delivery.
  */
 
-import type { Block, Entry, Field, PluginContext } from 'astromech';
 import type { ValueRow } from '../utilities/values';
+import type { Block, Entry, Field, PluginContext } from 'astromech';
 
 /**
  * One stored notification block instance. `_type` selects the provider and the

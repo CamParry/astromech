@@ -22,8 +22,8 @@ menus/
 
 ```ts
 // astromech.config.ts
-import { defineConfig } from 'astromech';
 import { menus } from '@astromech/menus';
+import { defineConfig } from 'astromech';
 
 export default defineConfig({
     plugins: [

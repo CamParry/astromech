@@ -7,12 +7,12 @@
  * all local code rather than shared wrapper code — and none of it was covered.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
-import { usersService } from '@/users/service';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
-import type { DB } from '@/database/types';
+import { usersService } from '@/users/service';
 
 let db: Kysely<DB>;
 

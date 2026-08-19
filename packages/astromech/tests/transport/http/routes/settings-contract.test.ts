@@ -7,12 +7,12 @@
  * /:key` body or stops pinning `full: true` fails here.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { Role } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { adminRole, mountRouter, roleWith } from '@tests/mount-router';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { settingsService } from '@/settings/index';
 import { settingsRouter } from '@/transport/http/routes/settings';
-import type { Role } from '@/types/index';
 
 function app(role: Role = adminRole) {
     return mountRouter('/settings', settingsRouter, role);

@@ -3,12 +3,12 @@
  * is grid-only.
  */
 
+import type { SortDirection } from '@/admin/components/ui/table';
+import type { Media } from '@/types/index';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Checkbox, Table } from '@/admin/components/ui/index';
-import type { SortDirection } from '@/admin/components/ui/table';
 import { MediaRow } from './MediaRow';
-import type { Media } from '@/types/index';
 
 export type MediaTableProps = {
     items: Media[];

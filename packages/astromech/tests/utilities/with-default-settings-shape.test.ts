@@ -7,9 +7,9 @@
  * type error anywhere. An explicit `full: false` must still win.
  */
 
+import type { JsonValue, Setting, SettingsService } from '@/types/index';
 import { describe, expect, it } from 'vitest';
 import { withDefaultSettingsShape } from '@/utilities/with-default-shape';
-import type { JsonValue, Setting, SettingsService } from '@/types/index';
 
 type Recorded = {
     all: ({ full?: boolean } | undefined)[];

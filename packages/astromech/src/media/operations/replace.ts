@@ -1,11 +1,11 @@
-import { getStorageDriver } from '@/storage/registry';
-import { deletePrefix } from '@/storage/prefix';
 import type { Media } from '@/types/index';
-import { createMediaStorage } from '../storage';
+import { deletePrefix } from '@/storage/prefix';
+import { getStorageDriver } from '@/storage/registry';
 import { originalKey } from '../internal/keys';
 import { storeFile } from '../internal/store-file';
 import { toMedia } from '../internal/to-media';
 import { variantPrefix } from '../serving/image/url.shared';
+import { createMediaStorage } from '../storage';
 
 /** Swap a media item's file, keeping its id, URL shape and metadata row. */
 export async function replace(params: { id: string; file: File }): Promise<Media> {

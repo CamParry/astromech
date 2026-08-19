@@ -12,11 +12,11 @@
  * implicit `Panel`; layout fields render as standalone blocks.
  */
 
-import React from 'react';
 import type { Field } from '@/types/index';
-import { Panel, Tabs, Collapsible, Stack } from '@/admin/components/ui/index';
-import { FormField } from '@/admin/components/fields/form-field';
+import React from 'react';
 import { FieldValuesProvider } from '@/admin/components/fields/field-context';
+import { FormField } from '@/admin/components/fields/form-field';
+import { Collapsible, Panel, Stack, Tabs } from '@/admin/components/ui/index';
 import { useLabel } from '@/admin/i18n/entry-namespace';
 
 const LAYOUT_TYPES = new Set(['section', 'tabs', 'tab', 'accordion']);

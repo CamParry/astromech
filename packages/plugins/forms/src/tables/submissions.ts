@@ -3,10 +3,10 @@
  * `plugin_<namespace>_` prefix, so this declares the bare name.
  */
 
-import { definePluginTable } from 'astromech';
-import type { TableInsert, TableSelect } from 'astromech';
-import { FORMS_PACKAGE } from '../types';
 import type { SubmissionMeta } from '../types';
+import type { TableInsert, TableSelect } from 'astromech';
+import { definePluginTable } from 'astromech';
+import { FORMS_PACKAGE } from '../types';
 
 export const submissionsTable = definePluginTable(
     FORMS_PACKAGE,

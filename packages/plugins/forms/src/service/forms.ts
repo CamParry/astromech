@@ -3,24 +3,19 @@
  * `submit` validates and stores a set of submitted values. Both are `public`,
  * so neither may assume a session, and both report failure as a result shape.
  */
-
+import type { FormsAfterSubmitPayload, FormsBeforeSubmitPayload } from '../hooks/events';
+import type { SpamProvider } from '../spam/types';
+import type { FormsOptions, SubmissionMeta } from '../types';
 import type { Field, FieldErrors, FieldLookups } from 'astromech';
 import { defineServiceMethod, z } from 'astromech';
 import { parseFields } from 'astromech/fields';
 import { compileFormFields } from '../fields/compile';
-import {
-    AFTER_SUBMIT,
-    BEFORE_SUBMIT,
-    type FormsAfterSubmitPayload,
-    type FormsBeforeSubmitPayload,
-} from '../hooks/events';
+import { AFTER_SUBMIT, BEFORE_SUBMIT } from '../hooks/events';
 import { sendNotifications } from '../notifications/dispatch';
-import { consumeRateLimit } from './rate-limit';
-import type { SpamProvider } from '../spam/types';
 import { SUBMISSION_TYPE } from '../types';
-import type { FormsOptions, SubmissionMeta } from '../types';
 import { entryFields, loadForm, usesSpam } from '../utilities/form-entry';
 import { buildSummary } from '../utilities/summary';
+import { consumeRateLimit } from './rate-limit';
 
 /** The public projection of a form, built by explicit allow-list. */
 export type PublicForm = {

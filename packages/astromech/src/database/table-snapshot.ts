@@ -1,3 +1,26 @@
+import type {
+    ColumnKind,
+    ColumnRuntime,
+    IndexSpec,
+    ReferenceTarget,
+    Table,
+} from '@/database/define-table';
+import type {
+    Snapshot,
+    SnapshotColumn,
+    SnapshotForeignKey,
+    SnapshotIndex,
+    SnapshotTable,
+    SqlDialect,
+} from '@astromech/schema-engine';
+import {
+    capIdentifier,
+    renderCreateIndex,
+    renderCreateTable,
+    renderTableStatements,
+} from '@astromech/schema-engine';
+import { AstromechError } from '@/errors/index';
+
 /**
  * `Table` → snapshot conversion — the CMS half of the old `ddl.ts`.
  *
@@ -23,27 +46,6 @@
  * tag rather than inspecting a driver — the seam a Postgres emitter slots into
  * later.
  */
-
-import {
-    capIdentifier,
-    renderCreateIndex,
-    renderCreateTable,
-    renderTableStatements,
-    type Snapshot,
-    type SnapshotColumn,
-    type SnapshotForeignKey,
-    type SnapshotIndex,
-    type SnapshotTable,
-    type SqlDialect,
-} from '@astromech/schema-engine';
-import type {
-    ColumnKind,
-    ColumnRuntime,
-    IndexSpec,
-    ReferenceTarget,
-    Table,
-} from '@/database/define-table';
-import { AstromechError } from '@/errors/index';
 
 export type {
     Snapshot,

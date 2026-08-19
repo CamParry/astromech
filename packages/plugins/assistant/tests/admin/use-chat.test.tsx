@@ -6,13 +6,13 @@
  * calls still held.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act } from 'react';
-import { createRoot } from 'react-dom/client';
-import { useChat } from '../../src/admin/use-chat';
 import type { UseChat } from '../../src/admin/use-chat';
 import type { ChatSession } from '../../src/service/sessions';
 import type { ApprovalRequest, ChatEvent, ChatMessage } from '../../src/types';
+import { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useChat } from '../../src/admin/use-chat';
 
 const { sessionsService } = vi.hoisted(() => ({
     sessionsService: {

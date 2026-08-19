@@ -7,13 +7,6 @@
  * happens before the service function is entered.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { setupTestConfig } from '@tests/harness';
-import { PermissionDeniedError } from '@/errors/index';
-import { annotateManifest } from '@/policies/annotate-manifest';
-import { scopeEntries, scopeMethods, scopedServices } from '@/policies/scoped-services';
-import { permissionsFor } from '@/permissions/permissions-for';
-import { runWithContext } from '@/request-context/index';
 import type {
     CoreManifestMethod,
     EntriesService,
@@ -23,6 +16,13 @@ import type {
     ServiceMethodContract,
     User,
 } from '@/types/index';
+import { setupTestConfig } from '@tests/harness';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { PermissionDeniedError } from '@/errors/index';
+import { permissionsFor } from '@/permissions/permissions-for';
+import { annotateManifest } from '@/policies/annotate-manifest';
+import { scopedServices, scopeEntries, scopeMethods } from '@/policies/scoped-services';
+import { runWithContext } from '@/request-context/index';
 
 beforeEach(() => {
     setupTestConfig();

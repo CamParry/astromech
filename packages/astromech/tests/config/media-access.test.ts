@@ -2,9 +2,6 @@
  * `media.access` resolution and the boot-time incompatibility check (spec §8.4).
  */
 
-import { describe, expect, it } from 'vitest';
-import { resolveConfig } from '@/config/resolve';
-import { cloudflareImages } from '@/media/serving/image/drivers/cloudflare';
 import type {
     AstromechConfig,
     DatabaseDriver,
@@ -12,6 +9,9 @@ import type {
     MediaConfig,
     StorageDriver,
 } from '@/types/index';
+import { describe, expect, it } from 'vitest';
+import { resolveConfig } from '@/config/resolve';
+import { cloudflareImages } from '@/media/serving/image/drivers/cloudflare';
 
 const dbDriver: DatabaseDriver = {
     type: 'test',

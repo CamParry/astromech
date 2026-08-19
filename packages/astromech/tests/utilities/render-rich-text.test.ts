@@ -2,8 +2,8 @@
  * Tests for renderRichText — JSON→HTML rendering and sanitization.
  */
 
-import { describe, expect, it } from 'vitest';
 import type { JSONContent } from '@tiptap/core';
+import { describe, expect, it } from 'vitest';
 import { renderRichText } from '@/fields/rich-text/index';
 
 // ============================================================================

@@ -7,14 +7,14 @@
  * nothing leaks past a refusal — it carries no arguments, and the reserved
  * key never reaches a service on any path.
  */
-
-import { describe, expect, it } from 'vitest';
-import { evaluateConfirmation, type ConfirmDecision } from '@/policies/confirmation';
+import type { ConfirmDecision } from '@/policies/confirmation';
 import type {
     CoreManifestMethod,
     EntriesManifestMethod,
     ManifestMethod,
 } from '@/types/index';
+import { describe, expect, it } from 'vitest';
+import { evaluateConfirmation } from '@/policies/confirmation';
 
 // ---------------------------------------------------------------------------
 // Fixtures

@@ -2,9 +2,9 @@
  * Accordion — collapsible panels built on Base UI Accordion.
  */
 
-import React from 'react';
 import { Accordion as BaseAccordion } from '@base-ui/react/accordion';
 import { ChevronDown } from 'lucide-react';
+import React from 'react';
 
 type AccordionItem = {
     value: string;

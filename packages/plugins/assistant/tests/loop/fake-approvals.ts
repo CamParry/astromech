@@ -5,9 +5,9 @@
  * refusals are made of, and taking a row is what stops it running twice.
  */
 
-import { vi } from 'vitest';
 import type { ApprovalsStorage, ClaimedApproval } from '../../src/approvals/storage';
 import type { ApprovalRow } from '../../src/tables/approvals';
+import { vi } from 'vitest';
 
 const HOUR_MS = 60 * 60 * 1000;
 

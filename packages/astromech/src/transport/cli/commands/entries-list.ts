@@ -1,8 +1,8 @@
 import { defineCommand } from 'citty';
-import { loadConfig } from '../config';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { entriesService } from '@/entries/service';
+import { loadConfig } from '../config';
 import { printResult } from '../output';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
     meta: { name: 'entries:list', description: 'List entries for a given type' },

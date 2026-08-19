@@ -5,10 +5,10 @@
  * admit exactly the same nodes and marks.
  */
 
-import { getSchema } from '@tiptap/core';
-import type { Schema } from '@tiptap/pm/model';
-import { buildRichTextExtensions } from './extensions';
 import type { RichTextAllow } from '@/types/fields';
+import type { Schema } from '@tiptap/pm/model';
+import { getSchema } from '@tiptap/core';
+import { buildRichTextExtensions } from './extensions';
 
 /** Build (or reuse) the ProseMirror schema for an `allow` list. */
 export function schemaFor(allow?: RichTextAllow): Schema {

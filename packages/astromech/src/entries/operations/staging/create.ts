@@ -1,8 +1,8 @@
-import { asEntry, loadAndAssertType } from '../../internal/records';
-import { getStagingStorage } from '../../internal/type-config';
-import { indexEntryRelationships } from '../../internal/relationships';
-import { StagedEntryExistsError } from '../../errors';
 import type { Entry, JsonObject } from '@/types/index';
+import { StagedEntryExistsError } from '../../errors';
+import { asEntry, loadAndAssertType } from '../../internal/records';
+import { indexEntryRelationships } from '../../internal/relationships';
+import { getStagingStorage } from '../../internal/type-config';
 
 export async function createStaged(params: { type: string; id: string }): Promise<Entry> {
     const { type, id } = params;

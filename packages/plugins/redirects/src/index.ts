@@ -5,15 +5,15 @@
  * plugin exposes data, the app owns the route.
  */
 
-import { definePlugin, withDefaults } from 'astromech';
-import type { ServiceInterface } from 'astromech';
-import { REDIRECTS_PACKAGE } from './types';
 import type { RedirectsOptions } from './types';
+import type { ServiceInterface } from 'astromech';
+import { definePlugin, withDefaults } from 'astromech';
 import { migrationProvider } from '../migrations/index';
 import { redirectEntryType } from './entries/redirect';
-import { redirectsTable } from './tables/redirects';
-import { redirectsService } from './service/redirects';
 import { slugChangeHook } from './hooks/slug-change';
+import { redirectsService } from './service/redirects';
+import { redirectsTable } from './tables/redirects';
+import { REDIRECTS_PACKAGE } from './types';
 
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions

@@ -10,25 +10,25 @@
  * Two-column layout: version list sidebar left, diff view right.
  */
 
-import React, { useState } from 'react';
-import { useNavigate, Link as RouterLink } from '@tanstack/react-router';
-import { useTranslation } from 'react-i18next';
+import type { EntriesMount } from './mount';
+import type { EntryVersion } from '@/types/index';
+import { Link as RouterLink, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import { formatDatetime } from '@/utilities/dates';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-    Button,
-    Panel,
     Breadcrumb,
-    PageLoading,
-    useConfirm,
+    Button,
     Page,
-    PageHeader,
-    PageTitle,
     PageContent,
+    PageHeader,
+    PageLoading,
+    PageTitle,
+    Panel,
+    useConfirm,
 } from '@/admin/components/ui/index';
 import { useEntry, useEntryVersions, useRestoreEntryVersion } from '@/admin/hooks/index';
-import type { EntryVersion } from '@/types/index';
-import type { EntriesMount } from './mount';
+import { formatDatetime } from '@/utilities/dates';
 
 // Mount link bases are runtime strings; address `Link` by string `to`.
 type LinkProps = Omit<React.ComponentProps<typeof RouterLink>, 'to'> & { to: string };

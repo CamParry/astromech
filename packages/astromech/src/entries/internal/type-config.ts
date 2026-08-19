@@ -4,15 +4,15 @@
  * resolution. All read the resolved config.
  */
 
-import { getConfig } from '@/config/registry';
-import { resolveContentLocale } from '@/utilities/locale';
-import { flattenEntryFields } from '@/fields/flatten';
-import { resolveEntryType } from '@/utilities/entry-type-ids';
-import { getEntryStorage } from '../storage/registry';
-import { CapabilityError } from '../errors';
-import type { Capability } from '@/utilities/entry-capabilities';
 import type { EntryStorage } from '../storage/types';
 import type { Field } from '@/types/index';
+import type { Capability } from '@/utilities/entry-capabilities';
+import { getConfig } from '@/config/registry';
+import { flattenEntryFields } from '@/fields/flatten';
+import { resolveEntryType } from '@/utilities/entry-type-ids';
+import { resolveContentLocale } from '@/utilities/locale';
+import { CapabilityError } from '../errors';
+import { getEntryStorage } from '../storage/registry';
 
 export function getDefaultLocale(): string {
     // `defaultLocale` is a DISPLAY tag (e.g. `en-GB`) and may not be a content

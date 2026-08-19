@@ -1,6 +1,6 @@
-import React from 'react';
 import { useAstromechPlugin } from 'astromech/ui/app';
 import { Panel } from 'astromech/ui/layout';
+import React from 'react';
 
 export default function RatingsOverviewPage(): React.ReactElement {
     if (new URLSearchParams(window.location.search).get('boom') === '1') {

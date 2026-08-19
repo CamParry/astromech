@@ -8,13 +8,13 @@
  * touched, so this must never load `astromech.config.ts`.
  */
 
-import { defineCommand } from 'citty';
-import { createJiti } from 'jiti';
+import type { Table } from '@/database/define-table';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { defineCommand } from 'citty';
+import { createJiti } from 'jiti';
 import { generateMigrations } from '@/database/generate';
 import { pluginNamespace, pluginTablePrefix } from '@/plugins/runtime/plugin-identity';
-import type { Table } from '@/database/define-table';
 
 /** Structural check — a `Table`, without importing runtime code. */
 function isTable(value: unknown): value is Table {

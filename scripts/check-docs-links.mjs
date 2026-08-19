@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 // Fails when a markdown link or a backticked path in the repo's documentation
 // no longer resolves. Catches renames that nobody propagated.
-
-import { readdirSync, readFileSync, existsSync } from 'node:fs';
-import { join, dirname, resolve, relative, extname } from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');

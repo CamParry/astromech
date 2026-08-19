@@ -11,11 +11,11 @@
  *   // → [{ label, url?, newTab?, children: [...] }]
  */
 
-import { definePlugin, defineServiceMethod } from 'astromech';
+import type { MenuItem, MenusOptions } from './types';
 import type { ServiceInterface } from 'astromech';
-import { buildMenusService } from './service/menus';
+import { definePlugin, defineServiceMethod } from 'astromech';
 import { buildMenuPages } from './pages/menus';
-import type { MenusOptions, MenuItem } from './types';
+import { buildMenusService } from './service/menus';
 
 /** Typed service shape — used only for the module augmentation. */
 const _menusServiceTyped = {

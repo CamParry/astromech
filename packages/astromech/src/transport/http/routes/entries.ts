@@ -13,21 +13,9 @@
  * carrying the reason — they are still declared, still documented, and still
  * reachable by the fetch client.
  */
-
-import { OpenAPIHono, z } from '@hono/zod-openapi';
-import type { Context } from 'hono';
-import { getConfig } from '@/config/registry';
-import { entriesService } from '@/entries/index';
-import {
-    badRequest,
-    forbidden,
-    fromZodError,
-    notFound,
-    requestSchemaError,
-} from '@/transport/http/middleware/errors';
+import type { ContractCatalogue, RestRoute } from './rest-route';
+import type { EntryMethodContract, EntryMethodName } from '@/entries/methods';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import { PERMISSION_ENTRY_READ_FULL, entryPermission } from '@/permissions/index';
-import { permissionsFor } from '@/permissions/permissions-for';
 import type {
     EntryQueryParams,
     EntryUpdateData,
@@ -35,28 +23,30 @@ import type {
     ResolvedEntryType,
     SortDirection,
 } from '@/types/index';
-import {
-    ENTRY_METHOD_ACTIONS,
-    entryMethodContracts,
-    type EntryMethodContract,
-    type EntryMethodName,
-} from '@/entries/methods';
+import type { Context } from 'hono';
+import { OpenAPIHono, z } from '@hono/zod-openapi';
+import { getConfig } from '@/config/registry';
+import { PublicTrashedReadError, StagedEntryExistsError } from '@/entries/errors';
+import { entriesService } from '@/entries/index';
+import { ENTRY_METHOD_ACTIONS, entryMethodContracts } from '@/entries/methods';
 import {
     createEntrySchema,
     entrySortSchema,
     titledUpdateEntrySchema,
     updateEntrySchema,
 } from '@/entries/schema';
-import { PublicTrashedReadError, StagedEntryExistsError } from '@/entries/errors';
+import { entryPermission, PERMISSION_ENTRY_READ_FULL } from '@/permissions/index';
+import { permissionsFor } from '@/permissions/permissions-for';
+import {
+    badRequest,
+    forbidden,
+    fromZodError,
+    notFound,
+    requestSchemaError,
+} from '@/transport/http/middleware/errors';
 import { resolveEntryType } from '@/utilities/entry-type-ids';
 import { ENTRIES_ROUTE_SPECS } from './http-routes.shared';
-import {
-    attachHandlers,
-    documentBespokeRoutes,
-    mountRestRoutes,
-    type ContractCatalogue,
-    type RestRoute,
-} from './rest-route';
+import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 
 type Env = { Variables: AuthVariables };
 

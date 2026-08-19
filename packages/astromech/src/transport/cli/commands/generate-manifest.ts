@@ -1,13 +1,13 @@
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 import { defineCommand } from 'citty';
-import { loadConfig, loadRawConfig } from '../config';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import {
     generateMethodManifest,
-    serialiseMethodManifest,
     METHOD_MANIFEST_FILENAME,
+    serialiseMethodManifest,
 } from '@/codegen/method-manifest';
-import { writeFile, mkdir } from 'node:fs/promises';
-import { resolve, dirname } from 'node:path';
+import { loadConfig, loadRawConfig } from '../config';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
     meta: {

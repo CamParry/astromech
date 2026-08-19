@@ -10,11 +10,11 @@
  * Both modes rewrite history, which is legal only before a release.
  */
 
-import { defineCommand } from 'citty';
 import { resolve } from 'node:path';
-import { loadConfig } from '../config';
+import { defineCommand } from 'citty';
 import { rebaselineMigrations } from '@/database/generate';
 import { CORE_TABLES } from '@/database/schema';
+import { loadConfig } from '../config';
 
 export default defineCommand({
     meta: {

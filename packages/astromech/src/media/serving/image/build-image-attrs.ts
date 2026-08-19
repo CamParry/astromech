@@ -5,9 +5,9 @@
  */
 
 import type { ImageFormat } from './url.shared';
-import { buildMediaUrl, buildVariantUrl } from './url.shared';
 import { normaliseWidths } from '@/utilities/image-widths';
 import { isOptimisableImage } from './dimensions';
+import { buildMediaUrl, buildVariantUrl } from './url.shared';
 
 export type ImageAttrsInput = {
     id: string;

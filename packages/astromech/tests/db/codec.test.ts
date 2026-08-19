@@ -14,12 +14,12 @@
  * the baseline migration disagreed.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
-import { sql } from 'kysely';
+import type { DB, Db } from '@/database/types';
 import type { Insertable } from 'kysely';
 import { createTestDb, createTestUser } from '@tests/harness';
+import { sql } from 'kysely';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { decode, encode, encodePatch } from '@/database/codec';
-import type { DB, Db } from '@/database/types';
 
 const CREATED = new Date('2024-03-04T05:06:07.000Z');
 const EXPIRES = new Date('2024-04-05T06:07:08.000Z');

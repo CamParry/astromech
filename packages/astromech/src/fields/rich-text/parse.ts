@@ -5,12 +5,12 @@
  * outside the field's `allow` list is dropped by the schema.
  */
 
-import { parseHTML } from 'linkedom';
-import { DOMParser } from '@tiptap/pm/model';
-import type { JSONContent } from '@tiptap/core';
 import type { RichTextAllow } from '@/types/fields';
-import { schemaFor } from './schema';
+import type { JSONContent } from '@tiptap/core';
+import { DOMParser } from '@tiptap/pm/model';
+import { parseHTML } from 'linkedom';
 import { stripUnsafeLinks } from './safe-links';
+import { schemaFor } from './schema';
 
 /**
  * Parse an HTML string into a ProseMirror JSON document.

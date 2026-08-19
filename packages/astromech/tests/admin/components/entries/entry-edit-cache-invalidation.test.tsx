@@ -23,31 +23,30 @@
  * whatever this test's own copy of it does.
  */
 
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, act, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import type { AuthUser } from '@/admin/context/auth';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
+    createMemoryHistory,
+    createRootRoute,
+    createRoute,
+    createRouter,
     Outlet,
     RouterProvider,
-    createMemoryHistory,
-    createRoute,
-    createRootRoute,
-    createRouter,
 } from '@tanstack/react-router';
+import { act, cleanup, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { ToastProvider } from '@/admin/components/ui/toast';
-import { AuthProvider } from '@/admin/context/auth';
-import { sessionQueryOptions } from '@/admin/context/auth';
-import type { AuthUser } from '@/admin/context/auth';
-import { ConfirmProvider } from '@/admin/components/ui/confirm';
-import { AIContextProvider } from '@/admin/context/ai-context';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { EntryEditPage } from '@/admin/components/entries/entry-edit-page';
+import { ConfirmProvider } from '@/admin/components/ui/confirm';
+import { ToastProvider } from '@/admin/components/ui/toast';
+import { AIContextProvider } from '@/admin/context/ai-context';
+import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
 import { scopedEntryKeys } from '@/admin/hooks/use-query-keys';
 import '@/admin/rendering/register-fields';
 import type { EntriesMount } from '@/admin/components/entries/mount';
-import type { AdminEntryType, Entry, EntriesService, EntryStatus } from '@/types/index';
+import type { AdminEntryType, EntriesService, Entry, EntryStatus } from '@/types/index';
 
 afterEach(cleanup);
 

@@ -4,15 +4,15 @@
  * the admin topbar button and panel that talk to it.
  */
 
+import type { AssistantOptions, ResolvedAssistantOptions } from './types';
 import { definePlugin, withDefaults } from 'astromech';
+import { migrationProvider } from '../migrations/index';
 import { assistantPermissions } from './permissions/assistant';
 import { chatRoutes } from './routes/chat';
 import { buildSessionsService } from './service/sessions';
-import { migrationProvider } from '../migrations/index';
 import { approvalsTable } from './tables/approvals';
 import { sessionsTable } from './tables/sessions';
 import { ASSISTANT_PACKAGE } from './types';
-import type { AssistantOptions, ResolvedAssistantOptions } from './types';
 
 export type { AssistantOptions };
 

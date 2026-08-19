@@ -6,8 +6,8 @@
  * i18next lives separately in `@/admin/i18n/labels.ts`.
  */
 
-import { startCase } from 'lodash-es';
 import type { Label, MessageRef } from '@/types/fields';
+import { startCase } from 'lodash-es';
 import { slugify } from './strings';
 
 /** Capture an i18n key as a serializable `MessageRef` (`resolveLabel` resolves it). */

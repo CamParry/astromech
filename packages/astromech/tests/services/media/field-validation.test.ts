@@ -3,11 +3,11 @@
  * (update). Validates coercion, required fields, uniqueness, and self-exclusion.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { setStorageDriver } from '@/storage/registry';
-import { mediaService } from '@/media/service';
 import type { AstromechConfig, StorageDriver } from '@/types/index';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { mediaService } from '@/media/service';
+import { setStorageDriver } from '@/storage/registry';
 
 // ---------------------------------------------------------------------------
 // Minimal file helpers

@@ -4,9 +4,9 @@
  * covered there, so this one always stores.
  */
 
-import { vi } from 'vitest';
 import type { SessionsStorage } from '../../src/sessions/storage';
 import type { ChatMessage } from '../../src/types';
+import { vi } from 'vitest';
 
 export type FakeSessions = {
     storage: SessionsStorage;

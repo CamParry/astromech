@@ -6,10 +6,10 @@
  * database on `ctx.db`.
  */
 
-import { createStorage } from 'astromech';
-import type { PluginContext } from 'astromech';
-import { sessionsTable } from '../tables/sessions';
 import type { ChatMessage } from '../types';
+import type { PluginContext } from 'astromech';
+import { createStorage } from 'astromech';
+import { sessionsTable } from '../tables/sessions';
 
 /**
  * A database-row backstop, not a retention policy. The model's context window

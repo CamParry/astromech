@@ -6,8 +6,8 @@
  * are discovered lazily via the virtual plugin-components module; callers fall
  * through to that path when getFieldComponent returns undefined.
  */
-import type * as React from 'react';
 import type { BaseFieldProps } from '@/types/index';
+import type * as React from 'react';
 
 export type FieldComponent = (props: BaseFieldProps) => React.ReactElement;
 

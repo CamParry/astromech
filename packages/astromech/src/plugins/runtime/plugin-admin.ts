@@ -14,6 +14,7 @@
  *           defaults `settings:read` for settings pages, null for component pages.
  */
 
+import type { EntryFields, ResolvedEntryFields } from '@/types/fields';
 import type {
     AdminPage,
     PluginDefinition,
@@ -21,7 +22,6 @@ import type {
     ResolvedAdminPage,
     ResolvedPluginIdentity,
 } from '@/types/index';
-import type { EntryFields, ResolvedEntryFields } from '@/types/fields';
 import {
     pluginEntryTypes,
     resolvePluginPermission,

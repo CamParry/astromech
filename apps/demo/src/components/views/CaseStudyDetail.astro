@@ -1,9 +1,9 @@
 ---
-import Site from '../../layouts/Site.astro';
-import Blocks from '../blocks/Blocks.astro';
-import { t, localizedPath } from '../../lib/site.ts';
 import type { Locale } from '../../lib/site.ts';
 import type { Entry } from 'astromech';
+import Site from '../../layouts/Site.astro';
+import { localizedPath, t } from '../../lib/site.ts';
+import Blocks from '../blocks/Blocks.astro';
 
 interface Props {
     locale: Locale;

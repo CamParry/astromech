@@ -1,7 +1,7 @@
-import React from 'react';
 import { Menu } from '@base-ui/react/menu';
-import { ChevronDown } from 'lucide-react';
 import { clsx } from 'clsx';
+import { ChevronDown } from 'lucide-react';
+import React from 'react';
 
 type DropdownItem = {
     label: string;

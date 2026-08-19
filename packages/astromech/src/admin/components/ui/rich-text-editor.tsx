@@ -1,28 +1,29 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useEditor, EditorContent, useEditorState } from '@tiptap/react';
-import type { JSONContent, Editor } from '@tiptap/core';
+import type { RichTextAllow } from './rich-text-extensions';
+import type { Editor, JSONContent } from '@tiptap/core';
+import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import {
+    AlignCenter,
+    AlignJustify,
+    AlignLeft,
+    AlignRight,
     Bold,
-    Italic,
-    Underline,
-    Strikethrough,
+    ChevronDown,
     Code,
+    Italic,
     Link as LinkIcon,
     List,
     ListOrdered,
-    Quote,
     Minus,
-    AlignLeft,
-    AlignCenter,
-    AlignRight,
-    AlignJustify,
-    Undo,
+    Quote,
     Redo,
-    ChevronDown,
+    Strikethrough,
+    Underline,
+    Undo,
     WrapText,
 } from 'lucide-react';
-import { buildRichTextExtensions, type RichTextAllow } from './rich-text-extensions';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useFieldControl } from '@/admin/components/fields/field-control-context';
+import { buildRichTextExtensions } from './rich-text-extensions';
 
 // ============================================================================
 // Types

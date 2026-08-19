@@ -7,12 +7,12 @@
  * handler has to reproduce exactly.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { AstromechConfig, Entry } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { adminRole, mountRouter } from '@tests/mount-router';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService as api } from '@/entries/service';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
-import type { AstromechConfig, Entry } from '@/types/index';
 
 function app() {
     return mountRouter('/entries', createEntriesRouter(), adminRole);

@@ -1,11 +1,11 @@
-import { defineCommand } from 'citty';
+import type { DB } from '@/database/types';
 import type { Insertable } from 'kysely';
+import { defineCommand } from 'citty';
+import { encode } from '@/database/codec';
+import { getDb } from '@/database/registry';
+import { createUserStorage } from '@/users/storage';
 import { loadConfig } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
-import { getDb } from '@/database/registry';
-import { encode } from '@/database/codec';
-import { createUserStorage } from '@/users/storage';
-import type { DB } from '@/database/types';
 
 export default defineCommand({
     meta: { name: 'users:create', description: 'Create a new user' },

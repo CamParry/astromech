@@ -2,9 +2,9 @@
  * Collapsible — single expandable section built on Base UI Collapsible.
  */
 
-import React from 'react';
 import { Collapsible as BaseCollapsible } from '@base-ui/react/collapsible';
 import { ChevronDown } from 'lucide-react';
+import React from 'react';
 
 type CollapsibleProps = {
     label: string;

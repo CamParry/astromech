@@ -13,6 +13,10 @@
  * Per-type view preference is persisted to localStorage.
  */
 
+import type { EntriesListSearch, EntriesMount } from './mount';
+import type { DropdownItem } from '@/admin/components/ui/dropdown';
+import type { SortDirection } from '@/admin/components/ui/table';
+import type { CellRenderContext, Entry, TableColumn } from '@/types/index';
 import { Menu } from '@base-ui/react/menu';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import {
@@ -30,19 +34,7 @@ import {
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import type { CellRenderContext, Entry, TableColumn } from '@/types/index';
-import type { DropdownItem } from '@/admin/components/ui/dropdown';
-import {
-    fieldTypeOf,
-    resolveAdminEntryType,
-    resolveTable,
-} from '@/admin/rendering/resolve';
-import { defaultCellKind } from '@/admin/rendering/cell-kind-map';
-import { getCellRenderer } from '@/admin/rendering/cell-registry';
-import { resolveLabel } from '@/admin/i18n/labels';
-import { namespaceForScope } from '@/admin/i18n/entry-namespace';
-import { statusVariant } from '@/admin/rendering/cells/status-variant';
-import { Link } from '@/admin/rendering/cells/link';
+import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal';
 import {
     Badge,
     Button,
@@ -60,31 +52,39 @@ import {
     Table,
     ToggleGroup,
     Toolbar,
-    ToolbarStart,
     ToolbarEnd,
+    ToolbarStart,
     useConfirm,
     useContextMenu,
     useToast,
 } from '@/admin/components/ui/index';
-import type { SortDirection } from '@/admin/components/ui/table';
 import {
-    useSelection,
-    useViewMode,
-    useIsMobile,
-    usePermissions,
-    useEntriesQuery,
-    useTrashEntry,
-    useDeleteEntry,
-    useDuplicateEntry,
-    useRestoreEntry,
-    useBulkTrashEntries,
     useBulkDeleteEntries,
     useBulkPublishEntries,
+    useBulkTrashEntries,
     useBulkUnpublishEntries,
+    useDeleteEntry,
+    useDuplicateEntry,
+    useEntriesQuery,
+    useIsMobile,
+    usePermissions,
+    useRestoreEntry,
+    useSelection,
+    useTrashEntry,
+    useViewMode,
 } from '@/admin/hooks/index';
-import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal';
+import { namespaceForScope } from '@/admin/i18n/entry-namespace';
+import { resolveLabel } from '@/admin/i18n/labels';
+import { defaultCellKind } from '@/admin/rendering/cell-kind-map';
+import { getCellRenderer } from '@/admin/rendering/cell-registry';
+import { Link } from '@/admin/rendering/cells/link';
+import { statusVariant } from '@/admin/rendering/cells/status-variant';
+import {
+    fieldTypeOf,
+    resolveAdminEntryType,
+    resolveTable,
+} from '@/admin/rendering/resolve';
 import { resolveContentLocale } from '@/utilities/locale';
-import type { EntriesMount, EntriesListSearch } from './mount';
 
 // ============================================================================
 // Types

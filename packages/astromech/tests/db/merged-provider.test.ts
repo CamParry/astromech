@@ -8,10 +8,10 @@
  * and covered in `packages/schema-engine/tests/apply.test.ts`.
  */
 
-import { describe, expect, it } from 'vitest';
-import type { MigrationProvider } from 'kysely';
-import { collectPluginMigrations } from '@/database/plugin-migrations';
 import type { PluginDefinition } from '@/types/index';
+import type { MigrationProvider } from 'kysely';
+import { describe, expect, it } from 'vitest';
+import { collectPluginMigrations } from '@/database/plugin-migrations';
 
 function provider(name: string): MigrationProvider {
     return {

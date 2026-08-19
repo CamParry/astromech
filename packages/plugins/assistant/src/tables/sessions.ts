@@ -4,10 +4,10 @@
  * name and comes out as `plugin_assistant_sessions`.
  */
 
-import { definePluginTable } from 'astromech';
-import type { TableInsert, TableSelect } from 'astromech';
-import { ASSISTANT_PACKAGE } from '../types';
 import type { ChatMessage } from '../types';
+import type { TableInsert, TableSelect } from 'astromech';
+import { definePluginTable } from 'astromech';
+import { ASSISTANT_PACKAGE } from '../types';
 
 export const sessionsTable = definePluginTable(
     ASSISTANT_PACKAGE,

@@ -17,8 +17,7 @@
  * hand-written and consume those definitions.
  */
 
-import type { AdminConfig } from '@/types/index';
-import type { EntriesService } from '@/types/index';
+import type { AdminConfig, EntriesService } from '@/types/index';
 import { qualifyEntryType } from '@/utilities/entry-type-ids';
 
 export type EntryAction = 'read' | 'create' | 'update' | 'delete' | 'publish';

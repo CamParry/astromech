@@ -61,12 +61,12 @@ import type {
     FieldPathSegment,
     FieldValidationContext,
     ResourceValidator,
-    ValidationRule,
     ValidationMode,
+    ValidationRule,
 } from '@/types/fields';
 import { ValidationError } from '@/errors/index';
-import { getFieldType } from './field-type-registry';
 import { formatInstancePath, isValidFieldName } from './field-path';
+import { getFieldType } from './field-type-registry';
 import { flattenFieldNodes } from './flatten';
 import { projectToSchema } from './values';
 

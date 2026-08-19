@@ -5,11 +5,11 @@
  *  - incoming-relationships list (only when other entries reference this one)
  */
 
+import type { Entry, IncomingRelationship } from '@/types/index';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Checkbox, Modal, Spinner } from '@/admin/components/ui/index';
 import { useIncomingRelationships } from '@/admin/hooks/entries';
-import type { Entry, IncomingRelationship } from '@/types/index';
 
 type DeleteEntryModalProps = {
     open: boolean;

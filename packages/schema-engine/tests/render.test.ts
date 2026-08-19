@@ -7,10 +7,10 @@
  * `renderMigrationFile`'s backtick-escaping + overall shape.
  */
 
-import { describe, expect, it } from 'vitest';
-import { renderMigrationFile, renderOpStatements } from '../src/render';
 import type { TableOp } from '../src/diff';
 import type { SnapshotTable } from '../src/model';
+import { describe, expect, it } from 'vitest';
+import { renderMigrationFile, renderOpStatements } from '../src/render';
 
 const widgets: SnapshotTable = {
     name: 'widgets',

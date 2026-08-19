@@ -2,10 +2,10 @@
  * The tool surface the model sees: core hands over the scoped tool definitions,
  * and this wraps each one as an AI SDK tool.
  */
-
-import { anthropic } from '@ai-sdk/anthropic';
-import { jsonSchema, tool, type Tool, type ToolSet } from 'ai';
+import type { Tool, ToolSet } from 'ai';
 import type { ToolDefinition } from 'astromech';
+import { anthropic } from '@ai-sdk/anthropic';
+import { jsonSchema, tool } from 'ai';
 import { errorMessage } from '../error-message';
 
 /**

@@ -9,14 +9,14 @@
  * come back camelCased, so the table's keys line up.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
-import { sql } from 'kysely';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { entriesService } from '@/entries/index';
 import type { AstromechConfig, PluginDefinition } from '@/types/index';
-import { tableStorage } from '@/entries/storage/table';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { sql } from 'kysely';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { defineTable } from '@/database/define-table';
 import { UnknownSortKeyError } from '@/entries/errors';
+import { entriesService } from '@/entries/index';
+import { tableStorage } from '@/entries/storage/table';
 
 // ============================================================================
 // Scratch table definition

@@ -1,6 +1,6 @@
 import type { QueryResult, User, UserQueryParams } from '@/types/index';
-import { createUserStorage } from '../storage';
 import { toUser } from '../internal/to-user';
+import { createUserStorage } from '../storage';
 
 /** List CMS users, paginated unless `limit: 'all'` asks for the lot. */
 export async function query(params?: UserQueryParams): Promise<QueryResult<User>> {

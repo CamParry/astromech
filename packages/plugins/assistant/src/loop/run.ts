@@ -1,14 +1,3 @@
-/**
- * The server-side model loop: assembles one request, runs the model, and yields
- * the chat events the SSE route writes to the browser.
- */
-
-import { stepCountIs, streamText, type LanguageModel, type ToolCallPart } from 'ai';
-import type { AIContextItem, PluginLogger, ToolDefinition } from 'astromech';
-import { answerUnansweredCalls, pauseForApproval, resumePausedTurn } from './approvals';
-import { buildRequest } from './request';
-import { toToolSet } from './tools';
-import { errorMessage } from '../error-message';
 import type { ApprovalsStorage } from '../approvals/storage';
 import type { SessionsStorage } from '../sessions/storage';
 import type {
@@ -17,6 +6,18 @@ import type {
     ChatMessage,
     ResolvedAssistantOptions,
 } from '../types';
+import type { LanguageModel, ToolCallPart } from 'ai';
+import type { AIContextItem, PluginLogger, ToolDefinition } from 'astromech';
+import { stepCountIs, streamText } from 'ai';
+import { errorMessage } from '../error-message';
+import { answerUnansweredCalls, pauseForApproval, resumePausedTurn } from './approvals';
+import { buildRequest } from './request';
+import { toToolSet } from './tools';
+
+/**
+ * The server-side model loop: assembles one request, runs the model, and yields
+ * the chat events the SSE route writes to the browser.
+ */
 
 /** Bounded so a looping model cannot spend a request forever. */
 const MAX_STEPS = 12;

@@ -3,11 +3,11 @@
  * infrastructure sources only, and absent rather than spoofable.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Hono } from 'hono';
-import { getClientAddress } from '@/transport/http/client-address';
-import { setConfig } from '@/config/registry';
 import type { ResolvedConfig, TrustProxy } from '@/types/index';
+import { Hono } from 'hono';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setConfig } from '@/config/registry';
+import { getClientAddress } from '@/transport/http/client-address';
 
 /** Serve `GET /` with the resolved address as the body, and call it with `headers`. */
 async function addressFor(headers: Record<string, string>): Promise<string> {

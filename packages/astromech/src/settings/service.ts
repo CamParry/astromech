@@ -8,18 +8,18 @@
  * not as a cross-cutting policy.
  */
 
-import { getConfig } from '@/config/registry';
-import type { JsonValue, Setting, SettingsService } from '@/types/index';
-import { createSettingsStorage } from './storage';
 import type { SettingRow } from './schema';
-import { mergeLocaleSetting } from './page-values.shared';
-import { isPublicSettingKey } from './visibility';
-import { parseFields } from '@/fields/pipeline';
-import { flattenEntryFields } from '@/fields/flatten';
+import type { JsonValue, Setting, SettingsService } from '@/types/index';
+import { getConfig } from '@/config/registry';
 import { existingEntryTypes } from '@/database/storage/resource-existence';
-import { fieldLookupsFromRecords } from '@/fields/field-lookups';
-import { getCurrentUser } from '@/request-context/index';
 import { ValidationError } from '@/errors/validation';
+import { fieldLookupsFromRecords } from '@/fields/field-lookups';
+import { flattenEntryFields } from '@/fields/flatten';
+import { parseFields } from '@/fields/pipeline';
+import { getCurrentUser } from '@/request-context/index';
+import { mergeLocaleSetting } from './page-values.shared';
+import { createSettingsStorage } from './storage';
+import { isPublicSettingKey } from './visibility';
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
     typeof v === 'object' && v !== null && !Array.isArray(v);

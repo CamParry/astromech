@@ -7,18 +7,6 @@
  * its own table rather than in `entries` — must survive.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
-import { sql } from 'kysely';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { entriesService as api } from '@/entries/service';
-import { usersService } from '@/users/service';
-import { createMediaStorage } from '@/media/storage';
-import { createUserStorage } from '@/users/storage';
-import { createRelationshipStorage } from '@/database/storage/relationships';
-import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
-import { tableStorage } from '@/entries/storage/table';
-import { getEntryStorage } from '@/entries/storage/registry';
-import { defineTable } from '@/database/define-table';
 import type { EntryStorage, StorageDb } from '@/entries/storage/types';
 import type {
     AstromechConfig,
@@ -27,6 +15,18 @@ import type {
     JsonObject,
     PluginDefinition,
 } from '@/types/index';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { sql } from 'kysely';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { defineTable } from '@/database/define-table';
+import { createRelationshipStorage } from '@/database/storage/relationships';
+import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
+import { entriesService as api } from '@/entries/service';
+import { getEntryStorage } from '@/entries/storage/registry';
+import { tableStorage } from '@/entries/storage/table';
+import { createMediaStorage } from '@/media/storage';
+import { usersService } from '@/users/service';
+import { createUserStorage } from '@/users/storage';
 
 const linksTable = defineTable('test_links', ({ col }) => ({
     id: col.id(),

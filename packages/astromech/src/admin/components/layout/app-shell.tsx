@@ -5,16 +5,16 @@
  * On mobile the sidebar becomes a fixed overlay with a backdrop.
  */
 
+import { Dialog } from '@base-ui/react/dialog';
 import { Outlet } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@base-ui/react/dialog';
 import { useUI } from '../../context/ui';
+import { useHotkeys } from '../../hooks/index';
+import { AIContextReadout } from '../dev/ai-context-readout';
+import { PluginSlot } from '../plugins/PluginSlot';
 import { CommandPalette, CommandPaletteProvider } from '../ui/command-palette';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
-import { useHotkeys } from '../../hooks/index';
-import { PluginSlot } from '../plugins/PluginSlot';
-import { AIContextReadout } from '../dev/ai-context-readout';
 
 export function AppShell() {
     const { sidebarOpen, setSidebarOpen, shortcutsOpen, setShortcutsOpen } = useUI();

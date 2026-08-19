@@ -12,14 +12,14 @@
  * the migration SQL, journal, snapshot and index are still machine-written.
  */
 
+import type { MigrationOpsAuthor } from '@/database/generate';
+import { resolve } from 'node:path';
 import { defineCommand } from 'citty';
 import { createJiti } from 'jiti';
-import { resolve } from 'node:path';
-import { loadConfig } from '../config';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { generateMigrations, generateMigrationsFromOps } from '@/database/generate';
 import { CORE_TABLES } from '@/database/schema';
-import type { MigrationOpsAuthor } from '@/database/generate';
+import { loadConfig } from '../config';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 /** Load an ops file's default export, failing loudly if it is not a function. */
 async function loadOpsAuthor(path: string): Promise<MigrationOpsAuthor> {

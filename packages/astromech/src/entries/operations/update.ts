@@ -1,24 +1,3 @@
-import { getCurrentUser } from '@/request-context/index';
-import { updateEntrySchema } from '../schema';
-import { getEntryStorage } from '../storage/registry';
-import { validate } from '../internal/validate';
-import { indexEntryRelationships } from '../internal/relationships';
-import { pruneDanglingRelations } from '../internal/dangling-relations';
-import { asEntry, loadAndAssertType } from '../internal/records';
-import { uniqueSlugIfChanged } from '../internal/slug';
-import { propagateSharedFields } from '../internal/translatable';
-import { changesVersionedContent, snapshotVersion } from '../internal/versions';
-import { runBulk } from '../internal/bulk';
-import { runUpdateWithHooks } from '../internal/hooks';
-import { isPublicBranded, PublicShapeWriteError } from '../visibility';
-import { UnknownEntryTypeError } from '../errors';
-import { createEntryLookups } from '../lookups';
-import { resolveEntryType } from '@/utilities/entry-type-ids';
-import { entryValidationMode } from '../validation-mode.shared';
-import { flattenEntryFields } from '@/fields/flatten';
-import { assertNoFieldErrors, parseFields } from '@/fields/pipeline';
-import { mergePatch, projectToSchema } from '@/fields/values';
-import { getConfig } from '@/config/registry';
 import type { EntryStorage, StorageDb } from '../storage/types';
 import type { Field } from '@/types/fields';
 import type {
@@ -29,6 +8,27 @@ import type {
     JsonObject,
     ResolvedEntryType,
 } from '@/types/index';
+import { getConfig } from '@/config/registry';
+import { flattenEntryFields } from '@/fields/flatten';
+import { assertNoFieldErrors, parseFields } from '@/fields/pipeline';
+import { mergePatch, projectToSchema } from '@/fields/values';
+import { getCurrentUser } from '@/request-context/index';
+import { resolveEntryType } from '@/utilities/entry-type-ids';
+import { UnknownEntryTypeError } from '../errors';
+import { runBulk } from '../internal/bulk';
+import { pruneDanglingRelations } from '../internal/dangling-relations';
+import { runUpdateWithHooks } from '../internal/hooks';
+import { asEntry, loadAndAssertType } from '../internal/records';
+import { indexEntryRelationships } from '../internal/relationships';
+import { uniqueSlugIfChanged } from '../internal/slug';
+import { propagateSharedFields } from '../internal/translatable';
+import { validate } from '../internal/validate';
+import { changesVersionedContent, snapshotVersion } from '../internal/versions';
+import { createEntryLookups } from '../lookups';
+import { updateEntrySchema } from '../schema';
+import { getEntryStorage } from '../storage/registry';
+import { entryValidationMode } from '../validation-mode.shared';
+import { isPublicBranded, PublicShapeWriteError } from '../visibility';
 
 /** What the field helpers below need to know about the update in progress. */
 type FieldContext = {

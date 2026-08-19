@@ -4,8 +4,8 @@
  * reaching them through `parseRichText` ever exercises them.
  */
 
-import { describe, expect, it } from 'vitest';
 import type { JSONContent } from '@tiptap/core';
+import { describe, expect, it } from 'vitest';
 import {
     findUnsafeLink,
     isUnsafeHref,

@@ -3,9 +3,9 @@
  * Used for relation fields and entry lookups.
  */
 
-import React from 'react';
 import { Combobox as BaseCombobox } from '@base-ui/react/combobox';
 import { ChevronDown, X } from 'lucide-react';
+import React from 'react';
 
 type ComboboxOption = {
     label: string;

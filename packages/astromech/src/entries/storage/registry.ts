@@ -13,9 +13,9 @@
  * copy while the entries service reads another.
  */
 
+import type { EntryStorage } from './types';
 import { createKeyedRegistry, createRegistry } from '@/utilities/registry';
 import { createBuiltInEntryStorage } from './built-in';
-import type { EntryStorage } from './types';
 
 const builtIn = createRegistry<EntryStorage>('entryStorageBuiltIn', { required: false });
 const overrides = createKeyedRegistry<EntryStorage>('entryStorageOverrides');

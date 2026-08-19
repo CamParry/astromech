@@ -3,10 +3,10 @@
  * path returns through here, so a `Media.url` is made in exactly one place.
  */
 
+import type { MediaRow } from '../schema';
+import type { Media } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { getStorageDriver } from '@/storage/registry';
-import type { Media } from '@/types/index';
-import type { MediaRow } from '../schema';
 import { buildMediaUrl } from '../serving/image/url.shared';
 import { extOf, originalKey } from './keys';
 

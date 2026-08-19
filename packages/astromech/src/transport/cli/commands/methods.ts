@@ -1,15 +1,14 @@
-import { defineCommand } from 'citty';
-import { loadConfig, loadRawConfig } from '../config';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
-import { generateMethodManifest } from '@/codegen/method-manifest';
-import {
-    annotateManifest,
-    type AnnotatedManifestMethod,
-} from '@/policies/annotate-manifest';
-import { filterMethods, type ExcludedMethod } from '@/policies/method-filter';
+import type { AnnotatedManifestMethod } from '@/policies/annotate-manifest';
+import type { ExcludedMethod } from '@/policies/method-filter';
 import type { ManifestMethod, ResolvedConfig } from '@/types/index';
-import { printError } from '../output';
+import { defineCommand } from 'citty';
+import { generateMethodManifest } from '@/codegen/method-manifest';
+import { annotateManifest } from '@/policies/annotate-manifest';
+import { filterMethods } from '@/policies/method-filter';
+import { loadConfig, loadRawConfig } from '../config';
 import { filterArgs, toMethodFilter } from '../filter-args';
+import { printError } from '../output';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 /**
  * Resolve a role slug, rejecting one that is not configured.

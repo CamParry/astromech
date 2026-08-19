@@ -14,12 +14,13 @@
  * working directory the way a real Node host would find its own config.
  */
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { sql, type Kysely, type MigrationProvider } from 'kysely';
-import { migrateToLatest } from '@astromech/schema-engine';
-import { d1 } from '@/database/drivers/d1';
-import { disposeBindings, resetBindingEnv, resolveBinding } from '@/cloudflare/bindings';
 import type { D1DatabaseLike } from '@/database/drivers/d1-dialect';
+import type { Kysely, MigrationProvider } from 'kysely';
+import { migrateToLatest } from '@astromech/schema-engine';
+import { sql } from 'kysely';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { disposeBindings, resetBindingEnv, resolveBinding } from '@/cloudflare/bindings';
+import { d1 } from '@/database/drivers/d1';
 
 /** Test-only schema; deliberately unrelated to the app's `DB` type. */
 type TestSchema = {

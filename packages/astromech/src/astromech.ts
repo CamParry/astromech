@@ -19,22 +19,22 @@ import type {
     User,
     UsersService,
 } from '@/types/index';
-import { AstromechError } from '@/errors/index';
-import { getCurrentRole, getCurrentUser } from '@/request-context/index';
-import { registerDrivers, registerPluginRuntime } from '@/registrations';
-import { checkMigrationDrift } from '@/database/migrations';
+import { setConfig } from '@/config/registry';
+import { resolveConfig } from '@/config/resolve';
 import { getSchedulerDriver } from '@/cron/registry';
 import { onTick } from '@/cron/runner';
-import { resolveConfig } from '@/config/resolve';
-import { setConfig } from '@/config/registry';
+import { checkMigrationDrift } from '@/database/migrations';
 import { registerBuiltInEntryJobs, typedEntriesService } from '@/entries/index';
+import { AstromechError } from '@/errors/index';
 import { mediaService } from '@/media/index';
 import { currentUserNotificationsService } from '@/notifications/index';
-import { settingsService } from '@/settings/index';
-import { usersService } from '@/users/index';
-import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { bootPlugins } from '@/plugins/runtime/plugin-runtime';
+import { pluginServices } from '@/plugins/runtime/plugin-services';
+import { registerDrivers, registerPluginRuntime } from '@/registrations';
+import { getCurrentRole, getCurrentUser } from '@/request-context/index';
+import { settingsService } from '@/settings/index';
 import { createHttpApp } from '@/transport/http/index';
+import { usersService } from '@/users/index';
 import { createRegistry } from '@/utilities/registry';
 
 export type Astromech = {

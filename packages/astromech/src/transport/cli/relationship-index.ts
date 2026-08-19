@@ -1,3 +1,11 @@
+import type { RelationshipRow } from '@/database/schema';
+import type { RelationshipIndexSource } from '@/database/storage/relationships';
+import type { TargetKind } from '@/fields/relationship-edges';
+import { createRelationshipStorage } from '@/database/storage/relationships';
+import { collectEntryRelationshipSources } from '@/entries/internal/relationships';
+import { collectMediaRelationshipSources } from '@/media/internal/relationships';
+import { collectUserRelationshipSources } from '@/users/internal/relationships';
+
 /**
  * Relationships index repair — rebuild and drift check.
  *
@@ -18,16 +26,6 @@
  * Both functions load every source's field data into memory. That is fine for a
  * SQLite-only v1 and is the first thing to revisit if this ever needs to scale.
  */
-
-import {
-    createRelationshipStorage,
-    type RelationshipIndexSource,
-} from '@/database/storage/relationships';
-import type { RelationshipRow } from '@/database/schema';
-import type { TargetKind } from '@/fields/relationship-edges';
-import { collectEntryRelationshipSources } from '@/entries/internal/relationships';
-import { collectUserRelationshipSources } from '@/users/internal/relationships';
-import { collectMediaRelationshipSources } from '@/media/internal/relationships';
 
 /** Scope of a repair run. `type` is an ENTRY type; it never covers user or media. */
 export type RelationshipIndexScope = { type?: string };

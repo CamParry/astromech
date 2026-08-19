@@ -1,6 +1,6 @@
 import type { Media } from '@/types/index';
-import { createMediaStorage } from '../storage';
 import { toMedia } from '../internal/to-media';
+import { createMediaStorage } from '../storage';
 
 /** Read one media item by id, or null when there is no such row. */
 export async function get(params: { id: string }): Promise<Media | null> {

@@ -2,9 +2,9 @@
  * Thin wrappers around `app.entries.query` for common page data needs.
  * All swallow errors gracefully — missing data returns null/empty arrays.
  */
-import { getAstromech } from 'astromech';
-import type { Entry } from 'astromech';
 import type { Locale } from './site.ts';
+import type { Entry } from 'astromech';
+import { getAstromech } from 'astromech';
 
 /**
  * Forward-versioning preview: a valid `previewToken` bypasses the publish gate

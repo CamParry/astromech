@@ -2,8 +2,8 @@
  * Boot-time validation that every qualified relationship target resolves.
  */
 
-import type { ResolvedConfig } from '@/types/index';
 import type { Field, ResolvedEntryFields } from '@/types/fields';
+import type { ResolvedConfig } from '@/types/index';
 import { parseEntryTypeId, resolveEntryType } from '@/utilities/entry-type-ids';
 
 /**

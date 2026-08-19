@@ -1,6 +1,6 @@
+import type { Field } from '@/types/fields';
 import { describe, expect, it } from 'vitest';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
-import type { Field } from '@/types/fields';
 
 type TestRecord = { id: string; fields: Record<string, unknown> };
 

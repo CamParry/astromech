@@ -10,11 +10,11 @@
  * and the late-value case in each block is what proves that.
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
+import type { Field } from '@/types/index';
 import { act, cleanup, render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
-import type { Field } from '@/types/index';
+import { afterEach, describe, expect, it } from 'vitest';
 import '@/admin/rendering/register-fields';
 import { FormField } from '@/admin/components/fields/form-field';
 

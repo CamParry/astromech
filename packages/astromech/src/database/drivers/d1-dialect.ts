@@ -1,3 +1,17 @@
+import type {
+    CompiledQuery,
+    DatabaseConnection,
+    DatabaseIntrospector,
+    Dialect,
+    Driver,
+    Kysely,
+    QueryCompiler,
+    QueryResult,
+} from 'kysely';
+import { SqliteAdapter, SqliteQueryCompiler } from 'kysely';
+import { AstromechError } from '@/errors/index';
+import { D1Introspector } from './d1-introspector';
+
 /**
  * Hand-written Kysely dialect for Cloudflare D1.
  *
@@ -16,21 +30,6 @@
  * `Driver`/`DatabaseConnection` pair. Introspection needs its own
  * implementation — see `D1Introspector` for the query D1's authorizer rejects.
  */
-
-import {
-    SqliteAdapter,
-    SqliteQueryCompiler,
-    type CompiledQuery,
-    type DatabaseConnection,
-    type DatabaseIntrospector,
-    type Dialect,
-    type Driver,
-    type Kysely,
-    type QueryCompiler,
-    type QueryResult,
-} from 'kysely';
-import { D1Introspector } from './d1-introspector';
-import { AstromechError } from '@/errors/index';
 
 /** Structural subset of Cloudflare's D1Database we depend on. */
 export type D1DatabaseLike = {

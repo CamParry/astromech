@@ -2,10 +2,10 @@
  * Resolving the host admin pages an author declares under `admin.pages`.
  */
 
-import type { AdminPage, ResolvedAdminPage } from '@/types/index';
 import type { ResolvedEntryFields } from '@/types/fields';
-import { assertUniqueDataNames, validateFieldTree } from '@/config/validate/field-tree';
+import type { AdminPage, ResolvedAdminPage } from '@/types/index';
 import { toResolvedFields } from '@/config/entry-types';
+import { assertUniqueDataNames, validateFieldTree } from '@/config/validate/field-tree';
 
 /** Normalize + structurally validate a `fields`-mode host admin page's tree. */
 export function resolvePageFields(page: AdminPage): ResolvedEntryFields {

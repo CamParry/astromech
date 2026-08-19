@@ -11,15 +11,15 @@
  * an author-editable copy, so neither needs the containers' re-seed guard.
  */
 
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Field } from '@/types/index';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import React from 'react';
 import i18n from 'i18next';
+import React from 'react';
 import { initReactI18next } from 'react-i18next';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/admin/components/ui/toast';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { Field } from '@/types/index';
 import '@/admin/rendering/register-fields';
 import { FormField } from '@/admin/components/fields/form-field';
 

@@ -12,22 +12,17 @@
  *   PUT    /media/:id          → media.update
  *   DELETE /media/:id          → media.delete
  */
-
-import { OpenAPIHono, z } from '@hono/zod-openapi';
-import type { Context } from 'hono';
-import { mediaService } from '@/media/index';
-import { badRequest, forbidden, notFound } from '@/transport/http/middleware/errors';
+import type { RestRoute } from './rest-route';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import { permissionsFor } from '@/permissions/permissions-for';
-import { mediaContract } from '@/media/methods';
 import type { MediaQueryParams, SortDirection } from '@/types/index';
+import type { Context } from 'hono';
+import { OpenAPIHono, z } from '@hono/zod-openapi';
+import { mediaService } from '@/media/index';
+import { mediaContract } from '@/media/methods';
+import { permissionsFor } from '@/permissions/permissions-for';
+import { badRequest, forbidden, notFound } from '@/transport/http/middleware/errors';
 import { MEDIA_ROUTE_SPECS } from './http-routes.shared';
-import {
-    attachHandlers,
-    documentBespokeRoutes,
-    mountRestRoutes,
-    type RestRoute,
-} from './rest-route';
+import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 
 type Env = { Variables: AuthVariables };
 

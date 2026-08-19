@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import type { JSONContent } from '@tiptap/core';
+import { describe, expect, it } from 'vitest';
 import { parseRichText, renderRichText } from '@/fields/rich-text/index';
 
 // ---------------------------------------------------------------------------

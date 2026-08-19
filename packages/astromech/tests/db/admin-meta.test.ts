@@ -7,8 +7,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { defineTable } from '@/database/define-table';
 import { tableAdminMeta } from '@/database/admin-meta';
+import { defineTable } from '@/database/define-table';
 
 const target = defineTable('target', ({ col }) => ({ id: col.id() }));
 

@@ -6,13 +6,13 @@
  * default, and it is the one rule a well-meaning refactor would "fix".
  */
 
-import { describe, expect, it } from 'vitest';
-import { filterMethods } from '@/policies/method-filter';
 import type {
     CoreManifestMethod,
     EntriesManifestMethod,
     ManifestMethod,
 } from '@/types/index';
+import { describe, expect, it } from 'vitest';
+import { filterMethods } from '@/policies/method-filter';
 
 // ---------------------------------------------------------------------------
 // Fixtures

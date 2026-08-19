@@ -2,12 +2,12 @@
  * Sort control for a media grid, which has no column headers to sort by.
  */
 
+import type { SortDirection } from '@/admin/components/ui/table';
+import type { MediaBrowserQuery } from '@/admin/types/media';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Select } from '@/admin/components/ui/index';
-import type { SortDirection } from '@/admin/components/ui/table';
 import { isSortKey } from '@/admin/types/media';
-import type { MediaBrowserQuery } from '@/admin/types/media';
 
 const SORT_NONE = 'none';
 

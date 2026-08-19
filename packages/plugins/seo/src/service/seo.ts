@@ -4,10 +4,6 @@
  * without a `url` are skipped, so the plugin never guesses a path.
  */
 
-import type { Entry, PluginContext } from 'astromech';
-import { defineServiceMethod, noInput, z } from 'astromech';
-import { resolveEntryPath } from 'astromech';
-import { SEO_FIELD_NAME } from '../types';
 import type {
     SeoOverview,
     SeoOverviewItem,
@@ -15,6 +11,9 @@ import type {
     SeoSitemap,
     SeoSitemapUrl,
 } from '../types';
+import type { Entry, PluginContext } from 'astromech';
+import { defineServiceMethod, noInput, resolveEntryPath, z } from 'astromech';
+import { SEO_FIELD_NAME } from '../types';
 import {
     lengthStatus,
     SEO_DESCRIPTION_RANGE,

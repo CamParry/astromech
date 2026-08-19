@@ -1,7 +1,15 @@
-import React from 'react';
+import type { SortDirection } from '@/admin/components/ui/table';
+import type { MediaBrowserQuery, MediaSortKey, TypeFilter } from '@/admin/types/media';
 import { createFileRoute } from '@tanstack/react-router';
-import { useTranslation } from 'react-i18next';
 import { LayoutGrid, LayoutList, Trash2 } from 'lucide-react';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { MediaEmpty } from '@/admin/components/media/media-empty';
+import { MediaFilters } from '@/admin/components/media/media-filters';
+import { MediaGrid } from '@/admin/components/media/media-grid';
+import { MediaSortSelect, sortPatch } from '@/admin/components/media/media-sort-select';
+import { MediaTable } from '@/admin/components/media/media-table';
+import { MediaDetailModal } from '@/admin/components/media/MediaDetailModal';
 import {
     Dropdown,
     DropZone,
@@ -19,24 +27,16 @@ import {
     UploadButton,
     useConfirm,
 } from '@/admin/components/ui/index';
-import type { SortDirection } from '@/admin/components/ui/table';
-import { MediaDetailModal } from '@/admin/components/media/MediaDetailModal';
-import { MediaEmpty } from '@/admin/components/media/media-empty';
-import { MediaFilters } from '@/admin/components/media/media-filters';
-import { MediaGrid } from '@/admin/components/media/media-grid';
-import { MediaSortSelect, sortPatch } from '@/admin/components/media/media-sort-select';
-import { MediaTable } from '@/admin/components/media/media-table';
-import { useViewMode } from '@/admin/hooks/use-view-mode';
-import { useSelection } from '@/admin/hooks/use-selection';
-import {
-    useUploadMedia,
-    usePermissions,
-    useMediaBrowser,
-    useBulkDeleteMedia,
-} from '@/admin/hooks/index';
 import { useAIContext } from '@/admin/context/ai-context';
-import { MEDIA_ACCEPT, TYPE_FILTER_VALUES, isSortKey } from '@/admin/types/media';
-import type { MediaBrowserQuery, MediaSortKey, TypeFilter } from '@/admin/types/media';
+import {
+    useBulkDeleteMedia,
+    useMediaBrowser,
+    usePermissions,
+    useUploadMedia,
+} from '@/admin/hooks/index';
+import { useSelection } from '@/admin/hooks/use-selection';
+import { useViewMode } from '@/admin/hooks/use-view-mode';
+import { isSortKey, MEDIA_ACCEPT, TYPE_FILTER_VALUES } from '@/admin/types/media';
 
 const PER_PAGE = 20;
 

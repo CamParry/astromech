@@ -7,13 +7,13 @@
  * pre-scoped to the plugin's i18n namespace (= its derived namespace).
  */
 
-import React from 'react';
 import { useNavigate } from '@tanstack/react-router';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { astromechClient } from '@/transport/http/client/index';
-import { useToast } from '@/admin/components/ui/index';
 import { useConfirm } from '@/admin/components/ui/confirm';
+import { useToast } from '@/admin/components/ui/index';
 import { useAuth } from '@/admin/context/auth';
+import { astromechClient } from '@/transport/http/client/index';
 
 export type PluginUiIdentity = {
     /** The plugin's derived namespace, e.g. `seo` — also its admin route segment. */

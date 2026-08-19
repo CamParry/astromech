@@ -7,15 +7,15 @@
  * migrator commits in a transaction, and a `:memory:` db is poisoned for reads
  * afterwards.
  */
-
-import { describe, expect, it } from 'vitest';
+import type { MigrationProvider } from 'kysely';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createClient } from '@libsql/client';
-import { Kysely, sql, type MigrationProvider } from 'kysely';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
+import { Kysely, sql } from 'kysely';
+import { describe, expect, it } from 'vitest';
 import { mergeMigrationProviders, migrateToLatest } from '../src/apply';
 import { dumpSchema } from '../src/oracle';
 

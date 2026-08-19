@@ -1,5 +1,6 @@
+import type { TableInsert, TableSelect } from '@/database/define-table';
 import { z } from '@hono/zod-openapi';
-import { defineTable, type TableSelect, type TableInsert } from '@/database/define-table';
+import { defineTable } from '@/database/define-table';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 
 // ============================================================================

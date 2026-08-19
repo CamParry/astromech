@@ -5,14 +5,14 @@
  * that has not run.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act } from 'react';
-import type { ComponentProps, ReactElement } from 'react';
-import { createRoot } from 'react-dom/client';
-import ChatDrawer from '../../src/admin/slots/chat-drawer';
-import { closeDrawer, toggleDrawer } from '../../src/admin/drawer-state';
-import type { ApprovalDecision, ApprovalRequest } from '../../src/types';
 import type { ChatEntry, UseChat } from '../../src/admin/use-chat';
+import type { ApprovalDecision, ApprovalRequest } from '../../src/types';
+import type { ComponentProps, ReactElement } from 'react';
+import { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { closeDrawer, toggleDrawer } from '../../src/admin/drawer-state';
+import ChatDrawer from '../../src/admin/slots/chat-drawer';
 
 let chat: UseChat;
 

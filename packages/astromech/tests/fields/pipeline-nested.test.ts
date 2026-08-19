@@ -7,8 +7,8 @@
  * happens below a container.
  */
 
-import { describe, expect, it } from 'vitest';
 import type { Field, FieldValidationContext, ValidationMode } from '@/types/fields';
+import { describe, expect, it } from 'vitest';
 import { parseFields } from '@/fields/pipeline';
 
 // ---------------------------------------------------------------------------

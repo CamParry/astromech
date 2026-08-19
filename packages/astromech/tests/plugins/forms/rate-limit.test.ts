@@ -4,25 +4,25 @@
  * the window-reset and cap rules on the counter itself.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { sql } from 'kysely';
+import type { DB } from '@/database/types';
+import type { EntriesService, PluginContext } from '@/types/index';
+import type { FormsOptions, SubmitResult } from '@astromech/forms';
 import type { Kysely } from 'kysely';
-import { setEmailDriver } from '@/email/registry';
+import { forms } from '@astromech/forms';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { sql } from 'kysely';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setEmailDriver } from '@/email/registry';
 import { entriesService as localEntries } from '@/entries/service';
 import {
     createPluginContext,
     getPluginIdentity,
     getPluginServiceMethods,
 } from '@/plugins/runtime/plugin-runtime';
-import { forms } from '@astromech/forms';
-import type { FormsOptions, SubmitResult } from '@astromech/forms';
 import {
     consumeRateLimit,
     resetRateLimit,
 } from '../../../../plugins/forms/src/service/rate-limit';
-import type { DB } from '@/database/types';
-import type { EntriesService, PluginContext } from '@/types/index';
 
 const FORM = 'forms/form';
 

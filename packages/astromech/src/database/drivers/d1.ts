@@ -16,11 +16,11 @@
  *     reports `canDump: false` with an explanatory error instead of assuming
  *     every driver can dump.
  */
-
-import { Kysely, CamelCasePlugin } from 'kysely';
-import { resolveBinding } from '@/cloudflare/bindings';
-import { D1Dialect, type D1DatabaseLike } from './d1-dialect';
+import type { D1DatabaseLike } from './d1-dialect';
 import type { DB } from '@/database/types';
+import { CamelCasePlugin, Kysely } from 'kysely';
+import { resolveBinding } from '@/cloudflare/bindings';
+import { D1Dialect } from './d1-dialect';
 
 export type { D1DatabaseLike, D1PreparedStatementLike, D1ResultLike } from './d1-dialect';
 

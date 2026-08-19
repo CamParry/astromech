@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import adminConfig from 'virtual:astromech/admin-config';
 import type { BaseFieldProps } from '@/types/index';
-import { astromechClient } from '@/transport/http/client/index';
+import { useEffect, useState } from 'react';
+import adminConfig from 'virtual:astromech/admin-config';
 import { MultiSelect } from '@/admin/components/ui/multi-select';
+import { astromechClient } from '@/transport/http/client/index';
 
 type EntryOption = {
     id: string;

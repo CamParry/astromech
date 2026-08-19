@@ -1,3 +1,14 @@
+import type {
+    ColumnMetadata,
+    DatabaseIntrospector,
+    DatabaseMetadata,
+    DatabaseMetadataOptions,
+    Kysely,
+    SchemaMetadata,
+    TableMetadata,
+} from 'kysely';
+import { DEFAULT_MIGRATION_LOCK_TABLE, DEFAULT_MIGRATION_TABLE, sql } from 'kysely';
+
 /**
  * Kysely introspector for Cloudflare D1.
  *
@@ -12,19 +23,6 @@
  * `pragma_table_info(?)` per table instead, and reproduces the rest of
  * `SqliteIntrospector`'s output so both drivers report identical metadata.
  */
-
-import {
-    DEFAULT_MIGRATION_LOCK_TABLE,
-    DEFAULT_MIGRATION_TABLE,
-    sql,
-    type ColumnMetadata,
-    type DatabaseIntrospector,
-    type DatabaseMetadata,
-    type DatabaseMetadataOptions,
-    type Kysely,
-    type SchemaMetadata,
-    type TableMetadata,
-} from 'kysely';
 
 type MasterRow = { name: string; sql: string | null; type: string };
 

@@ -6,13 +6,13 @@
  * converted route where the argument shape could leak into the response.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { Role, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { mountRouter, roleWith } from '@tests/mount-router';
-import { setStorageDriver } from '@/storage/registry';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { createMediaStorage } from '@/media/storage';
+import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
-import type { Role, StorageDriver } from '@/types/index';
 
 const noopStorage: StorageDriver = {
     name: 'noop',

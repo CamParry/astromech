@@ -4,10 +4,10 @@
  * and self-exclusion on update.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { usersService } from '@/users/service';
 import type { AstromechConfig } from '@/types/index';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { usersService } from '@/users/service';
 
 // ---------------------------------------------------------------------------
 // Config with custom user fields

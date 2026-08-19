@@ -13,12 +13,12 @@
  */
 
 import type { PluginContext, PluginServiceNamespace } from '@/types/index';
-import { getCurrentRole, getCurrentUser } from '@/request-context/index';
 import {
     createPluginContext,
     getPluginIdentity,
     getPluginServiceMethods,
 } from '@/plugins/runtime/plugin-runtime';
+import { getCurrentRole, getCurrentUser } from '@/request-context/index';
 
 type MethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
 

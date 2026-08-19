@@ -7,11 +7,11 @@
  * route, the width allowlist and the record's version.
  */
 
+import type { Media } from '@/types/index';
 import React from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
-import { buildVariantUrl } from '@/media/serving/image/url.shared';
 import { FileTypeIcon, versionedMediaUrl } from '@/admin/utilities/media';
-import type { Media } from '@/types/index';
+import { buildVariantUrl } from '@/media/serving/image/url.shared';
 
 export type MediaThumbProps = {
     item: Media;

@@ -3,12 +3,12 @@
  * route and folds the server-sent events back into it.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useAIContextItems, useAstromechPlugin } from 'astromech/ui/app';
-import { parseChatEvent, splitSseFrames } from './sse';
-import { errorMessage } from '../error-message';
 import type { ChatSession } from '../service/sessions';
 import type { ApprovalDecision, ApprovalRequest, ChatEvent, ChatMessage } from '../types';
+import { useAIContextItems, useAstromechPlugin } from 'astromech/ui/app';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { errorMessage } from '../error-message';
+import { parseChatEvent, splitSseFrames } from './sse';
 
 /**
  * One row of the transcript. An error is not a content block and must never

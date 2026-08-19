@@ -7,8 +7,8 @@
  * search, which never passes a locale).
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService } from '@/entries/index';
 
 const api = entriesService;

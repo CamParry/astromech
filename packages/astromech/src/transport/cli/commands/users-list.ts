@@ -1,7 +1,7 @@
 import { defineCommand } from 'citty';
+import { usersService } from '@/users/index';
 import { loadConfig } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
-import { usersService } from '@/users/index';
 
 export default defineCommand({
     meta: { name: 'users:list', description: 'List all users' },

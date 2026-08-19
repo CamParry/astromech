@@ -2,11 +2,11 @@
  * The plugin's own `forms:beforeSubmit` subscriber, registered only when the
  * site configured a spam provider.
  */
-
+import type { FormsBeforeSubmitPayload } from '../hooks/events';
+import type { SpamProvider } from './types';
 import type { Hook } from 'astromech';
 import { defineHook } from 'astromech';
-import { BEFORE_SUBMIT, type FormsBeforeSubmitPayload } from '../hooks/events';
-import type { SpamProvider } from './types';
+import { BEFORE_SUBMIT } from '../hooks/events';
 
 /** Reject a submission whose spam token fails verification. */
 export function spamHook(spam: SpamProvider): Hook {

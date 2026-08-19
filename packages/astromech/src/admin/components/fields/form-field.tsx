@@ -1,13 +1,13 @@
-import React from 'react';
 import type { Field } from '@/types/index';
+import React from 'react';
 import { Input } from '@/admin/components/ui/input';
-import { getFieldComponent } from '@/admin/rendering/field-registry';
 import { useLabel } from '@/admin/i18n/entry-namespace';
-import { hasPluginFieldType, PluginField } from './plugin-field';
+import { getFieldComponent } from '@/admin/rendering/field-registry';
 import { FieldPathProvider } from './field-context';
-import { FieldWrapper } from './field-wrapper';
 import { useFieldError, useFieldWarning } from './field-errors-context';
 import { useFieldValidationHandlers } from './field-validation-context';
+import { FieldWrapper } from './field-wrapper';
+import { hasPluginFieldType, PluginField } from './plugin-field';
 
 export type FormFieldProps = {
     field: Field;

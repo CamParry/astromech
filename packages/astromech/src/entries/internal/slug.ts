@@ -1,7 +1,7 @@
-import { getEntryStorage } from '../storage/registry';
-import { slugify } from '@/utilities/strings';
-import type { Entry, ResolvedEntryType } from '@/types/index';
 import type { EntryStorage } from '../storage/types';
+import type { Entry, ResolvedEntryType } from '@/types/index';
+import { slugify } from '@/utilities/strings';
+import { getEntryStorage } from '../storage/registry';
 
 /**
  * Derives the slug a new entry stores: the caller's, else one slugified from

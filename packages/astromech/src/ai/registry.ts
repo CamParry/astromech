@@ -6,8 +6,8 @@
  * reads probe rather than throw. What is stored is already wrapped.
  */
 
-import { createRegistry } from '@/utilities/registry';
 import type { LanguageModelV4 } from '@ai-sdk/provider';
+import { createRegistry } from '@/utilities/registry';
 
 type WrappedAIConfig = {
     model: LanguageModelV4;

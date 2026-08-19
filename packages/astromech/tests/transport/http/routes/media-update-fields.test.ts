@@ -8,15 +8,15 @@
  * These assert through the HTTP layer, which is what the admin actually uses.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
-import { OpenAPIHono } from '@hono/zod-openapi';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { setStorageDriver } from '@/storage/registry';
-import { mediaRouter } from '@/transport/http/routes/media';
-import { createMediaStorage } from '@/media/storage';
-import { mediaService } from '@/media/service';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { Role, StorageDriver, User } from '@/types/index';
+import { OpenAPIHono } from '@hono/zod-openapi';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { mediaService } from '@/media/service';
+import { createMediaStorage } from '@/media/storage';
+import { setStorageDriver } from '@/storage/registry';
+import { mediaRouter } from '@/transport/http/routes/media';
 
 const noopStorage: StorageDriver = {
     name: 'noop',

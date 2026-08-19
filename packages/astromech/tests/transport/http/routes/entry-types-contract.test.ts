@@ -10,11 +10,11 @@
  * single read 403s before it looks the type up.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { AstromechConfig, PluginDefinition, Role } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { mountRouter, roleWith } from '@tests/mount-router';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { entryTypesRouter } from '@/transport/http/routes/entry-types';
-import type { AstromechConfig, PluginDefinition, Role } from '@/types/index';
 
 const widgetsPlugin: PluginDefinition = {
     package: 'widgets',

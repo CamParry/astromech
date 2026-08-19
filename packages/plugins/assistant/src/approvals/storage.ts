@@ -6,15 +6,11 @@
  * handle is an argument, not a lookup: a plugin is *handed* its database on
  * `ctx.db`.
  */
-
-import { createStorage } from 'astromech';
-import type { PluginContext } from 'astromech';
-import {
-    approvalsTable,
-    type ApprovalRow,
-    type NewApprovalRow,
-} from '../tables/approvals';
+import type { ApprovalRow, NewApprovalRow } from '../tables/approvals';
 import type { ApprovalDecision } from '../types';
+import type { PluginContext } from 'astromech';
+import { createStorage } from 'astromech';
+import { approvalsTable } from '../tables/approvals';
 
 /**
  * How long an approval stays answerable. A pause the user never answers is

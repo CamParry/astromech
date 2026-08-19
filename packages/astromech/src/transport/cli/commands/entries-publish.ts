@@ -1,8 +1,8 @@
 import { defineCommand } from 'citty';
-import { loadConfig } from '../config';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { entriesService } from '@/entries/service';
-import { printResult, printError } from '../output';
+import { loadConfig } from '../config';
+import { printError, printResult } from '../output';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
     meta: { name: 'entries:publish', description: 'Publish an entry' },

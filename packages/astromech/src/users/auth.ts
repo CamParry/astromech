@@ -4,13 +4,13 @@
  * must already be filled; the built instance is held in a registry slot.
  */
 
-import { betterAuth } from 'better-auth';
 import type { Auth, BetterAuthOptions } from 'better-auth';
-import { createRegistry } from '@/utilities/registry';
-import { getDatabaseDriver } from '@/database/driver-registry';
+import { betterAuth } from 'better-auth';
 import { getConfig } from '@/config/registry';
+import { getDatabaseDriver } from '@/database/driver-registry';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 import { log } from '@/utilities/log';
+import { createRegistry } from '@/utilities/registry';
 
 const authRegistry = createRegistry<Auth<BetterAuthOptions>>('auth', {
     required: false,

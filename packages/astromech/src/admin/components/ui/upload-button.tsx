@@ -1,8 +1,8 @@
-import React, { useRef } from 'react';
-import { Upload } from 'lucide-react';
-import { Button } from './button';
 import type { ButtonProps } from './button';
+import { Upload } from 'lucide-react';
+import React, { useRef } from 'react';
 import { MEDIA_ACCEPT } from '@/admin/types/media';
+import { Button } from './button';
 
 export type UploadButtonProps = {
     /** Called with the selected File objects when the user picks files. */

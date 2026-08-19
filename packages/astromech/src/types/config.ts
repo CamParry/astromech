@@ -2,10 +2,7 @@
  * Configuration types — collection config, drivers, Astromech config
  */
 
-import type { Dialect, Kysely } from 'kysely';
-import type { DB } from '@/database/types';
 import type { AIConfig } from './ai';
-import type { CellKind } from './resolved';
 import type { Permission, Role } from './domain';
 import type {
     EntryFields,
@@ -15,8 +12,11 @@ import type {
     ResourceValidator,
 } from './fields';
 import type { PluginDefinition, PluginNavItem } from './plugins';
+import type { CellKind } from './resolved';
+import type { DB } from '@/database/types';
 import type { EntryStorage } from '@/entries/storage/types';
 import type { ImageFormat } from '@/media/serving/image/url.shared';
+import type { Dialect, Kysely } from 'kysely';
 
 // ============================================================================
 // Drivers

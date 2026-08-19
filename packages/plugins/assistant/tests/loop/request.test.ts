@@ -5,17 +5,16 @@
  * prompt instead.
  */
 
+import type { ChatMessage } from '../../src/types';
+import type { AIContextItem } from 'astromech';
+import { formatAIContextMessage } from 'astromech';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildRequest, SYSTEM_PROMPT } from '../../src/loop/request';
 
 // Only placement is under test, so the formatter returns a fixed marker.
 vi.mock('astromech', () => ({
     formatAIContextMessage: vi.fn(),
 }));
-
-import { formatAIContextMessage } from 'astromech';
-import type { AIContextItem } from 'astromech';
-import { buildRequest, SYSTEM_PROMPT } from '../../src/loop/request';
-import type { ChatMessage } from '../../src/types';
 
 const CONTEXT = { role: 'system' as const, content: '<<context>>' };
 

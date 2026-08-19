@@ -6,6 +6,7 @@
  * lives on the `_protected` layout, so references survive navigation.
  */
 
+import type { AIContextItem, AIContextReference } from '@/types/ai-context';
 import React, {
     createContext,
     useContext,
@@ -14,7 +15,6 @@ import React, {
     useState,
     useSyncExternalStore,
 } from 'react';
-import type { AIContextItem, AIContextReference } from '@/types/ai-context';
 
 // ============================================================================
 // Types

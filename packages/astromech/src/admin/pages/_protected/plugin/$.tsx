@@ -12,19 +12,19 @@
  * dirty indicator, locale switcher.
  */
 
-import React from 'react';
 import { createFileRoute } from '@tanstack/react-router';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { pages } from 'virtual:astromech/plugins/components';
 import adminConfig from 'virtual:astromech/admin-config';
-import { usePermissions } from '@/admin/hooks/index';
+import { pages } from 'virtual:astromech/plugins/components';
 import { ComponentErrorBoundary } from '@/admin/components/pages/ComponentErrorBoundary';
 import { ComponentPageView } from '@/admin/components/pages/ComponentPageView';
 import { SettingsPageForm } from '@/admin/components/pages/SettingsPageForm';
-import { PluginUiProvider } from '@/admin/context/plugin';
 import { EmptyState, Page, PageContent } from '@/admin/components/ui/index';
-import { resolveLabel } from '@/admin/i18n/labels';
 import { useAIContext } from '@/admin/context/ai-context';
+import { PluginUiProvider } from '@/admin/context/plugin';
+import { usePermissions } from '@/admin/hooks/index';
+import { resolveLabel } from '@/admin/i18n/labels';
 
 function PluginPage(): React.ReactElement {
     const params = Route.useParams();

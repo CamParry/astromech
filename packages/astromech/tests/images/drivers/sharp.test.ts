@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeAll } from 'vitest';
-import sharpLib from 'sharp';
-import { sharp } from '@/media/serving/image/drivers/sharp';
 import type { ImageSource } from '@/types/index';
+import sharpLib from 'sharp';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { sharp } from '@/media/serving/image/drivers/sharp';
 
 // ---------------------------------------------------------------------------
 // Shared test fixture

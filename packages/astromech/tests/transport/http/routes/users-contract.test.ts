@@ -7,13 +7,13 @@
  * which role each one turns away.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { Role, User } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { adminRole, mountRouter, roleWith, testUser } from '@tests/mount-router';
-import { usersService } from '@/users/index';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 import { usersRouter } from '@/transport/http/routes/users';
-import type { Role, User } from '@/types/index';
+import { usersService } from '@/users/index';
 
 function app(role: Role = adminRole, user: User = testUser) {
     return mountRouter('/users', usersRouter, role, user);

@@ -1,10 +1,9 @@
+import type { EntryStatus, EntryUpdateData, JsonObject } from '@/types/index';
 import { defineCommand } from 'citty';
-import { loadConfig } from '../config';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 import { entriesService } from '@/entries/service';
-import { printResult, printError, parseJsonArg } from '../output';
-import type { EntryStatus, EntryUpdateData } from '@/types/index';
-import type { JsonObject } from '@/types/index';
+import { loadConfig } from '../config';
+import { parseJsonArg, printError, printResult } from '../output';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
     meta: { name: 'entries:update', description: 'Update an existing entry' },

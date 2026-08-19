@@ -1,10 +1,10 @@
+import type { ResolvedEntryFields } from '@/types/fields';
 import { describe, expect, it } from 'vitest';
 import {
-    partitionGlobalValues,
     mergeGlobalValues,
     mergeLocaleSetting,
+    partitionGlobalValues,
 } from '@/settings/index';
-import type { ResolvedEntryFields } from '@/types/fields';
 
 // ---------------------------------------------------------------------------
 // Helpers

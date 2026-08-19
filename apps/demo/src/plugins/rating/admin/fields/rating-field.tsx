@@ -1,5 +1,5 @@
-import React from 'react';
 import type { BaseFieldProps, Field } from 'astromech';
+import React from 'react';
 
 export default function RatingField({
     name,

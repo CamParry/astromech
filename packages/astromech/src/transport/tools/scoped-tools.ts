@@ -3,12 +3,12 @@
  * dispatched through `buildScopedDispatch`. Lives beside `dispatch.ts` because
  * it composes it, and serves the AI tool-loop as well as MCP.
  */
-
+import type { DispatchResult } from '@/transport/tools/dispatch';
 import type { ManifestMethod, Role, ToolDefinition } from '@/types/index';
 import { getMethodManifest } from '@/codegen/manifest-registry';
-import { filterMethods } from '@/policies/method-filter';
 import { annotateManifest } from '@/policies/annotate-manifest';
-import { buildScopedDispatch, type DispatchResult } from '@/transport/tools/dispatch';
+import { filterMethods } from '@/policies/method-filter';
+import { buildScopedDispatch } from '@/transport/tools/dispatch';
 
 /** Build the tool definitions this role reaches, narrowed by the method filter. */
 export function buildScopedTools(

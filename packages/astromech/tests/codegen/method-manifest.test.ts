@@ -1,15 +1,15 @@
-import { describe, expect, it } from 'vitest';
-import {
-    generateMethodManifest,
-    serialiseMethodManifest,
-} from '@/codegen/method-manifest';
-import { resolveConfig } from '@/config/resolve';
 import type {
     AstromechConfig,
     DatabaseDriver,
     PluginDefinition,
     StorageDriver,
 } from '@/types/index';
+import { describe, expect, it } from 'vitest';
+import {
+    generateMethodManifest,
+    serialiseMethodManifest,
+} from '@/codegen/method-manifest';
+import { resolveConfig } from '@/config/resolve';
 
 // ============================================================================
 // Minimal stubs — resolveConfig needs db + storage but doesn't call them here

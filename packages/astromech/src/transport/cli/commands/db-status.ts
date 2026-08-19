@@ -1,7 +1,7 @@
 import { defineCommand } from 'citty';
+import { getDb } from '@/database/registry';
 import { loadConfig } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
-import { getDb } from '@/database/registry';
 
 export default defineCommand({
     meta: { name: 'db:status', description: 'Show migration status' },

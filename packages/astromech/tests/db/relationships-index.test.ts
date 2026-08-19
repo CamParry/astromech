@@ -3,11 +3,11 @@
  * file) database. Covers the wholesale replace and its INSERT chunking.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { RelationshipEdge } from '@/fields/relationship-edges';
 import { createTestDb } from '@tests/harness';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { getDb } from '@/database/registry';
 import { createRelationshipStorage } from '@/database/storage/relationships';
-import type { RelationshipEdge } from '@/fields/relationship-edges';
 
 const SOURCE = { id: 'src-1', kind: 'entry', type: 'post' } as const;
 

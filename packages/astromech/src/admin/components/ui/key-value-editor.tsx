@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
 import { Trash2 } from 'lucide-react';
+import React, { useRef, useState } from 'react';
 import { Input } from './input';
 
 export type KeyValueEditorProps = {

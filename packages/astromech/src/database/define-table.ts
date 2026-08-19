@@ -27,8 +27,8 @@
  * Postgres) compare ISO strings correctly (fixed-width, lexicographic).
  */
 
-import { ulid } from 'ulidx';
 import type { ColumnType, Generated } from 'kysely';
+import { ulid } from 'ulidx';
 
 // ============================================================================
 // Runtime shapes

@@ -10,23 +10,21 @@
  * fails here.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { AuthVariables } from '@/transport/http/middleware/auth';
+import type { MountedRoute } from '@/transport/http/routes/http-routes.shared';
+import type { RestRoute } from '@/transport/http/routes/rest-route';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import type { AuthVariables } from '@/transport/http/middleware/auth';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { createEntriesRouter, ENTRIES_ROUTES } from '@/transport/http/routes/entries';
-import { mediaRouter, MEDIA_ROUTES } from '@/transport/http/routes/media';
+import { HTTP_ROUTES } from '@/transport/http/routes/http-routes.shared';
+import { MEDIA_ROUTES, mediaRouter } from '@/transport/http/routes/media';
 import {
-    notificationsRouter,
     NOTIFICATIONS_ROUTES,
+    notificationsRouter,
 } from '@/transport/http/routes/notifications';
-import { settingsRouter, SETTINGS_ROUTES } from '@/transport/http/routes/settings';
-import { usersRouter, USERS_ROUTES } from '@/transport/http/routes/users';
-import type { RestRoute } from '@/transport/http/routes/rest-route';
-import {
-    HTTP_ROUTES,
-    type MountedRoute,
-} from '@/transport/http/routes/http-routes.shared';
+import { SETTINGS_ROUTES, settingsRouter } from '@/transport/http/routes/settings';
+import { USERS_ROUTES, usersRouter } from '@/transport/http/routes/users';
 
 type Operation = {
     summary?: string;

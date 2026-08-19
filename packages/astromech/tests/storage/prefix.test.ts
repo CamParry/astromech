@@ -1,6 +1,6 @@
+import type { StorageDriver, StorageList } from '@/types/index';
 import { describe, expect, it } from 'vitest';
 import { deletePrefix, listAll } from '@/storage/prefix';
-import type { StorageDriver, StorageList } from '@/types/index';
 
 // ---------------------------------------------------------------------------
 // Paginating fake driver — `list` never returns more than `pageSize` keys and

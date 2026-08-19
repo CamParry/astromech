@@ -4,18 +4,18 @@
  * collector that enumerates every entry as a source.
  */
 
-import { getConfig } from '@/config/registry';
-import { createRelationshipStorage } from '@/database/storage/relationships';
+import type { StorageDb } from '../storage/types';
 import type { RelationshipIndexSource } from '@/database/storage/relationships';
-import { createStorage } from '@/database/storage/create-storage';
-import { collectRelationshipEdges } from '@/fields/relationship-edges';
 import type { RelationshipEdge } from '@/fields/relationship-edges';
+import type { JsonObject } from '@/types/index';
+import { getConfig } from '@/config/registry';
+import { createStorage } from '@/database/storage/create-storage';
+import { createRelationshipStorage } from '@/database/storage/relationships';
 import { flattenEntryFields } from '@/fields/flatten';
+import { collectRelationshipEdges } from '@/fields/relationship-edges';
+import { qualifyEntryType, resolveEntryType } from '@/utilities/entry-type-ids';
 import { entriesTable } from '../schema';
 import { getEntryStorage, hasEntryStorageOverride } from '../storage/registry';
-import { qualifyEntryType, resolveEntryType } from '@/utilities/entry-type-ids';
-import type { JsonObject } from '@/types/index';
-import type { StorageDb } from '../storage/types';
 
 /**
  * Re-index one entry. `fields` must be post-`parseFields` values — item ids

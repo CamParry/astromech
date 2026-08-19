@@ -1,3 +1,21 @@
+import type { HttpRouteSpec } from './http-routes.shared';
+import type { AuthVariables } from '@/transport/http/middleware/auth';
+import type { ServiceMethodContract } from '@/types/index';
+import type { OpenAPIHono } from '@hono/zod-openapi';
+import type { Context } from 'hono';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
+import { z } from '@hono/zod-openapi';
+import { PermissionDeniedError } from '@/errors/index';
+import { permissionsFor } from '@/permissions/permissions-for';
+import { scopedServices } from '@/policies/scoped-services';
+import {
+    badRequest,
+    forbidden,
+    fromZodError,
+    notFound,
+    requestSchemaError,
+} from '@/transport/http/middleware/errors';
+
 /**
  * The server half of the REST route table.
  *
@@ -22,23 +40,6 @@
  * shared table marked `handler: 'bespoke'`, and `documentBespokeRoutes` puts it
  * in the document with the rest. A hand-written handler is still public API.
  */
-
-import { z, type OpenAPIHono } from '@hono/zod-openapi';
-import type { Context } from 'hono';
-import type { ContentfulStatusCode } from 'hono/utils/http-status';
-import { PermissionDeniedError } from '@/errors/index';
-import { permissionsFor } from '@/permissions/permissions-for';
-import { scopedServices } from '@/policies/scoped-services';
-import type { AuthVariables } from '@/transport/http/middleware/auth';
-import {
-    badRequest,
-    forbidden,
-    fromZodError,
-    notFound,
-    requestSchemaError,
-} from '@/transport/http/middleware/errors';
-import type { HttpRouteSpec } from './http-routes.shared';
-import type { ServiceMethodContract } from '@/types/index';
 
 type Env = { Variables: AuthVariables };
 

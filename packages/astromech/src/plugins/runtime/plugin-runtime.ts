@@ -12,9 +12,8 @@
  * `virtual:astromech/config`, so this module stays unit-testable.
  */
 
-import type { Kysely } from 'kysely';
 import type { DB } from '@/database/types';
-import type { ReactElement } from 'react';
+import type { ClientAccess } from '@/plugins/runtime/client-access';
 import type {
     AnyServiceMethod,
     EntriesService,
@@ -23,8 +22,9 @@ import type {
     KnownCoreEvent,
     MediaService,
     NotificationsService,
-    PluginContext,
+    NotifyInput,
     PluginConfigView,
+    PluginContext,
     PluginDatabase,
     PluginDefinition,
     PluginLogger,
@@ -40,33 +40,33 @@ import type {
     User,
     UsersService,
 } from '@/types/index';
-import { getDb } from '@/database/registry';
-import { getCurrentRole } from '@/request-context/index';
+import type { Kysely } from 'kysely';
+import type { ReactElement } from 'react';
+import { registerCronJob } from '@/cron/registry';
 import { kyselyTableKey, registerTableCodec } from '@/database/codec';
 import { peekDatabaseDriver } from '@/database/driver-registry';
-import { getStorageDriver } from '@/storage/registry';
-import { listAll } from '@/storage/prefix';
+import { getDb } from '@/database/registry';
 import { getEmailDriver } from '@/email/registry';
 import { renderEmail } from '@/email/render';
-import type { NotifyInput } from '@/types/index';
+import { AstromechError } from '@/errors/index';
+import { flattenEntryFields } from '@/fields/flatten';
+import { entryAccess } from '@/plugins/runtime/entry-access';
+import { notifyAccess } from '@/plugins/runtime/notify-access';
 import {
     pluginEntryTypes,
     resolvePluginIdentity,
 } from '@/plugins/runtime/plugin-identity';
-import type { ClientAccess } from '@/plugins/runtime/client-access';
-import { entryAccess } from '@/plugins/runtime/entry-access';
-import { notifyAccess } from '@/plugins/runtime/notify-access';
 import { isTable } from '@/plugins/runtime/plugin-tables';
 import { createPluginTrackingStorage } from '@/plugins/runtime/plugin-tracking-storage';
-import { registerCronJob } from '@/cron/registry';
-import { flattenEntryFields } from '@/fields/flatten';
-import {
-    withDefaultShape,
-    withDefaultSettingsShape,
-} from '@/utilities/with-default-shape';
-import { createRegistry } from '@/utilities/registry';
-import { AstromechError } from '@/errors/index';
+import { getCurrentRole } from '@/request-context/index';
+import { listAll } from '@/storage/prefix';
+import { getStorageDriver } from '@/storage/registry';
 import { log } from '@/utilities/log';
+import { createRegistry } from '@/utilities/registry';
+import {
+    withDefaultSettingsShape,
+    withDefaultShape,
+} from '@/utilities/with-default-shape';
 
 // ============================================================================
 // Registry (globalThis — shared across the package's entry chunks)

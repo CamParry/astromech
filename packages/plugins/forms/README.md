@@ -13,8 +13,8 @@ table, and are still managed through the standard entry admin UI.
 
 ```ts
 // astromech.config.ts
-import { defineConfig } from 'astromech';
 import { forms } from '@astromech/forms';
+import { defineConfig } from 'astromech';
 
 export default defineConfig({
     plugins: [forms()],

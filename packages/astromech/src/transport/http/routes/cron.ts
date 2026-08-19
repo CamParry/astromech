@@ -10,9 +10,9 @@
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { unauthorized } from '@/transport/http/middleware/errors';
-import { getCurrentRole } from '@/request-context/index';
 import { onTick } from '@/cron/runner';
+import { getCurrentRole } from '@/request-context/index';
+import { unauthorized } from '@/transport/http/middleware/errors';
 
 const router = new OpenAPIHono();
 

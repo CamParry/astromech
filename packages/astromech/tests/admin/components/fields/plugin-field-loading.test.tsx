@@ -11,11 +11,11 @@
  * which the loading form and an entry with no stored value look alike from.
  */
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { BaseFieldProps, Field } from '@/types/index';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
-import type { BaseFieldProps, Field } from '@/types/index';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import '@/admin/rendering/register-fields';
 import { FormField } from '@/admin/components/fields/form-field';
 

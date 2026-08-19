@@ -14,10 +14,11 @@
  * a session-scoped method takes its subject from the request context.
  */
 
+import type { AuthVariables } from '@/transport/http/middleware/auth';
+import type { ManifestMethod } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { z } from 'zod';
 import { PermissionDeniedError } from '@/errors/index';
-import type { AuthVariables } from '@/transport/http/middleware/auth';
 import {
     badRequest,
     forbidden,
@@ -26,7 +27,6 @@ import {
 } from '@/transport/http/middleware/errors';
 import { dispatchArgs } from '@/transport/tools/dispatch';
 import { resolveScopedMethod } from '@/transport/tools/scoped-tools';
-import type { ManifestMethod } from '@/types/index';
 
 type Env = { Variables: AuthVariables };
 

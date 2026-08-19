@@ -5,9 +5,8 @@
  * is core's job and is tested there.
  */
 
-import { describe, expect, it } from 'vitest';
-
 import type { ToolDefinition } from 'astromech';
+import { describe, expect, it } from 'vitest';
 import { TOOL_SEARCH_KEY, toToolSet } from '../../src/loop/tools';
 
 /** A dispatch whose `invoke` resolves to `result`. */

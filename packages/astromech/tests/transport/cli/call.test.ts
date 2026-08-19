@@ -6,9 +6,9 @@
  * trusted, unscoped path, so `sessionScoped` is one of those reasons.
  */
 
+import type { ManifestMethod } from '@/types/index';
 import { describe, expect, it } from 'vitest';
 import { resolveCallable } from '@/transport/cli/commands/call';
-import type { ManifestMethod } from '@/types/index';
 
 function coreMethod(overrides: Partial<ManifestMethod> = {}): ManifestMethod {
     return {

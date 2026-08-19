@@ -3,25 +3,25 @@
  * domains read, and register the plugin runtime (ports, plugins, manifest).
  */
 
-import type { Kysely } from 'kysely';
-import type { AstromechConfig, ResolvedConfig } from '@/types/index';
 import type { DB } from '@/database/types';
-import { generateMethodManifest } from '@/codegen/method-manifest';
-import { setMethodManifest } from '@/codegen/manifest-registry';
-import { setDb } from '@/database/registry';
-import { setDatabaseDriver } from '@/database/driver-registry';
-import { setStorageDriver } from '@/storage/registry';
-import { setImageConfig } from '@/media/serving/image/registry';
-import { defaultImageWidths, normaliseWidths } from '@/utilities/image-widths';
-import { setEmailDriver } from '@/email/registry';
-import { setAIConfig } from '@/ai/registry';
+import type { AstromechConfig, ResolvedConfig } from '@/types/index';
+import type { Kysely } from 'kysely';
 import { buildAIConfig } from '@/ai/middleware';
+import { setAIConfig } from '@/ai/registry';
+import { setMethodManifest } from '@/codegen/manifest-registry';
+import { generateMethodManifest } from '@/codegen/method-manifest';
+import { resolveSchedulerDriver, setSchedulerDriver } from '@/cron/registry';
+import { setDatabaseDriver } from '@/database/driver-registry';
+import { setDb } from '@/database/registry';
+import { setEmailDriver } from '@/email/registry';
 import { setEntryAccess } from '@/entries/plugin-access';
+import { setImageConfig } from '@/media/serving/image/registry';
 import { setNotifyAccess } from '@/notifications/plugin-access';
 import { setPluginAccess } from '@/plugin-access';
-import { resolveSchedulerDriver, setSchedulerDriver } from '@/cron/registry';
-import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { entryAccess } from '@/plugins/runtime/entry-access';
+import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
+import { setStorageDriver } from '@/storage/registry';
+import { defaultImageWidths, normaliseWidths } from '@/utilities/image-widths';
 
 /** Fill every driver slot the domains read. */
 export async function registerDrivers(

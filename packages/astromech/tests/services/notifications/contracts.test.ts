@@ -8,7 +8,8 @@
  * itself. `decisions/0037` is the design.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import type { DB } from '@/database/types';
+import type { CoreManifestMethod, Role } from '@/types/index';
 import type { Kysely } from 'kysely';
 import {
     createTestDb,
@@ -17,13 +18,12 @@ import {
     runAsUser,
     setupTestConfig,
 } from '@tests/harness';
-import { resolveConfig } from '@/config/resolve';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { generateMethodManifest } from '@/codegen/method-manifest';
+import { resolveConfig } from '@/config/resolve';
 import { notificationsContract } from '@/notifications/methods';
 import { notify } from '@/notifications/service';
 import { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch';
-import type { CoreManifestMethod, Role } from '@/types/index';
-import type { DB } from '@/database/types';
 
 let db: Kysely<DB>;
 let alice: string;

@@ -6,9 +6,9 @@
  * a field's own error keeps a key they share.
  */
 
-import { describe, expect, it, vi } from 'vitest';
-import type { Field, ResourceValidator, ValidationMode } from '@/types/fields';
 import type { ResourceType } from '@/types/domain';
+import type { Field, ResourceValidator, ValidationMode } from '@/types/fields';
+import { describe, expect, it, vi } from 'vitest';
 import { parseFields } from '@/fields/pipeline';
 
 // ---------------------------------------------------------------------------

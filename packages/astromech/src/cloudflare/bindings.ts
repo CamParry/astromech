@@ -22,8 +22,8 @@
  * Workers build never bundles `wrangler`.
  */
 
-import { createRegistry } from '@/utilities/registry';
 import { AstromechError } from '@/errors/index';
+import { createRegistry } from '@/utilities/registry';
 
 type BindingEnv = Record<string, unknown>;
 

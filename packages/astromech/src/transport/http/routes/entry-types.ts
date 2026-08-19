@@ -18,13 +18,13 @@
  *   GET /entry-types/:type      → single entry type metadata
  */
 
+import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { getConfig } from '@/config/registry';
-import { resolveEntryType } from '@/utilities/entry-type-ids';
-import { forbidden, notFound } from '@/transport/http/middleware/errors';
-import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { entryPermission } from '@/permissions/index';
 import { permissionsFor } from '@/permissions/permissions-for';
+import { forbidden, notFound } from '@/transport/http/middleware/errors';
+import { resolveEntryType } from '@/utilities/entry-type-ids';
 
 type Env = { Variables: AuthVariables };
 

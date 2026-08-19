@@ -12,13 +12,14 @@
  * the namespace is derived from it here.
  */
 
+import type { DB } from '@/database/types';
+import type { Kysely } from 'kysely';
 import { defineCommand } from 'citty';
-import { sql, type Kysely } from 'kysely';
-import { loadConfig, loadRawConfig } from '../config';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
+import { sql } from 'kysely';
 import { getDb } from '@/database/registry';
 import { pluginNamespace } from '@/plugins/runtime/plugin-identity';
-import type { DB } from '@/database/types';
+import { loadConfig, loadRawConfig } from '../config';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export type PurgeResult = {
     /** Dropped table names, in `sqlite_master` order. */

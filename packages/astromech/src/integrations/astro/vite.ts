@@ -4,13 +4,13 @@
  * virtual modules.
  */
 
-import { fileURLToPath } from 'node:url';
-import type { HookParameters } from 'astro';
-import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 import type { AstromechConfig, ResolvedConfig } from '@/types/index';
-import { resolveConfigPath } from '@/config/load';
-import { buildAdminConfig } from '@/config/admin-config';
+import type { HookParameters } from 'astro';
+import { fileURLToPath } from 'node:url';
+import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 import { generatePluginClientManifest } from '@/codegen/plugin-client-manifest';
+import { buildAdminConfig } from '@/config/admin-config';
+import { resolveConfigPath } from '@/config/load';
 import { virtualModule } from '@/integrations/astro/virtual-module';
 
 /** The `vite` field of the config update Astro accepts. */

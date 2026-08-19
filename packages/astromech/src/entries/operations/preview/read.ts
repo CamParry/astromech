@@ -5,14 +5,14 @@
  * token → empty result (the front-end renders a 404).
  */
 
+import type { Entry, EntryQueryParams, QueryResult } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { flattenEntryFields } from '@/fields/flatten';
 import { resolveEntryType } from '@/utilities/entry-type-ids';
-import { getEntryStorage } from '../../storage/registry';
-import { getDefaultLocale } from '../../internal/type-config';
+import { projectPreview, verifyPreviewToken } from '../../internal/preview';
 import { asEntry } from '../../internal/records';
-import { verifyPreviewToken, projectPreview } from '../../internal/preview';
-import type { Entry, EntryQueryParams, QueryResult } from '@/types/index';
+import { getDefaultLocale } from '../../internal/type-config';
+import { getEntryStorage } from '../../storage/registry';
 
 export async function runPreviewQuery(
     params: EntryQueryParams & { type: string | readonly string[] }

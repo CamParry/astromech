@@ -4,9 +4,9 @@
  * update.
  */
 
-import { getNonTranslatableFieldNames } from './type-config';
-import type { Entry, JsonObject, ResolvedEntryType } from '@/types/index';
 import type { EntryStorage } from '../storage/types';
+import type { Entry, JsonObject, ResolvedEntryType } from '@/types/index';
+import { getNonTranslatableFieldNames } from './type-config';
 
 /**
  * Merges in the locale group's shared fields from an existing sibling. A field

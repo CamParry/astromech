@@ -5,16 +5,15 @@
  * publishes a resolved config through the harness.
  */
 
-import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import type { Kysely } from 'kysely';
-import type { Updateable } from 'kysely';
+import type { DB } from '@/database/types';
+import type { Kysely, Updateable } from 'kysely';
 import { createTestDb, makeTestConfig } from '@tests/harness';
-import { registerCronJob } from '@/cron/registry';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { interval } from '@/cron/drivers/index';
-import { createWorkerEntry } from '@/integrations/cloudflare/index';
+import { registerCronJob } from '@/cron/registry';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/schema';
-import type { DB } from '@/database/types';
+import { createWorkerEntry } from '@/integrations/cloudflare/index';
 import { globals } from '@/utilities/registry';
 
 // Holds what the mocked virtual module serves. `vi.hoisted` so the mock factory,

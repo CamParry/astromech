@@ -1,5 +1,5 @@
-import { useTranslation } from 'react-i18next';
 import type { BaseFieldProps } from '@/types/index';
+import { useTranslation } from 'react-i18next';
 import { KeyValueEditor } from '@/admin/components/ui/key-value-editor';
 
 export function KeyValueField({ name, value, onChange, disabled }: BaseFieldProps) {

@@ -1,6 +1,6 @@
-import React from 'react';
-import { ToggleGroup as BaseToggleGroup } from '@base-ui/react/toggle-group';
 import { Toggle as BaseToggle } from '@base-ui/react/toggle';
+import { ToggleGroup as BaseToggleGroup } from '@base-ui/react/toggle-group';
+import React from 'react';
 
 export type ToggleGroupItem<V extends string = string> = {
     value: V;

@@ -430,9 +430,11 @@ name, and it prefixes both the table and any index names with
 `plugin_<namespace>_` so two plugins can never collide.
 
 ```ts
-// tables/widgets.ts
-import { definePluginTable, type TableSelect } from 'astromech';
+import type { TableSelect } from 'astromech';
+import { definePluginTable } from 'astromech';
 import { MY_PLUGIN_PACKAGE } from '../types.js';
+
+// tables/widgets.ts
 
 export const widgetsTable = definePluginTable(
     MY_PLUGIN_PACKAGE,
@@ -531,9 +533,10 @@ plugin is _handed_ its database on `ctx.db`.
 
 ```ts
 // storage.ts
-import { createStorage } from 'astromech';
+import type { WidgetRow } from './tables/widgets.js';
 import type { PluginContext } from 'astromech';
-import { widgetsTable, type WidgetRow } from './tables/widgets.js';
+import { createStorage } from 'astromech';
+import { widgetsTable } from './tables/widgets.js';
 
 export function createWidgetsStorage(db: PluginContext['db']) {
     const storage = createStorage(widgetsTable, db);
@@ -723,8 +726,8 @@ the HTTP RPC route, so there is nothing to scope them with.
 imports, so reaching a model needs no port and no `ctx` handle:
 
 ```ts
-import { getModel } from 'astromech';
 import { generateText } from 'ai';
+import { getModel } from 'astromech';
 
 const model = getModel('my-plugin');
 if (model === undefined) return; // no `ai` block — the feature is off
@@ -837,14 +840,14 @@ options, pass `definePlugin` a factory instead of a plain object:
 
 ```ts
 // index.ts
-import { definePlugin, withDefaults } from 'astromech';
 import type { RedirectsOptions } from './types.js';
-import { REDIRECTS_PACKAGE } from './types.js';
+import { definePlugin, withDefaults } from 'astromech';
 import { migrationProvider } from '../migrations/index.js';
 import { redirectEntryType } from './entries/redirect.js';
-import { redirectsTable } from './tables/redirects.js';
-import { redirectsService } from './service/redirects.js';
 import { slugChangeHook } from './hooks/slug-change.js';
+import { redirectsService } from './service/redirects.js';
+import { redirectsTable } from './tables/redirects.js';
+import { REDIRECTS_PACKAGE } from './types.js';
 
 const DEFAULT_OPTIONS: Required<RedirectsOptions> = {
     generateOnSlugChange: true,

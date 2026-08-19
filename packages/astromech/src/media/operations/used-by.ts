@@ -4,11 +4,11 @@
  */
 
 import type { RelationshipRow } from '@/database/schema';
+import type { MediaUsage } from '@/types/index';
 import { createRelationshipStorage } from '@/database/storage/relationships';
 // Peer domains, read only to name a source row. See the `usedBy` docstring.
 import { getEntryStorage } from '@/entries/storage/registry';
 import { createUserStorage } from '@/users/storage';
-import type { MediaUsage } from '@/types/index';
 import { createMediaStorage } from '../storage';
 
 /**

@@ -5,15 +5,15 @@
  * re-renders — so it stayed disabled and no media edit could ever be saved.
  */
 
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import type { Media } from '@/types/index';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { ConfirmProvider } from '@/admin/components/ui/confirm';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { MediaDetailModal } from '@/admin/components/media/MediaDetailModal';
+import { ConfirmProvider } from '@/admin/components/ui/confirm';
 import en from '@/admin/locales/en.json';
-import type { Media } from '@/types/index';
 
 const { updateMutate, deleteMutate } = vi.hoisted(() => ({
     updateMutate: vi.fn(),

@@ -8,9 +8,9 @@
  * Called by the public-shape projection in visibility.ts.
  */
 
-import { renderToHTMLString } from '@tiptap/static-renderer';
-import type { JSONContent } from '@tiptap/core';
 import type { RichTextAllow } from '@/types/fields';
+import type { JSONContent } from '@tiptap/core';
+import { renderToHTMLString } from '@tiptap/static-renderer';
 import { buildRichTextExtensions } from './extensions';
 import { isUnsafeHref } from './safe-links';
 

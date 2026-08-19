@@ -10,10 +10,10 @@
  * without seeing the value.
  */
 
-import { describe, expect, it, beforeAll } from 'vitest';
-import i18next from 'i18next';
-import type { TFunction } from 'i18next';
 import type { Field } from '@/types/index';
+import type { TFunction } from 'i18next';
+import i18next from 'i18next';
+import { beforeAll, describe, expect, it } from 'vitest';
 import {
     fieldErrorNames,
     fieldLabelPathForError,

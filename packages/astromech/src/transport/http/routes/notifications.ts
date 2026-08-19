@@ -12,18 +12,13 @@
  *   DELETE /notifications        → notifications.dismissAll
  *   DELETE /notifications/:id    → notifications.dismiss
  */
-
+import type { RestRoute } from './rest-route';
+import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { notificationsService } from '@/notifications/index';
-import type { AuthVariables } from '@/transport/http/middleware/auth';
-import { NOTIFICATIONS_ROUTE_SPECS } from './http-routes.shared';
-import {
-    attachHandlers,
-    documentBespokeRoutes,
-    mountRestRoutes,
-    type RestRoute,
-} from './rest-route';
 import { notificationsContract } from '@/notifications/methods';
+import { NOTIFICATIONS_ROUTE_SPECS } from './http-routes.shared';
+import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 
 type Env = { Variables: AuthVariables };
 

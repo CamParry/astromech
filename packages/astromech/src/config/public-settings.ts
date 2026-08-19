@@ -3,8 +3,8 @@
  * the author's `publicSettings` list.
  */
 
-import type { PluginDefinition } from '@/types/plugins';
 import type { ResolvedAdminPage } from '@/types/index';
+import type { PluginDefinition } from '@/types/plugins';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 
 /**

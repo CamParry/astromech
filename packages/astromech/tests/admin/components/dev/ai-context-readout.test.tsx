@@ -6,13 +6,13 @@
  * verbatim rather than a rendering of its own.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
-import { createRoot } from 'react-dom/client';
-import { act } from 'react';
 import type { AIContextReference } from '@/types/ai-context';
+import { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { AIContextReadout } from '@/admin/components/dev/ai-context-readout';
 import { AIContextProvider, useAIContext } from '@/admin/context/ai-context';
 import { formatAIContextMessage } from '@/utilities/ai-context';
-import { AIContextReadout } from '@/admin/components/dev/ai-context-readout';
 
 const postsList: AIContextReference = { kind: 'entries', type: 'posts', label: 'Posts' };
 

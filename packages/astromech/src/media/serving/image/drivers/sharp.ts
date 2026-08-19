@@ -10,9 +10,9 @@
  * Not suitable for Cloudflare Workers — use the Cloudflare Images driver there.
  */
 
-import sharpLib from 'sharp';
-import { encode } from 'blurhash';
 import type { ImageDriver, ImageSource } from '@/types/index';
+import { encode } from 'blurhash';
+import sharpLib from 'sharp';
 
 export function sharp(): ImageDriver {
     return {

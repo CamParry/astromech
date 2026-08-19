@@ -3,9 +3,8 @@
  * anything runs it, and still closes the stream with `done`.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { streamText } from 'ai';
+import type { ChatEvent, ChatMessage, ResolvedAssistantOptions } from '../../src/types';
+import type { FakeSessions } from '../sessions/fake-sessions';
 import type {
     LanguageModel,
     ModelMessage,
@@ -15,11 +14,11 @@ import type {
 } from 'ai';
 import type * as AiModule from 'ai';
 import type { PluginLogger, ToolDefinition } from 'astromech';
+import { streamText } from 'ai';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { runAssistantLoop } from '../../src/loop/run';
-import type { ChatEvent, ChatMessage, ResolvedAssistantOptions } from '../../src/types';
-import { fakeApprovals } from './fake-approvals';
 import { fakeSessions } from '../sessions/fake-sessions';
-import type { FakeSessions } from '../sessions/fake-sessions';
+import { fakeApprovals } from './fake-approvals';
 
 vi.mock('ai', async (importOriginal) => ({
     ...(await importOriginal<typeof AiModule>()),

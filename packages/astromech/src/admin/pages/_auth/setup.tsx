@@ -4,13 +4,13 @@
  * Shown when no users exist. Creates the first admin account.
  */
 
-import React, { useEffect, useState } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '@/admin/context/auth';
 import { AuthCard } from '@/admin/components/auth/AuthCard';
-import { Input } from '@/admin/components/ui/input';
 import { Button } from '@/admin/components/ui/button';
+import { Input } from '@/admin/components/ui/input';
+import { useAuth } from '@/admin/context/auth';
 
 declare const __ASTROMECH_BASE_PATH__: string;
 

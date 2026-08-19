@@ -6,11 +6,11 @@
  * restore/emptyTrash. Versions returns [] for versioning-off types (lenient).
  */
 
-import { beforeAll, describe, expect, it } from 'vitest';
-import { createTestDb, setupTestConfig } from '@tests/harness';
-import { entriesService } from '@/entries/service';
-import { CapabilityError } from '@/entries/errors';
 import type { AstromechConfig } from '@/types/index';
+import { createTestDb, setupTestConfig } from '@tests/harness';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { CapabilityError } from '@/entries/errors';
+import { entriesService } from '@/entries/service';
 
 // ---------------------------------------------------------------------------
 // Config with capability-restricted types

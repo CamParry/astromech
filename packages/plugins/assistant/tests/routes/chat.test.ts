@@ -5,7 +5,6 @@
  */
 
 import { describe, expect, it } from 'vitest';
-
 import { readChatRequest } from '../../src/routes/chat';
 
 /** A POST carrying `body` verbatim, so malformed JSON stays malformed. */

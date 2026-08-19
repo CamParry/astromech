@@ -9,12 +9,12 @@
  * to the other one (and to the app itself) stays.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
-import { sql } from 'kysely';
+import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
 import { createTestDb, FIRST_PARTY_PLUGIN_MIGRATIONS } from '@tests/harness';
+import { sql } from 'kysely';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { purgePlugin } from '@/transport/cli/commands/plugin-purge';
-import type { DB } from '@/database/types';
 
 type Db = Kysely<DB>;
 

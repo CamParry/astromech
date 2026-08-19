@@ -5,14 +5,14 @@
  * and the token usage.
  */
 
-import type { LanguageModelMiddleware } from 'ai';
+import type { WrappedAIConfig } from '@/ai/registry';
+import type { AIConfig } from '@/types/index';
 import type {
     LanguageModelV4,
     LanguageModelV4StreamPart,
     LanguageModelV4Usage,
 } from '@ai-sdk/provider';
-import type { AIConfig } from '@/types/index';
-import type { WrappedAIConfig } from '@/ai/registry';
+import type { LanguageModelMiddleware } from 'ai';
 
 /**
  * Wrap the configured models with core's middleware, keyed by name. `ai` is

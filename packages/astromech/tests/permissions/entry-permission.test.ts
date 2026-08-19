@@ -1,9 +1,9 @@
+import type { EntryAction } from '@/permissions/entry-permission';
 import { describe, expect, it } from 'vitest';
 import {
     entryPermission,
-    rootEntryPermission,
     pluginEntryPermission,
-    type EntryAction,
+    rootEntryPermission,
 } from '@/permissions/entry-permission';
 import { hasPermission } from '@/utilities/permission-match';
 

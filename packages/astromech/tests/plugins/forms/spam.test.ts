@@ -12,14 +12,14 @@
  * `@astromech/forms` package alias.
  */
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { turnstile } from '../../../../plugins/forms/src/spam/providers/turnstile';
-import { recaptcha } from '../../../../plugins/forms/src/spam/providers/recaptcha';
-import { spamHook } from '../../../../plugins/forms/src/spam/hook';
-import { BEFORE_SUBMIT } from '../../../../plugins/forms/src/hooks/events';
 import type { FormsBeforeSubmitPayload } from '../../../../plugins/forms/src/hooks/events';
 import type { SpamProvider } from '../../../../plugins/forms/src/spam/types';
 import type { PluginContext } from 'astromech';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { BEFORE_SUBMIT } from '../../../../plugins/forms/src/hooks/events';
+import { spamHook } from '../../../../plugins/forms/src/spam/hook';
+import { recaptcha } from '../../../../plugins/forms/src/spam/providers/recaptcha';
+import { turnstile } from '../../../../plugins/forms/src/spam/providers/turnstile';
 
 function jsonResponse(body: unknown, status = 200): Response {
     return new Response(JSON.stringify(body), {

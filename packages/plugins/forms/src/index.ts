@@ -4,8 +4,9 @@
  * blocks editor; a `submission` entry stores what gets posted.
  */
 
-import { definePlugin, withDefaults } from 'astromech';
+import type { FormsOptions } from './types';
 import type { ServiceInterface } from 'astromech';
+import { definePlugin, withDefaults } from 'astromech';
 import { migrationProvider } from '../migrations/index';
 import { formEntryType } from './entries/form';
 import { submissionEntryType } from './entries/submission';
@@ -13,7 +14,6 @@ import { buildFormsService } from './service/forms';
 import { spamHook } from './spam/hook';
 import { submissionsTable } from './tables/submissions';
 import { FORMS_PACKAGE } from './types';
-import type { FormsOptions } from './types';
 
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions

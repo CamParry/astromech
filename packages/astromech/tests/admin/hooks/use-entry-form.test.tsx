@@ -13,16 +13,16 @@
  * directly (same approach as use-field-validation.test.tsx).
  */
 
-import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { createRoot } from 'react-dom/client';
-import React, { act } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import { ToastProvider } from '@/admin/components/ui/toast';
-import { useEntryForm } from '@/admin/hooks/use-entry-form';
 import type { UseEntryFormReturn } from '@/admin/hooks/use-entry-form';
 import type { Entry, Field } from '@/types/index';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import i18n from 'i18next';
+import React, { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { initReactI18next } from 'react-i18next';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { ToastProvider } from '@/admin/components/ui/toast';
+import { useEntryForm } from '@/admin/hooks/use-entry-form';
 
 beforeAll(async () => {
     // The hook reads labels through `useTranslation`; the SPA's own i18n module

@@ -7,10 +7,10 @@
  * form renderers without hand-maintaining a parallel column list per table.
  */
 
-import { resolveReferenceTarget } from '@/database/table-snapshot';
 import type { ColumnKind, Table } from '@/database/define-table';
-import type { CellKind } from '@/types/resolved';
 import type { FieldTypeName } from '@/types/fields';
+import type { CellKind } from '@/types/resolved';
+import { resolveReferenceTarget } from '@/database/table-snapshot';
 
 export type ColumnAdminMeta = {
     /** camelCase column key — the data key the admin reads. */

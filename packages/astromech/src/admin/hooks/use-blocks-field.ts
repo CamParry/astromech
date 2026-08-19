@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef } from 'react';
 import type { Block } from '@/types/index';
+import { useCallback, useRef, useState } from 'react';
 // Deep import: the `fields/` barrel reaches server code (virtual config / DB).
 import { buildDefaultValues } from '@/fields/defaults';
 

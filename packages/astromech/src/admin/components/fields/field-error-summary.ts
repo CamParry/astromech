@@ -12,12 +12,12 @@
  * `Label` against its namespace and owns the `t` used for the sentence itself.
  */
 
-import type { TFunction } from 'i18next';
 import type { Field, FieldErrors, Label } from '@/types/index';
+import type { TFunction } from 'i18next';
+import { titleCase } from '@/admin/i18n/labels';
 // Deep imports: the `fields/` barrel reaches server code (virtual config / DB).
 import { parseInstancePath } from '@/fields/field-path';
 import { flattenFieldNodes } from '@/fields/flatten';
-import { titleCase } from '@/admin/i18n/labels';
 
 /** How many fields the summary names before it starts counting. */
 const NAMED_LIMIT = 3;

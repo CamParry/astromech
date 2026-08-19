@@ -1,8 +1,8 @@
-import React from 'react';
-import { Dialog } from '@base-ui/react/dialog';
-import { AlertDialog } from '@base-ui/react/alert-dialog';
-import { Button } from './button';
 import type { ButtonVariant } from './button';
+import { AlertDialog } from '@base-ui/react/alert-dialog';
+import { Dialog } from '@base-ui/react/dialog';
+import React from 'react';
+import { Button } from './button';
 
 type ModalProps = {
     open: boolean;

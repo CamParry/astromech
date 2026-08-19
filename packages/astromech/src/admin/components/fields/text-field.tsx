@@ -1,6 +1,6 @@
 import type { BaseFieldProps } from '@/types/index';
-import { formatValueForInput } from '@/fields/formatters';
 import { Input } from '@/admin/components/ui/input';
+import { formatValueForInput } from '@/fields/formatters';
 import { FieldCount } from './field-count';
 
 export function TextField({

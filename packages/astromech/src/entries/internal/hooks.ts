@@ -6,6 +6,7 @@
  * for the event context are only loaded when a plugin actually subscribes.
  */
 
+import type { Entry, EntryUpdateData } from '@/types/index';
 import {
     hasHookHandlers,
     runAfterHooks,
@@ -14,7 +15,6 @@ import {
 import { getCurrentUser } from '@/request-context/index';
 import { getEntryStorage } from '../storage/registry';
 import { loadAndAssertType } from './records';
-import type { Entry, EntryUpdateData } from '@/types/index';
 
 export function hasEntryHooks(...events: string[]): boolean {
     return events.some((event) => hasHookHandlers(event));

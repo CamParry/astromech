@@ -14,9 +14,9 @@
  * resync, or every keystroke would be clobbered by the last-saved value.
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
 import { act, cleanup, render } from '@testing-library/react';
 import React from 'react';
+import { afterEach, describe, expect, it } from 'vitest';
 import { useBlocksField } from '@/admin/hooks/use-blocks-field';
 import { useTreeField } from '@/admin/hooks/use-tree-field';
 

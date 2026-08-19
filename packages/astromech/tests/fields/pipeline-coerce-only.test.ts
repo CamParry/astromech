@@ -5,8 +5,8 @@
  * second pass over an untouched value is directly observable.
  */
 
-import { describe, expect, it } from 'vitest';
 import type { Field, ValidationMode } from '@/types/fields';
+import { describe, expect, it } from 'vitest';
 import { registerFieldType } from '@/fields/field-type-registry';
 import { parseFields } from '@/fields/pipeline';
 

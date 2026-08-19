@@ -7,8 +7,8 @@
  * if both parse the same flags into the same options.
  */
 
-import type { ArgsDef } from 'citty';
 import type { MethodFilter } from '@/policies/method-filter';
+import type { ArgsDef } from 'citty';
 
 /** citty arg definitions. Spread into a command's `args`. */
 export const filterArgs = {

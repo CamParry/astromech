@@ -10,10 +10,10 @@
  * The handle is an argument, not a lookup: a plugin is *handed* its database on
  * `ctx.db` and must never reach for core's registry.
  */
-
-import { createStorage } from 'astromech';
+import type { BackupRunRow } from './tables/runs';
 import type { Patch, PluginContext } from 'astromech';
-import { backupRunsTable, type BackupRunRow } from './tables/runs';
+import { createStorage } from 'astromech';
+import { backupRunsTable } from './tables/runs';
 
 /** A partial write against a run row — the status transitions below. */
 export type BackupRunPatch = Patch<typeof backupRunsTable>;

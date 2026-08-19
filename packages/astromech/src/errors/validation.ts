@@ -1,5 +1,6 @@
-import { ZodIssueCode, type ZodIssue } from 'zod';
 import type { FieldErrors } from '@/types/fields';
+import type { ZodIssue } from 'zod';
+import { ZodIssueCode } from 'zod';
 
 export class ValidationError extends Error {
     public readonly issues: ZodIssue[];

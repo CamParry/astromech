@@ -4,11 +4,11 @@
  * storage.
  */
 
-import { createRelationshipStorage } from '@/database/storage/relationships';
-import { getEntryStorage } from '../storage/registry';
-import { loadAndAssertType } from '../internal/records';
 import type { EntryRecord, EntryStorage } from '../storage/types';
 import type { IncomingRelationship } from '@/types/index';
+import { createRelationshipStorage } from '@/database/storage/relationships';
+import { loadAndAssertType } from '../internal/records';
+import { getEntryStorage } from '../storage/registry';
 
 /** One row per index edge: a source referencing the target twice is two rows. */
 export async function incomingRelationships(params: {

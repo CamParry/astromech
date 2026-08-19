@@ -2,9 +2,9 @@
  * Entry version helpers shared by the operations that write a version.
  */
 
-import { deepEqual } from './deep-equal';
-import type { Entry, JsonObject } from '@/types/index';
 import type { EntryStorage } from '../storage/types';
+import type { Entry, JsonObject } from '@/types/index';
+import { deepEqual } from './deep-equal';
 
 /**
  * Saves the entry's current state as the next version. The caller decides

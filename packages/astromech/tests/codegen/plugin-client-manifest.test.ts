@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { generatePluginClientManifest } from '@/codegen/plugin-client-manifest';
 import type { AdminPage } from '@/types/config';
 import type { PluginDefinition } from '@/types/plugins';
+import { describe, expect, it } from 'vitest';
+import { generatePluginClientManifest } from '@/codegen/plugin-client-manifest';
 
 const seoPlugin: PluginDefinition = {
     package: '@astromech/seo',

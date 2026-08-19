@@ -5,8 +5,8 @@
  * TypeScript, which plain Node cannot load.
  */
 
-import { resolve } from 'node:path';
 import type { MigrationProvider } from 'kysely';
+import { resolve } from 'node:path';
 
 /** Import `<cwd>/migrations/index.ts`. Throws if it is missing or malformed. */
 export async function loadAppMigrations(

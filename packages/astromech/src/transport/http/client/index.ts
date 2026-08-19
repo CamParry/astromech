@@ -1,3 +1,23 @@
+import type {
+    MountedRoute,
+    ResponseEnvelope,
+} from '@/transport/http/routes/http-routes.shared';
+import type {
+    EntriesService,
+    Media,
+    MediaQueryParams,
+    MediaService,
+    NotificationsService,
+    PluginServiceNamespace,
+    Setting,
+    SettingsService,
+    SortOption,
+    TypedEntriesService,
+    UserQueryParams,
+    UsersService,
+} from '@/types/index';
+import { HTTP_ROUTES } from '@/transport/http/routes/http-routes.shared';
+
 /**
  * `astromechClient` — the fetch-based client for client-side JavaScript (the
  * React admin, a browser app). Public as the named and default export of
@@ -17,26 +37,6 @@
  * `media.upload` and `media.replace` are the only methods written out end to
  * end: their body is `FormData`, so there is no row to read.
  */
-
-import {
-    HTTP_ROUTES,
-    type MountedRoute,
-    type ResponseEnvelope,
-} from '@/transport/http/routes/http-routes.shared';
-import type {
-    EntriesService,
-    Media,
-    MediaQueryParams,
-    MediaService,
-    NotificationsService,
-    PluginServiceNamespace,
-    Setting,
-    SettingsService,
-    SortOption,
-    TypedEntriesService,
-    UserQueryParams,
-    UsersService,
-} from '@/types/index';
 
 // ============================================================================
 // Typed API Error

@@ -2,8 +2,8 @@
  * Progress bar built on Base UI Progress.
  */
 
-import React from 'react';
 import { Progress as BaseProgress } from '@base-ui/react/progress';
+import React from 'react';
 
 type ProgressProps = {
     value: number | null;

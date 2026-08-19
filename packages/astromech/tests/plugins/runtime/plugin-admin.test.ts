@@ -1,12 +1,12 @@
-import { describe, expect, it } from 'vitest';
 import type {
     AdminPage,
     EntryType,
     PluginDefinition,
     PluginNavItem,
 } from '@/types/index';
-import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
+import { describe, expect, it } from 'vitest';
 import { derivePluginNav, derivePluginPages } from '@/plugins/runtime/plugin-admin';
+import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 
 const entryType = (type: string, single: string, plural: string): EntryType => ({
     type,

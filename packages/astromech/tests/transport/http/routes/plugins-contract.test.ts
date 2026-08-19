@@ -11,14 +11,13 @@
  * `entries-mounted.test.ts` does.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AstromechConfig, PluginDefinition, Role, User } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import type { AstromechConfig, PluginDefinition, Role, User } from '@/types/index';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getSession } from '@/users/session';
 
 vi.mock('@/users/session', () => ({ getSession: vi.fn() }));
-
-import { getSession } from '@/users/session';
 
 const mockGetSession = vi.mocked(getSession);
 

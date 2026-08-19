@@ -9,23 +9,23 @@
  */
 
 import type { EntriesService } from '@/types/index';
-import { query } from './operations/query';
-import { get } from './operations/get';
 import { create } from './operations/create';
-import { update } from './operations/update';
-import { duplicate } from './operations/duplicate';
-import { trash, emptyTrash } from './operations/trash';
-import { restore } from './operations/restore';
 import { deleteEntry } from './operations/delete';
-import { publish, unpublish, schedule } from './operations/status';
+import { duplicate } from './operations/duplicate';
+import { get } from './operations/get';
+import { issuePreviewToken, revokePreviewToken } from './operations/preview/token';
+import { query } from './operations/query';
 import { incomingRelationships } from './operations/relationships';
-import { listVersions } from './operations/versions/list';
-import { restoreVersion } from './operations/versions/restore';
+import { restore } from './operations/restore';
 import { createStaged } from './operations/staging/create';
+import { deleteStaged } from './operations/staging/delete';
 import { getStaged } from './operations/staging/get';
 import { mergeStaged } from './operations/staging/merge';
-import { deleteStaged } from './operations/staging/delete';
-import { issuePreviewToken, revokePreviewToken } from './operations/preview/token';
+import { publish, schedule, unpublish } from './operations/status';
+import { emptyTrash, trash } from './operations/trash';
+import { update } from './operations/update';
+import { listVersions } from './operations/versions/list';
+import { restoreVersion } from './operations/versions/restore';
 
 /** @deprecated Slug uniqueness is now a storage concern. */
 export { generateUniqueSlug } from './internal/slug';

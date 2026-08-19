@@ -7,10 +7,10 @@
 
 import type { EntryType } from 'astromech';
 import { tableStorage } from 'astromech';
+import * as columns from 'astromech/columns';
+import * as fields from 'astromech/fields';
 import { redirectsTable } from '../tables/redirects';
 import { REDIRECT_TYPE } from '../types';
-import * as fields from 'astromech/fields';
-import * as columns from 'astromech/columns';
 
 export const redirectEntryType: EntryType = {
     type: REDIRECT_TYPE,

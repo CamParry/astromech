@@ -5,25 +5,25 @@
  * Guarded: redirects to dashboard if the current user lacks users:create permission.
  */
 
-import React, { useEffect } from 'react';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useForm, useStore } from '@tanstack/react-form';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import adminConfig from 'virtual:astromech/admin-config';
 import {
-    Button,
-    Panel,
     Breadcrumb,
+    Button,
+    FormLayout,
     Input,
-    Select,
     Page,
+    PageContent,
     PageHeader,
     PageTitle,
-    PageContent,
-    FormLayout,
+    Panel,
+    Select,
     Stack,
 } from '@/admin/components/ui/index';
-import { usePermissions, useCreateUser } from '@/admin/hooks/index';
-import adminConfig from 'virtual:astromech/admin-config';
+import { useCreateUser, usePermissions } from '@/admin/hooks/index';
 
 // ============================================================================
 // Types

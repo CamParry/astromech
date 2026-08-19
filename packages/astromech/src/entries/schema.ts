@@ -1,10 +1,6 @@
+import type { Table, TableInsert, TableSelect } from '@/database/define-table';
 import { z } from '@hono/zod-openapi';
-import {
-    defineTable,
-    type TableSelect,
-    type TableInsert,
-    type Table,
-} from '@/database/define-table';
+import { defineTable } from '@/database/define-table';
 
 // ============================================================================
 // Tables (defineTable) — source of truth for types + row codec

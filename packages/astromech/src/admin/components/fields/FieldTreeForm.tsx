@@ -9,10 +9,10 @@
  * Callers own state (`values` / `onChange`) and disabled logic.
  */
 
-import React from 'react';
 import type { ResolvedEntryFields } from '@/types/index';
-import { FormLayout, FormLayoutContent, Stack } from '@/admin/components/ui/index';
+import React from 'react';
 import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer';
+import { FormLayout, FormLayoutContent, Stack } from '@/admin/components/ui/index';
 
 export type FieldTreeFormProps = {
     fields: ResolvedEntryFields;

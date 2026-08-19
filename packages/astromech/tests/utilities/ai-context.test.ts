@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import type { AIContextItem } from '@/types/ai-context';
+import { describe, expect, it } from 'vitest';
 import { formatAIContextMessage } from '@/utilities/ai-context';
 
 /** Build a single-reference list so a line can be asserted in isolation. */
