@@ -8,7 +8,7 @@
  * not as a cross-cutting policy.
  */
 
-import type { SettingRow } from './schema';
+import type { SettingRow } from './tables';
 import type { JsonValue, Setting, SettingsService } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { existingEntryTypes } from '@/database/storage/resource-existence';

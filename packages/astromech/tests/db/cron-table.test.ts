@@ -4,7 +4,7 @@ import { createTestDb } from '@tests/harness';
 import { sql } from 'kysely';
 import { describe, expect, it } from 'vitest';
 import { decodeWith, encodeWith } from '@/database/codec';
-import { cronTable } from '@/database/schema';
+import { cronTable } from '@/database/tables';
 
 describe('_astromech_cron table', () => {
     it('is created by the package migrations', async () => {

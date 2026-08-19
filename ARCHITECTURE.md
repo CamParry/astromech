@@ -59,9 +59,9 @@ publish time. The plugin **runtime** (hook engine) stays a core capability.
 Key invariants:
 
 - **Domains are deep modules named for the business, not the tech.** Every domain
-  owns a `service.ts` (its verbs), a `schema.ts` (`defineTable` table + Zod
-  validation) and a contract catalogue, which is what puts it in the method
-  manifest. Four domains hold nothing but that catalogue and name the file
+  owns a `service.ts` (its verbs), a `tables.ts` (its `defineTable` tables and row
+  types), a contract catalogue (which is what puts it in the method manifest) and,
+  where it validates request input, a `schema.ts` (the domain's Zod schemas). Four domains hold nothing but that catalogue and name the file
   `contract.ts` (`media`, `notifications`, `settings`, `users`); `entries` names
   it `methods.ts`, because it also carries the per-method action list and the
   method-name union. Two further files are per-domain, not universal:
@@ -69,8 +69,8 @@ Key invariants:
   shape (`entries`, `settings`), and `operations/` + `internal/` only where one
   `service.ts` has stopped being readable (`entries`, `media`, `users` —
   `settings` and `notifications` stay a single file). Tables are reached through
-  `@/database/schema` (the table aggregator) rather than another domain's
-  `schema.ts`. A domain may call a peer directly — the split is for organisation,
+  `@/database/tables` (the table aggregator) rather than another domain's
+  `tables.ts`. A domain may call a peer directly — the split is for organisation,
   not isolation, and the alternative was a second wire shape for the same
   concept.
 - **A decomposed domain's `service.ts` is an assembler and nothing else.** It
@@ -185,15 +185,15 @@ packages/
 │   │   ├── plugins/        # plugins/runtime (hook engine) only — first-party plugins live in packages/plugins/; it imports the domains directly to build PluginContext
 │   │   │
 │   │   │   ── domains ────────────────────────────────────────────────────
-│   │   ├── entries/        # entries domain: service (assembler) · operations/ · internal/ · schema · methods · visibility · capabilities · type-ids.shared · entry-url.shared
-│   │   ├── media/          # media domain: service (assembler) · operations/ · internal/ · schema · contract · serving/image/ · image-drivers · image-widths.shared
-│   │   ├── users/          # users domain: service (assembler) · operations/ · internal/ · schema · contract · auth (Better Auth integration)
-│   │   ├── settings/       # settings domain: service · schema · contract · visibility · page-values.shared
-│   │   ├── notifications/  # notifications domain: service (+ notify) · schema · contract · user-scoped storage
+│   │   ├── entries/        # entries domain: service (assembler) · operations/ · internal/ · tables · schema · methods · visibility · capabilities · type-ids.shared · entry-url.shared
+│   │   ├── media/          # media domain: service (assembler) · operations/ · internal/ · tables · schema · contract · serving/image/ · image-drivers · image-widths.shared
+│   │   ├── users/          # users domain: service (assembler) · operations/ · internal/ · tables · schema · contract · auth (Better Auth integration)
+│   │   ├── settings/       # settings domain: service · tables · schema · contract · visibility · page-values.shared
+│   │   ├── notifications/  # notifications domain: service (+ notify) · tables · contract · user-scoped storage
 │   │   │
 │   │   │   ── capabilities ───────────────────────────────────────────────
 │   │   ├── config/         # the config pipeline: load (jiti) · resolve (orchestration) + its named steps · validate/ · admin-config · registry (setConfig/getConfig)
-│   │   ├── database/       # Kysely client/drivers + schema.ts aggregator + migrations.ts (runMigrations / drift check)
+│   │   ├── database/       # Kysely client/drivers + tables.ts aggregator + migrations.ts (runMigrations / drift check)
 │   │   ├── storage/        # blob-storage registry + drivers/ (filesystem, r2, s3)
 │   │   ├── cloudflare/     # binding-name resolution across Workers and Node
 │   │   ├── permissions/    # permission model: roles, grammar, BUILT_IN_ROLES, can()

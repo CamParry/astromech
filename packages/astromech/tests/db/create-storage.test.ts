@@ -12,9 +12,9 @@ import { createTestDb } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { defineTable } from '@/database/define-table';
-import { cronTable } from '@/database/schema';
 import { createStorage } from '@/database/storage/create-storage';
-import { entriesTable } from '@/entries/schema';
+import { cronTable } from '@/database/tables';
+import { entriesTable } from '@/entries/tables';
 
 const EARLY = new Date('2020-01-01T00:00:00.000Z');
 const MIDDLE = new Date('2022-06-01T12:00:00.000Z');

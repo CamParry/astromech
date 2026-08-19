@@ -8,8 +8,8 @@
 
 import type { Db } from '@/database/types';
 import { getDb } from '@/database/registry';
-import { entryPreviewTokensTable } from '@/database/schema';
 import { createStorage } from '@/database/storage/create-storage';
+import { entryPreviewTokensTable } from '@/database/tables';
 
 export type PreviewTokenStorage = ReturnType<typeof createPreviewTokenStorage>;
 

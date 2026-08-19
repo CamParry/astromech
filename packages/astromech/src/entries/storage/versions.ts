@@ -3,11 +3,11 @@
  * built-in entry storage's `versions` capability group.
  */
 
-import type { EntryVersionRow, NewEntryVersionRow } from '../schema';
+import type { EntryVersionRow, NewEntryVersionRow } from '../tables';
 import type { Db } from '@/database/types';
 import { getDb } from '@/database/registry';
-import { entryVersionsTable } from '@/database/schema';
 import { createStorage } from '@/database/storage/create-storage';
+import { entryVersionsTable } from '@/database/tables';
 
 export type VersionStorage = ReturnType<typeof createVersionStorage>;
 

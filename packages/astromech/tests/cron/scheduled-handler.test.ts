@@ -17,7 +17,7 @@ import {
 } from '@/cron/registry';
 import { onTick, runDue } from '@/cron/runner';
 import { encodePatchWith } from '@/database/codec';
-import { cronTable } from '@/database/schema';
+import { cronTable } from '@/database/tables';
 import { createWorkerEntry } from '@/integrations/cloudflare/index';
 import { globals } from '@/registry';
 

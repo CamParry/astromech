@@ -27,7 +27,7 @@
  * inserts never set `createdBy`/`updatedBy` (both nullable), so no user row is
  * required for the entry flows — `createTestUser` is provided for completeness.
  */
-import type { UserRow } from '@/database/schema';
+import type { UserRow } from '@/database/tables';
 import type { DB } from '@/database/types';
 import type {
     AstromechConfig,
@@ -51,7 +51,7 @@ import { resolveConfig } from '@/config/resolve';
 import { decodeWith, encodeWith } from '@/database/codec';
 import { setDatabaseDriver } from '@/database/driver-registry';
 import { setDb } from '@/database/registry';
-import { usersTable } from '@/database/schema';
+import { usersTable } from '@/database/tables';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { runWithContext } from '@/request-context/index';

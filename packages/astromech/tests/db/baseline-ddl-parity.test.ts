@@ -16,8 +16,8 @@ import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { createTestDb } from '@tests/harness';
 import { Kysely, sql } from 'kysely';
 import { describe, expect, it } from 'vitest';
-import { CORE_TABLES } from '@/database/schema';
 import { emitTableStatements } from '@/database/table-snapshot';
+import { CORE_TABLES } from '@/database/tables';
 
 const TABLE_NAMES = CORE_TABLES.map((table) => table.name);
 

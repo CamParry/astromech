@@ -10,11 +10,11 @@
  * table, so `enabled: true` becomes INTEGER 1 and a `Date` becomes the
  * ISO-TEXT these columns store.
  */
-import type { CronRow, NewCronRow } from '@/database/schema';
+import type { CronRow, NewCronRow } from '@/database/tables';
 import type { Db } from '@/database/types';
 import { decodeWith, encodePatchWith, encodeWith } from '@/database/codec';
-import { cronTable } from '@/database/schema';
 import { createStorage } from '@/database/storage/create-storage';
+import { cronTable } from '@/database/tables';
 
 export type CronStorage = ReturnType<typeof createCronStorage>;
 

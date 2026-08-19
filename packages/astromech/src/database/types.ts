@@ -36,7 +36,7 @@ import type {
     rolesTable,
     settingsTable,
     usersTable,
-} from '@/database/schema';
+} from '@/database/tables';
 import type { Kysely, Transaction } from 'kysely';
 
 export type DB = {

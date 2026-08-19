@@ -11,8 +11,8 @@
 
 import type { Db } from '@/database/types';
 import { getDb } from '@/database/registry';
-import { entriesTable } from '@/database/schema';
 import { createStorage } from '@/database/storage/create-storage';
+import { entriesTable } from '@/database/tables';
 
 export type EntryMaintenanceStorage = ReturnType<typeof createEntryMaintenanceStorage>;
 

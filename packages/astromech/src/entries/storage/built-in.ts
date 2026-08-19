@@ -30,7 +30,7 @@
  * instance to the Kysely tx handle.
  */
 
-import type { EntryRow } from '../schema';
+import type { EntryRow } from '../tables';
 import type {
     Capability,
     EntryStorage,
@@ -51,9 +51,9 @@ import type { ExpressionBuilder, Updateable } from 'kysely';
 import { supportsTransactions } from '@/database/capabilities';
 import { decodeWith, encodePatchWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
-import { entriesTable } from '@/database/schema';
 import { createStorage } from '@/database/storage/create-storage';
 import { existingResourceIds } from '@/database/storage/resource-existence';
+import { entriesTable } from '@/database/tables';
 import { BUILT_IN_SUPPORTS } from '@/entries/capabilities';
 import { UnknownSortKeyError, UnknownWhereKeyError } from '../errors';
 import { createVersionStorage } from './versions';

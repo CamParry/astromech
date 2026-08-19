@@ -3,7 +3,7 @@
  * Reads the relationships index, then names each source through its own domain.
  */
 
-import type { RelationshipRow } from '@/database/schema';
+import type { RelationshipRow } from '@/database/tables';
 import type { MediaUsage } from '@/types/index';
 import { createRelationshipStorage } from '@/database/storage/relationships';
 // Peer domains, read only to name a source row. See the `usedBy` docstring.

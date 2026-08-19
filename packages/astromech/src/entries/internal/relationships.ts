@@ -14,8 +14,8 @@ import { createRelationshipStorage } from '@/database/storage/relationships';
 import { qualifyEntryType, resolveEntryType } from '@/entries/type-ids.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { collectRelationshipEdges } from '@/fields/relationship-edges';
-import { entriesTable } from '../schema';
 import { getEntryStorage, hasEntryStorageOverride } from '../storage/registry';
+import { entriesTable } from '../tables';
 
 /**
  * Re-index one entry. `fields` must be post-`parseFields` values — item ids

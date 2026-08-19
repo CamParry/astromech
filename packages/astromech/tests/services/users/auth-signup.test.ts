@@ -15,8 +15,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { decodeWith } from '@/database/codec';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 import { getAuth } from '@/users/auth';
-import { usersTable } from '@/users/schema';
 import { createUserStorage } from '@/users/storage';
+import { usersTable } from '@/users/tables';
 
 let db: Kysely<DB>;
 

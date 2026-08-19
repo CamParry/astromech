@@ -13,7 +13,7 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { registerCronJob } from '@/cron/registry';
 import { encodePatchWith } from '@/database/codec';
-import { cronTable } from '@/database/schema';
+import { cronTable } from '@/database/tables';
 import { globals } from '@/registry';
 import { runWithRequest } from '@/request-context/index';
 import { cronRouter } from '@/transport/http/routes/cron';

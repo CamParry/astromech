@@ -10,7 +10,7 @@
  * `methods.ts` declare that with `sessionScoped`; `decisions/0037` is why.
  */
 
-import type { NotificationRow } from './schema';
+import type { NotificationRow } from './tables';
 import type { Notification, NotifyInput } from '@/types/index';
 import { createUserStorage } from '@/users/storage';
 import { createNotificationStorage } from './storage';

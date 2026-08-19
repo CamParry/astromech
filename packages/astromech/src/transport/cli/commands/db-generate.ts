@@ -17,7 +17,7 @@ import { resolve } from 'node:path';
 import { defineCommand } from 'citty';
 import { createJiti } from 'jiti';
 import { generateMigrations, generateMigrationsFromOps } from '@/database/generate';
-import { CORE_TABLES } from '@/database/schema';
+import { CORE_TABLES } from '@/database/tables';
 import { loadConfig } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 

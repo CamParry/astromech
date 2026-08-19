@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { interval } from '@/cron/drivers/index';
 import { registerCronJob } from '@/cron/registry';
 import { encodePatchWith } from '@/database/codec';
-import { cronTable } from '@/database/schema';
+import { cronTable } from '@/database/tables';
 import { createWorkerEntry } from '@/integrations/cloudflare/index';
 import { globals } from '@/registry';
 

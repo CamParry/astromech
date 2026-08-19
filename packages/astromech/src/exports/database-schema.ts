@@ -18,6 +18,6 @@
  * which have no `Table` to pass.
  */
 
-export * from '@/database/schema';
+export * from '@/database/tables';
 export { encode, decode, encodeWith, decodeWith } from '@/database/codec';
 export type { DB, Db } from '@/database/types';

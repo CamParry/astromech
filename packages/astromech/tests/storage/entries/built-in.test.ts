@@ -12,7 +12,7 @@ import type { Insertable } from 'kysely';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { encodeWith } from '@/database/codec';
-import { entriesTable } from '@/database/schema';
+import { entriesTable } from '@/database/tables';
 import { BUILT_IN_SUPPORTS } from '@/entries/capabilities';
 import { createBuiltInEntryStorage } from '@/entries/storage/built-in';
 

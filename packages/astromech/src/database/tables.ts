@@ -4,15 +4,15 @@ import {
     entriesTable,
     entryPreviewTokensTable,
     entryVersionsTable,
-} from '@/entries/schema';
-import { mediaTable } from '@/media/schema';
-import { notificationsTable } from '@/notifications/schema';
-import { settingsTable } from '@/settings/schema';
+} from '@/entries/tables';
+import { mediaTable } from '@/media/tables';
+import { notificationsTable } from '@/notifications/tables';
+import { settingsTable } from '@/settings/tables';
 // `export { x } from '...'` (below) re-exports without binding `x` locally —
 // these value imports are ONLY so `CORE_TABLES` (bottom of file) can
 // reference the tables; the `export {...} from` blocks stay the public
 // re-export surface.
-import { rolesTable, usersTable } from '@/users/schema';
+import { rolesTable, usersTable } from '@/users/tables';
 
 /**
  * Aggregate schema surface for Astromech.
@@ -36,7 +36,7 @@ export {
     type RoleRow,
     type NewRoleRow,
     type UserRow,
-} from '@/users/schema';
+} from '@/users/tables';
 
 // ============================================================================
 // Entries
@@ -52,19 +52,19 @@ export {
     type NewEntryVersionRow,
     type EntryPreviewTokenRow,
     type NewEntryPreviewTokenRow,
-} from '@/entries/schema';
+} from '@/entries/tables';
 
 // ============================================================================
 // Media / Settings / Notifications
 // ============================================================================
 
-export { mediaTable, type MediaRow, type NewMediaRow } from '@/media/schema';
-export { settingsTable, type SettingRow, type NewSettingRow } from '@/settings/schema';
+export { mediaTable, type MediaRow, type NewMediaRow } from '@/media/tables';
+export { settingsTable, type SettingRow, type NewSettingRow } from '@/settings/tables';
 export {
     notificationsTable,
     type NotificationRow,
     type NewNotificationRow,
-} from '@/notifications/schema';
+} from '@/notifications/tables';
 
 // ============================================================================
 // Relationships
