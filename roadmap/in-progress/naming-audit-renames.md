@@ -10,6 +10,12 @@ Everything here touches only names, file paths, and comments — no behaviour
 changes. Several renames touch symbols re-exported from the package root, so
 this work is cheapest before the first npm release.
 
+**Five of the six workstreams have shipped.** WS3 (`storage` → `repository`) is
+parked: it reverses a rule written in `.claude/skills/code/SKILL.md`,
+`decisions/0003` and `decisions/0009`, which makes it a data-layer question
+rather than a naming one. The rest of this file is a record of what landed.
+Decision 3 below is the one that has NOT been acted on.
+
 ## Decisions settled in review (each needs a `decisions/` record)
 
 1. **Acronyms are title-case with no length exception**: `Ai`, `Ui`, `Url`,
@@ -22,7 +28,8 @@ this work is cheapest before the first npm release.
    Kysely's `executeTakeFirst` / `executeTakeFirstOrThrow`. TypeScript types
    carry nullability; a throwing wrapper documents the throw in its comment.
    Supersedes `decisions/0069-the-build-sequence-is-flat-and-the-probe-is-maybeget.md`.
-3. **`storage` means file storage; the data-access layer is `repository`.**
+3. **Not acted on — see WS3.** `storage` means file storage; the data-access
+   layer is `repository`.
    The word previously named both the blob/file subsystem and the per-domain
    persistence layer. "Storage" is universally read as file storage, so the
    file side keeps it and the data-access side (the 41-use majority) renames
@@ -235,6 +242,31 @@ PascalCase.
   triplication of the helper itself is tracked in
   `roadmap/planned/three-identical-validate-helpers.md`.
 - **Renaming the blob side to `blob/`** — inverted by decision 3; the file
-  side keeps `storage`.
+  side keeps `storage`. Moot while WS3 is parked.
 - **`types/` break-up** — the shared-contracts barrel stays; co-location is
   a per-contract judgement for later work, not a sweep.
+- **`http-routes.shared.ts` → `http-routes.ts`** — dropped from WS5 on a wrong
+  premise. `ARCHITECTURE.md` states the suffix carries the same isomorphic
+  meaning there as everywhere else, because the fetch client sits on that
+  boundary too.
+- **`v` → `value` beyond `fields/built-in-rules.ts`** — `v` is a house idiom
+  (eight uses in `database/define-table.ts`, four in `database/codec.ts`, plus
+  zod transforms and setState callbacks). WS5 covered the six exported
+  coercers the audit named, and `coerceRichText` in
+  `fields/rich-text/validate.ts` still takes `v`. A broad sweep is separate
+  work if it is wanted at all.
+
+## What landed
+
+|                                   |                            |
+| --------------------------------- | -------------------------- |
+| WS1 registry `get` / `getOrThrow` | shipped                    |
+| WS2 acronym casing                | shipped                    |
+| WS3 `storage` → `repository`      | **parked**, nothing landed |
+| WS4 component filenames           | shipped                    |
+| WS5 smaller renames               | shipped, two items dropped |
+| WS6 directory moves               | shipped                    |
+
+Records written: `decisions/0072-the-registry-probe-is-get.md`,
+`decisions/0073-acronyms-are-title-case.md`,
+`decisions/0074-leaves-are-placed-by-subject.md`.
