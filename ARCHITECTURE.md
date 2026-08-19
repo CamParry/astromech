@@ -167,7 +167,6 @@ published.
 packages/
 ├── astromech/       # the published `astromech` core package
 │   ├── src/
-│   │   ├── index.ts        # public framework-agnostic entry (re-exported via exports/)
 │   │   ├── astromech.ts    # composition root — createAstromech/getAstromech, the Astromech type, the instance registry, and the create sequence
 │   │   ├── registry.ts     # the globalThis-backed slot primitive (createRegistry/createKeyedRegistry) every subsystem registry is built on
 │   │   │
@@ -210,7 +209,7 @@ packages/
 │   │   ├── errors/         # base error classes
 │   │   │
 │   │   │   ── public surface ───────────────────────────────────────────
-│   │   └── exports/        # thin re-export barrels; tsup builds from here — internals are private
+│   │   └── exports/        # thin re-export barrels, index.ts being the root `astromech` subpath; tsup builds from here — internals are private
 │   ├── tests/              # mirrors src/
 │   ├── scripts/
 │   └── (tsup|vitest).config.ts · tsconfig*.json

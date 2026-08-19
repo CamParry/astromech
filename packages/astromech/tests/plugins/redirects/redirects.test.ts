@@ -32,7 +32,7 @@ import {
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService as localEntries } from '@/entries/service';
-import { defineHook } from '@/index';
+import { defineHook } from '@/plugins/define-hook';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
 
 // Type-level proof: redirects.lookup carries real Input/Output via

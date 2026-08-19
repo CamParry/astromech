@@ -7,7 +7,6 @@ import type {
 } from '@/types/index';
 import { describe, expect, it } from 'vitest';
 import { resolveConfig } from '@/config/resolve';
-import { definePlugin } from '@/index';
 import { buildPermissionCatalogue } from '@/permissions/catalogue';
 import {
     BUILT_IN_ROLES,
@@ -19,6 +18,7 @@ import {
     permissionsForBuiltInRole,
     resolveRoles,
 } from '@/permissions/index';
+import { definePlugin } from '@/plugins/define-plugin';
 
 // ============================================================================
 // hasPermission — new grammar (resource[:identifier]:action, action last)

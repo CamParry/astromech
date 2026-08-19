@@ -12,7 +12,7 @@ import { createElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getCronJobs } from '@/cron/registry';
 import { setEmailDriver } from '@/email/registry';
-import { defineHook } from '@/index';
+import { defineHook } from '@/plugins/define-hook';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import {
     bootPlugins,

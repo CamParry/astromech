@@ -5,8 +5,8 @@ import type {
     StorageDriver,
 } from '@/types/index';
 import { describe, expect, it } from 'vitest';
+import { defineAdminPage } from '@/config/define-admin-page';
 import { resolveConfig } from '@/config/resolve';
-import { defineAdminPage } from '@/index';
 
 const driver: DatabaseDriver = {
     type: 'test',
