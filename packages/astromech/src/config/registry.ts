@@ -4,7 +4,7 @@
  */
 
 import type { ResolvedConfig } from '@/types/index';
-import { createRegistry } from '@/utilities/registry';
+import { createRegistry } from '@/registry';
 
 const config = createRegistry<ResolvedConfig>('config', {
     hint: 'Ensure createAstromech({ config }) has run before reading config.',

@@ -7,6 +7,7 @@
 import type { ResolvedEntryType } from '@/types/index';
 import type { PluginDefinition } from '@/types/plugins';
 import { toResolvedEntryType } from '@/config/entry-types';
+import { BUILT_IN_SUPPORTS } from '@/entries/capabilities';
 import { assertNoFieldTypeCollisions } from '@/plugins/runtime/plugin-fields';
 import {
     assertNoPluginCollisions,
@@ -15,7 +16,6 @@ import {
     resolvePluginIdentity,
 } from '@/plugins/runtime/plugin-identity';
 import { assertPluginTablePrefixes } from '@/plugins/runtime/plugin-tables';
-import { BUILT_IN_SUPPORTS } from '@/utilities/entry-capabilities';
 
 /**
  * Access-key collisions, dependencies (existence + basic semver range), table

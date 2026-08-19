@@ -15,7 +15,7 @@ import { registerCronJob } from '@/cron/registry';
 import { onTick, runDue } from '@/cron/runner';
 import { decodeWith, encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/schema';
-import { globals } from '@/utilities/registry';
+import { globals } from '@/registry';
 
 // Truncate to second resolution to match DB storage.
 function toSecond(d: Date): number {

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createKeyedRegistry, createRegistry } from '@/utilities/registry';
+import { createKeyedRegistry, createRegistry } from '@/registry';
 
 type Driver = { name: string };
 

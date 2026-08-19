@@ -25,8 +25,8 @@ import {
     runAfterHooks,
     runBeforeHooks,
 } from '@/plugins/runtime/plugin-runtime';
+import { globals } from '@/registry';
 import { buildScopedTools } from '@/transport/tools/scoped-tools';
-import { globals } from '@/utilities/registry';
 
 vi.mock('@/transport/tools/scoped-tools', () => ({
     buildScopedTools: vi.fn(() => []),

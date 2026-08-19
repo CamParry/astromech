@@ -5,7 +5,7 @@
  */
 
 import type { ComponentType } from 'react';
-import { createKeyedRegistry } from '@/utilities/registry';
+import { createKeyedRegistry } from '@/registry';
 
 type EmailOverride = {
     name: string;

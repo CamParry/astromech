@@ -41,18 +41,18 @@ import { setEmailDriver } from '@/email/registry';
 import { entryJobs, typedEntriesService } from '@/entries/index';
 import { setEntryStorage } from '@/entries/storage/registry';
 import { AstromechError } from '@/errors/index';
+import { defaultImageWidths, normaliseWidths } from '@/media/image-widths.shared';
 import { mediaService } from '@/media/index';
 import { setImageConfig } from '@/media/serving/image/registry';
 import { currentUserNotificationsService } from '@/notifications/index';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
+import { createRegistry } from '@/registry';
 import { getCurrentRole, getCurrentUser } from '@/request-context/index';
 import { settingsService } from '@/settings/index';
 import { setStorageDriver } from '@/storage/registry';
 import { createHttpApp } from '@/transport/http/index';
 import { usersService } from '@/users/index';
-import { defaultImageWidths, normaliseWidths } from '@/utilities/image-widths';
-import { createRegistry } from '@/utilities/registry';
 
 export type Astromech = {
     /** The resolved, read-only config this runtime serves. */

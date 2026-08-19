@@ -14,7 +14,7 @@
  */
 
 import type { EntryStorage } from './types';
-import { createKeyedRegistry, createRegistry } from '@/utilities/registry';
+import { createKeyedRegistry, createRegistry } from '@/registry';
 import { createBuiltInEntryStorage } from './built-in';
 
 const builtIn = createRegistry<EntryStorage>('entryStorageBuiltIn', { required: false });

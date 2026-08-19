@@ -13,12 +13,12 @@ const noJsExtension = [
 }));
 
 // Core's globals share one `globalThis.__astromech` namespace, declared once in
-// utilities/registry.ts. The namespace grew ten siblings with that invariant
-// already written down, so it is a lint rule rather than a convention.
+// registry.ts. The namespace grew ten siblings with that invariant already
+// written down, so it is a lint rule rather than a convention.
 const noDeclareGlobal = {
     selector: 'TSModuleDeclaration[global=true]',
     message:
-        'Declare globals in packages/astromech/src/utilities/registry.ts only — add a key to `globalThis.__astromech` instead of a new global.',
+        'Declare globals in packages/astromech/src/registry.ts only — add a key to `globalThis.__astromech` instead of a new global.',
 };
 
 export default tseslint.config(
@@ -52,7 +52,7 @@ export default tseslint.config(
         },
     },
     {
-        files: ['packages/astromech/src/utilities/registry.ts'],
+        files: ['packages/astromech/src/registry.ts'],
         rules: { 'no-restricted-syntax': ['error', ...noJsExtension] },
     },
     {

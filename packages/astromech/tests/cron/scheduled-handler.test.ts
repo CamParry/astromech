@@ -19,7 +19,7 @@ import { onTick, runDue } from '@/cron/runner';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/schema';
 import { createWorkerEntry } from '@/integrations/cloudflare/index';
-import { globals } from '@/utilities/registry';
+import { globals } from '@/registry';
 
 // The scheduled handler reads the config it creates the application from out of
 // the virtual module, so a test of it has to serve one. `vi.hoisted` so the factory,

@@ -5,7 +5,7 @@
  * never drift between enforcement and documentation.
  */
 
-import { QUALIFIED_SEPARATOR } from '@/utilities/entry-type-ids';
+import { QUALIFIED_SEPARATOR } from '@/entries/type-ids.shared';
 
 /** The CRUD+publish actions an entry permission gates. */
 export type EntryAction = 'read' | 'create' | 'update' | 'delete' | 'publish';

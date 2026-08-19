@@ -48,6 +48,7 @@ import { getEmailDriver } from '@/email/registry';
 import { renderEmail } from '@/email/render';
 import { typedEntriesService } from '@/entries/index';
 import { resetEntryStorageOverrides, setEntryStorage } from '@/entries/storage/registry';
+import { qualifyEntryType } from '@/entries/type-ids.shared';
 import { AstromechError } from '@/errors/index';
 import { flattenEntryFields } from '@/fields/flatten';
 import { mediaService } from '@/media/index';
@@ -59,15 +60,14 @@ import {
 import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { isTable } from '@/plugins/runtime/plugin-tables';
 import { createPluginTrackingStorage } from '@/plugins/runtime/plugin-tracking-storage';
+import { createRegistry } from '@/registry';
 import { getCurrentRole } from '@/request-context/index';
 import { settingsService } from '@/settings/index';
 import { listAll } from '@/storage/prefix';
 import { getStorageDriver } from '@/storage/registry';
 import { buildScopedTools } from '@/transport/tools/scoped-tools';
 import { usersService } from '@/users/index';
-import { qualifyEntryType } from '@/utilities/entry-type-ids';
 import { log } from '@/utilities/log';
-import { createRegistry } from '@/utilities/registry';
 import {
     withDefaultSettingsShape,
     withDefaultShape,

@@ -312,7 +312,7 @@ The **application** is the booted runtime a process holds: the object
 the resolved config and the domain services, and it is the one front door — a
 process has exactly one, held in a `globalThis` slot because one module can be
 instantiated more than once in a process and a module-scoped memo would boot
-twice. `packages/astromech/src/utilities/registry.ts` records why.
+twice. `packages/astromech/src/registry.ts` records why.
 
 The pair is split on purpose, following Laravel (`bootstrap/app.php` creates,
 `app()` only reads). `createAstromech` initialises and is idempotent: a second

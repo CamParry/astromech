@@ -11,7 +11,7 @@
  */
 
 import type { MethodManifest } from '@/types/index';
-import { createRegistry } from '@/utilities/registry';
+import { createRegistry } from '@/registry';
 
 const manifest = createRegistry<MethodManifest>('methodManifest', { required: false });
 

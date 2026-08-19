@@ -9,8 +9,8 @@ import { betterAuth } from 'better-auth';
 import { getConfig } from '@/config/registry';
 import { getDatabaseDriverOrThrow } from '@/database/driver-registry';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
+import { createRegistry } from '@/registry';
 import { log } from '@/utilities/log';
-import { createRegistry } from '@/utilities/registry';
 
 const authRegistry = createRegistry<Auth<BetterAuthOptions>>('auth', {
     required: false,

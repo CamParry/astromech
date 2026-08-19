@@ -23,7 +23,7 @@
  */
 
 import { AstromechError } from '@/errors/index';
-import { createRegistry } from '@/utilities/registry';
+import { createRegistry } from '@/registry';
 
 type BindingEnv = Record<string, unknown>;
 

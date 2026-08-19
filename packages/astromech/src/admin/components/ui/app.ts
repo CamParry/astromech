@@ -4,7 +4,7 @@
  * admin React context, so none of them load outside a booted admin.
  */
 
-import { assertSingleUiInstance } from '@/admin/support/ui-instance-guard';
+import { assertSingleUiInstance } from '@/admin/components/ui/instance-guard';
 
 assertSingleUiInstance();
 

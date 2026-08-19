@@ -35,6 +35,7 @@ import {
     titledUpdateEntrySchema,
     updateEntrySchema,
 } from '@/entries/schema';
+import { resolveEntryType } from '@/entries/type-ids.shared';
 import { entryPermission, PERMISSION_ENTRY_READ_FULL } from '@/permissions/index';
 import { permissionsFor } from '@/permissions/permissions-for';
 import {
@@ -44,7 +45,6 @@ import {
     notFound,
     requestSchemaError,
 } from '@/transport/http/middleware/errors';
-import { resolveEntryType } from '@/utilities/entry-type-ids';
 import { ENTRIES_ROUTE_SPECS } from './http-routes.shared';
 import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 

@@ -41,7 +41,7 @@ One branch, one commit per workstream.
 
 ### WS1 — registry primitive: `get` / `getOrThrow`
 
-- [x] In `packages/astromech/src/utilities/registry.ts` (both `createRegistry`
+- [x] In `packages/astromech/src/registry.ts` (both `createRegistry`
       and `createKeyedRegistry`): rename `maybeGet` → `get` (nullable) and the
       current throwing `get` → `getOrThrow`.
 - [x] Wrapper functions across the subsystem registries keep their bare `get*`
@@ -188,22 +188,42 @@ PascalCase.
 
 ### WS6 — directory moves out of the layer-word buckets
 
-- [ ] Lift `utilities/registry.ts` (the DI primitive every subsystem's
-      registry depends on) to its own top-level module beside the composition
-      root.
-- [ ] `utilities/image-drivers.ts` and `utilities/image-widths.ts` → under
-      `media/`.
-- [ ] `utilities/entry-capabilities.ts` and `utilities/entry-type-ids.ts` →
-      beside the entry code.
-- [ ] `admin/lib/settings-page-save.ts` → under a settings subject;
-      dissolve `admin/lib/`.
-- [ ] `admin/support/ui-instance-guard.ts` → into `admin/context` or an
-      admin UI subject; dissolve `admin/support/`.
-- [ ] `entries/utils/url.shared.ts` → `entries/entry-url.shared.ts`;
+- [x] Lift `utilities/registry.ts` to `src/registry.ts`, beside the
+      composition root. In the layer diagram it stays on the pure-leaves row:
+      the diagram encodes import direction, not filesystem location, and
+      putting it on the composition-root row would claim the ten capability
+      registries import upward. It imports only `@/errors/index`.
+- [x] `utilities/image-drivers.ts` → `media/image-drivers.ts`;
+      `utilities/image-widths.ts` → `media/image-widths.shared.ts`. The suffix
+      is load-bearing: `media/serving/image/url.shared.ts` imports it, so it
+      is in the client graph.
+- [x] `utilities/entry-capabilities.ts` → `entries/capabilities.ts`;
+      `utilities/entry-type-ids.ts` → `entries/type-ids.shared.ts` (four admin
+      modules import it directly). `ARCHITECTURE.md` was already citing
+      `entries/type-ids.shared.ts` as an example before the file existed
+      there.
+- [x] `admin/lib/settings-page-save.ts` →
+      `admin/components/pages/settings-page-save.ts`, beside its only
+      consumer; `admin/lib/` dissolved.
+- [x] `admin/support/ui-instance-guard.ts` →
+      `admin/components/ui/instance-guard.ts`, beside its two consumers;
+      `admin/support/` dissolved.
+- [x] `entries/utils/url.shared.ts` → `entries/entry-url.shared.ts`;
       dissolve `entries/utils/`.
-- [ ] What remains in `utilities/` (`bytes`, `strings`, `dates`, `locale`,
-      `options`, `values-equal`) is the accepted miscellany bucket. Update
-      `ARCHITECTURE.md` where the moves change the map.
+- [x] What remains in `utilities/` is the accepted miscellany bucket. The
+      audit's list of six was short: `labels`, `log`, `permission-match`,
+      `plugin-namespace`, `with-default-shape` and `ai-context` also stay.
+      `ARCHITECTURE.md`'s map is updated, and its `utilities/` line was
+      already stale (it listed `entry-fields` and `rich-text`, both of which
+      live in `fields/`).
+- [x] `tests/` mirrors `src/`, so two test files followed their subject:
+      `tests/utilities/registry.test.ts` → `tests/registry.test.ts` and
+      `tests/utilities/entry-types.test.ts` → `tests/entries/type-ids.test.ts`.
+- [x] Write the `decisions/` record —
+      `decisions/0074-leaves-are-placed-by-subject.md`. It carries the new
+      invariant: a pure leaf is placed by subject and may be imported from any
+      layer, so `config/` and `permissions/` reading the four moved files from
+      below is allowed and named in `ARCHITECTURE.md`.
 
 ## Explicitly not doing
 

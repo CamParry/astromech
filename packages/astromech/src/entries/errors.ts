@@ -1,4 +1,4 @@
-import type { Capability } from '@/utilities/entry-capabilities';
+import type { Capability } from '@/entries/capabilities';
 
 /**
  * Thrown when an entry mutation is called with a `type` that doesn't match the

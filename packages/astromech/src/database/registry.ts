@@ -7,7 +7,7 @@
 
 import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
-import { createRegistry } from '@/utilities/registry';
+import { createRegistry } from '@/registry';
 
 type AnyDb = Kysely<DB>;
 

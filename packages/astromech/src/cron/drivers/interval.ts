@@ -1,5 +1,5 @@
 import type { SchedulerDriver } from '@/types/index';
-import { globals } from '@/utilities/registry';
+import { globals } from '@/registry';
 
 /** In-process ticker driving onTick once a minute. The default scheduler. */
 export function interval(): SchedulerDriver {

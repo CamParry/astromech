@@ -10,13 +10,13 @@ import type {
     ResolvedEntryType,
 } from '@/types/config';
 import type { AstromechConfig, ResolvedConfig } from '@/types/index';
+import { defaultImageWidths, normaliseWidths } from '@/media/image-widths.shared';
 import {
     derivePluginNav,
     derivePluginPages,
     resolvePluginLabel,
 } from '@/plugins/runtime/plugin-admin';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
-import { defaultImageWidths, normaliseWidths } from '@/utilities/image-widths';
 
 /**
  * Project a resolved entry type into the serializable admin shape. Shared by

@@ -11,6 +11,7 @@
  *
  * Schema version: 2
  */
+import type { Capability } from '@/entries/capabilities';
 import type { EntryMethodContract } from '@/entries/methods';
 import type {
     AnyServiceMethod,
@@ -27,9 +28,9 @@ import type {
     ResolvedEntryCapabilities,
     ServiceMethodContract,
 } from '@/types/index';
-import type { Capability } from '@/utilities/entry-capabilities';
 import { z } from '@hono/zod-openapi';
 import { entryMethodContracts } from '@/entries/methods';
+import { qualifyEntryType } from '@/entries/type-ids.shared';
 import { mediaContract } from '@/media/contract';
 import { notificationsContract } from '@/notifications/contract';
 import {
@@ -38,7 +39,6 @@ import {
 } from '@/plugins/runtime/plugin-identity';
 import { settingsContract } from '@/settings/contract';
 import { usersContract } from '@/users/contract';
-import { qualifyEntryType } from '@/utilities/entry-type-ids';
 
 /**
  * Filename of the emitted manifest (lands in the project's `.astro/` dir).

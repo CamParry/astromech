@@ -1,7 +1,7 @@
 /**
  * CRON job registry.
  *
- * globalThis-backed (see `@/utilities/registry.js`) so a job registered through
+ * globalThis-backed (see `@/registry.js`) so a job registered through
  * one entry chunk is visible to the runner reached through another.
  */
 
@@ -9,7 +9,7 @@ import type { DB } from '@/database/types';
 import type { ResolvedConfig, SchedulerDriver } from '@/types/index';
 import type { Kysely } from 'kysely';
 import { interval } from '@/cron/drivers/interval';
-import { createRegistry } from '@/utilities/registry';
+import { createRegistry } from '@/registry';
 
 export type CronContext = {
     db: Kysely<DB>;

@@ -15,7 +15,7 @@ import { getConfig } from '@/config/registry';
 import { getCronJobs } from '@/cron/registry';
 import { createCronStorage } from '@/cron/storage';
 import { getDb } from '@/database/registry';
-import { globals } from '@/utilities/registry';
+import { globals } from '@/registry';
 
 /** Claim lease: generous so a normal job never self-expires mid-run. A crashed
  *  claim auto-expires after this and the next tick retries. */

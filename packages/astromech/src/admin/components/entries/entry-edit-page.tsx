@@ -77,7 +77,7 @@ import {
 import { scopedEntryKeys } from '@/admin/hooks/use-query-keys';
 import { EntryNamespaceProvider, namespaceForScope } from '@/admin/i18n/entry-namespace';
 import { resolveAdminEntryType, resolveForm } from '@/admin/rendering/resolve';
-import { resolveEntryUrl } from '@/entries/utils/url.shared';
+import { resolveEntryUrl } from '@/entries/entry-url.shared';
 import { resolveContentLocale } from '@/utilities/locale';
 import { EntryFormErrors } from './entry-form-errors';
 

@@ -6,9 +6,9 @@
 
 import type { Role, User } from '@/types/index';
 import { AsyncLocalStorage } from 'node:async_hooks';
-// `@/utilities/registry` imports nothing, which is what keeps this module
+// `@/registry` imports nothing, which is what keeps this module
 // service-free and loadable before `virtual:astromech/config` resolves.
-import { createRegistry } from '@/utilities/registry';
+import { createRegistry } from '@/registry';
 
 export type RequestContext = {
     request: Request;
