@@ -7,7 +7,7 @@
  * Policy (validation, hooks, relationships, versioning *decisions*, bulk
  * dispatch) stays in the entries service.
  *
- * Row access goes through `createStorage(entriesTable)` — the `Table`-backed CRUD
+ * Row access goes through `createRepository(entriesTable)` — the `Table`-backed CRUD
  * wrapper — which owns encoding, `updatedAt` stamping and result decoding. Four
  * things it cannot express stay on the raw Kysely handle:
  *
@@ -33,7 +33,7 @@
 import type { EntryRow } from '../schema';
 import type {
     Capability,
-    EntryStorage,
+    EntryRepository,
     EntryWrite,
     ListParams,
     NewEntryVersionSnapshot,
@@ -51,12 +51,12 @@ import type { ExpressionBuilder, Updateable } from 'kysely';
 import { supportsTransactions } from '@/database/capabilities';
 import { decodeWith, encodePatchWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
+import { createRepository } from '@/database/repository/create-repository';
+import { existingResourceIds } from '@/database/repository/resource-existence';
 import { entriesTable } from '@/database/schema';
-import { createStorage } from '@/database/storage/create-storage';
-import { existingResourceIds } from '@/database/storage/resource-existence';
 import { BUILT_IN_SUPPORTS } from '@/entries/capabilities';
 import { UnknownSortKeyError, UnknownWhereKeyError } from '../errors';
-import { createVersionStorage } from './versions';
+import { createVersionRepository } from './versions';
 
 // ============================================================================
 // Query helpers
@@ -125,7 +125,7 @@ function buildListWhere(params: ListParams, defaultLocale: string, types: string
         }
 
         // where filters. Column comparisons follow the shared `where` DSL
-        // (database/storage/create-storage.ts): `undefined` or an absent key means
+        // (database/repository/create-repository.ts): `undefined` or an absent key means
         // unfiltered, a deliberate `null` renders `IS NULL`. Reading a bare `null`
         // as unfiltered instead returned every row to a caller asking for the
         // null ones.
@@ -258,10 +258,10 @@ async function populateLocaleSingle(db: Db, row: EntryRow): Promise<Entry> {
 }
 
 // ============================================================================
-// BuiltInEntryStorage
+// BuiltInEntryRepository
 // ============================================================================
 
-export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: string }) {
+export function createBuiltInEntryRepository(opts?: { db?: Db; defaultLocale?: string }) {
     const dbOverride = opts?.db;
     const defaultLocale = opts?.defaultLocale ?? 'en';
 
@@ -269,12 +269,12 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
 
     // Unbound when there is no override, so it follows `setDb` per call exactly
     // as `handle()` does.
-    const storage = createStorage(entriesTable, dbOverride);
+    const repository = createRepository(entriesTable, dbOverride);
 
     const supports: readonly Capability[] = BUILT_IN_SUPPORTS;
 
     async function transaction<T>(
-        fn: (storage: EntryStorage<Entry>, db: Db) => Promise<T>
+        fn: (repository: EntryRepository<Entry>, db: Db) => Promise<T>
     ): Promise<T> {
         // `handle()`, not `getDb()`: a storage already bound to a tx handle must
         // nest on that handle, or it opens a second transaction on the base
@@ -282,8 +282,11 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
         return handle()
             .transaction()
             .execute(async (trx) => {
-                const txStorage = createBuiltInEntryStorage({ db: trx, defaultLocale });
-                return fn(txStorage, trx);
+                const txRepository = createBuiltInEntryRepository({
+                    db: trx,
+                    defaultLocale,
+                });
+                return fn(txRepository, trx);
             });
     }
 
@@ -302,7 +305,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
         let counter = 1;
 
         while (true) {
-            const existing = await storage.findOne({
+            const existing = await repository.findOne({
                 type,
                 locale,
                 slug: candidate,
@@ -376,7 +379,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
         id: string,
         opts?: { includeTrashed?: boolean }
     ): Promise<Entry | null> {
-        const row = await storage.findOne({
+        const row = await repository.findOne({
             id,
             deletedAt: opts?.includeTrashed === true ? undefined : null,
         });
@@ -385,7 +388,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
     }
 
     async function create(data: EntryWrite & { type: string }): Promise<Entry> {
-        const created = await storage.create({
+        const created = await repository.create({
             type: data.type,
             title: data.title ?? '',
             slug: data.slug ?? null,
@@ -410,7 +413,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
         // admits it and the encoder drops it), so the partial write forwards
         // straight through. `updatedAt` is stamped by the wrapper (the column
         // declares `onUpdate`).
-        const updated = await storage.update(id, {
+        const updated = await repository.update(id, {
             title: data.title,
             slug: data.slug,
             fields: data.fields,
@@ -425,29 +428,29 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
 
     async function del(id: string, opts?: { cascadeLocales?: boolean }): Promise<void> {
         if (opts?.cascadeLocales === true) {
-            const existing = await storage.findOne({ id });
+            const existing = await repository.findOne({ id });
             const localeGroup = existing?.localeGroup;
             if (localeGroup !== undefined) {
-                await storage.deleteMany({ localeGroup });
+                await repository.deleteMany({ localeGroup });
                 return;
             }
         }
-        await storage.delete(id);
+        await repository.delete(id);
     }
 
     const trash = {
         trash: async (id: string, opts?: { cascadeLocales?: boolean }): Promise<void> => {
-            const row = await storage.findOne({ id });
+            const row = await repository.findOne({ id });
             if (!row) throw new Error(`Entry '${id}' not found`);
             const now = new Date();
 
             // Idempotent: re-trashing an already-trashed entry is a no-op.
             if (row.deletedAt === null) {
-                await storage.update(id, { deletedAt: now });
+                await repository.update(id, { deletedAt: now });
             }
 
             if (opts?.cascadeLocales === true) {
-                await storage.updateMany(
+                await repository.updateMany(
                     {
                         localeGroup: row.localeGroup,
                         id: { ne: id },
@@ -479,23 +482,23 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
         },
 
         emptyTrash: async (type: string): Promise<void> => {
-            await storage.deleteMany({ type, deletedAt: { ne: null } });
+            await repository.deleteMany({ type, deletedAt: { ne: null } });
         },
     };
 
     const versions = {
         list: async (entryId: string): Promise<EntryVersion[]> => {
-            const rows = await createVersionStorage(handle()).list(entryId);
+            const rows = await createVersionRepository(handle()).list(entryId);
             return rows as unknown as EntryVersion[];
         },
 
         get: async (versionId: string): Promise<EntryVersion | null> => {
-            const row = await createVersionStorage(handle()).get(versionId);
+            const row = await createVersionRepository(handle()).get(versionId);
             return (row as unknown as EntryVersion) ?? null;
         },
 
         create: async (snapshot: NewEntryVersionSnapshot): Promise<void> => {
-            await createVersionStorage(handle()).create({
+            await createVersionRepository(handle()).create({
                 entryId: snapshot.entryId,
                 versionNumber: snapshot.versionNumber,
                 title: snapshot.title,
@@ -506,13 +509,13 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
         },
 
         latestNumber: async (entryId: string): Promise<number> => {
-            return createVersionStorage(handle()).getLatestNumber(entryId);
+            return createVersionRepository(handle()).getLatestNumber(entryId);
         },
     };
 
     const staging = {
         getByCanonical: async (canonicalId: string): Promise<Entry | null> => {
-            const row = await storage.findOne({
+            const row = await repository.findOne({
                 stagedFor: canonicalId,
                 deletedAt: null,
             });
@@ -523,7 +526,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
 
     const translatable = {
         siblings: async (localeGroup: string, excludeId?: string): Promise<Entry[]> => {
-            const siblingRows = await storage.findMany({
+            const siblingRows = await repository.findMany({
                 where: {
                     localeGroup,
                     deletedAt: null,
@@ -538,7 +541,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
             excludeId: string,
             values: JsonObject
         ): Promise<void> => {
-            const siblings = await storage.findMany({
+            const siblings = await repository.findMany({
                 where: {
                     localeGroup,
                     id: { ne: excludeId },
@@ -549,7 +552,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
             for (const sibling of siblings) {
                 // Rows come back decoded, so `fields` is already the parsed object.
                 const existingFields = (sibling.fields ?? {}) as JsonObject;
-                await storage.update(sibling.id, {
+                await repository.update(sibling.id, {
                     fields: { ...existingFields, ...values },
                 });
             }
@@ -558,7 +561,7 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
 
     return {
         supports,
-        // `EntryStorage.transaction` is optional and every caller
+        // `EntryRepository.transaction` is optional and every caller
         // (operations/create.ts, internal/bulk.ts, operations/staging/merge.ts)
         // already falls back to sequential writes, so omitting it on a driver
         // without interactive transactions degrades correctly instead of
@@ -575,5 +578,5 @@ export function createBuiltInEntryStorage(opts?: { db?: Db; defaultLocale?: stri
         versions,
         staging,
         translatable,
-    } satisfies EntryStorage<Entry>;
+    } satisfies EntryRepository<Entry>;
 }

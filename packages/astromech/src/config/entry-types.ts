@@ -111,7 +111,7 @@ export function collectSearchable(nodes: Field[], out: string[]): void {
 /**
  * Resolve a single entry type: validate capabilities + titleField (crash-loud
  * on mismatch) and strip the live `storage` instance, which `ResolvedEntryType`
- * omits — a type's storage is reached through `entries/storage/registry.js`,
+ * omits — a type's storage is reached through `entries/repository/registry.js`,
  * keyed by type, not off the config. `typeKey` is the type's addressable id —
  * the root `entries` key, or the qualified `{plugin}/{type}` key for plugin
  * types — stamped onto the result as `id` and used in error messages.
@@ -138,7 +138,7 @@ export function toResolvedEntryType(
         if (searchableNames.length > 0) resolvedSearch = searchableNames;
     }
 
-    const { storage: _storage, fields: _fields, type: _type, ...rest } = entryType;
+    const { repository: _repository, fields: _fields, type: _type, ...rest } = entryType;
     return {
         ...rest,
         id: typeKey,

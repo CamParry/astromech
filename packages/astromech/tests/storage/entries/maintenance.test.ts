@@ -1,5 +1,5 @@
 /**
- * Storage-level tests for `createEntryMaintenanceStorage` — the whole-table
+ * Storage-level tests for `createEntryMaintenanceRepository` — the whole-table
  * upkeep used by the scheduled-publish and trash-purge CRON jobs.
  */
 
@@ -7,23 +7,23 @@ import type { Db } from '@/database/types';
 import type { ResolvedConfig } from '@/types/index';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { createRepository } from '@/database/repository/create-repository';
+import { createRelationshipRepository } from '@/database/repository/relationships';
 import { entriesTable } from '@/database/schema';
-import { createStorage } from '@/database/storage/create-storage';
-import { createRelationshipStorage } from '@/database/storage/relationships';
 import { trashPurgeJob } from '@/entries/jobs/trash-purge';
-import { createBuiltInEntryStorage } from '@/entries/storage/built-in';
-import { createEntryMaintenanceStorage } from '@/entries/storage/maintenance';
+import { createBuiltInEntryRepository } from '@/entries/repository/built-in';
+import { createEntryMaintenanceRepository } from '@/entries/repository/maintenance';
 
 let db: Db;
 let config: ResolvedConfig;
-let entryStorage: ReturnType<typeof createBuiltInEntryStorage>;
-let maintenance: ReturnType<typeof createEntryMaintenanceStorage>;
+let entryRepository: ReturnType<typeof createBuiltInEntryRepository>;
+let maintenance: ReturnType<typeof createEntryMaintenanceRepository>;
 
 beforeEach(async () => {
     db = await createTestDb();
     config = setupTestConfig();
-    entryStorage = createBuiltInEntryStorage();
-    maintenance = createEntryMaintenanceStorage(db);
+    entryRepository = createBuiltInEntryRepository();
+    maintenance = createEntryMaintenanceRepository(db);
 });
 
 describe('publishDueScheduled', () => {
@@ -31,28 +31,28 @@ describe('publishDueScheduled', () => {
         const past = new Date(Date.now() - 60_000);
         const future = new Date(Date.now() + 60_000);
 
-        const due1 = await entryStorage.create({
+        const due1 = await entryRepository.create({
             type: 'post',
             title: 'Due 1',
             slug: 'due-1',
             status: 'scheduled',
             publishedAt: past,
         });
-        const due2 = await entryStorage.create({
+        const due2 = await entryRepository.create({
             type: 'post',
             title: 'Due 2',
             slug: 'due-2',
             status: 'scheduled',
             publishedAt: past,
         });
-        const notDue = await entryStorage.create({
+        const notDue = await entryRepository.create({
             type: 'post',
             title: 'Not due',
             slug: 'not-due',
             status: 'scheduled',
             publishedAt: future,
         });
-        const alreadyPublished = await entryStorage.create({
+        const alreadyPublished = await entryRepository.create({
             type: 'post',
             title: 'Already',
             slug: 'already',
@@ -63,22 +63,24 @@ describe('publishDueScheduled', () => {
         const count = await maintenance.publishDueScheduled(new Date());
         expect(count).toBe(2);
 
-        expect((await entryStorage.get(due1.id))?.status).toBe('published');
-        expect((await entryStorage.get(due2.id))?.status).toBe('published');
-        expect((await entryStorage.get(notDue.id))?.status).toBe('scheduled');
-        expect((await entryStorage.get(alreadyPublished.id))?.status).toBe('published');
+        expect((await entryRepository.get(due1.id))?.status).toBe('published');
+        expect((await entryRepository.get(due2.id))?.status).toBe('published');
+        expect((await entryRepository.get(notDue.id))?.status).toBe('scheduled');
+        expect((await entryRepository.get(alreadyPublished.id))?.status).toBe(
+            'published'
+        );
     });
 
     it('excludes trashed entries even if their publish time has passed', async () => {
         const past = new Date(Date.now() - 60_000);
-        const trashed = await entryStorage.create({
+        const trashed = await entryRepository.create({
             type: 'post',
             title: 'Trashed',
             slug: 'trashed',
             status: 'scheduled',
             publishedAt: past,
         });
-        await entryStorage.trash.trash(trashed.id);
+        await entryRepository.trash.trash(trashed.id);
 
         const count = await maintenance.publishDueScheduled(new Date());
         expect(count).toBe(0);
@@ -87,43 +89,43 @@ describe('publishDueScheduled', () => {
 
 describe('purgeTrashedBefore', () => {
     it('hard-deletes only entries trashed on or before the cutoff', async () => {
-        const old = await entryStorage.create({
+        const old = await entryRepository.create({
             type: 'post',
             title: 'Old',
             slug: 'old',
         });
-        const recent = await entryStorage.create({
+        const recent = await entryRepository.create({
             type: 'post',
             title: 'Recent',
             slug: 'recent',
         });
 
         // Backdate `old`'s deletedAt directly — trash() always stamps "now".
-        const rawEntries = createStorage(entriesTable, db);
+        const rawEntries = createRepository(entriesTable, db);
         await rawEntries.update(old.id, {
             deletedAt: new Date(Date.now() - 100_000_000),
         });
-        await entryStorage.trash.trash(recent.id);
+        await entryRepository.trash.trash(recent.id);
 
         const cutoff = new Date(Date.now() - 1000);
         const purged = await maintenance.purgeTrashedBefore(cutoff);
         expect(purged).toEqual([old.id]);
 
-        expect(await entryStorage.get(old.id, { includeTrashed: true })).toBeNull();
+        expect(await entryRepository.get(old.id, { includeTrashed: true })).toBeNull();
         expect(
-            await entryStorage.get(recent.id, { includeTrashed: true })
+            await entryRepository.get(recent.id, { includeTrashed: true })
         ).not.toBeNull();
     });
 
     it('leaves live (non-trashed) entries alone', async () => {
-        const live = await entryStorage.create({
+        const live = await entryRepository.create({
             type: 'post',
             title: 'Live',
             slug: 'live',
         });
         const purged = await maintenance.purgeTrashedBefore(new Date());
         expect(purged).toEqual([]);
-        expect(await entryStorage.get(live.id)).not.toBeNull();
+        expect(await entryRepository.get(live.id)).not.toBeNull();
     });
 });
 
@@ -132,22 +134,22 @@ describe('trashPurgeJob', () => {
     // them: a purged entry would keep both the edges it owned and the edges
     // pointing at it forever.
     it('leaves no relationship rows for a purged entry, in either direction', async () => {
-        const doomed = await entryStorage.create({
+        const doomed = await entryRepository.create({
             type: 'post',
             title: 'Doomed',
             slug: 'doomed',
         });
-        const survivor = await entryStorage.create({
+        const survivor = await entryRepository.create({
             type: 'post',
             title: 'Survivor',
             slug: 'survivor',
         });
         // Backdate past the 30-day retention default the job reads.
-        await createStorage(entriesTable, db).update(doomed.id, {
+        await createRepository(entriesTable, db).update(doomed.id, {
             deletedAt: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000),
         });
 
-        const relationships = createRelationshipStorage(db);
+        const relationships = createRelationshipRepository(db);
         await relationships.replaceForSource(
             { id: doomed.id, kind: 'entry', type: 'post' },
             [
@@ -179,7 +181,7 @@ describe('trashPurgeJob', () => {
 
         await trashPurgeJob.handler({ db, config });
 
-        expect(await entryStorage.get(doomed.id, { includeTrashed: true })).toBeNull();
+        expect(await entryRepository.get(doomed.id, { includeTrashed: true })).toBeNull();
         expect(await relationships.findBySource(doomed.id, 'entry')).toEqual([]);
         expect(await relationships.findByTarget(doomed.id, 'entry')).toEqual([]);
         // Only edges touching the purged id go: the survivor keeps the rest.

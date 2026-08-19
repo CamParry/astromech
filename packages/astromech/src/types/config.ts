@@ -14,7 +14,7 @@ import type {
 import type { PluginDefinition, PluginNavItem } from './plugins';
 import type { CellKind } from './resolved';
 import type { DB } from '@/database/types';
-import type { EntryStorage } from '@/entries/storage/types';
+import type { EntryRepository } from '@/entries/repository/types';
 import type { ImageFormat } from '@/media/serving/image/url.shared';
 import type { Dialect, Kysely } from 'kysely';
 
@@ -246,13 +246,13 @@ export type EntryType = {
      */
     url?: string;
     /**
-     * Custom storage backend for this entry type; absent means built-in
-     * storage. Stripped from the resolved config (a live instance cannot be
-     * serialised into the virtual module) and registered into the storage
+     * Custom repository backend for this entry type; absent means built-in
+     * repository. Stripped from the resolved config (a live instance cannot be
+     * serialised into the virtual module) and registered into the repository
      * registry at boot, under the bare type name for a host type and the
      * qualified `{plugin}/{type}` id for a plugin's.
      */
-    storage?: EntryStorage;
+    repository?: EntryRepository;
     /** Field names a multi-type storage should index for free-text search. */
     search?: string[];
     /**

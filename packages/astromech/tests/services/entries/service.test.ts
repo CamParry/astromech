@@ -2,7 +2,7 @@
  * Characterization tests for the entry data layer (`entriesService.*`).
  *
  * These pin down CURRENT behavior — not desired behavior — to act as the
- * regression net for the EntryStorage extraction (Phase 2, slice 2b). Where a
+ * regression net for the EntryRepository extraction (Phase 2, slice 2b). Where a
  * behavior looks surprising it is asserted anyway and flagged in a comment.
  *
  * Each `describe` block gets a fresh in-memory database (`beforeEach`), keeping

@@ -1,12 +1,12 @@
 /**
  * The `redirect` entry type — managed through the standard entry UI, no custom
- * admin surface. Storage is the plugin's own table via `tableStorage` (no core
+ * admin surface. Storage is the plugin's own table via `tableRepository` (no core
  * capabilities), so records carry `fields = { from, to, status, enabled }` and
  * `search` is derived from `searchable` fields.
  */
 
 import type { EntryType } from 'astromech';
-import { tableStorage } from 'astromech';
+import { tableRepository } from 'astromech';
 import * as columns from 'astromech/columns';
 import * as fields from 'astromech/fields';
 import { redirectsTable } from '../tables/redirects';
@@ -16,7 +16,7 @@ export const redirectEntryType: EntryType = {
     type: REDIRECT_TYPE,
     single: 'Redirect',
     plural: 'Redirects',
-    storage: tableStorage(redirectsTable),
+    repository: tableRepository(redirectsTable),
     titleField: false,
     statuses: false,
     slug: false,

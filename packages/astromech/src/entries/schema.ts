@@ -172,7 +172,7 @@ const sortObject = z.record(z.string(), sortDirection);
  *
  * A value that does not parse as this shape is DROPPED rather than rejected,
  * answering the default order. A well-shaped sort naming a field the store
- * cannot order by throws: `entries/storage/built-in.ts` holds the allowlist.
+ * cannot order by throws: `entries/repository/built-in.ts` holds the allowlist.
  */
 export const entrySortSchema = z
     .union([sortObject, z.array(sortObject)])

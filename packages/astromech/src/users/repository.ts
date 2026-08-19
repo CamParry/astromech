@@ -1,7 +1,7 @@
 /**
  * User storage — the only place Kysely touches the `users` table.
  *
- * Row CRUD goes through `createStorage(usersTable)`, which owns encoding,
+ * Row CRUD goes through `createRepository(usersTable)`, which owns encoding,
  * `updatedAt` stamping and row decoding. `list`/`count` stay on the raw handle
  * because the name/email search is an OR, which the flat `where` DSL cannot
  * express; they compile their DSL-expressible part with the wrapper's own
@@ -10,15 +10,15 @@
 
 import type { UserRow } from './schema';
 import type { TableInsert } from '@/database/define-table';
-import type { Patch } from '@/database/storage/create-storage';
+import type { Patch } from '@/database/repository/create-repository';
 import type { Db } from '@/database/types';
 import type { SortOption } from '@/types/index';
 import type { Expression, ExpressionBuilder, SqlBool } from 'kysely';
 import { decodeWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
+import { createRepository } from '@/database/repository/create-repository';
+import { createRelationshipRepository } from '@/database/repository/relationships';
 import { usersTable } from '@/database/schema';
-import { createStorage } from '@/database/storage/create-storage';
-import { createRelationshipStorage } from '@/database/storage/relationships';
 
 type UsersEb = ExpressionBuilder<Record<string, Record<string, unknown>>, string>;
 
@@ -70,15 +70,15 @@ function buildOrderBy(
 // Factory
 // ============================================================================
 
-export type UserStorage = ReturnType<typeof createUserStorage>;
+export type UserRepository = ReturnType<typeof createUserRepository>;
 
 /** Defaults to the registered db; pass a tx handle to scope it to a transaction. */
-export function createUserStorage(db?: Db) {
-    const storage = createStorage(usersTable, db);
+export function createUserRepository(db?: Db) {
+    const repository = createRepository(usersTable, db);
 
     /** The name/email search OR — shared by `list` and `count` so they cannot drift. */
     function filter(search?: string): (eb: UsersEb) => Expression<SqlBool> {
-        const { where } = storage.query();
+        const { where } = repository.query();
         const dsl = where();
         return (eb) => {
             if (!search) return dsl(eb);
@@ -93,7 +93,7 @@ export function createUserStorage(db?: Db) {
     }
 
     async function list(params?: UserListParams): Promise<UserRow[]> {
-        const { db: handle, table } = storage.query();
+        const { db: handle, table } = repository.query();
         let q = handle.selectFrom(table).selectAll().where(filter(params?.search));
         for (const { col, dir } of buildOrderBy(params?.sort)) {
             q = q.orderBy(col, dir);
@@ -105,7 +105,7 @@ export function createUserStorage(db?: Db) {
     }
 
     async function count(params?: { search?: string | undefined }): Promise<number> {
-        const { db: handle, table } = storage.query();
+        const { db: handle, table } = repository.query();
         const row = await handle
             .selectFrom(table)
             .select((eb) => eb.fn.countAll<number>().as('total'))
@@ -115,19 +115,19 @@ export function createUserStorage(db?: Db) {
     }
 
     async function countByRole(roleSlug: string): Promise<number> {
-        return storage.count({ roleSlug });
+        return repository.count({ roleSlug });
     }
 
     /** Every user id — the `notify()` broadcast target. */
     async function ids(): Promise<string[]> {
-        const { db: handle, table } = storage.query();
+        const { db: handle, table } = repository.query();
         const rows = await handle.selectFrom(table).select('id').execute();
         return rows.map((row) => String(row.id));
     }
 
     /** User ids holding a role — the `notify()` per-role target. */
     async function idsByRole(roleSlug: string): Promise<string[]> {
-        const { db: handle, table, where } = storage.query();
+        const { db: handle, table, where } = repository.query();
         const rows = await handle
             .selectFrom(table)
             .select('id')
@@ -137,22 +137,22 @@ export function createUserStorage(db?: Db) {
     }
 
     async function get(id: string): Promise<UserRow | null> {
-        return storage.findOne({ id });
+        return repository.findOne({ id });
     }
 
     async function create(data: NewUser): Promise<UserRow> {
-        return storage.create(data);
+        return repository.create(data);
     }
 
     /** By primary key. Throws when no row matched. */
     async function update(id: string, patch: UserPatch): Promise<UserRow> {
-        return storage.update(id, patch);
+        return repository.update(id, patch);
     }
 
     async function del(id: string): Promise<void> {
         // Relationship rows first: deleting the user row is what orphans them.
-        await createRelationshipStorage(db ?? getDb()).deleteByResource(id, 'user');
-        await storage.delete(id);
+        await createRelationshipRepository(db ?? getDb()).deleteByResource(id, 'user');
+        await repository.delete(id);
     }
 
     return {

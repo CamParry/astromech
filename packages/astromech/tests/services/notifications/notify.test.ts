@@ -5,7 +5,7 @@
  * Two things here are worth a test beyond "it still runs". The `users` lookups
  * that resolve a broadcast/per-role target moved to `users` storage, so each
  * target arm needs to be shown to reach the right people. And the fan-out insert
- * is a hand-written multi-row statement (`createStorage`'s `create` is
+ * is a hand-written multi-row statement (`createRepository`'s `create` is
  * single-row), so it is the one write in this domain not covered by the wrapper.
  *
  * `dismiss` filters on `userId` as well as `id` — that pairing is the

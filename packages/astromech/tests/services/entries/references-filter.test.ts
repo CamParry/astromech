@@ -18,9 +18,9 @@ import {
     UnknownSortKeyError,
     UnknownWhereKeyError,
 } from '@/entries/errors';
+import { tableRepository } from '@/entries/repository/table';
 import { entriesService as api } from '@/entries/service';
-import { tableStorage } from '@/entries/storage/table';
-import { createMediaStorage } from '@/media/storage';
+import { createMediaRepository } from '@/media/repository';
 
 const linksTable = defineTable('test_links', ({ col }) => ({
     id: col.id(),
@@ -43,7 +43,7 @@ function linksPlugin(): PluginDefinition {
                 statuses: false,
                 slug: false,
                 trash: false,
-                storage: tableStorage(linksTable),
+                repository: tableRepository(linksTable),
                 fields: [
                     { name: 'label', type: 'text', label: 'Label' },
                     { name: 'post', type: 'relationship', label: 'Post', target: 'post' },
@@ -110,7 +110,7 @@ beforeEach(async () => {
 
 /** A media row, inserted through storage so no driver or real bytes are needed. */
 async function createMedia(filename: string): Promise<string> {
-    const row = await createMediaStorage().create({
+    const row = await createMediaRepository().create({
         filename,
         mimeType: 'image/png',
         size: 1,

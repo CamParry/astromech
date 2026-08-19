@@ -1,6 +1,6 @@
 import type { JsonObject, User } from '@/types/index';
 import { getConfig } from '@/config/registry';
-import { existingEntryTypes } from '@/database/storage/resource-existence';
+import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenFieldNodes } from '@/fields/flatten';
@@ -9,8 +9,8 @@ import { getCurrentUser } from '@/request-context/index';
 import { indexUserRelationships } from '../internal/relationships';
 import { toUser } from '../internal/to-user';
 import { validate } from '../internal/validate';
+import { createUserRepository } from '../repository';
 import { createUserSchema } from '../schema';
-import { createUserStorage } from '../storage';
 import { query } from './query';
 
 /** Create a CMS user, running its custom fields through the field pipeline. */
@@ -49,7 +49,7 @@ export async function create(params: {
         processedFields.values as JsonObject
     );
 
-    const created = await createUserStorage().create({
+    const created = await createUserRepository().create({
         email: validated.email,
         name: validated.name,
         ...(Object.keys(fields).length > 0 && { fields }),

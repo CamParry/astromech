@@ -8,9 +8,9 @@
 
 import type { ApprovalRequest, ChatMessage, ResolvedAssistantOptions } from '../types';
 import { defineServiceMethod, noInput } from 'astromech';
+import { createApprovalsRepository } from '../approvals/repository';
 import { toApprovalRequest } from '../approvals/request';
-import { createApprovalsStorage } from '../approvals/storage';
-import { createSessionsStorage } from '../sessions/storage';
+import { createSessionsRepository } from '../sessions/repository';
 
 /**
  * A user's conversation. `pending` is read off the approvals table rather than
@@ -31,7 +31,7 @@ export function buildSessionsService(options: ResolvedAssistantOptions) {
             mutates: false,
             handler: async (_input, ctx): Promise<ChatSession> => {
                 const userId = actingUserId(ctx.user);
-                const approvals = createApprovalsStorage(ctx.db);
+                const approvals = createApprovalsRepository(ctx.db);
                 const held = await approvals.findPending(userId);
                 // Only a held call needs the tool that worded it, and building
                 // the surface composes the whole manifest.
@@ -40,7 +40,7 @@ export function buildSessionsService(options: ResolvedAssistantOptions) {
                         ? []
                         : ctx.methods.tools({ readOnly: options.readOnly });
                 return {
-                    messages: (await createSessionsStorage(ctx.db).load(userId)) ?? [],
+                    messages: (await createSessionsRepository(ctx.db).load(userId)) ?? [],
                     pending: held.map((row) => toApprovalRequest(row, tools)),
                 };
             },
@@ -56,10 +56,10 @@ export function buildSessionsService(options: ResolvedAssistantOptions) {
             destructive: false,
             handler: async (_input, ctx): Promise<null> => {
                 const userId = actingUserId(ctx.user);
-                await createSessionsStorage(ctx.db).clear(userId);
+                await createSessionsRepository(ctx.db).clear(userId);
                 // A conversation nobody will answer must leave no held rows, the
                 // same rule a new message already applies.
-                await createApprovalsStorage(ctx.db).rejectPending(userId);
+                await createApprovalsRepository(ctx.db).rejectPending(userId);
                 return null;
             },
         }),

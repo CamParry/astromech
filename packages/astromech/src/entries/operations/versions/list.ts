@@ -1,13 +1,13 @@
 import type { EntryVersion } from '@/types/index';
 import { loadAndAssertType } from '../../internal/records';
-import { getEntryStorage } from '../../storage/registry';
+import { getEntryRepository } from '../../repository/registry';
 
 export async function listVersions(params: {
     type: string;
     id: string;
 }): Promise<EntryVersion[]> {
-    const storage = getEntryStorage(params.type);
-    await loadAndAssertType(storage, params.type, params.id);
-    if (!storage.versions) return [];
-    return storage.versions.list(params.id);
+    const repository = getEntryRepository(params.type);
+    await loadAndAssertType(repository, params.type, params.id);
+    if (!repository.versions) return [];
+    return repository.versions.list(params.id);
 }

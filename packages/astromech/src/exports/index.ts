@@ -68,22 +68,22 @@ export type {
 export { decodeWith, encodeWith, encodePatchWith } from '@/database/codec';
 // The `Table`-backed CRUD wrapper, on the same surface as the `Table`
 // vocabulary and the codec it is built on: a plugin holding a `definePluginTable`
-// table composes `createStorage` inside its own `createXStorage(db)` factory
+// table composes `createRepository` inside its own `createXRepository(db)` factory
 // exactly as core's domains do, and then never spells the table name or reaches
 // for a codec again. Its public types ship with it for the TS2742 reason above —
 // a plugin's `.d.ts` has to be able to *name* what the factory returns.
-export { createStorage } from '@/database/storage/create-storage';
+export { createRepository } from '@/database/repository/create-repository';
 export type {
     FindManyParams,
     GenericDb,
     OrderBy,
     Patch,
     QueryHandle,
-    Storage,
+    Repository,
     UpsertOptions,
     Where,
-} from '@/database/storage/create-storage';
-export { tableStorage } from '@/entries/storage/table';
+} from '@/database/repository/create-repository';
+export { tableRepository } from '@/entries/repository/table';
 export { t } from '@/utilities/labels';
 // Rich text is stored as ProseMirror JSON and rendered to sanitized HTML on
 // public reads. A plugin holding richtext that is `private` — and so absent

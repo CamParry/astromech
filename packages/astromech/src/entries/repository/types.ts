@@ -1,5 +1,5 @@
 /**
- * Internal EntryStorage contract.
+ * Internal EntryRepository contract.
  *
  * This is NOT exported from the package root — it is the seam between the
  * entries service (`src/services/entries/service.ts`: validation, hooks,
@@ -25,7 +25,7 @@ import type {
     WhereFilters,
 } from '@/types/index';
 
-export type StorageDb = Db;
+export type RepositoryDb = Db;
 
 export type { Capability } from '@/entries/capabilities';
 
@@ -36,7 +36,7 @@ export type { Capability } from '@/entries/capabilities';
  * (the entries service asserts on it). The `locales` map is populated by storages
  * supporting `translatable`.
  */
-export type EntryRecord = {
+export type EntryRow = {
     id: string;
     fields: JsonObject;
     createdAt: Date;
@@ -81,7 +81,7 @@ export type ListParams = {
     search?: string | undefined;
     /**
      * Fields to apply `search` over; honored by storages that map fields to
-     * columns (tableStorage); built-in storage ignores it (title search).
+     * columns (tableRepository); built-in storage ignores it (title search).
      */
     searchFields?: readonly string[] | undefined;
     where?: WhereFilters | undefined;
@@ -110,7 +110,7 @@ export type NewEntryVersionSnapshot = {
  * canonical mismatch error if they prefer (the built-in defers to the
  * entries service).
  */
-export type EntryStorage<R extends EntryRecord = EntryRecord> = {
+export type EntryRepository<R extends EntryRow = EntryRow> = {
     readonly supports: readonly Capability[];
 
     list(params: ListParams): Promise<{ data: R[]; total: number }>;
@@ -137,7 +137,7 @@ export type EntryStorage<R extends EntryRecord = EntryRecord> = {
      * contract) atomic with the storage writes.
      */
     transaction?<T>(
-        fn: (storage: EntryStorage<R>, db: StorageDb) => Promise<T>
+        fn: (repository: EntryRepository<R>, db: RepositoryDb) => Promise<T>
     ): Promise<T>;
 
     /**

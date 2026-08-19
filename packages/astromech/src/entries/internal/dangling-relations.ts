@@ -7,12 +7,12 @@
  * `relationships` index (that is `internal/relationships.ts`).
  */
 
-import type { StorageDb } from '../storage/types';
+import type { RepositoryDb } from '../repository/types';
 import type { RelationshipDeclaration, TargetKind } from '@/fields/relationship-edges';
 import type { Field } from '@/types/fields';
 import type { JsonObject } from '@/types/index';
 import { getConfig } from '@/config/registry';
-import { existingResourceIds } from '@/database/storage/resource-existence';
+import { existingResourceIds } from '@/database/repository/resource-existence';
 import { resolveEntryType } from '@/entries/type-ids.shared';
 import { parseInstancePath } from '@/fields/field-path';
 import {
@@ -20,7 +20,7 @@ import {
     collectRelationshipEdges,
 } from '@/fields/relationship-edges';
 import { RESERVED_KEY } from '@/fields/reserved-keys';
-import { getEntryStorage, hasEntryStorageOverride } from '../storage/registry';
+import { getEntryRepository, hasEntryRepositoryOverride } from '../repository/registry';
 
 const TARGET_KINDS = ['entry', 'user', 'media'] as const satisfies readonly TargetKind[];
 
@@ -36,7 +36,7 @@ type ExistingIds = (ids: string[]) => Promise<Set<string>>;
 export async function pruneDanglingRelations(
     definitions: Field[],
     values: JsonObject,
-    db?: StorageDb
+    db?: RepositoryDb
 ): Promise<{ values: JsonObject; dropped: number }> {
     const edges = collectRelationshipEdges(definitions, values);
     if (edges.length === 0) return { values, dropped: 0 };
@@ -140,8 +140,8 @@ function isPrunable(declaration: RelationshipDeclaration): boolean {
     const target = declaration.target;
     if (target === undefined || target === '') return false;
     if (!resolveEntryType(getConfig(), target)) return false;
-    if (!hasEntryStorageOverride(target)) return true;
-    return getEntryStorage(target).existingIds !== undefined;
+    if (!hasEntryRepositoryOverride(target)) return true;
+    return getEntryRepository(target).existingIds !== undefined;
 }
 
 /** The `existingIds` read of every override-backed target, per schema path. */
@@ -151,12 +151,12 @@ function storageReadsByPath(definitions: Field[]): Map<string, Map<string, Exist
         const target = declaration.target;
         if (declaration.targetKind !== 'entry') continue;
         if (target === undefined || target === '') continue;
-        if (!hasEntryStorageOverride(target)) continue;
-        const storage = getEntryStorage(target);
-        if (storage.existingIds === undefined) continue;
+        if (!hasEntryRepositoryOverride(target)) continue;
+        const repository = getEntryRepository(target);
+        if (repository.existingIds === undefined) continue;
         const reads =
             byPath.get(declaration.schemaPath) ?? new Map<string, ExistingIds>();
-        reads.set(target, storage.existingIds.bind(storage));
+        reads.set(target, repository.existingIds.bind(repository));
         byPath.set(declaration.schemaPath, reads);
     }
     return byPath;

@@ -23,7 +23,7 @@ import {
     notFound,
 } from '@/transport/http/middleware/errors';
 import { updateUserSchema, usersContract, usersService } from '@/users/index';
-import { createUserStorage } from '@/users/storage';
+import { createUserRepository } from '@/users/repository';
 import { USERS_ROUTE_SPECS } from './http-routes.shared';
 import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 
@@ -113,7 +113,7 @@ router.put('/:id', async (c) => {
         // Last-admin check: if changing away from 'admin', ensure it's not the last one
         const targetUser = await usersService.get({ id });
         if (targetUser && targetUser.roleSlug === 'admin' && roleSlug !== 'admin') {
-            const adminCount = await createUserStorage().countByRole('admin');
+            const adminCount = await createUserRepository().countByRole('admin');
             if (adminCount <= 1) {
                 return badRequest(c, 'Cannot remove the last administrator');
             }
@@ -146,7 +146,7 @@ router.delete('/:id', async (c) => {
     // Last-admin check
     const targetUser = await usersService.get({ id });
     if (targetUser && targetUser.roleSlug === 'admin') {
-        const adminCount = await createUserStorage().countByRole('admin');
+        const adminCount = await createUserRepository().countByRole('admin');
         if (adminCount <= 1) {
             return badRequest(c, 'Cannot delete the last administrator');
         }

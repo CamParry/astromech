@@ -15,7 +15,7 @@ outgrows the shared table.
 ## The state today (all verified)
 
 - `where` on entries is a hardcoded allow-list — `locale`, `_search`, `status`,
-  `slug`, `title`, `id`, `references` (`entries/storage/built-in.ts`). Anything
+  `slug`, `title`, `id`, `references` (`entries/repository/built-in.ts`). Anything
   else throws `UnknownWhereKeyError`
   (`decisions/0029-an-unknown-where-key-throws.md`), and that stays: querying a
   field with no declared index must throw naming the field path and the
@@ -28,7 +28,7 @@ outgrows the shared table.
 - No JSON path handling exists anywhere — a repo-wide grep for `json_extract` /
   `->>` / `jsonb` / `json_each` returns zero hits outside `node_modules`.
 - Table-backed entry types forward `where` into the storage wrapper's full
-  operator DSL and throw on unknown keys (`entries/storage/table.ts:289-302`).
+  operator DSL and throw on unknown keys (`entries/repository/table.ts:289-302`).
 
 ## The shape
 

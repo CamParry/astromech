@@ -1,15 +1,15 @@
 import type { Media, MediaQueryParams, QueryResult } from '@/types/index';
 import { toMedia } from '../internal/to-media';
-import { createMediaStorage } from '../storage';
+import { createMediaRepository } from '../repository';
 
 /** List media items, paginated unless `limit: 'all'` asks for the lot. */
 export async function query(params?: MediaQueryParams): Promise<QueryResult<Media>> {
-    const storage = createMediaStorage();
+    const repository = createMediaRepository();
     const page = params?.page ?? 1;
     const limit = params?.limit;
 
     if (limit === 'all') {
-        const rows = await storage.list(params);
+        const rows = await repository.list(params);
         return { data: rows.map(toMedia), pagination: null };
     }
 
@@ -17,8 +17,8 @@ export async function query(params?: MediaQueryParams): Promise<QueryResult<Medi
     const offset = (page - 1) * perPage;
 
     const [rows, total] = await Promise.all([
-        storage.list(params, { limit: perPage, offset }),
-        storage.count(params),
+        repository.list(params, { limit: perPage, offset }),
+        repository.count(params),
     ]);
 
     return {

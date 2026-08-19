@@ -6,14 +6,14 @@
  * typed, callable off `Astromech.plugins.backups` and off `service` in the
  * admin page, and visible to the method manifest the CLI and MCP discover from.
  *
- * Row access goes through `createBackupRunsStorage`, which owns the table name,
+ * Row access goes through `createBackupRunsRepository`, which owns the table name,
  * the codec and the ordering.
  */
 
 import type { BackupRunRow } from '../tables/runs';
 import { defineServiceMethod, noInput, z } from 'astromech';
 import { isBackupRunning, performBackup, resolveKeep } from '../backup';
-import { createBackupRunsStorage } from '../storage';
+import { createBackupRunsRepository } from '../repository';
 
 const MAX_RUNS = 100;
 
@@ -57,7 +57,7 @@ export function buildBackupsService(defaultKeep: number) {
             mutates: false,
             handler: async (_input, ctx): Promise<ListRunsResult> => {
                 return {
-                    runs: await createBackupRunsStorage(ctx.db).recent(MAX_RUNS),
+                    runs: await createBackupRunsRepository(ctx.db).recent(MAX_RUNS),
                     capabilities: {
                         canDump: ctx.database.dump !== undefined,
                         canRestore: ctx.database.restore !== undefined,
@@ -86,7 +86,7 @@ export function buildBackupsService(defaultKeep: number) {
             destructive: true,
             handler: async (input, ctx): Promise<DeleteRunResult> => {
                 const id = typeof input?.id === 'string' ? input.id : '';
-                const runs = createBackupRunsStorage(ctx.db);
+                const runs = createBackupRunsRepository(ctx.db);
                 const row = await runs.get(id);
                 if (row === null) return { ok: false, reason: 'not-found' };
 

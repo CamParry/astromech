@@ -13,7 +13,7 @@ import { getCurrentUser } from '@/request-context/index';
 import { InvalidReferencesFilterError, PublicTrashedReadError } from '../errors';
 import { asEntry } from '../internal/records';
 import { getDefaultLocale } from '../internal/type-config';
-import { getEntryStorage } from '../storage/registry';
+import { getEntryRepository } from '../repository/registry';
 import { applyVisibility, markPublic } from '../visibility';
 import { runPreviewQuery } from './preview/read';
 
@@ -42,7 +42,7 @@ export async function query(
     // A single type resolves one config; a cross-type query resolves per row.
     const singleType = types.length === 1 ? (types[0] ?? null) : null;
     const firstType = types[0] ?? '';
-    const storage = getEntryStorage(firstType);
+    const repository = getEntryRepository(firstType);
 
     const singleTypeCfg = singleType
         ? resolveEntryType(getConfig(), singleType)
@@ -54,7 +54,7 @@ export async function query(
     // `publishedAt <= now` (no lte operator) — that check stays in applyVisibility.
     // NOTE: scheduled rows with publishedAt <= now will be counted but then
     // filtered in applyVisibility, slightly inflating total/pages when such rows exist.
-    // Only push for types that have the statuses capability; tableStorage-backed
+    // Only push for types that have the statuses capability; tableRepository-backed
     // types (statuses: false) have no publication status column.
     const hasStatuses = singleTypeCfg
         ? singleTypeCfg.capabilities.statuses !== false
@@ -67,7 +67,7 @@ export async function query(
     const references = params.where?.['references'];
     if (references !== undefined) assertReferencesFilter(references, types);
 
-    const { data: rows, total } = await storage.list({
+    const { data: rows, total } = await repository.list({
         type: singleType ?? types,
         locale: params.locale ?? getDefaultLocale(),
         trashed: params.trashed ?? false,
@@ -88,7 +88,7 @@ export async function query(
     for (const entry of data) {
         // Resolve field definitions per row (supports cross-type queries).
         const rowType = entry.type ?? singleType ?? firstType;
-        // tableStorage-backed rows have no `type` column, so they come back
+        // tableRepository-backed rows have no `type` column, so they come back
         // without a type. Stamp it from the query so every returned entry is
         // complete (consumers build links / resolve icons from `entry.type`).
         if (entry.type === undefined) entry.type = rowType;

@@ -1,7 +1,7 @@
 /**
  * Settings storage — the only place Kysely touches the `settings` table.
  *
- * Thin domain vocabulary over `createStorage(settingsTable)`, which owns encoding,
+ * Thin domain vocabulary over `createRepository(settingsTable)`, which owns encoding,
  * value serialization and row decoding. The public/private key rule is a read
  * shape, not a query, so it stays in the service.
  */
@@ -9,22 +9,22 @@
 import type { SettingRow } from './schema';
 import type { Db } from '@/database/types';
 import type { JsonValue } from '@/types/index';
+import { createRepository } from '@/database/repository/create-repository';
 import { settingsTable } from '@/database/schema';
-import { createStorage } from '@/database/storage/create-storage';
 
-export type SettingsStorage = ReturnType<typeof createSettingsStorage>;
+export type SettingsRepository = ReturnType<typeof createSettingsRepository>;
 
 /** Defaults to the registered db; pass a tx handle to scope it to a transaction. */
-export function createSettingsStorage(db?: Db) {
-    const storage = createStorage(settingsTable, db);
+export function createSettingsRepository(db?: Db) {
+    const repository = createRepository(settingsTable, db);
 
     async function all(): Promise<SettingRow[]> {
-        return storage.findMany();
+        return repository.findMany();
     }
 
     /** The rows for an explicit key set — absent keys are simply not returned. */
     async function byKeys(keys: string[]): Promise<SettingRow[]> {
-        return storage.findMany({ where: { key: { in: keys } } });
+        return repository.findMany({ where: { key: { in: keys } } });
     }
 
     /**
@@ -33,7 +33,7 @@ export function createSettingsStorage(db?: Db) {
      * conflict update — so it is deliberately absent from both value sets here.
      */
     async function set(key: string, value: JsonValue): Promise<SettingRow> {
-        return storage.upsert({ key, value }, { target: ['key'], set: { value } });
+        return repository.upsert({ key, value }, { target: ['key'], set: { value } });
     }
 
     return { all, byKeys, set };

@@ -4,7 +4,7 @@
  * resolution. All read the resolved config.
  */
 
-import type { EntryStorage } from '../storage/types';
+import type { EntryRepository } from '../repository/types';
 import type { Capability } from '@/entries/capabilities';
 import type { Field } from '@/types/index';
 import { getConfig } from '@/config/registry';
@@ -12,7 +12,7 @@ import { resolveEntryType } from '@/entries/type-ids.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { resolveContentLocale } from '@/utilities/locale';
 import { CapabilityError } from '../errors';
-import { getEntryStorage } from '../storage/registry';
+import { getEntryRepository } from '../repository/registry';
 
 export function getDefaultLocale(): string {
     // `defaultLocale` is a DISPLAY tag (e.g. `en-GB`) and may not be a content
@@ -32,7 +32,7 @@ export function isTitled(typeName: string): boolean {
 
 export function isVersioningEnabled(typeName: string): boolean {
     return (
-        getEntryStorage(typeName).versions !== undefined &&
+        getEntryRepository(typeName).versions !== undefined &&
         !!resolveEntryType(getConfig(), typeName)?.versioning
     );
 }
@@ -71,17 +71,17 @@ export function assertCapability(typeName: string, capability: Capability): void
  * backend that carries `stagedFor` in v1) and return both the storage and its
  * (now-narrowed) staging sub-surface.
  */
-export function getStagingStorage(typeName: string): {
-    storage: EntryStorage;
-    staging: NonNullable<EntryStorage['staging']>;
+export function getStagingRepository(typeName: string): {
+    repository: EntryRepository;
+    staging: NonNullable<EntryRepository['staging']>;
 } {
     assertCapability(typeName, 'staging');
-    const storage = getEntryStorage(typeName);
-    const staging = storage.staging;
+    const repository = getEntryRepository(typeName);
+    const staging = repository.staging;
     if (!staging) {
         throw new Error(
             `Entry type "${typeName}" does not support staging (built-in storage required).`
         );
     }
-    return { storage, staging };
+    return { repository, staging };
 }

@@ -3,7 +3,7 @@ import type { Insertable } from 'kysely';
 import { defineCommand } from 'citty';
 import { encode } from '@/database/codec';
 import { getDb } from '@/database/registry';
-import { createUserStorage } from '@/users/storage';
+import { createUserRepository } from '@/users/repository';
 import { loadConfig } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
@@ -42,7 +42,7 @@ export default defineCommand({
         const accountId = crypto.randomUUID();
         const hashedPassword = await hashPassword(password);
 
-        await createUserStorage().create({
+        await createUserRepository().create({
             id: userId,
             email,
             name,

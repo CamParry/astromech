@@ -3,7 +3,7 @@
  *
  * The mime-bucket predicate is the one part of the migration whose SQL is
  * genuinely different in kind: it moved from a `DB`-typed expression builder onto
- * the generic one `createStorage.query()` hands out, and the `other` bucket is a
+ * the generic one `createRepository.query()` hands out, and the `other` bucket is a
  * raw `sql` fragment naming snake_case columns (CamelCasePlugin does not
  * transform raw fragments). Nothing else in the suite exercises it.
  *
@@ -14,8 +14,8 @@
 import type { MediaMimeTypeFilter, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { createMediaRepository } from '@/media/repository';
 import { mediaService } from '@/media/service';
-import { createMediaStorage } from '@/media/storage';
 import { setStorageDriver } from '@/storage/registry';
 
 const noopStorage: StorageDriver = {
@@ -53,9 +53,9 @@ beforeEach(async () => {
     setupTestConfig(makeTestConfig());
     setStorageDriver(noopStorage);
 
-    const storage = createMediaStorage();
+    const repository = createMediaRepository();
     for (const [filename, mimeType] of FIXTURES) {
-        await storage.create({ filename, mimeType, size: 1 });
+        await repository.create({ filename, mimeType, size: 1 });
     }
 });
 

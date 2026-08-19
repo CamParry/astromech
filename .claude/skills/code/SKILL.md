@@ -44,15 +44,15 @@ Names are not a place to be creative. Before naming anything, find what this exa
 - **No flair, no rhetorical emphasis** ("this is the whole point", "THIS IS THE ONLY…").
 - **No history, no rejected alternatives, no naming justifications.** Established naming needs no defence in a comment — put the record in `decisions/`.
 
-## Data access (storage pattern)
+## Data access (repository pattern)
 
-- **No repository pattern.** Every DB-touching unit is _storage_. Name `createXStorage`, never `XRepository`.
+- **The DB-access unit is a _repository_.** Name `createXRepository`, type `XRepository`, never `createXStorage`. `storage` means file/blob storage only. (See `decisions/0075`.)
 - **A `defineTable` / `definePluginTable` export is named `<noun>Table`** — `entriesTable`, `cronTable`, `submissionsTable`. The noun matches the SQL table name; the suffix keeps the table distinct from the domain and its service. Row types stay `EntryRow` / `NewEntryRow`.
-- **Storage is the only place `getDb` or a Kysely query appears.** Services, operations, jobs, and helpers call storage — never raw queries.
-- Storage modules are **factory functions** closing over the db handle: `createEntryStorage(db) => ({ … })`. No storage classes.
-- Domain logic is split **operations-per-file** (`operations/create.ts`, …) wrapping storage; shared per-domain helpers live in `<domain>/internal/`.
-- Entries-local data → `<domain>/storage/`. Cross-domain subsystems (e.g. relationships, spanning entry/user/media) → `database/storage/`, composed by the services that need them.
-- `<domain>/storage/` (DB access) is distinct from top-level `storage/` (media binary/blob drivers). Don't conflate.
+- **A repository is the only place `getDb` or a Kysely query appears.** Services, operations, jobs, and helpers call a repository — never raw queries.
+- Repositories are **factory functions** closing over the db handle: `createUserRepository(db) => ({ … })`. The one class is `TableRepository`, the pluggable `EntryRepository` implementation.
+- Domain logic is split **operations-per-file** (`operations/create.ts`, …) wrapping the repository; shared per-domain helpers live in `<domain>/internal/`.
+- Entries-local data → `<domain>/repository/`. Cross-domain subsystems (e.g. relationships, spanning entry/user/media) → `database/repository/`, composed by the services that need them.
+- `<domain>/repository/` (DB access) is a different concept from top-level `storage/` (media binary/blob drivers) — the rename in 0075 exists to keep the two words apart.
 
 ## Commits
 

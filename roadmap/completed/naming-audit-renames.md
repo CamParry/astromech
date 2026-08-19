@@ -10,11 +10,10 @@ Everything here touches only names, file paths, and comments — no behaviour
 changes. Several renames touch symbols re-exported from the package root, so
 this work is cheapest before the first npm release.
 
-**Five of the six workstreams have shipped.** WS3 (`storage` → `repository`) is
-parked: it reverses a rule written in `.claude/skills/code/SKILL.md`,
-`decisions/0003` and `decisions/0009`, which makes it a data-layer question
-rather than a naming one. The rest of this file is a record of what landed.
-Decision 3 below is the one that has NOT been acted on.
+**All six workstreams have shipped.** WS3 (`storage` → `repository`) was the
+last: it reversed a rule written in `.claude/skills/code/SKILL.md`,
+`decisions/0003` and `decisions/0009`, so it was settled as a data-layer
+question first, in `decisions/0075`. This file is a record of what landed.
 
 ## Decisions settled in review (each needs a `decisions/` record)
 
@@ -28,14 +27,14 @@ Decision 3 below is the one that has NOT been acted on.
    Kysely's `executeTakeFirst` / `executeTakeFirstOrThrow`. TypeScript types
    carry nullability; a throwing wrapper documents the throw in its comment.
    Supersedes `decisions/0069-the-build-sequence-is-flat-and-the-probe-is-maybeget.md`.
-3. **Not acted on — see WS3.** `storage` means file storage; the data-access
-   layer is `repository`.
+3. **Shipped as WS3, recorded in `decisions/0075`.** `storage` means file
+   storage; the data-access layer is `repository`.
    The word previously named both the blob/file subsystem and the per-domain
    persistence layer. "Storage" is universally read as file storage, so the
    file side keeps it and the data-access side (the 41-use majority) renames
    to `repository` (TypeORM / Spring / DDD's term for per-entity CRUD).
    `store` was rejected as too close to the surviving `storage`;
-   `persistence` as awkward in type names. Needs a `TERMINOLOGY.md` entry.
+   `persistence` as awkward in type names.
 4. **`get` stays the async CRUD read verb** (`get` returns one, `query`
    returns many). `load`/`fetch` for I/O was considered and rejected: the
    CRUD verb set is consistent and deliberate.
@@ -87,45 +86,29 @@ One branch, one commit per workstream.
 
 ### WS3 — `storage` → `repository` for the data-access layer
 
-**Parked.** Not a naming call. It reverses a rule written in three
-places: `.claude/skills/code/SKILL.md` ("**No repository pattern.** …
-Name `createXStorage`, never `XRepository`"), `decisions/0003`'s
-"Entries: storage is the adapter, and no repository wrapper", and
-`decisions/0009`, which found the word returning as `notificationsRepo`
-and called it a rule violation. Decision 3 above was settled without
-those in view, so the data-layer question gets looked at on its own
-before any rename. Nothing landed.
-
-Two things worth carrying into that discussion. `decisions/0003`'s
-objection splits: "repositories pre-flatten the query surface" argues
-against adding a _layer_, which this was not (`createRepository` would
-have returned the identical object, open `where` grammar and all),
-while "every DB-touching unit being called storage removes a
-distinction that was never carrying weight" was a fair trade only
-while `storage` had one meaning — the file drivers later took the same
-word. And `EntryRecord` → `EntryRow` stands on its own: `TERMINOLOGY.md`'s
-"Entry vs Record" already says to avoid "record", and `Row` is the
-house suffix (`RelationshipRow`, `CronRow`, `NotificationRow`).
+Shipped. The data-layer question it was parked on is settled in
+`decisions/0075` (the DB-access layer is `repository`, `storage` means
+file/blob only), which supersedes `decisions/0003` on the naming point.
 
 The file/blob side is untouched: top-level `storage/`, `StorageDriver`, and
 the `r2`/`s3`/`filesystem` drivers keep their names.
 
-- [ ] `packages/astromech/src/database/storage/` → `database/repository/`;
+- [x] `packages/astromech/src/database/storage/` → `database/repository/`;
       `create-storage.ts` → `create-repository.ts`; `Storage<D>` →
       `Repository<D>`; `createStorage` → `createRepository`.
-- [ ] `packages/astromech/src/entries/storage/` → `entries/repository/`, with
+- [x] `packages/astromech/src/entries/storage/` → `entries/repository/`, with
       the symbol sweep: `EntryStorage` → `EntryRepository`,
       `getEntryStorage`/`setEntryStorage` → `getEntryRepository`/
       `setEntryRepository`, `hasEntryStorageOverride`,
       `resetEntryStorageOverrides` and friends renamed to match.
-- [ ] Per-domain modules: `media/storage.ts`, `users/storage.ts`,
+- [x] Per-domain modules: `media/storage.ts`, `users/storage.ts`,
       `settings/storage.ts`, `notifications/storage.ts`, `cron/storage.ts`,
       `plugins/runtime/plugin-tracking-storage.ts` → `repository` naming,
       including their `create*Storage` factories and `*Storage` types.
-- [ ] While inside `entries/repository/`: `EntryRecord` → `EntryRow` (the
+- [x] While inside `entries/repository/`: `EntryRecord` → `EntryRow` (the
       house suffix for persisted shapes — `RelationshipRow`, `CronRow`,
       `NotificationRow`), keeping the pairing with `EntryWrite` coherent.
-- [ ] Add the `TERMINOLOGY.md` entries (`repository`, and sharpen `storage`)
+- [x] Add the `TERMINOLOGY.md` entries (`repository`, and sharpen `storage`)
       and the `decisions/` record with the rejected alternatives.
 
 ### WS4 — component filename casing
@@ -241,8 +224,8 @@ PascalCase.
 - **`validate(schema, data)` changes** — kept as is (decision 5). The
   triplication of the helper itself is tracked in
   `roadmap/planned/three-identical-validate-helpers.md`.
-- **Renaming the blob side to `blob/`** — inverted by decision 3; the file
-  side keeps `storage`. Moot while WS3 is parked.
+- **Renaming the blob side to `blob/`** — inverted by decision 3 and again by
+  `decisions/0075`; the file side keeps `storage`.
 - **`types/` break-up** — the shared-contracts barrel stays; co-location is
   a per-contract judgement for later work, not a sweep.
 - **`http-routes.shared.ts` → `http-routes.ts`** — dropped from WS5 on a wrong
@@ -262,11 +245,12 @@ PascalCase.
 | --------------------------------- | -------------------------- |
 | WS1 registry `get` / `getOrThrow` | shipped                    |
 | WS2 acronym casing                | shipped                    |
-| WS3 `storage` → `repository`      | **parked**, nothing landed |
+| WS3 `storage` → `repository`      | shipped                    |
 | WS4 component filenames           | shipped                    |
 | WS5 smaller renames               | shipped, two items dropped |
 | WS6 directory moves               | shipped                    |
 
 Records written: `decisions/0072-the-registry-probe-is-get.md`,
 `decisions/0073-acronyms-are-title-case.md`,
-`decisions/0074-leaves-are-placed-by-subject.md`.
+`decisions/0074-leaves-are-placed-by-subject.md`,
+`decisions/0075-repository-for-data-access.md`.

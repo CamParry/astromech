@@ -7,8 +7,8 @@
  */
 
 import type { CronJob } from '@/cron/registry';
-import { createRelationshipStorage } from '@/database/storage/relationships';
-import { createEntryMaintenanceStorage } from '../storage/maintenance';
+import { createRelationshipRepository } from '@/database/repository/relationships';
+import { createEntryMaintenanceRepository } from '../repository/maintenance';
 
 export const trashPurgeJob: CronJob = {
     name: 'trash-purge',
@@ -19,10 +19,11 @@ export const trashPurgeJob: CronJob = {
         const cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - config.trash.retentionDays);
 
-        const purged = await createEntryMaintenanceStorage(db).purgeTrashedBefore(cutoff);
+        const purged =
+            await createEntryMaintenanceRepository(db).purgeTrashedBefore(cutoff);
         // Both directions: the edges a purged entry owned, and the edges other
         // entries still record as pointing at it.
-        const relationships = createRelationshipStorage(db);
+        const relationships = createRelationshipRepository(db);
         for (const id of purged) {
             await relationships.deleteByResource(id, 'entry');
         }

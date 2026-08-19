@@ -1,8 +1,8 @@
 /**
- * tableStorage — EntryStorage implementation over an arbitrary `Table`.
+ * tableRepository — EntryRepository implementation over an arbitrary `Table`.
  *
  * This is an *adapter*, not a query layer: every read and write goes through
- * `createStorage` (`database/storage/create-storage.ts`), which owns the `where`
+ * `createRepository` (`database/repository/create-repository.ts`), which owns the `where`
  * DSL, value serialization and row decoding. That file documents the semantics —
  * bare `null` means `IS NULL`, unknown column keys throw, `like` patterns are
  * raw — and is the only place they are implemented. `list` is the one method on
@@ -11,7 +11,7 @@
  *
  * What this adapter adds on top:
  *
- * Maps any `Table` to the EntryStorage contract by treating every column
+ * Maps any `Table` to the EntryRepository contract by treating every column
  * that is not the id/timestamp/actor-reserved set as a "field". Declares no
  * capabilities (supports: []) — statuses, slug, trash, versioning, and
  * translatable must all be disabled for any entry type using this storage.
@@ -33,24 +33,24 @@
  * field column); an unknown name throws, as it does for built-in storage.
  *
  * uniqueSlug: not supported — throws with an instructional error.
- * transaction: wraps fn in a Kysely tx, rebinding a new tableStorage instance.
+ * transaction: wraps fn in a Kysely tx, rebinding a new tableRepository instance.
  *   Absent entirely when the active driver has no interactive transactions.
  */
 
 import type {
-    EntryRecord,
-    EntryStorage,
+    EntryRepository,
+    EntryRow,
     EntryWrite,
     ListParams,
-    StorageDb,
+    RepositoryDb,
 } from './types';
 import type { Column, Table } from '@/database/define-table';
-import type { QueryHandle, Storage } from '@/database/storage/create-storage';
+import type { QueryHandle, Repository } from '@/database/repository/create-repository';
 import type { Db } from '@/database/types';
 import type { JsonObject } from '@/types/index';
 import { supportsTransactions } from '@/database/capabilities';
 import { decodeWith } from '@/database/codec';
-import { createStorage } from '@/database/storage/create-storage';
+import { createRepository } from '@/database/repository/create-repository';
 import { RelationshipFilterUnsupportedError, UnknownSortKeyError } from '../errors';
 
 type OrderPair = [column: string, direction: 'asc' | 'desc'];
@@ -61,7 +61,7 @@ const ID_CHUNK = 100;
 /** The wrapper's compiled `where`, the shape a raw clause has to AND onto. */
 type Predicate = ReturnType<QueryHandle<Table>['where']>;
 
-export type TableStorageOptions = {
+export type TableRepositoryOptions = {
     /** Primary key column name. Default 'id'. */
     idColumn?: string;
     /**
@@ -72,29 +72,29 @@ export type TableStorageOptions = {
     timestamps?: { createdAt?: string; updatedAt?: string } | false;
 };
 
-class TableStorage implements EntryStorage<EntryRecord> {
+class TableRepository implements EntryRepository<EntryRow> {
     public readonly supports: readonly never[] = Object.freeze([]) as readonly never[];
 
     /**
      * Assigned in the constructor only when the active driver supports
      * interactive transactions — an own `undefined` property would still
      * satisfy `'transaction' in storage`, so degrading means never assigning
-     * it at all. `EntryStorage.transaction` is optional and every caller
+     * it at all. `EntryRepository.transaction` is optional and every caller
      * already falls back to sequential writes.
      */
     public transaction?: <T>(
-        fn: (storage: EntryStorage<EntryRecord>, db: StorageDb) => Promise<T>
+        fn: (repository: EntryRepository<EntryRow>, db: RepositoryDb) => Promise<T>
     ) => Promise<T>;
 
     private readonly table: Table;
-    private readonly storage: Storage<Table>;
+    private readonly repository: Repository<Table>;
     private readonly idCol: string;
     private readonly createdAtCol: string | false;
     private readonly updatedAtCol: string | false;
 
-    constructor(table: Table, options?: TableStorageOptions, db?: Db) {
+    constructor(table: Table, options?: TableRepositoryOptions, db?: Db) {
         this.table = table;
-        this.storage = createStorage(table, db);
+        this.repository = createRepository(table, db);
         this.idCol = options?.idColumn ?? 'id';
 
         if (options?.timestamps === false) {
@@ -105,18 +105,21 @@ class TableStorage implements EntryStorage<EntryRecord> {
             this.updatedAtCol = options?.timestamps?.updatedAt ?? 'updatedAt';
         }
 
-        // `EntryStorage.transaction` is optional and every caller
+        // `EntryRepository.transaction` is optional and every caller
         // (operations/create.ts, internal/bulk.ts, operations/staging/merge.ts)
         // already falls back to sequential writes, so leaving it unassigned on a
         // driver without interactive transactions (D1) degrades correctly
         // instead of throwing at runtime.
         if (supportsTransactions()) {
             this.transaction = async <T>(
-                fn: (storage: EntryStorage<EntryRecord>, db: StorageDb) => Promise<T>
+                fn: (
+                    repository: EntryRepository<EntryRow>,
+                    db: RepositoryDb
+                ) => Promise<T>
             ): Promise<T> => {
-                const { db } = this.storage.query();
+                const { db } = this.repository.query();
                 return db.transaction().execute(async (trx) => {
-                    let timestamps: TableStorageOptions['timestamps'];
+                    let timestamps: TableRepositoryOptions['timestamps'];
                     if (this.createdAtCol === false) {
                         timestamps = false;
                     } else if (this.updatedAtCol === false) {
@@ -127,12 +130,12 @@ class TableStorage implements EntryStorage<EntryRecord> {
                             updatedAt: this.updatedAtCol,
                         };
                     }
-                    const txStorage = new TableStorage(
+                    const txRepository = new TableRepository(
                         this.table,
                         { idColumn: this.idCol, timestamps },
                         trx as unknown as Db
                     );
-                    return fn(txStorage, trx as unknown as StorageDb);
+                    return fn(txRepository, trx as unknown as RepositoryDb);
                 });
             };
         }
@@ -153,8 +156,8 @@ class TableStorage implements EntryStorage<EntryRecord> {
         return reserved;
     }
 
-    /** Build an EntryRecord from a decoded (domain-shaped) row. */
-    private toRecord(row: Record<string, unknown>): EntryRecord {
+    /** Build an EntryRow from a decoded (domain-shaped) row. */
+    private toRecord(row: Record<string, unknown>): EntryRow {
         const reserved = this.reservedNames();
         const cols = this.getColumns();
         const fields: Record<string, unknown> = {};
@@ -167,7 +170,7 @@ class TableStorage implements EntryStorage<EntryRecord> {
         const idVal = row[this.idCol];
         const id = typeof idVal === 'string' ? idVal : String(idVal);
 
-        const record: EntryRecord = {
+        const record: EntryRow = {
             id,
             fields: fields as JsonObject,
             createdAt: this.timestampOf(row, this.createdAtCol),
@@ -194,16 +197,16 @@ class TableStorage implements EntryStorage<EntryRecord> {
 
     uniqueSlug(): Promise<string> {
         throw new Error(
-            'tableStorage does not support slugs; disable the slug capability for this entry type'
+            'tableRepository does not support slugs; disable the slug capability for this entry type'
         );
     }
 
-    async create(data: EntryWrite & { type: string }): Promise<EntryRecord> {
+    async create(data: EntryWrite & { type: string }): Promise<EntryRow> {
         const cols = this.getColumns();
         const reserved = this.reservedNames();
         const now = new Date();
 
-        // The id is NOT minted here — `createStorage.create` runs `encodeWith`,
+        // The id is NOT minted here — `createRepository.create` runs `encodeWith`,
         // which fills any column carrying an app default (col.id() → ULID,
         // col.timestamp({ defaultNow }) → now) that is still undefined.
         const insertValues: Record<string, unknown> = {};
@@ -225,15 +228,15 @@ class TableStorage implements EntryStorage<EntryRecord> {
             }
         }
 
-        return this.toRecord(await this.storage.create(insertValues));
+        return this.toRecord(await this.repository.create(insertValues));
     }
 
-    async update(id: string, data: EntryWrite): Promise<EntryRecord> {
+    async update(id: string, data: EntryWrite): Promise<EntryRow> {
         const cols = this.getColumns();
         const reserved = this.reservedNames();
         const setValues: Record<string, unknown> = {};
 
-        // `createStorage.update` stamps every column the table marks
+        // `createRepository.update` stamps every column the table marks
         // `onUpdate`, so the ordinary case (`updatedAt` declared with
         // `onUpdate: true`) needs no explicit stamp. The explicit stamp survives
         // for the case the table cannot express: an updatedAt column this
@@ -262,21 +265,25 @@ class TableStorage implements EntryStorage<EntryRecord> {
         // rather than the wrapper's by-primary-key `update`/`delete`, because
         // `idColumn` is configurable and need not be the table's primary
         // key — keying on the wrong column would silently write the wrong row.
-        const affected = await this.storage.updateMany({ [this.idCol]: id }, setValues);
-        if (affected === 0) throw new Error(`tableStorage: no row found for id "${id}"`);
+        const affected = await this.repository.updateMany(
+            { [this.idCol]: id },
+            setValues
+        );
+        if (affected === 0)
+            throw new Error(`tableRepository: no row found for id "${id}"`);
 
         const row = await this.get(id);
-        if (!row) throw new Error(`tableStorage: no row found for id "${id}"`);
+        if (!row) throw new Error(`tableRepository: no row found for id "${id}"`);
         return row;
     }
 
-    async get(id: string): Promise<EntryRecord | null> {
-        const row = await this.storage.findOne({ [this.idCol]: id });
+    async get(id: string): Promise<EntryRow | null> {
+        const row = await this.repository.findOne({ [this.idCol]: id });
         return row ? this.toRecord(row) : null;
     }
 
     async delete(id: string): Promise<void> {
-        await this.storage.deleteMany({ [this.idCol]: id });
+        await this.repository.deleteMany({ [this.idCol]: id });
     }
 
     /**
@@ -287,7 +294,7 @@ class TableStorage implements EntryStorage<EntryRecord> {
     async existingIds(ids: string[]): Promise<Set<string>> {
         const unique = Array.from(new Set(ids));
         const found = new Set<string>();
-        const { db, table, where } = this.storage.query();
+        const { db, table, where } = this.repository.query();
         for (let i = 0; i < unique.length; i += ID_CHUNK) {
             const rows = await db
                 .selectFrom(table)
@@ -341,7 +348,7 @@ class TableStorage implements EntryStorage<EntryRecord> {
         const cols = this.getColumns();
         for (const field of fields) {
             if (!(field in cols)) {
-                throw new Error(`tableStorage: column "${field}" not found on table`);
+                throw new Error(`tableRepository: column "${field}" not found on table`);
             }
         }
 
@@ -374,8 +381,8 @@ class TableStorage implements EntryStorage<EntryRecord> {
         return pairs;
     }
 
-    async list(params: ListParams): Promise<{ data: EntryRecord[]; total: number }> {
-        const { db, table, where } = this.storage.query();
+    async list(params: ListParams): Promise<{ data: EntryRow[]; total: number }> {
+        const { db, table, where } = this.repository.query();
 
         // One predicate for both the count and the rows, so the two cannot
         // drift: the DSL filters compiled by the wrapper, ANDed with the search
@@ -397,7 +404,7 @@ class TableStorage implements EntryStorage<EntryRecord> {
             rowsQuery = rowsQuery.orderBy(column, direction);
         }
 
-        const toRecords = (rows: Record<string, unknown>[]): EntryRecord[] =>
+        const toRecords = (rows: Record<string, unknown>[]): EntryRow[] =>
             rows.map((row) => this.toRecord(decodeWith(this.table, row)));
 
         const limit = params.limit;
@@ -421,13 +428,16 @@ class TableStorage implements EntryStorage<EntryRecord> {
 }
 
 /**
- * Create an EntryStorage backed by an arbitrary `Table`.
+ * Create an EntryRepository backed by an arbitrary `Table`.
  *
  * Every column that is not the id/timestamp/actor-reserved set is treated as a
- * field; `EntryRecord.fields` is `{ [columnKey]: value }` for all such columns.
+ * field; `EntryRow.fields` is `{ [columnKey]: value }` for all such columns.
  * Capabilities are all off (supports: []); the entry type config must disable
  * statuses, slug, trash, translatable, and versioning.
  */
-export function tableStorage(table: Table, options?: TableStorageOptions): EntryStorage {
-    return new TableStorage(table, options) as EntryStorage;
+export function tableRepository(
+    table: Table,
+    options?: TableRepositoryOptions
+): EntryRepository {
+    return new TableRepository(table, options) as EntryRepository;
 }

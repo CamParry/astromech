@@ -1,4 +1,4 @@
-import type { EntryStorage } from '@/entries/storage/types';
+import type { EntryRepository } from '@/entries/repository/types';
 import type {
     AstromechConfig,
     DatabaseDriver,
@@ -52,7 +52,7 @@ const baseConfig = (plugins: PluginDefinition[]): AstromechConfig => ({
 });
 
 /** A storage that supports nothing (Phase 3 minimal single-table style). */
-const emptyStorage = (): EntryStorage => ({
+const emptyRepository = (): EntryRepository => ({
     supports: [],
     list: async () => ({ data: [], total: 0 }),
     get: async () => null,
@@ -108,7 +108,11 @@ describe('resolveConfig pluginEntries', () => {
                 {
                     package: '@astromech/store',
                     entries: [
-                        { ...entryType('Item'), type: 'item', storage: emptyStorage() },
+                        {
+                            ...entryType('Item'),
+                            type: 'item',
+                            repository: emptyRepository(),
+                        },
                     ],
                 },
             ])
@@ -130,7 +134,7 @@ describe('resolveConfig pluginEntries', () => {
                                 ...entryType('Item'),
                                 type: 'item',
                                 versioning: true,
-                                storage: emptyStorage(),
+                                repository: emptyRepository(),
                             },
                         ],
                     },

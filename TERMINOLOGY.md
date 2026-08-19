@@ -29,7 +29,7 @@ pre-built singleton on the root barrel. See `apps/docs/configuration/storage.md`
 for the storage set and `decisions/0032-a-capability-slot-holds-what-the-config-declared.md`
 for why the factory is the one style.
 
-An **adapter** is a different thing: it reshapes one internal interface into another, as `tableStorage` reshapes a plugin table into `EntryStorage`. A driver reaches an external system. `decisions/0012-driver-not-adapter.md` records why the two words are kept apart.
+An **adapter** is a different thing: it reshapes one internal interface into another, as `tableRepository` reshapes a plugin table into `EntryRepository`. A driver reaches an external system. `decisions/0012-driver-not-adapter.md` records why the two words are kept apart.
 
 ---
 
@@ -114,11 +114,19 @@ A **resource validator** is the whole-resource `validate` an author declares on 
 
 **Entry** — the built-in content unit, on the fixed core schema, with the full feature set available to it (statuses, slug, versions, staging, trash, translation, preview, relationships).
 
-**Table-backed type** — a plugin-defined custom table (redirects, logs) on its own schema and its own storage. A table-backed type reaches the admin through `tableStorage`, an `EntryStorage` adapter that declares `supports: []`, so all entry chrome switches off. `Table` (the type `defineTable` returns) is a table's schema object, not a data world.
+**Table-backed type** — a plugin-defined custom table (redirects, logs) on its own schema and its own repository. A table-backed type reaches the admin through `tableRepository`, an `EntryRepository` adapter that declares `supports: []`, so all entry chrome switches off. `Table` (the type `defineTable` returns) is a table's schema object, not a data world.
 
-The two are separate internally and share only the admin surface. `supports` gates behaviour and UI, **never** schema — toggling one needs no migration, and storage is always full.
+The two are separate internally and share only the admin surface. `supports` gates behaviour and UI, **never** schema — toggling one needs no migration, and the repository is always full.
 
-Note the neighbouring clash: `<domain>/storage/` is DB access; top-level `storage/` is media binary/blob drivers. Different concepts.
+Two nearby words to keep apart: `<domain>/repository/` is DB access; top-level `storage/` is media binary/blob drivers. Different concepts, on different words since `decisions/0075`.
+
+---
+
+## Repository vs storage
+
+**Repository** — a `Table`-backed CRUD wrapper, the DB-access unit. `createUserRepository(db)` and its siblings, the `Repository<D>` type, `EntryRepository`, and everything under `<domain>/repository/` and `database/repository/`. It is the word TypeORM, Spring and DDD use for per-entity persistence; `decisions/0075` records why it replaced `storage` here.
+
+**Storage** — file/blob storage only: the `StorageDriver` backends (`filesystem`, `r2`, `s3`), the `src/storage/` registry, and the `ctx.storage` plugin port. Nothing to do with the database.
 
 ---
 
@@ -172,7 +180,7 @@ A **staged entry** is a separate, fully-editable `entries` row that holds the ne
 
 - It links to its **canonical** entry via the nullable `stagedFor` FK (`stagedFor IS NULL` ⇒ canonical; non-null ⇒ staged). It reuses all entry machinery (fields, validation, its own preview) and gets a **fresh `localeGroup`** — `stagedFor` is the only link.
 - It shares the canonical's slug (staged rows are excluded from the slug unique index and from entry lists) and is always `unpublished`.
-- Enabled per-type by the **`staging`** capability — default off, **independent of `versioning`**, built-in storage only.
+- Enabled per-type by the **`staging`** capability — default off, **independent of `versioning`**, built-in repository only.
 - Service ops (all keyed off the **canonical** id): `createStaged` (throws `StagedEntryExistsError` carrying the existing staged id — one staged change per canonical), `getStaged`, `mergeStaged`, `deleteStaged`.
 - **Merge** = backup (only if `versioning`) → update the canonical in place (id + slug preserved) with the staged content → hard-delete the staged row. Merge is **content-only**: it does not change the canonical's status (publishing stays a separate action). Staged entries are never trashed — discard and merge-cleanup both hard-delete.
 

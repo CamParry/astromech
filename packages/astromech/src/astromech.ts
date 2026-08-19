@@ -39,7 +39,7 @@ import { checkMigrationDrift } from '@/database/migrations';
 import { setDb } from '@/database/registry';
 import { setEmailDriver } from '@/email/registry';
 import { entryJobs, typedEntriesService } from '@/entries/index';
-import { setEntryStorage } from '@/entries/storage/registry';
+import { setEntryRepository } from '@/entries/repository/registry';
 import { AstromechError } from '@/errors/index';
 import { defaultImageWidths, normaliseWidths } from '@/media/image-widths.shared';
 import { mediaService } from '@/media/index';
@@ -175,7 +175,7 @@ async function build(config: AstromechConfig): Promise<Astromech> {
     // `registerPlugins` because that opens by clearing every override. Keyed by
     // the bare type name; plugin types are qualified instead.
     for (const [type, entryType] of Object.entries(config.entries)) {
-        if (entryType.storage) setEntryStorage(type, entryType.storage);
+        if (entryType.repository) setEntryRepository(type, entryType.repository);
     }
     // The method manifest those plugins dispatch from, generated here because
     // this is the only site holding both the resolved config and the raw

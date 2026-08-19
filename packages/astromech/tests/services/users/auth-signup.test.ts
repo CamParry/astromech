@@ -15,8 +15,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { decodeWith } from '@/database/codec';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 import { getAuth } from '@/users/auth';
+import { createUserRepository } from '@/users/repository';
 import { usersTable } from '@/users/schema';
-import { createUserStorage } from '@/users/storage';
 
 let db: Kysely<DB>;
 
@@ -109,7 +109,7 @@ describe('better-auth email signup', () => {
         await getAuth().api.signUpEmail({
             body: { email: 'stamp@test.dev', password: 'password123', name: 'Stamp' },
         });
-        await createUserStorage().create({
+        await createUserRepository().create({
             email: 'ours@test.dev',
             name: 'Ours',
             roleSlug: DEFAULT_ROLE_SLUG,

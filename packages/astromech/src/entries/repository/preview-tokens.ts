@@ -8,10 +8,10 @@
 
 import type { Db } from '@/database/types';
 import { getDb } from '@/database/registry';
+import { createRepository } from '@/database/repository/create-repository';
 import { entryPreviewTokensTable } from '@/database/schema';
-import { createStorage } from '@/database/storage/create-storage';
 
-export type PreviewTokenStorage = ReturnType<typeof createPreviewTokenStorage>;
+export type PreviewTokenRepository = ReturnType<typeof createPreviewTokenRepository>;
 
 /** SHA-256 hex of a token (crypto.subtle — Workers-safe). */
 export async function hashPreviewToken(plaintext: string): Promise<string> {
@@ -22,8 +22,8 @@ export async function hashPreviewToken(plaintext: string): Promise<string> {
         .join('');
 }
 
-export function createPreviewTokenStorage(db: Db = getDb()) {
-    const storage = createStorage(entryPreviewTokensTable, db);
+export function createPreviewTokenRepository(db: Db = getDb()) {
+    const repository = createRepository(entryPreviewTokensTable, db);
 
     /** Replace any existing token for `entryId` with a freshly-hashed one. */
     async function issue(
@@ -32,8 +32,8 @@ export function createPreviewTokenStorage(db: Db = getDb()) {
         expiresAt: Date | null,
         createdBy: string | null
     ): Promise<void> {
-        await storage.deleteMany({ entryId });
-        await storage.create({
+        await repository.deleteMany({ entryId });
+        await repository.create({
             entryId,
             token: tokenHash,
             expiresAt,
@@ -43,7 +43,7 @@ export function createPreviewTokenStorage(db: Db = getDb()) {
 
     /** Remove all preview tokens for `entryId`. */
     async function revoke(entryId: string): Promise<void> {
-        await storage.deleteMany({ entryId });
+        await repository.deleteMany({ entryId });
     }
 
     /** True if `tokenHash` is a current (non-expired) token for `entryId`. */
@@ -58,7 +58,7 @@ export function createPreviewTokenStorage(db: Db = getDb()) {
         // serialization. Tier-1 timestamps are ISO-TEXT; ISO strings compare
         // correctly with `>`.
         const nowIso = now.toISOString();
-        const { db: handle, table } = storage.query();
+        const { db: handle, table } = repository.query();
         const rows = await handle
             .selectFrom(table)
             .select('id')

@@ -1,6 +1,6 @@
 import type { JsonObject, Media } from '@/types/index';
 import { getConfig } from '@/config/registry';
-import { existingEntryTypes } from '@/database/storage/resource-existence';
+import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenFieldNodes } from '@/fields/flatten';
@@ -10,8 +10,8 @@ import { getCurrentUser } from '@/request-context/index';
 import { indexMediaRelationships } from '../internal/relationships';
 import { toMedia } from '../internal/to-media';
 import { validate } from '../internal/validate';
+import { createMediaRepository } from '../repository';
 import { updateMediaSchema } from '../schema';
-import { createMediaStorage } from '../storage';
 import { get } from './get';
 import { query } from './query';
 
@@ -68,7 +68,7 @@ export async function update(params: {
 
     // `updatedAt` is stamped by the storage wrapper (the column declares
     // `onUpdate`); an explicitly-`undefined` key means "leave this column alone".
-    const updated = await createMediaStorage().update(id, {
+    const updated = await createMediaRepository().update(id, {
         alt: validatedData.alt,
         title: validatedData.title,
         caption: validatedData.caption,

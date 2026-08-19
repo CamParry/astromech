@@ -90,7 +90,7 @@ export function isPublicBranded(value: unknown): boolean {
  * - publishedAt must be null/absent (no scheduled gate) OR <= now
  * - deletedAt must be null/absent
  *
- * Note: tableStorage-backed entries omit status/publishedAt/deletedAt entirely;
+ * Note: tableRepository-backed entries omit status/publishedAt/deletedAt entirely;
  * treat absent values the same as null (no restriction).
  */
 function passesPublicRowFilter(entry: Entry, now: Date): boolean {

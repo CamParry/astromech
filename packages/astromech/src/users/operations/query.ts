@@ -1,15 +1,15 @@
 import type { QueryResult, User, UserQueryParams } from '@/types/index';
 import { toUser } from '../internal/to-user';
-import { createUserStorage } from '../storage';
+import { createUserRepository } from '../repository';
 
 /** List CMS users, paginated unless `limit: 'all'` asks for the lot. */
 export async function query(params?: UserQueryParams): Promise<QueryResult<User>> {
-    const storage = createUserStorage();
+    const repository = createUserRepository();
     const page = params?.page ?? 1;
     const limit = params?.limit;
 
     if (limit === 'all') {
-        const rows = await storage.list({
+        const rows = await repository.list({
             search: params?.search,
             sort: params?.sort,
         });
@@ -20,13 +20,13 @@ export async function query(params?: UserQueryParams): Promise<QueryResult<User>
     const offset = (page - 1) * perPage;
 
     const [rows, total] = await Promise.all([
-        storage.list({
+        repository.list({
             search: params?.search,
             sort: params?.sort,
             limit: perPage,
             offset,
         }),
-        storage.count({ search: params?.search }),
+        repository.count({ search: params?.search }),
     ]);
 
     return {

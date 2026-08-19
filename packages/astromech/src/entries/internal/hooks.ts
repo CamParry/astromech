@@ -13,7 +13,7 @@ import {
     runBeforeHooks,
 } from '@/plugins/runtime/plugin-runtime';
 import { getCurrentUser } from '@/request-context/index';
-import { getEntryStorage } from '../storage/registry';
+import { getEntryRepository } from '../repository/registry';
 import { loadAndAssertType } from './records';
 
 export function hasEntryHooks(...events: string[]): boolean {
@@ -21,7 +21,7 @@ export function hasEntryHooks(...events: string[]): boolean {
 }
 
 export async function loadEntrySnapshot(type: string, id: string): Promise<Entry> {
-    return loadAndAssertType(getEntryStorage(type), type, id);
+    return loadAndAssertType(getEntryRepository(type), type, id);
 }
 
 /**

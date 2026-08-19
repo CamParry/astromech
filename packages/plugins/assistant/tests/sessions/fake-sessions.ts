@@ -4,12 +4,12 @@
  * covered there, so this one always stores.
  */
 
-import type { SessionsStorage } from '../../src/sessions/storage';
+import type { SessionsRepository } from '../../src/sessions/repository';
 import type { ChatMessage } from '../../src/types';
 import { vi } from 'vitest';
 
 export type FakeSessions = {
-    storage: SessionsStorage;
+    storage: SessionsRepository;
     rows: Map<string, ChatMessage[]>;
 };
 
@@ -17,7 +17,7 @@ export type FakeSessions = {
 export function fakeSessions(seed?: Map<string, ChatMessage[]>): FakeSessions {
     const rows = new Map(seed);
 
-    const storage: SessionsStorage = {
+    const storage: SessionsRepository = {
         load: vi.fn(async (userId) => rows.get(userId) ?? null),
         save: vi.fn(async (userId, messages) => {
             rows.set(userId, messages);

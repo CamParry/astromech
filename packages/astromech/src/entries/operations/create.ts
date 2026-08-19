@@ -1,4 +1,4 @@
-import type { EntryStorage, EntryWrite, StorageDb } from '../storage/types';
+import type { EntryRepository, EntryWrite, RepositoryDb } from '../repository/types';
 import type {
     Entry,
     EntryCreateParams,
@@ -21,15 +21,15 @@ import { inheritSharedFields } from '../internal/translatable';
 import { getDefaultLocale } from '../internal/type-config';
 import { validate } from '../internal/validate';
 import { createEntryLookups } from '../lookups';
+import { getEntryRepository } from '../repository/registry';
 import { createEntrySchema } from '../schema';
-import { getEntryStorage } from '../storage/registry';
 import { entryValidationMode } from '../validation-mode.shared';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility';
 
 /** What the field helper below needs to know about the write in progress. */
 type FieldContext = {
     entryType: ResolvedEntryType;
-    storage: EntryStorage;
+    repository: EntryRepository;
     locale: string;
     localeGroup: string | undefined;
     status: EntryStatus;
@@ -52,7 +52,7 @@ export async function create(params: EntryCreateParams): Promise<Entry> {
     }
 
     // Lookups
-    const storage = getEntryStorage(type);
+    const repository = getEntryRepository(type);
     const user = await getCurrentUser();
 
     // Validation
@@ -74,7 +74,7 @@ export async function create(params: EntryCreateParams): Promise<Entry> {
         status === 'published' ? new Date() : (validated.publishedAt ?? null);
 
     const slug = await deriveSlug({
-        storage,
+        repository,
         entryType,
         locale,
         title,
@@ -83,7 +83,7 @@ export async function create(params: EntryCreateParams): Promise<Entry> {
 
     const fields = await toStoredFields(validated.fields ?? {}, {
         entryType,
-        storage,
+        repository,
         locale,
         localeGroup,
         status,
@@ -101,7 +101,7 @@ export async function create(params: EntryCreateParams): Promise<Entry> {
 
     await runBeforeHooks('entry:beforeCreate', { type, data, user }, user);
 
-    const entry = await persistEntry(storage, type, data);
+    const entry = await persistEntry(repository, type, data);
 
     await runAfterHooks('entry:afterCreate', { type, data, user, entry }, user);
 
@@ -117,10 +117,10 @@ async function toStoredFields(
     values: Record<string, unknown>,
     context: FieldContext
 ): Promise<JsonObject> {
-    const { entryType, storage, locale, localeGroup, status } = context;
+    const { entryType, repository, locale, localeGroup, status } = context;
     const definitions = flattenEntryFields(entryType.fields);
     const withShared = await inheritSharedFields(values, definitions, {
-        storage,
+        repository,
         entryType,
         localeGroup,
     });
@@ -134,7 +134,7 @@ async function toStoredFields(
         }),
         resource: { kind: 'entry', record: null },
         user: await getCurrentUser(),
-        lookups: createEntryLookups(storage, { type: entryType.id, locale }),
+        lookups: createEntryLookups(repository, { type: entryType.id, locale }),
         ...(resourceValidate ? { resourceValidate } : {}),
     });
 
@@ -149,17 +149,19 @@ async function toStoredFields(
  * storage has one and sequentially when it does not.
  */
 async function persistEntry(
-    storage: EntryStorage,
+    repository: EntryRepository,
     type: string,
     data: EntryWrite & { fields: JsonObject }
 ): Promise<Entry> {
     const write = async (
-        txStorage: EntryStorage,
-        txDb: StorageDb | undefined
+        txRepository: EntryRepository,
+        txDb: RepositoryDb | undefined
     ): Promise<Entry> => {
-        const entry = asEntry(await txStorage.create({ type, ...data }));
+        const entry = asEntry(await txRepository.create({ type, ...data }));
         await indexEntryRelationships(entry, data.fields, type, txDb);
         return entry;
     };
-    return storage.transaction ? storage.transaction(write) : write(storage, undefined);
+    return repository.transaction
+        ? repository.transaction(write)
+        : write(repository, undefined);
 }

@@ -1,5 +1,5 @@
-import type { ApprovalsStorage } from '../approvals/storage';
-import type { SessionsStorage } from '../sessions/storage';
+import type { ApprovalsRepository } from '../approvals/repository';
+import type { SessionsRepository } from '../sessions/repository';
 import type {
     ApprovalDecision,
     ChatEvent,
@@ -30,8 +30,8 @@ export async function* runAssistantLoop(input: {
     messages: ChatMessage[];
     aiContext: AiContextItem[];
     logger: PluginLogger;
-    approvals: ApprovalsStorage;
-    sessions: SessionsStorage;
+    approvals: ApprovalsRepository;
+    sessions: SessionsRepository;
     userId: string;
     decisions: ApprovalDecision[];
 }): AsyncGenerator<ChatEvent> {

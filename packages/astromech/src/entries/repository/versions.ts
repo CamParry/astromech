@@ -6,22 +6,22 @@
 import type { EntryVersionRow, NewEntryVersionRow } from '../schema';
 import type { Db } from '@/database/types';
 import { getDb } from '@/database/registry';
+import { createRepository } from '@/database/repository/create-repository';
 import { entryVersionsTable } from '@/database/schema';
-import { createStorage } from '@/database/storage/create-storage';
 
-export type VersionStorage = ReturnType<typeof createVersionStorage>;
+export type VersionRepository = ReturnType<typeof createVersionRepository>;
 
-export function createVersionStorage(db: Db = getDb()) {
-    const storage = createStorage(entryVersionsTable, db);
+export function createVersionRepository(db: Db = getDb()) {
+    const repository = createRepository(entryVersionsTable, db);
 
     /** Create a new version snapshot. */
     async function create(data: NewEntryVersionRow): Promise<EntryVersionRow> {
-        return storage.create(data);
+        return repository.create(data);
     }
 
     /** Get all versions for an entry, newest first. */
     async function list(entryId: string): Promise<EntryVersionRow[]> {
-        return storage.findMany({
+        return repository.findMany({
             where: { entryId },
             orderBy: [['versionNumber', 'desc']],
         });
@@ -29,12 +29,12 @@ export function createVersionStorage(db: Db = getDb()) {
 
     /** Get a single version by ID. */
     async function get(id: string): Promise<EntryVersionRow | null> {
-        return storage.findOne({ id });
+        return repository.findOne({ id });
     }
 
     /** Get the highest version number for an entry (0 if no versions exist). */
     async function getLatestNumber(entryId: string): Promise<number> {
-        const { db: handle, table } = storage.query();
+        const { db: handle, table } = repository.query();
         const row = await handle
             .selectFrom(table)
             .select((eb) => eb.fn.max('versionNumber').as('m'))
@@ -45,13 +45,13 @@ export function createVersionStorage(db: Db = getDb()) {
 
     /** Delete oldest versions beyond a retention limit (for CRON trimming). */
     async function deleteExcess(entryId: string, keep: number): Promise<void> {
-        const excess = await storage.findMany({
+        const excess = await repository.findMany({
             where: { entryId },
             orderBy: [['versionNumber', 'desc']],
             offset: keep,
         });
         if (excess.length === 0) return;
-        await storage.deleteMany({ id: { in: excess.map((v) => v.id) } });
+        await repository.deleteMany({ id: { in: excess.map((v) => v.id) } });
     }
 
     return { create, list, get, getLatestNumber, deleteExcess };

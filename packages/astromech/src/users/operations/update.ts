@@ -1,6 +1,6 @@
 import type { JsonObject, User } from '@/types/index';
 import { getConfig } from '@/config/registry';
-import { existingEntryTypes } from '@/database/storage/resource-existence';
+import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenFieldNodes } from '@/fields/flatten';
@@ -10,8 +10,8 @@ import { getCurrentUser } from '@/request-context/index';
 import { indexUserRelationships } from '../internal/relationships';
 import { toUser } from '../internal/to-user';
 import { validate } from '../internal/validate';
+import { createUserRepository } from '../repository';
 import { updateUserSchema } from '../schema';
-import { createUserStorage } from '../storage';
 import { get } from './get';
 import { query } from './query';
 
@@ -66,7 +66,7 @@ export async function update(params: {
 
     // An explicitly-`undefined` key means "leave this column alone"; storage
     // stamps `updatedAt`.
-    const updated = await createUserStorage().update(id, {
+    const updated = await createUserRepository().update(id, {
         name: validatedData.name,
         email: validatedData.email,
         fields: validatedData.fields as JsonObject | undefined,

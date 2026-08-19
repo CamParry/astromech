@@ -9,7 +9,7 @@
 import type { ApprovalRow, NewApprovalRow } from '../tables/approvals';
 import type { ApprovalDecision } from '../types';
 import type { PluginContext } from 'astromech';
-import { createStorage } from 'astromech';
+import { createRepository } from 'astromech';
 import { approvalsTable } from '../tables/approvals';
 
 /**
@@ -30,17 +30,19 @@ export type ClaimedApproval = {
     arguments: Record<string, unknown>;
 };
 
-export type ApprovalsStorage = ReturnType<typeof createApprovalsStorage>;
+export type ApprovalsRepository = ReturnType<typeof createApprovalsRepository>;
 
-export function createApprovalsStorage(db: PluginContext['db']) {
-    const storage = createStorage(approvalsTable, db);
+export function createApprovalsRepository(db: PluginContext['db']) {
+    const repository = createRepository(approvalsTable, db);
 
     /** Record calls as pending, returning the rows the requests are built from. */
     async function mint(rows: ApprovalDraft[]): Promise<ApprovalRow[]> {
         const expiresAt = new Date(Date.now() + APPROVAL_TTL_MS);
         const minted: ApprovalRow[] = [];
         for (const row of rows) {
-            minted.push(await storage.create({ ...row, status: 'pending', expiresAt }));
+            minted.push(
+                await repository.create({ ...row, status: 'pending', expiresAt })
+            );
         }
         return minted;
     }
@@ -67,7 +69,7 @@ export function createApprovalsStorage(db: PluginContext['db']) {
         if (decisions.length === 0) return [];
         const now = new Date();
 
-        const candidates = await storage.findMany({
+        const candidates = await repository.findMany({
             where: {
                 id: { in: decisions.map(({ approvalId }) => approvalId) },
                 ...answerable(userId, now),
@@ -79,7 +81,7 @@ export function createApprovalsStorage(db: PluginContext['db']) {
             const action =
                 decisions.find(({ approvalId }) => approvalId === row.id)?.action ??
                 'reject';
-            const taken = await storage.updateMany(
+            const taken = await repository.updateMany(
                 { id: row.id, ...answerable(userId, now) },
                 {
                     status: action === 'approve' ? 'approved' : 'rejected',
@@ -104,7 +106,7 @@ export function createApprovalsStorage(db: PluginContext['db']) {
      * mint, so an abandoned pause is cleared lazily rather than by a cron.
      */
     async function expireStale(userId: string): Promise<void> {
-        await storage.updateMany(
+        await repository.updateMany(
             { userId, status: 'pending', expiresAt: { lt: new Date() } },
             { status: 'expired', arguments: null }
         );
@@ -116,7 +118,7 @@ export function createApprovalsStorage(db: PluginContext['db']) {
      * arguments a click runs with stay the ones on the row.
      */
     async function findPending(userId: string): Promise<ApprovalRow[]> {
-        return storage.findMany({ where: answerable(userId, new Date()) });
+        return repository.findMany({ where: answerable(userId, new Date()) });
     }
 
     /**
@@ -125,7 +127,7 @@ export function createApprovalsStorage(db: PluginContext['db']) {
      */
     async function rejectPending(userId: string): Promise<void> {
         const now = new Date();
-        await storage.updateMany(answerable(userId, now), {
+        await repository.updateMany(answerable(userId, now), {
             status: 'rejected',
             resolvedAt: now,
             arguments: null,

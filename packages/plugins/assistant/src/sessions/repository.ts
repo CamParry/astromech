@@ -8,7 +8,7 @@
 
 import type { ChatMessage } from '../types';
 import type { PluginContext } from 'astromech';
-import { createStorage } from 'astromech';
+import { createRepository } from 'astromech';
 import { sessionsTable } from '../tables/sessions';
 
 /**
@@ -18,14 +18,14 @@ import { sessionsTable } from '../tables/sessions';
  */
 export const MAX_SESSION_CHARS = 512 * 1024;
 
-export type SessionsStorage = ReturnType<typeof createSessionsStorage>;
+export type SessionsRepository = ReturnType<typeof createSessionsRepository>;
 
-export function createSessionsStorage(db: PluginContext['db']) {
-    const storage = createStorage(sessionsTable, db);
+export function createSessionsRepository(db: PluginContext['db']) {
+    const repository = createRepository(sessionsTable, db);
 
     /** This user's transcript, or null when they have never had one. */
     async function load(userId: string): Promise<ChatMessage[] | null> {
-        const row = await storage.findOne({ userId });
+        const row = await repository.findOne({ userId });
         return row === null ? null : row.messages;
     }
 
@@ -39,7 +39,7 @@ export function createSessionsStorage(db: PluginContext['db']) {
         // `updatedAt` is stamped by the wrapper on both branches — `defaultNow`
         // fills the insert, `onUpdate` fills the conflict update — so it is
         // deliberately absent from both value sets here.
-        await storage.upsert(
+        await repository.upsert(
             { userId, messages },
             { target: ['userId'], set: { messages } }
         );
@@ -48,7 +48,7 @@ export function createSessionsStorage(db: PluginContext['db']) {
 
     /** Drop this user's transcript, so the next turn starts a new conversation. */
     async function clear(userId: string): Promise<void> {
-        await storage.deleteMany({ userId });
+        await repository.deleteMany({ userId });
     }
 
     return { load, save, clear };

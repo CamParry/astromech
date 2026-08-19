@@ -9,11 +9,11 @@
  * claim. Cadence is read from the TABLE (runtime-editable), not the registry;
  * the registry only supplies handlers + seed schedules.
  */
-import type { CronStorage } from '@/cron/storage';
+import type { CronRepository } from '@/cron/repository';
 import { Cron } from 'croner';
 import { getConfig } from '@/config/registry';
 import { getCronJobs } from '@/cron/registry';
-import { createCronStorage } from '@/cron/storage';
+import { createCronRepository } from '@/cron/repository';
 import { getDb } from '@/database/registry';
 import { globals } from '@/registry';
 
@@ -31,7 +31,11 @@ function nextRunFrom(schedule: string, from: Date, timezone: string): Date | nul
  * stored (possibly admin-edited) row. Jobs with no seed schedule and no existing
  * row are not scheduled — warn once.
  */
-async function seed(storage: CronStorage, now: Date, timezone: string): Promise<void> {
+async function seed(
+    repository: CronRepository,
+    now: Date,
+    timezone: string
+): Promise<void> {
     const warned = (globals().cronUnscheduledWarned ??= new Set<string>());
     for (const job of getCronJobs()) {
         if (!job.schedule) {
@@ -43,7 +47,7 @@ async function seed(storage: CronStorage, now: Date, timezone: string): Promise<
             }
             continue;
         }
-        await storage.seedJob({
+        await repository.seedJob({
             name: job.name,
             schedule: job.schedule,
             enabled: true,
@@ -63,19 +67,19 @@ export async function runDue(now: Date): Promise<void> {
     const db = getDb();
     const config = getConfig();
     const timezone = config.timezone ?? 'UTC';
-    const storage = createCronStorage();
+    const repository = createCronRepository();
 
-    await seed(storage, now, timezone);
+    await seed(repository, now, timezone);
 
     const handlers = new Map(getCronJobs().map((j) => [j.name, j]));
 
-    for (const row of await storage.due(now)) {
+    for (const row of await repository.due(now)) {
         const job = handlers.get(row.name);
         if (!job) continue; // orphan table row (handler not registered) — skip
 
         // CAS-claim: succeeds only if unlocked or the prior claim expired.
         const expiry = new Date(now.getTime() + LOCK_TTL_MS);
-        if (!(await storage.claim(row.name, now, expiry))) continue; // another tick owns it
+        if (!(await repository.claim(row.name, now, expiry))) continue; // another tick owns it
 
         try {
             await job.handler({ db, config });
@@ -86,7 +90,7 @@ export async function runDue(now: Date): Promise<void> {
         // Record + release, gated on our exact claim token (see `claim`'s ABA
         // note). next_run recomputes from `now` — missed runs fire once, no
         // backfill — using the row's CURRENT (possibly admin-edited) schedule.
-        await storage.recordRunAndRelease(row.name, expiry, {
+        await repository.recordRunAndRelease(row.name, expiry, {
             lastRun: now,
             nextRun: nextRunFrom(row.schedule, now, timezone),
         });

@@ -18,12 +18,12 @@ vi.mock('astromech', () => ({
     noInput: () => undefined,
 }));
 
-vi.mock('../../src/sessions/storage', () => ({
-    createSessionsStorage: () => sessions.storage,
+vi.mock('../../src/sessions/repository', () => ({
+    createSessionsRepository: () => sessions.storage,
 }));
 
-vi.mock('../../src/approvals/storage', () => ({
-    createApprovalsStorage: () => approvals.storage,
+vi.mock('../../src/approvals/repository', () => ({
+    createApprovalsRepository: () => approvals.storage,
 }));
 
 const OPTIONS: ResolvedAssistantOptions = {

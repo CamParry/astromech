@@ -1,4 +1,4 @@
-import type { EntryStorage, StorageDb } from '../storage/types';
+import type { EntryRepository, RepositoryDb } from '../repository/types';
 import type { Field } from '@/types/fields';
 import type {
     Entry,
@@ -25,15 +25,15 @@ import { propagateSharedFields } from '../internal/translatable';
 import { validate } from '../internal/validate';
 import { changesVersionedContent, snapshotVersion } from '../internal/versions';
 import { createEntryLookups } from '../lookups';
+import { getEntryRepository } from '../repository/registry';
 import { updateEntrySchema } from '../schema';
-import { getEntryStorage } from '../storage/registry';
 import { entryValidationMode } from '../validation-mode.shared';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility';
 
 /** What the field helpers below need to know about the update in progress. */
 type FieldContext = {
-    storage: EntryStorage;
-    db: StorageDb | undefined;
+    repository: EntryRepository;
+    db: RepositoryDb | undefined;
     entryType: ResolvedEntryType;
     currentEntry: Entry;
     status: EntryStatus | undefined;
@@ -55,9 +55,9 @@ export async function update(params: EntryUpdateParams): Promise<Entry | Entry[]
 
     const id = params.id;
     if (typeof id === 'string') {
-        const storage = getEntryStorage(entryType.id);
+        const repository = getEntryRepository(entryType.id);
         return runUpdateWithHooks(entryType.id, [id], params.data, () =>
-            updateOne({ storage, db: undefined, entryType, id, data: params.data })
+            updateOne({ repository, db: undefined, entryType, id, data: params.data })
         );
     }
 
@@ -69,9 +69,9 @@ export async function update(params: EntryUpdateParams): Promise<Entry | Entry[]
         );
     }
     return runUpdateWithHooks(entryType.id, id, params.data, () =>
-        runBulk(entryType.id, id, (txStorage, txDb, bulkId) =>
+        runBulk(entryType.id, id, (txRepository, txDb, bulkId) =>
             updateOne({
-                storage: txStorage,
+                repository: txRepository,
                 db: txDb,
                 entryType,
                 id: bulkId,
@@ -86,16 +86,16 @@ export async function update(params: EntryUpdateParams): Promise<Entry | Entry[]
  * writes the row, then re-indexes relationships and propagates shared fields.
  */
 async function updateOne(params: {
-    storage: EntryStorage;
-    db: StorageDb | undefined;
+    repository: EntryRepository;
+    db: RepositoryDb | undefined;
     entryType: ResolvedEntryType;
     id: string;
     data: EntryUpdateData;
 }): Promise<Entry> {
-    const { storage, db, entryType, id, data } = params;
+    const { repository, db, entryType, id, data } = params;
 
     // Lookups
-    const currentEntry = await loadAndAssertType(storage, entryType.id, id);
+    const currentEntry = await loadAndAssertType(repository, entryType.id, id);
 
     // Validation
     const titled = entryType.titleField !== false;
@@ -106,7 +106,7 @@ async function updateOne(params: {
     const patchedFieldNames = patch ? getPatchedFieldNames(patch) : [];
     const fields = patch
         ? await toStoredFields(patch, patchedFieldNames, {
-              storage,
+              repository,
               db,
               entryType,
               currentEntry,
@@ -117,14 +117,14 @@ async function updateOne(params: {
     // Version — before the slug is uniquified, so it compares what the caller sent.
     if (
         entryType.capabilities.versioning &&
-        storage.versions &&
+        repository.versions &&
         changesVersionedContent(currentEntry, {
             title: validated.title,
             slug: validated.slug,
             fields,
         })
     ) {
-        await snapshotVersion(storage.versions, currentEntry);
+        await snapshotVersion(repository.versions, currentEntry);
     }
 
     // Defaults
@@ -133,7 +133,7 @@ async function updateOne(params: {
             ? new Date()
             : validated.publishedAt;
     const slug = await uniqueSlugIfChanged(
-        storage,
+        repository,
         entryType.id,
         currentEntry,
         validated.slug
@@ -141,7 +141,7 @@ async function updateOne(params: {
 
     // Persist
     const entry = asEntry(
-        await storage.update(id, {
+        await repository.update(id, {
             title: validated.title,
             slug,
             fields,
@@ -152,7 +152,7 @@ async function updateOne(params: {
     if (fields) {
         await indexEntryRelationships(entry, fields, entryType.id, db);
         await propagateSharedFields({
-            storage,
+            repository,
             entryType,
             entry: currentEntry,
             fields,
@@ -172,10 +172,10 @@ async function toStoredFields(
     patchedFieldNames: string[],
     context: FieldContext
 ): Promise<JsonObject> {
-    const { storage, db, entryType, currentEntry, status } = context;
+    const { repository, db, entryType, currentEntry, status } = context;
     const definitions = flattenEntryFields(entryType.fields);
     const excludeIds = await getUniquenessExcludeIds({
-        storage,
+        repository,
         entryType,
         currentEntry,
         definitions,
@@ -197,7 +197,7 @@ async function toStoredFields(
         }),
         resource: { kind: 'entry', record: currentEntry },
         user: await getCurrentUser(),
-        lookups: createEntryLookups(storage, {
+        lookups: createEntryLookups(repository, {
             type: entryType.id,
             locale: currentEntry.locale,
             excludeId: excludeIds,
@@ -228,12 +228,12 @@ function getPatchedFieldNames(patch: Record<string, unknown>): string[] {
  * looked up when the type can stage and some field is actually unique.
  */
 async function getUniquenessExcludeIds(params: {
-    storage: EntryStorage;
+    repository: EntryRepository;
     entryType: ResolvedEntryType;
     currentEntry: Entry;
     definitions: Field[];
 }): Promise<string[]> {
-    const { storage, entryType, currentEntry, definitions } = params;
+    const { repository, entryType, currentEntry, definitions } = params;
     const excludeIds = [currentEntry.id];
 
     const canStage = entryType.capabilities.staging === true;
@@ -244,7 +244,7 @@ async function getUniquenessExcludeIds(params: {
 
     const paired =
         currentEntry.stagedFor ??
-        (await storage.staging?.getByCanonical(currentEntry.id))?.id;
+        (await repository.staging?.getByCanonical(currentEntry.id))?.id;
     if (paired) excludeIds.push(paired);
     return excludeIds;
 }

@@ -14,26 +14,26 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { encodeWith } from '@/database/codec';
 import { entriesTable } from '@/database/schema';
 import { BUILT_IN_SUPPORTS } from '@/entries/capabilities';
-import { createBuiltInEntryStorage } from '@/entries/storage/built-in';
+import { createBuiltInEntryRepository } from '@/entries/repository/built-in';
 
-let storage: ReturnType<typeof createBuiltInEntryStorage>;
+let repository: ReturnType<typeof createBuiltInEntryRepository>;
 let db: Awaited<ReturnType<typeof createTestDb>>;
 
 beforeEach(async () => {
     db = await createTestDb();
     setupTestConfig();
-    storage = createBuiltInEntryStorage();
+    repository = createBuiltInEntryRepository();
 });
 
 describe('supports', () => {
     it('declares all built-in capabilities', () => {
-        expect(storage.supports).toEqual(BUILT_IN_SUPPORTS);
+        expect(repository.supports).toEqual(BUILT_IN_SUPPORTS);
     });
 });
 
 describe('base CRUD', () => {
     it('round-trips create/get/update/delete', async () => {
-        const created = await storage.create({
+        const created = await repository.create({
             type: 'post',
             title: 'Hello',
             slug: 'hello',
@@ -45,96 +45,96 @@ describe('base CRUD', () => {
         expect(created.fields).toEqual({ body: 'hi' });
         expect(created.locales).toEqual({ en: created.id });
 
-        const got = await storage.get(created.id);
+        const got = await repository.get(created.id);
         expect(got?.id).toBe(created.id);
 
-        const updated = await storage.update(created.id, { title: 'Changed' });
+        const updated = await repository.update(created.id, { title: 'Changed' });
         expect(updated.title).toBe('Changed');
 
-        await storage.delete(created.id);
-        expect(await storage.get(created.id)).toBeNull();
+        await repository.delete(created.id);
+        expect(await repository.get(created.id)).toBeNull();
     });
 
     it('mints a ULID localeGroup, not a UUID, when none is supplied', async () => {
         // The `entries` table declares `defaultUlid` on localeGroup, so
         // storage must leave the key absent rather than minting its own id.
-        const created = await storage.create({ type: 'post', title: 'L', slug: 'l' });
+        const created = await repository.create({ type: 'post', title: 'L', slug: 'l' });
         expect(created.localeGroup).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
     });
 
     it('get filters trashed rows unless includeTrashed is set', async () => {
-        const e = await storage.create({ type: 'post', title: 'T', slug: 't' });
-        await storage.trash.trash(e.id);
-        expect(await storage.get(e.id)).toBeNull();
-        expect(await storage.get(e.id, { includeTrashed: true })).not.toBeNull();
+        const e = await repository.create({ type: 'post', title: 'T', slug: 't' });
+        await repository.trash.trash(e.id);
+        expect(await repository.get(e.id)).toBeNull();
+        expect(await repository.get(e.id, { includeTrashed: true })).not.toBeNull();
     });
 });
 
 describe('uniqueSlug', () => {
     it('returns the base slug when free, then -2 on collision', async () => {
-        await storage.create({ type: 'post', title: 'A', slug: 'same' });
-        expect(await storage.uniqueSlug('post', 'en', 'same')).toBe('same-2');
-        expect(await storage.uniqueSlug('post', 'en', 'free')).toBe('free');
+        await repository.create({ type: 'post', title: 'A', slug: 'same' });
+        expect(await repository.uniqueSlug('post', 'en', 'same')).toBe('same-2');
+        expect(await repository.uniqueSlug('post', 'en', 'free')).toBe('free');
     });
 });
 
 describe('existingIds', () => {
     it('reports live and trashed rows as existing, and nothing else', async () => {
-        const live = await storage.create({ type: 'post', title: 'Live' });
-        const trashed = await storage.create({ type: 'post', title: 'Trashed' });
-        await storage.trash?.trash(trashed.id);
+        const live = await repository.create({ type: 'post', title: 'Live' });
+        const trashed = await repository.create({ type: 'post', title: 'Trashed' });
+        await repository.trash?.trash(trashed.id);
 
-        expect(await storage.existingIds?.([live.id, trashed.id, 'no-such-id'])).toEqual(
-            new Set([live.id, trashed.id])
-        );
+        expect(
+            await repository.existingIds?.([live.id, trashed.id, 'no-such-id'])
+        ).toEqual(new Set([live.id, trashed.id]));
     });
 });
 
 describe('list', () => {
     it('paginates with total', async () => {
         for (let i = 0; i < 5; i++) {
-            await storage.create({ type: 'post', title: `P${i}`, slug: `p${i}` });
+            await repository.create({ type: 'post', title: `P${i}`, slug: `p${i}` });
         }
-        const res = await storage.list({ type: 'post', limit: 2, page: 1 });
+        const res = await repository.list({ type: 'post', limit: 2, page: 1 });
         expect(res.data).toHaveLength(2);
         expect(res.total).toBe(5);
     });
 
     it('searches by title and sorts', async () => {
-        await storage.create({ type: 'post', title: 'Bravo', slug: 'bravo' });
-        await storage.create({ type: 'post', title: 'Alpha', slug: 'alpha' });
+        await repository.create({ type: 'post', title: 'Bravo', slug: 'bravo' });
+        await repository.create({ type: 'post', title: 'Alpha', slug: 'alpha' });
 
-        const search = await storage.list({ type: 'post', search: 'Alpha' });
+        const search = await repository.list({ type: 'post', search: 'Alpha' });
         expect(search.data.map((e) => e.title)).toEqual(['Alpha']);
 
-        const sorted = await storage.list({ type: 'post', sort: { title: 'asc' } });
+        const sorted = await repository.list({ type: 'post', sort: { title: 'asc' } });
         expect(sorted.data.map((e) => e.title)).toEqual(['Alpha', 'Bravo']);
     });
 
     it('searches by slug as well as title', async () => {
         // Title differs from the slug, so a slug match is the only way to find it.
-        await storage.create({ type: 'post', title: 'Welcome', slug: 'home' });
-        await storage.create({ type: 'post', title: 'Other', slug: 'other' });
+        await repository.create({ type: 'post', title: 'Welcome', slug: 'home' });
+        await repository.create({ type: 'post', title: 'Other', slug: 'other' });
 
-        const bySlug = await storage.list({ type: 'post', search: 'home' });
+        const bySlug = await repository.list({ type: 'post', search: 'home' });
         expect(bySlug.data.map((e) => e.title)).toEqual(['Welcome']);
     });
 
     it('reads a bare null in `where` as IS NULL, and undefined as unfiltered', async () => {
-        // Same semantics as the shared `where` DSL (create-storage.ts): reading
+        // Same semantics as the shared `where` DSL (create-repository.ts): reading
         // null as "no filter" returned every row to a caller asking for the
         // null-slug ones.
-        await storage.create({ type: 'card', title: '', slug: null });
-        await storage.create({ type: 'card', title: 'Has slug', slug: 'has-slug' });
+        await repository.create({ type: 'card', title: '', slug: null });
+        await repository.create({ type: 'card', title: 'Has slug', slug: 'has-slug' });
 
-        const nullSlug = await storage.list({
+        const nullSlug = await repository.list({
             type: 'card',
             where: { slug: null },
             limit: 'all',
         });
         expect(nullSlug.data.map((e) => e.slug)).toEqual([null]);
 
-        const unfiltered = await storage.list({
+        const unfiltered = await repository.list({
             type: 'card',
             where: { slug: undefined },
             limit: 'all',
@@ -143,21 +143,25 @@ describe('list', () => {
     });
 
     it('excludes trashed unless requested', async () => {
-        const a = await storage.create({ type: 'post', title: 'A', slug: 'a' });
-        await storage.create({ type: 'post', title: 'B', slug: 'b' });
-        await storage.trash.trash(a.id);
+        const a = await repository.create({ type: 'post', title: 'A', slug: 'a' });
+        await repository.create({ type: 'post', title: 'B', slug: 'b' });
+        await repository.trash.trash(a.id);
 
-        const live = await storage.list({ type: 'post', limit: 'all' });
+        const live = await repository.list({ type: 'post', limit: 'all' });
         expect(live.data.map((e) => e.title)).toEqual(['B']);
 
-        const trashed = await storage.list({ type: 'post', trashed: true, limit: 'all' });
+        const trashed = await repository.list({
+            type: 'post',
+            trashed: true,
+            limit: 'all',
+        });
         expect(trashed.data.map((e) => e.title)).toEqual(['A']);
     });
 });
 
 describe('staging (forward versioning) schema', () => {
     it('a staged row may share the canonical slug and is excluded from list + uniqueSlug', async () => {
-        const canonical = await storage.create({
+        const canonical = await repository.create({
             type: 'post',
             title: 'Live',
             slug: 'live',
@@ -179,7 +183,7 @@ describe('staging (forward versioning) schema', () => {
             .execute();
 
         // Staged rows never surface in lists.
-        const list = await storage.list({ type: 'post', limit: 'all' });
+        const list = await repository.list({ type: 'post', limit: 'all' });
         expect(list.data.map((e) => e.title)).toEqual(['Live']);
 
         // A slug used ONLY by a staged row is still considered free.
@@ -195,56 +199,56 @@ describe('staging (forward versioning) schema', () => {
                 }) as unknown as Insertable<DB['entries']>
             )
             .execute();
-        expect(await storage.uniqueSlug('post', 'en', 'ghost')).toBe('ghost');
+        expect(await repository.uniqueSlug('post', 'en', 'ghost')).toBe('ghost');
 
         // The canonical still occupies its own slug.
-        expect(await storage.uniqueSlug('post', 'en', 'live')).toBe('live-2');
+        expect(await repository.uniqueSlug('post', 'en', 'live')).toBe('live-2');
     });
 });
 
 describe('trash sub-surface', () => {
     it('trash sets deletedAt, restore clears it, emptyTrash purges', async () => {
-        const e = await storage.create({ type: 'post', title: 'T', slug: 't' });
-        await storage.trash.trash(e.id);
+        const e = await repository.create({ type: 'post', title: 'T', slug: 't' });
+        await repository.trash.trash(e.id);
         expect(
-            (await storage.get(e.id, { includeTrashed: true }))?.deletedAt
+            (await repository.get(e.id, { includeTrashed: true }))?.deletedAt
         ).toBeInstanceOf(Date);
 
-        const restored = await storage.trash.restore(e.id);
+        const restored = await repository.trash.restore(e.id);
         expect(restored.deletedAt).toBeNull();
 
-        await storage.trash.trash(e.id);
-        await storage.trash.emptyTrash('post');
-        expect(await storage.get(e.id, { includeTrashed: true })).toBeNull();
+        await repository.trash.trash(e.id);
+        await repository.trash.emptyTrash('post');
+        expect(await repository.get(e.id, { includeTrashed: true })).toBeNull();
     });
 
     it('cascades trash across the locale group', async () => {
-        const en = await storage.create({
+        const en = await repository.create({
             type: 'post',
             title: 'EN',
             slug: 'en',
             locale: 'en',
         });
-        const de = await storage.create({
+        const de = await repository.create({
             type: 'post',
             title: 'DE',
             slug: 'de',
             locale: 'de',
             localeGroup: en.localeGroup,
         });
-        await storage.trash.trash(en.id, { cascadeLocales: true });
+        await repository.trash.trash(en.id, { cascadeLocales: true });
         expect(
-            (await storage.get(de.id, { includeTrashed: true }))?.deletedAt
+            (await repository.get(de.id, { includeTrashed: true }))?.deletedAt
         ).toBeInstanceOf(Date);
     });
 });
 
 describe('versions sub-surface', () => {
     it('creates, lists newest-first, gets, and tracks latestNumber', async () => {
-        const e = await storage.create({ type: 'post', title: 'V', slug: 'v' });
-        expect(await storage.versions.latestNumber(e.id)).toBe(0);
+        const e = await repository.create({ type: 'post', title: 'V', slug: 'v' });
+        expect(await repository.versions.latestNumber(e.id)).toBe(0);
 
-        await storage.versions.create({
+        await repository.versions.create({
             entryId: e.id,
             versionNumber: 1,
             title: 'V1',
@@ -252,7 +256,7 @@ describe('versions sub-surface', () => {
             fields: { body: 'one' },
             createdBy: null,
         });
-        await storage.versions.create({
+        await repository.versions.create({
             entryId: e.id,
             versionNumber: 2,
             title: 'V2',
@@ -261,27 +265,27 @@ describe('versions sub-surface', () => {
             createdBy: null,
         });
 
-        expect(await storage.versions.latestNumber(e.id)).toBe(2);
-        const list = await storage.versions.list(e.id);
+        expect(await repository.versions.latestNumber(e.id)).toBe(2);
+        const list = await repository.versions.list(e.id);
         expect(list.map((v) => v.versionNumber)).toEqual([2, 1]);
 
         const one = list.find((v) => v.versionNumber === 1);
         if (!one) throw new Error('expected version 1');
-        const got = await storage.versions.get(one.id);
+        const got = await repository.versions.get(one.id);
         expect(got?.title).toBe('V1');
     });
 });
 
 describe('translatable sub-surface', () => {
     it('returns siblings excluding the given id and propagates field values', async () => {
-        const en = await storage.create({
+        const en = await repository.create({
             type: 'post',
             title: 'EN',
             slug: 'en',
             locale: 'en',
             fields: { body: 'enbody', category: 'news' },
         });
-        const de = await storage.create({
+        const de = await repository.create({
             type: 'post',
             title: 'DE',
             slug: 'de',
@@ -290,13 +294,13 @@ describe('translatable sub-surface', () => {
             fields: { body: 'debody', category: 'news' },
         });
 
-        const siblings = await storage.translatable.siblings(en.localeGroup, en.id);
+        const siblings = await repository.translatable.siblings(en.localeGroup, en.id);
         expect(siblings.map((s) => s.id)).toEqual([de.id]);
 
-        await storage.translatable.propagateFields(en.localeGroup, en.id, {
+        await repository.translatable.propagateFields(en.localeGroup, en.id, {
             category: 'updated',
         });
-        const deAfter = await storage.get(de.id);
+        const deAfter = await repository.get(de.id);
         expect(deAfter?.fields).toEqual({ body: 'debody', category: 'updated' });
     });
 });
@@ -308,12 +312,12 @@ describe('transaction', () => {
     // the thrown error and do NOT re-query the same db (same caveat the bulk
     // characterization test documents).
     it('rejects and rolls back when the callback throws', async () => {
-        const e = await storage.create({ type: 'post', title: 'Keep', slug: 'keep' });
+        const e = await repository.create({ type: 'post', title: 'Keep', slug: 'keep' });
         // The harness driver always supports transactions — asserted so a
         // regression there surfaces here rather than as a confusing TypeError.
-        expect(storage.transaction).toBeDefined();
+        expect(repository.transaction).toBeDefined();
         await expect(
-            storage.transaction!(async (tx) => {
+            repository.transaction!(async (tx) => {
                 await tx.update(e.id, { title: 'Changed' });
                 throw new Error('boom');
             })
@@ -331,30 +335,30 @@ describe('transaction', () => {
     // handle the inner call now fails loudly rather than joining or escaping.
     it('opens its transaction on the bound handle, not the registered base db', async () => {
         const bound = await createTestDb();
-        const boundStorage = createBuiltInEntryStorage({ db: bound });
-        // Registering a second db makes it the `getDb()` base; boundStorage stays
+        const boundRepository = createBuiltInEntryRepository({ db: bound });
+        // Registering a second db makes it the `getDb()` base; boundRepository stays
         // bound to the first.
         const base = await createTestDb();
-        const baseStorage = createBuiltInEntryStorage({ db: base });
+        const baseRepository = createBuiltInEntryRepository({ db: base });
 
-        expect(boundStorage.transaction).toBeDefined();
-        await boundStorage.transaction!(async (tx) => {
+        expect(boundRepository.transaction).toBeDefined();
+        await boundRepository.transaction!(async (tx) => {
             await tx.create({ type: 'post', title: 'Bound', slug: 'bound' });
         });
 
-        const onBound = await boundStorage.list({ type: 'post', limit: 'all' });
+        const onBound = await boundRepository.list({ type: 'post', limit: 'all' });
         expect(onBound.data.map((e) => e.title)).toEqual(['Bound']);
-        const onBase = await baseStorage.list({ type: 'post', limit: 'all' });
+        const onBase = await baseRepository.list({ type: 'post', limit: 'all' });
         expect(onBase.data).toEqual([]);
     });
 
     it('binds the tx storage so writes inside the callback take effect', async () => {
-        const e = await storage.create({ type: 'post', title: 'Before', slug: 'b' });
+        const e = await repository.create({ type: 'post', title: 'Before', slug: 'b' });
         // The committed value is observed via the in-tx return; libsql :memory:
         // routes the tx through a separate connection, so a post-commit read on
         // the base handle is unreliable here — assert the tx result instead.
-        expect(storage.transaction).toBeDefined();
-        const result = await storage.transaction!(async (tx) =>
+        expect(repository.transaction).toBeDefined();
+        const result = await repository.transaction!(async (tx) =>
             tx.update(e.id, { title: 'After' })
         );
         expect(result.title).toBe('After');

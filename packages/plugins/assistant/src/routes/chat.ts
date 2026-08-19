@@ -12,8 +12,8 @@ import type {
 } from '../types';
 import type { AiContextItem, PluginContext, PluginRawRoute } from 'astromech';
 import { getModel } from 'astromech';
-import { createApprovalsStorage } from '../approvals/storage';
-import { createSessionsStorage } from '../sessions/storage';
+import { createApprovalsRepository } from '../approvals/repository';
+import { createSessionsRepository } from '../sessions/repository';
 
 /** The plugin's raw routes: the streaming chat endpoint. */
 export function chatRoutes(options: ResolvedAssistantOptions): PluginRawRoute[] {
@@ -84,8 +84,8 @@ async function handleChat(
         messages: body.messages,
         aiContext: body.aiContext ?? [],
         logger: ctx.logger,
-        approvals: createApprovalsStorage(ctx.db),
-        sessions: createSessionsStorage(ctx.db),
+        approvals: createApprovalsRepository(ctx.db),
+        sessions: createSessionsRepository(ctx.db),
         userId: user.id,
         decisions: body.decisions ?? [],
     });

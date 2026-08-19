@@ -11,7 +11,7 @@ import type { PluginContext } from 'astromech';
 import { Readable } from 'node:stream';
 import { createGzip } from 'node:zlib';
 import { BACKUPS_SETTINGS_PATH } from './pages/settings';
-import { createBackupRunsStorage } from './storage';
+import { createBackupRunsRepository } from './repository';
 
 // ============================================================================
 // In-process overlap guard
@@ -34,7 +34,7 @@ export async function performBackup(
     trigger: 'scheduled' | 'manual' | 'pre-restore',
     opts: { keep: number }
 ): Promise<BackupRunRow> {
-    const runs = createBackupRunsStorage(ctx.db);
+    const runs = createBackupRunsRepository(ctx.db);
 
     if (isBackupRunning()) {
         ctx.logger.warn('[backups] A backup is already in progress — skipping.');
@@ -153,7 +153,7 @@ export async function resolveKeep(ctx: PluginContext, fallback: number): Promise
  * `keep`.
  */
 export async function rotate(ctx: PluginContext, keep: number): Promise<void> {
-    const runs = createBackupRunsStorage(ctx.db);
+    const runs = createBackupRunsRepository(ctx.db);
     const candidates = await runs.rotationCandidates();
 
     const toDelete = candidates.slice(keep);

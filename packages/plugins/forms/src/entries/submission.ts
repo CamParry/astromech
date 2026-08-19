@@ -1,11 +1,11 @@
 /**
  * The `submission` entry type, stored in the plugin's own table via
- * `tableStorage`. Rows are written by the public `submit` method, never by
+ * `tableRepository`. Rows are written by the public `submit` method, never by
  * hand; a site withholds create and update permission to keep it that way.
  */
 
 import type { EntryType } from 'astromech';
-import { tableStorage } from 'astromech';
+import { tableRepository } from 'astromech';
 import * as columns from 'astromech/columns';
 import * as fields from 'astromech/fields';
 import { submissionsTable } from '../tables/submissions';
@@ -15,7 +15,7 @@ export const submissionEntryType: EntryType = {
     type: SUBMISSION_TYPE,
     single: 'Submission',
     plural: 'Submissions',
-    storage: tableStorage(submissionsTable),
+    repository: tableRepository(submissionsTable),
     titleField: false,
     statuses: false,
     slug: false,

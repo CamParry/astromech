@@ -50,7 +50,7 @@ types · utilities · errors · registry.ts       pure leaves
 The six first-party plugins (`@astromech/{assistant,backups,forms,menus,redirects,seo}`)
 live OUTSIDE this `src/` graph, in `packages/plugins/` — each a separately published
 npm package that consumes core only through the public `astromech` surface. The
-plugin-authoring API (`definePluginTable`, `createStorage`, codec helpers,
+plugin-authoring API (`definePluginTable`, `createRepository`, codec helpers,
 `Table` type vocabulary, …) is part of the root `astromech` export, not a
 separate subpath. They prove the public surface can build a real plugin;
 cross-package isolation is enforced by each package's `exports` boundary at
@@ -189,7 +189,7 @@ packages/
 │   │   ├── media/          # media domain: service (assembler) · operations/ · internal/ · schema · contract · serving/image/ · image-drivers · image-widths.shared
 │   │   ├── users/          # users domain: service (assembler) · operations/ · internal/ · schema · contract · auth (Better Auth integration)
 │   │   ├── settings/       # settings domain: service · schema · contract · visibility · page-values.shared
-│   │   ├── notifications/  # notifications domain: service (+ notify) · schema · contract · user-scoped storage
+│   │   ├── notifications/  # notifications domain: service (+ notify) · schema · contract · user-scoped repository
 │   │   │
 │   │   │   ── capabilities ───────────────────────────────────────────────
 │   │   ├── config/         # the config pipeline: load (jiti) · resolve (orchestration) + its named steps · validate/ · admin-config · registry (setConfig/getConfig)

@@ -2,12 +2,12 @@ import type { Entry, JsonObject } from '@/types/index';
 import { StagedEntryExistsError } from '../../errors';
 import { asEntry, loadAndAssertType } from '../../internal/records';
 import { indexEntryRelationships } from '../../internal/relationships';
-import { getStagingStorage } from '../../internal/type-config';
+import { getStagingRepository } from '../../internal/type-config';
 
 export async function createStaged(params: { type: string; id: string }): Promise<Entry> {
     const { type, id } = params;
-    const { storage, staging } = getStagingStorage(type);
-    const canonical = await loadAndAssertType(storage, type, id);
+    const { repository, staging } = getStagingRepository(type);
+    const canonical = await loadAndAssertType(repository, type, id);
     if (canonical.stagedFor != null) {
         throw new Error(`Entry '${id}' is itself a staged change and cannot be staged.`);
     }
@@ -21,7 +21,7 @@ export async function createStaged(params: { type: string; id: string }): Promis
     // (it does not join the canonical's translation group) and is always
     // unpublished. The slug is shared with the canonical (kept as-is). Passing no
     // localeGroup is what asks storage's table to mint a fresh one.
-    const created = await storage.create({
+    const created = await repository.create({
         type,
         title: canonical.title,
         slug: canonical.slug,

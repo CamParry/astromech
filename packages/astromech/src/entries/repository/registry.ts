@@ -1,8 +1,8 @@
 /**
  * Entry storage registry.
  *
- * A type resolves to its own storage when one is mounted via `setEntryStorage`
- * (a table-backed type mounts `tableStorage`), and to the shared built-in
+ * A type resolves to its own storage when one is mounted via `setEntryRepository`
+ * (a table-backed type mounts `tableRepository`), and to the shared built-in
  * singleton otherwise. The singleton is config-free; the entries service resolves
  * locale defaults before dispatching, so the built-in storage's own
  * `defaultLocale` fallback ('en') is never relied on.
@@ -13,28 +13,30 @@
  * copy while the entries service reads another.
  */
 
-import type { EntryStorage } from './types';
+import type { EntryRepository } from './types';
 import { createKeyedRegistry, createRegistry } from '@/registry';
-import { createBuiltInEntryStorage } from './built-in';
+import { createBuiltInEntryRepository } from './built-in';
 
-const builtIn = createRegistry<EntryStorage>('entryStorageBuiltIn', { required: false });
-const overrides = createKeyedRegistry<EntryStorage>('entryStorageOverrides');
+const builtIn = createRegistry<EntryRepository>('entryRepositoryBuiltIn', {
+    required: false,
+});
+const overrides = createKeyedRegistry<EntryRepository>('entryRepositoryOverrides');
 
 /** The shared built-in storage, constructed on first use. */
-function getBuiltIn(): EntryStorage {
+function getBuiltIn(): EntryRepository {
     const existing = builtIn.get();
     if (existing) return existing;
-    const created = createBuiltInEntryStorage();
+    const created = createBuiltInEntryRepository();
     builtIn.set(created);
     return created;
 }
 
-export function getEntryStorage(type: string): EntryStorage {
+export function getEntryRepository(type: string): EntryRepository {
     return overrides.get(type) ?? getBuiltIn();
 }
 
-export function setEntryStorage(type: string, storage: EntryStorage): void {
-    overrides.set(type, storage);
+export function setEntryRepository(type: string, repository: EntryRepository): void {
+    overrides.set(type, repository);
 }
 
 /**
@@ -42,7 +44,7 @@ export function setEntryStorage(type: string, storage: EntryStorage): void {
  * Callers that read the `entries` table directly (the relationships rebuild) use
  * it to tell which types have rows there at all.
  */
-export function hasEntryStorageOverride(type: string): boolean {
+export function hasEntryRepositoryOverride(type: string): boolean {
     return overrides.has(type);
 }
 
@@ -50,6 +52,6 @@ export function hasEntryStorageOverride(type: string): boolean {
  * Clear all per-type storage overrides. Called at the start of `registerPlugins`
  * so repeated registrations (notably in tests) don't leak stale plugin storages.
  */
-export function resetEntryStorageOverrides(): void {
+export function resetEntryRepositoryOverrides(): void {
     overrides.clear();
 }

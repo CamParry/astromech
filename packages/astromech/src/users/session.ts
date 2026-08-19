@@ -11,7 +11,7 @@ import type { Role, User } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { resolveRole } from '@/permissions/index';
 import { getAuth } from './auth';
-import { createUserStorage } from './storage';
+import { createUserRepository } from './repository';
 
 /** What Better Auth's `getSession` resolves to — null when there is no session. */
 type GetSessionResult = Awaited<
@@ -32,7 +32,7 @@ export async function getSession(
     if (!session?.user) return null;
 
     // Load the full user row (Better Auth session may not include custom fields)
-    const userRow = await createUserStorage().get(session.user.id);
+    const userRow = await createUserRepository().get(session.user.id);
     if (!userRow) return null;
 
     const user: User = {

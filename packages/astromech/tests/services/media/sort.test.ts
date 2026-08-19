@@ -10,8 +10,8 @@
 import type { SortOption, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { createMediaRepository } from '@/media/repository';
 import { mediaService } from '@/media/service';
-import { createMediaStorage } from '@/media/storage';
 import { setStorageDriver } from '@/storage/registry';
 
 const noopStorage: StorageDriver = {
@@ -48,9 +48,9 @@ beforeEach(async () => {
     setupTestConfig(makeTestConfig());
     setStorageDriver(noopStorage);
 
-    const storage = createMediaStorage();
+    const repository = createMediaRepository();
     for (const row of FIXTURES) {
-        await storage.create({ ...row });
+        await repository.create({ ...row });
     }
 });
 

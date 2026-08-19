@@ -4,23 +4,23 @@
  * storage.
  */
 
-import type { EntryRecord, EntryStorage } from '../storage/types';
+import type { EntryRepository, EntryRow } from '../repository/types';
 import type { IncomingRelationship } from '@/types/index';
-import { createRelationshipStorage } from '@/database/storage/relationships';
+import { createRelationshipRepository } from '@/database/repository/relationships';
 import { loadAndAssertType } from '../internal/records';
-import { getEntryStorage } from '../storage/registry';
+import { getEntryRepository } from '../repository/registry';
 
 /** One row per index edge: a source referencing the target twice is two rows. */
 export async function incomingRelationships(params: {
     type: string;
     id: string;
 }): Promise<IncomingRelationship[]> {
-    const storage = getEntryStorage(params.type);
-    await loadAndAssertType(storage, params.type, params.id);
+    const repository = getEntryRepository(params.type);
+    await loadAndAssertType(repository, params.type, params.id);
 
     // Staged sources count: a pending merge that references this entry is a
     // reason not to delete it.
-    const rows = await createRelationshipStorage().findByTarget(params.id, 'entry', {
+    const rows = await createRelationshipRepository().findByTarget(params.id, 'entry', {
         includeStaged: true,
     });
 
@@ -55,7 +55,7 @@ export async function incomingRelationships(params: {
  */
 async function loadSources(
     rows: { sourceId: string; sourceType: string }[]
-): Promise<Map<string, EntryRecord>> {
+): Promise<Map<string, EntryRow>> {
     const idsByType = new Map<string, Set<string>>();
     for (const row of rows) {
         const ids = idsByType.get(row.sourceType) ?? new Set<string>();
@@ -63,12 +63,12 @@ async function loadSources(
         idsByType.set(row.sourceType, ids);
     }
 
-    const loaded = new Map<string, EntryRecord>();
+    const loaded = new Map<string, EntryRow>();
     for (const [type, ids] of idsByType) {
-        const storage = storageFor(type);
-        if (storage === null) continue;
+        const repository = storageFor(type);
+        if (repository === null) continue;
         const records = await Promise.all(
-            Array.from(ids, (id) => storage.get(id, { includeTrashed: true }))
+            Array.from(ids, (id) => repository.get(id, { includeTrashed: true }))
         );
         for (const record of records) {
             if (record !== null) loaded.set(record.id, record);
@@ -78,9 +78,9 @@ async function loadSources(
 }
 
 /** A type dropped from config since its rows were written has no storage. */
-function storageFor(type: string): EntryStorage | null {
+function storageFor(type: string): EntryRepository | null {
     try {
-        return getEntryStorage(type);
+        return getEntryRepository(type);
     } catch {
         return null;
     }

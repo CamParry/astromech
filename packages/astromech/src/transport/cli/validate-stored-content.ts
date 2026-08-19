@@ -23,19 +23,22 @@
 import type { FieldErrors } from '@/types/fields';
 import type { EntryStatus, JsonObject, ResourceType } from '@/types/index';
 import { getConfig } from '@/config/registry';
-import { createStorage } from '@/database/storage/create-storage';
-import { existingEntryTypes } from '@/database/storage/resource-existence';
+import { createRepository } from '@/database/repository/create-repository';
+import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { createEntryLookups } from '@/entries/lookups';
+import {
+    getEntryRepository,
+    hasEntryRepositoryOverride,
+} from '@/entries/repository/registry';
 import { entriesTable } from '@/entries/schema';
-import { getEntryStorage, hasEntryStorageOverride } from '@/entries/storage/registry';
 import { qualifyEntryType, resolveEntryType } from '@/entries/type-ids.shared';
 import { entryValidationMode } from '@/entries/validation-mode.shared';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenEntryFields, flattenFieldNodes } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
-import { createMediaStorage } from '@/media/storage';
+import { createMediaRepository } from '@/media/repository';
 import { settingsService } from '@/settings/service';
-import { createUserStorage } from '@/users/storage';
+import { createUserRepository } from '@/users/repository';
 
 /** Scope of a report run. `type` is an ENTRY type; it never covers media, users or settings. */
 export type ValidationScope = { type?: string };
@@ -87,7 +90,7 @@ async function checkEntries(
     report: ValidationReport,
     type: string | undefined
 ): Promise<void> {
-    const rows = await createStorage(entriesTable).findMany({
+    const rows = await createRepository(entriesTable).findMany({
         where: type !== undefined ? { type } : {},
     });
     for (const row of rows) {
@@ -103,7 +106,7 @@ async function checkEntries(
     }
 
     for (const typeName of tableBackedEntryTypes(type)) {
-        const { data } = await getEntryStorage(typeName).list({
+        const { data } = await getEntryRepository(typeName).list({
             type: typeName,
             limit: 'all',
             locale: 'all',
@@ -154,7 +157,7 @@ async function checkEntryRow(
             }),
             resource: { kind: 'entry', record: row.record },
             user: null,
-            lookups: createEntryLookups(getEntryStorage(row.type), {
+            lookups: createEntryLookups(getEntryRepository(row.type), {
                 type: row.type,
                 locale: row.locale,
                 excludeId: row.id,
@@ -182,7 +185,7 @@ function tableBackedEntryTypes(type: string | undefined): string[] {
         ),
     ];
     return configured
-        .filter(hasEntryStorageOverride)
+        .filter(hasEntryRepositoryOverride)
         .filter((candidate) => type === undefined || candidate === type);
 }
 
@@ -200,10 +203,10 @@ async function checkMedia(report: ValidationReport): Promise<void> {
     const config = getConfig();
     const definitions = flattenFieldNodes(config.media?.fields ?? []);
     const resourceValidate = config.media?.validate;
-    const storage = createMediaStorage();
+    const repository = createMediaRepository();
     // One load for the whole pass: a `unique` rule reads it per row, and the
     // run writes nothing, so the snapshot cannot go stale under it.
-    const load = memoize(() => storage.list());
+    const load = memoize(() => repository.list());
     const rows = await load();
 
     for (const row of rows) {
@@ -243,8 +246,8 @@ async function checkUsers(report: ValidationReport): Promise<void> {
     const config = getConfig();
     const definitions = flattenFieldNodes(config.users?.fields ?? []);
     const resourceValidate = config.users?.validate;
-    const storage = createUserStorage();
-    const load = memoize(() => storage.list());
+    const repository = createUserRepository();
+    const load = memoize(() => repository.list());
     const rows = await load();
 
     for (const row of rows) {

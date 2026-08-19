@@ -7,7 +7,7 @@
  * its own table rather than in `entries` — must survive.
  */
 
-import type { EntryStorage, StorageDb } from '@/entries/storage/types';
+import type { EntryRepository, RepositoryDb } from '@/entries/repository/types';
 import type {
     AstromechConfig,
     Entry,
@@ -19,14 +19,14 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { defineTable } from '@/database/define-table';
-import { createRelationshipStorage } from '@/database/storage/relationships';
+import { createRelationshipRepository } from '@/database/repository/relationships';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
+import { getEntryRepository } from '@/entries/repository/registry';
+import { tableRepository } from '@/entries/repository/table';
 import { entriesService as api } from '@/entries/service';
-import { getEntryStorage } from '@/entries/storage/registry';
-import { tableStorage } from '@/entries/storage/table';
-import { createMediaStorage } from '@/media/storage';
+import { createMediaRepository } from '@/media/repository';
+import { createUserRepository } from '@/users/repository';
 import { usersService } from '@/users/service';
-import { createUserStorage } from '@/users/storage';
 
 const linksTable = defineTable('test_links', ({ col }) => ({
     id: col.id(),
@@ -44,11 +44,11 @@ const notesTable = defineTable('test_notes', ({ col }) => ({
 
 /**
  * The same storage with `existingIds` hidden — a third-party storage predating
- * the hook. A proxy rather than a spread: `tableStorage` is a class instance and
+ * the hook. A proxy rather than a spread: `tableRepository` is a class instance and
  * its methods live on the prototype.
  */
-function withoutExistingIds(storage: EntryStorage): EntryStorage {
-    return new Proxy(storage, {
+function withoutExistingIds(repository: EntryRepository): EntryRepository {
+    return new Proxy(repository, {
         get: (target, prop, receiver) =>
             prop === 'existingIds'
                 ? undefined
@@ -73,14 +73,14 @@ function linksPlugin(): PluginDefinition {
                 type: 'link',
                 single: 'Link',
                 plural: 'Links',
-                storage: tableStorage(linksTable),
+                repository: tableRepository(linksTable),
                 ...tableBacked,
             },
             {
                 type: 'note',
                 single: 'Note',
                 plural: 'Notes',
-                storage: withoutExistingIds(tableStorage(notesTable)),
+                repository: withoutExistingIds(tableRepository(notesTable)),
                 ...tableBacked,
             },
         ],
@@ -151,7 +151,7 @@ async function touch(id: string): Promise<Entry> {
 
 /** A media row, inserted through storage so no driver or real bytes are needed. */
 async function createMedia(): Promise<string> {
-    const row = await createMediaStorage().create({
+    const row = await createMediaRepository().create({
         filename: 'a.png',
         mimeType: 'image/png',
         size: 1,
@@ -168,16 +168,16 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
             fields: { author: target.id },
         });
         expect(
-            await createRelationshipStorage().findBySource(doc.id, 'entry')
+            await createRelationshipRepository().findBySource(doc.id, 'entry')
         ).toHaveLength(1);
 
         await api.delete({ type: 'post', id: target.id });
         const updated = await touch(doc.id);
 
         expect(updated.fields.author).toBeNull();
-        expect(await createRelationshipStorage().findBySource(doc.id, 'entry')).toEqual(
-            []
-        );
+        expect(
+            await createRelationshipRepository().findBySource(doc.id, 'entry')
+        ).toEqual([]);
     });
 
     it('drops only the dead id from a multi-relation and keeps the order of the rest', async () => {
@@ -212,7 +212,7 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
 
     // `links/link` rows live in `test_links`, so a check against `entries`
     // reports every one of them absent. Its storage answers for them instead.
-    it('keeps a reference to a live tableStorage-backed row', async () => {
+    it('keeps a reference to a live tableRepository-backed row', async () => {
         const link = await api.create({ type: 'links/link', fields: { label: 'One' } });
         const doc = await api.create({
             type: 'doc',
@@ -226,7 +226,7 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
         expect(await api.get({ type: 'links/link', id: link.id })).not.toBeNull();
     });
 
-    it('drops a reference to a deleted tableStorage-backed row', async () => {
+    it('drops a reference to a deleted tableRepository-backed row', async () => {
         const link = await api.create({ type: 'links/link', fields: { label: 'One' } });
         const doc = await api.create({
             type: 'doc',
@@ -277,8 +277,8 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
             fields: { avatar: mediaId, owner: user.id },
         });
 
-        await createMediaStorage().delete(mediaId);
-        await createUserStorage().delete(user.id);
+        await createMediaRepository().delete(mediaId);
+        await createUserRepository().delete(user.id);
         const updated = await touch(doc.id);
 
         expect(updated.fields.avatar).toBeNull();
@@ -299,7 +299,7 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
 
         const sections = updated.fields.sections as { ref: string | null }[];
         expect(sections.map((section) => section.ref)).toEqual([null, alive.id]);
-        const rows = await createRelationshipStorage().findBySource(doc.id, 'entry');
+        const rows = await createRelationshipRepository().findBySource(doc.id, 'entry');
         expect(rows.map((row) => row.targetId)).toEqual([alive.id]);
     });
 });
@@ -310,7 +310,7 @@ describe('pruneDanglingRelations (directly)', () => {
         selectFrom(): never {
             throw new Error('existence query should not run');
         },
-    } as unknown as StorageDb;
+    } as unknown as RepositoryDb;
 
     it('leaves values holding no relation untouched, and runs no query', async () => {
         const values: JsonObject = { plain: 'nothing to prune' };
@@ -326,13 +326,13 @@ describe('pruneDanglingRelations (directly)', () => {
     // all and the reference stands.
     it('keeps a table-backed reference when pruning inside a transaction', async () => {
         const missing = '01JQZZZZZZZZZZZZZZZZZZZZZZ';
-        const storage = getEntryStorage('doc');
-        if (storage.transaction === undefined) throw new Error('no transactions');
+        const repository = getEntryRepository('doc');
+        if (repository.transaction === undefined) throw new Error('no transactions');
 
         const outside = await pruneDanglingRelations(docFields, { link: missing });
         expect(outside).toEqual({ values: { link: null }, dropped: 1 });
 
-        await storage.transaction(async (_txStorage, txDb) => {
+        await repository.transaction(async (_txRepository, txDb) => {
             const inside = await pruneDanglingRelations(
                 docFields,
                 { link: missing },

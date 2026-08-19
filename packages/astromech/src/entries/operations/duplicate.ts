@@ -1,7 +1,7 @@
 import type { Entry, EntryDuplicateOverrides, JsonObject } from '@/types/index';
 import { asEntry, loadAndAssertType } from '../internal/records';
 import { indexEntryRelationships } from '../internal/relationships';
-import { getEntryStorage } from '../storage/registry';
+import { getEntryRepository } from '../repository/registry';
 
 export async function duplicate(params: {
     type: string;
@@ -9,8 +9,8 @@ export async function duplicate(params: {
     overrides?: EntryDuplicateOverrides;
 }): Promise<Entry> {
     const { type, id, overrides } = params;
-    const storage = getEntryStorage(type);
-    const source = await loadAndAssertType(storage, type, id);
+    const repository = getEntryRepository(type);
+    const source = await loadAndAssertType(repository, type, id);
 
     const locale = overrides?.locale ?? source.locale;
     const status = overrides?.status ?? 'unpublished';
@@ -21,9 +21,9 @@ export async function duplicate(params: {
     };
 
     const baseSlug = overrides?.slug ?? source.slug;
-    const slug = baseSlug ? await storage.uniqueSlug(type, locale, baseSlug) : null;
+    const slug = baseSlug ? await repository.uniqueSlug(type, locale, baseSlug) : null;
 
-    const created = await storage.create({
+    const created = await repository.create({
         type,
         title,
         slug,

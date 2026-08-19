@@ -9,14 +9,14 @@
  */
 
 import type { DB } from '@/database/types';
-import type { EntryStorage } from '@/entries/storage/types';
+import type { EntryRepository } from '@/entries/repository/types';
 import type { AstromechConfig, StorageDriver } from '@/types/index';
 import type { Kysely } from 'kysely';
 import { createTestDb } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createAstromech, getAstromech } from '@/astromech';
+import { getEntryRepository } from '@/entries/repository/registry';
 import { entriesService } from '@/entries/service';
-import { getEntryStorage } from '@/entries/storage/registry';
 
 const storageDriver: StorageDriver = {
     name: 'noop',
@@ -45,7 +45,7 @@ function throwing(): never {
     throw new Error('custom widget storage reached');
 }
 
-const throwingStorage: EntryStorage = {
+const throwingRepository: EntryRepository = {
     supports: [],
     list: throwing,
     get: throwing,
@@ -73,7 +73,7 @@ function makeConfig(getInstance: () => Kysely<DB>): AstromechConfig {
             widget: {
                 single: 'Widget',
                 plural: 'Widgets',
-                storage: throwingStorage,
+                repository: throwingRepository,
             },
             note: {
                 single: 'Note',
@@ -94,11 +94,11 @@ describe('createAstromech — host entry storage', () => {
     });
 
     it('registers the declared storage under the bare type name', () => {
-        expect(getEntryStorage('widget')).toBe(throwingStorage);
+        expect(getEntryRepository('widget')).toBe(throwingRepository);
     });
 
     it('leaves a type without declared storage on built-in storage', () => {
-        expect(getEntryStorage('note')).not.toBe(throwingStorage);
+        expect(getEntryRepository('note')).not.toBe(throwingRepository);
     });
 
     it('routes a read for the type through its declared storage', async () => {

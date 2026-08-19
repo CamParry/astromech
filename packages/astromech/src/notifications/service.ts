@@ -12,8 +12,8 @@
 
 import type { NotificationRow } from './schema';
 import type { Notification, NotifyInput } from '@/types/index';
-import { createUserStorage } from '@/users/storage';
-import { createNotificationStorage } from './storage';
+import { createUserRepository } from '@/users/repository';
+import { createNotificationRepository } from './repository';
 
 /** The verbs, with the user each acts for named. */
 export type NotificationsDomainService = {
@@ -25,20 +25,20 @@ export type NotificationsDomainService = {
 
 export const notificationsService: NotificationsDomainService = {
     async list(params) {
-        const rows = await createNotificationStorage().listByUser(params.userId);
+        const rows = await createNotificationRepository().listByUser(params.userId);
         return rows.map(toNotification);
     },
 
     async count(params) {
-        return createNotificationStorage().countByUser(params.userId);
+        return createNotificationRepository().countByUser(params.userId);
     },
 
     async dismiss(params) {
-        await createNotificationStorage().dismiss(params.userId, params.id);
+        await createNotificationRepository().dismiss(params.userId, params.id);
     },
 
     async dismissAll(params) {
-        await createNotificationStorage().dismissAll(params.userId);
+        await createNotificationRepository().dismissAll(params.userId);
     },
 };
 
@@ -61,7 +61,7 @@ export function toNotification(row: NotificationRow): Notification {
  * session.
  */
 export async function notify(input: NotifyInput): Promise<void> {
-    const users = createUserStorage();
+    const users = createUserRepository();
 
     let userIds: string[];
 
@@ -75,7 +75,7 @@ export async function notify(input: NotifyInput): Promise<void> {
 
     if (userIds.length === 0) return;
 
-    await createNotificationStorage().createMany(
+    await createNotificationRepository().createMany(
         userIds.map((userId) => ({
             userId,
             type: input.type,

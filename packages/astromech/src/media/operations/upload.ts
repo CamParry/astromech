@@ -4,7 +4,7 @@ import { getStorageDriver } from '@/storage/registry';
 import { originalKey } from '../internal/keys';
 import { storeFile } from '../internal/store-file';
 import { toMedia } from '../internal/to-media';
-import { createMediaStorage } from '../storage';
+import { createMediaRepository } from '../repository';
 
 /** Store a new file and insert the row describing it. */
 export async function upload(params: { file: File }): Promise<Media> {
@@ -22,7 +22,7 @@ export async function upload(params: { file: File }): Promise<Media> {
     const { width, height, metadata } = await storeFile(driver, key, file);
 
     return toMedia(
-        await createMediaStorage().create({
+        await createMediaRepository().create({
             id,
             filename: file.name,
             mimeType: file.type,

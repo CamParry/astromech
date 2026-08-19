@@ -3,7 +3,7 @@
  * table-column/field vocabulary (`CellKind`, `Field['type']`).
  *
  * Pure, serializable — no db imports. Lets a table-backed admin surface (e.g.
- * step 5's `tableStorage` replacement) describe itself for the shell's list/
+ * step 5's `tableRepository` replacement) describe itself for the shell's list/
  * form renderers without hand-maintaining a parallel column list per table.
  */
 

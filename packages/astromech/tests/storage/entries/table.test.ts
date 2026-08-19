@@ -1,5 +1,5 @@
 /**
- * Storage-level tests for tableStorage plus entries-service integration.
+ * Storage-level tests for tableRepository plus entries-service integration.
  *
  * Uses a scratch table created via raw DDL — no migration dependency. The
  * scratch table's columns mirror the table below: id (ULID text), from,
@@ -16,7 +16,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { defineTable } from '@/database/define-table';
 import { UnknownSortKeyError } from '@/entries/errors';
 import { entriesService } from '@/entries/index';
-import { tableStorage } from '@/entries/storage/table';
+import { tableRepository } from '@/entries/repository/table';
 
 // ============================================================================
 // Scratch table definition
@@ -37,7 +37,7 @@ const testLinksTable = defineTable('test_links', ({ col }) => ({
     updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
 }));
 
-const storage = tableStorage(testLinksTable);
+const repository = tableRepository(testLinksTable);
 
 // ============================================================================
 // Test setup
@@ -65,8 +65,8 @@ beforeEach(async () => {
 
 describe('supports', () => {
     it('declares no capabilities (empty frozen array)', () => {
-        expect(storage.supports).toEqual([]);
-        expect(Object.isFrozen(storage.supports)).toBe(true);
+        expect(repository.supports).toEqual([]);
+        expect(Object.isFrozen(repository.supports)).toBe(true);
     });
 });
 
@@ -78,7 +78,7 @@ describe('create', () => {
     it('generates an id, sets timestamps, writes field columns', async () => {
         // Timestamps are ISO-8601 TEXT, so millisecond precision round-trips.
         const before = new Date();
-        const record = await storage.create({
+        const record = await repository.create({
             type: 'link',
             fields: { from: '/old', to: '/new', status: '302', enabled: true },
         });
@@ -94,7 +94,7 @@ describe('create', () => {
     });
 
     it('drops unknown field keys silently', async () => {
-        const record = await storage.create({
+        const record = await repository.create({
             type: 'link',
             fields: { from: '/a', to: '/b', unknownCol: 'ignored' },
         });
@@ -103,7 +103,7 @@ describe('create', () => {
     });
 
     it('round-trips boolean field (enabled)', async () => {
-        const record = await storage.create({
+        const record = await repository.create({
             type: 'link',
             fields: { from: '/x', to: '/y', enabled: false },
         });
@@ -111,15 +111,15 @@ describe('create', () => {
     });
 
     it('ignores title/slug/status/locale keys from EntryWrite', async () => {
-        // These are EntryWrite keys that tableStorage ignores
-        const record = await storage.create({
+        // These are EntryWrite keys that tableRepository ignores
+        const record = await repository.create({
             type: 'link',
             title: 'This is ignored',
             slug: 'ignored',
             locale: 'en',
             fields: { from: '/a', to: '/b' },
         });
-        // No type field on tableStorage records
+        // No type field on tableRepository records
         expect(record.type).toBeUndefined();
         // Fields should not contain title/slug/locale
         expect(record.fields['title']).toBeUndefined();
@@ -132,16 +132,16 @@ describe('create', () => {
 
 describe('get', () => {
     it('returns null for missing id', async () => {
-        const result = await storage.get('no-such-id');
+        const result = await repository.get('no-such-id');
         expect(result).toBeNull();
     });
 
     it('returns the record for a valid id', async () => {
-        const created = await storage.create({
+        const created = await repository.create({
             type: 'link',
             fields: { from: '/a', to: '/b' },
         });
-        const got = await storage.get(created.id);
+        const got = await repository.get(created.id);
         expect(got?.id).toBe(created.id);
         expect(got?.fields['from']).toBe('/a');
     });
@@ -153,7 +153,7 @@ describe('get', () => {
 
 describe('update', () => {
     it('merges fields and bumps updatedAt; createdAt unchanged', async () => {
-        const created = await storage.create({
+        const created = await repository.create({
             type: 'link',
             fields: { from: '/a', to: '/b', status: '301' },
         });
@@ -162,7 +162,7 @@ describe('update', () => {
         // to move.
         await new Promise((r) => setTimeout(r, 5));
 
-        const updated = await storage.update(created.id, {
+        const updated = await repository.update(created.id, {
             fields: { from: '/a', to: '/new', status: '302' },
         });
 
@@ -175,7 +175,7 @@ describe('update', () => {
 
     it('throws when row is missing', async () => {
         await expect(
-            storage.update('nonexistent', { fields: { from: '/x', to: '/y' } })
+            repository.update('nonexistent', { fields: { from: '/x', to: '/y' } })
         ).rejects.toThrow();
     });
 });
@@ -186,12 +186,12 @@ describe('update', () => {
 
 describe('delete', () => {
     it('hard-deletes the row', async () => {
-        const created = await storage.create({
+        const created = await repository.create({
             type: 'link',
             fields: { from: '/a', to: '/b' },
         });
-        await storage.delete(created.id);
-        const gone = await storage.get(created.id);
+        await repository.delete(created.id);
+        const gone = await repository.get(created.id);
         expect(gone).toBeNull();
     });
 });
@@ -202,18 +202,18 @@ describe('delete', () => {
 
 describe('existingIds', () => {
     it('reports the ids this table holds and omits the rest', async () => {
-        const created = await storage.create({
+        const created = await repository.create({
             type: 'link',
             fields: { from: '/a', to: '/b' },
         });
 
-        expect(await storage.existingIds?.([created.id, 'no-such-id'])).toEqual(
+        expect(await repository.existingIds?.([created.id, 'no-such-id'])).toEqual(
             new Set([created.id])
         );
     });
 
     it('returns an empty set for no ids', async () => {
-        expect(await storage.existingIds?.([])).toEqual(new Set());
+        expect(await repository.existingIds?.([])).toEqual(new Set());
     });
 });
 
@@ -224,7 +224,7 @@ describe('existingIds', () => {
 describe('list – pagination', () => {
     async function seed(n: number) {
         for (let i = 0; i < n; i++) {
-            await storage.create({
+            await repository.create({
                 type: 'link',
                 fields: { from: `/from${i}`, to: `/to${i}` },
             });
@@ -233,21 +233,21 @@ describe('list – pagination', () => {
 
     it('returns total and paginated data', async () => {
         await seed(5);
-        const res = await storage.list({ type: 'link', limit: 2, page: 1 });
+        const res = await repository.list({ type: 'link', limit: 2, page: 1 });
         expect(res.data).toHaveLength(2);
         expect(res.total).toBe(5);
     });
 
     it('page 2 returns correct slice', async () => {
         await seed(5);
-        const res = await storage.list({ type: 'link', limit: 2, page: 2 });
+        const res = await repository.list({ type: 'link', limit: 2, page: 2 });
         expect(res.data).toHaveLength(2);
         expect(res.total).toBe(5);
     });
 
     it('limit: "all" returns all rows with total === data.length', async () => {
         await seed(7);
-        const res = await storage.list({ type: 'link', limit: 'all' });
+        const res = await repository.list({ type: 'link', limit: 'all' });
         expect(res.data).toHaveLength(7);
         expect(res.total).toBe(7);
     });
@@ -259,18 +259,18 @@ describe('list – pagination', () => {
 
 describe('list – sort', () => {
     it('sorts asc/desc on a field column', async () => {
-        await storage.create({ type: 'link', fields: { from: '/b', to: '/x' } });
-        await storage.create({ type: 'link', fields: { from: '/a', to: '/y' } });
-        await storage.create({ type: 'link', fields: { from: '/c', to: '/z' } });
+        await repository.create({ type: 'link', fields: { from: '/b', to: '/x' } });
+        await repository.create({ type: 'link', fields: { from: '/a', to: '/y' } });
+        await repository.create({ type: 'link', fields: { from: '/c', to: '/z' } });
 
-        const asc = await storage.list({
+        const asc = await repository.list({
             type: 'link',
             limit: 'all',
             sort: { from: 'asc' },
         });
         expect(asc.data.map((r) => r.fields['from'])).toEqual(['/a', '/b', '/c']);
 
-        const desc = await storage.list({
+        const desc = await repository.list({
             type: 'link',
             limit: 'all',
             sort: { from: 'desc' },
@@ -279,17 +279,17 @@ describe('list – sort', () => {
     });
 
     it('sorts on createdAt', async () => {
-        const a = await storage.create({
+        const a = await repository.create({
             type: 'link',
             fields: { from: '/a', to: '/x' },
         });
         await new Promise((r) => setTimeout(r, 5));
-        const b = await storage.create({
+        const b = await repository.create({
             type: 'link',
             fields: { from: '/b', to: '/y' },
         });
 
-        const res = await storage.list({
+        const res = await repository.list({
             type: 'link',
             limit: 'all',
             sort: { createdAt: 'asc' },
@@ -299,12 +299,12 @@ describe('list – sort', () => {
     });
 
     it('throws on a sort key that is not a column', async () => {
-        await storage.create({ type: 'link', fields: { from: '/a', to: '/x' } });
+        await repository.create({ type: 'link', fields: { from: '/a', to: '/x' } });
 
         // Matches built-in storage: a typo must not quietly answer the default
         // order — see `decisions/0029-an-unknown-where-key-throws.md`.
         await expect(
-            storage.list({ type: 'link', limit: 'all', sort: { nope: 'asc' } })
+            repository.list({ type: 'link', limit: 'all', sort: { nope: 'asc' } })
         ).rejects.toThrow(UnknownSortKeyError);
     });
 });
@@ -315,16 +315,16 @@ describe('list – sort', () => {
 
 describe('list – where filters', () => {
     it('eq filter', async () => {
-        await storage.create({
+        await repository.create({
             type: 'link',
             fields: { from: '/a', to: '/x', status: '301' },
         });
-        await storage.create({
+        await repository.create({
             type: 'link',
             fields: { from: '/b', to: '/y', status: '302' },
         });
 
-        const res = await storage.list({
+        const res = await repository.list({
             type: 'link',
             limit: 'all',
             where: { status: '302' },
@@ -334,20 +334,20 @@ describe('list – where filters', () => {
     });
 
     it('in filter', async () => {
-        await storage.create({
+        await repository.create({
             type: 'link',
             fields: { from: '/a', to: '/x', status: '301' },
         });
-        await storage.create({
+        await repository.create({
             type: 'link',
             fields: { from: '/b', to: '/y', status: '302' },
         });
-        await storage.create({
+        await repository.create({
             type: 'link',
             fields: { from: '/c', to: '/z', status: '307' },
         });
 
-        const res = await storage.list({
+        const res = await repository.list({
             type: 'link',
             limit: 'all',
             where: { status: { in: ['301', '307'] } },
@@ -358,10 +358,13 @@ describe('list – where filters', () => {
     });
 
     it('like filter', async () => {
-        await storage.create({ type: 'link', fields: { from: '/admin/page', to: '/x' } });
-        await storage.create({ type: 'link', fields: { from: '/home', to: '/y' } });
+        await repository.create({
+            type: 'link',
+            fields: { from: '/admin/page', to: '/x' },
+        });
+        await repository.create({ type: 'link', fields: { from: '/home', to: '/y' } });
 
-        const res = await storage.list({
+        const res = await repository.list({
             type: 'link',
             limit: 'all',
             where: { from: { like: '/admin%' } },
@@ -371,13 +374,13 @@ describe('list – where filters', () => {
     });
 
     it('bare null filters to IS NULL rather than meaning "unfiltered"', async () => {
-        await storage.create({
+        await repository.create({
             type: 'link',
             fields: { from: '/a', to: '/x', note: 'kept' },
         });
-        await storage.create({ type: 'link', fields: { from: '/b', to: '/y' } });
+        await repository.create({ type: 'link', fields: { from: '/b', to: '/y' } });
 
-        const res = await storage.list({
+        const res = await repository.list({
             type: 'link',
             limit: 'all',
             where: { note: null },
@@ -387,9 +390,9 @@ describe('list – where filters', () => {
     });
 
     it('ignores a `locale` where key instead of throwing (no locale concept)', async () => {
-        await storage.create({ type: 'link', fields: { from: '/a', to: '/x' } });
+        await repository.create({ type: 'link', fields: { from: '/a', to: '/x' } });
 
-        const res = await storage.list({
+        const res = await repository.list({
             type: 'link',
             limit: 'all',
             where: { locale: 'en' },
@@ -404,14 +407,17 @@ describe('list – where filters', () => {
 
 describe('list – search and searchFields', () => {
     it('matches either column when searching two searchFields', async () => {
-        await storage.create({ type: 'link', fields: { from: '/hello', to: '/world' } });
-        await storage.create({ type: 'link', fields: { from: '/foo', to: '/bar' } });
-        await storage.create({
+        await repository.create({
+            type: 'link',
+            fields: { from: '/hello', to: '/world' },
+        });
+        await repository.create({ type: 'link', fields: { from: '/foo', to: '/bar' } });
+        await repository.create({
             type: 'link',
             fields: { from: '/baz', to: '/hello-page' },
         });
 
-        const res = await storage.list({
+        const res = await repository.list({
             type: 'link',
             limit: 'all',
             search: 'hello',
@@ -423,10 +429,10 @@ describe('list – search and searchFields', () => {
     });
 
     it('search with no searchFields is a no-op (returns all)', async () => {
-        await storage.create({ type: 'link', fields: { from: '/a', to: '/b' } });
-        await storage.create({ type: 'link', fields: { from: '/c', to: '/d' } });
+        await repository.create({ type: 'link', fields: { from: '/a', to: '/b' } });
+        await repository.create({ type: 'link', fields: { from: '/c', to: '/d' } });
 
-        const res = await storage.list({
+        const res = await repository.list({
             type: 'link',
             limit: 'all',
             search: 'zzz',
@@ -436,16 +442,16 @@ describe('list – search and searchFields', () => {
     });
 
     it('combines search with a where filter on the id column', async () => {
-        const a = await storage.create({
+        const a = await repository.create({
             type: 'link',
             fields: { from: '/hello', to: '/x' },
         });
-        await storage.create({
+        await repository.create({
             type: 'link',
             fields: { from: '/hello-two', to: '/y' },
         });
 
-        const res = await storage.list({
+        const res = await repository.list({
             type: 'link',
             limit: 'all',
             search: 'hello',
@@ -458,7 +464,7 @@ describe('list – search and searchFields', () => {
 
     it('searchFields naming a missing column throws', async () => {
         await expect(
-            storage.list({
+            repository.list({
                 type: 'link',
                 limit: 'all',
                 search: 'hello',
@@ -474,8 +480,8 @@ describe('list – search and searchFields', () => {
 
 describe('uniqueSlug', () => {
     it('throws with an instructional error', () => {
-        expect(() => storage.uniqueSlug('link', 'en', 'some-slug')).toThrow(
-            'tableStorage does not support slugs'
+        expect(() => repository.uniqueSlug('link', 'en', 'some-slug')).toThrow(
+            'tableRepository does not support slugs'
         );
     });
 });
@@ -492,23 +498,24 @@ describe('transaction', () => {
     // (c) the returned storage inside the callback is fully functional.
 
     function runTx<T>(
-        fn: Parameters<NonNullable<typeof storage.transaction>>[0]
+        fn: Parameters<NonNullable<typeof repository.transaction>>[0]
     ): Promise<T> {
-        if (!storage.transaction) throw new Error('tableStorage must have transaction');
-        return storage.transaction(fn) as Promise<T>;
+        if (!repository.transaction)
+            throw new Error('tableRepository must have transaction');
+        return repository.transaction(fn) as Promise<T>;
     }
 
     it('propagates exception from the callback (rollback path)', async () => {
         let createdInsideTx = false;
 
         await expect(
-            runTx(async (txStorage) => {
-                const rec = await txStorage.create({
+            runTx(async (txRepository) => {
+                const rec = await txRepository.create({
                     type: 'link',
                     fields: { from: '/tx1', to: '/ok' },
                 });
                 // Write is visible inside the transaction callback.
-                const found = await txStorage.get(rec.id);
+                const found = await txRepository.get(rec.id);
                 expect(found?.id).toBe(rec.id);
                 createdInsideTx = true;
                 throw new Error('simulated failure');
@@ -522,18 +529,18 @@ describe('transaction', () => {
     it('returns the result of the callback (commit path)', async () => {
         const ids: string[] = [];
 
-        const result = await runTx<string>(async (txStorage) => {
-            const a = await txStorage.create({
+        const result = await runTx<string>(async (txRepository) => {
+            const a = await txRepository.create({
                 type: 'link',
                 fields: { from: '/tx1', to: '/a' },
             });
-            const b = await txStorage.create({
+            const b = await txRepository.create({
                 type: 'link',
                 fields: { from: '/tx2', to: '/b' },
             });
             ids.push(a.id, b.id);
             // Both writes visible inside the callback.
-            const res = await txStorage.list({ type: 'link', limit: 'all' });
+            const res = await txRepository.list({ type: 'link', limit: 'all' });
             expect(res.data).toHaveLength(2);
             return 'done';
         });
@@ -560,7 +567,7 @@ describe('entries-service integration', () => {
                     statuses: false,
                     slug: false,
                     trash: false,
-                    storage: tableStorage(testLinksTable),
+                    repository: tableRepository(testLinksTable),
                     search: ['from', 'to'],
                     fields: [
                         { name: 'from', type: 'text', label: 'From' },

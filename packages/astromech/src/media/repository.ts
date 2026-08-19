@@ -1,19 +1,19 @@
 import type { MediaRow, NewMediaRow } from './schema';
-import type { Patch, QueryHandle } from '@/database/storage/create-storage';
+import type { Patch, QueryHandle } from '@/database/repository/create-repository';
 import type { Db } from '@/database/types';
 import type { MediaMimeTypeFilter, MediaQueryParams, SortOption } from '@/types/index';
 import type { Expression, SqlBool } from 'kysely';
 import { sql } from 'kysely';
 import { decodeWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
+import { createRepository } from '@/database/repository/create-repository';
+import { createRelationshipRepository } from '@/database/repository/relationships';
 import { mediaTable } from '@/database/schema';
-import { createStorage } from '@/database/storage/create-storage';
-import { createRelationshipStorage } from '@/database/storage/relationships';
 
 /**
  * Media storage — the only place Kysely touches the `media` table.
  *
- * Row CRUD goes through `createStorage(mediaTable)`, which owns encoding, `updatedAt`
+ * Row CRUD goes through `createRepository(mediaTable)`, which owns encoding, `updatedAt`
  * stamping and row decoding. `list`/`count` stay on the raw handle because the
  * mime-bucket filter is not expressible in the flat `where` DSL: `documents` is an
  * OR and `other` is a raw negated-LIKE fragment. They compile their DSL-expressible
@@ -35,7 +35,7 @@ export type MediaPage = { limit: number; offset: number };
 const SORTABLE_COLS = ['filename', 'mimeType', 'size', 'createdAt'] as const;
 type SortableCol = (typeof SORTABLE_COLS)[number];
 
-export type MediaStorage = ReturnType<typeof createMediaStorage>;
+export type MediaRepository = ReturnType<typeof createMediaRepository>;
 
 /**
  * The mime "bucket" predicate. `null` when no bucket is selected, so the caller
@@ -81,11 +81,11 @@ function buildOrderBy(
 }
 
 /** Defaults to the registered db; pass a tx handle to scope it to a transaction. */
-export function createMediaStorage(db?: Db) {
-    const storage = createStorage(mediaTable, db);
+export function createMediaRepository(db?: Db) {
+    const repository = createRepository(mediaTable, db);
 
     function filter(params?: MediaQueryParams): Predicate {
-        const { where } = storage.query();
+        const { where } = repository.query();
         const search = params?.search;
         const dsl = where(search ? { filename: { like: `%${search}%` } } : undefined);
         return (eb) => {
@@ -101,7 +101,7 @@ export function createMediaStorage(db?: Db) {
         params?: MediaQueryParams,
         page?: MediaPage
     ): Promise<MediaRow[]> {
-        const { db: handle, table } = storage.query();
+        const { db: handle, table } = repository.query();
         let q = handle.selectFrom(table).selectAll().where(filter(params));
         for (const { col, dir } of buildOrderBy(params?.sort)) {
             q = q.orderBy(col, dir);
@@ -112,7 +112,7 @@ export function createMediaStorage(db?: Db) {
     }
 
     async function count(params?: MediaQueryParams): Promise<number> {
-        const { db: handle, table } = storage.query();
+        const { db: handle, table } = repository.query();
         const row = await handle
             .selectFrom(table)
             .select((eb) => eb.fn.countAll<number>().as('total'))
@@ -122,11 +122,11 @@ export function createMediaStorage(db?: Db) {
     }
 
     async function get(id: string): Promise<MediaRow | null> {
-        return storage.findOne({ id });
+        return repository.findOne({ id });
     }
 
     async function create(data: NewMediaRow): Promise<MediaRow> {
-        return storage.create(data);
+        return repository.create(data);
     }
 
     /** By primary key. Throws when no row matched. */
@@ -134,13 +134,13 @@ export function createMediaStorage(db?: Db) {
         id: string,
         patch: Patch<typeof mediaTable>
     ): Promise<MediaRow> {
-        return storage.update(id, patch);
+        return repository.update(id, patch);
     }
 
     /** Drops the row and every relationship pointing at (or from) it. */
     async function del(id: string): Promise<void> {
-        await createRelationshipStorage(db ?? getDb()).deleteByResource(id, 'media');
-        await storage.delete(id);
+        await createRelationshipRepository(db ?? getDb()).deleteByResource(id, 'media');
+        await repository.delete(id);
     }
 
     return { list, count, get, create, update, delete: del };

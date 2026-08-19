@@ -2,7 +2,7 @@
  * `usersService` CRUD + list behaviour, pinned across the move onto users storage.
  *
  * `users` storage is hand-rolled (better-auth owns the table, so there is no
- * `Table` for `createStorage` to wrap), which means its sort
+ * `Table` for `createRepository` to wrap), which means its sort
  * whitelist, its name/email search OR, its count and its `updatedAt` stamp are
  * all local code rather than shared wrapper code — and none of it was covered.
  */

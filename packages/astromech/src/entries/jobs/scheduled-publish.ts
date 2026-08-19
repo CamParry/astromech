@@ -6,12 +6,12 @@
  */
 
 import type { CronJob } from '@/cron/registry';
-import { createEntryMaintenanceStorage } from '../storage/maintenance';
+import { createEntryMaintenanceRepository } from '../repository/maintenance';
 
 export const scheduledPublishJob: CronJob = {
     name: 'scheduled-publish',
     schedule: '* * * * *',
     async handler({ db }) {
-        await createEntryMaintenanceStorage(db).publishDueScheduled(new Date());
+        await createEntryMaintenanceRepository(db).publishDueScheduled(new Date());
     },
 };

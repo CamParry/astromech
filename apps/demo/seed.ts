@@ -1895,7 +1895,7 @@ async function seed(): Promise<void> {
     // The redirects table is the plugin's own, so its rows go through the
     // plugin's own table codec rather than being hand-built: `encodeWith` mints
     // the ULID id and the ISO-TEXT createdAt/updatedAt from the table's
-    // defaults, exactly as `tableStorage` does at runtime.
+    // defaults, exactly as `tableRepository` does at runtime.
     await pluginDb
         .insertInto('pluginRedirectsRedirects')
         .values(

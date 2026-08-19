@@ -5,11 +5,11 @@
 
 import type { RelationshipRow } from '@/database/schema';
 import type { MediaUsage } from '@/types/index';
-import { createRelationshipStorage } from '@/database/storage/relationships';
+import { createRelationshipRepository } from '@/database/repository/relationships';
 // Peer domains, read only to name a source row. See the `usedBy` docstring.
-import { getEntryStorage } from '@/entries/storage/registry';
-import { createUserStorage } from '@/users/storage';
-import { createMediaStorage } from '../storage';
+import { getEntryRepository } from '@/entries/repository/registry';
+import { createUserRepository } from '@/users/repository';
+import { createMediaRepository } from '../repository';
 
 /**
  * Every relationships-index edge pointing at this media item — one row per
@@ -22,12 +22,12 @@ import { createMediaStorage } from '../storage';
  */
 export async function usedBy(params: { id: string }): Promise<MediaUsage[]> {
     const { id } = params;
-    const row = await createMediaStorage().get(id);
+    const row = await createMediaRepository().get(id);
     if (!row) throw new Error(`Media '${id}' not found`);
 
     // Staged sources count: a pending merge that uses this file is a reason
     // not to delete it.
-    const rows = await createRelationshipStorage().findByTarget(id, 'media', {
+    const rows = await createRelationshipRepository().findByTarget(id, 'media', {
         includeStaged: true,
     });
 
@@ -73,29 +73,31 @@ async function resolveSourceTitles(
 
     for (const [type, ids] of entryIdsByType) {
         // A type dropped from config since its rows were written has no storage.
-        let storage;
+        let repository;
         try {
-            storage = getEntryStorage(type);
+            repository = getEntryRepository(type);
         } catch {
             continue;
         }
         const records = await Promise.all(
-            Array.from(ids, (entryId) => storage.get(entryId, { includeTrashed: true }))
+            Array.from(ids, (entryId) =>
+                repository.get(entryId, { includeTrashed: true })
+            )
         );
         for (const record of records) {
             if (record !== null) titles.set(`entry ${record.id}`, record.title ?? '');
         }
     }
 
-    const userStorage = createUserStorage();
+    const userRepository = createUserRepository();
     for (const userId of userIds) {
-        const user = await userStorage.get(userId);
+        const user = await userRepository.get(userId);
         if (user !== null) titles.set(`user ${userId}`, user.name || user.email);
     }
 
-    const mediaStorage = createMediaStorage();
+    const mediaRepository = createMediaRepository();
     for (const mediaId of mediaIds) {
-        const item = await mediaStorage.get(mediaId);
+        const item = await mediaRepository.get(mediaId);
         if (item !== null) titles.set(`media ${mediaId}`, item.filename);
     }
 

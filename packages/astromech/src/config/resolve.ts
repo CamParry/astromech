@@ -28,7 +28,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
         entries[typeKey] = toResolvedEntryType(
             typeKey,
             entryType,
-            entryType.storage?.supports ?? BUILT_IN_SUPPORTS
+            entryType.repository?.supports ?? BUILT_IN_SUPPORTS
         );
     }
 

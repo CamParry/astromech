@@ -5,7 +5,10 @@
  * refusals are made of, and taking a row is what stops it running twice.
  */
 
-import type { ApprovalsStorage, ClaimedApproval } from '../../src/approvals/storage';
+import type {
+    ApprovalsRepository,
+    ClaimedApproval,
+} from '../../src/approvals/repository';
 import type { ApprovalRow } from '../../src/tables/approvals';
 import { vi } from 'vitest';
 
@@ -30,7 +33,7 @@ export function approvalRow(overrides: Partial<ApprovalRow> = {}): ApprovalRow {
 }
 
 export type FakeApprovals = {
-    storage: ApprovalsStorage;
+    storage: ApprovalsRepository;
     rows: ApprovalRow[];
 };
 
@@ -39,7 +42,7 @@ export function fakeApprovals(seed: ApprovalRow[] = []): FakeApprovals {
     const rows = [...seed];
     let minted = 0;
 
-    const storage: ApprovalsStorage = {
+    const storage: ApprovalsRepository = {
         mint: vi.fn(async (drafts) =>
             drafts.map((draft) => {
                 minted += 1;

@@ -1,21 +1,21 @@
-import type { EntryStorage } from '../storage/types';
-import { createRelationshipStorage } from '@/database/storage/relationships';
+import type { EntryRepository } from '../repository/types';
+import { createRelationshipRepository } from '@/database/repository/relationships';
 import { runBulkVoid } from '../internal/bulk';
 import { runDeleteWithHooks } from '../internal/hooks';
 import { loadAndAssertType } from '../internal/records';
 import { assertCapability } from '../internal/type-config';
-import { getEntryStorage } from '../storage/registry';
+import { getEntryRepository } from '../repository/registry';
 
 /** Soft-delete a single entry (policy). */
 async function trashOne(
-    storage: EntryStorage,
+    repository: EntryRepository,
     type: string,
     id: string,
     cascadeLocales: boolean
 ): Promise<void> {
-    await loadAndAssertType(storage, type, id);
-    if (!storage.trash) throw new Error(`Entry type "${type}" does not support trash`);
-    await storage.trash.trash(id, { cascadeLocales });
+    await loadAndAssertType(repository, type, id);
+    if (!repository.trash) throw new Error(`Entry type "${type}" does not support trash`);
+    await repository.trash.trash(id, { cascadeLocales });
 }
 
 export async function trash(params: {
@@ -27,13 +27,13 @@ export async function trash(params: {
     const cascade = !!params.cascadeLocales;
     await runDeleteWithHooks(params.type, params.id, false, async () => {
         if (Array.isArray(params.id)) {
-            await runBulkVoid(params.type, params.id, (txStorage, _txDb, id) =>
-                trashOne(txStorage, params.type, id, cascade)
+            await runBulkVoid(params.type, params.id, (txRepository, _txDb, id) =>
+                trashOne(txRepository, params.type, id, cascade)
             );
             return;
         }
         await trashOne(
-            getEntryStorage(params.type),
+            getEntryRepository(params.type),
             params.type,
             params.id as string,
             cascade
@@ -44,20 +44,20 @@ export async function trash(params: {
 export async function emptyTrash(params: { type: string }): Promise<void> {
     assertCapability(params.type, 'trash');
     const { type } = params;
-    const storage = getEntryStorage(type);
-    if (!storage.trash) throw new Error(`Entry type "${type}" does not support trash`);
+    const repository = getEntryRepository(type);
+    if (!repository.trash) throw new Error(`Entry type "${type}" does not support trash`);
 
     // Clean up relationship rows for the soon-to-be-deleted trashed entries.
-    const { data: trashed } = await storage.list({
+    const { data: trashed } = await repository.list({
         type,
         locale: 'all',
         trashed: true,
         limit: 'all',
     });
-    const relationships = createRelationshipStorage();
+    const relationships = createRelationshipRepository();
     for (const entry of trashed) {
         await relationships.deleteByResource(entry.id, 'entry');
     }
 
-    await storage.trash.emptyTrash(type);
+    await repository.trash.emptyTrash(type);
 }

@@ -12,11 +12,11 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { CapabilityError } from '@/entries/errors';
 import { DEFAULT_PREVIEW_TOKEN_TTL_MS } from '@/entries/operations/preview/token';
-import { entriesService as api } from '@/entries/service';
 import {
-    createPreviewTokenStorage,
+    createPreviewTokenRepository,
     hashPreviewToken,
-} from '@/entries/storage/preview-tokens';
+} from '@/entries/repository/preview-tokens';
+import { entriesService as api } from '@/entries/service';
 
 beforeEach(async () => {
     await createTestDb();
@@ -73,20 +73,20 @@ describe('issuePreviewToken', () => {
         const e = await api.create({ type: 'post', title: 'X', slug: 'x' });
         const { token } = await api.issuePreviewToken({ type: 'post', id: e.id });
 
-        const storage = createPreviewTokenStorage();
+        const repository = createPreviewTokenRepository();
         const hash = await hashPreviewToken(token);
         const tolerance = 60_000;
 
-        expect(await storage.isValid(e.id, hash, new Date())).toBe(true);
+        expect(await repository.isValid(e.id, hash, new Date())).toBe(true);
         expect(
-            await storage.isValid(
+            await repository.isValid(
                 e.id,
                 hash,
                 new Date(Date.now() + DEFAULT_PREVIEW_TOKEN_TTL_MS - tolerance)
             )
         ).toBe(true);
         expect(
-            await storage.isValid(
+            await repository.isValid(
                 e.id,
                 hash,
                 new Date(Date.now() + DEFAULT_PREVIEW_TOKEN_TTL_MS + tolerance)
@@ -104,7 +104,7 @@ describe('issuePreviewToken', () => {
 
         const hash = await hashPreviewToken(token);
         const farFuture = new Date(Date.now() + 10 * DEFAULT_PREVIEW_TOKEN_TTL_MS);
-        expect(await createPreviewTokenStorage().isValid(e.id, hash, farFuture)).toBe(
+        expect(await createPreviewTokenRepository().isValid(e.id, hash, farFuture)).toBe(
             true
         );
     });

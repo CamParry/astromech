@@ -11,14 +11,14 @@
 import type { SettingRow } from './schema';
 import type { JsonValue, Setting, SettingsService } from '@/types/index';
 import { getConfig } from '@/config/registry';
-import { existingEntryTypes } from '@/database/storage/resource-existence';
+import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { ValidationError } from '@/errors/validation';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenEntryFields } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { getCurrentUser } from '@/request-context/index';
 import { mergeLocaleSetting } from './page-values.shared';
-import { createSettingsStorage } from './storage';
+import { createSettingsRepository } from './repository';
 import { isPublicSettingKey } from './visibility';
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
@@ -35,7 +35,7 @@ function toSetting(row: SettingRow): Setting {
 
 export const settingsService: SettingsService = {
     async all(params?: { full?: boolean }): Promise<Setting[]> {
-        const rows = await createSettingsStorage().all();
+        const rows = await createSettingsRepository().all();
         const full = params?.full ?? false;
         const publicKeys = getConfig().publicSettingKeys;
         return rows
@@ -60,7 +60,7 @@ export const settingsService: SettingsService = {
         }
 
         const locKey = locale ? `${key}:${locale}` : null;
-        const rows = await createSettingsStorage().byKeys(
+        const rows = await createSettingsRepository().byKeys(
             locKey === null ? [key] : [key, locKey]
         );
         // An absent row must stay `undefined` here, not become `null`:
@@ -129,6 +129,6 @@ export const settingsService: SettingsService = {
             effectiveValue = processed.values as JsonValue;
         }
 
-        return toSetting(await createSettingsStorage().set(key, effectiveValue));
+        return toSetting(await createSettingsRepository().set(key, effectiveValue));
     },
 };

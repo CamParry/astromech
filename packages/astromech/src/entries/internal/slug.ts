@@ -1,7 +1,7 @@
-import type { EntryStorage } from '../storage/types';
+import type { EntryRepository } from '../repository/types';
 import type { Entry, ResolvedEntryType } from '@/types/index';
 import { slugify } from '@/utilities/strings';
-import { getEntryStorage } from '../storage/registry';
+import { getEntryRepository } from '../repository/registry';
 
 /**
  * Derives the slug a new entry stores: the caller's, else one slugified from
@@ -9,17 +9,17 @@ import { getEntryStorage } from '../storage/registry';
  * type has no slug capability or there is nothing to slugify.
  */
 export async function deriveSlug(params: {
-    storage: EntryStorage;
+    repository: EntryRepository;
     entryType: ResolvedEntryType;
     locale: string;
     title: string;
     slug: string | undefined;
 }): Promise<string | null> {
-    const { storage, entryType, locale, title, slug } = params;
+    const { repository, entryType, locale, title, slug } = params;
     if (!entryType.capabilities.slug) return null;
     const source = slug ?? (entryType.titleField !== false ? slugify(title) : null);
     if (!source) return null;
-    return storage.uniqueSlug(entryType.id, locale, source);
+    return repository.uniqueSlug(entryType.id, locale, source);
 }
 
 /**
@@ -28,13 +28,13 @@ export async function deriveSlug(params: {
  * a no-op update never collides a slug with itself.
  */
 export async function uniqueSlugIfChanged(
-    storage: EntryStorage,
+    repository: EntryRepository,
     type: string,
     entry: Entry,
     slug: string | null | undefined
 ): Promise<string | null | undefined> {
     if (!slug || slug === entry.slug) return slug;
-    return storage.uniqueSlug(type, entry.locale, slug, entry.id);
+    return repository.uniqueSlug(type, entry.locale, slug, entry.id);
 }
 
 /**
@@ -47,5 +47,5 @@ export async function generateUniqueSlug(
     baseSlug: string,
     excludeId?: string
 ): Promise<string> {
-    return getEntryStorage(type).uniqueSlug(type, locale, baseSlug, excludeId);
+    return getEntryRepository(type).uniqueSlug(type, locale, baseSlug, excludeId);
 }

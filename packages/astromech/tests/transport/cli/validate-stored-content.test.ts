@@ -9,14 +9,14 @@
 import type { AstromechConfig, JsonObject } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createStorage } from '@/database/storage/create-storage';
+import { createRepository } from '@/database/repository/create-repository';
 import { entriesTable } from '@/entries/schema';
 import { entriesService as api } from '@/entries/service';
+import { createSettingsRepository } from '@/settings/repository';
 import { settingsService } from '@/settings/service';
-import { createSettingsStorage } from '@/settings/storage';
 import { validateStoredContent } from '@/transport/cli/validate-stored-content';
+import { createUserRepository } from '@/users/repository';
 import { usersService } from '@/users/service';
-import { createUserStorage } from '@/users/storage';
 
 /**
  * `article` carries a bounded number and a unique code; `report` carries the
@@ -111,13 +111,13 @@ beforeEach(async () => {
 
 /** Overwrite a stored row's field blob without going through the pipeline. */
 async function storeFields(id: string, fields: JsonObject): Promise<void> {
-    await createStorage(entriesTable).update(id, { fields });
+    await createRepository(entriesTable).update(id, { fields });
 }
 
 /** Every field blob a run could touch, serialized for a straight comparison. */
 async function snapshot(): Promise<string> {
-    const entries = await createStorage(entriesTable).findMany({ where: {} });
-    const users = await createUserStorage().list();
+    const entries = await createRepository(entriesTable).findMany({ where: {} });
+    const users = await createUserRepository().list();
     const settings = await settingsService.all({ full: true });
     return JSON.stringify([
         entries.map((row) => [row.id, row.fields]),
@@ -205,7 +205,7 @@ describe('validateStoredContent', () => {
 
         expect((await validateStoredContent()).findings).toEqual([]);
 
-        await createStorage(entriesTable).update(article.id, { status: 'published' });
+        await createRepository(entriesTable).update(article.id, { status: 'published' });
 
         expect((await validateStoredContent()).findings).toEqual([
             {
@@ -261,7 +261,7 @@ describe('validateStoredContent', () => {
             name: 'Long',
             fields: { nickname: 'ok' },
         });
-        await createUserStorage().update(user.id, {
+        await createUserRepository().update(user.id, {
             fields: { nickname: 'far too long' },
         });
 
@@ -292,7 +292,7 @@ describe('validateStoredContent', () => {
     });
 
     it('reports a settings blob that fails a current rule', async () => {
-        await createSettingsStorage().set('branding', { company: 'Far too long' });
+        await createSettingsRepository().set('branding', { company: 'Far too long' });
 
         const report = await validateStoredContent();
 

@@ -3,7 +3,7 @@ import { asEntry, loadAndAssertType } from '../../internal/records';
 import { indexEntryRelationships } from '../../internal/relationships';
 import { uniqueSlugIfChanged } from '../../internal/slug';
 import { snapshotVersion } from '../../internal/versions';
-import { getEntryStorage } from '../../storage/registry';
+import { getEntryRepository } from '../../repository/registry';
 
 export async function restoreVersion(params: {
     type: string;
@@ -11,22 +11,22 @@ export async function restoreVersion(params: {
     versionId: string;
 }): Promise<Entry> {
     const { type, id, versionId } = params;
-    const storage = getEntryStorage(type);
-    if (!storage.versions) throw new Error('Version not found');
+    const repository = getEntryRepository(type);
+    if (!repository.versions) throw new Error('Version not found');
 
-    const version = await storage.versions.get(versionId);
+    const version = await repository.versions.get(versionId);
     if (!version || version.entryId !== id) {
         throw new Error('Version not found');
     }
 
-    const currentEntry = await loadAndAssertType(storage, type, id);
+    const currentEntry = await loadAndAssertType(repository, type, id);
 
-    await snapshotVersion(storage.versions, currentEntry);
+    await snapshotVersion(repository.versions, currentEntry);
 
-    const slug = await uniqueSlugIfChanged(storage, type, currentEntry, version.slug);
+    const slug = await uniqueSlugIfChanged(repository, type, currentEntry, version.slug);
 
     const restoredFields = (version.fields as JsonObject) ?? currentEntry.fields;
-    const updated = await storage.update(id, {
+    const updated = await repository.update(id, {
         title: version.title,
         slug: slug ?? currentEntry.slug,
         fields: restoredFields,

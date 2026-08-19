@@ -3,12 +3,12 @@ import { generatePreviewSecret } from '../../internal/preview';
 import { loadAndAssertType } from '../../internal/records';
 import { assertCapability } from '../../internal/type-config';
 import { validate } from '../../internal/validate';
-import { previewTokenSchema } from '../../schema';
 import {
-    createPreviewTokenStorage,
+    createPreviewTokenRepository,
     hashPreviewToken,
-} from '../../storage/preview-tokens';
-import { getEntryStorage } from '../../storage/registry';
+} from '../../repository/preview-tokens';
+import { getEntryRepository } from '../../repository/registry';
+import { previewTokenSchema } from '../../schema';
 
 /**
  * How long a preview token lives when the caller names no expiry: 7 days.
@@ -32,8 +32,8 @@ export async function issuePreviewToken(params: {
 }): Promise<{ token: string }> {
     const { type, id } = params;
     assertCapability(type, 'staging');
-    const storage = getEntryStorage(type);
-    const canonical = await loadAndAssertType(storage, type, id);
+    const repository = getEntryRepository(type);
+    const canonical = await loadAndAssertType(repository, type, id);
     if (canonical.stagedFor != null) {
         throw new Error(
             `Entry '${id}' is a staged change; issue the preview token on its canonical entry.`
@@ -56,7 +56,7 @@ export async function issuePreviewToken(params: {
         expiresAt === undefined
             ? new Date(Date.now() + DEFAULT_PREVIEW_TOKEN_TTL_MS)
             : expiresAt;
-    await createPreviewTokenStorage().issue(id, hash, expiry, user?.id ?? null);
+    await createPreviewTokenRepository().issue(id, hash, expiry, user?.id ?? null);
     return { token };
 }
 
@@ -66,7 +66,7 @@ export async function revokePreviewToken(params: {
 }): Promise<void> {
     const { type, id } = params;
     assertCapability(type, 'staging');
-    const storage = getEntryStorage(type);
-    await loadAndAssertType(storage, type, id);
-    await createPreviewTokenStorage().revoke(id);
+    const repository = getEntryRepository(type);
+    await loadAndAssertType(repository, type, id);
+    await createPreviewTokenRepository().revoke(id);
 }

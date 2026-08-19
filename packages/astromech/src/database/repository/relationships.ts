@@ -15,9 +15,9 @@ import type { RelationshipEdge, TargetKind } from '@/fields/relationship-edges';
 import { encodeWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { relationshipsTable } from '@/database/schema';
-import { createStorage } from './create-storage';
+import { createRepository } from './create-repository';
 
-export type RelationshipStorage = ReturnType<typeof createRelationshipStorage>;
+export type RelationshipRepository = ReturnType<typeof createRelationshipRepository>;
 
 /** What holds the reference. Entries carry an entry type as well; users and
  *  media do not, so `type` is null for them. */
@@ -48,8 +48,8 @@ export type RelationshipIndexSource = {
 const INSERT_CHUNK_ROWS = 12;
 
 /** Defaults to the registered db; pass a tx handle to scope it to a transaction. */
-export function createRelationshipStorage(db: Db = getDb()) {
-    const storage = createStorage(relationshipsTable, db);
+export function createRelationshipRepository(db: Db = getDb()) {
+    const repository = createRepository(relationshipsTable, db);
 
     /**
      * Replace every edge recorded for one source. The delete covers the whole
@@ -60,10 +60,10 @@ export function createRelationshipStorage(db: Db = getDb()) {
         source: RelationshipSource,
         edges: RelationshipEdge[]
     ): Promise<void> {
-        await storage.deleteMany({ sourceId: source.id, sourceKind: source.kind });
+        await repository.deleteMany({ sourceId: source.id, sourceKind: source.kind });
         if (edges.length === 0) return;
 
-        const { db: handle, table } = storage.query();
+        const { db: handle, table } = repository.query();
         const rows = edges.map((edge) =>
             encodeWith(relationshipsTable, {
                 sourceId: source.id,
@@ -89,7 +89,7 @@ export function createRelationshipStorage(db: Db = getDb()) {
         sourceId: string,
         sourceKind: TargetKind
     ): Promise<RelationshipRow[]> {
-        return storage.findMany({ where: { sourceId, sourceKind } });
+        return repository.findMany({ where: { sourceId, sourceKind } });
     }
 
     /**
@@ -102,7 +102,7 @@ export function createRelationshipStorage(db: Db = getDb()) {
         targetKind: TargetKind,
         opts?: { includeStaged?: boolean }
     ): Promise<RelationshipRow[]> {
-        return storage.findMany({
+        return repository.findMany({
             where: {
                 targetId,
                 targetKind,
@@ -117,7 +117,7 @@ export function createRelationshipStorage(db: Db = getDb()) {
      * they cannot enumerate by source.
      */
     async function findAll(filter?: { sourceType?: string }): Promise<RelationshipRow[]> {
-        return storage.findMany({
+        return repository.findMany({
             where:
                 filter?.sourceType !== undefined ? { sourceType: filter.sourceType } : {},
         });
@@ -128,7 +128,7 @@ export function createRelationshipStorage(db: Db = getDb()) {
         sourceId: string,
         sourceKind: TargetKind
     ): Promise<void> {
-        await storage.deleteMany({ sourceId, sourceKind });
+        await repository.deleteMany({ sourceId, sourceKind });
     }
 
     /**
@@ -138,13 +138,13 @@ export function createRelationshipStorage(db: Db = getDb()) {
      * claiming a reference to a row that no longer exists.
      */
     async function deleteByResource(id: string, kind: TargetKind): Promise<void> {
-        await storage.deleteMany({ sourceId: id, sourceKind: kind });
-        await storage.deleteMany({ targetId: id, targetKind: kind });
+        await repository.deleteMany({ sourceId: id, sourceKind: kind });
+        await repository.deleteMany({ targetId: id, targetKind: kind });
     }
 
     /** Wipe the index, optionally for one source kind. The rebuild entry point. */
     async function clear(sourceKind?: TargetKind): Promise<void> {
-        await storage.deleteMany(sourceKind ? { sourceKind } : {});
+        await repository.deleteMany(sourceKind ? { sourceKind } : {});
     }
 
     return {
@@ -155,6 +155,6 @@ export function createRelationshipStorage(db: Db = getDb()) {
         deleteBySource,
         deleteByResource,
         clear,
-        query: storage.query,
+        query: repository.query,
     };
 }

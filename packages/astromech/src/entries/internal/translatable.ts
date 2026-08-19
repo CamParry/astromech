@@ -4,7 +4,7 @@
  * update.
  */
 
-import type { EntryStorage } from '../storage/types';
+import type { EntryRepository } from '../repository/types';
 import type { Entry, JsonObject, ResolvedEntryType } from '@/types/index';
 import { getNonTranslatableFieldNames } from './type-config';
 
@@ -17,13 +17,13 @@ export async function inheritSharedFields(
     values: Record<string, unknown>,
     definitions: { name: string }[],
     context: {
-        storage: EntryStorage;
+        repository: EntryRepository;
         entryType: ResolvedEntryType;
         localeGroup: string | undefined;
     }
 ): Promise<Record<string, unknown>> {
-    const { storage, entryType, localeGroup } = context;
-    if (localeGroup === undefined || !storage.translatable) return values;
+    const { repository, entryType, localeGroup } = context;
+    if (localeGroup === undefined || !repository.translatable) return values;
 
     const shared = getNonTranslatableFieldNames(
         entryType.id,
@@ -31,7 +31,7 @@ export async function inheritSharedFields(
     );
     if (shared.length === 0) return values;
 
-    const [sibling] = await storage.translatable.siblings(localeGroup);
+    const [sibling] = await repository.translatable.siblings(localeGroup);
     if (!sibling) return values;
 
     const inherited: Record<string, unknown> = {};
@@ -48,14 +48,14 @@ export async function inheritSharedFields(
  * overwrite its siblings.
  */
 export async function propagateSharedFields(params: {
-    storage: EntryStorage;
+    repository: EntryRepository;
     entryType: ResolvedEntryType;
     entry: Entry;
     fields: JsonObject;
     patchedFieldNames: string[];
 }): Promise<void> {
-    const { storage, entryType, entry, fields, patchedFieldNames } = params;
-    if (!storage.translatable) return;
+    const { repository, entryType, entry, fields, patchedFieldNames } = params;
+    if (!repository.translatable) return;
 
     const shared = getNonTranslatableFieldNames(entryType.id, patchedFieldNames);
     if (shared.length === 0) return;
@@ -65,5 +65,5 @@ export async function propagateSharedFields(params: {
         const value = fields[name];
         if (value !== undefined) values[name] = value;
     }
-    await storage.translatable.propagateFields(entry.localeGroup, entry.id, values);
+    await repository.translatable.propagateFields(entry.localeGroup, entry.id, values);
 }

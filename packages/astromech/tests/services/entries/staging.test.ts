@@ -20,10 +20,10 @@ import { join } from 'node:path';
 import { createFileTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getDb } from '@/database/registry';
-import { createRelationshipStorage } from '@/database/storage/relationships';
+import { createRelationshipRepository } from '@/database/repository/relationships';
 import { CapabilityError, StagedEntryExistsError } from '@/entries/errors';
+import { getEntryRepository } from '@/entries/repository/registry';
 import { entriesService as api } from '@/entries/service';
-import { getEntryStorage } from '@/entries/storage/registry';
 
 let dbCounter = 0;
 let dbPath = '';
@@ -55,14 +55,14 @@ afterEach(() => {
 });
 
 function relationTargets(entryId: string): Promise<string[]> {
-    return createRelationshipStorage(getDb())
+    return createRelationshipRepository(getDb())
         .findBySource(entryId, 'entry')
         .then((rels) => rels.map((r) => r.targetId).sort());
 }
 
 /** `sourceStaged` on every index row for a source (a boolean per row). */
 function relationStagedFlags(entryId: string): Promise<boolean[]> {
-    return createRelationshipStorage(getDb())
+    return createRelationshipRepository(getDb())
         .findBySource(entryId, 'entry')
         .then((rels) => rels.map((r) => r.sourceStaged));
 }
@@ -292,7 +292,7 @@ describe('mergeStaged — field validation', () => {
 
     /** Write to a row without going through the field pipeline. */
     async function plantFields(id: string, fields: JsonObject): Promise<void> {
-        await getEntryStorage('post').update(id, { fields });
+        await getEntryRepository('post').update(id, { fields });
     }
 
     it('rejects staged content missing a required field when the canonical is published', async () => {

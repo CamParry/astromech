@@ -4,18 +4,18 @@
  * collector that enumerates every entry as a source.
  */
 
-import type { StorageDb } from '../storage/types';
-import type { RelationshipIndexSource } from '@/database/storage/relationships';
+import type { RepositoryDb } from '../repository/types';
+import type { RelationshipIndexSource } from '@/database/repository/relationships';
 import type { RelationshipEdge } from '@/fields/relationship-edges';
 import type { JsonObject } from '@/types/index';
 import { getConfig } from '@/config/registry';
-import { createStorage } from '@/database/storage/create-storage';
-import { createRelationshipStorage } from '@/database/storage/relationships';
+import { createRepository } from '@/database/repository/create-repository';
+import { createRelationshipRepository } from '@/database/repository/relationships';
 import { qualifyEntryType, resolveEntryType } from '@/entries/type-ids.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { collectRelationshipEdges } from '@/fields/relationship-edges';
+import { getEntryRepository, hasEntryRepositoryOverride } from '../repository/registry';
 import { entriesTable } from '../schema';
-import { getEntryStorage, hasEntryStorageOverride } from '../storage/registry';
 
 /**
  * Re-index one entry. `fields` must be post-`parseFields` values — item ids
@@ -25,12 +25,12 @@ export async function indexEntryRelationships(
     entry: { id: string; stagedFor?: string | null },
     fields: JsonObject,
     typeName: string,
-    db?: StorageDb
+    db?: RepositoryDb
 ): Promise<void> {
     const edges = entryEdges(typeName, fields);
     if (edges === null) return;
 
-    await createRelationshipStorage(db).replaceForSource(
+    await createRelationshipRepository(db).replaceForSource(
         {
             id: entry.id,
             kind: 'entry',
@@ -76,7 +76,7 @@ function entryEdges(typeName: string, fields: JsonObject): RelationshipEdge[] | 
  * and trashed rows by default, and the rebuild needs both.
  */
 async function builtInEntrySources(type?: string): Promise<RelationshipIndexSource[]> {
-    const rows = await createStorage(entriesTable).findMany({
+    const rows = await createRepository(entriesTable).findMany({
         where: type !== undefined ? { type } : {},
     });
     return rows.map((row) => ({
@@ -91,7 +91,7 @@ async function builtInEntrySources(type?: string): Promise<RelationshipIndexSour
 }
 
 /**
- * Sources for entry types backed by their own storage (`tableStorage`). Their
+ * Sources for entry types backed by their own storage (`tableRepository`). Their
  * rows are not in the `entries` table but they are indexed on write, so leaving
  * them out would report every one of their edges as drift.
  */
@@ -99,12 +99,12 @@ async function tableBackedEntrySources(
     type?: string
 ): Promise<RelationshipIndexSource[]> {
     const types = configuredEntryTypes()
-        .filter(hasEntryStorageOverride)
+        .filter(hasEntryRepositoryOverride)
         .filter((candidate) => type === undefined || candidate === type);
 
     const collected: RelationshipIndexSource[] = [];
     for (const typeName of types) {
-        const { data } = await getEntryStorage(typeName).list({
+        const { data } = await getEntryRepository(typeName).list({
             type: typeName,
             limit: 'all',
             locale: 'all',

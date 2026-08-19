@@ -423,7 +423,7 @@ naming the keys is the honest default.
 
 ### Database tables
 
-A plugin that needs its own storage declares each table with
+A plugin that needs its own tables declares each with
 `definePluginTable` from `astromech`, one file per table. It is
 `defineTable` scoped to your plugin: you pass your package name and a bare
 name, and it prefixes both the table and any index names with
@@ -521,41 +521,41 @@ identifier is the unambiguous one.
 
 #### Reading and writing the table
 
-Don't query the table from your handlers. Give it a storage module —
-`createStorage` from `astromech` turns a `Table` into typed
+Don't query the table from your handlers. Give it a repository module —
+`createRepository` from `astromech` turns a `Table` into typed
 `findOne`/`findMany`/`count`/`create`/`update`/`delete`/`updateMany`/`deleteMany`/`upsert`,
 and owns encoding, `where`-value serialization and row decoding, so nothing above
 it spells the table name or touches a codec.
 
-Compose it inside your own `createXStorage(db)` factory, exactly as core's domains
+Compose it inside your own `createXRepository(db)` factory, exactly as core's domains
 do, and give the methods your plugin's vocabulary. The handle is an argument: a
 plugin is _handed_ its database on `ctx.db`.
 
 ```ts
-// storage.ts
+// repository.ts
 import type { WidgetRow } from './tables/widgets.js';
 import type { PluginContext } from 'astromech';
-import { createStorage } from 'astromech';
+import { createRepository } from 'astromech';
 import { widgetsTable } from './tables/widgets.js';
 
-export function createWidgetsStorage(db: PluginContext['db']) {
-    const storage = createStorage(widgetsTable, db);
+export function createWidgetsRepository(db: PluginContext['db']) {
+    const repository = createRepository(widgetsTable, db);
 
     async function live(limit: number): Promise<WidgetRow[]> {
-        return storage.findMany({
+        return repository.findMany({
             where: { status: 'live' },
             orderBy: [['createdAt', 'desc']],
             limit,
         });
     }
 
-    return { get: (id: string) => storage.findOne({ id }), live };
+    return { get: (id: string) => repository.findOne({ id }), live };
 }
 ```
 
 ```ts
 // service/widgets.ts
-const widgets = await createWidgetsStorage(ctx.db).live(20);
+const widgets = await createWidgetsRepository(ctx.db).live(20);
 ```
 
 `where` is flat and ANDs its keys together: a bare value means `=`, a bare `null`
@@ -565,12 +565,12 @@ unknown column name throws rather than being skipped, because a dropped
 predicate returns too many rows.
 
 For anything the flat DSL cannot express — an `OR`, a projection, an aggregate —
-`storage.query()` is the escape hatch. It hands back the Kysely handle, the
+`repository.query()` is the escape hatch. It hands back the Kysely handle, the
 resolved table key, and the wrapper's own `where` compiler, so a mixed query
 ANDs a raw clause onto the DSL filter in one statement instead of restating it:
 
 ```ts
-const { db, table, where } = storage.query();
+const { db, table, where } = repository.query();
 const rows = await db
     .selectFrom(table)
     .selectAll()
@@ -580,8 +580,8 @@ const rows = await db
 const widgets = rows.map((row) => decodeWith(widgetsTable, row));
 ```
 
-That decoding is also what you want for a read or write that bypasses a storage
-layer entirely: `decodeWith(widgetsTable, row)`,
+That decoding is also what you want for a read or write that bypasses a repository
+entirely: `decodeWith(widgetsTable, row)`,
 `encodeWith(widgetsTable, values)`, `encodePatchWith(widgetsTable, patch)` — all
 from `astromech`.
 

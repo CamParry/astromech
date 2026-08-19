@@ -47,7 +47,10 @@ import { getDb } from '@/database/registry';
 import { getEmailDriver } from '@/email/registry';
 import { renderEmail } from '@/email/render';
 import { typedEntriesService } from '@/entries/index';
-import { resetEntryStorageOverrides, setEntryStorage } from '@/entries/storage/registry';
+import {
+    resetEntryRepositoryOverrides,
+    setEntryRepository,
+} from '@/entries/repository/registry';
 import { qualifyEntryType } from '@/entries/type-ids.shared';
 import { AstromechError } from '@/errors/index';
 import { flattenEntryFields } from '@/fields/flatten';
@@ -59,7 +62,7 @@ import {
 } from '@/plugins/runtime/plugin-identity';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { isTable } from '@/plugins/runtime/plugin-tables';
-import { createPluginTrackingStorage } from '@/plugins/runtime/plugin-tracking-storage';
+import { createPluginTrackingRepository } from '@/plugins/runtime/plugin-tracking-repository';
 import { createRegistry } from '@/registry';
 import { getCurrentRole } from '@/request-context/index';
 import { settingsService } from '@/settings/index';
@@ -124,7 +127,7 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
     s.service = new Map();
     s.rawRoutes = [];
     // Drop stale plugin storages before re-registering (test setups re-run this).
-    resetEntryStorageOverrides();
+    resetEntryRepositoryOverrides();
 
     for (const def of defs) {
         const identity = resolvePluginIdentity(def);
@@ -157,10 +160,10 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
 
         // Register per-type custom storages under the qualified id.
         for (const [type, entryType] of pluginEntryTypes(def)) {
-            if (entryType.storage) {
-                setEntryStorage(
+            if (entryType.repository) {
+                setEntryRepository(
                     qualifyEntryType(identity.namespace, type),
-                    entryType.storage
+                    entryType.repository
                 );
             }
         }
@@ -229,7 +232,7 @@ async function trackPlugin(
     version: string
 ): Promise<void> {
     try {
-        await createPluginTrackingStorage().track(pkg, namespace, version);
+        await createPluginTrackingRepository().track(pkg, namespace, version);
     } catch (error) {
         log.warn(
             `Could not record plugin "${pkg}" in _astromech_plugins: ` +
@@ -245,7 +248,7 @@ async function trackPlugin(
  */
 async function warnOnUntrackedRemovals(configured: string[]): Promise<void> {
     try {
-        const tracked = await createPluginTrackingStorage().packages();
+        const tracked = await createPluginTrackingRepository().packages();
         for (const pkg of tracked) {
             if (configured.includes(pkg)) continue;
             log.warn(

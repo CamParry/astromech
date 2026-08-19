@@ -3,7 +3,7 @@
  * call, and resolving the paused turn the next request carries back.
  */
 
-import type { ApprovalsStorage, ClaimedApproval } from '../approvals/storage';
+import type { ApprovalsRepository, ClaimedApproval } from '../approvals/repository';
 import type { ApprovalDecision, ApprovalRequest, ChatMessage } from '../types';
 import type { ToolCallPart, ToolResultPart } from 'ai';
 import type { ToolDefinition } from 'astromech';
@@ -31,7 +31,7 @@ const ABANDONED = 'The user moved on without answering this, so it was not run.'
 export async function pauseForApproval(input: {
     calls: ToolCallPart[];
     tools: ToolDefinition[];
-    approvals: ApprovalsStorage;
+    approvals: ApprovalsRepository;
     userId: string;
 }): Promise<ApprovalRequest[]> {
     const calls = mutatingCalls(input.calls, input.tools);
@@ -80,7 +80,7 @@ export async function resumePausedTurn(input: {
     messages: ChatMessage[];
     tools: ToolDefinition[];
     decisions: ApprovalDecision[];
-    approvals: ApprovalsStorage;
+    approvals: ApprovalsRepository;
     userId: string;
 }): Promise<ChatMessage | null> {
     const calls = pausedToolCalls(input.messages);

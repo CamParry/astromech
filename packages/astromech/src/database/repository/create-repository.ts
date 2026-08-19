@@ -1,9 +1,9 @@
 /**
- * `createStorage` — the generic, `defineTable`-backed CRUD object.
+ * `createRepository` — the generic, `defineTable`-backed CRUD object.
  *
  * One `Table` in, a typed `findOne`/`findMany`/`count`/`create`/
  * `update`/`delete`/`updateMany`/`deleteMany`/`upsert` surface out. It composes
- * *inside* the existing `createXStorage` factories rather than replacing them:
+ * *inside* the existing `createXRepository` factories rather than replacing them:
  * those keep the transaction rebinding point and the domain vocabulary
  * (`getLatestNumber`, `publishDueScheduled`, …), which a generic wrapper cannot
  * absorb. Pass the tx handle as the second argument to rebind.
@@ -36,7 +36,7 @@
  * `'json'`, an object is always a value. A json column that genuinely needs an
  * operator comparison drops to `query()`.
  *
- * ## Deliberate difference from `tableStorage`
+ * ## Deliberate difference from `tableRepository`
  *
  * A bare `null` in `where` means `IS NULL`, not "no filter". Omitting the key
  * (or passing `undefined`) is how you mean unfiltered; a `null` you deliberately
@@ -107,7 +107,7 @@ type WhereOps<V> = {
  * null/undefined split exists to express.
  *
  * The runtime additionally reads a bare array as `in`, for loosely-typed callers
- * migrating off `tableStorage`. Typed callers use `{ in: [...] }`.
+ * migrating off `tableRepository`. Typed callers use `{ in: [...] }`.
  */
 export type Where<D> = {
     [K in keyof TableSelect<D>]?:
@@ -179,7 +179,7 @@ export type QueryHandle<D> = {
     where: (where?: Where<D>) => WhereFn;
 };
 
-export type Storage<D extends Table> = {
+export type Repository<D extends Table> = {
     /** The `Table` this storage is bound to. */
     table: D;
     findOne(where: Where<D>): Promise<TableSelect<D> | null>;
@@ -215,7 +215,7 @@ const RANGE_SQL = { gt: '>', gte: '>=', lt: '<', lte: '<=' } as const;
 // Factory
 // ============================================================================
 
-export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
+export function createRepository<D extends Table>(table: D, db?: Db): Repository<D> {
     const tableKey = kyselyTableKey(table.name);
     const columns: Record<string, ColumnRuntime> = table.columns;
     // A table-level composite key wins: no column carries the inline flag, so
@@ -234,7 +234,7 @@ export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
         const col = columns[name];
         if (!col) {
             throw new AstromechError(
-                `createStorage("${table.name}"): unknown column "${name}"`
+                `createRepository("${table.name}"): unknown column "${name}"`
             );
         }
         return col;
@@ -245,7 +245,7 @@ export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
         const [only] = primaryKey;
         if (primaryKey.length !== 1 || only === undefined) {
             throw new AstromechError(
-                `createStorage("${table.name}"): update/delete by id ` +
+                `createRepository("${table.name}"): update/delete by id ` +
                     `needs exactly one primary-key column, found ${primaryKey.length}. ` +
                     `Use updateMany/deleteMany with an explicit where.`
             );
@@ -317,7 +317,7 @@ export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
                     break;
                 default:
                     throw new AstromechError(
-                        `createStorage("${table.name}"): ` +
+                        `createRepository("${table.name}"): ` +
                             `unknown operator "${op}" on column "${key}"`
                     );
             }
@@ -333,7 +333,7 @@ export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
     ): unknown[] {
         if (!Array.isArray(operand)) {
             throw new AstromechError(
-                `createStorage("${table.name}"): "${op}" on column ` +
+                `createRepository("${table.name}"): "${op}" on column ` +
                     `"${key}" expects an array`
             );
         }
@@ -440,7 +440,7 @@ export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
             .executeTakeFirst();
         if (!row) {
             throw new AstromechError(
-                `createStorage("${table.name}"): insert returned no row`
+                `createRepository("${table.name}"): insert returned no row`
             );
         }
         return decodeRow(row);
@@ -456,7 +456,8 @@ export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
             .executeTakeFirst();
         if (!row) {
             throw new AstromechError(
-                `createStorage("${table.name}"): no row found for ` + `${idCol} "${id}"`
+                `createRepository("${table.name}"): no row found for ` +
+                    `${idCol} "${id}"`
             );
         }
         return decodeRow(row);
@@ -494,7 +495,7 @@ export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
         const target = opts?.target ?? primaryKey;
         if (target.length === 0) {
             throw new AstromechError(
-                `createStorage("${table.name}"): upsert needs a ` +
+                `createRepository("${table.name}"): upsert needs a ` +
                     `conflict target — the table has no primary key, so pass \`target\`.`
             );
         }
@@ -508,7 +509,7 @@ export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
                 : encodeUpdate(opts.set as object);
         if (Object.keys(setValues).length === 0) {
             throw new AstromechError(
-                `createStorage("${table.name}"): upsert has nothing ` +
+                `createRepository("${table.name}"): upsert has nothing ` +
                     `to set on conflict — pass \`set\`.`
             );
         }
@@ -520,7 +521,7 @@ export function createStorage<D extends Table>(table: D, db?: Db): Storage<D> {
             .executeTakeFirst();
         if (!row) {
             throw new AstromechError(
-                `createStorage("${table.name}"): upsert returned no row`
+                `createRepository("${table.name}"): upsert returned no row`
             );
         }
         return decodeRow(row);

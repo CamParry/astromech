@@ -4,13 +4,13 @@
  * rebuild-side collector that enumerates every media record as a source.
  */
 
-import type { RelationshipIndexSource } from '@/database/storage/relationships';
+import type { RelationshipIndexSource } from '@/database/repository/relationships';
 import type { JsonObject } from '@/types/index';
 import { getConfig } from '@/config/registry';
-import { createRelationshipStorage } from '@/database/storage/relationships';
+import { createRelationshipRepository } from '@/database/repository/relationships';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { collectRelationshipEdges } from '@/fields/relationship-edges';
-import { createMediaStorage } from '../storage';
+import { createMediaRepository } from '../repository';
 
 /**
  * Re-index a media record's relationship fields. `fields` must be
@@ -21,7 +21,7 @@ export async function indexMediaRelationships(
     fields: JsonObject
 ): Promise<void> {
     const definitions = flattenFieldNodes(getConfig().media?.fields ?? []);
-    await createRelationshipStorage().replaceForSource(
+    await createRelationshipRepository().replaceForSource(
         { id, kind: 'media' },
         collectRelationshipEdges(definitions, fields)
     );
@@ -36,7 +36,7 @@ export async function collectMediaRelationshipSources(): Promise<
     RelationshipIndexSource[]
 > {
     const definitions = flattenFieldNodes(getConfig().media?.fields ?? []);
-    const rows = await createMediaStorage().list();
+    const rows = await createMediaRepository().list();
     return rows.map((row) => ({
         source: { id: row.id, kind: 'media' as const },
         edges: collectRelationshipEdges(definitions, (row.fields ?? {}) as JsonObject),

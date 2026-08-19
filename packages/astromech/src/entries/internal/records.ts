@@ -4,17 +4,17 @@
  * service applies before every by-id operation).
  */
 
-import type { EntryRecord, EntryStorage } from '../storage/types';
+import type { EntryRepository, EntryRow } from '../repository/types';
 import type { Entry } from '@/types/index';
 import { EntryTypeMismatchError } from '../errors';
 
 /**
- * Narrow a storage `EntryRecord` to the public `Entry`. The built-in storage —
+ * Narrow a storage `EntryRow` to the public `Entry`. The built-in storage —
  * the only Phase 2 implementation — always returns full, locale-enriched
- * Entries. The contract is intentionally wider (`EntryRecord`) so Phase 3
+ * Entries. The contract is intentionally wider (`EntryRow`) so Phase 3
  * single-table storages need not carry every capability column.
  */
-export function asEntry(record: EntryRecord): Entry {
+export function asEntry(record: EntryRow): Entry {
     return record as Entry;
 }
 
@@ -24,11 +24,11 @@ export function asEntry(record: EntryRecord): Entry {
  * did. Returns the storage record (locale-enriched Entry for built-in storage).
  */
 export async function loadAndAssertType(
-    storage: EntryStorage,
+    repository: EntryRepository,
     type: string,
     id: string
 ): Promise<Entry> {
-    const record = await storage.get(id, { includeTrashed: true });
+    const record = await repository.get(id, { includeTrashed: true });
     if (!record) throw new Error(`Entry '${id}' not found`);
     if (record.type !== undefined && record.type !== type) {
         throw new EntryTypeMismatchError({

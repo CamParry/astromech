@@ -17,14 +17,14 @@ import type { PluginContext, PluginRawRoute } from 'astromech';
 import { Readable } from 'node:stream';
 import { createGunzip } from 'node:zlib';
 import { isBackupRunning, performBackup, resolveKeep } from '../backup';
-import { createBackupRunsStorage } from '../storage';
+import { createBackupRunsRepository } from '../repository';
 import { backupRunsTable } from '../tables/runs';
 
 /**
  * The table's **SQL** name, for the restore driver's `preserve` list — that is a
  * list of real table names, not Kysely `DB` keys, so it stays the table's
  * `name` rather than anything the storage wrapper hands out. Row access goes
- * through `createBackupRunsStorage`; this is the one thing it cannot answer.
+ * through `createBackupRunsRepository`; this is the one thing it cannot answer.
  */
 const RUNS_TABLE = backupRunsTable.name;
 
@@ -57,7 +57,7 @@ async function downloadArtifact(request: Request, ctx: PluginContext): Promise<R
     // pathname: /api/plugins/backups/runs/:id/download → id is second from end
     const id = parseSegment(url.pathname, 1);
 
-    const row = await createBackupRunsStorage(ctx.db).get(id);
+    const row = await createBackupRunsRepository(ctx.db).get(id);
     if (row === null) {
         return Response.json({ error: 'Backup run not found' }, { status: 404 });
     }
@@ -94,7 +94,7 @@ async function restoreFromBackup(
     // pathname: /api/plugins/backups/runs/:id/restore → id is second from end
     const id = parseSegment(url.pathname, 1);
 
-    const row = await createBackupRunsStorage(ctx.db).get(id);
+    const row = await createBackupRunsRepository(ctx.db).get(id);
     if (row === null) {
         return Response.json({ error: 'Backup run not found' }, { status: 404 });
     }

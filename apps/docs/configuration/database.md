@@ -95,7 +95,7 @@ waiting to be filled. D1's only atomicity primitive is `batch()`, which
 executes a list of statements prepared up front — it cannot interleave
 application logic, so it cannot implement an interactive transaction.
 
-`d1()` therefore declares `supportsTransactions: false`, and entry storage
+`d1()` therefore declares `supportsTransactions: false`, and the entry repository
 **omits its optional `transaction` method** entirely. The operations that would
 otherwise use one — entry create (row + relationship rows), bulk operations,
 and staged-entry merge — already check for it and fall back to sequential

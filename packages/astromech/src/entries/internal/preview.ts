@@ -4,7 +4,10 @@
  */
 import type { AudienceContext } from '../visibility';
 import type { Entry, Field } from '@/types/index';
-import { createPreviewTokenStorage, hashPreviewToken } from '../storage/preview-tokens';
+import {
+    createPreviewTokenRepository,
+    hashPreviewToken,
+} from '../repository/preview-tokens';
 import { applyVisibility, markPublic } from '../visibility';
 
 /** Generate a high-entropy preview token secret (32 random bytes, hex). */
@@ -21,7 +24,7 @@ export async function verifyPreviewToken(
     token: string
 ): Promise<boolean> {
     const hash = await hashPreviewToken(token);
-    return createPreviewTokenStorage().isValid(entryId, hash, new Date());
+    return createPreviewTokenRepository().isValid(entryId, hash, new Date());
 }
 
 export const previewAudience = (): AudienceContext => ({

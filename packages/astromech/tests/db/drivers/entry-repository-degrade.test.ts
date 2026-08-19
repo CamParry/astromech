@@ -11,8 +11,8 @@ import { createTestDb } from '@tests/harness';
 import { afterEach, describe, expect, it } from 'vitest';
 import { defineTable } from '@/database/define-table';
 import { setDatabaseDriver } from '@/database/driver-registry';
-import { createBuiltInEntryStorage } from '@/entries/storage/built-in';
-import { tableStorage } from '@/entries/storage/table';
+import { createBuiltInEntryRepository } from '@/entries/repository/built-in';
+import { tableRepository } from '@/entries/repository/table';
 
 const scratchTable = defineTable('degrade_scratch', ({ col }) => ({
     id: col.id(),
@@ -40,14 +40,14 @@ describe('entry storage transaction degradation', () => {
         await createTestDb();
         setDatabaseDriver(noTxDriver);
 
-        expect(createBuiltInEntryStorage().transaction).toBeUndefined();
-        expect(tableStorage(scratchTable).transaction).toBeUndefined();
+        expect(createBuiltInEntryRepository().transaction).toBeUndefined();
+        expect(tableRepository(scratchTable).transaction).toBeUndefined();
     });
 
     it('keeps transaction when the active driver supports transactions (default)', async () => {
         await createTestDb();
 
-        expect(createBuiltInEntryStorage().transaction).toBeDefined();
-        expect(tableStorage(scratchTable).transaction).toBeDefined();
+        expect(createBuiltInEntryRepository().transaction).toBeDefined();
+        expect(tableRepository(scratchTable).transaction).toBeDefined();
     });
 });

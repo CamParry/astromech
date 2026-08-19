@@ -1,6 +1,6 @@
 /**
- * Storage-level tests for `createVersionStorage`. The CRUD/list/latestNumber
- * surface is already exercised through `createBuiltInEntryStorage.versions` in
+ * Storage-level tests for `createVersionRepository`. The CRUD/list/latestNumber
+ * surface is already exercised through `createBuiltInEntryRepository.versions` in
  * `built-in.test.ts`; this file covers `deleteExcess`, which the built-in
  * wrapper does not expose.
  */
@@ -8,25 +8,25 @@
 import type { Db } from '@/database/types';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createBuiltInEntryStorage } from '@/entries/storage/built-in';
-import { createVersionStorage } from '@/entries/storage/versions';
+import { createBuiltInEntryRepository } from '@/entries/repository/built-in';
+import { createVersionRepository } from '@/entries/repository/versions';
 
 let db: Db;
-let entryStorage: ReturnType<typeof createBuiltInEntryStorage>;
-let versionStorage: ReturnType<typeof createVersionStorage>;
+let entryRepository: ReturnType<typeof createBuiltInEntryRepository>;
+let versionRepository: ReturnType<typeof createVersionRepository>;
 
 beforeEach(async () => {
     db = await createTestDb();
     setupTestConfig();
-    entryStorage = createBuiltInEntryStorage();
-    versionStorage = createVersionStorage(db);
+    entryRepository = createBuiltInEntryRepository();
+    versionRepository = createVersionRepository(db);
 });
 
 describe('deleteExcess', () => {
     it('keeps exactly `keep` newest versions and deletes the rest', async () => {
-        const e = await entryStorage.create({ type: 'post', title: 'V', slug: 'v' });
+        const e = await entryRepository.create({ type: 'post', title: 'V', slug: 'v' });
         for (let n = 1; n <= 5; n++) {
-            await versionStorage.create({
+            await versionRepository.create({
                 entryId: e.id,
                 versionNumber: n,
                 title: `V${n}`,
@@ -36,15 +36,15 @@ describe('deleteExcess', () => {
             });
         }
 
-        await versionStorage.deleteExcess(e.id, 2);
+        await versionRepository.deleteExcess(e.id, 2);
 
-        const remaining = await versionStorage.list(e.id);
+        const remaining = await versionRepository.list(e.id);
         expect(remaining.map((v) => v.versionNumber)).toEqual([5, 4]);
     });
 
     it('is a no-op when there is nothing beyond `keep`', async () => {
-        const e = await entryStorage.create({ type: 'post', title: 'V', slug: 'v' });
-        await versionStorage.create({
+        const e = await entryRepository.create({ type: 'post', title: 'V', slug: 'v' });
+        await versionRepository.create({
             entryId: e.id,
             versionNumber: 1,
             title: 'V1',
@@ -53,9 +53,9 @@ describe('deleteExcess', () => {
             createdBy: null,
         });
 
-        await versionStorage.deleteExcess(e.id, 5);
+        await versionRepository.deleteExcess(e.id, 5);
 
-        const remaining = await versionStorage.list(e.id);
+        const remaining = await versionRepository.list(e.id);
         expect(remaining.map((v) => v.versionNumber)).toEqual([1]);
     });
 });

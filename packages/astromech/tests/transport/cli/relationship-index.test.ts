@@ -12,13 +12,13 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { defineTable } from '@/database/define-table';
+import { createRepository } from '@/database/repository/create-repository';
+import { createRelationshipRepository } from '@/database/repository/relationships';
 import { relationshipsTable } from '@/database/schema';
-import { createStorage } from '@/database/storage/create-storage';
-import { createRelationshipStorage } from '@/database/storage/relationships';
+import { tableRepository } from '@/entries/repository/table';
 import { entriesService as api } from '@/entries/service';
-import { tableStorage } from '@/entries/storage/table';
+import { createMediaRepository } from '@/media/repository';
 import { mediaService } from '@/media/service';
-import { createMediaStorage } from '@/media/storage';
 import { setStorageDriver } from '@/storage/registry';
 import {
     checkRelationshipIndex,
@@ -70,7 +70,7 @@ function linksPlugin(): PluginDefinition {
                 statuses: false,
                 slug: false,
                 trash: false,
-                storage: tableStorage(linksTable),
+                repository: tableRepository(linksTable),
                 fields: [
                     { name: 'label', type: 'text', label: 'Label' },
                     { name: 'post', type: 'relationship', label: 'Post', target: 'post' },
@@ -152,7 +152,7 @@ beforeEach(async () => {
 
 /** A media row, inserted through storage so no driver or real bytes are needed. */
 async function createMedia(filename = 'a.png'): Promise<string> {
-    const row = await createMediaStorage().create({
+    const row = await createMediaRepository().create({
         filename,
         mimeType: 'image/png',
         size: 1,
@@ -194,7 +194,7 @@ async function seedContent(): Promise<{ article: string; post: string; media: st
 
 /** Every stored row, in a stable order, so two runs compare directly. */
 async function storedRows(): Promise<RelationshipRow[]> {
-    const rows = await createRelationshipStorage().findAll();
+    const rows = await createRelationshipRepository().findAll();
     return rows.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
 }
 
@@ -237,7 +237,10 @@ describe('checkRelationshipIndex', () => {
         expect(driftCount(await checkRelationshipIndex())).toBe(0);
 
         await rebuildRelationshipIndex();
-        const rows = await createRelationshipStorage().findBySource(staged.id, 'entry');
+        const rows = await createRelationshipRepository().findBySource(
+            staged.id,
+            'entry'
+        );
         expect(rows.length).toBeGreaterThan(0);
         expect(rows.every((row) => row.sourceStaged)).toBe(true);
         expect(driftCount(await checkRelationshipIndex())).toBe(0);
@@ -245,7 +248,7 @@ describe('checkRelationshipIndex', () => {
 
     it('reports an empty index as entirely missing', async () => {
         await seedContent();
-        await createRelationshipStorage().clear();
+        await createRelationshipRepository().clear();
 
         const report = await checkRelationshipIndex();
 
@@ -261,7 +264,7 @@ describe('checkRelationshipIndex', () => {
 describe('rebuildRelationshipIndex', () => {
     it('detects a deleted row as missing and restores it', async () => {
         const { article, post } = await seedContent();
-        await createStorage(relationshipsTable).deleteMany({
+        await createRepository(relationshipsTable).deleteMany({
             sourceId: article,
             instancePath: 'author',
             targetId: post,
@@ -278,7 +281,7 @@ describe('rebuildRelationshipIndex', () => {
 
     it('detects a row no field data holds as unexpected and removes it', async () => {
         const { article } = await seedContent();
-        await createStorage(relationshipsTable).create({
+        await createRepository(relationshipsTable).create({
             sourceId: article,
             sourceKind: 'entry',
             sourceType: 'article',
@@ -296,13 +299,13 @@ describe('rebuildRelationshipIndex', () => {
         await rebuildRelationshipIndex();
 
         expect(driftCount(await checkRelationshipIndex())).toBe(0);
-        const rows = await createRelationshipStorage().findAll();
+        const rows = await createRelationshipRepository().findAll();
         expect(rows.some((row) => row.targetId === 'ghost')).toBe(false);
     });
 
     it('removes rows left behind by a source that no longer exists', async () => {
         await seedContent();
-        await createStorage(relationshipsTable).create({
+        await createRepository(relationshipsTable).create({
             sourceId: 'purged-entry',
             sourceKind: 'entry',
             sourceType: 'article',
@@ -341,16 +344,16 @@ describe('rebuildRelationshipIndex', () => {
 describe('rebuildRelationshipIndex({ type })', () => {
     it('repairs the named type and leaves other types and user/media rows alone', async () => {
         const { article, post, media } = await seedContent();
-        const storage = createStorage(relationshipsTable);
+        const repository = createRepository(relationshipsTable);
 
         // Drop an article row (must come back) and plant a bogus row on each of
         // the three scopes a `--type article` run must not touch.
-        await storage.deleteMany({
+        await repository.deleteMany({
             sourceId: article,
             instancePath: 'author',
             targetId: post,
         });
-        await storage.create({
+        await repository.create({
             sourceId: post,
             sourceKind: 'entry',
             sourceType: 'post',
@@ -360,7 +363,7 @@ describe('rebuildRelationshipIndex({ type })', () => {
             targetKind: 'entry',
             sourceStaged: false,
         });
-        await storage.create({
+        await repository.create({
             sourceId: media,
             sourceKind: 'media',
             sourceType: null,
@@ -376,7 +379,7 @@ describe('rebuildRelationshipIndex({ type })', () => {
         expect(driftCount(await checkRelationshipIndex({ type: 'article' }))).toBe(0);
         expect(report.orphanRowsRemoved).toBe(0);
 
-        const rows = await createRelationshipStorage().findAll();
+        const rows = await createRelationshipRepository().findAll();
         expect(rows.filter((row) => row.targetId === 'ghost')).toHaveLength(2);
     });
 });

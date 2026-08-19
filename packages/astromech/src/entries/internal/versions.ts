@@ -2,7 +2,7 @@
  * Entry version helpers shared by the operations that write a version.
  */
 
-import type { EntryStorage } from '../storage/types';
+import type { EntryRepository } from '../repository/types';
 import type { Entry, JsonObject } from '@/types/index';
 import { deepEqual } from './deep-equal';
 
@@ -11,7 +11,7 @@ import { deepEqual } from './deep-equal';
  * whether a version is warranted; this numbers and writes it.
  */
 export async function snapshotVersion(
-    versions: NonNullable<EntryStorage['versions']>,
+    versions: NonNullable<EntryRepository['versions']>,
     entry: Entry
 ): Promise<void> {
     const latestNumber = await versions.latestNumber(entry.id);

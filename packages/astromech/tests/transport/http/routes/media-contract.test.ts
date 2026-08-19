@@ -9,8 +9,8 @@ import type { Media, Role, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { adminRole, mountRouter, roleWith } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { createMediaRepository } from '@/media/repository';
 import { mediaService } from '@/media/service';
-import { createMediaStorage } from '@/media/storage';
 import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
 
@@ -46,7 +46,7 @@ beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeTestConfig());
     setStorageDriver(noopStorage);
-    const row = await createMediaStorage().create({
+    const row = await createMediaRepository().create({
         filename: 'photo.png',
         mimeType: 'image/png',
         size: 12,
@@ -68,7 +68,7 @@ describe('GET /media', () => {
     });
 
     it('filters on the mimeType bucket', async () => {
-        await createMediaStorage().create({
+        await createMediaRepository().create({
             filename: 'notes.pdf',
             mimeType: 'application/pdf',
             size: 3,
@@ -90,7 +90,7 @@ describe('GET /media', () => {
     });
 
     it('honours search, limit=all and an allowed sort field', async () => {
-        await createMediaStorage().create({
+        await createMediaRepository().create({
             filename: 'apple.png',
             mimeType: 'image/png',
             size: 1,

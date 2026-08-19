@@ -1,6 +1,6 @@
 /**
  * Slice 5 validator: the redirects plugin runs on its OWN table
- * (`plugin_redirects_redirects`) via `tableStorage`, exercised end-to-end
+ * (`plugin_redirects_redirects`) via `tableRepository`, exercised end-to-end
  * through the entries service, the plugin service, and the slug-change hook.
  *
  * Covers:
@@ -122,7 +122,7 @@ describe('redirects — own-table storage', () => {
             status: 'published',
         });
 
-        // query() must return a complete entry — tableStorage rows have no
+        // query() must return a complete entry — tableRepository rows have no
         // `type` column, so the entries service stamps it. Without this, admin
         // search builds a broken `/entries/undefined/<id>` link.
         const listed = await redirectEntriesService().query({

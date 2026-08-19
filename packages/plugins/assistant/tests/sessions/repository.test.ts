@@ -1,11 +1,14 @@
 /**
- * Session storage against a stand-in for `createStorage`: one row per user,
+ * Session storage against a stand-in for `createRepository`: one row per user,
  * replaced, and the size cap that skips a write rather than trimming one.
  */
 
 import type { ChatMessage } from '../../src/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createSessionsStorage, MAX_SESSION_CHARS } from '../../src/sessions/storage';
+import {
+    createSessionsRepository,
+    MAX_SESSION_CHARS,
+} from '../../src/sessions/repository';
 
 type StoredRow = { userId: string; messages: ChatMessage[] };
 
@@ -17,7 +20,7 @@ vi.mock('astromech', () => ({
         columns: {},
         indexes: [],
     }),
-    createStorage: () => ({
+    createRepository: () => ({
         findOne: (where: { userId: string }) =>
             Promise.resolve(table.get(where.userId) ?? null),
         upsert: (data: StoredRow) => {
@@ -29,8 +32,8 @@ vi.mock('astromech', () => ({
     }),
 }));
 
-/** The db handle is never touched here — `createStorage` is stood in for. */
-const db = {} as Parameters<typeof createSessionsStorage>[0];
+/** The db handle is never touched here — `createRepository` is stood in for. */
+const db = {} as Parameters<typeof createSessionsRepository>[0];
 
 /** One turn of `size` characters of text. */
 function turnOf(size: number): ChatMessage {
@@ -46,13 +49,13 @@ beforeEach(() => {
     table.clear();
 });
 
-describe('createSessionsStorage', () => {
+describe('createSessionsRepository', () => {
     it('reads back nothing for a user who has never had a conversation', async () => {
-        await expect(createSessionsStorage(db).load('user_1')).resolves.toBeNull();
+        await expect(createSessionsRepository(db).load('user_1')).resolves.toBeNull();
     });
 
     it('round-trips a transcript through save and load', async () => {
-        const storage = createSessionsStorage(db);
+        const storage = createSessionsRepository(db);
 
         await expect(storage.save('user_1', TRANSCRIPT)).resolves.toBe(true);
 
@@ -60,7 +63,7 @@ describe('createSessionsStorage', () => {
     });
 
     it('replaces the row rather than adding to it', async () => {
-        const storage = createSessionsStorage(db);
+        const storage = createSessionsRepository(db);
         await storage.save('user_1', TRANSCRIPT);
 
         await storage.save('user_1', [TRANSCRIPT[0] as ChatMessage]);
@@ -70,14 +73,14 @@ describe('createSessionsStorage', () => {
     });
 
     it('keeps a transcript to the user it belongs to', async () => {
-        const storage = createSessionsStorage(db);
+        const storage = createSessionsRepository(db);
         await storage.save('user_1', TRANSCRIPT);
 
         await expect(storage.load('user_2')).resolves.toBeNull();
     });
 
     it('clears the row, leaving the next turn to start a new conversation', async () => {
-        const storage = createSessionsStorage(db);
+        const storage = createSessionsRepository(db);
         await storage.save('user_1', TRANSCRIPT);
 
         await storage.clear('user_1');
@@ -86,7 +89,7 @@ describe('createSessionsStorage', () => {
     });
 
     it('skips the write past the cap, leaving the previous transcript in place', async () => {
-        const storage = createSessionsStorage(db);
+        const storage = createSessionsRepository(db);
         await storage.save('user_1', TRANSCRIPT);
 
         await expect(storage.save('user_1', [turnOf(MAX_SESSION_CHARS)])).resolves.toBe(

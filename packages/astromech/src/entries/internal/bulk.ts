@@ -8,26 +8,30 @@
  * back to the registered db.
  */
 
-import type { EntryStorage, StorageDb } from '../storage/types';
+import type { EntryRepository, RepositoryDb } from '../repository/types';
 import { BulkOperationError } from '../errors';
-import { getEntryStorage } from '../storage/registry';
+import { getEntryRepository } from '../repository/registry';
 
 export async function runBulk<T>(
     type: string,
     ids: readonly string[],
-    perId: (storage: EntryStorage, db: StorageDb | undefined, id: string) => Promise<T>
+    perId: (
+        repository: EntryRepository,
+        db: RepositoryDb | undefined,
+        id: string
+    ) => Promise<T>
 ): Promise<T[]> {
     if (ids.length === 0) return [];
-    const storage = getEntryStorage(type);
+    const repository = getEntryRepository(type);
     const run = async (
-        txStorage: EntryStorage,
-        db: StorageDb | undefined
+        txRepository: EntryRepository,
+        db: RepositoryDb | undefined
     ): Promise<T[]> => {
         const results: T[] = [];
         const succeeded: string[] = [];
         for (const id of ids) {
             try {
-                results.push(await perId(txStorage, db, id));
+                results.push(await perId(txRepository, db, id));
                 succeeded.push(id);
             } catch (err) {
                 throw new BulkOperationError({
@@ -40,13 +44,19 @@ export async function runBulk<T>(
         }
         return results;
     };
-    return storage.transaction ? storage.transaction(run) : run(storage, undefined);
+    return repository.transaction
+        ? repository.transaction(run)
+        : run(repository, undefined);
 }
 
 export async function runBulkVoid(
     type: string,
     ids: readonly string[],
-    perId: (storage: EntryStorage, db: StorageDb | undefined, id: string) => Promise<void>
+    perId: (
+        repository: EntryRepository,
+        db: RepositoryDb | undefined,
+        id: string
+    ) => Promise<void>
 ): Promise<void> {
     if (ids.length === 0) return;
     await runBulk(type, ids, perId);

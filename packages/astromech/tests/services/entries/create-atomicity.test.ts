@@ -5,7 +5,7 @@
  * rolled back and no orphaned record is left in the database.
  */
 
-import type * as RelationshipStorageModule from '@/database/storage/relationships';
+import type * as RelationshipRepositoryModule from '@/database/repository/relationships';
 import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -17,14 +17,14 @@ import { entriesService } from '@/entries/index';
 // `create` persists the row and its index rows inside a storage transaction.
 // Fail `replaceForSource` so the transaction rolls back; everything else
 // delegates to the real storage.
-vi.mock('@/database/storage/relationships', async (importOriginal) => {
-    const actual = await importOriginal<typeof RelationshipStorageModule>();
+vi.mock('@/database/repository/relationships', async (importOriginal) => {
+    const actual = await importOriginal<typeof RelationshipRepositoryModule>();
     return {
         ...actual,
-        createRelationshipStorage: (
-            ...args: Parameters<typeof actual.createRelationshipStorage>
+        createRelationshipRepository: (
+            ...args: Parameters<typeof actual.createRelationshipRepository>
         ) => ({
-            ...actual.createRelationshipStorage(...args),
+            ...actual.createRelationshipRepository(...args),
             replaceForSource: (): Promise<void> => Promise.reject(new Error('boom')),
         }),
     };

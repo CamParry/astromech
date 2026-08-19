@@ -11,24 +11,24 @@
 
 import { createTestDb } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createCronStorage } from '@/cron/storage';
+import { createCronRepository } from '@/cron/repository';
 
 const NOW = new Date('2024-06-01T12:00:00.000Z');
 const EXPIRY = new Date('2024-06-01T12:05:00.000Z');
 
-let storage: ReturnType<typeof createCronStorage>;
+let repository: ReturnType<typeof createCronRepository>;
 
 beforeEach(async () => {
     await createTestDb();
-    storage = createCronStorage();
+    repository = createCronRepository();
 });
 
 describe('seedJob', () => {
     it('inserts the row, then leaves a stored one alone', async () => {
-        await storage.seedJob({ name: 'job', schedule: '* * * * *', enabled: true });
-        await storage.seedJob({ name: 'job', schedule: '0 12 * * *', enabled: false });
+        await repository.seedJob({ name: 'job', schedule: '* * * * *', enabled: true });
+        await repository.seedJob({ name: 'job', schedule: '0 12 * * *', enabled: false });
 
-        const rows = await storage.due(NOW);
+        const rows = await repository.due(NOW);
         expect(rows).toHaveLength(1);
         expect(rows[0]?.schedule).toBe('* * * * *');
         expect(rows[0]?.enabled).toBe(true);
@@ -38,18 +38,18 @@ describe('seedJob', () => {
 describe('due', () => {
     beforeEach(async () => {
         // A null nextRun (never computed) is due; the rest are seeded explicitly.
-        await storage.seedJob({ name: 'never-run', schedule: '* * * * *' });
-        await storage.seedJob({
+        await repository.seedJob({ name: 'never-run', schedule: '* * * * *' });
+        await repository.seedJob({
             name: 'overdue',
             schedule: '* * * * *',
             nextRun: new Date(NOW.getTime() - 1000),
         });
-        await storage.seedJob({
+        await repository.seedJob({
             name: 'future',
             schedule: '* * * * *',
             nextRun: new Date(NOW.getTime() + 1000),
         });
-        await storage.seedJob({
+        await repository.seedJob({
             name: 'disabled',
             schedule: '* * * * *',
             enabled: false,
@@ -58,12 +58,12 @@ describe('due', () => {
     });
 
     it('returns enabled jobs whose nextRun has passed or is null', async () => {
-        const names = (await storage.due(NOW)).map((row) => row.name).sort();
+        const names = (await repository.due(NOW)).map((row) => row.name).sort();
         expect(names).toEqual(['never-run', 'overdue']);
     });
 
     it('decodes storage values back to domain values', async () => {
-        const row = (await storage.due(NOW)).find((r) => r.name === 'overdue');
+        const row = (await repository.due(NOW)).find((r) => r.name === 'overdue');
         expect(row?.enabled).toBe(true);
         expect(row?.nextRun).toBeInstanceOf(Date);
         expect(row?.lock).toBeNull();
@@ -72,48 +72,51 @@ describe('due', () => {
 
 describe('claim', () => {
     beforeEach(async () => {
-        await storage.seedJob({ name: 'job', schedule: '* * * * *' });
+        await repository.seedJob({ name: 'job', schedule: '* * * * *' });
     });
 
     it('elects exactly one winner among concurrent claims', async () => {
         const results = await Promise.all([
-            storage.claim('job', NOW, EXPIRY),
-            storage.claim('job', NOW, EXPIRY),
-            storage.claim('job', NOW, EXPIRY),
+            repository.claim('job', NOW, EXPIRY),
+            repository.claim('job', NOW, EXPIRY),
+            repository.claim('job', NOW, EXPIRY),
         ]);
         expect(results.filter(Boolean)).toHaveLength(1);
     });
 
     it('claims an unlocked job, then refuses while that claim is live', async () => {
-        expect(await storage.claim('job', NOW, EXPIRY)).toBe(true);
-        expect(await storage.claim('job', NOW, EXPIRY)).toBe(false);
+        expect(await repository.claim('job', NOW, EXPIRY)).toBe(true);
+        expect(await repository.claim('job', NOW, EXPIRY)).toBe(false);
     });
 
     it('reclaims once the previous claim has expired', async () => {
-        expect(await storage.claim('job', NOW, EXPIRY)).toBe(true);
+        expect(await repository.claim('job', NOW, EXPIRY)).toBe(true);
 
         const later = new Date(EXPIRY.getTime() + 1000);
-        expect(await storage.claim('job', later, new Date(later.getTime() + 1000))).toBe(
-            true
-        );
+        expect(
+            await repository.claim('job', later, new Date(later.getTime() + 1000))
+        ).toBe(true);
     });
 
     it('returns false for a job that does not exist', async () => {
-        expect(await storage.claim('missing', NOW, EXPIRY)).toBe(false);
+        expect(await repository.claim('missing', NOW, EXPIRY)).toBe(false);
     });
 });
 
 describe('recordRunAndRelease', () => {
     beforeEach(async () => {
-        await storage.seedJob({ name: 'job', schedule: '* * * * *' });
-        await storage.claim('job', NOW, EXPIRY);
+        await repository.seedJob({ name: 'job', schedule: '* * * * *' });
+        await repository.claim('job', NOW, EXPIRY);
     });
 
     it('records the run and clears the lock when the token matches', async () => {
         const next = new Date(NOW.getTime() + 60_000);
-        await storage.recordRunAndRelease('job', EXPIRY, { lastRun: NOW, nextRun: next });
+        await repository.recordRunAndRelease('job', EXPIRY, {
+            lastRun: NOW,
+            nextRun: next,
+        });
 
-        const [row] = await storage.due(new Date(next.getTime() + 1000));
+        const [row] = await repository.due(new Date(next.getTime() + 1000));
         expect(row?.lock).toBeNull();
         expect(row?.lastRun?.getTime()).toBe(NOW.getTime());
         expect(row?.nextRun?.getTime()).toBe(next.getTime());
@@ -121,9 +124,12 @@ describe('recordRunAndRelease', () => {
 
     it('writes nothing when the token does not match (the ABA guard)', async () => {
         const stale = new Date(EXPIRY.getTime() - 1000);
-        await storage.recordRunAndRelease('job', stale, { lastRun: NOW, nextRun: null });
+        await repository.recordRunAndRelease('job', stale, {
+            lastRun: NOW,
+            nextRun: null,
+        });
 
         // Lock intact, so the live claim still blocks a new one.
-        expect(await storage.claim('job', NOW, EXPIRY)).toBe(false);
+        expect(await repository.claim('job', NOW, EXPIRY)).toBe(false);
     });
 });

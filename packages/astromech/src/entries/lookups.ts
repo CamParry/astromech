@@ -1,6 +1,6 @@
-import type { EntryStorage } from './storage/types';
+import type { EntryRepository } from './repository/types';
 import type { FieldLookups } from '@/types/fields';
-import { existingEntryTypes } from '@/database/storage/resource-existence';
+import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 
 /**
@@ -11,12 +11,12 @@ import { fieldLookupsFromRecords } from '@/fields/field-lookups';
  * later optimisation.
  */
 export function createEntryLookups(
-    storage: EntryStorage,
+    repository: EntryRepository,
     scope: { type: string; locale: string; excludeId?: string | readonly string[] }
 ): FieldLookups {
     return fieldLookupsFromRecords({
         load: async () => {
-            const { data } = await storage.list({
+            const { data } = await repository.list({
                 type: scope.type,
                 locale: scope.locale,
                 trashed: false,

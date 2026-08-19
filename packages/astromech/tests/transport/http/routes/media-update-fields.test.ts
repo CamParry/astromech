@@ -13,8 +13,8 @@ import type { Role, StorageDriver, User } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { createMediaRepository } from '@/media/repository';
 import { mediaService } from '@/media/service';
-import { createMediaStorage } from '@/media/storage';
 import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
 
@@ -66,7 +66,7 @@ beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeTestConfig());
     setStorageDriver(noopStorage);
-    const row = await createMediaStorage().create({
+    const row = await createMediaRepository().create({
         filename: 'a.png',
         mimeType: 'image/png',
         size: 1,

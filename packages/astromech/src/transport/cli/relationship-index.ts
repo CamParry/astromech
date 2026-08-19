@@ -1,7 +1,7 @@
+import type { RelationshipIndexSource } from '@/database/repository/relationships';
 import type { RelationshipRow } from '@/database/schema';
-import type { RelationshipIndexSource } from '@/database/storage/relationships';
 import type { TargetKind } from '@/fields/relationship-edges';
-import { createRelationshipStorage } from '@/database/storage/relationships';
+import { createRelationshipRepository } from '@/database/repository/relationships';
 import { collectEntryRelationshipSources } from '@/entries/internal/relationships';
 import { collectMediaRelationshipSources } from '@/media/internal/relationships';
 import { collectUserRelationshipSources } from '@/users/internal/relationships';
@@ -52,19 +52,19 @@ export async function rebuildRelationshipIndex(
     opts?: RelationshipIndexScope
 ): Promise<RebuildReport> {
     const sources = await collectSources(opts);
-    const storage = createRelationshipStorage();
+    const repository = createRelationshipRepository();
 
     let rowsWritten = 0;
     for (const { source, edges } of sources) {
         // Per source rather than one bulk write, so the chunking that keeps an
         // INSERT under D1's 100-bound-parameter cap keeps applying.
-        await storage.replaceForSource(source, edges);
+        await repository.replaceForSource(source, edges);
         rowsWritten += edges.length;
     }
 
     // Read AFTER the replaces: what is left over then belongs to sources that no
     // longer exist, which no `replaceForSource` would ever reach.
-    const stored = await storage.findAll(storedScope(opts));
+    const stored = await repository.findAll(storedScope(opts));
     const live = new Set(sources.map(({ source }) => sourceKey(source.id, source.kind)));
     const orphanSources = new Map<string, { id: string; kind: TargetKind }>();
     let orphanRowsRemoved = 0;
@@ -75,7 +75,7 @@ export async function rebuildRelationshipIndex(
         orphanSources.set(key, { id: row.sourceId, kind: row.sourceKind });
     }
     for (const { id, kind } of orphanSources.values()) {
-        await storage.deleteBySource(id, kind);
+        await repository.deleteBySource(id, kind);
     }
 
     return { sourcesScanned: sources.length, rowsWritten, orphanRowsRemoved };
@@ -103,7 +103,7 @@ export async function checkRelationshipIndex(
         }
     }
 
-    const stored = await createRelationshipStorage().findAll(storedScope(opts));
+    const stored = await createRelationshipRepository().findAll(storedScope(opts));
     const storedByKey = new Map(stored.map((row) => [rowKey(row), row]));
 
     const mismatched: DriftReport['mismatched'] = [];

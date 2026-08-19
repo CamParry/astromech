@@ -1,7 +1,7 @@
 /**
  * Cron storage — the only place Kysely touches the `_astromech_cron` table.
  *
- * Thin domain vocabulary over `createStorage(cronTable)`, which owns encoding, value
+ * Thin domain vocabulary over `createRepository(cronTable)`, which owns encoding, value
  * serialization and row decoding. Three of the four methods still drop to
  * `query()`, because the scheduler's predicates are things the flat `where` DSL
  * cannot express: the due test and the claim test are both ORs, and the seed is
@@ -13,14 +13,14 @@
 import type { CronRow, NewCronRow } from '@/database/schema';
 import type { Db } from '@/database/types';
 import { decodeWith, encodePatchWith, encodeWith } from '@/database/codec';
+import { createRepository } from '@/database/repository/create-repository';
 import { cronTable } from '@/database/schema';
-import { createStorage } from '@/database/storage/create-storage';
 
-export type CronStorage = ReturnType<typeof createCronStorage>;
+export type CronRepository = ReturnType<typeof createCronRepository>;
 
 /** Defaults to the registered db; pass a tx handle to scope it to a transaction. */
-export function createCronStorage(db?: Db) {
-    const storage = createStorage(cronTable, db);
+export function createCronRepository(db?: Db) {
+    const repository = createRepository(cronTable, db);
 
     /**
      * Insert a job's seed row, or leave an existing one alone. ON CONFLICT DO
@@ -28,7 +28,7 @@ export function createCronStorage(db?: Db) {
      * authoritative and must never be overwritten by the registry's defaults.
      */
     async function seedJob(row: NewCronRow): Promise<void> {
-        const { db: handle, table } = storage.query();
+        const { db: handle, table } = repository.query();
         await handle
             .insertInto(table)
             .values(encodeWith(cronTable, row))
@@ -38,7 +38,7 @@ export function createCronStorage(db?: Db) {
 
     /** Enabled jobs whose next run has arrived, or was never computed. */
     async function due(now: Date): Promise<CronRow[]> {
-        const { db: handle, table, where } = storage.query();
+        const { db: handle, table, where } = repository.query();
         const rows = await handle
             .selectFrom(table)
             .selectAll()
@@ -62,7 +62,7 @@ export function createCronStorage(db?: Db) {
      * claim auto-expires, so the next tick past `expiry` can retry.
      */
     async function claim(name: string, now: Date, expiry: Date): Promise<boolean> {
-        const { db: handle, table, where } = storage.query();
+        const { db: handle, table, where } = repository.query();
         const result = await handle
             .updateTable(table)
             .set(encodePatchWith(cronTable, { lock: expiry }))
@@ -90,7 +90,7 @@ export function createCronStorage(db?: Db) {
         token: Date,
         run: { lastRun: Date; nextRun: Date | null }
     ): Promise<void> {
-        await storage.updateMany({ name, lock: token }, { ...run, lock: null });
+        await repository.updateMany({ name, lock: token }, { ...run, lock: null });
     }
 
     return { seedJob, due, claim, recordRunAndRelease };

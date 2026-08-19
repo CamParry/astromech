@@ -12,7 +12,7 @@ import { flattenEntryFields } from '@/fields/flatten';
 import { projectPreview, verifyPreviewToken } from '../../internal/preview';
 import { asEntry } from '../../internal/records';
 import { getDefaultLocale } from '../../internal/type-config';
-import { getEntryStorage } from '../../storage/registry';
+import { getEntryRepository } from '../../repository/registry';
 
 export async function runPreviewQuery(
     params: EntryQueryParams & { type: string | readonly string[] }
@@ -31,11 +31,11 @@ export async function runPreviewQuery(
     const type = Array.isArray(typeParam) ? typeParam[0] : (typeParam as string);
     if (!token || !type) return empty;
 
-    const storage = getEntryStorage(type);
+    const repository = getEntryRepository(type);
     const entryTypeCfg = resolveEntryType(getConfig(), type);
     const fields = entryTypeCfg ? flattenEntryFields(entryTypeCfg.fields) : [];
 
-    const { data: rows } = await storage.list({
+    const { data: rows } = await repository.list({
         type,
         locale: params.locale ?? getDefaultLocale(),
         where: params.where,
@@ -51,7 +51,7 @@ export async function runPreviewQuery(
 
         let target: Entry = canonical;
         if (params.staged) {
-            const staged = await storage.staging?.getByCanonical(canonical.id);
+            const staged = await repository.staging?.getByCanonical(canonical.id);
             if (!staged) continue;
             target = asEntry(staged);
         }
@@ -81,8 +81,8 @@ export async function runPreviewGet(
     const token = params.previewToken;
     if (!token) return null;
 
-    const storage = getEntryStorage(type);
-    const record = await storage.get(id); // excludes trashed
+    const repository = getEntryRepository(type);
+    const record = await repository.get(id); // excludes trashed
     if (!record) return null;
     if (record.type !== undefined && record.type !== type) return null;
 
@@ -91,7 +91,7 @@ export async function runPreviewGet(
 
     let target: Entry = canonical;
     if (params.staged) {
-        const staged = await storage.staging?.getByCanonical(canonical.id);
+        const staged = await repository.staging?.getByCanonical(canonical.id);
         if (!staged) return null;
         target = asEntry(staged);
     }

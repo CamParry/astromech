@@ -4,16 +4,16 @@ import { getStorageDriver } from '@/storage/registry';
 import { originalKey } from '../internal/keys';
 import { storeFile } from '../internal/store-file';
 import { toMedia } from '../internal/to-media';
+import { createMediaRepository } from '../repository';
 import { variantPrefix } from '../serving/image/url.shared';
-import { createMediaStorage } from '../storage';
 
 /** Swap a media item's file, keeping its id, URL shape and metadata row. */
 export async function replace(params: { id: string; file: File }): Promise<Media> {
     const { id, file } = params;
-    const storage = createMediaStorage();
+    const repository = createMediaRepository();
     const driver = getStorageDriver();
 
-    const row = await storage.get(id);
+    const row = await repository.get(id);
     if (!row) throw new Error(`Media '${id}' not found`);
 
     const newKey = originalKey(id, file.name);
@@ -29,7 +29,7 @@ export async function replace(params: { id: string; file: File }): Promise<Media
     await deletePrefix(driver, variantPrefix(id));
 
     return toMedia(
-        await storage.update(id, {
+        await repository.update(id, {
             filename: file.name,
             mimeType: file.type,
             size: file.size,

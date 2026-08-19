@@ -97,7 +97,7 @@ Most types bring their own validator, and it runs on every write whether or not
 you declared any rules. This matters more than it looks: the declarative rules
 all ignore a value of the wrong type — `minLength` only measures strings and
 arrays, `min` only compares numbers — so on a wrong-typed value the type's own
-validator is the only thing standing between the input and storage.
+validator is the only thing standing between the input and the database.
 
 | Field type                      | What it rejects                                                                                      |
 | ------------------------------- | ---------------------------------------------------------------------------------------------------- |

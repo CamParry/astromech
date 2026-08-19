@@ -4,13 +4,13 @@
  * collector that enumerates every user as a source.
  */
 
-import type { RelationshipIndexSource } from '@/database/storage/relationships';
+import type { RelationshipIndexSource } from '@/database/repository/relationships';
 import type { JsonObject } from '@/types/index';
 import { getConfig } from '@/config/registry';
-import { createRelationshipStorage } from '@/database/storage/relationships';
+import { createRelationshipRepository } from '@/database/repository/relationships';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { collectRelationshipEdges } from '@/fields/relationship-edges';
-import { createUserStorage } from '../storage';
+import { createUserRepository } from '../repository';
 
 /**
  * Re-index a user's relationship fields. `fields` must be post-`parseFields`
@@ -21,7 +21,7 @@ export async function indexUserRelationships(
     fields: JsonObject
 ): Promise<void> {
     const definitions = flattenFieldNodes(getConfig().users?.fields ?? []);
-    await createRelationshipStorage().replaceForSource(
+    await createRelationshipRepository().replaceForSource(
         { id, kind: 'user' },
         collectRelationshipEdges(definitions, fields)
     );
@@ -36,7 +36,7 @@ export async function collectUserRelationshipSources(): Promise<
     RelationshipIndexSource[]
 > {
     const definitions = flattenFieldNodes(getConfig().users?.fields ?? []);
-    const rows = await createUserStorage().list();
+    const rows = await createUserRepository().list();
     return rows.map((row) => ({
         source: { id: row.id, kind: 'user' as const },
         edges: collectRelationshipEdges(

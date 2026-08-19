@@ -136,7 +136,7 @@ export class InvalidReferencesFilterError extends Error {
 }
 
 /**
- * Thrown when `where: { references }` reaches a `tableStorage`-backed entry
+ * Thrown when `where: { references }` reaches a `tableRepository`-backed entry
  * type. That storage lists an arbitrary table and cannot compile the index
  * subquery, so the filter is refused rather than returning unfiltered rows.
  */
@@ -145,7 +145,7 @@ export class RelationshipFilterUnsupportedError extends Error {
 
     constructor(entryType: string) {
         super(
-            `Entry type '${entryType}' is backed by tableStorage, which cannot ` +
+            `Entry type '${entryType}' is backed by tableRepository, which cannot ` +
                 `filter on the relationships index. \`where: { references }\` ` +
                 `requires the built-in entry storage.`
         );

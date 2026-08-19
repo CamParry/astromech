@@ -10,7 +10,7 @@ import type { Role, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { mountRouter, roleWith } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createMediaStorage } from '@/media/storage';
+import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
 
@@ -42,7 +42,7 @@ beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeTestConfig());
     setStorageDriver(noopStorage);
-    const row = await createMediaStorage().create({
+    const row = await createMediaRepository().create({
         filename: 'a.png',
         mimeType: 'image/png',
         size: 1,

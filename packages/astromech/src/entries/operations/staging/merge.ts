@@ -1,21 +1,21 @@
-import type { EntryStorage, StorageDb } from '../../storage/types';
+import type { EntryRepository, RepositoryDb } from '../../repository/types';
 import type { Entry, JsonObject } from '@/types/index';
 import { getConfig } from '@/config/registry';
-import { createRelationshipStorage } from '@/database/storage/relationships';
+import { createRelationshipRepository } from '@/database/repository/relationships';
 import { resolveEntryType } from '@/entries/type-ids.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { assertNoFieldErrors, parseFields } from '@/fields/parse-fields';
 import { getCurrentUser } from '@/request-context/index';
 import { asEntry, loadAndAssertType } from '../../internal/records';
 import { indexEntryRelationships } from '../../internal/relationships';
-import { getStagingStorage, isVersioningEnabled } from '../../internal/type-config';
+import { getStagingRepository, isVersioningEnabled } from '../../internal/type-config';
 import { createEntryLookups } from '../../lookups';
 import { entryValidationMode } from '../../validation-mode.shared';
 
 export async function mergeStaged(params: { type: string; id: string }): Promise<Entry> {
     const { type, id } = params;
-    const { storage, staging } = getStagingStorage(type);
-    const canonical = await loadAndAssertType(storage, type, id);
+    const { repository, staging } = getStagingRepository(type);
+    const canonical = await loadAndAssertType(repository, type, id);
     const staged = await staging.getByCanonical(id);
     if (!staged) throw new Error(`No staged change for entry '${id}'`);
 
@@ -42,7 +42,7 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
             // the uniqueness scan: the canonical (about to be overwritten with
             // it) and the staged row (about to be deleted). Excluding only one
             // makes every `unique` field collide with its own other copy.
-            lookups: createEntryLookups(storage, {
+            lookups: createEntryLookups(repository, {
                 type,
                 locale: canonical.locale,
                 excludeId: [id, staged.id],
@@ -56,14 +56,14 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
     const versioningOn = isVersioningEnabled(type);
 
     const run = async (
-        txStorage: EntryStorage,
-        txDb: StorageDb | undefined
+        txRepository: EntryRepository,
+        txDb: RepositoryDb | undefined
     ): Promise<Entry> => {
         // 1. Backup (conditional on versioning): snapshot the canonical first so
         //    a partial failure leaves a recoverable version.
-        if (versioningOn && txStorage.versions) {
-            const latestNumber = await txStorage.versions.latestNumber(id);
-            await txStorage.versions.create({
+        if (versioningOn && txRepository.versions) {
+            const latestNumber = await txRepository.versions.latestNumber(id);
+            await txRepository.versions.create({
                 entryId: id,
                 versionNumber: latestNumber + 1,
                 title: canonical.title,
@@ -77,7 +77,7 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
         //    refs stable) with the staged content. Status is intentionally
         //    left untouched: merging is content-only — publishing (or not) is
         //    a separate action, so an unpublished canonical stays unpublished.
-        const updated = await txStorage.update(id, {
+        const updated = await txRepository.update(id, {
             title: staged.title,
             fields: mergedFields,
         });
@@ -88,11 +88,13 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
 
         // 3. Cleanup: hard-delete the staged entry (its versions cascade; its
         //    index rows are not FK-bound, so drop them explicitly).
-        await createRelationshipStorage(txDb).deleteByResource(staged.id, 'entry');
-        await txStorage.delete(staged.id);
+        await createRelationshipRepository(txDb).deleteByResource(staged.id, 'entry');
+        await txRepository.delete(staged.id);
 
         return asEntry(updated);
     };
 
-    return storage.transaction ? storage.transaction(run) : run(storage, undefined);
+    return repository.transaction
+        ? repository.transaction(run)
+        : run(repository, undefined);
 }

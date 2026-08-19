@@ -46,7 +46,7 @@ export function resolvePluginEntries(
             types[type] = toResolvedEntryType(
                 `${name}/${type}`,
                 entryType,
-                entryType.storage?.supports ?? BUILT_IN_SUPPORTS
+                entryType.repository?.supports ?? BUILT_IN_SUPPORTS
             );
         }
         pluginEntries[name] = types;

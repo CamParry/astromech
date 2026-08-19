@@ -12,8 +12,8 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { defineTable } from '@/database/define-table';
+import { tableRepository } from '@/entries/repository/table';
 import { entriesService as api } from '@/entries/service';
-import { tableStorage } from '@/entries/storage/table';
 
 const linksTable = defineTable('test_links', ({ col }) => ({
     id: col.id(),
@@ -35,7 +35,7 @@ function linksPlugin(): PluginDefinition {
                 statuses: false,
                 slug: false,
                 trash: false,
-                storage: tableStorage(linksTable),
+                repository: tableRepository(linksTable),
                 fields: [
                     { name: 'label', type: 'text', label: 'Label' },
                     { name: 'post', type: 'relationship', label: 'Post', target: 'post' },
