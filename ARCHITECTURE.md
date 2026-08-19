@@ -87,7 +87,7 @@ Key invariants:
   map, so one module can be instantiated more than once in a process and the
   global is the only slot every copy shares. `createRegistry`
   is a single-value slot: required ones resolve-or-throw, genuinely optional ones
-  expose `peek()` and no `get()` at all. `createKeyedRegistry` is the same slot keyed
+  expose `tryGet()` and no `get()` at all. `createKeyedRegistry` is the same slot keyed
   by string, for the per-type and per-name override maps.
   The namespace also carries a few **process guards** — a cron tick lock and
   interval handle, the duplicate-admin-UI check — as plain keys read directly

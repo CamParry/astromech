@@ -1,6 +1,7 @@
 /**
- * The registration steps the create sequence runs: fill the driver slots the
- * domains read, and register the plugin runtime (ports, plugins, manifest).
+ * The registration steps the create sequence runs: fill the backend slots the
+ * domains read, register the built-in cron jobs, and register the plugin runtime
+ * (ports, plugins, manifest).
  */
 
 import type { DB } from '@/database/types';
@@ -10,10 +11,15 @@ import { buildAIConfig } from '@/ai/middleware';
 import { setAIConfig } from '@/ai/registry';
 import { setMethodManifest } from '@/codegen/manifest-registry';
 import { generateMethodManifest } from '@/codegen/method-manifest';
-import { resolveSchedulerDriver, setSchedulerDriver } from '@/cron/registry';
+import {
+    registerCronJob,
+    resolveSchedulerDriver,
+    setSchedulerDriver,
+} from '@/cron/registry';
 import { setDatabaseDriver } from '@/database/driver-registry';
 import { setDb } from '@/database/registry';
 import { setEmailDriver } from '@/email/registry';
+import { entryJobs } from '@/entries/index';
 import { setEntryAccess } from '@/entries/plugin-access';
 import { setImageConfig } from '@/media/serving/image/registry';
 import { setNotifyAccess } from '@/notifications/plugin-access';
@@ -23,8 +29,8 @@ import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { setStorageDriver } from '@/storage/registry';
 import { defaultImageWidths, normaliseWidths } from '@/utilities/image-widths';
 
-/** Fill every driver slot the domains read. */
-export async function registerDrivers(
+/** Fill every backend slot the domains read: the database, storage, image, email, AI, and scheduler. */
+export async function registerBackends(
     config: AstromechConfig,
     db: Kysely<DB>
 ): Promise<void> {
@@ -48,6 +54,11 @@ export async function registerDrivers(
     }
 
     setSchedulerDriver(resolveSchedulerDriver(config.scheduler));
+}
+
+/** Register the built-in cron jobs each domain ships. */
+export function registerBuiltInJobs(): void {
+    for (const job of entryJobs) registerCronJob(job);
 }
 
 /**
