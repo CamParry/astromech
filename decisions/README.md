@@ -108,3 +108,4 @@ Distinct from the neighbouring directories:
 - [0066](0066-the-astromech-prefix-is-a-log-device.md) — the `[Astromech]` prefix moves out of error messages into `log`; thrown errors identify by type (`AstromechError`), wire errors carry clean messages
 - [0067](0067-the-registry-probe-is-tryget.md) — the registry probe is renamed `peek` → `tryGet`; `get` stays the throwing read, and `peekDatabaseDriver` becomes `tryGetDatabaseDriver`
 - [0068](0068-the-create-sequence-registers-backends-and-jobs.md) — `registerDrivers` becomes `registerBackends`, and built-in cron jobs register through one `registerBuiltInJobs` aggregator instead of a call per domain in `build`
+- [0069](0069-the-build-sequence-is-flat-and-the-probe-is-maybeget.md) — the probe is `maybeGet`, and `build` runs the boot sequence inline (deleting `registrations.ts`), keeping only `registerBuiltInJobs`; supersedes 0067 and 0068

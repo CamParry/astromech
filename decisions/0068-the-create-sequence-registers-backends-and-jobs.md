@@ -1,7 +1,7 @@
 # 0068 — The create sequence registers backends and built-in jobs
 
 **Date:** 2026-08-19
-**Status:** accepted
+**Status:** superseded by 0069
 
 Two naming/structure choices in the create sequence (`build` in
 `src/astromech.ts`, its steps in `src/registrations.ts`).

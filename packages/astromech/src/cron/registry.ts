@@ -30,19 +30,19 @@ export type CronJob = {
 const jobs = createRegistry<CronJob[]>('cronJobs', { required: false });
 
 export function registerCronJob(job: CronJob): void {
-    const list = jobs.tryGet() ?? [];
+    const list = jobs.maybeGet() ?? [];
     list.push(job);
     jobs.set(list);
 }
 
 export function getCronJobs(): CronJob[] {
-    return jobs.tryGet() ?? [];
+    return jobs.maybeGet() ?? [];
 }
 
 const scheduler = createRegistry<SchedulerDriver>('scheduler', { required: false });
 
 export const setSchedulerDriver = scheduler.set;
-export const getSchedulerDriver = scheduler.tryGet;
+export const getSchedulerDriver = scheduler.maybeGet;
 
 /**
  * The driver factory an integration nominates for a config naming no scheduler.
@@ -58,5 +58,5 @@ export const setDefaultScheduler = defaultScheduler.set;
 
 /** The config's driver, else the integration's default, else the in-process ticker. */
 export function resolveSchedulerDriver(configured?: SchedulerDriver): SchedulerDriver {
-    return configured ?? defaultScheduler.tryGet()?.() ?? interval();
+    return configured ?? defaultScheduler.maybeGet()?.() ?? interval();
 }

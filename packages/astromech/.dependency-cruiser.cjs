@@ -20,7 +20,7 @@
  * package `exports` boundaries, not this scan.
  *
  * The composition root is the root-level src modules (astromech.ts,
- * registrations.ts, plugin-access.ts) — not a layer directory. It sits at the
+ * plugin-access.ts) — not a layer directory. It sits at the
  * top of the DAG and may import from any layer below it.
  *
  * Domains may read one another. The module split is for organisation, not
@@ -88,13 +88,13 @@ const UNLAYERED = ['exports'];
 
 /**
  * The composition root: root-level src modules (not in any layer directory).
- * `astromech.ts` is the front door (createAstromech/getAstromech); `registrations.ts`
- * and `plugin-access.ts` are the wiring it calls. They sit at the top of the DAG:
- * they may import any layer, no layer below the entrypoints tier may import them,
- * and no browser bundle may hold them (they drag `virtual:astromech/config` and the
- * whole driver graph with them).
+ * `astromech.ts` is the front door (createAstromech/getAstromech) and runs the
+ * boot sequence; `plugin-access.ts` is wiring it calls. They sit at the top of
+ * the DAG: they may import any layer, no layer below the entrypoints tier may
+ * import them, and no browser bundle may hold them (they drag
+ * `virtual:astromech/config` and the whole driver graph with them).
  */
-const COMPOSITION_ROOT = '^src/(astromech|registrations|plugin-access)\\.ts$';
+const COMPOSITION_ROOT = '^src/(astromech|plugin-access)\\.ts$';
 
 /**
  * Sources exempt from their layer's generated no-upward rule.

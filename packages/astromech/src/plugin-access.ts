@@ -8,9 +8,8 @@
  * Exposed as an explicit `setPluginAccess()` CALL rather than an import
  * side-effect: the package is `sideEffects: false`, so a bare
  * `import './plugin-access'` would be tree-shaken out of the build and the ports
- * would never register. `registrations.ts`'s `registerPluginRuntime` calls this
- * once before `registerPlugins`, next to `setEntryAccess()` and
- * `setNotifyAccess()`.
+ * would never register. `build` in `astromech.ts` calls this once before
+ * `registerPlugins`, next to `setEntryAccess()` and `setNotifyAccess()`.
  *
  * What is injected is the named slice, never the application instance: the six
  * handles carry no `config`, no `fetch` and no `scheduled`, so a plugin cannot

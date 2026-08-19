@@ -11,4 +11,4 @@ export type ResolvedImageConfig = {
 const image = createRegistry<ResolvedImageConfig>('image', { required: false });
 
 export const setImageConfig = image.set;
-export const getImageConfig = image.tryGet;
+export const getImageConfig = image.maybeGet;

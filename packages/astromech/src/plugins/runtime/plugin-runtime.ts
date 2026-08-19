@@ -44,7 +44,7 @@ import type { Kysely } from 'kysely';
 import type { ReactElement } from 'react';
 import { registerCronJob } from '@/cron/registry';
 import { kyselyTableKey, registerTableCodec } from '@/database/codec';
-import { tryGetDatabaseDriver } from '@/database/driver-registry';
+import { maybeGetDatabaseDriver } from '@/database/driver-registry';
 import { getDb } from '@/database/registry';
 import { getEmailDriver } from '@/email/registry';
 import { renderEmail } from '@/email/render';
@@ -105,7 +105,7 @@ const runtime = createRegistry<PluginRuntimeState>('pluginRuntime', {
 
 /** The runtime state, built empty on first use. */
 function state(): PluginRuntimeState {
-    const existing = runtime.tryGet();
+    const existing = runtime.maybeGet();
     if (existing) return existing;
     const created: PluginRuntimeState = {
         config: null,
@@ -483,7 +483,7 @@ export function createPluginContext(
         get database(): PluginDatabase {
             // Probes rather than throws: plugin unit tests build a context
             // without ever wiring a db driver, and read `dialect` from it.
-            const drv = tryGetDatabaseDriver();
+            const drv = maybeGetDatabaseDriver();
             const dialect = drv?.type ?? 'unknown';
             const dump = drv?.dump?.bind(drv);
             const restore = drv?.restore?.bind(drv);
