@@ -2,7 +2,7 @@
  * Configuration types — collection config, drivers, Astromech config
  */
 
-import type { AIConfig } from './ai';
+import type { AiConfig } from './ai';
 import type { Permission, Role } from './domain';
 import type {
     EntryFields,
@@ -459,7 +459,7 @@ export type AstromechConfig = {
     /** Email sending. The driver carries its own `from`; absent means no email. */
     email?: EmailDriver;
     /** Model access. Absent unless configured; see `getModel`. */
-    ai?: AIConfig;
+    ai?: AiConfig;
     /** Triggering driver for scheduled jobs. Default: `interval()`. */
     scheduler?: SchedulerDriver;
     /**

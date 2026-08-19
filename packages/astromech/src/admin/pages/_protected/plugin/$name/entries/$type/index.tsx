@@ -19,7 +19,7 @@ import {
     validateEntriesListSearch,
 } from '@/admin/components/entries/mount';
 import { EmptyState, Page, PageContent } from '@/admin/components/ui/index';
-import { useAIContext } from '@/admin/context/ai-context';
+import { useAiContext } from '@/admin/context/ai-context';
 import { astromechClient } from '@/transport/http/client/index';
 
 function PluginEntryListPage(): React.ReactElement {
@@ -28,7 +28,7 @@ function PluginEntryListPage(): React.ReactElement {
     const api = astromechClient.entries as unknown as EntriesService;
     const mount = buildPluginEntriesMount(adminConfig.plugins, name, type, api);
     // The mount carries the qualified type id the entries service addresses.
-    useAIContext(
+    useAiContext(
         mount !== null
             ? {
                   kind: 'entries',

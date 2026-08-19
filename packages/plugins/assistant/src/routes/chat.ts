@@ -10,7 +10,7 @@ import type {
     ChatRequest,
     ResolvedAssistantOptions,
 } from '../types';
-import type { AIContextItem, PluginContext, PluginRawRoute } from 'astromech';
+import type { AiContextItem, PluginContext, PluginRawRoute } from 'astromech';
 import { getModel } from 'astromech';
 import { createApprovalsStorage } from '../approvals/storage';
 import { createSessionsStorage } from '../sessions/storage';
@@ -101,7 +101,7 @@ async function handleChat(
 
 /**
  * Parse the browser's body, or null when it is not a chat request. The
- * `aiContext` items stay unchecked past being an array: `formatAIContextMessage`
+ * `aiContext` items stay unchecked past being an array: `formatAiContextMessage`
  * sanitises every value it interpolates.
  *
  * Trust boundary: a client holding the transcript can forge a tool result.
@@ -134,7 +134,7 @@ export async function readChatRequest(request: Request): Promise<ChatRequest | n
 
     if (aiContext === undefined) return { messages, ...answered };
     if (!Array.isArray(aiContext)) return null;
-    return { messages, aiContext: aiContext as AIContextItem[], ...answered };
+    return { messages, aiContext: aiContext as AiContextItem[], ...answered };
 }
 
 /** Is this an array of `{ approvalId, action }` answers? */

@@ -124,7 +124,7 @@ export type { RelationshipEdge, TargetKind } from '@/fields/relationship-edges';
 // The AI context formatter ships from the plugin-authoring surface as well as
 // `astromech/methods`: a plugin building a chat request needs it, and this is
 // the only barrel it may import.
-export { formatAIContextMessage } from '@/utilities/ai-context';
+export { formatAiContextMessage } from '@/utilities/ai-context';
 
 // ============================================================================
 // Config / Collection / Plugin Helpers

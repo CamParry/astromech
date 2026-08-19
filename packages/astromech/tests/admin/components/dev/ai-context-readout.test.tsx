@@ -6,17 +6,17 @@
  * verbatim rather than a rendering of its own.
  */
 
-import type { AIContextReference } from '@/types/ai-context';
+import type { AiContextReference } from '@/types/ai-context';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { AIContextReadout } from '@/admin/components/dev/ai-context-readout';
-import { AIContextProvider, useAIContext } from '@/admin/context/ai-context';
-import { formatAIContextMessage } from '@/utilities/ai-context';
+import { AiContextReadout } from '@/admin/components/dev/ai-context-readout';
+import { AiContextProvider, useAiContext } from '@/admin/context/ai-context';
+import { formatAiContextMessage } from '@/utilities/ai-context';
 
-const postsList: AIContextReference = { kind: 'entries', type: 'posts', label: 'Posts' };
+const postsList: AiContextReference = { kind: 'entries', type: 'posts', label: 'Posts' };
 
-describe('AIContextReadout', () => {
+describe('AiContextReadout', () => {
     beforeEach(() => {
         localStorage.clear();
     });
@@ -34,7 +34,7 @@ describe('AIContextReadout', () => {
 
         mounted.click();
 
-        const expected = formatAIContextMessage([
+        const expected = formatAiContextMessage([
             { reference: postsList, depth: 0, order: 0 },
         ]);
         expect(mounted.host.querySelector('pre')?.textContent).toBe(expected?.content);
@@ -72,9 +72,9 @@ type Mounted = {
 };
 
 /** Mount the readout under a provider with one declaring route. */
-function mountReadout(reference: AIContextReference | null): Mounted {
+function mountReadout(reference: AiContextReference | null): Mounted {
     function DeclaringRoute(): null {
-        useAIContext(reference);
+        useAiContext(reference);
         return null;
     }
 
@@ -83,10 +83,10 @@ function mountReadout(reference: AIContextReference | null): Mounted {
     const root = createRoot(host);
     act(() => {
         root.render(
-            <AIContextProvider>
+            <AiContextProvider>
                 <DeclaringRoute />
-                <AIContextReadout />
-            </AIContextProvider>
+                <AiContextReadout />
+            </AiContextProvider>
         );
     });
 

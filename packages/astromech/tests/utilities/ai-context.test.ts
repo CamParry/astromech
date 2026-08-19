@@ -1,23 +1,23 @@
-import type { AIContextItem } from '@/types/ai-context';
+import type { AiContextItem } from '@/types/ai-context';
 import { describe, expect, it } from 'vitest';
-import { formatAIContextMessage } from '@/utilities/ai-context';
+import { formatAiContextMessage } from '@/utilities/ai-context';
 
 /** Build a single-reference list so a line can be asserted in isolation. */
-function lineFor(reference: AIContextItem['reference']): string {
-    const message = formatAIContextMessage([{ reference, depth: 0, order: 0 }]);
+function lineFor(reference: AiContextItem['reference']): string {
+    const message = formatAiContextMessage([{ reference, depth: 0, order: 0 }]);
     return (message?.content.split('\n')[1] ?? '').replace('1. ', '');
 }
 
-describe('formatAIContextMessage', () => {
+describe('formatAiContextMessage', () => {
     describe('empty input', () => {
         it('returns null', () => {
-            expect(formatAIContextMessage([])).toBeNull();
+            expect(formatAiContextMessage([])).toBeNull();
         });
     });
 
     describe('ordering', () => {
         it('sorts by depth ascending', () => {
-            const message = formatAIContextMessage([
+            const message = formatAiContextMessage([
                 { reference: { kind: 'pages', label: 'Deep' }, depth: 2, order: 0 },
                 { reference: { kind: 'pages', label: 'Shallow' }, depth: 0, order: 0 },
                 { reference: { kind: 'pages', label: 'Middle' }, depth: 1, order: 0 },
@@ -28,7 +28,7 @@ describe('formatAIContextMessage', () => {
         });
 
         it('breaks depth ties by order ascending', () => {
-            const message = formatAIContextMessage([
+            const message = formatAiContextMessage([
                 { reference: { kind: 'pages', label: 'Third' }, depth: 1, order: 9 },
                 { reference: { kind: 'pages', label: 'First' }, depth: 1, order: 1 },
                 { reference: { kind: 'pages', label: 'Second' }, depth: 1, order: 4 },
@@ -39,11 +39,11 @@ describe('formatAIContextMessage', () => {
         });
 
         it('does not mutate the input array', () => {
-            const items: AIContextItem[] = [
+            const items: AiContextItem[] = [
                 { reference: { kind: 'pages', label: 'B' }, depth: 2, order: 0 },
                 { reference: { kind: 'pages', label: 'A' }, depth: 0, order: 0 },
             ];
-            formatAIContextMessage(items);
+            formatAiContextMessage(items);
             expect(items.map((item) => item.reference.label)).toEqual(['B', 'A']);
         });
     });
@@ -117,7 +117,7 @@ describe('formatAIContextMessage', () => {
 
     describe('message shape', () => {
         it('pins the exact content of a two-item list', () => {
-            const message = formatAIContextMessage([
+            const message = formatAiContextMessage([
                 {
                     reference: {
                         kind: 'entries',
@@ -147,7 +147,7 @@ describe('formatAIContextMessage', () => {
 
     describe('sanitization', () => {
         it('collapses a newline-bearing label onto a single line', () => {
-            const message = formatAIContextMessage([
+            const message = formatAiContextMessage([
                 {
                     reference: {
                         kind: 'pages',
@@ -194,7 +194,7 @@ describe('formatAIContextMessage', () => {
         });
 
         it('appends the trust line when there is at least one item', () => {
-            const message = formatAIContextMessage([
+            const message = formatAiContextMessage([
                 { reference: { kind: 'pages', label: 'Dashboard' }, depth: 0, order: 0 },
             ]);
             expect(message?.content).toContain(
@@ -203,7 +203,7 @@ describe('formatAIContextMessage', () => {
         });
 
         it('still returns null for an empty list', () => {
-            expect(formatAIContextMessage([])).toBeNull();
+            expect(formatAiContextMessage([])).toBeNull();
         });
     });
 });

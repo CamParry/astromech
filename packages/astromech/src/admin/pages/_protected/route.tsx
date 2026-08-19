@@ -1,8 +1,8 @@
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { AppShell } from '../../components/layout/app-shell';
-import { AIContextProvider } from '../../context/ai-context';
+import { AiContextProvider } from '../../context/ai-context';
 import { sessionQueryOptions } from '../../context/auth';
-import { UIProvider } from '../../context/ui';
+import { UiProvider } from '../../context/ui';
 import { hasPermission } from '../../hooks/use-permissions';
 
 export const Route = createFileRoute('/_protected')({
@@ -19,10 +19,10 @@ export const Route = createFileRoute('/_protected')({
 
 function ProtectedLayout() {
     return (
-        <UIProvider>
-            <AIContextProvider>
+        <UiProvider>
+            <AiContextProvider>
                 <AppShell />
-            </AIContextProvider>
-        </UIProvider>
+            </AiContextProvider>
+        </UiProvider>
     );
 }

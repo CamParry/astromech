@@ -18,8 +18,8 @@ export {
 } from './command-palette';
 
 // AI context: declare what a surface is showing, or read what every surface declared.
-export { useAIContext, useAIContextItems } from '@/admin/context/ai-context';
-export type { AIContextItem } from '@/types/ai-context';
+export { useAiContext, useAiContextItems } from '@/admin/context/ai-context';
+export type { AiContextItem } from '@/types/ai-context';
 
 export { ApiErrorPanel, dispatchApiErrorEvent } from './api-error-panel';
 export type { ApiErrorEventDetail } from './api-error-panel';

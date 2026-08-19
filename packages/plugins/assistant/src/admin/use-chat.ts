@@ -5,7 +5,7 @@
 
 import type { ChatSession } from '../service/sessions';
 import type { ApprovalDecision, ApprovalRequest, ChatEvent, ChatMessage } from '../types';
-import { useAIContextItems, useAstromechPlugin } from 'astromech/ui/app';
+import { useAiContextItems, useAstromechPlugin } from 'astromech/ui/app';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { errorMessage } from '../error-message';
 import { parseChatEvent, splitSseFrames } from './sse';
@@ -66,7 +66,7 @@ export function useChat(): UseChat {
     const [isRestoring, setIsRestoring] = useState(true);
     const [pending, setPending] = useState<ApprovalRequest[]>([]);
     const [rejected, setRejected] = useState<RejectedCalls>({});
-    const aiContext = useAIContextItems();
+    const aiContext = useAiContextItems();
     const entriesRef = useRef<ChatEntry[]>([]);
     const pendingRef = useRef<ApprovalRequest[]>([]);
     const abortRef = useRef<AbortController | null>(null);

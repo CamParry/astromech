@@ -1,7 +1,7 @@
 /** Public options for the assistant plugin, and the chat wire types. */
 
 import type { AssistantModelMessage, ToolModelMessage, UserModelMessage } from 'ai';
-import type { AIContextItem } from 'astromech';
+import type { AiContextItem } from 'astromech';
 
 /**
  * The package name, as a literal. `definePluginTable` needs the package as a
@@ -35,8 +35,8 @@ export type ChatMessage = UserModelMessage | AssistantModelMessage | ToolModelMe
 /** The body posted to the chat route. */
 export type ChatRequest = {
     messages: ChatMessage[];
-    /** What the admin route the user is on declared, from `useAIContextItems()`. */
-    aiContext?: AIContextItem[];
+    /** What the admin route the user is on declared, from `useAiContextItems()`. */
+    aiContext?: AiContextItem[];
     /** Answers to the approvals the previous response paused on. */
     decisions?: ApprovalDecision[];
 };

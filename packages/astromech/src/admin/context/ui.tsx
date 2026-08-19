@@ -11,7 +11,7 @@ import React, { createContext, useContext, useState } from 'react';
 // Types
 // ============================================================================
 
-type UIContextValue = {
+type UiContextValue = {
     sidebarOpen: boolean;
     toggleSidebar: () => void;
     setSidebarOpen: (open: boolean) => void;
@@ -23,17 +23,17 @@ type UIContextValue = {
 // Context
 // ============================================================================
 
-const UIContext = createContext<UIContextValue | null>(null);
+const UiContext = createContext<UiContextValue | null>(null);
 
 // ============================================================================
 // Provider
 // ============================================================================
 
-type UIProviderProps = {
+type UiProviderProps = {
     children: React.ReactNode;
 };
 
-export function UIProvider({ children }: UIProviderProps) {
+export function UiProvider({ children }: UiProviderProps) {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
@@ -42,7 +42,7 @@ export function UIProvider({ children }: UIProviderProps) {
     }
 
     return (
-        <UIContext.Provider
+        <UiContext.Provider
             value={{
                 sidebarOpen,
                 toggleSidebar,
@@ -52,7 +52,7 @@ export function UIProvider({ children }: UIProviderProps) {
             }}
         >
             {children}
-        </UIContext.Provider>
+        </UiContext.Provider>
     );
 }
 
@@ -60,10 +60,10 @@ export function UIProvider({ children }: UIProviderProps) {
 // Hook
 // ============================================================================
 
-export function useUI(): UIContextValue {
-    const ctx = useContext(UIContext);
+export function useUi(): UiContextValue {
+    const ctx = useContext(UiContext);
     if (ctx === null) {
-        throw new Error('useUI must be used within a UIProvider');
+        throw new Error('useUi must be used within a UiProvider');
     }
     return ctx;
 }

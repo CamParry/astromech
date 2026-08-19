@@ -8,16 +8,16 @@
 import { Dialog } from '@base-ui/react/dialog';
 import { Outlet } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { useUI } from '../../context/ui';
+import { useUi } from '../../context/ui';
 import { useHotkeys } from '../../hooks/index';
-import { AIContextReadout } from '../dev/ai-context-readout';
+import { AiContextReadout } from '../dev/ai-context-readout';
 import { PluginSlot } from '../plugins/PluginSlot';
 import { CommandPalette, CommandPaletteProvider } from '../ui/command-palette';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
 
 export function AppShell() {
-    const { sidebarOpen, setSidebarOpen, shortcutsOpen, setShortcutsOpen } = useUI();
+    const { sidebarOpen, setSidebarOpen, shortcutsOpen, setShortcutsOpen } = useUi();
     const { t } = useTranslation();
 
     useHotkeys('?', () => setShortcutsOpen(true));
@@ -48,7 +48,7 @@ export function AppShell() {
             </div>
             <CommandPalette />
             <PluginSlot name="global-overlay" />
-            {import.meta.env.DEV ? <AIContextReadout /> : null}
+            {import.meta.env.DEV ? <AiContextReadout /> : null}
 
             <Dialog.Root open={shortcutsOpen} onOpenChange={setShortcutsOpen}>
                 <Dialog.Portal>

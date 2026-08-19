@@ -6,19 +6,19 @@
  */
 
 import type { ChatMessage } from '../../src/types';
-import type { AIContextItem } from 'astromech';
-import { formatAIContextMessage } from 'astromech';
+import type { AiContextItem } from 'astromech';
+import { formatAiContextMessage } from 'astromech';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildRequest, SYSTEM_PROMPT } from '../../src/loop/request';
 
 // Only placement is under test, so the formatter returns a fixed marker.
 vi.mock('astromech', () => ({
-    formatAIContextMessage: vi.fn(),
+    formatAiContextMessage: vi.fn(),
 }));
 
 const CONTEXT = { role: 'system' as const, content: '<<context>>' };
 
-const items: AIContextItem[] = [
+const items: AiContextItem[] = [
     { reference: { kind: 'pages', label: 'Dashboard' }, depth: 0, order: 0 },
 ];
 
@@ -34,7 +34,7 @@ const conversation: ChatMessage[] = [
 ];
 
 beforeEach(() => {
-    vi.mocked(formatAIContextMessage).mockReturnValue(CONTEXT);
+    vi.mocked(formatAiContextMessage).mockReturnValue(CONTEXT);
 });
 
 describe('buildRequest', () => {
@@ -98,7 +98,7 @@ describe('buildRequest', () => {
     });
 
     it('leaves the prompt and turns alone when there is no context', () => {
-        vi.mocked(formatAIContextMessage).mockReturnValue(null);
+        vi.mocked(formatAiContextMessage).mockReturnValue(null);
 
         const { system, messages } = buildRequest(conversation, []);
 

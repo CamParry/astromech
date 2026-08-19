@@ -9,14 +9,14 @@
 import type { LanguageModelV4 } from '@ai-sdk/provider';
 import { createRegistry } from '@/utilities/registry';
 
-type WrappedAIConfig = {
+type WrappedAiConfig = {
     model: LanguageModelV4;
     models: Record<string, LanguageModelV4>;
 };
 
-const ai = createRegistry<WrappedAIConfig>('ai', { required: false });
+const ai = createRegistry<WrappedAiConfig>('ai', { required: false });
 
-export const setAIConfig = ai.set;
-export const getAIConfig = ai.get;
+export const setAiConfig = ai.set;
+export const getAiConfig = ai.get;
 
-export type { WrappedAIConfig };
+export type { WrappedAiConfig };

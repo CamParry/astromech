@@ -287,7 +287,7 @@ Distinct from **AI context** below, and the two are at different layers rather t
 
 ## AI context
 
-What an admin route declares about the thing the user is currently looking at, so a model can resolve "this page" or "this field". A route contributes an `AIContextReference` (`{ kind, type?, id?, label }`) via `useAIContext`; the chat drawer assembles the current ordered set into a `role: 'system'` message inside `messages[]` — never into the system prompt, which would invalidate the prompt cache on every navigation.
+What an admin route declares about the thing the user is currently looking at, so a model can resolve "this page" or "this field". A route contributes an `AiContextReference` (`{ kind, type?, id?, label }`) via `useAiContext`; the chat drawer assembles the current ordered set into a `role: 'system'` message inside `messages[]` — never into the system prompt, which would invalidate the prompt cache on every navigation.
 
 Contributions are ordered, not a flat set: a layout, its route and a focused field editor can all contribute at once, and order is what decides which one "this" refers to.
 

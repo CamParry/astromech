@@ -41,32 +41,42 @@ One branch, one commit per workstream.
 
 ### WS1 — registry primitive: `get` / `getOrThrow`
 
-- [ ] In `packages/astromech/src/utilities/registry.ts` (both `createRegistry`
+- [x] In `packages/astromech/src/utilities/registry.ts` (both `createRegistry`
       and `createKeyedRegistry`): rename `maybeGet` → `get` (nullable) and the
       current throwing `get` → `getOrThrow`.
-- [ ] Wrapper functions across the subsystem registries keep their bare `get*`
+- [x] Wrapper functions across the subsystem registries keep their bare `get*`
       names. Nullable ones (`getEmailDriver`, `getSchedulerDriver`,
-      `getAiConfig`, `getMethodManifest`, `getModel`) now read naturally
+      `getAiConfig`, `getMethodManifest`, `getImageConfig`) now read naturally
       against the primitive; throwing ones (`getDb`, `getStorageDriver`,
       `getConfig`, …) state the throw in their doc comment.
-- [ ] `packages/astromech/src/database/driver-registry.ts` exports both
+- [x] `packages/astromech/src/database/driver-registry.ts` exports both
       variants, so it takes the suffix: `getDatabaseDriver` becomes the
       nullable read, the throwing read becomes `getDatabaseDriverOrThrow`,
       and `maybeGetDatabaseDriver` is deleted. Update call sites.
-- [ ] Write the `decisions/` record superseding 0069.
+- [x] Write the `decisions/` record superseding 0069 —
+      `decisions/0072-the-registry-probe-is-get.md`. `getModel` does not
+      exist; the nullable wrapper the audit missed is `getImageConfig`.
 
 ### WS2 — acronym casing sweep
 
-- [ ] `AI` → `Ai` (~16 identifiers): `AIConfig`, `setAIConfig`, `getAIConfig`,
-      `buildAIConfig`, `WrappedAIConfig`, `formatAIContextMessage`,
-      `AIContextStore`, `createAIContextStore`, `AIContextProvider`,
-      `useAIContext`, `useAIContextItems`, `AIContextReadout`,
-      `AIContextKind`, `AIContextReference`, `AIContextItem`.
-- [ ] `URL` → `Url` in Astromech-owned identifiers only. Platform globals
-      (`URL`, `URLSearchParams`) are untouched.
-- [ ] `UI` → `Ui`: `UIProvider` and any siblings.
-- [ ] Write the `decisions/` record (the "no length exception" choice is the
-      part a future contributor would re-litigate).
+- [x] `AI` → `Ai` (18 identifiers): the `AiConfig` set (`AiConfig`,
+      `WrappedAiConfig`, `setAiConfig`, `getAiConfig`, `buildAiConfig`) and the
+      `AiContext*` family (`AiContextItem`, `AiContextReference`,
+      `AiContextKind`, `AiContextStore`, `AiContextStoreContext`,
+      `createAiContextStore`, `AiContextProvider`, `AiContextProviderProps`,
+      `useAiContext`, `useAiContextItems`, `useAiContextStore`,
+      `AiContextReadout`, `formatAiContextMessage`).
+- [x] `URL` → `Url`: nothing to do. Every Astromech-owned identifier was
+      already `Url` (`coerceUrl`, `getSignedUploadUrl`, `publicUrl`). The
+      all-caps hits are platform globals (`URL`, `URLSearchParams`), Node's
+      `fileURLToPath`, better-auth's `baseURL` config key, and SCREAMING_SNAKE
+      env vars.
+- [x] `UI` → `Ui`: `UiProvider`, `UiProviderProps`, `UiContext`,
+      `UiContextValue`, `useUi`. Declared in `admin/context/ui.tsx`, consumed
+      by the three layout components. Not on the public surface.
+- [x] Write the `decisions/` record (the "no length exception" choice is the
+      part a future contributor would re-litigate) —
+      `decisions/0073-acronyms-are-title-case.md`.
 
 ### WS3 — `storage` → `repository` for the data-access layer
 

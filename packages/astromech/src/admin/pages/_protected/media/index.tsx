@@ -27,7 +27,7 @@ import {
     UploadButton,
     useConfirm,
 } from '@/admin/components/ui/index';
-import { useAIContext } from '@/admin/context/ai-context';
+import { useAiContext } from '@/admin/context/ai-context';
 import {
     useBulkDeleteMedia,
     useMediaBrowser,
@@ -67,7 +67,7 @@ function MediaIndexPage(): React.ReactElement {
     const { canUploadMedia, canUpdateMedia, canDeleteMedia } = usePermissions();
     const { upload, isUploading } = useUploadMedia();
 
-    useAIContext({ kind: 'media', label: t('media.title') }, { depth: 0 });
+    useAiContext({ kind: 'media', label: t('media.title') }, { depth: 0 });
 
     const query: MediaBrowserQuery = {
         q,

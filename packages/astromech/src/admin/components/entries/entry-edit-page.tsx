@@ -59,7 +59,7 @@ import {
     useConfirm,
     useToast,
 } from '@/admin/components/ui/index';
-import { useAIContext } from '@/admin/context/ai-context';
+import { useAiContext } from '@/admin/context/ai-context';
 import {
     useCreateStaged,
     useDeleteStaged,
@@ -164,7 +164,7 @@ function EntryEditPageBody({
 
     // Declare the entry in view; `null` until it loads, so no placeholder label
     // is ever published. Serves the root and plugin routes alike.
-    useAIContext(
+    useAiContext(
         entry != null
             ? { kind: 'entries', type, id, label: entryLabel(entry, entryType) }
             : null,

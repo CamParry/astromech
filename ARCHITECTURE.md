@@ -292,7 +292,7 @@ export), `astromech/middleware`,
 `astromech/methods` (the server-side seam surface — the boot-generated method
 manifest via `getMethodManifest`, plus `buildDispatch`, `buildScopedDispatch`,
 `filterMethods`, `annotateManifest`, `scopedServices`, the confirmation helpers
-and `formatAIContextMessage`; **core-internal in practice — a plugin package
+and `formatAiContextMessage`; **core-internal in practice — a plugin package
 cannot import it, see "Plugin runtime boundary"**),
 `astromech/fields`, `astromech/database/schema`, `astromech/storage/{filesystem,r2,s3}`
 (storage drivers), `astromech/cloudflare` (binding-name resolution), and the

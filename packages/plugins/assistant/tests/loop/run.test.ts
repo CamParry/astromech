@@ -26,7 +26,7 @@ vi.mock('ai', async (importOriginal) => ({
 }));
 
 // The loop only reaches core to format AI context, and none is sent here.
-vi.mock('astromech', () => ({ formatAIContextMessage: vi.fn(() => null) }));
+vi.mock('astromech', () => ({ formatAiContextMessage: vi.fn(() => null) }));
 
 const streamTextMock = vi.mocked(streamText);
 

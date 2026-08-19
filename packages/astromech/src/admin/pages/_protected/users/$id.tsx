@@ -26,7 +26,7 @@ import {
     Stack,
     useConfirm,
 } from '@/admin/components/ui/index';
-import { useAIContext } from '@/admin/context/ai-context';
+import { useAiContext } from '@/admin/context/ai-context';
 import { useAuth } from '@/admin/context/auth';
 import {
     useDeleteUser,
@@ -68,7 +68,7 @@ function UserEditPage(): React.ReactElement {
 
     // Declare the user in view; `null` until they load. A blank name falls back
     // to the email, which every user has.
-    useAIContext(
+    useAiContext(
         user != null
             ? { kind: 'users', id, label: user.name !== '' ? user.name : user.email }
             : null,

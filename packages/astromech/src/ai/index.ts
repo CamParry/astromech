@@ -7,14 +7,14 @@
  */
 
 import type { LanguageModelV4 } from '@ai-sdk/provider';
-import { getAIConfig } from '@/ai/registry';
+import { getAiConfig } from '@/ai/registry';
 
 /**
  * The configured model, or the one registered under `name`. A name that is not
  * configured falls back to the default model.
  */
 export function getModel(name?: string): LanguageModelV4 | undefined {
-    const config = getAIConfig();
+    const config = getAiConfig();
     if (config === null) return undefined;
     if (name === undefined) return config.model;
     return config.models[name] ?? config.model;
