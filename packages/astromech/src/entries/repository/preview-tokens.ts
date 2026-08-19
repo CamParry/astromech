@@ -9,7 +9,7 @@
 import type { Db } from '@/database/types';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
-import { entryPreviewTokensTable } from '@/database/schema';
+import { entryPreviewTokensTable } from '@/database/tables';
 
 export type PreviewTokenRepository = ReturnType<typeof createPreviewTokenRepository>;
 

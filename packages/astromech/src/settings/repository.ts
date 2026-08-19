@@ -6,11 +6,11 @@
  * shape, not a query, so it stays in the service.
  */
 
-import type { SettingRow } from './schema';
+import type { SettingRow } from './tables';
 import type { Db } from '@/database/types';
 import type { JsonValue } from '@/types/index';
 import { createRepository } from '@/database/repository/create-repository';
-import { settingsTable } from '@/database/schema';
+import { settingsTable } from '@/database/tables';
 
 export type SettingsRepository = ReturnType<typeof createSettingsRepository>;
 

@@ -1,5 +1,5 @@
 import type { RelationshipIndexSource } from '@/database/repository/relationships';
-import type { RelationshipRow } from '@/database/schema';
+import type { RelationshipRow } from '@/database/tables';
 import type { TargetKind } from '@/fields/relationship-edges';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { collectEntryRelationshipSources } from '@/entries/internal/relationships';

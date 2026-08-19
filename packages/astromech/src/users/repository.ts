@@ -8,7 +8,7 @@
  * `where`, handed out by `query()`, so the two share one predicate.
  */
 
-import type { UserRow } from './schema';
+import type { UserRow } from './tables';
 import type { TableInsert } from '@/database/define-table';
 import type { Patch } from '@/database/repository/create-repository';
 import type { Db } from '@/database/types';
@@ -18,7 +18,7 @@ import { decodeWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
-import { usersTable } from '@/database/schema';
+import { usersTable } from '@/database/tables';
 
 type UsersEb = ExpressionBuilder<Record<string, Record<string, unknown>>, string>;
 

@@ -11,11 +11,11 @@
  * table's rows, not this one's.
  */
 
-import type { NewNotificationRow, NotificationRow } from './schema';
+import type { NewNotificationRow, NotificationRow } from './tables';
 import type { Db } from '@/database/types';
 import { encodeWith } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
-import { notificationsTable } from '@/database/schema';
+import { notificationsTable } from '@/database/tables';
 
 export type NotificationRepository = ReturnType<typeof createNotificationRepository>;
 

@@ -30,7 +30,7 @@
  * instance to the Kysely tx handle.
  */
 
-import type { EntryRow } from '../schema';
+import type { EntryRow } from '../tables';
 import type {
     Capability,
     EntryRepository,
@@ -53,7 +53,7 @@ import { decodeWith, encodePatchWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { existingResourceIds } from '@/database/repository/resource-existence';
-import { entriesTable } from '@/database/schema';
+import { entriesTable } from '@/database/tables';
 import { BUILT_IN_SUPPORTS } from '@/entries/capabilities';
 import { UnknownSortKeyError, UnknownWhereKeyError } from '../errors';
 import { createVersionRepository } from './versions';

@@ -13,7 +13,6 @@ import type { Table } from '@/database/define-table';
 import { serializeSnapshot } from '@astromech/schema-engine';
 import { describe, expect, it } from 'vitest';
 import { defineTable } from '@/database/define-table';
-import { cronTable, relationshipsTable } from '@/database/schema';
 import {
     columnType,
     createSnapshot,
@@ -24,8 +23,9 @@ import {
     toSnakeCase,
     toSnapshotTable,
 } from '@/database/table-snapshot';
-import { entriesTable, entryPreviewTokensTable } from '@/entries/schema';
-import { rolesTable } from '@/users/schema';
+import { cronTable, relationshipsTable } from '@/database/tables';
+import { entriesTable, entryPreviewTokensTable } from '@/entries/tables';
+import { rolesTable } from '@/users/tables';
 
 describe('toSnakeCase', () => {
     it('converts camelCase keys to snake_case identifiers', () => {

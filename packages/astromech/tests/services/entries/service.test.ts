@@ -15,7 +15,7 @@ import { createTestDb, registerTestPlugins, setupTestConfig } from '@tests/harne
 import { beforeEach, describe, expect, it } from 'vitest';
 import { decodeWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
-import { entriesTable } from '@/database/schema';
+import { entriesTable } from '@/database/tables';
 import { entriesService } from '@/entries/index';
 import { defineHook } from '@/plugins/define-hook';
 

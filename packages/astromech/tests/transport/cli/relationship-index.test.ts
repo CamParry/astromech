@@ -6,7 +6,7 @@
  * stored data. Everything else here is repair behaviour — detecting a deleted
  * row, a bogus row, staying idempotent, and staying inside a `--type` scope.
  */
-import type { RelationshipRow } from '@/database/schema';
+import type { RelationshipRow } from '@/database/tables';
 import type { AstromechConfig, PluginDefinition, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
@@ -14,7 +14,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { defineTable } from '@/database/define-table';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
-import { relationshipsTable } from '@/database/schema';
+import { relationshipsTable } from '@/database/tables';
 import { tableRepository } from '@/entries/repository/table';
 import { entriesService as api } from '@/entries/service';
 import { createMediaRepository } from '@/media/repository';

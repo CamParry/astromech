@@ -9,7 +9,7 @@
 
 import type { Db } from '@/database/types';
 import { createRepository } from '@/database/repository/create-repository';
-import { pluginsTable } from '@/database/schema';
+import { pluginsTable } from '@/database/tables';
 
 export type PluginTrackingRepository = ReturnType<typeof createPluginTrackingRepository>;
 

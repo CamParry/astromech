@@ -9,7 +9,7 @@ import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
-import { entriesTable } from '@/database/schema';
+import { entriesTable } from '@/database/tables';
 import { trashPurgeJob } from '@/entries/jobs/trash-purge';
 import { createBuiltInEntryRepository } from '@/entries/repository/built-in';
 import { createEntryMaintenanceRepository } from '@/entries/repository/maintenance';

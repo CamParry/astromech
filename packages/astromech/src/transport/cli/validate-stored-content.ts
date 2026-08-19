@@ -30,7 +30,7 @@ import {
     getEntryRepository,
     hasEntryRepositoryOverride,
 } from '@/entries/repository/registry';
-import { entriesTable } from '@/entries/schema';
+import { entriesTable } from '@/entries/tables';
 import { qualifyEntryType, resolveEntryType } from '@/entries/type-ids.shared';
 import { entryValidationMode } from '@/entries/validation-mode.shared';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';

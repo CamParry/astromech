@@ -12,7 +12,7 @@
 import type { Db } from '@/database/types';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
-import { entriesTable } from '@/database/schema';
+import { entriesTable } from '@/database/tables';
 
 export type EntryMaintenanceRepository = ReturnType<
     typeof createEntryMaintenanceRepository

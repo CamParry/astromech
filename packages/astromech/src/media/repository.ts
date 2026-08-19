@@ -1,4 +1,4 @@
-import type { MediaRow, NewMediaRow } from './schema';
+import type { MediaRow, NewMediaRow } from './tables';
 import type { Patch, QueryHandle } from '@/database/repository/create-repository';
 import type { Db } from '@/database/types';
 import type { MediaMimeTypeFilter, MediaQueryParams, SortOption } from '@/types/index';
@@ -8,7 +8,7 @@ import { decodeWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
-import { mediaTable } from '@/database/schema';
+import { mediaTable } from '@/database/tables';
 
 /**
  * Media storage — the only place Kysely touches the `media` table.

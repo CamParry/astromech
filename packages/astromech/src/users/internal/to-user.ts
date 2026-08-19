@@ -1,4 +1,4 @@
-import type { UserRow } from '../schema';
+import type { UserRow } from '../tables';
 import type { JsonObject, User } from '@/types/index';
 
 /** The stored row as the domain type. Every read path returns through here. */

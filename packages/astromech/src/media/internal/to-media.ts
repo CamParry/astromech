@@ -3,7 +3,7 @@
  * path returns through here, so a `Media.url` is made in exactly one place.
  */
 
-import type { MediaRow } from '../schema';
+import type { MediaRow } from '../tables';
 import type { Media } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { getStorageDriver } from '@/storage/registry';
