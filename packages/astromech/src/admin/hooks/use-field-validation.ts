@@ -25,7 +25,7 @@
 import type { Field, FieldErrors, FieldLookups, ValidationMode } from '@/types/index';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 // Deep import: the `fields/` barrel reaches server code (virtual config / DB).
-import { parseFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/parse-fields';
 
 /**
  * Data-dependent checks are server-only and are skipped in silence.

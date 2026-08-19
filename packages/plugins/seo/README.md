@@ -59,14 +59,17 @@ every other role opts in by naming the key.
 ```ts
 // astromech.config.ts
 import { seo } from '@astromech/seo';
-import { builtInRole, defineConfig } from 'astromech';
+import { defineConfig, permissionsForBuiltInRole } from 'astromech';
 
 export default defineConfig({
     plugins: [seo()],
     roles: {
         'content-editor': {
             name: 'Content Editor',
-            permissions: [...builtInRole('editor'), ...seo.permissions('view')],
+            permissions: [
+                ...permissionsForBuiltInRole('editor'),
+                ...seo.permissions('view'),
+            ],
         },
     },
 });

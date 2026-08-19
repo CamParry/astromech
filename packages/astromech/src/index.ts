@@ -31,7 +31,7 @@ export type { Astromech } from '@/astromech';
 // Model access, so a plugin can reach a configured model without taking its own
 // SDK dependency. Absent unless the site configures `ai` — hence `undefined`.
 export { getModel, hasModel } from '@/ai/index';
-export { builtInRole, BUILT_IN_ROLES } from '@/permissions/index';
+export { permissionsForBuiltInRole, BUILT_IN_ROLES } from '@/permissions/index';
 export type { BuiltInRoleSlug } from '@/permissions/index';
 export { definePermissions } from '@/permissions/define';
 export type { PermissionDeclaration, PermissionDeclarations } from '@/permissions/define';

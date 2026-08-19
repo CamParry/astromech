@@ -30,14 +30,14 @@ import type {
 import type { Capability } from '@/utilities/entry-capabilities';
 import { z } from '@hono/zod-openapi';
 import { entryMethodContracts } from '@/entries/methods';
-import { mediaContract } from '@/media/methods';
-import { notificationsContract } from '@/notifications/methods';
+import { mediaContract } from '@/media/contract';
+import { notificationsContract } from '@/notifications/contract';
 import {
     resolvePluginIdentity,
     resolvePluginPermission,
 } from '@/plugins/runtime/plugin-identity';
-import { settingsContract } from '@/settings/methods';
-import { usersContract } from '@/users/methods';
+import { settingsContract } from '@/settings/contract';
+import { usersContract } from '@/users/contract';
 import { qualifyEntryType } from '@/utilities/entry-type-ids';
 
 /**

@@ -1,5 +1,5 @@
 /**
- * Field-processing pipeline — coerce → default → validate.
+ * `parseFields` runs each field through coerce, then default, then validate.
  *
  * Pure logic: no domain/DB imports. The `reads` handle on `ctx` is the
  * injection point for any async checks (uniqueness, references).
@@ -43,10 +43,9 @@
  * on a key a field already claimed, the field's own error wins as the more
  * specific one.
  *
- * The values the pipeline returns hold only keys the schema declares: a key
- * belonging to no declared field is dropped, silently, because it has no field
- * to report an error against and a PATCH-merge write would otherwise carry it
- * forever.
+ * The values it returns hold only keys the schema declares: a key belonging to
+ * no declared field is dropped, silently, because it has no field to report an
+ * error against and a PATCH-merge write would otherwise carry it forever.
  *
  * `ctx.coerceOnly` names the root fields a patch actually carries. Coercion then
  * runs for those fields and their subtrees only, while defaults, `children()`
@@ -206,7 +205,7 @@ async function runRule(
 }
 
 // ---------------------------------------------------------------------------
-// Pipeline
+// parseFields
 // ---------------------------------------------------------------------------
 
 /**
@@ -214,7 +213,7 @@ async function runRule(
  * `validation` and `collectWarnings` are optional for callers and concrete inside
  * (see `parseFields`).
  */
-type PipelineContext = Omit<
+type ParseContext = Omit<
     FieldValidationContext,
     'value' | 'values' | 'field' | 'path' | 'validation'
 > & {
@@ -417,11 +416,11 @@ export type ParsedFields = {
 export async function parseFields(
     fields: Record<string, unknown>,
     definitions: Field[],
-    ctx: PipelineContext
+    ctx: ParseContext
 ): Promise<ParsedFields> {
     const declared = flattenFieldNodes(definitions);
     // `projectToSchema` hands back its input when the schema is unknown, and the
-    // pipeline mutates what it is given, so that case still needs a copy.
+    // parse mutates what it is given, so that case still needs a copy.
     const result =
         declared.length === 0 ? { ...fields } : projectToSchema(fields, declared);
     const errors: FieldErrors = {};

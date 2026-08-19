@@ -8,7 +8,12 @@ import { forms } from '@astromech/forms';
 import { menus } from '@astromech/menus';
 import { redirects } from '@astromech/redirects';
 import { seo, seoSection } from '@astromech/seo';
-import { builtInRole, defineAdminPage, defineConfig, entryPermissions } from 'astromech';
+import {
+    defineAdminPage,
+    defineConfig,
+    entryPermissions,
+    permissionsForBuiltInRole,
+} from 'astromech';
 import { libsql } from 'astromech/database/libsql';
 import { consoleEmail } from 'astromech/email/console';
 import * as fields from 'astromech/fields';
@@ -166,7 +171,7 @@ export default defineConfig({
         'content-editor': {
             name: 'Content Editor',
             permissions: [
-                ...builtInRole('editor'),
+                ...permissionsForBuiltInRole('editor'),
                 ...seo.permissions('view'),
                 // Redirects declares no permissions — its entry type's are
                 // derived by core, so a site enumerates the actions it grants.

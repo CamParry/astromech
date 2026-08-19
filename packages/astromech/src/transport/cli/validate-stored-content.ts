@@ -31,7 +31,7 @@ import { getEntryStorage, hasEntryStorageOverride } from '@/entries/storage/regi
 import { entryValidationMode } from '@/entries/validation-mode.shared';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenEntryFields, flattenFieldNodes } from '@/fields/flatten';
-import { parseFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/parse-fields';
 import { createMediaStorage } from '@/media/storage';
 import { settingsService } from '@/settings/service';
 import { createUserStorage } from '@/users/storage';

@@ -8,7 +8,7 @@ import type {
 } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { flattenEntryFields } from '@/fields/flatten';
-import { assertNoFieldErrors, parseFields } from '@/fields/pipeline';
+import { assertNoFieldErrors, parseFields } from '@/fields/parse-fields';
 import { runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime';
 import { getCurrentUser } from '@/request-context/index';
 import { resolveEntryType } from '@/utilities/entry-type-ids';

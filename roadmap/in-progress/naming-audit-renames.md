@@ -143,40 +143,48 @@ PascalCase.
 
 ### WS5 — smaller renames
 
-- [ ] `builtInRole` → `permissionsForBuiltInRole` in
+- [x] `builtInRole` → `permissionsForBuiltInRole` in
       `packages/astromech/src/permissions/index.ts`. It returns
       `Permission[]`, not a role; the new name matches the existing
       `permissionsFor` phrasing. Re-exported from the package root.
-- [ ] `ConfirmOutcome` → `ConfirmationResult` in
+- [x] `ConfirmOutcome` → `ConfirmationResult` in
       `packages/astromech/src/policies/confirmation.ts` (`result` ×12,
       `outcome` ×1). The `confirm` verb itself stays — it is a real domain
       concept, not a synonym for `validate`.
-- [ ] `checkRichTextDocument` → `validateRichText` in
+- [x] `checkRichTextDocument` → `validateRichTextDocument` in
       `packages/astromech/src/fields/rich-text/validate.ts` (`validate` ×23,
-      `check` ×4) — unless it returns a bare boolean, in which case `check`
-      stays. The `document` noun stays either way (ProseMirror vocabulary).
-- [ ] `UseEntryFormReturn` → `UseEntryFormResult` in
+      `check` ×4). It returns `true | string`, not a bare boolean, so the
+      rename went ahead. Not `validateRichText`: that name is taken in the
+      same file by the `FieldValidator` this helper backs. The `document`
+      noun stays (ProseMirror vocabulary).
+- [x] `UseEntryFormReturn` → `UseEntryFormResult` in
       `packages/astromech/src/admin/hooks/use-entry-form.ts` (sibling hooks
       all say `Result`).
-- [ ] `fields/pipeline.ts` → `fields/parse-fields.ts`. Its exports are
+- [x] `fields/pipeline.ts` → `fields/parse-fields.ts`. Its exports are
       `parseFields`, `ParsedFields`, `assertNoFieldErrors`; "pipeline" is a
-      colliding metaphor. Keep the old name only if the file genuinely
-      composes an ordered multi-stage transform.
-- [ ] `transport/http/routes/http-routes.shared.ts` → `http-routes.ts`. The
-      `.shared.ts` suffix elsewhere means isomorphic client/server modules;
-      this file's "shared" means shared between routers.
-- [ ] The four `methods.ts` files whose only export is `{domain}Contract`
+      colliding metaphor, and the `coerce → default → validate` sequence is
+      fixed inside one function rather than composed. The five
+      `tests/fields/pipeline-*.test.ts` files followed, and the file-local
+      `PipelineContext` became `ParseContext`.
+- [ ] ~~`transport/http/routes/http-routes.shared.ts` → `http-routes.ts`~~ —
+      **dropped.** The premise is wrong. `ARCHITECTURE.md` lines 139-143 say
+      the suffix here carries the same isomorphic meaning it does everywhere
+      else: "The fetch client sits on the same boundary and holds the same
+      allowance, so the REST route table both halves of the HTTP transport
+      read stays beside the routes it describes." The file keeps its name.
+- [x] The four `methods.ts` files whose only export is `{domain}Contract`
       (`media`, `notifications`, `settings`, `users`) → `contract.ts`, so the
       filename and the export use the same word.
-- [ ] `v` → `value` on the six exported coercers in
+- [x] `v` → `value` on the six exported coercers in
       `packages/astromech/src/fields/built-in-rules.ts` (`coerceEmail`,
       `coerceUrl`, `coerceNumber`, `coerceDate`, `coerceKeyValue`,
       `isJsonValue`).
-- [ ] Normalize the internal delete helpers: `entries/operations/delete.ts`
-      exports both `deleteOne` and `deleteEntry` — two compounds for one
-      concept; pick one shape. The service surface already says bare
-      `delete(params)` (`delete` is only reserved as a bare binding, not as a
-      method name), so this is internal-only.
+- [x] Normalize the internal delete helpers: no rename was needed.
+      `deleteEntry` is the verb `service.ts` mounts and the compound is
+      forced (`delete` cannot name a function declaration). `deleteOne` is the
+      per-id worker with no importer outside the file, so it simply stopped
+      being exported, and moved below `deleteEntry` per the `code` skill's
+      "the main thing comes first".
 
 ### WS6 — directory moves out of the layer-word buckets
 

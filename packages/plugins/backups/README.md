@@ -92,7 +92,7 @@ roles: {
     'ops': {
         name: 'Ops',
         permissions: [
-            ...builtInRole('editor'),
+            ...permissionsForBuiltInRole('editor'),
             ...backups.permissions('read', 'run'),
         ],
     },

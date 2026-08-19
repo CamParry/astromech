@@ -4,7 +4,7 @@ import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenFieldNodes } from '@/fields/flatten';
-import { assertNoFieldErrors, parseFields } from '@/fields/pipeline';
+import { assertNoFieldErrors, parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { getCurrentUser } from '@/request-context/index';
 import { indexMediaRelationships } from '../internal/relationships';

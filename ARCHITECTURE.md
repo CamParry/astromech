@@ -60,8 +60,11 @@ Key invariants:
 
 - **Domains are deep modules named for the business, not the tech.** Every domain
   owns a `service.ts` (its verbs), a `schema.ts` (`defineTable` table + Zod
-  validation) and a `methods.ts` (its contract catalogue, which is what puts it
-  in the method manifest). Two further files are per-domain, not universal:
+  validation) and a contract catalogue, which is what puts it in the method
+  manifest. Four domains hold nothing but that catalogue and name the file
+  `contract.ts` (`media`, `notifications`, `settings`, `users`); `entries` names
+  it `methods.ts`, because it also carries the per-method action list and the
+  method-name union. Two further files are per-domain, not universal:
   `visibility.ts` exists only where a domain projects a row into more than one
   shape (`entries`, `settings`), and `operations/` + `internal/` only where one
   `service.ts` has stopped being readable (`entries`, `media`, `users` —
@@ -174,10 +177,10 @@ packages/
 │   │   │
 │   │   │   ── domains ────────────────────────────────────────────────────
 │   │   ├── entries/        # entries domain: service (assembler) · operations/ · internal/ · schema · methods · visibility · url.shared
-│   │   ├── media/          # media domain: service (assembler) · operations/ · internal/ · schema · methods · serving/image/
-│   │   ├── users/          # users domain: service (assembler) · operations/ · internal/ · schema · methods · auth (Better Auth integration)
-│   │   ├── settings/       # settings domain: service · schema · methods · visibility · page-values.shared
-│   │   ├── notifications/  # notifications domain: service (+ notify) · schema · methods · user-scoped storage
+│   │   ├── media/          # media domain: service (assembler) · operations/ · internal/ · schema · contract · serving/image/
+│   │   ├── users/          # users domain: service (assembler) · operations/ · internal/ · schema · contract · auth (Better Auth integration)
+│   │   ├── settings/       # settings domain: service · schema · contract · visibility · page-values.shared
+│   │   ├── notifications/  # notifications domain: service (+ notify) · schema · contract · user-scoped storage
 │   │   │
 │   │   │   ── capabilities ───────────────────────────────────────────────
 │   │   ├── config/         # the config pipeline: load (jiti) · resolve (orchestration) + its named steps · validate/ · admin-config · registry (setConfig/getConfig)

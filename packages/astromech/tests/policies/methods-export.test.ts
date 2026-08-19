@@ -7,9 +7,9 @@
 
 // Types, asserted structurally: an unexported one fails the typecheck, not this.
 import type {
+    ConfirmationResult,
     ConfirmDecision,
     ConfirmOptions,
-    ConfirmOutcome,
     ConfirmRequest,
     DispatchResult,
     ScopedServices,
@@ -33,7 +33,7 @@ import { formatAiContextMessage } from '@/utilities/ai-context';
 export type Exported = [
     ConfirmDecision,
     ConfirmOptions,
-    ConfirmOutcome,
+    ConfirmationResult,
     ConfirmRequest,
     DispatchResult,
     ScopedServices,

@@ -21,7 +21,7 @@ import {
 import { beforeEach, describe, expect, it } from 'vitest';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { resolveConfig } from '@/config/resolve';
-import { notificationsContract } from '@/notifications/methods';
+import { notificationsContract } from '@/notifications/contract';
 import { notify } from '@/notifications/service';
 import { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch';
 

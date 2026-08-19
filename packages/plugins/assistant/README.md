@@ -107,14 +107,17 @@ every other role opts in by naming the key.
 ```ts
 // astromech.config.ts
 import { assistant } from '@astromech/assistant';
-import { builtInRole, defineConfig } from 'astromech';
+import { defineConfig, permissionsForBuiltInRole } from 'astromech';
 
 export default defineConfig({
     plugins: [assistant()],
     roles: {
         'content-editor': {
             name: 'Content Editor',
-            permissions: [...builtInRole('editor'), ...assistant.permissions('use')],
+            permissions: [
+                ...permissionsForBuiltInRole('editor'),
+                ...assistant.permissions('use'),
+            ],
         },
     },
 });

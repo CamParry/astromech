@@ -322,4 +322,4 @@ export function useEntryForm({
 }
 
 /** The return type of `useEntryForm`, derived from the hook itself. */
-export type UseEntryFormReturn = ReturnType<typeof useEntryForm>;
+export type UseEntryFormResult = ReturnType<typeof useEntryForm>;

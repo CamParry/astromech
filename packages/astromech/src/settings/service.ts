@@ -15,7 +15,7 @@ import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { ValidationError } from '@/errors/validation';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenEntryFields } from '@/fields/flatten';
-import { parseFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/parse-fields';
 import { getCurrentUser } from '@/request-context/index';
 import { mergeLocaleSetting } from './page-values.shared';
 import { createSettingsStorage } from './storage';

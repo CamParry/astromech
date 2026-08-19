@@ -38,17 +38,17 @@ import type {
 import { ENTRY_METHOD_ACTIONS } from '@/entries/methods';
 import { entriesService } from '@/entries/service';
 import { PermissionDeniedError } from '@/errors/index';
-import { mediaContract } from '@/media/methods';
+import { mediaContract } from '@/media/contract';
 import { mediaService } from '@/media/service';
-import { notificationsContract } from '@/notifications/methods';
+import { notificationsContract } from '@/notifications/contract';
 import { notificationsService } from '@/notifications/service';
 import { entryPermission } from '@/permissions/entry-permission';
 import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/index';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { getCurrentUser } from '@/request-context/index';
-import { settingsContract } from '@/settings/methods';
+import { settingsContract } from '@/settings/contract';
 import { settingsService } from '@/settings/service';
-import { usersContract } from '@/users/methods';
+import { usersContract } from '@/users/contract';
 import { usersService } from '@/users/service';
 
 /**

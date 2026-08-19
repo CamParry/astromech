@@ -2,7 +2,7 @@ export { useHotkeys } from './use-hotkeys';
 export { useIsMobile } from './use-is-mobile';
 export { queryKeys } from './use-query-keys';
 export { useEntryForm } from './use-entry-form';
-export type { UseEntryFormReturn, EntryFormValues, EntryPayload } from './use-entry-form';
+export type { UseEntryFormResult, EntryFormValues, EntryPayload } from './use-entry-form';
 export { useViewMode } from './use-view-mode';
 export { useSelection } from './use-selection';
 export type { SelectionResult } from './use-selection';

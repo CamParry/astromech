@@ -27,6 +27,6 @@ export {
 export type {
     ConfirmDecision,
     ConfirmOptions,
-    ConfirmOutcome,
+    ConfirmationResult,
     ConfirmRequest,
 } from '@/policies/confirmation';

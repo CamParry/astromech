@@ -3,7 +3,7 @@ import type { Entry, JsonObject } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { createRelationshipStorage } from '@/database/storage/relationships';
 import { flattenEntryFields } from '@/fields/flatten';
-import { assertNoFieldErrors, parseFields } from '@/fields/pipeline';
+import { assertNoFieldErrors, parseFields } from '@/fields/parse-fields';
 import { getCurrentUser } from '@/request-context/index';
 import { resolveEntryType } from '@/utilities/entry-type-ids';
 import { asEntry, loadAndAssertType } from '../../internal/records';

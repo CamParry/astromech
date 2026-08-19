@@ -2,7 +2,7 @@
  * `buildDefaultValues` — the value record a fresh container item starts with.
  *
  * The admin seeds an added block through this, because the pipeline applies
- * defaults on `create` only (`fields/pipeline.ts`).
+ * defaults on `create` only (`fields/parse-fields.ts`).
  */
 
 import type { Field } from '@/types/fields';
