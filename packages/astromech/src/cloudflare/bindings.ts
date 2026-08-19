@@ -95,7 +95,7 @@ async function detectEnv(): Promise<BindingEnv> {
 
 /** Resolve a named binding (e.g. 'MEDIA', 'DB') from the host environment. */
 export async function resolveBinding<T>(name: string): Promise<T> {
-    let pending = bindingEnv.tryGet();
+    let pending = bindingEnv.maybeGet();
     if (!pending) {
         // Drop a failed detection rather than memoising it forever, so a caller
         // that installs wrangler (or calls setBindingEnv) can still recover.
@@ -124,7 +124,7 @@ export async function resolveBinding<T>(name: string): Promise<T> {
  * will not exit until this runs.
  */
 export async function disposeBindings(): Promise<void> {
-    const proxy = platformProxy.tryGet();
+    const proxy = platformProxy.maybeGet();
     if (proxy) {
         await proxy.dispose();
     }

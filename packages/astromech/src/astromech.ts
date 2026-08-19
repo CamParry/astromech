@@ -90,7 +90,7 @@ const registry = createRegistry<Registered>('astromech', { required: false });
 export function createAstromech(options: {
     config: AstromechConfig;
 }): Promise<Astromech> {
-    const existing = registry.tryGet();
+    const existing = registry.maybeGet();
     if (existing !== null) {
         // Identity, not deep equality: two different config objects mean two
         // different intended configs, which is the mistake this guard surfaces.
@@ -112,7 +112,7 @@ export function createAstromech(options: {
 
 /** Gets the global Astromech instance. Throws if it does not exist. */
 export function getAstromech(): Promise<Astromech> {
-    const existing = registry.tryGet();
+    const existing = registry.maybeGet();
     if (existing === null) {
         throw new AstromechError(
             'no instance of Astromech exists, createAstromech({ config }) must be called before getAstromech()'

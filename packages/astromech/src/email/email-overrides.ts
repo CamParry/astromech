@@ -24,5 +24,5 @@ export function registerEmailOverride(override: EmailOverride): void {
 export function getEmailOverride(
     name: string
 ): ComponentType<Record<string, unknown>> | undefined {
-    return overrides.tryGet(name) ?? undefined;
+    return overrides.maybeGet(name) ?? undefined;
 }

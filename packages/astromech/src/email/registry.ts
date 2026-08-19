@@ -12,4 +12,4 @@ import { createRegistry } from '@/utilities/registry';
 const email = createRegistry<EmailDriver>('email', { required: false });
 
 export const setEmailDriver = email.set;
-export const getEmailDriver = email.tryGet;
+export const getEmailDriver = email.maybeGet;
