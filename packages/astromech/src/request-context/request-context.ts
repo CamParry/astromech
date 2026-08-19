@@ -24,9 +24,9 @@ const requestContext = createRegistry<AsyncLocalStorage<RequestContext>>(
 );
 
 /**
- * The store lives in a registry slot: the package has multiple bundle entry
- * points, so a second copy of this module in another chunk would otherwise be a
- * second, EMPTY store. Constructed here on first use rather than in the slot.
+ * The store lives in a registry: the package has multiple bundle entry points,
+ * so a second copy of this module in another chunk would otherwise be a second,
+ * EMPTY store. Constructed here on first use rather than in the registry.
  */
 function store(): AsyncLocalStorage<RequestContext> {
     const existing = requestContext.get();

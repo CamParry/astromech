@@ -90,8 +90,8 @@ type PluginRuntimeState = {
     rawRoutes: RegisteredRawRoute[];
 };
 
-// One slot holding all five fields rather than five slots: `registerPlugins`
-// rewrites them together in a single pass.
+// One registry holding all five fields rather than five registries:
+// `registerPlugins` rewrites them together in a single pass.
 const runtime = createRegistry<PluginRuntimeState>('pluginRuntime', {
     required: false,
 });

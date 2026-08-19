@@ -7,7 +7,7 @@
  * locale defaults before dispatching, so the built-in storage's own
  * `defaultLocale` fallback ('en') is never relied on.
  *
- * Both slots live in the shared `globalThis` namespace: the package has multiple
+ * Both registries live in the shared `globalThis` namespace: the package has multiple
  * bundle entry points (core, adapters, plugin subpaths), so module-level state
  * can be duplicated per chunk — `registerPlugins` would write overrides into one
  * copy while the entries service reads another.

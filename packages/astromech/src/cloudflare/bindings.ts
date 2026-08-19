@@ -39,7 +39,7 @@ type WranglerModule = {
 /**
  * The resolved environment is memoised as a *promise* so concurrent callers
  * share one detection, and on `globalThis` for the same reason every other
- * boot-wired slot is — tsup emits several entry chunks and a module-level
+ * boot-wired registry is — tsup emits several entry chunks and a module-level
  * variable would be duplicated across them.
  */
 const bindingEnv = createRegistry<Promise<BindingEnv>>('cloudflareEnv', {

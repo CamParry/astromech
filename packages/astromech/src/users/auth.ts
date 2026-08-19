@@ -1,7 +1,7 @@
 /**
  * Better Auth, wired to Astromech's user, session, account and verification
  * tables. It builds on first ask, so the config and database driver registries
- * must already be filled; the built instance is held in a registry slot.
+ * must already be filled; the built instance is held in a registry.
  */
 
 import type { Auth, BetterAuthOptions } from 'better-auth';

@@ -5,7 +5,7 @@
  *
  * `createAstromech` boots and registers the instance; `getAstromech` only reads
  * it — one instance per process. `build` runs the whole sequence inline, in the
- * order it happens: resolve the config, fill the backend slots, verify the
+ * order it happens: resolve the config, fill the backend registries, verify the
  * schema, register the jobs and plugin runtime, boot the plugins, assemble.
  */
 
@@ -87,7 +87,7 @@ type Registered = {
     app: Promise<Astromech>;
 };
 
-// The process-wide slot holding the one Astromech instance.
+// The process-wide registry holding the one Astromech instance.
 const registry = createRegistry<Registered>('astromech', { required: false });
 
 /**
@@ -138,7 +138,7 @@ function registerBuiltInJobs(): void {
     for (const job of entryJobs) registerCronJob(job);
 }
 
-/** Boot a runtime: fill the slots, verify, register, boot the plugins, assemble the app. */
+/** Boot a runtime: fill the registries, verify, register, boot the plugins, assemble the app. */
 async function build(config: AstromechConfig): Promise<Astromech> {
     const plugins = config.plugins ?? [];
     const db = config.db.getInstance();
@@ -147,7 +147,7 @@ async function build(config: AstromechConfig): Promise<Astromech> {
     const resolved = resolveConfig(config);
     setConfig(resolved);
 
-    // Backend slots the domains read from
+    // Backend registries the domains read from
     setDb(db);
     setDatabaseDriver(config.db);
     setStorageDriver(config.storage);
