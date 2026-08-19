@@ -42,17 +42,18 @@ export function globals(): AstromechGlobals {
 
 export type RequiredRegistry<T> = {
     set(value: T): void;
-    /** Throws when unset. */
-    get(): T;
-    /** Null when unset — for callers that legitimately probe. */
-    maybeGet(): T | null;
+    /** The value. Throws when unset. */
+    getOrThrow(): T;
+    /** The value, or null when unset. */
+    get(): T | null;
     /** Return the slot to its unset state. */
     clear(): void;
 };
 
 export type OptionalRegistry<T> = {
     set(value: T): void;
-    maybeGet(): T | null;
+    /** The value, or null when unset. */
+    get(): T | null;
     clear(): void;
 };
 
@@ -73,7 +74,7 @@ export function createRegistry<T>(
         set: (value: T): void => {
             globals()[name] = value;
         },
-        get: (): T => {
+        getOrThrow: (): T => {
             const value = globals()[name];
             if (value === undefined) {
                 const hint = opts?.hint === undefined ? '' : ` ${opts.hint}`;
@@ -81,9 +82,9 @@ export function createRegistry<T>(
             }
             return value as T;
         },
-        maybeGet: (): T | null => (globals()[name] ?? null) as T | null,
+        get: (): T | null => (globals()[name] ?? null) as T | null,
         clear: (): void => {
-            // Assign rather than `delete` — `maybeGet()` reads `?? null`, so an
+            // Assign rather than `delete` — `get()` reads `?? null`, so an
             // undefined slot is already indistinguishable from an absent one.
             globals()[name] = undefined;
         },
@@ -92,10 +93,10 @@ export function createRegistry<T>(
 
 export type KeyedRegistry<T> = {
     set(key: string, value: T): void;
-    /** Throws when the key is unset. */
-    get(key: string): T;
-    /** Null when unset — for callers that legitimately probe. */
-    maybeGet(key: string): T | null;
+    /** The entry. Throws when the key is unset. */
+    getOrThrow(key: string): T;
+    /** The entry, or null when the key is unset. */
+    get(key: string): T | null;
     has(key: string): boolean;
     keys(): string[];
     /** Drop every entry, leaving the slot usable. */
@@ -117,14 +118,14 @@ export function createKeyedRegistry<T>(name: string): KeyedRegistry<T> {
         set: (key: string, value: T): void => {
             slot().set(key, value);
         },
-        get: (key: string): T => {
+        getOrThrow: (key: string): T => {
             const value = slot().get(key);
             if (value === undefined) {
                 throw new AstromechError(`'${name}' has no entry for '${key}'.`);
             }
             return value;
         },
-        maybeGet: (key: string): T | null => slot().get(key) ?? null,
+        get: (key: string): T | null => slot().get(key) ?? null,
         has: (key: string): boolean => slot().has(key),
         keys: (): string[] => [...slot().keys()],
         clear: (): void => {

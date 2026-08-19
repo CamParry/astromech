@@ -14,7 +14,9 @@ const dbDriver = createRegistry<DatabaseDriver>('dbDriver', {
 });
 
 export const setDatabaseDriver = dbDriver.set;
-export const getDatabaseDriver = dbDriver.get;
 
 /** Feature-detect the driver without requiring one — null when unwired. */
-export const maybeGetDatabaseDriver = dbDriver.maybeGet;
+export const getDatabaseDriver = dbDriver.get;
+
+/** The configured database driver. Throws when unset. */
+export const getDatabaseDriverOrThrow = dbDriver.getOrThrow;

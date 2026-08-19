@@ -17,6 +17,6 @@ type WrappedAIConfig = {
 const ai = createRegistry<WrappedAIConfig>('ai', { required: false });
 
 export const setAIConfig = ai.set;
-export const getAIConfig = ai.maybeGet;
+export const getAIConfig = ai.get;
 
 export type { WrappedAIConfig };

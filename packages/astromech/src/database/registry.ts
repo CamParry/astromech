@@ -16,4 +16,6 @@ const db = createRegistry<AnyDb>('db', {
 });
 
 export const setDb = db.set;
-export const getDb = db.get;
+
+/** The active database instance. Throws when unset. */
+export const getDb = db.getOrThrow;

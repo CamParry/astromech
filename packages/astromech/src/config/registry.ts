@@ -11,4 +11,6 @@ const config = createRegistry<ResolvedConfig>('config', {
 });
 
 export const setConfig = config.set;
-export const getConfig = config.get;
+
+/** The resolved config for the process. Throws when unset. */
+export const getConfig = config.getOrThrow;

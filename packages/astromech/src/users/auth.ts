@@ -7,7 +7,7 @@
 import type { Auth, BetterAuthOptions } from 'better-auth';
 import { betterAuth } from 'better-auth';
 import { getConfig } from '@/config/registry';
-import { getDatabaseDriver } from '@/database/driver-registry';
+import { getDatabaseDriverOrThrow } from '@/database/driver-registry';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 import { log } from '@/utilities/log';
 import { createRegistry } from '@/utilities/registry';
@@ -18,7 +18,7 @@ const authRegistry = createRegistry<Auth<BetterAuthOptions>>('auth', {
 
 /** Better Auth for this process, built on first ask. */
 export function getAuth(): Auth<BetterAuthOptions> {
-    const existing = authRegistry.maybeGet();
+    const existing = authRegistry.get();
     if (existing) return existing;
     const auth = buildAuth();
     authRegistry.set(auth);
@@ -32,7 +32,7 @@ function buildAuth(): Auth<BetterAuthOptions> {
         baseURL: import.meta.env.BETTER_AUTH_URL,
         basePath: `${basePath}/api/auth`,
         database: {
-            dialect: getDatabaseDriver().createDialect(),
+            dialect: getDatabaseDriverOrThrow().createDialect(),
             type: 'sqlite',
         },
         user: {

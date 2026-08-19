@@ -14,4 +14,6 @@ const storage = createRegistry<StorageDriver>('storage', {
 });
 
 export const setStorageDriver = storage.set;
-export const getStorageDriver = storage.get;
+
+/** The configured storage driver. Throws when unset. */
+export const getStorageDriver = storage.getOrThrow;
