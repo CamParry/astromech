@@ -39,42 +39,33 @@ import { createRegistry } from '@/utilities/registry';
 
 export type Astromech = {
     config: ResolvedConfig;
-
     entries: TypedEntriesService;
     media: MediaService;
     users: UsersService;
     settings: SettingsService;
     notifications: NotificationsService;
     plugins: PluginServiceNamespace;
-
     /** The acting user for the current request, or null outside one. */
     getCurrentUser(): Promise<User | null>;
-
     /** The acting role for the current request, or null outside one. */
     getCurrentRole(): Promise<Role | null>;
-
     /** Serve one HTTP request from the application's own routes. */
     fetch(request: Request): Promise<Response>;
-
     /** Run the cron jobs due at `at`. Defaults to now. */
     scheduled(at?: Date): Promise<void>;
-
     /** The serving integration's terminal action. Idempotent. No-op on Workers. */
     startScheduler(): Promise<void>;
 };
 
 type Registered = { config: AstromechConfig; app: Promise<Astromech> };
 
-// A `globalThis` registry rather than a module-level variable: the package ships
-// two tsup builds and six `exports` subpaths that can resolve to `src` or `dist`,
-// so one module can be instantiated more than once. See `utilities/registry.ts`.
+// The global registry to hold the Astromech instance.
 const registry = createRegistry<Registered>('astromech', { required: false });
 
 /**
- * Create a single Astromech instance. Returns the existing instance in subsequent calls. A second call with the
- * same config returns the existing instance and a different one throws — a
- * Worker exports `fetch` and `scheduled` from one isolate and either can be
- * first. A failed boot clears the slot, so the next caller retries.
+ * Creates the global Astromech instance and returns it.
+ * Subsequent calls return the existing instance or
+ * throws if called with a different config.
  */
 export function createAstromech(options: {
     config: AstromechConfig;
@@ -83,8 +74,7 @@ export function createAstromech(options: {
     if (existing !== null) {
         if (existing.config !== options.config) {
             throw new AstromechError(
-                'createAstromech() was called with a different config than ' +
-                    'the one this process was created with. A process holds one application.'
+                'createAstromech() cannot be called again with a different config'
             );
         }
         return existing.app;
@@ -98,13 +88,12 @@ export function createAstromech(options: {
     return app;
 }
 
-/** Gets the Astromech instance. Throws if it does not exist. */
+/** Gets the global Astromech instance. Throws if it does not exist. */
 export function getAstromech(): Promise<Astromech> {
     const existing = registry.peek();
     if (existing === null) {
         throw new AstromechError(
-            'no application has been created. An integration calls ' +
-                'createAstromech({ config }) before anything reads the app.'
+            'no instance of Astromech exists, createAstromech({ config }) must be called before getAstromech()'
         );
     }
     return existing.app;

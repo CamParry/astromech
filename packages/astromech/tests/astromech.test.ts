@@ -139,7 +139,7 @@ describe('createAstromech — the application registry', () => {
     });
 
     it('getAstromech reads the created instance and never creates one', async () => {
-        expect(() => getAstromech()).toThrow(/no application has been created/);
+        expect(() => getAstromech()).toThrow(/no instance of Astromech exists/);
 
         const config = makeConfig(() => db);
         const created = await createAstromech({ config });
