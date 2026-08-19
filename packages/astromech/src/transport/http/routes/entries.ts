@@ -80,7 +80,7 @@ const listQuery = z.object({
     search: z.string().optional(),
     trashed: z.string().optional(),
     full: z.string().optional(),
-    locale: z.string().optional().openapi({ example: 'en' }),
+    locale: z.string().optional(),
     sort: z.string().optional(),
     dir: z.enum(['asc', 'desc']).optional(),
     previewToken: z.string().optional(),

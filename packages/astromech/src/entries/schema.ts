@@ -31,19 +31,14 @@ const optionalDate = z
  * it as optional, and `create` normalizes a missing title to `''` downstream.
  */
 export function createEntrySchema({ titled }: { titled: boolean }) {
-    const title = titled
-        ? z.string().min(1, 'Title is required').openapi({ example: 'My Post' })
-        : z.string().optional().openapi({ example: 'My Post' });
+    const title = titled ? z.string().min(1, 'Title is required') : z.string().optional();
     return z
         .object({
             title,
             slug: slugField,
-            locale: z.string().min(1).optional().openapi({ example: 'en' }),
+            locale: z.string().min(1).optional(),
             localeGroup: z.string().min(1).optional(),
-            fields: z
-                .record(z.string(), z.unknown())
-                .optional()
-                .openapi({ example: { body: 'Hello world' } }),
+            fields: z.record(z.string(), z.unknown()).optional(),
             status: entryStatusEnum.optional(),
             publishedAt: optionalDate,
         })
@@ -94,7 +89,6 @@ export const entrySortSchema = z
         type: 'object',
         additionalProperties: { type: 'string', enum: ['asc', 'desc'] },
         description: 'Field → direction, or a list of such objects.',
-        example: { title: 'asc' },
     });
 
 export const scheduleEntrySchema = z.object({
