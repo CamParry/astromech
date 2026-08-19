@@ -17,4 +17,4 @@ export const setDatabaseDriver = dbDriver.set;
 export const getDatabaseDriver = dbDriver.get;
 
 /** Feature-detect the driver without requiring one — null when unwired. */
-export const peekDatabaseDriver = dbDriver.peek;
+export const tryGetDatabaseDriver = dbDriver.tryGet;

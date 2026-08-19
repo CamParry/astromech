@@ -6,9 +6,9 @@
  * so nothing changes for the default libsql path.
  */
 
-import { peekDatabaseDriver } from '@/database/driver-registry';
+import { tryGetDatabaseDriver } from '@/database/driver-registry';
 
 /** False only when the active driver explicitly declares no interactive transactions (D1). */
 export function supportsTransactions(): boolean {
-    return peekDatabaseDriver()?.supportsTransactions ?? true;
+    return tryGetDatabaseDriver()?.supportsTransactions ?? true;
 }

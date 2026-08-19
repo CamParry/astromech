@@ -106,3 +106,4 @@ Distinct from the neighbouring directories:
 - [0064](0064-the-composition-root-is-astromech-at-the-source-root.md) — the composition root moves to a root-level `astromech.ts`, `boot/` dissolves, the boot sequence inlines into `createAstromech`, "phase" is dropped, and migrations move to `database/`
 - [0065](0065-boot-timing-is-not-hand-instrumented.md) — the boot stopwatch is removed; boot timing comes from a profiler, cold-start metrics from the platform, superseding 0064 on the timing sub-point
 - [0066](0066-the-astromech-prefix-is-a-log-device.md) — the `[Astromech]` prefix moves out of error messages into `log`; thrown errors identify by type (`AstromechError`), wire errors carry clean messages
+- [0067](0067-the-registry-probe-is-tryget.md) — the registry probe is renamed `peek` → `tryGet`; `get` stays the throwing read, and `peekDatabaseDriver` becomes `tryGetDatabaseDriver`

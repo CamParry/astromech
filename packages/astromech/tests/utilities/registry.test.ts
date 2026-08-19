@@ -25,11 +25,11 @@ describe('createRegistry', () => {
         expect(() => reg.get()).toThrow("'test.noHint' is not configured.");
     });
 
-    it('peek() returns null when unset', () => {
+    it('tryGet() returns null when unset', () => {
         const reg = createRegistry<Driver>('test.peek', { required: false });
-        expect(reg.peek()).toBeNull();
+        expect(reg.tryGet()).toBeNull();
         reg.set({ name: 'b' });
-        expect(reg.peek()).toEqual({ name: 'b' });
+        expect(reg.tryGet()).toEqual({ name: 'b' });
     });
 
     it('does not collide with a registry of a different name', () => {
@@ -37,7 +37,7 @@ describe('createRegistry', () => {
         const two = createRegistry<Driver>('test.two');
         one.set({ name: 'one' });
         expect(one.get().name).toBe('one');
-        expect(two.peek()).toBeNull();
+        expect(two.tryGet()).toBeNull();
     });
 
     it('set() overwrites', () => {
@@ -61,7 +61,7 @@ describe('createKeyedRegistry', () => {
         const reg = createKeyedRegistry<Driver>('test.keyed.roundTrip');
         reg.set('a', { name: 'first' });
         expect(reg.get('a').name).toBe('first');
-        expect(reg.peek('a')).toEqual({ name: 'first' });
+        expect(reg.tryGet('a')).toEqual({ name: 'first' });
     });
 
     it('throws on get() for an unset key, naming the slot and the key', () => {
@@ -70,9 +70,9 @@ describe('createKeyedRegistry', () => {
         expect(() => reg.get('missing')).toThrow(/missing/);
     });
 
-    it('peek() returns null and has() false for an unset key', () => {
+    it('tryGet() returns null and has() false for an unset key', () => {
         const reg = createKeyedRegistry<Driver>('test.keyed.probe');
-        expect(reg.peek('a')).toBeNull();
+        expect(reg.tryGet('a')).toBeNull();
         expect(reg.has('a')).toBe(false);
         reg.set('a', { name: 'x' });
         expect(reg.has('a')).toBe(true);
@@ -85,21 +85,21 @@ describe('createKeyedRegistry', () => {
         expect(reg.keys()).toEqual(['a', 'b']);
         reg.clear();
         expect(reg.keys()).toEqual([]);
-        expect(reg.peek('a')).toBeNull();
+        expect(reg.tryGet('a')).toBeNull();
     });
 
     it('does not collide with a keyed registry of a different name', () => {
         const one = createKeyedRegistry<Driver>('test.keyed.one');
         const two = createKeyedRegistry<Driver>('test.keyed.two');
         one.set('shared', { name: 'one' });
-        expect(two.peek('shared')).toBeNull();
+        expect(two.tryGet('shared')).toBeNull();
     });
 
     it('survives a wholesale reset of the namespace', () => {
         const reg = createKeyedRegistry<Driver>('test.keyed.reset');
         reg.set('a', { name: 'x' });
         globalThis.__astromech = undefined;
-        expect(reg.peek('a')).toBeNull();
+        expect(reg.tryGet('a')).toBeNull();
         reg.set('a', { name: 'y' });
         expect(reg.get('a').name).toBe('y');
     });

@@ -29,7 +29,7 @@ const requestContext = createRegistry<AsyncLocalStorage<RequestContext>>(
  * second, EMPTY store. Constructed here on first use rather than in the slot.
  */
 function store(): AsyncLocalStorage<RequestContext> {
-    const existing = requestContext.peek();
+    const existing = requestContext.tryGet();
     if (existing) return existing;
     const created = new AsyncLocalStorage<RequestContext>();
     requestContext.set(created);

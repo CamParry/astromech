@@ -70,7 +70,7 @@ const registry = createRegistry<Registered>('astromech', { required: false });
 export function createAstromech(options: {
     config: AstromechConfig;
 }): Promise<Astromech> {
-    const existing = registry.peek();
+    const existing = registry.tryGet();
     if (existing !== null) {
         if (existing.config !== options.config) {
             throw new AstromechError(
@@ -90,7 +90,7 @@ export function createAstromech(options: {
 
 /** Gets the global Astromech instance. Throws if it does not exist. */
 export function getAstromech(): Promise<Astromech> {
-    const existing = registry.peek();
+    const existing = registry.tryGet();
     if (existing === null) {
         throw new AstromechError(
             'no instance of Astromech exists, createAstromech({ config }) must be called before getAstromech()'

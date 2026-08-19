@@ -45,14 +45,14 @@ export type RequiredRegistry<T> = {
     /** Throws when unset. */
     get(): T;
     /** Null when unset — for callers that legitimately probe. */
-    peek(): T | null;
+    tryGet(): T | null;
     /** Return the slot to its unset state. */
     clear(): void;
 };
 
 export type OptionalRegistry<T> = {
     set(value: T): void;
-    peek(): T | null;
+    tryGet(): T | null;
     clear(): void;
 };
 
@@ -81,9 +81,9 @@ export function createRegistry<T>(
             }
             return value as T;
         },
-        peek: (): T | null => (globals()[name] ?? null) as T | null,
+        tryGet: (): T | null => (globals()[name] ?? null) as T | null,
         clear: (): void => {
-            // Assign rather than `delete` — `peek()` reads `?? null`, so an
+            // Assign rather than `delete` — `tryGet()` reads `?? null`, so an
             // undefined slot is already indistinguishable from an absent one.
             globals()[name] = undefined;
         },
@@ -95,7 +95,7 @@ export type KeyedRegistry<T> = {
     /** Throws when the key is unset. */
     get(key: string): T;
     /** Null when unset — for callers that legitimately probe. */
-    peek(key: string): T | null;
+    tryGet(key: string): T | null;
     has(key: string): boolean;
     keys(): string[];
     /** Drop every entry, leaving the slot usable. */
@@ -124,7 +124,7 @@ export function createKeyedRegistry<T>(name: string): KeyedRegistry<T> {
             }
             return value;
         },
-        peek: (key: string): T | null => slot().get(key) ?? null,
+        tryGet: (key: string): T | null => slot().get(key) ?? null,
         has: (key: string): boolean => slot().has(key),
         keys: (): string[] => [...slot().keys()],
         clear: (): void => {

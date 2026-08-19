@@ -20,5 +20,5 @@ export const setMethodManifest = manifest.set;
 
 /** The boot-generated manifest, or undefined when boot has not run. */
 export function getMethodManifest(): MethodManifest | undefined {
-    return manifest.peek() ?? undefined;
+    return manifest.tryGet() ?? undefined;
 }

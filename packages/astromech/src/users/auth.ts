@@ -18,7 +18,7 @@ const authRegistry = createRegistry<Auth<BetterAuthOptions>>('auth', {
 
 /** Better Auth for this process, built on first ask. */
 export function getAuth(): Auth<BetterAuthOptions> {
-    const existing = authRegistry.peek();
+    const existing = authRegistry.tryGet();
     if (existing) return existing;
     const auth = buildAuth();
     authRegistry.set(auth);
