@@ -1,7 +1,7 @@
 # 0036 — One layer table, and a suffix instead of an allowlist
 
 **Date:** 2026-08-09
-**Status:** accepted
+**Status:** superseded by 0070
 
 `packages/astromech/.dependency-cruiser.cjs` held eleven rules that each
 hand-enumerated every sibling directory. It had already failed open:

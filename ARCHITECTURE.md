@@ -32,9 +32,9 @@ and Boot matrix in `.github/workflows/ci.yml`. Development runs the Active LTS
 
 ## The layer model
 
-The source is a modular screaming-architecture DAG. Imports may only point
-**down** this list; upward edges are forbidden, and peers inside a layer may read
-one another:
+The source is organised in layers. Imports point **down** this list by
+convention, and peers inside a layer may read one another. The shape is
+documented, not machine-enforced (`decisions/0070-drop-dependency-cruiser.md`):
 
 ```
 astromech.ts · integrations · admin · codegen  entrypoints & composition root
@@ -141,7 +141,6 @@ Key invariants:
   boundary and holds the same allowance, so the REST route table both halves of
   the HTTP transport read stays beside the routes it describes, at
   `packages/astromech/src/transport/http/routes/http-routes.shared.ts`.
-- **Enforced** by `packages/astromech/.dependency-cruiser.cjs` (`pnpm run lint:deps`), which scans `packages/astromech/src` only — core's internal DAG. The layer rules there are generated from one `LAYERS` table, and a top-level `src/` directory missing from it fails the scan. Cross-package isolation is enforced by `exports` boundaries at publish, not a repo-wide scan.
 
 ## Directory map
 
@@ -203,7 +202,7 @@ packages/
 │   │   └── exports/        # thin re-export barrels; tsup builds from here — internals are private
 │   ├── tests/              # mirrors src/
 │   ├── scripts/
-│   └── (tsup|vitest).config.ts · tsconfig*.json · .dependency-cruiser.cjs
+│   └── (tsup|vitest).config.ts · tsconfig*.json
 │
 └── plugins/         # first-party plugins as separate published packages
     ├── assistant/   # @astromech/assistant  (the AI assistant: admin route, tool loop, chat drawer)
@@ -316,7 +315,6 @@ used.
 | `pnpm run lint`               | eslint over `packages/schema-engine/src` and `packages/astromech/src` only. The plugin packages have no `lint` script; the pre-commit hook lints their files anyway                                                                                   |
 | `pnpm run lint:css`           | stylelint over `packages/astromech/src/admin/styles/`                                                                                                                                                                                                 |
 | `pnpm run format:check`       | prettier over the repo                                                                                                                                                                                                                                |
-| `pnpm run lint:deps`          | dependency-cruiser — enforces the modular DAG within `packages/astromech/src`: no upward edges, pure leaves, every top-level directory in a layer, and the browser boundary the admin and `*.shared.ts` files sit on                                  |
 | `pnpm run check:config`       | `tsx astromech.config.ts` in the demo — loads the site config the way Astro does, catching a config-time import that reaches a domain service                                                                                                         |
 | `pnpm run check:node-imports` | spawns plain `node` against built `dist` and imports each plugin-facing subpath. Needs `dist`, so it runs after `build`. See "Plugin runtime boundary"                                                                                                |
 | `pnpm run check:exports`      | asserts `exports` and `publishConfig.exports` name the same subpaths, so a new one cannot be added to the repo map and forgotten in the published one, and that an entry's `types` and `default` resolve into the same tree                           |
