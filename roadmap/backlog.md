@@ -33,6 +33,10 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 - [ ] `PluginDefinition.requiredEnv` exists, is validated at boot with a clear error, and no shipped plugin declares it. The one env var a plugin genuinely depends on — the assistant's `ANTHROPIC_API_KEY` — can't use it, because the AI SDK reads the key during config evaluation (before plugin boot), which is why site configs must open with `import 'dotenv/config'`. Either find `requiredEnv` a real first user or decide the config-evaluation-time class of env needs its own answer
 - [ ] A plugin can't type its own declared hook-event payloads. `AstromechPluginHookEvents` is codegen-augmented per **site**, so inside a plugin package `defineHook`'s handler parameter resolves to `unknown` and every handler needs an in-body cast (see `@astromech/forms`' spam hook). Annotating the parameter directly is a contravariance error. Some way for a plugin to declare the payload type alongside the event name would remove the cast
 
+### Tooling
+
+- [ ] Re-evaluate a dependency lint (dependency-cruiser or similar) as a QA hardening layer once development shifts from building to hardening — dropped while building, `decisions/0070-drop-dependency-cruiser.md`
+
 ### Relationships follow-ups (from `completed/relationships-model.md`)
 
 The model shipped whole; these are the deliberate deferrals and the sharp edges found building it.

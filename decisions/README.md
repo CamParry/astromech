@@ -109,3 +109,5 @@ Distinct from the neighbouring directories:
 - [0067](0067-the-registry-probe-is-tryget.md) — the registry probe is renamed `peek` → `tryGet`; `get` stays the throwing read, and `peekDatabaseDriver` becomes `tryGetDatabaseDriver`
 - [0068](0068-the-create-sequence-registers-backends-and-jobs.md) — `registerDrivers` becomes `registerBackends`, and built-in cron jobs register through one `registerBuiltInJobs` aggregator instead of a call per domain in `build`
 - [0069](0069-the-build-sequence-is-flat-and-the-probe-is-maybeget.md) — the probe is `maybeGet`, and `build` runs the boot sequence inline (deleting `registrations.ts`), keeping only `registerBuiltInJobs`; supersedes 0067 and 0068
+- [0070](0070-drop-dependency-cruiser.md) — dependency-cruiser, its config, its script and its CI step are removed; the layer model stays in `ARCHITECTURE.md` as a documented convention; supersedes 0036
+- [0071](0071-the-plugin-runtime-imports-the-domains-directly.md) — the four plugin-runtime access ports and their three injector modules are deleted; `plugin-runtime.ts` imports the domain services, the entries storage registry, `notify` and `buildScopedTools` directly

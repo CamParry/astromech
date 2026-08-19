@@ -12,9 +12,6 @@ import { createElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getCronJobs } from '@/cron/registry';
 import { setEmailDriver } from '@/email/registry';
-// This test drives registerPlugins directly (no harness), so wire the
-// entry-access port that registerPlugins now depends on.
-import { setEntryAccess } from '@/entries/plugin-access';
 import { defineHook } from '@/index';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import {
@@ -27,11 +24,13 @@ import {
     registerPlugins,
     runAfterHooks,
     runBeforeHooks,
-    setPluginMethods,
 } from '@/plugins/runtime/plugin-runtime';
+import { buildScopedTools } from '@/transport/tools/scoped-tools';
 import { globals } from '@/utilities/registry';
 
-setEntryAccess();
+vi.mock('@/transport/tools/scoped-tools', () => ({
+    buildScopedTools: vi.fn(() => []),
+}));
 
 const config: ResolvedConfig = {
     basePath: '/cms',
@@ -203,26 +202,10 @@ describe('createPluginContext', () => {
         expect(ctx.role).toBe(adminRole);
     });
 
-    // The port is injected by the Local API at module load, so a context that
-    // reaches it in a graph that never loaded one must say so rather than
-    // returning an empty tool list.
-    it('crashes loud when the methods port is unwired', () => {
+    it("hands ctx.methods.tools the context's role and the given options", () => {
         registerPlugins([def({ package: '@astromech/seo' })], config);
-        const ctx = createPluginContext(
-            resolvePluginIdentity(def({ package: '@astromech/seo' })),
-            user,
-            null
-        );
-
-        expect(() => ctx.methods.tools()).toThrow(
-            'Plugin methods are not available in this context.'
-        );
-    });
-
-    it("calls the injected port with the context's role and the given options", () => {
-        registerPlugins([def({ package: '@astromech/seo' })], config);
-        const tools = vi.fn(() => []);
-        setPluginMethods({ tools });
+        const tools = vi.mocked(buildScopedTools);
+        tools.mockReturnValue([]);
         const ctx = createPluginContext(
             resolvePluginIdentity(def({ package: '@astromech/seo' })),
             user,

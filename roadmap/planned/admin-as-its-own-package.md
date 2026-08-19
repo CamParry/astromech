@@ -130,6 +130,12 @@ Of the three costs the move was going to remove, one survives.
 That was the last standing justification, and it was addressed far more cheaply
 than by moving 257 files.
 
+`decisions/0070-drop-dependency-cruiser.md` changed the balance again: the
+browser boundary is no longer checked at lint time — only `check:boot`'s
+admin-paint assertion catches a server import in the client bundle, at runtime.
+The package boundary this split creates is the durable replacement, which moves
+the split up the queue: it is one of the next items to be tackled.
+
 ## Prerequisites
 
 1. **`roadmap/completed/config-free-component-kit.md`** — split
@@ -144,15 +150,14 @@ than by moving 257 files.
 
 Both are worth doing on their own terms. Neither commits to the split.
 
-## What the split would create that nothing would catch
+## What checks the shape of the new package
 
-`lint:deps` scans `packages/astromech/src` only, and the plugin packages have no
-`lint` or `lint:deps` script at all. Moving `admin/` into its own package means
-**nothing in the repo checks the new package's internal shape** — the `exports`
-boundary substitutes for it only at publish time, and only for what crosses the
-boundary, not for the layering inside it. That is a new blindspot in exchange
-for one that step 2 of `roadmap/completed/module-boundary-enforcement.md`
-already closed.
+Since `decisions/0070-drop-dependency-cruiser.md` nothing in the repo checks any
+package's internal shape, core's included. The split therefore creates no new
+blindspot relative to the status quo — it moves `admin/` from one unchecked
+interior to another. What remains is the `exports` boundary at publish time, and
+that is the check this split strengthens: a browser package cannot import server
+code it does not declare.
 
 ## Notes / caveats
 

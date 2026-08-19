@@ -13,7 +13,6 @@
  */
 
 import type { DB } from '@/database/types';
-import type { ClientAccess } from '@/plugins/runtime/client-access';
 import type {
     AnyServiceMethod,
     EntriesService,
@@ -35,7 +34,6 @@ import type {
     ResolvedPluginIdentity,
     Role,
     SettingsService,
-    ToolDefinition,
     TypedEntriesService,
     User,
     UsersService,
@@ -48,19 +46,26 @@ import { maybeGetDatabaseDriver } from '@/database/driver-registry';
 import { getDb } from '@/database/registry';
 import { getEmailDriver } from '@/email/registry';
 import { renderEmail } from '@/email/render';
+import { typedEntriesService } from '@/entries/index';
+import { resetEntryStorageOverrides, setEntryStorage } from '@/entries/storage/registry';
 import { AstromechError } from '@/errors/index';
 import { flattenEntryFields } from '@/fields/flatten';
-import { entryAccess } from '@/plugins/runtime/entry-access';
-import { notifyAccess } from '@/plugins/runtime/notify-access';
+import { mediaService } from '@/media/index';
+import { currentUserNotificationsService, notify } from '@/notifications/index';
 import {
     pluginEntryTypes,
     resolvePluginIdentity,
 } from '@/plugins/runtime/plugin-identity';
+import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { isTable } from '@/plugins/runtime/plugin-tables';
 import { createPluginTrackingStorage } from '@/plugins/runtime/plugin-tracking-storage';
 import { getCurrentRole } from '@/request-context/index';
+import { settingsService } from '@/settings/index';
 import { listAll } from '@/storage/prefix';
 import { getStorageDriver } from '@/storage/registry';
+import { buildScopedTools } from '@/transport/tools/scoped-tools';
+import { usersService } from '@/users/index';
+import { qualifyEntryType } from '@/utilities/entry-type-ids';
 import { log } from '@/utilities/log';
 import { createRegistry } from '@/utilities/registry';
 import {
@@ -77,28 +82,16 @@ type HookCallback = (eventCtx: unknown, ctx: PluginContext) => Promise<void> | v
 type RegisteredHook = { identity: ResolvedPluginIdentity; handler: HookCallback };
 type RegisteredRawRoute = { identity: ResolvedPluginIdentity; route: PluginRawRoute };
 
-/** The dispatch-table builder `ctx.methods` runs, injected by the composition root. */
-export type PluginMethodsAccess = {
-    tools(
-        role: Role | null | undefined,
-        options?: { readOnly?: boolean }
-    ): ToolDefinition[];
-};
-
 type PluginRuntimeState = {
     config: ResolvedConfig | null;
     identities: ResolvedPluginIdentity[];
     hooks: Map<string, RegisteredHook[]>;
     service: Map<string, Record<string, AnyServiceMethod>>;
     rawRoutes: RegisteredRawRoute[];
-    client: ClientAccess | null;
-    methods: PluginMethodsAccess | null;
 };
 
-// One slot holding all seven fields rather than seven slots: `registerPlugins`
-// rewrites config/identities/hooks/service/rawRoutes together in a single pass
-// and deliberately leaves client/methods standing, and that split is only
-// legible while the two groups sit in one record.
+// One slot holding all five fields rather than five slots: `registerPlugins`
+// rewrites them together in a single pass.
 const runtime = createRegistry<PluginRuntimeState>('pluginRuntime', {
     required: false,
 });
@@ -113,8 +106,6 @@ function state(): PluginRuntimeState {
         hooks: new Map(),
         service: new Map(),
         rawRoutes: [],
-        client: null,
-        methods: null,
     };
     runtime.set(created);
     return created;
@@ -133,7 +124,7 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
     s.service = new Map();
     s.rawRoutes = [];
     // Drop stale plugin storages before re-registering (test setups re-run this).
-    entryAccess().resetEntryStorageOverrides();
+    resetEntryStorageOverrides();
 
     for (const def of defs) {
         const identity = resolvePluginIdentity(def);
@@ -165,11 +156,10 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
         }
 
         // Register per-type custom storages under the qualified id.
-        const access = entryAccess();
         for (const [type, entryType] of pluginEntryTypes(def)) {
             if (entryType.storage) {
-                access.setEntryStorage(
-                    access.qualifyEntryType(identity.namespace, type),
+                setEntryStorage(
+                    qualifyEntryType(identity.namespace, type),
                     entryType.storage
                 );
             }
@@ -301,34 +291,6 @@ export function getPluginRawRoutes(): RegisteredRawRoute[] {
     return state().rawRoutes;
 }
 
-/** Injected by `plugin-access.ts`, which owns the implementation. */
-export function setPluginClient(client: ClientAccess): void {
-    state().client = client;
-}
-
-/** The registered client, or crash-loud if a context reaches for it too early. */
-function requireClient(): ClientAccess {
-    const client = state().client;
-    if (!client) {
-        throw new AstromechError('Plugin client is not available in this context.');
-    }
-    return client;
-}
-
-/** Injected by `plugin-access.ts`, for the same reason as the client. */
-export function setPluginMethods(access: PluginMethodsAccess): void {
-    state().methods = access;
-}
-
-/** The registered methods access, or crash-loud if a context reaches for it too early. */
-function requireMethods(): PluginMethodsAccess {
-    const methods = state().methods;
-    if (!methods) {
-        throw new AstromechError('Plugin methods are not available in this context.');
-    }
-    return methods;
-}
-
 // ============================================================================
 // Context construction
 // ============================================================================
@@ -437,29 +399,29 @@ export function createPluginContext(
         // sanitized rich text, stripped private fields and null private settings.
         get entries(): TypedEntriesService {
             return withDefaultShape(
-                requireClient().entries as unknown as EntriesService,
+                typedEntriesService as unknown as EntriesService,
                 'full'
             ) as unknown as TypedEntriesService;
         },
         // media / users / notifications have no shape axis, so they pass through.
         get media(): MediaService {
-            return requireClient().media;
+            return mediaService;
         },
         get settings(): SettingsService {
-            return withDefaultSettingsShape(requireClient().settings, 'full');
+            return withDefaultSettingsShape(settingsService, 'full');
         },
         get users(): UsersService {
-            return requireClient().users;
+            return usersService;
         },
         get notifications(): NotificationsService {
-            return requireClient().notifications;
+            return currentUserNotificationsService;
         },
         get plugins(): PluginServiceNamespace | undefined {
-            return requireClient().plugins;
+            return pluginServices;
         },
         email: { send: sendPluginEmail },
         notify: (input: NotifyInput) =>
-            notifyAccess().notify({
+            notify({
                 ...input,
                 type: `plugin:${identity.namespace}.${input.type}`,
             }),
@@ -477,7 +439,7 @@ export function createPluginContext(
         },
         get methods(): PluginMethods {
             return {
-                tools: (options) => requireMethods().tools(role, options),
+                tools: (options) => buildScopedTools(role, options),
             };
         },
         get database(): PluginDatabase {

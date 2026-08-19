@@ -10,7 +10,6 @@
         "build": "pnpm -r -F \"./packages/**\" build",
         "typecheck": "pnpm -r -F \"./packages/**\" typecheck && pnpm -F astromech-demo typecheck",
         "lint": "pnpm -F @astromech/schema-engine lint && pnpm -F astromech lint",
-        "lint:deps": "pnpm -F astromech lint:deps",
         "check:config": "pnpm -F astromech-demo check:config",
         "check:node-imports": "pnpm -F astromech check:node-imports",
         "check:exports": "pnpm -F astromech check:exports",
