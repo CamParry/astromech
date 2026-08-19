@@ -30,16 +30,16 @@ import {
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal';
+import { DeleteEntryModal } from '@/admin/components/entries/delete-entry-modal';
 import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer';
 import { entryLabel } from '@/admin/components/entries/entry-label';
-import { PublishPanel } from '@/admin/components/entries/PublishPanel';
+import { PublishPanel } from '@/admin/components/entries/publish-panel';
 import {
     FieldErrorsProvider,
     FieldWarningsProvider,
 } from '@/admin/components/fields/field-errors-context';
 import { FieldValidationProvider } from '@/admin/components/fields/field-validation-context';
-import { LocaleSwitcher } from '@/admin/components/translations/LocaleSwitcher';
+import { LocaleSwitcher } from '@/admin/components/translations/locale-switcher';
 import {
     Badge,
     Breadcrumb,

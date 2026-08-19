@@ -11,7 +11,7 @@ import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { MediaDetailModal } from '@/admin/components/media/MediaDetailModal';
+import { MediaDetailModal } from '@/admin/components/media/media-detail-modal';
 import { ConfirmProvider } from '@/admin/components/ui/confirm';
 import en from '@/admin/locales/en.json';
 

@@ -14,7 +14,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import { FieldTreeForm } from '@/admin/components/fields/FieldTreeForm';
+import { FieldTreeForm } from '@/admin/components/fields/field-tree-form';
 import {
     Button,
     Page,

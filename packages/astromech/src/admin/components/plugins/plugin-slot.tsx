@@ -9,7 +9,7 @@
 import type { AdminSlotName } from '@/types/config';
 import React from 'react';
 import { slots } from 'virtual:astromech/plugins/components';
-import { ComponentErrorBoundary } from '@/admin/components/pages/ComponentErrorBoundary';
+import { ComponentErrorBoundary } from '@/admin/components/pages/component-error-boundary';
 import { PluginUiProvider } from '@/admin/context/plugin';
 import { usePermissions } from '@/admin/hooks/index';
 

@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { useUi } from '../../context/ui';
 import { useHotkeys } from '../../hooks/index';
 import { AiContextReadout } from '../dev/ai-context-readout';
-import { PluginSlot } from '../plugins/PluginSlot';
+import { PluginSlot } from '../plugins/plugin-slot';
 import { CommandPalette, CommandPaletteProvider } from '../ui/command-palette';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';

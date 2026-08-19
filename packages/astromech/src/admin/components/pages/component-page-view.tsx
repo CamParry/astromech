@@ -11,7 +11,7 @@
  */
 import type { PluginUiIdentity } from '@/admin/context/plugin';
 import React from 'react';
-import { ComponentErrorBoundary } from '@/admin/components/pages/ComponentErrorBoundary';
+import { ComponentErrorBoundary } from '@/admin/components/pages/component-error-boundary';
 import {
     Page,
     PageContent,

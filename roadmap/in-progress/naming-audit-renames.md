@@ -80,6 +80,26 @@ One branch, one commit per workstream.
 
 ### WS3 — `storage` → `repository` for the data-access layer
 
+**Parked.** Not a naming call. It reverses a rule written in three
+places: `.claude/skills/code/SKILL.md` ("**No repository pattern.** …
+Name `createXStorage`, never `XRepository`"), `decisions/0003`'s
+"Entries: storage is the adapter, and no repository wrapper", and
+`decisions/0009`, which found the word returning as `notificationsRepo`
+and called it a rule violation. Decision 3 above was settled without
+those in view, so the data-layer question gets looked at on its own
+before any rename. Nothing landed.
+
+Two things worth carrying into that discussion. `decisions/0003`'s
+objection splits: "repositories pre-flatten the query surface" argues
+against adding a _layer_, which this was not (`createRepository` would
+have returned the identical object, open `where` grammar and all),
+while "every DB-touching unit being called storage removes a
+distinction that was never carrying weight" was a fair trade only
+while `storage` had one meaning — the file drivers later took the same
+word. And `EntryRecord` → `EntryRow` stands on its own: `TERMINOLOGY.md`'s
+"Entry vs Record" already says to avoid "record", and `Row` is the
+house suffix (`RelationshipRow`, `CronRow`, `NotificationRow`).
+
 The file/blob side is untouched: top-level `storage/`, `StorageDriver`, and
 the `r2`/`s3`/`filesystem` drivers keep their names.
 
@@ -107,19 +127,19 @@ Thirteen PascalCase component files sit in a kebab-case tree (70 kebab-case
 component siblings). Rename files only; exported component names stay
 PascalCase.
 
-- [ ] `AuthCard.tsx` → `auth-card.tsx`
-- [ ] `DeleteEntryModal.tsx` → `delete-entry-modal.tsx`
-- [ ] `PublishPanel.tsx` → `publish-panel.tsx`
-- [ ] `FieldTreeForm.tsx` → `field-tree-form.tsx`
-- [ ] `MediaCard.tsx` → `media-card.tsx`
-- [ ] `MediaDetailModal.tsx` → `media-detail-modal.tsx`
-- [ ] `MediaRow.tsx` → `media-row.tsx`
-- [ ] `ComponentErrorBoundary.tsx` → `component-error-boundary.tsx`
-- [ ] `ComponentPageView.tsx` → `component-page-view.tsx`
-- [ ] `SettingsPageForm.tsx` → `settings-page-form.tsx`
-- [ ] `PluginSlot.tsx` → `plugin-slot.tsx`
-- [ ] `LocaleSwitcher.tsx` → `locale-switcher.tsx`
-- [ ] `Brand.tsx` → `logo.tsx` (its only export is `Logo`)
+- [x] `AuthCard.tsx` → `auth-card.tsx`
+- [x] `DeleteEntryModal.tsx` → `delete-entry-modal.tsx`
+- [x] `PublishPanel.tsx` → `publish-panel.tsx`
+- [x] `FieldTreeForm.tsx` → `field-tree-form.tsx`
+- [x] `MediaCard.tsx` → `media-card.tsx`
+- [x] `MediaDetailModal.tsx` → `media-detail-modal.tsx`
+- [x] `MediaRow.tsx` → `media-row.tsx`
+- [x] `ComponentErrorBoundary.tsx` → `component-error-boundary.tsx`
+- [x] `ComponentPageView.tsx` → `component-page-view.tsx`
+- [x] `SettingsPageForm.tsx` → `settings-page-form.tsx`
+- [x] `PluginSlot.tsx` → `plugin-slot.tsx`
+- [x] `LocaleSwitcher.tsx` → `locale-switcher.tsx`
+- [x] `Brand.tsx` → `logo.tsx` (its only export is `Logo`)
 
 ### WS5 — smaller renames
 

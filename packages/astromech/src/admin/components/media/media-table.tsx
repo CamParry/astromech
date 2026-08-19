@@ -8,7 +8,7 @@ import type { Media } from '@/types/index';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Checkbox, Table } from '@/admin/components/ui/index';
-import { MediaRow } from './MediaRow';
+import { MediaRow } from './media-row';
 
 export type MediaTableProps = {
     items: Media[];
