@@ -1,7 +1,9 @@
 /**
- * Entry storage's degrade-not-throw contract: when the active driver declares
- * `supportsTransactions: false` (Cloudflare D1), both storage backends drop
- * their `transaction` method rather than exposing one that would fail.
+ * Entry storage's degrade-not-throw contract: `transaction` is always present on
+ * both storage backends. When the active driver declares
+ * `supportsTransactions: false` (Cloudflare D1) it runs `fn` sequentially with a
+ * `db` of `undefined` and no atomicity; when the driver supports interactive
+ * transactions it runs `fn` atomically with a real tx db handle.
  */
 
 import type { DB } from '@/database/types';
@@ -36,18 +38,40 @@ describe('entry storage transaction degradation', () => {
         await createTestDb();
     });
 
-    it('drops transaction when the active driver has no interactive transactions', async () => {
+    it('runs fn sequentially with no tx handle when the driver has no interactive transactions', async () => {
         await createTestDb();
         setDatabaseDriver(noTxDriver);
 
-        expect(createBuiltInEntryRepository().transaction).toBeUndefined();
-        expect(tableRepository(scratchTable).transaction).toBeUndefined();
+        const builtIn = createBuiltInEntryRepository();
+        expect(builtIn.transaction).toBeDefined();
+        let builtInDb: unknown = 'unset';
+        await builtIn.transaction(async (_repository, db) => {
+            builtInDb = db;
+        });
+        expect(builtInDb).toBeUndefined();
+
+        const table = tableRepository(scratchTable);
+        expect(table.transaction).toBeDefined();
+        let tableDb: unknown = 'unset';
+        await table.transaction(async (_repository, db) => {
+            tableDb = db;
+        });
+        expect(tableDb).toBeUndefined();
     });
 
-    it('keeps transaction when the active driver supports transactions (default)', async () => {
+    it('runs fn atomically with a tx db handle when the driver supports transactions (default)', async () => {
         await createTestDb();
 
-        expect(createBuiltInEntryRepository().transaction).toBeDefined();
-        expect(tableRepository(scratchTable).transaction).toBeDefined();
+        let builtInDb: unknown;
+        await createBuiltInEntryRepository().transaction(async (_repository, db) => {
+            builtInDb = db;
+        });
+        expect(builtInDb).toBeDefined();
+
+        let tableDb: unknown;
+        await tableRepository(scratchTable).transaction(async (_repository, db) => {
+            tableDb = db;
+        });
+        expect(tableDb).toBeDefined();
     });
 });

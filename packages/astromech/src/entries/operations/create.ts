@@ -161,7 +161,5 @@ async function persistEntry(
         await indexEntryRelationships(entry, data.fields, type, txDb);
         return entry;
     };
-    return repository.transaction
-        ? repository.transaction(write)
-        : write(repository, undefined);
+    return repository.transaction(write);
 }

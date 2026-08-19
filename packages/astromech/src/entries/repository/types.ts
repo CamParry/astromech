@@ -8,7 +8,7 @@
  * mounts a single-table storage that declares no capabilities and so only needs
  * the five base methods.
  *
- * Shape: five base methods (list/get/create/update/delete), an optional
+ * Shape: five base methods (list/get/create/update/delete), an always-present
  * `transaction`, and three optional capability groups (trash/versions/
  * translatable) required iff the corresponding capability is declared in
  * `supports`. `statuses`/`slug` carry no methods — they gate which EntryWrite
@@ -131,13 +131,15 @@ export type EntryRepository<R extends EntryRow = EntryRow> = {
     existingIds?(ids: string[]): Promise<Set<string>>;
 
     /**
-     * Run `fn` inside a single transaction. The storage handed to `fn` is bound
-     * to the tx; the raw tx db handle is also provided so the entries service can
-     * keep core relationship persistence (which lives outside the storage
+     * Always present. When the driver supports interactive transactions it runs
+     * `fn` atomically with the tx-bound repository and the raw tx db handle;
+     * otherwise (e.g. D1) it runs `fn` sequentially with `db` undefined and no
+     * atomicity, so callers never branch. The raw tx db handle lets the entries
+     * service keep core relationship persistence (which lives outside the storage
      * contract) atomic with the storage writes.
      */
-    transaction?<T>(
-        fn: (repository: EntryRepository<R>, db: RepositoryDb) => Promise<T>
+    transaction<T>(
+        fn: (repository: EntryRepository<R>, db: RepositoryDb | undefined) => Promise<T>
     ): Promise<T>;
 
     /**

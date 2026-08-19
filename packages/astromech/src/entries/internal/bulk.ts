@@ -44,9 +44,7 @@ export async function runBulk<T>(
         }
         return results;
     };
-    return repository.transaction
-        ? repository.transaction(run)
-        : run(repository, undefined);
+    return repository.transaction(run);
 }
 
 export async function runBulkVoid(

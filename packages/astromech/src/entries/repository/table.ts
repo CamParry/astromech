@@ -75,17 +75,6 @@ export type TableRepositoryOptions = {
 class TableRepository implements EntryRepository<EntryRow> {
     public readonly supports: readonly never[] = Object.freeze([]) as readonly never[];
 
-    /**
-     * Assigned in the constructor only when the active driver supports
-     * interactive transactions — an own `undefined` property would still
-     * satisfy `'transaction' in storage`, so degrading means never assigning
-     * it at all. `EntryRepository.transaction` is optional and every caller
-     * already falls back to sequential writes.
-     */
-    public transaction?: <T>(
-        fn: (repository: EntryRepository<EntryRow>, db: RepositoryDb) => Promise<T>
-    ) => Promise<T>;
-
     private readonly table: Table;
     private readonly repository: Repository<Table>;
     private readonly idCol: string;
@@ -104,41 +93,39 @@ class TableRepository implements EntryRepository<EntryRow> {
             this.createdAtCol = options?.timestamps?.createdAt ?? 'createdAt';
             this.updatedAtCol = options?.timestamps?.updatedAt ?? 'updatedAt';
         }
+    }
 
-        // `EntryRepository.transaction` is optional and every caller
-        // (operations/create.ts, internal/bulk.ts, operations/staging/merge.ts)
-        // already falls back to sequential writes, so leaving it unassigned on a
-        // driver without interactive transactions (D1) degrades correctly
-        // instead of throwing at runtime.
-        if (supportsTransactions()) {
-            this.transaction = async <T>(
-                fn: (
-                    repository: EntryRepository<EntryRow>,
-                    db: RepositoryDb
-                ) => Promise<T>
-            ): Promise<T> => {
-                const { db } = this.repository.query();
-                return db.transaction().execute(async (trx) => {
-                    let timestamps: TableRepositoryOptions['timestamps'];
-                    if (this.createdAtCol === false) {
-                        timestamps = false;
-                    } else if (this.updatedAtCol === false) {
-                        timestamps = { createdAt: this.createdAtCol };
-                    } else {
-                        timestamps = {
-                            createdAt: this.createdAtCol,
-                            updatedAt: this.updatedAtCol,
-                        };
-                    }
-                    const txRepository = new TableRepository(
-                        this.table,
-                        { idColumn: this.idCol, timestamps },
-                        trx as unknown as Db
-                    );
-                    return fn(txRepository, trx as unknown as RepositoryDb);
-                });
-            };
-        }
+    /**
+     * Atomic when the driver supports interactive transactions; otherwise runs
+     * `fn` sequentially with `db` undefined and no atomicity.
+     */
+    public async transaction<T>(
+        fn: (
+            repository: EntryRepository<EntryRow>,
+            db: RepositoryDb | undefined
+        ) => Promise<T>
+    ): Promise<T> {
+        if (!supportsTransactions()) return fn(this, undefined);
+        const { db } = this.repository.query();
+        return db.transaction().execute(async (trx) => {
+            let timestamps: TableRepositoryOptions['timestamps'];
+            if (this.createdAtCol === false) {
+                timestamps = false;
+            } else if (this.updatedAtCol === false) {
+                timestamps = { createdAt: this.createdAtCol };
+            } else {
+                timestamps = {
+                    createdAt: this.createdAtCol,
+                    updatedAt: this.updatedAtCol,
+                };
+            }
+            const txRepository = new TableRepository(
+                this.table,
+                { idColumn: this.idCol, timestamps },
+                trx as unknown as Db
+            );
+            return fn(txRepository, trx as unknown as RepositoryDb);
+        });
     }
 
     private getColumns(): Record<string, Column> {

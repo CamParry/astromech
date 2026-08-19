@@ -63,6 +63,7 @@ const emptyRepository = (): EntryRepository => ({
         throw new Error('not called');
     },
     delete: async () => undefined,
+    transaction: async (fn) => fn(emptyRepository(), undefined),
     uniqueSlug: async () => '',
 });
 

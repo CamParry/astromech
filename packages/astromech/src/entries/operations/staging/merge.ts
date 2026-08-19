@@ -94,7 +94,5 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
         return asEntry(updated);
     };
 
-    return repository.transaction
-        ? repository.transaction(run)
-        : run(repository, undefined);
+    return repository.transaction(run);
 }

@@ -274,8 +274,17 @@ export function createBuiltInEntryRepository(opts?: { db?: Db; defaultLocale?: s
     const supports: readonly Capability[] = BUILT_IN_SUPPORTS;
 
     async function transaction<T>(
-        fn: (repository: EntryRepository<Entry>, db: Db) => Promise<T>
+        fn: (repository: EntryRepository<Entry>, db: Db | undefined) => Promise<T>
     ): Promise<T> {
+        if (!supportsTransactions()) {
+            return fn(
+                createBuiltInEntryRepository({
+                    ...(dbOverride ? { db: dbOverride } : {}),
+                    defaultLocale,
+                }),
+                undefined
+            );
+        }
         // `handle()`, not `getDb()`: a storage already bound to a tx handle must
         // nest on that handle, or it opens a second transaction on the base
         // connection and the inner writes escape the outer rollback.
@@ -561,12 +570,9 @@ export function createBuiltInEntryRepository(opts?: { db?: Db; defaultLocale?: s
 
     return {
         supports,
-        // `EntryRepository.transaction` is optional and every caller
-        // (operations/create.ts, internal/bulk.ts, operations/staging/merge.ts)
-        // already falls back to sequential writes, so omitting it on a driver
-        // without interactive transactions degrades correctly instead of
-        // throwing at runtime.
-        ...(supportsTransactions() ? { transaction } : {}),
+        // Always present; degrades to sequential internally when the driver
+        // lacks interactive transactions.
+        transaction,
         existingIds,
         uniqueSlug,
         list,
