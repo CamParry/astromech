@@ -54,7 +54,7 @@ import { getDb } from '@/database/registry';
 import { entriesTable } from '@/database/schema';
 import { createStorage } from '@/database/storage/create-storage';
 import { existingResourceIds } from '@/database/storage/resource-existence';
-import { BUILT_IN_SUPPORTS } from '@/utilities/entry-capabilities';
+import { BUILT_IN_SUPPORTS } from '@/entries/capabilities';
 import { UnknownSortKeyError, UnknownWhereKeyError } from '../errors';
 import { createVersionStorage } from './versions';
 

@@ -15,7 +15,7 @@
  * This mounts the REAL `EntryEditPage` — not a hand-built stand-in — inside a
  * real `@tanstack/react-router` router (memory history) so `useNavigate` and
  * `Link` resolve, plus the plain-React-context providers the page's hooks
- * need (`ToastProvider`, `AuthProvider`, `ConfirmProvider`, `AIContextProvider`).
+ * need (`ToastProvider`, `AuthProvider`, `ConfirmProvider`, `AiContextProvider`).
  * It deliberately skips the app's `_protected` layout/`AppShell` — that's nav
  * chrome unrelated to this bug — and builds an `EntriesMount` by hand rather
  * than going through a route loader, exactly as `entry-edit-cache-invalidation`
@@ -41,7 +41,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { EntryEditPage } from '@/admin/components/entries/entry-edit-page';
 import { ConfirmProvider } from '@/admin/components/ui/confirm';
 import { ToastProvider } from '@/admin/components/ui/toast';
-import { AIContextProvider } from '@/admin/context/ai-context';
+import { AiContextProvider } from '@/admin/context/ai-context';
 import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
 import { scopedEntryKeys } from '@/admin/hooks/use-query-keys';
 import '@/admin/rendering/register-fields';
@@ -138,9 +138,9 @@ function mountEditPage(queryClient: QueryClient) {
             <ToastProvider>
                 <AuthProvider>
                     <ConfirmProvider>
-                        <AIContextProvider>
+                        <AiContextProvider>
                             <RouterProvider router={router} />
-                        </AIContextProvider>
+                        </AiContextProvider>
                     </ConfirmProvider>
                 </AuthProvider>
             </ToastProvider>

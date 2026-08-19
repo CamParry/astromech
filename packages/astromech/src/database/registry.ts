@@ -7,7 +7,7 @@
 
 import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
-import { createRegistry } from '@/utilities/registry';
+import { createRegistry } from '@/registry';
 
 type AnyDb = Kysely<DB>;
 
@@ -16,4 +16,6 @@ const db = createRegistry<AnyDb>('db', {
 });
 
 export const setDb = db.set;
-export const getDb = db.get;
+
+/** The active database instance. Throws when unset. */
+export const getDb = db.getOrThrow;

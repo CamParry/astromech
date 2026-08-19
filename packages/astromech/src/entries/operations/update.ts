@@ -9,11 +9,11 @@ import type {
     ResolvedEntryType,
 } from '@/types/index';
 import { getConfig } from '@/config/registry';
+import { resolveEntryType } from '@/entries/type-ids.shared';
 import { flattenEntryFields } from '@/fields/flatten';
-import { assertNoFieldErrors, parseFields } from '@/fields/pipeline';
+import { assertNoFieldErrors, parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { getCurrentUser } from '@/request-context/index';
-import { resolveEntryType } from '@/utilities/entry-type-ids';
 import { UnknownEntryTypeError } from '../errors';
 import { runBulk } from '../internal/bulk';
 import { pruneDanglingRelations } from '../internal/dangling-relations';

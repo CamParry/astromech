@@ -14,7 +14,7 @@
  */
 
 import type { EntryStorage } from './types';
-import { createKeyedRegistry, createRegistry } from '@/utilities/registry';
+import { createKeyedRegistry, createRegistry } from '@/registry';
 import { createBuiltInEntryStorage } from './built-in';
 
 const builtIn = createRegistry<EntryStorage>('entryStorageBuiltIn', { required: false });
@@ -22,7 +22,7 @@ const overrides = createKeyedRegistry<EntryStorage>('entryStorageOverrides');
 
 /** The shared built-in storage, constructed on first use. */
 function getBuiltIn(): EntryStorage {
-    const existing = builtIn.maybeGet();
+    const existing = builtIn.get();
     if (existing) return existing;
     const created = createBuiltInEntryStorage();
     builtIn.set(created);
@@ -30,7 +30,7 @@ function getBuiltIn(): EntryStorage {
 }
 
 export function getEntryStorage(type: string): EntryStorage {
-    return overrides.maybeGet(type) ?? getBuiltIn();
+    return overrides.get(type) ?? getBuiltIn();
 }
 
 export function setEntryStorage(type: string, storage: EntryStorage): void {

@@ -1,7 +1,7 @@
 /**
  * Build the value record a set of field definitions starts life with.
  *
- * The pipeline applies defaults on `create` only (`fields/pipeline.ts`), so a
+ * The pipeline applies defaults on `create` only (`fields/parse-fields.ts`), so a
  * container item added while EDITING an existing resource would otherwise never
  * see them. The admin seeds an added item through here instead.
  *

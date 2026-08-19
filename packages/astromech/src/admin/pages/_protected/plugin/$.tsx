@@ -17,11 +17,11 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { pages } from 'virtual:astromech/plugins/components';
-import { ComponentErrorBoundary } from '@/admin/components/pages/ComponentErrorBoundary';
-import { ComponentPageView } from '@/admin/components/pages/ComponentPageView';
-import { SettingsPageForm } from '@/admin/components/pages/SettingsPageForm';
+import { ComponentErrorBoundary } from '@/admin/components/pages/component-error-boundary';
+import { ComponentPageView } from '@/admin/components/pages/component-page-view';
+import { SettingsPageForm } from '@/admin/components/pages/settings-page-form';
 import { EmptyState, Page, PageContent } from '@/admin/components/ui/index';
-import { useAIContext } from '@/admin/context/ai-context';
+import { useAiContext } from '@/admin/context/ai-context';
 import { PluginUiProvider } from '@/admin/context/plugin';
 import { usePermissions } from '@/admin/hooks/index';
 import { resolveLabel } from '@/admin/i18n/labels';
@@ -48,7 +48,7 @@ function PluginPage(): React.ReactElement {
             ? resolveLabel(settingsPage.label, settingsPage.path, t, 'translation')
             : (registration?.label ?? null);
     const ownerLabel = settingsPlugin?.label;
-    useAIContext(
+    useAiContext(
         pageLabel !== null
             ? {
                   kind: 'pages',

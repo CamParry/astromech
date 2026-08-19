@@ -13,7 +13,7 @@
  * directly (same approach as use-field-validation.test.tsx).
  */
 
-import type { UseEntryFormReturn } from '@/admin/hooks/use-entry-form';
+import type { UseEntryFormResult } from '@/admin/hooks/use-entry-form';
 import type { Entry, Field } from '@/types/index';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from 'i18next';
@@ -40,7 +40,7 @@ function entry(id: string): Entry {
 }
 
 type Mounted = {
-    handle: () => UseEntryFormReturn;
+    handle: () => UseEntryFormResult;
     saveFn: ReturnType<typeof vi.fn>;
     publishFn: ReturnType<typeof vi.fn>;
     unmount: () => void;
@@ -56,7 +56,7 @@ function mountForm(defaults: {
 }): Mounted {
     const saveFn = vi.fn(async () => entry('saved'));
     const publishFn = vi.fn(async () => entry('published'));
-    let latest: UseEntryFormReturn | undefined;
+    let latest: UseEntryFormResult | undefined;
 
     function Probe(): React.ReactElement {
         const result = useEntryForm({

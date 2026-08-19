@@ -7,11 +7,11 @@ import type {
     ResolvedEntryType,
 } from '@/types/index';
 import { getConfig } from '@/config/registry';
+import { resolveEntryType } from '@/entries/type-ids.shared';
 import { flattenEntryFields } from '@/fields/flatten';
-import { assertNoFieldErrors, parseFields } from '@/fields/pipeline';
+import { assertNoFieldErrors, parseFields } from '@/fields/parse-fields';
 import { runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime';
 import { getCurrentUser } from '@/request-context/index';
-import { resolveEntryType } from '@/utilities/entry-type-ids';
 import { UnknownEntryTypeError } from '../errors';
 import { pruneDanglingRelations } from '../internal/dangling-relations';
 import { asEntry } from '../internal/records';

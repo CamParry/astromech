@@ -28,14 +28,14 @@ import { existingEntryTypes } from '@/database/storage/resource-existence';
 import { createEntryLookups } from '@/entries/lookups';
 import { entriesTable } from '@/entries/schema';
 import { getEntryStorage, hasEntryStorageOverride } from '@/entries/storage/registry';
+import { qualifyEntryType, resolveEntryType } from '@/entries/type-ids.shared';
 import { entryValidationMode } from '@/entries/validation-mode.shared';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenEntryFields, flattenFieldNodes } from '@/fields/flatten';
-import { parseFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/parse-fields';
 import { createMediaStorage } from '@/media/storage';
 import { settingsService } from '@/settings/service';
 import { createUserStorage } from '@/users/storage';
-import { qualifyEntryType, resolveEntryType } from '@/utilities/entry-type-ids';
 
 /** Scope of a report run. `type` is an ENTRY type; it never covers media, users or settings. */
 export type ValidationScope = { type?: string };

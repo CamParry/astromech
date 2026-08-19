@@ -12,10 +12,10 @@ import {
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import { useUI } from '../../context/ui';
+import { useUi } from '../../context/ui';
 import { usePermissions } from '../../hooks/index';
 import { resolveLabel } from '../../i18n/labels';
-import { Logo } from '../brand/Brand';
+import { Logo } from '../brand/logo';
 import { EntryTypeIcon } from '../ui/entry-type-icon';
 
 /**
@@ -39,7 +39,7 @@ function filterNavItems(
 
 export function Sidebar() {
     const { t } = useTranslation();
-    const { sidebarOpen, setSidebarOpen } = useUI();
+    const { sidebarOpen, setSidebarOpen } = useUi();
     const { canReadMedia, canReadUsers, hasPermission } = usePermissions();
     const entryTypes = Object.entries(adminConfig.entries);
     // Each host page carries its own resolved permission (`settings:read` for a
@@ -223,7 +223,7 @@ function PluginNavGroup({
     children_: PluginNavItem[];
 }) {
     const { t } = useTranslation();
-    const { sidebarOpen, setSidebarOpen } = useUI();
+    const { sidebarOpen, setSidebarOpen } = useUi();
     const pathname = useRouterState().location.pathname;
     const childActive = children_.some((child) => navItemContains(child, pathname));
     const [expanded, setExpanded] = React.useState(childActive);

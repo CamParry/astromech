@@ -11,12 +11,12 @@
  * `{ type, ... }`, and `type` is fixed per contract because a contract
  * describes one type's methods.
  */
+import type { Capability } from '@/entries/capabilities';
 import type { EntryAction } from '@/permissions/entry-permission';
 import type { ServiceMethodContract } from '@/types/index';
-import type { Capability } from '@/utilities/entry-capabilities';
 import { z } from '@hono/zod-openapi';
+import { parseEntryTypeId } from '@/entries/type-ids.shared';
 import { entryPermission } from '@/permissions/entry-permission';
-import { parseEntryTypeId } from '@/utilities/entry-type-ids';
 import {
     createEntrySchema,
     duplicateOverridesSchema,

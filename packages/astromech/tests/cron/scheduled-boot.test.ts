@@ -14,7 +14,7 @@ import { registerCronJob } from '@/cron/registry';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/schema';
 import { createWorkerEntry } from '@/integrations/cloudflare/index';
-import { globals } from '@/utilities/registry';
+import { globals } from '@/registry';
 
 // Holds what the mocked virtual module serves. `vi.hoisted` so the mock factory,
 // which is hoisted above the imports, can close over it.

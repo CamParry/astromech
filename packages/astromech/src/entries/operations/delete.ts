@@ -5,8 +5,31 @@ import { runDeleteWithHooks } from '../internal/hooks';
 import { loadAndAssertType } from '../internal/records';
 import { getEntryStorage } from '../storage/registry';
 
+export async function deleteEntry(params: {
+    type: string;
+    id: string | readonly string[];
+    cascadeLocales?: boolean;
+}): Promise<void> {
+    const cascade = !!params.cascadeLocales;
+    await runDeleteWithHooks(params.type, params.id, true, async () => {
+        if (Array.isArray(params.id)) {
+            await runBulkVoid(params.type, params.id, (txStorage, txDb, id) =>
+                deleteOne(txStorage, txDb, params.type, id, cascade)
+            );
+            return;
+        }
+        await deleteOne(
+            getEntryStorage(params.type),
+            undefined,
+            params.type,
+            params.id as string,
+            cascade
+        );
+    });
+}
+
 /** Permanently delete a single entry + its relationship rows (policy). */
-export async function deleteOne(
+async function deleteOne(
     storage: EntryStorage,
     db: StorageDb | undefined,
     type: string,
@@ -29,27 +52,4 @@ export async function deleteOne(
 
     await relationships.deleteByResource(id, 'entry');
     await storage.delete(id);
-}
-
-export async function deleteEntry(params: {
-    type: string;
-    id: string | readonly string[];
-    cascadeLocales?: boolean;
-}): Promise<void> {
-    const cascade = !!params.cascadeLocales;
-    await runDeleteWithHooks(params.type, params.id, true, async () => {
-        if (Array.isArray(params.id)) {
-            await runBulkVoid(params.type, params.id, (txStorage, txDb, id) =>
-                deleteOne(txStorage, txDb, params.type, id, cascade)
-            );
-            return;
-        }
-        await deleteOne(
-            getEntryStorage(params.type),
-            undefined,
-            params.type,
-            params.id as string,
-            cascade
-        );
-    });
 }

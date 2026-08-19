@@ -13,10 +13,10 @@ no events, and is pulled at send time rather than broadcast.
 
 ## The reference
 
-A route declares an `AIContextReference` (exported from `astromech`):
+A route declares an `AiContextReference` (exported from `astromech`):
 
 ```ts
-type AIContextReference = {
+type AiContextReference = {
     kind: 'entries' | 'media' | 'users' | 'settings' | 'pages';
     type?: string;
     id?: string;
@@ -39,18 +39,18 @@ type AIContextReference = {
 
 ## Declaring one
 
-`useAIContext` comes from `astromech/ui/app`. It declares the reference for as long
+`useAiContext` comes from `astromech/ui/app`. It declares the reference for as long
 as the component is mounted and withdraws it on unmount:
 
 ```tsx
-import { useAIContext } from 'astromech/ui/app';
+import { useAiContext } from 'astromech/ui/app';
 
 function MediaDetailPage() {
     const { id } = Route.useParams();
     const { data: item } = useMediaItem(id);
 
     // `null` until it loads, so no placeholder label is ever declared.
-    useAIContext(item != null ? { kind: 'media', id, label: item.filename } : null, {
+    useAiContext(item != null ? { kind: 'media', id, label: item.filename } : null, {
         depth: 1,
     });
 }
@@ -63,7 +63,7 @@ React does not allow, or a reference labelled "Loading…".
 A list screen declares the same way, with no `id`:
 
 ```tsx
-useAIContext({ kind: 'entries', type, label: entryType.plural }, { depth: 0 });
+useAiContext({ kind: 'entries', type, label: entryType.plural }, { depth: 0 });
 ```
 
 ### Depth
@@ -88,14 +88,14 @@ not remount on navigation, and they throw outside it.
 
 ## Reading it
 
-`useAIContextItems`, also from `astromech/ui/app`, returns the current items —
-each an `AIContextItem`, `{ reference, depth, order }` — in registration order.
-`formatAIContextMessage` from `astromech` turns them into the message:
+`useAiContextItems`, also from `astromech/ui/app`, returns the current items —
+each an `AiContextItem`, `{ reference, depth, order }` — in registration order.
+`formatAiContextMessage` from `astromech` turns them into the message:
 
 ```ts
-import { formatAIContextMessage } from 'astromech';
+import { formatAiContextMessage } from 'astromech';
 
-const message = formatAIContextMessage(items);
+const message = formatAiContextMessage(items);
 // { role: 'system', content: 'The user is currently viewing, from least to most specific:\n1. …' }
 ```
 
@@ -109,7 +109,7 @@ The user is currently viewing, from least to most specific:
 
 **Sorting lives in the formatter and nowhere else.** The store hands back what
 it holds, in registration order; the sort by depth, then by order, happens
-once, inside `formatAIContextMessage`. Duplicating it in the store would give
+once, inside `formatAiContextMessage`. Duplicating it in the store would give
 one fact two sources of truth.
 
 ## Why a `role: 'system'` message
@@ -140,7 +140,7 @@ That is also why the plugin checks `model.provider` rather than holding a list
 of model ids: a provider check answers the same question and doesn't go stale
 when a new model ships.
 
-`formatAIContextMessage` sanitizes every value it interpolates — control
+`formatAiContextMessage` sanitizes every value it interpolates — control
 characters and backticks stripped, whitespace collapsed, length clamped — and
 the message it builds says in its own last line that the quoted values are
 user-supplied data rather than instructions. An entry's `label` is an
@@ -165,7 +165,7 @@ neither guard is optional.
 
 The admin ships a panel, gated on `import.meta.env.DEV`, that shows the
 assembled message: the role, the content, and a count of the declared
-references. It renders `formatAIContextMessage`'s own output rather than its
+references. It renders `formatAiContextMessage`'s own output rather than its
 own view of the items, so the whole assembly path stays exercised while there
 is no other consumer — and so what you read there is exactly what would be
 sent.

@@ -21,7 +21,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer';
-import { PublishPanel } from '@/admin/components/entries/PublishPanel';
+import { PublishPanel } from '@/admin/components/entries/publish-panel';
 import {
     FieldErrorsProvider,
     FieldWarningsProvider,

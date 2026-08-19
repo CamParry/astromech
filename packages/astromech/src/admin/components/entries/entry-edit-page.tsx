@@ -30,16 +30,16 @@ import {
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal';
+import { DeleteEntryModal } from '@/admin/components/entries/delete-entry-modal';
 import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer';
 import { entryLabel } from '@/admin/components/entries/entry-label';
-import { PublishPanel } from '@/admin/components/entries/PublishPanel';
+import { PublishPanel } from '@/admin/components/entries/publish-panel';
 import {
     FieldErrorsProvider,
     FieldWarningsProvider,
 } from '@/admin/components/fields/field-errors-context';
 import { FieldValidationProvider } from '@/admin/components/fields/field-validation-context';
-import { LocaleSwitcher } from '@/admin/components/translations/LocaleSwitcher';
+import { LocaleSwitcher } from '@/admin/components/translations/locale-switcher';
 import {
     Badge,
     Breadcrumb,
@@ -59,7 +59,7 @@ import {
     useConfirm,
     useToast,
 } from '@/admin/components/ui/index';
-import { useAIContext } from '@/admin/context/ai-context';
+import { useAiContext } from '@/admin/context/ai-context';
 import {
     useCreateStaged,
     useDeleteStaged,
@@ -77,7 +77,7 @@ import {
 import { scopedEntryKeys } from '@/admin/hooks/use-query-keys';
 import { EntryNamespaceProvider, namespaceForScope } from '@/admin/i18n/entry-namespace';
 import { resolveAdminEntryType, resolveForm } from '@/admin/rendering/resolve';
-import { resolveEntryUrl } from '@/entries/utils/url.shared';
+import { resolveEntryUrl } from '@/entries/entry-url.shared';
 import { resolveContentLocale } from '@/utilities/locale';
 import { EntryFormErrors } from './entry-form-errors';
 
@@ -164,7 +164,7 @@ function EntryEditPageBody({
 
     // Declare the entry in view; `null` until it loads, so no placeholder label
     // is ever published. Serves the root and plugin routes alike.
-    useAIContext(
+    useAiContext(
         entry != null
             ? { kind: 'entries', type, id, label: entryLabel(entry, entryType) }
             : null,

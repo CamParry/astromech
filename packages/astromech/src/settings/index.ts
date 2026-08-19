@@ -1,6 +1,6 @@
 /** `settings` domain module — global key/value settings with public/private visibility. */
 export { settingsService } from './service';
-export { settingsContract } from './methods';
+export { settingsContract } from './contract';
 export { setSettingSchema } from './schema';
 export { isPublicSettingKey } from './visibility';
 export {

@@ -1,9 +1,9 @@
 import type { VisibilityShape } from '../visibility';
 import type { Entry } from '@/types/index';
 import { getConfig } from '@/config/registry';
+import { resolveEntryType } from '@/entries/type-ids.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { getCurrentUser } from '@/request-context/index';
-import { resolveEntryType } from '@/utilities/entry-type-ids';
 import { getEntryStorage } from '../storage/registry';
 import { applyVisibility, markPublic } from '../visibility';
 import { runPreviewGet } from './preview/read';

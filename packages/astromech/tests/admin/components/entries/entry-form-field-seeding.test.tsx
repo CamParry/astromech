@@ -25,7 +25,7 @@ import { initReactI18next } from 'react-i18next';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/admin/components/ui/toast';
 import '@/admin/rendering/register-fields';
-import type { UseEntryFormReturn } from '@/admin/hooks/use-entry-form';
+import type { UseEntryFormResult } from '@/admin/hooks/use-entry-form';
 import type { Entry, Field } from '@/types/index';
 import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer';
 import { useEntryForm } from '@/admin/hooks/use-entry-form';
@@ -60,7 +60,7 @@ type MountOptions = {
 };
 
 type Harness = {
-    handle: () => UseEntryFormReturn;
+    handle: () => UseEntryFormResult;
     saveFn: ReturnType<typeof vi.fn>;
     /** Deliver the fetched entry, as the query does. */
     load: () => void;
@@ -76,7 +76,7 @@ function mountEditPage({ main, sidebar = [], fields }: MountOptions): Harness {
     const saveFn = vi.fn(async () => ({ id: 'e1' }) as Entry);
     const publishFn = vi.fn(async () => ({ id: 'e1' }) as Entry);
     const seen: unknown[] = [];
-    let latest: UseEntryFormReturn | undefined;
+    let latest: UseEntryFormResult | undefined;
     let setEntry!: (entry: Entry | null) => void;
 
     function Probe(): React.ReactElement {

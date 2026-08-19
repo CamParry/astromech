@@ -11,12 +11,12 @@ import { definePlugin } from '@/index';
 import { buildPermissionCatalogue } from '@/permissions/catalogue';
 import {
     BUILT_IN_ROLES,
-    builtInRole,
     can,
     CORE_PERMISSIONS,
     definePermissions,
     entryPermissions,
     hasPermission,
+    permissionsForBuiltInRole,
     resolveRoles,
 } from '@/permissions/index';
 
@@ -173,16 +173,16 @@ describe('BUILT_IN_ROLES', () => {
 });
 
 // ============================================================================
-// builtInRole — defensive copy of a built-in role's permissions
+// permissionsForBuiltInRole — defensive copy of a built-in role's permissions
 // ============================================================================
 
-describe('builtInRole', () => {
+describe('permissionsForBuiltInRole', () => {
     it('returns the editor permissions including entry:*', () => {
-        expect(builtInRole('editor')).toContain('entry:*');
+        expect(permissionsForBuiltInRole('editor')).toContain('entry:*');
     });
 
     it('returns a defensive copy — mutating it does not affect BUILT_IN_ROLES', () => {
-        const copy = builtInRole('editor');
+        const copy = permissionsForBuiltInRole('editor');
         copy.push('users:read');
         expect(BUILT_IN_ROLES.editor.permissions).not.toContain('users:read');
     });
@@ -265,9 +265,9 @@ describe('plugin permissions (via definePlugin)', () => {
         expect(() => plugin.permissions('nope')).toThrow(/Unknown permission "nope"/);
     });
 
-    it('composes with builtInRole into a working role', () => {
+    it('composes with permissionsForBuiltInRole into a working role', () => {
         const permissions = [
-            ...builtInRole('editor'),
+            ...permissionsForBuiltInRole('editor'),
             ...plugin.permissions('lookup'),
             // Entry permissions are derived, not declared by the plugin.
             ...entryPermissions('redirects/redirect', 'read', 'update'),

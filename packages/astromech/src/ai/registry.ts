@@ -1,22 +1,22 @@
 /**
  * Model registry.
  *
- * globalThis-backed (see `@/utilities/registry.js`) so the models built during
+ * globalThis-backed (see `@/registry.js`) so the models built during
  * boot are visible to the server at request time. Model access is optional —
  * reads probe rather than throw. What is stored is already wrapped.
  */
 
 import type { LanguageModelV4 } from '@ai-sdk/provider';
-import { createRegistry } from '@/utilities/registry';
+import { createRegistry } from '@/registry';
 
-type WrappedAIConfig = {
+type WrappedAiConfig = {
     model: LanguageModelV4;
     models: Record<string, LanguageModelV4>;
 };
 
-const ai = createRegistry<WrappedAIConfig>('ai', { required: false });
+const ai = createRegistry<WrappedAiConfig>('ai', { required: false });
 
-export const setAIConfig = ai.set;
-export const getAIConfig = ai.maybeGet;
+export const setAiConfig = ai.set;
+export const getAiConfig = ai.get;
 
-export type { WrappedAIConfig };
+export type { WrappedAiConfig };

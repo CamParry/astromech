@@ -1,11 +1,11 @@
 import type { Field, FieldValidationContext } from '@/types/fields';
 import { describe, expect, it } from 'vitest';
-import { parseFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/parse-fields';
 import { renderRichText } from '@/fields/rich-text/index';
 import {
-    checkRichTextDocument,
     coerceRichText,
     validateRichText,
+    validateRichTextDocument,
 } from '@/fields/rich-text/validate';
 
 // ---------------------------------------------------------------------------
@@ -48,34 +48,34 @@ function fakeCtx() {
 }
 
 // ---------------------------------------------------------------------------
-// checkRichTextDocument
+// validateRichTextDocument
 // ---------------------------------------------------------------------------
 
-describe('checkRichTextDocument', () => {
+describe('validateRichTextDocument', () => {
     it('accepts a valid document', () => {
-        expect(checkRichTextDocument(doc)).toBe(true);
+        expect(validateRichTextDocument(doc)).toBe(true);
     });
 
     it('rejects an HTML string by naming what it is', () => {
-        expect(checkRichTextDocument('<p>Hello</p>')).toBe(
+        expect(validateRichTextDocument('<p>Hello</p>')).toBe(
             'Must be a rich text document, not an HTML string'
         );
     });
 
     it('rejects a plain string', () => {
-        expect(checkRichTextDocument('Hello')).toBe(
+        expect(validateRichTextDocument('Hello')).toBe(
             'Must be a rich text document, not an HTML string'
         );
     });
 
     it('rejects non-object values', () => {
-        expect(checkRichTextDocument(42)).toBe('Must be a rich text document');
-        expect(checkRichTextDocument(true)).toBe('Must be a rich text document');
-        expect(checkRichTextDocument([])).toBe('Must be a rich text document');
+        expect(validateRichTextDocument(42)).toBe('Must be a rich text document');
+        expect(validateRichTextDocument(true)).toBe('Must be a rich text document');
+        expect(validateRichTextDocument([])).toBe('Must be a rich text document');
     });
 
     it('rejects an object that is not a document', () => {
-        expect(checkRichTextDocument({ foo: 'bar' })).toMatch(/^Invalid rich text:/);
+        expect(validateRichTextDocument({ foo: 'bar' })).toMatch(/^Invalid rich text:/);
     });
 
     it('rejects an unknown mark type', () => {
@@ -88,13 +88,13 @@ describe('checkRichTextDocument', () => {
                 },
             ],
         };
-        expect(checkRichTextDocument(withMark)).toMatch(/nonsense/);
+        expect(validateRichTextDocument(withMark)).toMatch(/nonsense/);
     });
 
     // `fromJSON` accepts this — only `check()` catches it, which is why both run.
     it('rejects content the schema forbids in that position', () => {
         const bare = { type: 'doc', content: [{ type: 'text', text: 'bare' }] };
-        expect(checkRichTextDocument(bare)).toMatch(/^Invalid rich text:/);
+        expect(validateRichTextDocument(bare)).toMatch(/^Invalid rich text:/);
     });
 });
 
@@ -102,7 +102,7 @@ describe('checkRichTextDocument', () => {
 // Executable link schemes — `fromJSON` and `check()` never look at an href
 // ---------------------------------------------------------------------------
 
-describe('checkRichTextDocument rejects executable link schemes', () => {
+describe('validateRichTextDocument rejects executable link schemes', () => {
     /** A one-paragraph document whose only text carries a link mark. */
     function docWithHref(href: string) {
         return {
@@ -123,7 +123,7 @@ describe('checkRichTextDocument rejects executable link schemes', () => {
     }
 
     it('rejects a javascript: href and names it', () => {
-        const result = checkRichTextDocument(docWithHref('javascript:alert(1)'));
+        const result = validateRichTextDocument(docWithHref('javascript:alert(1)'));
 
         expect(result).toMatch(/^Invalid rich text: link href uses an unsafe scheme/);
         expect(result).toContain('javascript:alert(1)');
@@ -131,14 +131,14 @@ describe('checkRichTextDocument rejects executable link schemes', () => {
 
     it('rejects a data: href and names it', () => {
         const href = 'data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==';
-        const result = checkRichTextDocument(docWithHref(href));
+        const result = validateRichTextDocument(docWithHref(href));
 
         expect(result).toMatch(/^Invalid rich text: link href uses an unsafe scheme/);
         expect(result).toContain(href);
     });
 
     it('still accepts an ordinary link', () => {
-        expect(checkRichTextDocument(docWithHref('https://example.com'))).toBe(true);
+        expect(validateRichTextDocument(docWithHref('https://example.com'))).toBe(true);
     });
 
     it('rejects one nested inside a list, not just at the top level', () => {
@@ -175,14 +175,14 @@ describe('checkRichTextDocument rejects executable link schemes', () => {
             ],
         };
 
-        expect(checkRichTextDocument(nested)).toMatch(
+        expect(validateRichTextDocument(nested)).toMatch(
             /^Invalid rich text: link href uses an unsafe scheme/
         );
     });
 
     it('truncates a long href so the message stays readable', () => {
         const href = `data:text/html;base64,${'A'.repeat(500)}`;
-        const result = checkRichTextDocument(docWithHref(href));
+        const result = validateRichTextDocument(docWithHref(href));
 
         expect(typeof result).toBe('string');
         expect((result as string).length).toBeLessThan(140);
@@ -202,7 +202,7 @@ describe('checkRichTextDocument rejects executable link schemes', () => {
             ],
         };
 
-        const result = checkRichTextDocument(invalid);
+        const result = validateRichTextDocument(invalid);
         expect(result).toMatch(/^Invalid rich text:/);
         expect(result).not.toContain('unsafe scheme');
     });
@@ -220,17 +220,17 @@ describe('checkRichTextDocument rejects executable link schemes', () => {
 // allow list
 // ---------------------------------------------------------------------------
 
-describe('checkRichTextDocument with an allow list', () => {
+describe('validateRichTextDocument with an allow list', () => {
     it('accepts a heading when headings are allowed', () => {
-        expect(checkRichTextDocument(heading)).toBe(true);
+        expect(validateRichTextDocument(heading)).toBe(true);
     });
 
     it('rejects a heading when the field forbids headings', () => {
-        expect(checkRichTextDocument(heading, { heading: false })).toMatch(/heading/);
+        expect(validateRichTextDocument(heading, { heading: false })).toMatch(/heading/);
     });
 
     it('still accepts a plain paragraph under a restrictive allow list', () => {
-        expect(checkRichTextDocument(doc, { heading: false })).toBe(true);
+        expect(validateRichTextDocument(doc, { heading: false })).toBe(true);
     });
 });
 

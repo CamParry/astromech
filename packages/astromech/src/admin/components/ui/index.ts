@@ -4,7 +4,7 @@
  * the admin config or the fetch client; the surface that does is `./app`.
  */
 
-import { assertSingleUiInstance } from '@/admin/support/ui-instance-guard';
+import { assertSingleUiInstance } from '@/admin/components/ui/instance-guard';
 
 // `useFieldValue` is a React context hook, so the kit is config-free but not
 // instance-free: a second copy still breaks it.

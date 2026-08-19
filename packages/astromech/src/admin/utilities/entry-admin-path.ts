@@ -6,7 +6,7 @@
  * links are built in the canonical plugin shape.
  */
 
-import { parseEntryTypeId } from '@/utilities/entry-type-ids';
+import { parseEntryTypeId } from '@/entries/type-ids.shared';
 
 export function entryAdminPath(typeId: string, id: string): string {
     const parsed = parseEntryTypeId(typeId);

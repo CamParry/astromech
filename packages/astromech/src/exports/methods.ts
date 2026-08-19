@@ -6,8 +6,8 @@
 
 export { getMethodManifest } from '@/codegen/manifest-registry';
 
-export { formatAIContextMessage } from '@/utilities/ai-context';
-export type { AIContextItem } from '@/types/ai-context';
+export { formatAiContextMessage } from '@/utilities/ai-context';
+export type { AiContextItem } from '@/types/ai-context';
 
 export { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch';
 export type { DispatchResult, ToolDefinition } from '@/transport/tools/dispatch';
@@ -27,6 +27,6 @@ export {
 export type {
     ConfirmDecision,
     ConfirmOptions,
-    ConfirmOutcome,
+    ConfirmationResult,
     ConfirmRequest,
 } from '@/policies/confirmation';

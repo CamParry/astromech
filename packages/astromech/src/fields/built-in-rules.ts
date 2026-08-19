@@ -14,8 +14,8 @@ import { isUnsafeHref } from './rich-text/safe-links';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export const coerceEmail = (v: unknown): unknown =>
-    typeof v === 'string' ? v.trim() : v;
+export const coerceEmail = (value: unknown): unknown =>
+    typeof value === 'string' ? value.trim() : value;
 export const validateEmail: FieldValidator = async (ctx) =>
     typeof ctx.value === 'string' && EMAIL_RE.test(ctx.value)
         ? true
@@ -25,7 +25,8 @@ export const validateEmail: FieldValidator = async (ctx) =>
 // url
 // ---------------------------------------------------------------------------
 
-export const coerceUrl = (v: unknown): unknown => (typeof v === 'string' ? v.trim() : v);
+export const coerceUrl = (value: unknown): unknown =>
+    typeof value === 'string' ? value.trim() : value;
 export const validateUrl: FieldValidator = async (ctx) => {
     if (typeof ctx.value !== 'string') return 'Must be a valid URL';
     try {
@@ -58,13 +59,13 @@ export const validateSlug: FieldValidator = async (ctx) => {
 // ---------------------------------------------------------------------------
 
 /** Recursive JSON-shape guard. Rejects functions/undefined/symbols/bigint and non-finite numbers. */
-export function isJsonValue(v: unknown): boolean {
-    if (v === null) return true;
-    if (typeof v === 'string' || typeof v === 'boolean') return true;
-    if (typeof v === 'number') return Number.isFinite(v);
-    if (Array.isArray(v)) return v.every(isJsonValue);
-    if (typeof v === 'object') {
-        return Object.values(v as Record<string, unknown>).every(isJsonValue);
+export function isJsonValue(value: unknown): boolean {
+    if (value === null) return true;
+    if (typeof value === 'string' || typeof value === 'boolean') return true;
+    if (typeof value === 'number') return Number.isFinite(value);
+    if (Array.isArray(value)) return value.every(isJsonValue);
+    if (typeof value === 'object') {
+        return Object.values(value as Record<string, unknown>).every(isJsonValue);
     }
     return false;
 }
@@ -76,19 +77,19 @@ export const validateJson: FieldValidator = async (ctx) =>
 // key-value
 // ---------------------------------------------------------------------------
 
-export const coerceKeyValue = (v: unknown): unknown => {
-    if (typeof v !== 'object' || v === null || Array.isArray(v)) return v;
+export const coerceKeyValue = (value: unknown): unknown => {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return value;
     const out: Record<string, string> = {};
-    for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
-        if (k === '' || val === null || val === undefined) continue;
-        out[k] = typeof val === 'string' ? val : String(val);
+    for (const [key, pairValue] of Object.entries(value as Record<string, unknown>)) {
+        if (key === '' || pairValue === null || pairValue === undefined) continue;
+        out[key] = typeof pairValue === 'string' ? pairValue : String(pairValue);
     }
     return out;
 };
 
 export const validateKeyValue: FieldValidator = async (ctx) => {
-    const v = ctx.value;
-    return typeof v === 'object' && v !== null && !Array.isArray(v)
+    const value = ctx.value;
+    return typeof value === 'object' && value !== null && !Array.isArray(value)
         ? true
         : 'Must be a set of key/value pairs';
 };
@@ -135,12 +136,12 @@ export const validateMultiChoice: FieldValidator = async (ctx) => {
  * Parse a numeric string, since an HTML form posts every value as text.
  * A string that is not a number is left alone for the validator to reject.
  */
-export const coerceNumber = (v: unknown): unknown => {
-    if (typeof v !== 'string') return v;
-    const trimmed = v.trim();
+export const coerceNumber = (value: unknown): unknown => {
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
     if (trimmed === '') return null;
     const parsed = Number(trimmed);
-    return Number.isFinite(parsed) ? parsed : v;
+    return Number.isFinite(parsed) ? parsed : value;
 };
 
 export const validateNumber: FieldValidator = async (ctx) =>
@@ -163,8 +164,8 @@ export const validateBoolean: FieldValidator = async (ctx) =>
  * Callers pass a `Date` as often as a string. Both land in a JSON column as an
  * ISO string, so normalise here and let the validator deal only in strings.
  */
-export const coerceDate = (v: unknown): unknown =>
-    v instanceof Date && !Number.isNaN(v.getTime()) ? v.toISOString() : v;
+export const coerceDate = (value: unknown): unknown =>
+    value instanceof Date && !Number.isNaN(value.getTime()) ? value.toISOString() : value;
 
 /** Dates are stored as strings, so this checks the string actually parses. */
 export const validateDate: FieldValidator = async (ctx) => {
@@ -272,11 +273,11 @@ const URL_REFERENCE_BASE = 'https://astromech.invalid/';
  * reference, so an absolute url, a relative path and an anchor are all valid.
  */
 export const validateLink: FieldValidator = async (ctx) => {
-    const v = ctx.value;
-    if (typeof v !== 'object' || v === null || Array.isArray(v)) {
+    const value = ctx.value;
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
         return 'Must be a link';
     }
-    const { url, label, target } = v as Record<string, unknown>;
+    const { url, label, target } = value as Record<string, unknown>;
     if (typeof url !== 'string') return 'A link needs a url';
     const urlProblem = linkUrlProblem(url);
     if (urlProblem !== null) return urlProblem;
@@ -312,8 +313,8 @@ function linkUrlProblem(url: string): string | null {
 
 /** A group holds one object of child values. */
 export const validateGroup: FieldValidator = async (ctx) => {
-    const v = ctx.value;
-    return typeof v === 'object' && v !== null && !Array.isArray(v)
+    const value = ctx.value;
+    return typeof value === 'object' && value !== null && !Array.isArray(value)
         ? true
         : 'Must be a group of fields';
 };

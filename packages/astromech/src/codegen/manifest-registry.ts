@@ -11,7 +11,7 @@
  */
 
 import type { MethodManifest } from '@/types/index';
-import { createRegistry } from '@/utilities/registry';
+import { createRegistry } from '@/registry';
 
 const manifest = createRegistry<MethodManifest>('methodManifest', { required: false });
 
@@ -20,5 +20,5 @@ export const setMethodManifest = manifest.set;
 
 /** The boot-generated manifest, or undefined when boot has not run. */
 export function getMethodManifest(): MethodManifest | undefined {
-    return manifest.maybeGet() ?? undefined;
+    return manifest.get() ?? undefined;
 }

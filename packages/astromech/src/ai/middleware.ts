@@ -5,8 +5,8 @@
  * and the token usage.
  */
 
-import type { WrappedAIConfig } from '@/ai/registry';
-import type { AIConfig } from '@/types/index';
+import type { WrappedAiConfig } from '@/ai/registry';
+import type { AiConfig } from '@/types/index';
 import type {
     LanguageModelV4,
     LanguageModelV4StreamPart,
@@ -19,7 +19,7 @@ import type { LanguageModelMiddleware } from 'ai';
  * imported dynamically so a site that configures no model never pulls the
  * package into its module graph.
  */
-export async function buildAIConfig(config: AIConfig): Promise<WrappedAIConfig> {
+export async function buildAiConfig(config: AiConfig): Promise<WrappedAiConfig> {
     const { wrapLanguageModel } = await import('ai');
     const model = wrapLanguageModel({
         model: config.model,

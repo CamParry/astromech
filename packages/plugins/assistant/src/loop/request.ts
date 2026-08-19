@@ -5,8 +5,8 @@
 
 import type { ChatMessage } from '../types';
 import type { ModelMessage } from 'ai';
-import type { AIContextItem } from 'astromech';
-import { formatAIContextMessage } from 'astromech';
+import type { AiContextItem } from 'astromech';
+import { formatAiContextMessage } from 'astromech';
 
 /**
  * The system prompt and turns to send. AI context goes after the final user
@@ -21,10 +21,10 @@ import { formatAIContextMessage } from 'astromech';
  */
 export function buildRequest(
     messages: ChatMessage[],
-    aiContext: AIContextItem[]
+    aiContext: AiContextItem[]
 ): { system: string; messages: ModelMessage[] } {
     const turns: ModelMessage[] = [...messages];
-    const context = formatAIContextMessage(aiContext);
+    const context = formatAiContextMessage(aiContext);
     if (context === null) return { system: SYSTEM_PROMPT, messages: turns };
 
     if (turns[turns.length - 1]?.role !== 'user') {

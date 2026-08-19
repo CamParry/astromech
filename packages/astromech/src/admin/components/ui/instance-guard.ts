@@ -1,6 +1,6 @@
 /** Dev-only detection of a second copy of the admin UI in one page. */
 
-import { globals } from '@/utilities/registry';
+import { globals } from '@/registry';
 
 /**
  * Records this module's URL and logs if a different URL turns up.

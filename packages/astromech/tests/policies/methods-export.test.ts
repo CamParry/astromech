@@ -7,9 +7,9 @@
 
 // Types, asserted structurally: an unexported one fails the typecheck, not this.
 import type {
+    ConfirmationResult,
     ConfirmDecision,
     ConfirmOptions,
-    ConfirmOutcome,
     ConfirmRequest,
     DispatchResult,
     ScopedServices,
@@ -28,12 +28,12 @@ import { filterMethods } from '@/policies/method-filter';
 import { scopedServices } from '@/policies/scoped-services';
 import { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch';
 import { buildScopedTools } from '@/transport/tools/scoped-tools';
-import { formatAIContextMessage } from '@/utilities/ai-context';
+import { formatAiContextMessage } from '@/utilities/ai-context';
 
 export type Exported = [
     ConfirmDecision,
     ConfirmOptions,
-    ConfirmOutcome,
+    ConfirmationResult,
     ConfirmRequest,
     DispatchResult,
     ScopedServices,
@@ -52,7 +52,7 @@ describe('astromech/methods', () => {
         expect(methods.evaluateConfirmation).toBe(evaluateConfirmation);
         expect(methods.triggersConfirmation).toBe(triggersConfirmation);
         expect(methods.CONFIRM_KEY).toBe(CONFIRM_KEY);
-        expect(methods.formatAIContextMessage).toBe(formatAIContextMessage);
+        expect(methods.formatAiContextMessage).toBe(formatAiContextMessage);
     });
 
     it('exports nothing beyond that surface', () => {
@@ -64,7 +64,7 @@ describe('astromech/methods', () => {
             'buildScopedTools',
             'evaluateConfirmation',
             'filterMethods',
-            'formatAIContextMessage',
+            'formatAiContextMessage',
             'getMethodManifest',
             'scopedServices',
             'triggersConfirmation',

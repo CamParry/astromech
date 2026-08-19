@@ -29,7 +29,7 @@
  *
  * Three result-ish nouns sit close together and are not interchangeable:
  * `ConfirmAnswer` is the caller's reply, `ConfirmDecision` the verdict, and
- * `ConfirmOutcome` why a call stopped.
+ * `ConfirmationResult` why a call stopped.
  */
 
 import type { ManifestMethod } from '@/types/index';
@@ -65,7 +65,7 @@ export type ConfirmRequest = {
  * Both leave persisted state untouched — the check runs before the service, so
  * nothing has happened yet in either case.
  */
-export type ConfirmOutcome =
+export type ConfirmationResult =
     | { status: 'input_required'; requests: ConfirmRequest[] }
     | { status: 'declined'; method: string }
     | { status: 'cancelled'; method: string };
@@ -90,7 +90,7 @@ export type ConfirmOptions = { trigger?: ConfirmTrigger | undefined };
  */
 export type ConfirmDecision =
     | { proceed: true; args: Record<string, unknown> }
-    | { proceed: false; outcome: ConfirmOutcome };
+    | { proceed: false; outcome: ConfirmationResult };
 
 // ============================================================================
 // The reserved key

@@ -2,7 +2,7 @@ import type { FormEvent } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AuthCard } from '@/admin/components/auth/AuthCard';
+import { AuthCard } from '@/admin/components/auth/auth-card';
 import { Button } from '@/admin/components/ui/button';
 import { Input } from '@/admin/components/ui/input';
 

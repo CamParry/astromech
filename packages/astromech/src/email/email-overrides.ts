@@ -5,7 +5,7 @@
  */
 
 import type { ComponentType } from 'react';
-import { createKeyedRegistry } from '@/utilities/registry';
+import { createKeyedRegistry } from '@/registry';
 
 type EmailOverride = {
     name: string;
@@ -24,5 +24,5 @@ export function registerEmailOverride(override: EmailOverride): void {
 export function getEmailOverride(
     name: string
 ): ComponentType<Record<string, unknown>> | undefined {
-    return overrides.maybeGet(name) ?? undefined;
+    return overrides.get(name) ?? undefined;
 }

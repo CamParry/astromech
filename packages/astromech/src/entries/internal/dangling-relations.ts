@@ -13,13 +13,13 @@ import type { Field } from '@/types/fields';
 import type { JsonObject } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { existingResourceIds } from '@/database/storage/resource-existence';
+import { resolveEntryType } from '@/entries/type-ids.shared';
 import { parseInstancePath } from '@/fields/field-path';
 import {
     collectRelationshipDeclarations,
     collectRelationshipEdges,
 } from '@/fields/relationship-edges';
 import { RESERVED_KEY } from '@/fields/reserved-keys';
-import { resolveEntryType } from '@/utilities/entry-type-ids';
 import { getEntryStorage, hasEntryStorageOverride } from '../storage/registry';
 
 const TARGET_KINDS = ['entry', 'user', 'media'] as const satisfies readonly TargetKind[];

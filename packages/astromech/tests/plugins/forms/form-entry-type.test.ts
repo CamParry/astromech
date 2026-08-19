@@ -14,7 +14,7 @@
 
 import type { Field } from '@/types/fields';
 import { describe, expect, it } from 'vitest';
-import { parseFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/parse-fields';
 import { formEntryType } from '../../../../plugins/forms/src/entries/form';
 
 /** The `form` type declares a plain array; narrow the `EntryFields` union to it. */

@@ -12,7 +12,7 @@ import type { LanguageModel } from 'ai';
 export type ModelInstance = Exclude<LanguageModel, string>;
 
 /** The models a site makes available. Absent unless configured. */
-export type AIConfig = {
+export type AiConfig = {
     /** The model used when a consumer asks for no name in particular. */
     model: ModelInstance;
     /** Named alternatives — a cheap model for bulk work, a vision model, … */

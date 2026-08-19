@@ -6,9 +6,9 @@
  * so nothing changes for the default libsql path.
  */
 
-import { maybeGetDatabaseDriver } from '@/database/driver-registry';
+import { getDatabaseDriver } from '@/database/driver-registry';
 
 /** False only when the active driver explicitly declares no interactive transactions (D1). */
 export function supportsTransactions(): boolean {
-    return maybeGetDatabaseDriver()?.supportsTransactions ?? true;
+    return getDatabaseDriver()?.supportsTransactions ?? true;
 }

@@ -1,15 +1,15 @@
 /**
- * Nested field validation — the pipeline recursing into nested fields
+ * Nested field validation — `parseFields` recursing into nested fields
  * (group / repeater / blocks / tree) and keying errors by the `_id`-based path
  * grammar from `fields/field-path.ts`.
  *
- * Flat-field behaviour lives in `pipeline.test.ts`; this file only covers what
+ * Flat-field behaviour lives in `parse-fields.test.ts`; this file only covers what
  * happens below a container.
  */
 
 import type { Field, FieldValidationContext, ValidationMode } from '@/types/fields';
 import { describe, expect, it } from 'vitest';
-import { parseFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/parse-fields';
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -22,15 +22,15 @@ import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { useAuth } from '../../context/auth';
 import { useTheme } from '../../context/theme';
-import { useUI } from '../../context/ui';
-import { PluginSlot } from '../plugins/PluginSlot';
+import { useUi } from '../../context/ui';
+import { PluginSlot } from '../plugins/plugin-slot';
 import { useCommandPalette } from '../ui/command-palette';
 import { EntryTypeIcon } from '../ui/entry-type-icon';
 import { NotificationBell } from './notification-bell';
 
 export function Topbar() {
     const { user, logout } = useAuth();
-    const { sidebarOpen, toggleSidebar, setSidebarOpen, setShortcutsOpen } = useUI();
+    const { sidebarOpen, toggleSidebar, setSidebarOpen, setShortcutsOpen } = useUi();
     const { theme, setTheme } = useTheme();
     const { setOpen: openCommandPalette } = useCommandPalette();
     const { t } = useTranslation();

@@ -14,10 +14,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { registerCronJob } from '@/cron/registry';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/schema';
+import { globals } from '@/registry';
 import { runWithRequest } from '@/request-context/index';
 import { cronRouter } from '@/transport/http/routes/cron';
 import { getSession } from '@/users/session';
-import { globals } from '@/utilities/registry';
 
 // Mock getSession so tests control the session branch without a real
 // Better Auth stack.

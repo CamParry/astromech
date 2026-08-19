@@ -4,11 +4,13 @@
  */
 
 import type { ResolvedConfig } from '@/types/index';
-import { createRegistry } from '@/utilities/registry';
+import { createRegistry } from '@/registry';
 
 const config = createRegistry<ResolvedConfig>('config', {
     hint: 'Ensure createAstromech({ config }) has run before reading config.',
 });
 
 export const setConfig = config.set;
-export const getConfig = config.get;
+
+/** The resolved config for the process. Throws when unset. */
+export const getConfig = config.getOrThrow;

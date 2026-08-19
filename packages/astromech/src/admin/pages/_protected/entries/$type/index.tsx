@@ -13,13 +13,13 @@ import React from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntriesListPage } from '@/admin/components/entries/entries-list-page';
 import { validateEntriesListSearch } from '@/admin/components/entries/mount';
-import { useAIContext } from '@/admin/context/ai-context';
+import { useAiContext } from '@/admin/context/ai-context';
 import { pluginEntryRouteParams } from '@/admin/utilities/entry-admin-path';
 import { astromechClient } from '@/transport/http/client/index';
 
 function EntryIndexPage(): React.ReactElement {
     const { type } = Route.useParams();
-    useAIContext(
+    useAiContext(
         { kind: 'entries', type, label: adminConfig.entries[type]?.plural ?? type },
         { depth: 0 }
     );

@@ -11,9 +11,9 @@ import type { JsonObject } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { createStorage } from '@/database/storage/create-storage';
 import { createRelationshipStorage } from '@/database/storage/relationships';
+import { qualifyEntryType, resolveEntryType } from '@/entries/type-ids.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { collectRelationshipEdges } from '@/fields/relationship-edges';
-import { qualifyEntryType, resolveEntryType } from '@/utilities/entry-type-ids';
 import { entriesTable } from '../schema';
 import { getEntryStorage, hasEntryStorageOverride } from '../storage/registry';
 

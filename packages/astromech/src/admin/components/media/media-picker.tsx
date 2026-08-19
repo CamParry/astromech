@@ -20,10 +20,10 @@ import {
 } from '@/admin/components/ui/index';
 import { useMediaBrowser, usePermissions, useUploadMedia } from '@/admin/hooks/index';
 import { MEDIA_ACCEPT } from '@/admin/types/media';
+import { MediaCard } from './media-card';
 import { MediaEmpty } from './media-empty';
 import { MediaFilters } from './media-filters';
 import { MediaSortSelect } from './media-sort-select';
-import { MediaCard } from './MediaCard';
 
 const DEFAULT_PER_PAGE = 24;
 

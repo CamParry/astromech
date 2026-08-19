@@ -7,7 +7,7 @@ import type {
     ResolvedAssistantOptions,
 } from '../types';
 import type { LanguageModel, ToolCallPart } from 'ai';
-import type { AIContextItem, PluginLogger, ToolDefinition } from 'astromech';
+import type { AiContextItem, PluginLogger, ToolDefinition } from 'astromech';
 import { stepCountIs, streamText } from 'ai';
 import { errorMessage } from '../error-message';
 import { answerUnansweredCalls, pauseForApproval, resumePausedTurn } from './approvals';
@@ -28,7 +28,7 @@ export async function* runAssistantLoop(input: {
     options: ResolvedAssistantOptions;
     tools: ToolDefinition[];
     messages: ChatMessage[];
-    aiContext: AIContextItem[];
+    aiContext: AiContextItem[];
     logger: PluginLogger;
     approvals: ApprovalsStorage;
     sessions: SessionsStorage;

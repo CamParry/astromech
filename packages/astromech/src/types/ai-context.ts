@@ -1,9 +1,9 @@
 /** What an admin route declares about the thing the user is currently looking at. */
 
-export type AIContextKind = 'entries' | 'media' | 'users' | 'pages';
+export type AiContextKind = 'entries' | 'media' | 'users' | 'pages';
 
-export type AIContextReference = {
-    kind: AIContextKind;
+export type AiContextReference = {
+    kind: AiContextKind;
     /** Entry type id, bare (`posts`) or qualified (`redirects/redirect`). Entries only. */
     type?: string;
     /** Identifier of the single item in view. Absent on list and index screens. */
@@ -13,8 +13,8 @@ export type AIContextReference = {
 };
 
 /** A declared reference with its position: lower `depth` is less specific. */
-export type AIContextItem = {
-    reference: AIContextReference;
+export type AiContextItem = {
+    reference: AiContextReference;
     depth: number;
     order: number;
 };

@@ -4,7 +4,7 @@
 
 import type { Field, ResolvedEntryFields } from '@/types/fields';
 import type { ResolvedConfig } from '@/types/index';
-import { parseEntryTypeId, resolveEntryType } from '@/utilities/entry-type-ids';
+import { parseEntryTypeId, resolveEntryType } from '@/entries/type-ids.shared';
 
 /**
  * Any relationship field whose `target` is qualified (`{plugin}/{type}`) must

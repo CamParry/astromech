@@ -21,8 +21,8 @@ import type {
     User,
     UsersService,
 } from '@/types/index';
-import { buildAIConfig } from '@/ai/middleware';
-import { setAIConfig } from '@/ai/registry';
+import { buildAiConfig } from '@/ai/middleware';
+import { setAiConfig } from '@/ai/registry';
 import { setMethodManifest } from '@/codegen/manifest-registry';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { setConfig } from '@/config/registry';
@@ -41,18 +41,18 @@ import { setEmailDriver } from '@/email/registry';
 import { entryJobs, typedEntriesService } from '@/entries/index';
 import { setEntryStorage } from '@/entries/storage/registry';
 import { AstromechError } from '@/errors/index';
+import { defaultImageWidths, normaliseWidths } from '@/media/image-widths.shared';
 import { mediaService } from '@/media/index';
 import { setImageConfig } from '@/media/serving/image/registry';
 import { currentUserNotificationsService } from '@/notifications/index';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
+import { createRegistry } from '@/registry';
 import { getCurrentRole, getCurrentUser } from '@/request-context/index';
 import { settingsService } from '@/settings/index';
 import { setStorageDriver } from '@/storage/registry';
 import { createHttpApp } from '@/transport/http/index';
 import { usersService } from '@/users/index';
-import { defaultImageWidths, normaliseWidths } from '@/utilities/image-widths';
-import { createRegistry } from '@/utilities/registry';
 
 export type Astromech = {
     /** The resolved, read-only config this runtime serves. */
@@ -102,7 +102,7 @@ const registry = createRegistry<Registered>('astromech', { required: false });
 export function createAstromech(options: {
     config: AstromechConfig;
 }): Promise<Astromech> {
-    const existing = registry.maybeGet();
+    const existing = registry.get();
     if (existing !== null) {
         // Identity, not deep equality: two different config objects mean two
         // different intended configs, which is the mistake this guard surfaces.
@@ -124,7 +124,7 @@ export function createAstromech(options: {
 
 /** Gets the global Astromech instance. Throws if it does not exist. */
 export function getAstromech(): Promise<Astromech> {
-    const existing = registry.maybeGet();
+    const existing = registry.get();
     if (existing === null) {
         throw new AstromechError(
             'no instance of Astromech exists, createAstromech({ config }) must be called before getAstromech()'
@@ -160,7 +160,7 @@ async function build(config: AstromechConfig): Promise<Astromech> {
         });
     }
     if (config.email) setEmailDriver(config.email);
-    if (config.ai) setAIConfig(await buildAIConfig(config.ai));
+    if (config.ai) setAiConfig(await buildAiConfig(config.ai));
     setSchedulerDriver(resolveSchedulerDriver(config.scheduler));
 
     // Verify the schema before anything boots against it

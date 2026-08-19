@@ -119,7 +119,7 @@ export type BuiltInRoleSlug = keyof typeof BUILT_IN_ROLES;
 export const DEFAULT_ROLE_SLUG = 'editor' satisfies BuiltInRoleSlug;
 
 /** Copy of a built-in role's permissions, for spreading into config roles. */
-export function builtInRole(slug: BuiltInRoleSlug): Permission[] {
+export function permissionsForBuiltInRole(slug: BuiltInRoleSlug): Permission[] {
     const role = BUILT_IN_ROLES[slug];
     if (!role) {
         throw new Error(

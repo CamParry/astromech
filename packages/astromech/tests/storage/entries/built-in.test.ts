@@ -13,8 +13,8 @@ import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { encodeWith } from '@/database/codec';
 import { entriesTable } from '@/database/schema';
+import { BUILT_IN_SUPPORTS } from '@/entries/capabilities';
 import { createBuiltInEntryStorage } from '@/entries/storage/built-in';
-import { BUILT_IN_SUPPORTS } from '@/utilities/entry-capabilities';
 
 let storage: ReturnType<typeof createBuiltInEntryStorage>;
 let db: Awaited<ReturnType<typeof createTestDb>>;

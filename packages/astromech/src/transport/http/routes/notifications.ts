@@ -3,7 +3,7 @@
  *
  * Session-scoped — every call names the authenticated user, and filtering on
  * that id is the authorization. No permission contracts; the four methods
- * declare `sessionScoped` instead (`notifications/methods.ts`), and the scoped
+ * declare `sessionScoped` instead (`notifications/contract.ts`), and the scoped
  * handle fills `userId` from the request context.
  *
  * Routes:
@@ -15,8 +15,8 @@
 import type { RestRoute } from './rest-route';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { notificationsContract } from '@/notifications/contract';
 import { notificationsService } from '@/notifications/index';
-import { notificationsContract } from '@/notifications/methods';
 import { NOTIFICATIONS_ROUTE_SPECS } from './http-routes.shared';
 import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 

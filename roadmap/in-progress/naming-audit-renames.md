@@ -10,6 +10,12 @@ Everything here touches only names, file paths, and comments — no behaviour
 changes. Several renames touch symbols re-exported from the package root, so
 this work is cheapest before the first npm release.
 
+**Five of the six workstreams have shipped.** WS3 (`storage` → `repository`) is
+parked: it reverses a rule written in `.claude/skills/code/SKILL.md`,
+`decisions/0003` and `decisions/0009`, which makes it a data-layer question
+rather than a naming one. The rest of this file is a record of what landed.
+Decision 3 below is the one that has NOT been acted on.
+
 ## Decisions settled in review (each needs a `decisions/` record)
 
 1. **Acronyms are title-case with no length exception**: `Ai`, `Ui`, `Url`,
@@ -22,7 +28,8 @@ this work is cheapest before the first npm release.
    Kysely's `executeTakeFirst` / `executeTakeFirstOrThrow`. TypeScript types
    carry nullability; a throwing wrapper documents the throw in its comment.
    Supersedes `decisions/0069-the-build-sequence-is-flat-and-the-probe-is-maybeget.md`.
-3. **`storage` means file storage; the data-access layer is `repository`.**
+3. **Not acted on — see WS3.** `storage` means file storage; the data-access
+   layer is `repository`.
    The word previously named both the blob/file subsystem and the per-domain
    persistence layer. "Storage" is universally read as file storage, so the
    file side keeps it and the data-access side (the 41-use majority) renames
@@ -41,34 +48,64 @@ One branch, one commit per workstream.
 
 ### WS1 — registry primitive: `get` / `getOrThrow`
 
-- [ ] In `packages/astromech/src/utilities/registry.ts` (both `createRegistry`
+- [x] In `packages/astromech/src/registry.ts` (both `createRegistry`
       and `createKeyedRegistry`): rename `maybeGet` → `get` (nullable) and the
       current throwing `get` → `getOrThrow`.
-- [ ] Wrapper functions across the subsystem registries keep their bare `get*`
+- [x] Wrapper functions across the subsystem registries keep their bare `get*`
       names. Nullable ones (`getEmailDriver`, `getSchedulerDriver`,
-      `getAiConfig`, `getMethodManifest`, `getModel`) now read naturally
+      `getAiConfig`, `getMethodManifest`, `getImageConfig`) now read naturally
       against the primitive; throwing ones (`getDb`, `getStorageDriver`,
       `getConfig`, …) state the throw in their doc comment.
-- [ ] `packages/astromech/src/database/driver-registry.ts` exports both
+- [x] `packages/astromech/src/database/driver-registry.ts` exports both
       variants, so it takes the suffix: `getDatabaseDriver` becomes the
       nullable read, the throwing read becomes `getDatabaseDriverOrThrow`,
       and `maybeGetDatabaseDriver` is deleted. Update call sites.
-- [ ] Write the `decisions/` record superseding 0069.
+- [x] Write the `decisions/` record superseding 0069 —
+      `decisions/0072-the-registry-probe-is-get.md`. `getModel` does not
+      exist; the nullable wrapper the audit missed is `getImageConfig`.
 
 ### WS2 — acronym casing sweep
 
-- [ ] `AI` → `Ai` (~16 identifiers): `AIConfig`, `setAIConfig`, `getAIConfig`,
-      `buildAIConfig`, `WrappedAIConfig`, `formatAIContextMessage`,
-      `AIContextStore`, `createAIContextStore`, `AIContextProvider`,
-      `useAIContext`, `useAIContextItems`, `AIContextReadout`,
-      `AIContextKind`, `AIContextReference`, `AIContextItem`.
-- [ ] `URL` → `Url` in Astromech-owned identifiers only. Platform globals
-      (`URL`, `URLSearchParams`) are untouched.
-- [ ] `UI` → `Ui`: `UIProvider` and any siblings.
-- [ ] Write the `decisions/` record (the "no length exception" choice is the
-      part a future contributor would re-litigate).
+- [x] `AI` → `Ai` (18 identifiers): the `AiConfig` set (`AiConfig`,
+      `WrappedAiConfig`, `setAiConfig`, `getAiConfig`, `buildAiConfig`) and the
+      `AiContext*` family (`AiContextItem`, `AiContextReference`,
+      `AiContextKind`, `AiContextStore`, `AiContextStoreContext`,
+      `createAiContextStore`, `AiContextProvider`, `AiContextProviderProps`,
+      `useAiContext`, `useAiContextItems`, `useAiContextStore`,
+      `AiContextReadout`, `formatAiContextMessage`).
+- [x] `URL` → `Url`: nothing to do. Every Astromech-owned identifier was
+      already `Url` (`coerceUrl`, `getSignedUploadUrl`, `publicUrl`). The
+      all-caps hits are platform globals (`URL`, `URLSearchParams`), Node's
+      `fileURLToPath`, better-auth's `baseURL` config key, and SCREAMING_SNAKE
+      env vars.
+- [x] `UI` → `Ui`: `UiProvider`, `UiProviderProps`, `UiContext`,
+      `UiContextValue`, `useUi`. Declared in `admin/context/ui.tsx`, consumed
+      by the three layout components. Not on the public surface.
+- [x] Write the `decisions/` record (the "no length exception" choice is the
+      part a future contributor would re-litigate) —
+      `decisions/0073-acronyms-are-title-case.md`.
 
 ### WS3 — `storage` → `repository` for the data-access layer
+
+**Parked.** Not a naming call. It reverses a rule written in three
+places: `.claude/skills/code/SKILL.md` ("**No repository pattern.** …
+Name `createXStorage`, never `XRepository`"), `decisions/0003`'s
+"Entries: storage is the adapter, and no repository wrapper", and
+`decisions/0009`, which found the word returning as `notificationsRepo`
+and called it a rule violation. Decision 3 above was settled without
+those in view, so the data-layer question gets looked at on its own
+before any rename. Nothing landed.
+
+Two things worth carrying into that discussion. `decisions/0003`'s
+objection splits: "repositories pre-flatten the query surface" argues
+against adding a _layer_, which this was not (`createRepository` would
+have returned the identical object, open `where` grammar and all),
+while "every DB-touching unit being called storage removes a
+distinction that was never carrying weight" was a fair trade only
+while `storage` had one meaning — the file drivers later took the same
+word. And `EntryRecord` → `EntryRow` stands on its own: `TERMINOLOGY.md`'s
+"Entry vs Record" already says to avoid "record", and `Row` is the
+house suffix (`RelationshipRow`, `CronRow`, `NotificationRow`).
 
 The file/blob side is untouched: top-level `storage/`, `StorageDriver`, and
 the `r2`/`s3`/`filesystem` drivers keep their names.
@@ -97,75 +134,103 @@ Thirteen PascalCase component files sit in a kebab-case tree (70 kebab-case
 component siblings). Rename files only; exported component names stay
 PascalCase.
 
-- [ ] `AuthCard.tsx` → `auth-card.tsx`
-- [ ] `DeleteEntryModal.tsx` → `delete-entry-modal.tsx`
-- [ ] `PublishPanel.tsx` → `publish-panel.tsx`
-- [ ] `FieldTreeForm.tsx` → `field-tree-form.tsx`
-- [ ] `MediaCard.tsx` → `media-card.tsx`
-- [ ] `MediaDetailModal.tsx` → `media-detail-modal.tsx`
-- [ ] `MediaRow.tsx` → `media-row.tsx`
-- [ ] `ComponentErrorBoundary.tsx` → `component-error-boundary.tsx`
-- [ ] `ComponentPageView.tsx` → `component-page-view.tsx`
-- [ ] `SettingsPageForm.tsx` → `settings-page-form.tsx`
-- [ ] `PluginSlot.tsx` → `plugin-slot.tsx`
-- [ ] `LocaleSwitcher.tsx` → `locale-switcher.tsx`
-- [ ] `Brand.tsx` → `logo.tsx` (its only export is `Logo`)
+- [x] `AuthCard.tsx` → `auth-card.tsx`
+- [x] `DeleteEntryModal.tsx` → `delete-entry-modal.tsx`
+- [x] `PublishPanel.tsx` → `publish-panel.tsx`
+- [x] `FieldTreeForm.tsx` → `field-tree-form.tsx`
+- [x] `MediaCard.tsx` → `media-card.tsx`
+- [x] `MediaDetailModal.tsx` → `media-detail-modal.tsx`
+- [x] `MediaRow.tsx` → `media-row.tsx`
+- [x] `ComponentErrorBoundary.tsx` → `component-error-boundary.tsx`
+- [x] `ComponentPageView.tsx` → `component-page-view.tsx`
+- [x] `SettingsPageForm.tsx` → `settings-page-form.tsx`
+- [x] `PluginSlot.tsx` → `plugin-slot.tsx`
+- [x] `LocaleSwitcher.tsx` → `locale-switcher.tsx`
+- [x] `Brand.tsx` → `logo.tsx` (its only export is `Logo`)
 
 ### WS5 — smaller renames
 
-- [ ] `builtInRole` → `permissionsForBuiltInRole` in
+- [x] `builtInRole` → `permissionsForBuiltInRole` in
       `packages/astromech/src/permissions/index.ts`. It returns
       `Permission[]`, not a role; the new name matches the existing
       `permissionsFor` phrasing. Re-exported from the package root.
-- [ ] `ConfirmOutcome` → `ConfirmationResult` in
+- [x] `ConfirmOutcome` → `ConfirmationResult` in
       `packages/astromech/src/policies/confirmation.ts` (`result` ×12,
       `outcome` ×1). The `confirm` verb itself stays — it is a real domain
       concept, not a synonym for `validate`.
-- [ ] `checkRichTextDocument` → `validateRichText` in
+- [x] `checkRichTextDocument` → `validateRichTextDocument` in
       `packages/astromech/src/fields/rich-text/validate.ts` (`validate` ×23,
-      `check` ×4) — unless it returns a bare boolean, in which case `check`
-      stays. The `document` noun stays either way (ProseMirror vocabulary).
-- [ ] `UseEntryFormReturn` → `UseEntryFormResult` in
+      `check` ×4). It returns `true | string`, not a bare boolean, so the
+      rename went ahead. Not `validateRichText`: that name is taken in the
+      same file by the `FieldValidator` this helper backs. The `document`
+      noun stays (ProseMirror vocabulary).
+- [x] `UseEntryFormReturn` → `UseEntryFormResult` in
       `packages/astromech/src/admin/hooks/use-entry-form.ts` (sibling hooks
       all say `Result`).
-- [ ] `fields/pipeline.ts` → `fields/parse-fields.ts`. Its exports are
+- [x] `fields/pipeline.ts` → `fields/parse-fields.ts`. Its exports are
       `parseFields`, `ParsedFields`, `assertNoFieldErrors`; "pipeline" is a
-      colliding metaphor. Keep the old name only if the file genuinely
-      composes an ordered multi-stage transform.
-- [ ] `transport/http/routes/http-routes.shared.ts` → `http-routes.ts`. The
-      `.shared.ts` suffix elsewhere means isomorphic client/server modules;
-      this file's "shared" means shared between routers.
-- [ ] The four `methods.ts` files whose only export is `{domain}Contract`
+      colliding metaphor, and the `coerce → default → validate` sequence is
+      fixed inside one function rather than composed. The five
+      `tests/fields/pipeline-*.test.ts` files followed, and the file-local
+      `PipelineContext` became `ParseContext`.
+- [ ] ~~`transport/http/routes/http-routes.shared.ts` → `http-routes.ts`~~ —
+      **dropped.** The premise is wrong. `ARCHITECTURE.md` lines 139-143 say
+      the suffix here carries the same isomorphic meaning it does everywhere
+      else: "The fetch client sits on the same boundary and holds the same
+      allowance, so the REST route table both halves of the HTTP transport
+      read stays beside the routes it describes." The file keeps its name.
+- [x] The four `methods.ts` files whose only export is `{domain}Contract`
       (`media`, `notifications`, `settings`, `users`) → `contract.ts`, so the
       filename and the export use the same word.
-- [ ] `v` → `value` on the six exported coercers in
+- [x] `v` → `value` on the six exported coercers in
       `packages/astromech/src/fields/built-in-rules.ts` (`coerceEmail`,
       `coerceUrl`, `coerceNumber`, `coerceDate`, `coerceKeyValue`,
       `isJsonValue`).
-- [ ] Normalize the internal delete helpers: `entries/operations/delete.ts`
-      exports both `deleteOne` and `deleteEntry` — two compounds for one
-      concept; pick one shape. The service surface already says bare
-      `delete(params)` (`delete` is only reserved as a bare binding, not as a
-      method name), so this is internal-only.
+- [x] Normalize the internal delete helpers: no rename was needed.
+      `deleteEntry` is the verb `service.ts` mounts and the compound is
+      forced (`delete` cannot name a function declaration). `deleteOne` is the
+      per-id worker with no importer outside the file, so it simply stopped
+      being exported, and moved below `deleteEntry` per the `code` skill's
+      "the main thing comes first".
 
 ### WS6 — directory moves out of the layer-word buckets
 
-- [ ] Lift `utilities/registry.ts` (the DI primitive every subsystem's
-      registry depends on) to its own top-level module beside the composition
-      root.
-- [ ] `utilities/image-drivers.ts` and `utilities/image-widths.ts` → under
-      `media/`.
-- [ ] `utilities/entry-capabilities.ts` and `utilities/entry-type-ids.ts` →
-      beside the entry code.
-- [ ] `admin/lib/settings-page-save.ts` → under a settings subject;
-      dissolve `admin/lib/`.
-- [ ] `admin/support/ui-instance-guard.ts` → into `admin/context` or an
-      admin UI subject; dissolve `admin/support/`.
-- [ ] `entries/utils/url.shared.ts` → `entries/entry-url.shared.ts`;
+- [x] Lift `utilities/registry.ts` to `src/registry.ts`, beside the
+      composition root. In the layer diagram it stays on the pure-leaves row:
+      the diagram encodes import direction, not filesystem location, and
+      putting it on the composition-root row would claim the ten capability
+      registries import upward. It imports only `@/errors/index`.
+- [x] `utilities/image-drivers.ts` → `media/image-drivers.ts`;
+      `utilities/image-widths.ts` → `media/image-widths.shared.ts`. The suffix
+      is load-bearing: `media/serving/image/url.shared.ts` imports it, so it
+      is in the client graph.
+- [x] `utilities/entry-capabilities.ts` → `entries/capabilities.ts`;
+      `utilities/entry-type-ids.ts` → `entries/type-ids.shared.ts` (four admin
+      modules import it directly). `ARCHITECTURE.md` was already citing
+      `entries/type-ids.shared.ts` as an example before the file existed
+      there.
+- [x] `admin/lib/settings-page-save.ts` →
+      `admin/components/pages/settings-page-save.ts`, beside its only
+      consumer; `admin/lib/` dissolved.
+- [x] `admin/support/ui-instance-guard.ts` →
+      `admin/components/ui/instance-guard.ts`, beside its two consumers;
+      `admin/support/` dissolved.
+- [x] `entries/utils/url.shared.ts` → `entries/entry-url.shared.ts`;
       dissolve `entries/utils/`.
-- [ ] What remains in `utilities/` (`bytes`, `strings`, `dates`, `locale`,
-      `options`, `values-equal`) is the accepted miscellany bucket. Update
-      `ARCHITECTURE.md` where the moves change the map.
+- [x] What remains in `utilities/` is the accepted miscellany bucket. The
+      audit's list of six was short: `labels`, `log`, `permission-match`,
+      `plugin-namespace`, `with-default-shape` and `ai-context` also stay.
+      `ARCHITECTURE.md`'s map is updated, and its `utilities/` line was
+      already stale (it listed `entry-fields` and `rich-text`, both of which
+      live in `fields/`).
+- [x] `tests/` mirrors `src/`, so two test files followed their subject:
+      `tests/utilities/registry.test.ts` → `tests/registry.test.ts` and
+      `tests/utilities/entry-types.test.ts` → `tests/entries/type-ids.test.ts`.
+- [x] Write the `decisions/` record —
+      `decisions/0074-leaves-are-placed-by-subject.md`. It carries the new
+      invariant: a pure leaf is placed by subject and may be imported from any
+      layer, so `config/` and `permissions/` reading the four moved files from
+      below is allowed and named in `ARCHITECTURE.md`.
 
 ## Explicitly not doing
 
@@ -177,6 +242,31 @@ PascalCase.
   triplication of the helper itself is tracked in
   `roadmap/planned/three-identical-validate-helpers.md`.
 - **Renaming the blob side to `blob/`** — inverted by decision 3; the file
-  side keeps `storage`.
+  side keeps `storage`. Moot while WS3 is parked.
 - **`types/` break-up** — the shared-contracts barrel stays; co-location is
   a per-contract judgement for later work, not a sweep.
+- **`http-routes.shared.ts` → `http-routes.ts`** — dropped from WS5 on a wrong
+  premise. `ARCHITECTURE.md` states the suffix carries the same isomorphic
+  meaning there as everywhere else, because the fetch client sits on that
+  boundary too.
+- **`v` → `value` beyond `fields/built-in-rules.ts`** — `v` is a house idiom
+  (eight uses in `database/define-table.ts`, four in `database/codec.ts`, plus
+  zod transforms and setState callbacks). WS5 covered the six exported
+  coercers the audit named, and `coerceRichText` in
+  `fields/rich-text/validate.ts` still takes `v`. A broad sweep is separate
+  work if it is wanted at all.
+
+## What landed
+
+|                                   |                            |
+| --------------------------------- | -------------------------- |
+| WS1 registry `get` / `getOrThrow` | shipped                    |
+| WS2 acronym casing                | shipped                    |
+| WS3 `storage` → `repository`      | **parked**, nothing landed |
+| WS4 component filenames           | shipped                    |
+| WS5 smaller renames               | shipped, two items dropped |
+| WS6 directory moves               | shipped                    |
+
+Records written: `decisions/0072-the-registry-probe-is-get.md`,
+`decisions/0073-acronyms-are-title-case.md`,
+`decisions/0074-leaves-are-placed-by-subject.md`.

@@ -8,7 +8,7 @@
 import type { Field, ValidationMode } from '@/types/fields';
 import { describe, expect, it } from 'vitest';
 import { registerFieldType } from '@/fields/field-type-registry';
-import { parseFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/parse-fields';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -113,7 +113,7 @@ describe('coerceOnly — container subtrees', () => {
 });
 
 // ---------------------------------------------------------------------------
-// The rest of the pipeline is unaffected
+// The rest of `parseFields` is unaffected
 // ---------------------------------------------------------------------------
 
 describe('coerceOnly — validation still covers every field', () => {

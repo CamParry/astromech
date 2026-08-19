@@ -15,7 +15,7 @@
  */
 
 import type { ImageDriver } from '@/types/index';
-import { CLOUDFLARE_IMAGES_DRIVER } from '@/utilities/image-drivers';
+import { CLOUDFLARE_IMAGES_DRIVER } from '@/media/image-drivers';
 
 export function cloudflareImages(): ImageDriver {
     return {

@@ -35,7 +35,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { EntryEditPage } from '@/admin/components/entries/entry-edit-page';
 import { ConfirmProvider } from '@/admin/components/ui/confirm';
 import { ToastProvider } from '@/admin/components/ui/toast';
-import { AIContextProvider } from '@/admin/context/ai-context';
+import { AiContextProvider } from '@/admin/context/ai-context';
 import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
 import '@/admin/rendering/register-fields';
 import type { EntriesMount } from '@/admin/components/entries/mount';
@@ -201,9 +201,9 @@ function mountApp(queryClient: QueryClient, api: EntriesService) {
             <ToastProvider>
                 <AuthProvider>
                     <ConfirmProvider>
-                        <AIContextProvider>
+                        <AiContextProvider>
                             <RouterProvider router={router} />
-                        </AIContextProvider>
+                        </AiContextProvider>
                     </ConfirmProvider>
                 </AuthProvider>
             </ToastProvider>

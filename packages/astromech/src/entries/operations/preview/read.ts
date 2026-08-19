@@ -7,8 +7,8 @@
 
 import type { Entry, EntryQueryParams, QueryResult } from '@/types/index';
 import { getConfig } from '@/config/registry';
+import { resolveEntryType } from '@/entries/type-ids.shared';
 import { flattenEntryFields } from '@/fields/flatten';
-import { resolveEntryType } from '@/utilities/entry-type-ids';
 import { projectPreview, verifyPreviewToken } from '../../internal/preview';
 import { asEntry } from '../../internal/records';
 import { getDefaultLocale } from '../../internal/type-config';

@@ -386,7 +386,7 @@ enumeration is the point of an opt-in model:
 roles: {
     editor: {
         name: 'Editor',
-        permissions: [...builtInRole('editor'), ...myPlugin.permissions('view', 'export')],
+        permissions: [...permissionsForBuiltInRole('editor'), ...myPlugin.permissions('view', 'export')],
     },
 }
 ```

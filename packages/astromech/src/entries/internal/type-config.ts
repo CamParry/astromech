@@ -5,11 +5,11 @@
  */
 
 import type { EntryStorage } from '../storage/types';
+import type { Capability } from '@/entries/capabilities';
 import type { Field } from '@/types/index';
-import type { Capability } from '@/utilities/entry-capabilities';
 import { getConfig } from '@/config/registry';
+import { resolveEntryType } from '@/entries/type-ids.shared';
 import { flattenEntryFields } from '@/fields/flatten';
-import { resolveEntryType } from '@/utilities/entry-type-ids';
 import { resolveContentLocale } from '@/utilities/locale';
 import { CapabilityError } from '../errors';
 import { getEntryStorage } from '../storage/registry';

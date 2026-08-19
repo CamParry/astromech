@@ -68,7 +68,7 @@ no bundles — a role names the keys it grants:
 ```ts
 roles: {
     'content-editor': {
-        permissions: [...builtInRole('editor'), ...rating.permissions('view')],
+        permissions: [...permissionsForBuiltInRole('editor'), ...rating.permissions('view')],
     },
 }
 ```

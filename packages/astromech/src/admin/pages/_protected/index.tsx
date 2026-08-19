@@ -20,7 +20,7 @@ import {
     SectionTitle,
     Skeleton,
 } from '@/admin/components/ui/index';
-import { useAIContext } from '@/admin/context/ai-context';
+import { useAiContext } from '@/admin/context/ai-context';
 import { astromechClient } from '@/transport/http/client/index';
 import { formatDate } from '@/utilities/dates';
 
@@ -128,7 +128,7 @@ function DashboardPage(): React.ReactElement {
     const collectionEntries = Object.entries(collections);
     const { data: recentEntries, isLoading: recentLoading } = useRecentEntries();
 
-    useAIContext(
+    useAiContext(
         { kind: 'pages', id: 'dashboard', label: t('dashboard.title') },
         { depth: 0 }
     );

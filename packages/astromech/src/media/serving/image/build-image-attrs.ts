@@ -5,7 +5,7 @@
  */
 
 import type { ImageFormat } from './url.shared';
-import { normaliseWidths } from '@/utilities/image-widths';
+import { normaliseWidths } from '@/media/image-widths.shared';
 import { isOptimisableImage } from './dimensions';
 import { buildMediaUrl, buildVariantUrl } from './url.shared';
 

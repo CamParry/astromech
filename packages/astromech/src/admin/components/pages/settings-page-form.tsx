@@ -14,7 +14,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import { FieldTreeForm } from '@/admin/components/fields/FieldTreeForm';
+import { FieldTreeForm } from '@/admin/components/fields/field-tree-form';
+import { saveSettingsPage } from '@/admin/components/pages/settings-page-save';
 import {
     Button,
     Page,
@@ -26,7 +27,6 @@ import {
     useToast,
 } from '@/admin/components/ui/index';
 import { resolveLabel } from '@/admin/i18n/labels';
-import { saveSettingsPage } from '@/admin/lib/settings-page-save';
 import { astromechClient } from '@/transport/http/client/index';
 import { resolveContentLocale } from '@/utilities/locale';
 

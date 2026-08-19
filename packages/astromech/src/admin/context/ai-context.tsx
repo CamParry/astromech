@@ -1,12 +1,12 @@
 /**
  * AI context for the Astromech admin SPA.
  *
- * Routes declare what the user is looking at via `useAIContext`; the chat
- * drawer reads the collected references with `useAIContextItems`. The store
+ * Routes declare what the user is looking at via `useAiContext`; the chat
+ * drawer reads the collected references with `useAiContextItems`. The store
  * lives on the `_protected` layout, so references survive navigation.
  */
 
-import type { AIContextItem, AIContextReference } from '@/types/ai-context';
+import type { AiContextItem, AiContextReference } from '@/types/ai-context';
 import React, {
     createContext,
     useContext,
@@ -20,18 +20,18 @@ import React, {
 // Types
 // ============================================================================
 
-export type AIContextStore = {
-    register(key: string, reference: AIContextReference, depth: number): void;
+export type AiContextStore = {
+    register(key: string, reference: AiContextReference, depth: number): void;
     unregister(key: string): void;
     subscribe(listener: () => void): () => void;
-    getSnapshot(): readonly AIContextItem[];
+    getSnapshot(): readonly AiContextItem[];
 };
 
 // ============================================================================
 // Context
 // ============================================================================
 
-const AIContextStoreContext = createContext<AIContextStore | null>(null);
+const AiContextStoreContext = createContext<AiContextStore | null>(null);
 
 // ============================================================================
 // Store
@@ -42,10 +42,10 @@ const AIContextStoreContext = createContext<AIContextStore | null>(null);
  * instance. The snapshot is rebuilt on change and cached, because
  * `useSyncExternalStore` re-renders forever on a fresh array every read.
  */
-export function createAIContextStore(): AIContextStore {
-    const items = new Map<string, AIContextItem>();
+export function createAiContextStore(): AiContextStore {
+    const items = new Map<string, AiContextItem>();
     const listeners = new Set<() => void>();
-    let snapshot: readonly AIContextItem[] = [];
+    let snapshot: readonly AiContextItem[] = [];
     let nextOrder = 0;
 
     function publish(): void {
@@ -86,7 +86,7 @@ export function createAIContextStore(): AIContextStore {
 }
 
 /** Compare two references field by field; identity changes on every render. */
-function sameReference(a: AIContextReference, b: AIContextReference): boolean {
+function sameReference(a: AiContextReference, b: AiContextReference): boolean {
     return a.kind === b.kind && a.type === b.type && a.id === b.id && a.label === b.label;
 }
 
@@ -94,17 +94,17 @@ function sameReference(a: AIContextReference, b: AIContextReference): boolean {
 // Provider
 // ============================================================================
 
-type AIContextProviderProps = {
+type AiContextProviderProps = {
     children: React.ReactNode;
 };
 
-export function AIContextProvider({ children }: AIContextProviderProps) {
-    const [store] = useState(() => createAIContextStore());
+export function AiContextProvider({ children }: AiContextProviderProps) {
+    const [store] = useState(() => createAiContextStore());
 
     return (
-        <AIContextStoreContext.Provider value={store}>
+        <AiContextStoreContext.Provider value={store}>
             {children}
-        </AIContextStoreContext.Provider>
+        </AiContextStoreContext.Provider>
     );
 }
 
@@ -117,11 +117,11 @@ export function AIContextProvider({ children }: AIContextProviderProps) {
  * reference declares nothing, so a route can call this unconditionally while
  * its data loads. Lower `depth` is less specific.
  */
-export function useAIContext(
-    reference: AIContextReference | null,
+export function useAiContext(
+    reference: AiContextReference | null,
     options?: { depth?: number }
 ): void {
-    const store = useAIContextStore();
+    const store = useAiContextStore();
     const key = useId();
     const depth = options?.depth ?? 0;
     // Depend on the fields, not the object: callers pass a fresh literal each render.
@@ -136,7 +136,7 @@ export function useAIContext(
             return;
         }
         // Built key by key: `exactOptionalPropertyTypes` rejects explicit undefined.
-        const next: AIContextReference = { kind, label };
+        const next: AiContextReference = { kind, label };
         if (type !== undefined) next.type = type;
         if (id !== undefined) next.id = id;
         store.register(key, next, depth);
@@ -147,16 +147,16 @@ export function useAIContext(
 }
 
 /** The references declared by every mounted route, in registration order. */
-export function useAIContextItems(): readonly AIContextItem[] {
-    const store = useAIContextStore();
+export function useAiContextItems(): readonly AiContextItem[] {
+    const store = useAiContextStore();
     return useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
 }
 
 /** Read the store the provider installed. */
-function useAIContextStore(): AIContextStore {
-    const ctx = useContext(AIContextStoreContext);
+function useAiContextStore(): AiContextStore {
+    const ctx = useContext(AiContextStoreContext);
     if (ctx === null) {
-        throw new Error('AI context hooks must be used within an AIContextProvider');
+        throw new Error('AI context hooks must be used within an AiContextProvider');
     }
     return ctx;
 }

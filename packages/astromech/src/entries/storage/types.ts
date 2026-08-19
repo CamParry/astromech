@@ -16,6 +16,7 @@
  */
 
 import type { Db } from '@/database/types';
+import type { Capability } from '@/entries/capabilities';
 import type {
     EntryStatus,
     EntryVersion,
@@ -23,11 +24,10 @@ import type {
     SortOption,
     WhereFilters,
 } from '@/types/index';
-import type { Capability } from '@/utilities/entry-capabilities';
 
 export type StorageDb = Db;
 
-export type { Capability } from '@/utilities/entry-capabilities';
+export type { Capability } from '@/entries/capabilities';
 
 /**
  * Universal entry shape a storage returns. The built-in storage returns full

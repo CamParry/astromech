@@ -12,7 +12,7 @@ import type { BaseFieldProps } from '@/types/index';
 import React from 'react';
 import { fieldTypes } from 'virtual:astromech/plugins/components';
 import { useFieldControl } from '@/admin/components/fields/field-control-context';
-import { ComponentErrorBoundary } from '@/admin/components/pages/ComponentErrorBoundary';
+import { ComponentErrorBoundary } from '@/admin/components/pages/component-error-boundary';
 import { Spinner } from '@/admin/components/ui/index';
 import { PluginUiProvider } from '@/admin/context/plugin';
 

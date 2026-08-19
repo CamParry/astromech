@@ -13,10 +13,10 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { hostPages } from 'virtual:astromech/plugins/components';
-import { ComponentPageView } from '@/admin/components/pages/ComponentPageView';
-import { SettingsPageForm } from '@/admin/components/pages/SettingsPageForm';
+import { ComponentPageView } from '@/admin/components/pages/component-page-view';
+import { SettingsPageForm } from '@/admin/components/pages/settings-page-form';
 import { EmptyState, Page, PageContent } from '@/admin/components/ui/index';
-import { useAIContext } from '@/admin/context/ai-context';
+import { useAiContext } from '@/admin/context/ai-context';
 import { usePermissions } from '@/admin/hooks/index';
 import { resolveLabel } from '@/admin/i18n/labels';
 
@@ -33,7 +33,7 @@ function AppPage(): React.ReactElement {
     const page = adminConfig.pages.find((p) => p.path === splat);
 
     // Identify the page by its route key (the splat), which every mode carries.
-    useAIContext(
+    useAiContext(
         page !== undefined
             ? {
                   kind: 'pages',

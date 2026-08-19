@@ -34,7 +34,7 @@ import {
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import { DeleteEntryModal } from '@/admin/components/entries/DeleteEntryModal';
+import { DeleteEntryModal } from '@/admin/components/entries/delete-entry-modal';
 import {
     Badge,
     Button,

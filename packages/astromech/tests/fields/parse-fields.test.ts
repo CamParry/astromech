@@ -2,7 +2,7 @@ import type { ResourceType } from '@/types/domain';
 import type { Field, FieldValidationContext, ValidationMode } from '@/types/fields';
 import { describe, expect, it, vi } from 'vitest';
 import { registerFieldType } from '@/fields/field-type-registry';
-import { parseFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/parse-fields';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -958,7 +958,7 @@ describe('layout flattening', () => {
 
 describe('nested fields', () => {
     /**
-     * Containers ARE recursed (see pipeline-nested.test.ts for the full matrix).
+     * Containers ARE recursed (see parse-fields-nested.test.ts for the full matrix).
      * What matters here is that recursion never leaks a child's bare name into
      * the top-level error keys — a nested error always carries its path.
      */

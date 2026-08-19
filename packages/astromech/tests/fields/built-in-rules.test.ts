@@ -24,7 +24,7 @@ import {
     validateText,
     validateUrl,
 } from '@/fields/built-in-rules';
-import { parseFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/parse-fields';
 
 // ---------------------------------------------------------------------------
 // Helpers

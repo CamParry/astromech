@@ -92,7 +92,7 @@ There are no bundles; enumeration is the point of an opt-in model.
 ```ts
 // astromech.config.ts
 import { redirects } from '@astromech/redirects';
-import { builtInRole, defineConfig, entryPermissions } from 'astromech';
+import { defineConfig, entryPermissions, permissionsForBuiltInRole } from 'astromech';
 
 export default defineConfig({
     plugins: [redirects()],
@@ -100,7 +100,7 @@ export default defineConfig({
         'content-editor': {
             name: 'Content Editor',
             permissions: [
-                ...builtInRole('editor'),
+                ...permissionsForBuiltInRole('editor'),
                 ...entryPermissions(
                     'redirects/redirect',
                     'read',
@@ -114,7 +114,7 @@ export default defineConfig({
 });
 ```
 
-Note that `builtInRole('editor')`'s `entry:*` does **not** reach these — the
+Note that `permissionsForBuiltInRole('editor')`'s `entry:*` does **not** reach these — the
 plugin form is deliberately a separate namespace, so a plugin's entry types are
 never granted by a root-level wildcard. Run `astromech permissions` to list
 every grantable string your config produces.

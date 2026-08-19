@@ -1,7 +1,7 @@
 /**
  * CRON job registry.
  *
- * globalThis-backed (see `@/utilities/registry.js`) so a job registered through
+ * globalThis-backed (see `@/registry.js`) so a job registered through
  * one entry chunk is visible to the runner reached through another.
  */
 
@@ -9,7 +9,7 @@ import type { DB } from '@/database/types';
 import type { ResolvedConfig, SchedulerDriver } from '@/types/index';
 import type { Kysely } from 'kysely';
 import { interval } from '@/cron/drivers/interval';
-import { createRegistry } from '@/utilities/registry';
+import { createRegistry } from '@/registry';
 
 export type CronContext = {
     db: Kysely<DB>;
@@ -30,19 +30,19 @@ export type CronJob = {
 const jobs = createRegistry<CronJob[]>('cronJobs', { required: false });
 
 export function registerCronJob(job: CronJob): void {
-    const list = jobs.maybeGet() ?? [];
+    const list = jobs.get() ?? [];
     list.push(job);
     jobs.set(list);
 }
 
 export function getCronJobs(): CronJob[] {
-    return jobs.maybeGet() ?? [];
+    return jobs.get() ?? [];
 }
 
 const scheduler = createRegistry<SchedulerDriver>('scheduler', { required: false });
 
 export const setSchedulerDriver = scheduler.set;
-export const getSchedulerDriver = scheduler.maybeGet;
+export const getSchedulerDriver = scheduler.get;
 
 /**
  * The driver factory an integration nominates for a config naming no scheduler.
@@ -58,5 +58,5 @@ export const setDefaultScheduler = defaultScheduler.set;
 
 /** The config's driver, else the integration's default, else the in-process ticker. */
 export function resolveSchedulerDriver(configured?: SchedulerDriver): SchedulerDriver {
-    return configured ?? defaultScheduler.maybeGet()?.() ?? interval();
+    return configured ?? defaultScheduler.get()?.() ?? interval();
 }

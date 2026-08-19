@@ -9,7 +9,7 @@
 import type { ResourceType } from '@/types/domain';
 import type { Field, ValidationMode } from '@/types/fields';
 import { describe, expect, it, vi } from 'vitest';
-import { parseFields } from '@/fields/pipeline';
+import { parseFields } from '@/fields/parse-fields';
 
 // ---------------------------------------------------------------------------
 // Helpers

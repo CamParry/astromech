@@ -4,12 +4,12 @@ import { createFileRoute } from '@tanstack/react-router';
 import { LayoutGrid, LayoutList, Trash2 } from 'lucide-react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { MediaDetailModal } from '@/admin/components/media/media-detail-modal';
 import { MediaEmpty } from '@/admin/components/media/media-empty';
 import { MediaFilters } from '@/admin/components/media/media-filters';
 import { MediaGrid } from '@/admin/components/media/media-grid';
 import { MediaSortSelect, sortPatch } from '@/admin/components/media/media-sort-select';
 import { MediaTable } from '@/admin/components/media/media-table';
-import { MediaDetailModal } from '@/admin/components/media/MediaDetailModal';
 import {
     Dropdown,
     DropZone,
@@ -27,7 +27,7 @@ import {
     UploadButton,
     useConfirm,
 } from '@/admin/components/ui/index';
-import { useAIContext } from '@/admin/context/ai-context';
+import { useAiContext } from '@/admin/context/ai-context';
 import {
     useBulkDeleteMedia,
     useMediaBrowser,
@@ -67,7 +67,7 @@ function MediaIndexPage(): React.ReactElement {
     const { canUploadMedia, canUpdateMedia, canDeleteMedia } = usePermissions();
     const { upload, isUploading } = useUploadMedia();
 
-    useAIContext({ kind: 'media', label: t('media.title') }, { depth: 0 });
+    useAiContext({ kind: 'media', label: t('media.title') }, { depth: 0 });
 
     const query: MediaBrowserQuery = {
         q,

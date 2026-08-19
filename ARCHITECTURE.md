@@ -44,7 +44,7 @@ entries · media · users · settings ·           domains — siblings, never i
   notifications
 plugins/runtime · config · database · storage · capabilities
   email · ai · cron · cloudflare · request-context · fields · permissions
-types · utilities · errors                     pure leaves
+types · utilities · errors · registry.ts       pure leaves
 ```
 
 The six first-party plugins (`@astromech/{assistant,backups,forms,menus,redirects,seo}`)
@@ -60,8 +60,11 @@ Key invariants:
 
 - **Domains are deep modules named for the business, not the tech.** Every domain
   owns a `service.ts` (its verbs), a `schema.ts` (`defineTable` table + Zod
-  validation) and a `methods.ts` (its contract catalogue, which is what puts it
-  in the method manifest). Two further files are per-domain, not universal:
+  validation) and a contract catalogue, which is what puts it in the method
+  manifest. Four domains hold nothing but that catalogue and name the file
+  `contract.ts` (`media`, `notifications`, `settings`, `users`); `entries` names
+  it `methods.ts`, because it also carries the per-method action list and the
+  method-name union. Two further files are per-domain, not universal:
   `visibility.ts` exists only where a domain projects a row into more than one
   shape (`entries`, `settings`), and `operations/` + `internal/` only where one
   `service.ts` has stopped being readable (`entries`, `media`, `users` —
@@ -78,17 +81,17 @@ Key invariants:
   `fields`, `permissions`, `request-context`, `email`, `ai`, `cron`, `cloudflare`) and may
   not orchestrate domain logic.
 - **Each capability owns its own driver slot; there is no central context object.**
-  Every driver and override slot shares one mechanism (`utilities/registry.ts`)
+  Every driver and override slot shares one mechanism (`registry.ts`)
   over a single `globalThis.__astromech` namespace, but never a shared type. A hub
   carrying every driver would have to import every domain's types, which is what
   this DAG exists to prevent. globalThis is not a taste choice — the package ships
   two tsup builds, `exports` subpaths that resolve to `src` in the repo and
   `dist` for npm, and Vite aliases that reach package source regardless of the
   map, so one module can be instantiated more than once in a process and the
-  global is the only slot every copy shares. `createRegistry`
-  is a single-value slot: required ones resolve-or-throw, genuinely optional ones
-  expose `maybeGet()` and no `get()` at all. `createKeyedRegistry` is the same slot keyed
-  by string, for the per-type and per-name override maps.
+  global is the only slot every copy shares. `createRegistry` is a single-value
+  slot: `get()` returns the value or `null`, and required slots add a
+  `getOrThrow()` that genuinely optional ones do not have. `createKeyedRegistry`
+  is the same slot keyed by string, for the per-type and per-name override maps.
   The namespace also carries a few **process guards** — a cron tick lock and
   interval handle, the duplicate-admin-UI check — as plain keys read directly
   rather than through a registry object. They share the duplicate-copy hazard
@@ -104,10 +107,19 @@ Key invariants:
   read runs before the request that boots the application, and the node adapter
   answers the resulting rejection by holding the socket open — so it presents as
   a hang, and only `check:boot` sees it.
-- **`utilities/registry.ts` holds the only `declare global`.** Enforced by
+- **`registry.ts` holds the only `declare global`.** Enforced by
   `no-restricted-syntax` in `eslint.config.js`; a new global goes in the namespace.
-- **Leaves are pure.** `types/`, `utilities/`, and `errors/` import only other
-  leaves or third-party packages.
+- **Leaves are pure.** `types/`, `utilities/`, `errors/` and `registry.ts` import
+  only other leaves or third-party packages.
+- **A pure leaf is placed by subject and may be imported from any layer.**
+  `media/image-drivers.ts`, `media/image-widths.shared.ts`,
+  `entries/capabilities.ts` and `entries/type-ids.shared.ts` sit with the subject
+  they describe, and `config/` and `permissions/` read them from below. Qualifying
+  is narrow: a constant, a type alias, or a function over its arguments, importing
+  nothing but other leaves — `entries/capabilities.ts` is a string union plus a
+  frozen array, `image-drivers.ts` is one string constant. Anything holding a
+  driver, a database handle or a service is not a leaf, and the layer list governs
+  it as usual.
 - **A contract lives with the layer that implements it.** `types/` holds the
   vocabulary every layer shares: the data model, the config and plugin authoring
   contracts, fields, hooks, the service contracts and the query primitives. A
@@ -157,6 +169,7 @@ packages/
 │   ├── src/
 │   │   ├── index.ts        # public framework-agnostic entry (re-exported via exports/)
 │   │   ├── astromech.ts    # composition root — createAstromech/getAstromech, the Astromech type, the instance registry, and the create sequence
+│   │   ├── registry.ts     # the globalThis-backed slot primitive (createRegistry/createKeyedRegistry) every subsystem registry is built on
 │   │   │
 │   │   │   ── entrypoints ─────────────────────────────────────────────────────
 │   │   ├── integrations/   # framework and runtime glue — astro/ (index.ts the integration, astromech/astro · vite.ts · virtual-module.ts · routes.ts the injectRoute calls · middleware.ts, astromech/middleware · handler.ts, the one APIRoute behind every injected pattern) · cloudflare/ (index.ts, createWorkerEntry, astromech/cloudflare)
@@ -173,11 +186,11 @@ packages/
 │   │   ├── plugins/        # plugins/runtime (hook engine) only — first-party plugins live in packages/plugins/; it imports the domains directly to build PluginContext
 │   │   │
 │   │   │   ── domains ────────────────────────────────────────────────────
-│   │   ├── entries/        # entries domain: service (assembler) · operations/ · internal/ · schema · methods · visibility · url.shared
-│   │   ├── media/          # media domain: service (assembler) · operations/ · internal/ · schema · methods · serving/image/
-│   │   ├── users/          # users domain: service (assembler) · operations/ · internal/ · schema · methods · auth (Better Auth integration)
-│   │   ├── settings/       # settings domain: service · schema · methods · visibility · page-values.shared
-│   │   ├── notifications/  # notifications domain: service (+ notify) · schema · methods · user-scoped storage
+│   │   ├── entries/        # entries domain: service (assembler) · operations/ · internal/ · schema · methods · visibility · capabilities · type-ids.shared · entry-url.shared
+│   │   ├── media/          # media domain: service (assembler) · operations/ · internal/ · schema · contract · serving/image/ · image-drivers · image-widths.shared
+│   │   ├── users/          # users domain: service (assembler) · operations/ · internal/ · schema · contract · auth (Better Auth integration)
+│   │   ├── settings/       # settings domain: service · schema · contract · visibility · page-values.shared
+│   │   ├── notifications/  # notifications domain: service (+ notify) · schema · contract · user-scoped storage
 │   │   │
 │   │   │   ── capabilities ───────────────────────────────────────────────
 │   │   ├── config/         # the config pipeline: load (jiti) · resolve (orchestration) + its named steps · validate/ · admin-config · registry (setConfig/getConfig)
@@ -193,7 +206,7 @@ packages/
 │   │   │
 │   │   │   ── pure leaves ────────────────────────────────────────────────
 │   │   ├── types/          # shared TS types — data model, config shape, field/hook contracts, the five domain service contracts, the typed-entry surface
-│   │   ├── utilities/      # pure helpers (strings, dates, entry-fields, rich-text, entry-type-ids, entry-capabilities, image-widths, image-drivers, …)
+│   │   ├── utilities/      # pure helpers with no subject of their own (strings, dates, bytes, locale, labels, log, options, permission-match, plugin-namespace, values-equal, …)
 │   │   ├── errors/         # base error classes
 │   │   │
 │   │   │   ── public surface ───────────────────────────────────────────
@@ -292,7 +305,7 @@ export), `astromech/middleware`,
 `astromech/methods` (the server-side seam surface — the boot-generated method
 manifest via `getMethodManifest`, plus `buildDispatch`, `buildScopedDispatch`,
 `filterMethods`, `annotateManifest`, `scopedServices`, the confirmation helpers
-and `formatAIContextMessage`; **core-internal in practice — a plugin package
+and `formatAiContextMessage`; **core-internal in practice — a plugin package
 cannot import it, see "Plugin runtime boundary"**),
 `astromech/fields`, `astromech/database/schema`, `astromech/storage/{filesystem,r2,s3}`
 (storage drivers), `astromech/cloudflare` (binding-name resolution), and the

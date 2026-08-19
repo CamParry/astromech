@@ -31,7 +31,7 @@ export type { Astromech } from '@/astromech';
 // Model access, so a plugin can reach a configured model without taking its own
 // SDK dependency. Absent unless the site configures `ai` — hence `undefined`.
 export { getModel, hasModel } from '@/ai/index';
-export { builtInRole, BUILT_IN_ROLES } from '@/permissions/index';
+export { permissionsForBuiltInRole, BUILT_IN_ROLES } from '@/permissions/index';
 export type { BuiltInRoleSlug } from '@/permissions/index';
 export { definePermissions } from '@/permissions/define';
 export type { PermissionDeclaration, PermissionDeclarations } from '@/permissions/define';
@@ -43,9 +43,9 @@ export {
     entryPermissions,
 } from '@/permissions/entry-permission';
 export { withDefaults } from '@/utilities/options';
-export { resolveEntryUrl, resolveEntryPath } from '@/entries/utils/url.shared';
-export type { UrlEntry } from '@/entries/utils/url.shared';
-export { defaultImageWidths } from '@/utilities/image-widths';
+export { resolveEntryUrl, resolveEntryPath } from '@/entries/entry-url.shared';
+export type { UrlEntry } from '@/entries/entry-url.shared';
+export { defaultImageWidths } from '@/media/image-widths.shared';
 export { buildImageAttrs } from '@/media/serving/image/build-image-attrs';
 export type {
     ImageAttrs,
@@ -124,7 +124,7 @@ export type { RelationshipEdge, TargetKind } from '@/fields/relationship-edges';
 // The AI context formatter ships from the plugin-authoring surface as well as
 // `astromech/methods`: a plugin building a chat request needs it, and this is
 // the only barrel it may import.
-export { formatAIContextMessage } from '@/utilities/ai-context';
+export { formatAiContextMessage } from '@/utilities/ai-context';
 
 // ============================================================================
 // Config / Collection / Plugin Helpers

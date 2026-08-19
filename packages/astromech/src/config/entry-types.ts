@@ -3,13 +3,13 @@
  * search list derived from it.
  */
 
+import type { Capability } from '@/entries/capabilities';
 import type { EntryFields, Field, ResolvedEntryFields } from '@/types/fields';
 import type {
     EntryType,
     ResolvedEntryCapabilities,
     ResolvedEntryType,
 } from '@/types/index';
-import type { Capability } from '@/utilities/entry-capabilities';
 import {
     assertUniqueDataNames,
     LAYOUT_TYPES,

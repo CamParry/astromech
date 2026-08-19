@@ -17,7 +17,7 @@ import { schemaFor } from './schema';
  * document and still fail here when the field forbids one of its node types.
  */
 export const validateRichText: FieldValidator = async (ctx) =>
-    checkRichTextDocument(ctx.value, ctx.field.allow);
+    validateRichTextDocument(ctx.value, ctx.field.allow);
 
 /**
  * Normalise an empty rendered document to null. A public-shape read renders an
@@ -31,7 +31,7 @@ export const coerceRichText = (v: unknown): unknown => (v === '' ? null : v);
  * `fromJSON` rejects unknown node and mark types; `check()` adds the nested
  * content rules; neither looks at link hrefs, so executable schemes are last.
  */
-export function checkRichTextDocument(
+export function validateRichTextDocument(
     value: unknown,
     allow?: RichTextAllow
 ): true | string {

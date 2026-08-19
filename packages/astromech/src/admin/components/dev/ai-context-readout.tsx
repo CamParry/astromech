@@ -4,9 +4,9 @@
  * exercised until the chat drawer consumes it.
  */
 
-import { useAIContextItems } from '@/admin/context/ai-context';
+import { useAiContextItems } from '@/admin/context/ai-context';
 import { useLocalState } from '@/admin/hooks/use-local-state';
-import { formatAIContextMessage } from '@/utilities/ai-context';
+import { formatAiContextMessage } from '@/utilities/ai-context';
 import './ai-context-readout.css';
 
 type ReadoutState = 'open' | 'closed';
@@ -14,9 +14,9 @@ type ReadoutState = 'open' | 'closed';
 const READOUT_STATES: ReadoutState[] = ['open', 'closed'];
 
 /** Floating toggle plus a panel showing the assembled `system` message. */
-export function AIContextReadout() {
-    const items = useAIContextItems();
-    const message = formatAIContextMessage(items);
+export function AiContextReadout() {
+    const items = useAiContextItems();
+    const message = formatAiContextMessage(items);
     const [state, setState] = useLocalState<ReadoutState>(
         'ai-context-readout',
         'closed',

@@ -10,19 +10,19 @@
  * React root directly (same approach as use-field-validation.test.tsx).
  */
 
-import type { AIContextItem, AIContextReference } from '@/types/ai-context';
+import type { AiContextItem, AiContextReference } from '@/types/ai-context';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { describe, expect, it } from 'vitest';
 import {
-    AIContextProvider,
-    createAIContextStore,
-    useAIContext,
-    useAIContextItems,
+    AiContextProvider,
+    createAiContextStore,
+    useAiContext,
+    useAiContextItems,
 } from '@/admin/context/ai-context';
 
-const postsList: AIContextReference = { kind: 'entries', type: 'posts', label: 'Posts' };
-const postEntry: AIContextReference = {
+const postsList: AiContextReference = { kind: 'entries', type: 'posts', label: 'Posts' };
+const postEntry: AiContextReference = {
     kind: 'entries',
     type: 'posts',
     id: 'abc',
@@ -33,9 +33,9 @@ const postEntry: AIContextReference = {
 // Store
 // ============================================================================
 
-describe('createAIContextStore', () => {
+describe('createAiContextStore', () => {
     it('should keep the order minted on first registration when a key re-registers', () => {
-        const store = createAIContextStore();
+        const store = createAiContextStore();
         store.register('a', postsList, 0);
         store.register('b', postEntry, 1);
 
@@ -47,7 +47,7 @@ describe('createAIContextStore', () => {
     });
 
     it('should ignore a registration that changes nothing', () => {
-        const store = createAIContextStore();
+        const store = createAiContextStore();
         store.register('a', postsList, 0);
         const before = store.getSnapshot();
         let notified = 0;
@@ -60,7 +60,7 @@ describe('createAIContextStore', () => {
     });
 
     it('should notify and replace the snapshot when the label changes', () => {
-        const store = createAIContextStore();
+        const store = createAiContextStore();
         store.register('a', postsList, 0);
         const before = store.getSnapshot();
         let notified = 0;
@@ -74,7 +74,7 @@ describe('createAIContextStore', () => {
     });
 
     it('should notify and drop the item on unregister, and stay quiet for an unknown key', () => {
-        const store = createAIContextStore();
+        const store = createAiContextStore();
         store.register('a', postsList, 0);
         let notified = 0;
         store.subscribe(() => (notified += 1));
@@ -87,7 +87,7 @@ describe('createAIContextStore', () => {
     });
 
     it('should stop calling a listener once it unsubscribes', () => {
-        const store = createAIContextStore();
+        const store = createAiContextStore();
         let notified = 0;
         const unsubscribe = store.subscribe(() => (notified += 1));
 
@@ -99,7 +99,7 @@ describe('createAIContextStore', () => {
     });
 
     it('should keep the snapshot in insertion order rather than sorting by depth', () => {
-        const store = createAIContextStore();
+        const store = createAiContextStore();
         store.register('deep', postEntry, 5);
         store.register('shallow', postsList, 0);
 
@@ -111,7 +111,7 @@ describe('createAIContextStore', () => {
 // Hooks
 // ============================================================================
 
-describe('useAIContext', () => {
+describe('useAiContext', () => {
     it('should publish the reference the route declares', () => {
         const mounted = mountAdmin(postsList);
 
@@ -160,31 +160,31 @@ describe('useAIContext', () => {
 });
 
 type Mounted = {
-    /** What a consumer of `useAIContextItems` sees right now. */
-    items: () => readonly AIContextItem[];
-    setReference: (reference: AIContextReference | null) => void;
+    /** What a consumer of `useAiContextItems` sees right now. */
+    items: () => readonly AiContextItem[];
+    setReference: (reference: AiContextReference | null) => void;
     hideRoute: () => void;
     unmount: () => void;
 };
 
 /** Mount a provider with one declaring route and one reading consumer. */
-function mountAdmin(initial: AIContextReference | null): Mounted {
-    let items: readonly AIContextItem[] = [];
+function mountAdmin(initial: AiContextReference | null): Mounted {
+    let items: readonly AiContextItem[] = [];
     let setState: React.Dispatch<React.SetStateAction<AppState>> | undefined;
 
-    type AppState = { reference: AIContextReference | null; visible: boolean };
+    type AppState = { reference: AiContextReference | null; visible: boolean };
 
     function DeclaringRoute({
         reference,
     }: {
-        reference: AIContextReference | null;
+        reference: AiContextReference | null;
     }): null {
-        useAIContext(reference);
+        useAiContext(reference);
         return null;
     }
 
     function Consumer(): null {
-        items = useAIContextItems();
+        items = useAiContextItems();
         return null;
     }
 
@@ -195,10 +195,10 @@ function mountAdmin(initial: AIContextReference | null): Mounted {
         });
         setState = set;
         return (
-            <AIContextProvider>
+            <AiContextProvider>
                 {state.visible ? <DeclaringRoute reference={state.reference} /> : null}
                 <Consumer />
-            </AIContextProvider>
+            </AiContextProvider>
         );
     }
 

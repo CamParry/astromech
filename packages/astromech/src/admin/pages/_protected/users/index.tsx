@@ -27,7 +27,7 @@ import {
     ToolbarStart,
     useConfirm,
 } from '@/admin/components/ui/index';
-import { useAIContext } from '@/admin/context/ai-context';
+import { useAiContext } from '@/admin/context/ai-context';
 import { useDeleteUser, usePermissions, useUsersQuery } from '@/admin/hooks/index';
 import { formatDate } from '@/utilities/dates';
 
@@ -50,7 +50,7 @@ function UsersIndexPage(): React.ReactElement {
 
     const { q = '', page: pageParam = 1 } = Route.useSearch();
 
-    useAIContext({ kind: 'users', label: t('users.title') }, { depth: 0 });
+    useAiContext({ kind: 'users', label: t('users.title') }, { depth: 0 });
 
     useEffect(() => {
         if (!canReadUsers()) {

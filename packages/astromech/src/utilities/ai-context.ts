@@ -3,15 +3,15 @@
  * `role: 'system'` message a chat request carries inside `messages[]`.
  */
 
-import type { AIContextItem, AIContextReference } from '@/types/ai-context';
+import type { AiContextItem, AiContextReference } from '@/types/ai-context';
 
 /**
  * Build the context message from the current references, ordered least to most
  * specific. Returns `null` when there is nothing to say, so the caller omits
  * the message rather than sending an empty one.
  */
-export function formatAIContextMessage(
-    items: readonly AIContextItem[]
+export function formatAiContextMessage(
+    items: readonly AiContextItem[]
 ): { role: 'system'; content: string } | null {
     if (items.length === 0) return null;
     const sorted = [...items].sort((a, b) => a.depth - b.depth || a.order - b.order);
@@ -27,7 +27,7 @@ export function formatAIContextMessage(
 }
 
 /** Render one reference as a single line. */
-function describeReference(reference: AIContextReference): string {
+function describeReference(reference: AiContextReference): string {
     const { kind, type, id, label } = reference;
     const sanitizedLabel = sanitize(label);
     const sanitizedType = type === undefined ? undefined : sanitize(type);

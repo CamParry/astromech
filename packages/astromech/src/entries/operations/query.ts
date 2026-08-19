@@ -6,10 +6,10 @@ import type {
     ReferencesFilter,
 } from '@/types/index';
 import { getConfig } from '@/config/registry';
+import { resolveEntryType } from '@/entries/type-ids.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { collectRelationshipSchemaPaths } from '@/fields/relationship-edges';
 import { getCurrentUser } from '@/request-context/index';
-import { resolveEntryType } from '@/utilities/entry-type-ids';
 import { InvalidReferencesFilterError, PublicTrashedReadError } from '../errors';
 import { asEntry } from '../internal/records';
 import { getDefaultLocale } from '../internal/type-config';
