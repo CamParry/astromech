@@ -4,8 +4,9 @@
  * sequence that boots a runtime.
  *
  * `createAstromech` boots and registers the instance; `getAstromech` only reads
- * it — one instance per process. `build` runs the sequence: resolve the config,
- * register the backends and plugin runtime, boot the plugins, assemble the app.
+ * it — one instance per process. `build` runs the whole sequence inline, in the
+ * order it happens: resolve the config, fill the backend slots, verify the
+ * schema, register the jobs and plugin runtime, boot the plugins, assemble.
  */
 
 import type {
@@ -20,26 +21,40 @@ import type {
     User,
     UsersService,
 } from '@/types/index';
+import { buildAIConfig } from '@/ai/middleware';
+import { setAIConfig } from '@/ai/registry';
+import { setMethodManifest } from '@/codegen/manifest-registry';
+import { generateMethodManifest } from '@/codegen/method-manifest';
 import { setConfig } from '@/config/registry';
 import { resolveConfig } from '@/config/resolve';
-import { getSchedulerDriver } from '@/cron/registry';
+import {
+    getSchedulerDriver,
+    registerCronJob,
+    resolveSchedulerDriver,
+    setSchedulerDriver,
+} from '@/cron/registry';
 import { onTick } from '@/cron/runner';
+import { setDatabaseDriver } from '@/database/driver-registry';
 import { checkMigrationDrift } from '@/database/migrations';
-import { typedEntriesService } from '@/entries/index';
+import { setDb } from '@/database/registry';
+import { setEmailDriver } from '@/email/registry';
+import { entryJobs, typedEntriesService } from '@/entries/index';
+import { setEntryAccess } from '@/entries/plugin-access';
 import { AstromechError } from '@/errors/index';
 import { mediaService } from '@/media/index';
+import { setImageConfig } from '@/media/serving/image/registry';
 import { currentUserNotificationsService } from '@/notifications/index';
-import { bootPlugins } from '@/plugins/runtime/plugin-runtime';
+import { setNotifyAccess } from '@/notifications/plugin-access';
+import { setPluginAccess } from '@/plugin-access';
+import { entryAccess } from '@/plugins/runtime/entry-access';
+import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
-import {
-    registerBackends,
-    registerBuiltInJobs,
-    registerPluginRuntime,
-} from '@/registrations';
 import { getCurrentRole, getCurrentUser } from '@/request-context/index';
 import { settingsService } from '@/settings/index';
+import { setStorageDriver } from '@/storage/registry';
 import { createHttpApp } from '@/transport/http/index';
 import { usersService } from '@/users/index';
+import { defaultImageWidths, normaliseWidths } from '@/utilities/image-widths';
 import { createRegistry } from '@/utilities/registry';
 
 export type Astromech = {
@@ -121,7 +136,12 @@ export function getAstromech(): Promise<Astromech> {
     return existing.app;
 }
 
-/** Resolve the config, register the backends and plugin runtime, boot the plugins, assemble the app. */
+/** Register the built-in cron jobs each domain ships. New domains add their jobs here. */
+function registerBuiltInJobs(): void {
+    for (const job of entryJobs) registerCronJob(job);
+}
+
+/** Boot a runtime: fill the slots, verify, register, boot the plugins, assemble the app. */
 async function build(config: AstromechConfig): Promise<Astromech> {
     const plugins = config.plugins ?? [];
     const db = config.db.getInstance();
@@ -130,15 +150,43 @@ async function build(config: AstromechConfig): Promise<Astromech> {
     const resolved = resolveConfig(config);
     setConfig(resolved);
 
-    // Backends the domains read from
-    await registerBackends(config, db);
+    // Backend slots the domains read from
+    setDb(db);
+    setDatabaseDriver(config.db);
+    setStorageDriver(config.storage);
+    const image = config.media?.image;
+    if (image) {
+        setImageConfig({
+            driver: image.driver,
+            widths: normaliseWidths(image.widths ?? defaultImageWidths),
+            avif: image.avif ?? true,
+        });
+    }
+    if (config.email) setEmailDriver(config.email);
+    if (config.ai) setAIConfig(await buildAIConfig(config.ai));
+    setSchedulerDriver(resolveSchedulerDriver(config.scheduler));
 
     // Verify the schema before anything boots against it
     await checkMigrationDrift(db, plugins);
 
-    // Registrations
+    // Built-in cron jobs
     registerBuiltInJobs();
-    registerPluginRuntime(config, resolved);
+
+    // Plugin runtime: bind the ports plugins reach the domains through
+    setEntryAccess();
+    setNotifyAccess();
+    setPluginAccess();
+    registerPlugins(plugins, resolved);
+    // Host entry types declaring their own storage, mounted after
+    // `registerPlugins` because that opens by clearing every override. Keyed by
+    // the bare type name; plugin types are qualified instead.
+    for (const [type, entryType] of Object.entries(config.entries)) {
+        if (entryType.storage) entryAccess().setEntryStorage(type, entryType.storage);
+    }
+    // The method manifest those plugins dispatch from, generated here because
+    // this is the only site holding both the resolved config and the raw
+    // `PluginDefinition[]`, which `ResolvedConfig` strips.
+    setMethodManifest(generateMethodManifest(resolved, plugins));
 
     // Boot
     await bootPlugins(plugins);

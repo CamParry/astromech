@@ -1,7 +1,7 @@
 # 0067 — The registry probe is `tryGet`, not `peek`
 
 **Date:** 2026-08-19
-**Status:** accepted
+**Status:** superseded by 0069
 
 `createRegistry` and `createKeyedRegistry` expose two reads: `get`, which
 throws when the slot is unset, and the probe that returns `T | null` for callers
