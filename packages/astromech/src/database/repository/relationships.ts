@@ -7,7 +7,6 @@ import type { RelationshipRow } from '@/database/tables';
 import type { Db } from '@/database/types';
 import type { RelationshipEdge, TargetKind } from '@/fields/relationship-edges';
 import { encodeWith } from '@/database/codec';
-import { getDb } from '@/database/registry';
 import { relationshipsTable } from '@/database/tables';
 import { createRepository } from './create-repository';
 
@@ -43,8 +42,7 @@ const INSERT_CHUNK_ROWS = 12;
 
 /** Resolves `getDb()` per call unless a handle is passed — a test seam only. */
 export function createRelationshipRepository(db?: Db) {
-    const database = db ?? getDb();
-    const repository = createRepository(relationshipsTable, database);
+    const repository = createRepository(relationshipsTable, db);
 
     /**
      * Replace every edge recorded for one source. The delete covers the whole

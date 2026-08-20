@@ -183,10 +183,10 @@ thread reviews the diff and runs the gate itself.
 
 **Stage 2 — delete**
 
-- [ ] Rewrite `operations/delete.ts` to the target shape. Remove
+- [x] Rewrite `operations/delete.ts` to the target shape. Remove
       `cascadeLocales` from `repository.delete` in `built-in.ts`, `table.ts`
       and `types.ts`; the op resolves siblings via `repository.translatable`.
-- [ ] `service.ts`: `delete` accepts `id: string | readonly string[]` and calls
+- [x] `service.ts`: `delete` accepts `id: string | readonly string[]` and calls
       `deleteEntries({ ids: [id].flat() })`. Route and CLI callers unchanged.
 
 **Stage 3 — trash and restore**

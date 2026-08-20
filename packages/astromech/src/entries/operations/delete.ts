@@ -1,52 +1,90 @@
-import type { EntryRepository, RepositoryDb } from '../repository/types';
+import type { EntryRepository } from '../repository/types';
+import type { Entry } from '@/types/index';
 import { createRelationshipRepository } from '@/database/repository/relationships';
-import { runOnIdsVoid } from '../internal/bulk';
-import { runDeleteWithHooks } from '../internal/hooks';
-import { loadAndAssertType } from '../internal/records';
+import { transaction } from '@/database/transaction';
+import { runHook } from '@/hooks/index';
+import { getCurrentUser } from '@/request-context/index';
+import { BulkOperationError } from '../errors';
+import { asEntry, loadAndAssertType } from '../internal/records';
+import { getEntryRepository } from '../repository/registry';
 
 /**
- * Permanently delete one entry or many, atomically per batch, firing the entry
- * delete hooks around the write. Throws if an id is missing or of another type.
+ * Permanently delete one or many entries, atomically per batch, firing the
+ * entry delete hooks around the write. Throws if an id is missing or of
+ * another type before any hook fires or any row is touched.
  */
-export async function deleteEntry(params: {
+export async function deleteEntries(params: {
     type: string;
-    id: string | readonly string[];
+    ids: readonly string[];
     cascadeLocales?: boolean;
 }): Promise<void> {
-    const cascade = !!params.cascadeLocales;
-    await runDeleteWithHooks(params.type, params.id, true, () =>
-        runOnIdsVoid(params.type, params.id, (repository, db, id) =>
-            deleteOne(repository, db, params.type, id, cascade)
-        )
-    );
+    const { type, ids } = params;
+    const repository = getEntryRepository(type);
+    const entries = await loadEntries(repository, type, ids);
+    const targets = params.cascadeLocales
+        ? await withLocaleSiblings(repository, entries)
+        : entries;
+    const user = await getCurrentUser();
+    const relationships = createRelationshipRepository();
+
+    for (const entry of entries) {
+        await runHook('entry:beforeDelete', { type, entry, user, permanent: true });
+    }
+
+    await transaction(async () => {
+        const succeeded: string[] = [];
+        for (const target of targets) {
+            try {
+                await relationships.deleteByResource(target.id, 'entry');
+                // Versions cascade-delete via entry_versions.entry_id ON DELETE CASCADE.
+                await repository.delete(target.id);
+                succeeded.push(target.id);
+            } catch (err) {
+                throw new BulkOperationError({
+                    failedId: target.id,
+                    reason: err instanceof Error ? err.message : String(err),
+                    succeededBefore: succeeded,
+                    cause: err,
+                });
+            }
+        }
+    });
+
+    for (const entry of entries) {
+        // A throw here propagates; the write above stays (decisions/0081).
+        await runHook('entry:afterDelete', { type, entry, user, permanent: true });
+    }
+}
+
+/** Load and type-assert each id, preserving input order. */
+async function loadEntries(
+    repository: EntryRepository,
+    type: string,
+    ids: readonly string[]
+): Promise<Entry[]> {
+    return Promise.all(ids.map((id) => loadAndAssertType(repository, type, id)));
 }
 
 /**
- * Permanently delete a single entry and its relationship rows. With
- * `cascadeLocales`, deletes its locale siblings' relationship rows too and
- * cascades the delete across the locale group.
+ * Add each entry's live locale siblings to the batch, deduplicated by id
+ * (input entries first). A storage without `translatable` has no siblings to
+ * add.
  */
-async function deleteOne(
+async function withLocaleSiblings(
     repository: EntryRepository,
-    db: RepositoryDb | undefined,
-    type: string,
-    id: string,
-    cascadeLocales: boolean
-): Promise<void> {
-    const existing = await loadAndAssertType(repository, type, id);
-    const relationships = createRelationshipRepository(db);
+    entries: readonly Entry[]
+): Promise<Entry[]> {
+    if (!repository.translatable) return entries as Entry[];
 
-    if (cascadeLocales && repository.translatable) {
-        const siblings = await repository.translatable.siblings(existing.localeGroup, id);
-        for (const sib of siblings) {
-            await relationships.deleteByResource(sib.id, 'entry');
+    const byId = new Map(entries.map((entry) => [entry.id, entry]));
+    for (const entry of entries) {
+        const siblings = await repository.translatable.siblings(
+            entry.localeGroup,
+            entry.id
+        );
+        for (const sibling of siblings) {
+            if (!byId.has(sibling.id)) byId.set(sibling.id, asEntry(sibling));
         }
-        await relationships.deleteByResource(id, 'entry');
-        // Versions cascade-delete via entry_versions.entry_id ON DELETE CASCADE.
-        await repository.delete(id, { cascadeLocales: true });
-        return;
     }
-
-    await relationships.deleteByResource(id, 'entry');
-    await repository.delete(id);
+    return Array.from(byId.values());
 }

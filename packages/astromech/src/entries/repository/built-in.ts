@@ -408,15 +408,7 @@ export function createBuiltInEntryRepository(opts?: { db?: Db; defaultLocale?: s
         return populateLocaleSingle(handle(), updated);
     }
 
-    async function del(id: string, opts?: { cascadeLocales?: boolean }): Promise<void> {
-        if (opts?.cascadeLocales === true) {
-            const existing = await repository.findOne({ id });
-            const localeGroup = existing?.localeGroup;
-            if (localeGroup !== undefined) {
-                await repository.deleteMany({ localeGroup });
-                return;
-            }
-        }
+    async function del(id: string): Promise<void> {
         await repository.delete(id);
     }
 

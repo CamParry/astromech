@@ -7,7 +7,6 @@
  */
 
 import type { Db } from '@/database/types';
-import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { entryPreviewTokensTable } from '@/database/tables';
 
@@ -23,8 +22,10 @@ export async function hashPreviewToken(plaintext: string): Promise<string> {
 }
 
 export function createPreviewTokenRepository(db?: Db) {
-    const database = db ?? getDb();
-    const repository = createRepository(entryPreviewTokensTable, database);
+    // Pass `db` straight through: `createRepository`'s `handle()` resolves
+    // `db ?? getDb()` per call, so a repository built before `transaction()`
+    // opens still binds to the open scope (decisions/0080).
+    const repository = createRepository(entryPreviewTokensTable, db);
 
     /** Replace any existing token for `entryId` with a freshly-hashed one. */
     async function issue(

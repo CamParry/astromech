@@ -5,15 +5,16 @@
 
 import type { EntryVersionRow, NewEntryVersionRow } from '../tables';
 import type { Db } from '@/database/types';
-import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { entryVersionsTable } from '@/database/tables';
 
 export type VersionRepository = ReturnType<typeof createVersionRepository>;
 
 export function createVersionRepository(db?: Db) {
-    const database = db ?? getDb();
-    const repository = createRepository(entryVersionsTable, database);
+    // Pass `db` straight through: `createRepository`'s `handle()` resolves
+    // `db ?? getDb()` per call, so a repository built before `transaction()`
+    // opens still binds to the open scope (decisions/0080).
+    const repository = createRepository(entryVersionsTable, db);
 
     /** Create a new version snapshot. */
     async function create(data: NewEntryVersionRow): Promise<EntryVersionRow> {

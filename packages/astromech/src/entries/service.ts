@@ -10,7 +10,7 @@
 
 import type { EntriesService } from '@/types/index';
 import { create } from './operations/create';
-import { deleteEntry } from './operations/delete';
+import { deleteEntries } from './operations/delete';
 import { duplicate } from './operations/duplicate';
 import { get } from './operations/get';
 import { issuePreviewToken, revokePreviewToken } from './operations/preview/token';
@@ -38,7 +38,14 @@ export const entriesService: EntriesService = {
     duplicate,
     trash,
     restore: restore as EntriesService['restore'],
-    delete: deleteEntry,
+    delete: (params) =>
+        deleteEntries({
+            type: params.type,
+            ids: [params.id].flat(),
+            ...(params.cascadeLocales !== undefined
+                ? { cascadeLocales: params.cascadeLocales }
+                : {}),
+        }),
     emptyTrash,
     versions: listVersions,
     restoreVersion,

@@ -118,7 +118,7 @@ export type EntryRepository<R extends EntryRow = EntryRow> = {
     get(id: string, opts?: { includeTrashed?: boolean }): Promise<R | null>;
     create(data: EntryWrite & { type: string }): Promise<R>;
     update(id: string, data: EntryWrite): Promise<R>;
-    delete(id: string, opts?: { cascadeLocales?: boolean }): Promise<void>;
+    delete(id: string): Promise<void>;
 
     /**
      * Which of these ids this storage holds. Ids absent from the result do not
