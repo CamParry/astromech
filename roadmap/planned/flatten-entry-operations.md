@@ -50,10 +50,11 @@ Everything else is wiring.
    API keeps `id: string | string[]` as a one-line wrapper over that, so the
    `restore as EntriesService['restore']` cast in `service.ts` goes.
 
-3. **Hook placement is correct; the helper is not.** All `before*` hooks fire
-   before any DB work so a plugin veto aborts cleanly; `after*` hooks fire only
-   after commit so a plugin never sees a rolled-back write. Keep that. What goes
-   is the separate snapshot load: fetch each row once at the top of the
+3. **Hook placement is correct; the engine and the helper are not.** All
+   `before*` hooks fire before any DB work; `after*` hooks fire after commit.
+   Keep that. What goes is the swallow-and-log in `dispatchAfter` (a throw
+   propagates from either, `decisions/0081-one-hook-runner-a-throw-propagates.md`)
+   and the separate snapshot load: fetch each row once at the top of the
    operation and use that record for the hook context, the type assertion and
    the cascade.
 
@@ -91,7 +92,7 @@ export async function deleteEntries(params: {
     const relationships = createRelationshipRepository();
 
     for (const entry of entries) {
-        await runBeforeHooks('entry:beforeDelete', { type, entry, user, permanent: true }, user);
+        await emit('entry:beforeDelete', { type, entry, user, permanent: true });
     }
 
     await transaction(async () => {
@@ -108,7 +109,7 @@ export async function deleteEntries(params: {
     });
 
     for (const entry of entries) {
-        await runAfterHooks('entry:afterDelete', { type, entry, user, permanent: true }, user);
+        await emit('entry:afterDelete', { type, entry, user, permanent: true });   // a throw propagates; the write stays
     }
 }
 ```
@@ -155,14 +156,32 @@ thread reviews the diff and runs the gate itself.
       `db ?? getDb()` per call, not in a default parameter.
 - [ ] Remove `transaction` from `EntryRepository` (`repository/types.ts`,
       `built-in.ts`, `table.ts`). Point existing callers (`create`, `staging/merge`,
-      `internal/bulk.ts`) at the new function; `bulk.ts` is deleted in stage 1,
+      `internal/bulk.ts`) at the new function; `bulk.ts` is deleted in stage 3,
       so a minimal edit is enough here.
 - [ ] Remove the `db` parameter from `indexEntryRelationships` and
       `pruneDanglingRelations` and every call site.
 - [ ] Gate, plus `pnpm run check:boot`. A test that opens `transaction()` and
       asserts a nested call joins rather than throws, replacing the 0055 test.
 
-**Stage 1 — delete**
+**Stage 1 — one hook runner** (`decisions/0081`)
+
+- [ ] Add `hooks/` as a leaf: `subscribe(event, handler)`, `emit(event, payload)`
+      returning the payload after each handler's non-`undefined` return replaces
+      it, and `hasSubscribers(event)`. One loop, no try/catch. The registry goes
+      in the `globalThis` namespace like every other registry.
+- [ ] `plugins/runtime/plugin-runtime.ts`: `registerPlugins` calls `subscribe`
+      per `def.hooks` entry; `ctx.emit` forwards to `emit`. Delete the registry,
+      `dispatchBefore`, `dispatchAfter`, `runBeforeHooks`, `runAfterHooks`,
+      `hasHookHandlers` and `emitEvent`.
+- [ ] `types/hooks.ts`: drop the seven events nothing fires (`media:*`,
+      `auth:*`, `api:*`) and the header paragraph on name-keyed failure
+      semantics. Handler type gains a `void | Payload` return.
+- [ ] `entries/operations/create.ts` and `entries/internal/hooks.ts` call `emit`
+      instead; `hooks.ts` itself is deleted in stage 3.
+- [ ] A test that an `after*` handler throw propagates and the row is still
+      there, and that a `before*` throw leaves no row.
+
+**Stage 2 — delete**
 
 - [ ] Rewrite `operations/delete.ts` to the target shape. Remove
       `cascadeLocales` from `repository.delete` in `built-in.ts`, `table.ts`
@@ -170,7 +189,7 @@ thread reviews the diff and runs the gate itself.
 - [ ] `service.ts`: `delete` accepts `id: string | readonly string[]` and calls
       `deleteEntries({ ids: [id].flat() })`. Route and CLI callers unchanged.
 
-**Stage 2 — trash and restore**
+**Stage 3 — trash and restore**
 
 - [ ] `operations/trash.ts` `trash` to the target shape; `cascadeLocales` leaves
       `repository.trash.trash` the same way. `emptyTrash` gains a `transaction()`
@@ -178,14 +197,14 @@ thread reviews the diff and runs the gate itself.
 - [ ] `operations/restore.ts` to the target shape, returning the rows.
 - [ ] Delete `internal/bulk.ts` and `internal/hooks.ts` once nothing imports them.
 
-**Stage 3 — update**
+**Stage 4 — update**
 
 - [ ] `operations/update.ts`: inline the loop, drop `runUpdateWithHooks` and the
       `FieldContext.db` field. The body (`updateOne`, `toStoredFields`,
       `getUniquenessExcludeIds`) is already straight-line and stays; only the
       dispatch changes. The status wrappers in `status.ts` are untouched.
 
-**Stage 4 — the single-row writes that skipped transactions**
+**Stage 5 — the single-row writes that skipped transactions**
 
 - [ ] `duplicate`, `staging/create`, `versions/restore`: wrap the row write and
       `indexEntryRelationships` in `transaction()`. This is the atomicity defect
@@ -194,7 +213,7 @@ thread reviews the diff and runs the gate itself.
       zero-arg body. Already linear otherwise.
 - [ ] `create`: same, the transaction body becomes zero-arg.
 
-**Stage 5 — close out**
+**Stage 6 — close out**
 
 - [ ] `ARCHITECTURE.md`: the entries section names `transaction()` as a
       `database/` function and no longer describes `EntryRepository.transaction`.
@@ -207,7 +226,7 @@ thread reviews the diff and runs the gate itself.
 
 ## Not changing
 
-- Hook semantics (before all, then writes, then after all).
+- Hook placement: all `before*` before the scope opens, all `after*` after it closes. A throw propagates from either (`decisions/0081`).
 - Batch atomicity, `BulkOperationError` shape, and the public Local API overloads
   (`decisions/0077`).
 - The repository layer below `EntryRepository`: `createRepository`, the
