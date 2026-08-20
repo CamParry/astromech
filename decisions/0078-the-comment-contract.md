@@ -1,4 +1,4 @@
-# 0076 — the comment contract: no banners, JSDoc on the public surface
+# 0078 — the comment contract: no banners, JSDoc on the public surface
 
 **Date:** 2026-08-20
 **Status:** accepted
