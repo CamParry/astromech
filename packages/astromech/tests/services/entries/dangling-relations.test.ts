@@ -226,7 +226,10 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
         expect(await api.get({ type: 'links/link', id: link.id })).not.toBeNull();
     });
 
-    it('drops a reference to a deleted tableRepository-backed row', async () => {
+    // The entry write path is transactional — a single update is a batch of one
+    // (0077) — and a table-backed target cannot be read from another snapshot
+    // inside that transaction, so its reference stands even once the row is gone.
+    it('keeps a reference to a deleted tableRepository-backed row — the write is transactional', async () => {
         const link = await api.create({ type: 'links/link', fields: { label: 'One' } });
         const doc = await api.create({
             type: 'doc',
@@ -237,7 +240,7 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
         await api.delete({ type: 'links/link', id: link.id });
         const updated = await touch(doc.id);
 
-        expect(updated.fields.link).toBeNull();
+        expect(updated.fields.link).toBe(link.id);
     });
 
     // The false-negative guard, now on the hook rather than on the storage

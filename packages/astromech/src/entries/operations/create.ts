@@ -1,4 +1,4 @@
-import type { EntryRepository, EntryWrite, RepositoryDb } from '../repository/types';
+import type { EntryRepository } from '../repository/types';
 import type {
     Entry,
     EntryCreateParams,
@@ -101,7 +101,12 @@ export async function create(params: EntryCreateParams): Promise<Entry> {
 
     await runBeforeHooks('entry:beforeCreate', { type, data, user }, user);
 
-    const entry = await persistEntry(repository, type, data);
+    // Persist — write the row and its relationship index atomically.
+    const entry = await repository.transaction(async (txRepository, txDb) => {
+        const created = asEntry(await txRepository.create({ type, ...data }));
+        await indexEntryRelationships(created, data.fields, type, txDb);
+        return created;
+    });
 
     await runAfterHooks('entry:afterCreate', { type, data, user, entry }, user);
 
@@ -142,24 +147,4 @@ async function toStoredFields(
 
     const pruned = await pruneDanglingRelations(definitions, parsed.values as JsonObject);
     return pruned.values;
-}
-
-/**
- * Writes the row and its relationship index rows, in one transaction when the
- * storage has one and sequentially when it does not.
- */
-async function persistEntry(
-    repository: EntryRepository,
-    type: string,
-    data: EntryWrite & { fields: JsonObject }
-): Promise<Entry> {
-    const write = async (
-        txRepository: EntryRepository,
-        txDb: RepositoryDb | undefined
-    ): Promise<Entry> => {
-        const entry = asEntry(await txRepository.create({ type, ...data }));
-        await indexEntryRelationships(entry, data.fields, type, txDb);
-        return entry;
-    };
-    return repository.transaction(write);
 }

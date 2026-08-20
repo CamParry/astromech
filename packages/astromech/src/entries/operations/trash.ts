@@ -1,12 +1,30 @@
 import type { EntryRepository } from '../repository/types';
 import { createRelationshipRepository } from '@/database/repository/relationships';
-import { runBulkVoid } from '../internal/bulk';
+import { runOnIdsVoid } from '../internal/bulk';
 import { runDeleteWithHooks } from '../internal/hooks';
 import { loadAndAssertType } from '../internal/records';
 import { assertCapability } from '../internal/type-config';
 import { getEntryRepository } from '../repository/registry';
 
-/** Soft-delete a single entry (policy). */
+/**
+ * Soft-delete one entry or many, atomically per batch, firing the entry delete
+ * hooks around the write. Throws if the type does not support trash.
+ */
+export async function trash(params: {
+    type: string;
+    id: string | readonly string[];
+    cascadeLocales?: boolean;
+}): Promise<void> {
+    assertCapability(params.type, 'trash');
+    const cascade = !!params.cascadeLocales;
+    await runDeleteWithHooks(params.type, params.id, false, () =>
+        runOnIdsVoid(params.type, params.id, (repository, _db, id) =>
+            trashOne(repository, params.type, id, cascade)
+        )
+    );
+}
+
+/** Soft-delete a single entry. Throws if the type does not support trash. */
 async function trashOne(
     repository: EntryRepository,
     type: string,
@@ -18,29 +36,10 @@ async function trashOne(
     await repository.trash.trash(id, { cascadeLocales });
 }
 
-export async function trash(params: {
-    type: string;
-    id: string | readonly string[];
-    cascadeLocales?: boolean;
-}): Promise<void> {
-    assertCapability(params.type, 'trash');
-    const cascade = !!params.cascadeLocales;
-    await runDeleteWithHooks(params.type, params.id, false, async () => {
-        if (Array.isArray(params.id)) {
-            await runBulkVoid(params.type, params.id, (txRepository, _txDb, id) =>
-                trashOne(txRepository, params.type, id, cascade)
-            );
-            return;
-        }
-        await trashOne(
-            getEntryRepository(params.type),
-            params.type,
-            params.id as string,
-            cascade
-        );
-    });
-}
-
+/**
+ * Permanently delete every trashed entry of the type, clearing their
+ * relationship rows first. Throws if the type does not support trash.
+ */
 export async function emptyTrash(params: { type: string }): Promise<void> {
     assertCapability(params.type, 'trash');
     const { type } = params;

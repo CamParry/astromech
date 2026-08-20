@@ -1,34 +1,31 @@
 import type { EntryRepository, RepositoryDb } from '../repository/types';
 import { createRelationshipRepository } from '@/database/repository/relationships';
-import { runBulkVoid } from '../internal/bulk';
+import { runOnIdsVoid } from '../internal/bulk';
 import { runDeleteWithHooks } from '../internal/hooks';
 import { loadAndAssertType } from '../internal/records';
-import { getEntryRepository } from '../repository/registry';
 
+/**
+ * Permanently delete one entry or many, atomically per batch, firing the entry
+ * delete hooks around the write. Throws if an id is missing or of another type.
+ */
 export async function deleteEntry(params: {
     type: string;
     id: string | readonly string[];
     cascadeLocales?: boolean;
 }): Promise<void> {
     const cascade = !!params.cascadeLocales;
-    await runDeleteWithHooks(params.type, params.id, true, async () => {
-        if (Array.isArray(params.id)) {
-            await runBulkVoid(params.type, params.id, (txRepository, txDb, id) =>
-                deleteOne(txRepository, txDb, params.type, id, cascade)
-            );
-            return;
-        }
-        await deleteOne(
-            getEntryRepository(params.type),
-            undefined,
-            params.type,
-            params.id as string,
-            cascade
-        );
-    });
+    await runDeleteWithHooks(params.type, params.id, true, () =>
+        runOnIdsVoid(params.type, params.id, (repository, db, id) =>
+            deleteOne(repository, db, params.type, id, cascade)
+        )
+    );
 }
 
-/** Permanently delete a single entry + its relationship rows (policy). */
+/**
+ * Permanently delete a single entry and its relationship rows. With
+ * `cascadeLocales`, deletes its locale siblings' relationship rows too and
+ * cascades the delete across the locale group.
+ */
 async function deleteOne(
     repository: EntryRepository,
     db: RepositoryDb | undefined,

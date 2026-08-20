@@ -15,7 +15,7 @@ import { assertNoFieldErrors, parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { getCurrentUser } from '@/request-context/index';
 import { UnknownEntryTypeError } from '../errors';
-import { runBulk } from '../internal/bulk';
+import { runOnIds } from '../internal/bulk';
 import { pruneDanglingRelations } from '../internal/dangling-relations';
 import { runUpdateWithHooks } from '../internal/hooks';
 import { asEntry, loadAndAssertType } from '../internal/records';
@@ -25,7 +25,6 @@ import { propagateSharedFields } from '../internal/translatable';
 import { validate } from '../internal/validate';
 import { changesVersionedContent, snapshotVersion } from '../internal/versions';
 import { createEntryLookups } from '../lookups';
-import { getEntryRepository } from '../repository/registry';
 import { updateEntrySchema } from '../schema';
 import { entryValidationMode } from '../validation-mode.shared';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility';
@@ -53,30 +52,18 @@ export async function update(params: EntryUpdateParams): Promise<Entry | Entry[]
         throw new UnknownEntryTypeError(params.type);
     }
 
-    const id = params.id;
-    if (typeof id === 'string') {
-        const repository = getEntryRepository(entryType.id);
-        return runUpdateWithHooks(entryType.id, [id], params.data, () =>
-            updateOne({ repository, db: undefined, entryType, id, data: params.data })
-        );
-    }
-
     // A single slug across many ids would violate (type, locale) uniqueness.
-    if (params.data.slug !== undefined) {
+    if (Array.isArray(params.id) && params.data.slug !== undefined) {
         throw new Error(
             'Bulk update cannot set `slug`: a single value across multiple ids ' +
                 'would violate (type, locale) slug uniqueness. Update slugs individually.'
         );
     }
-    return runUpdateWithHooks(entryType.id, id, params.data, () =>
-        runBulk(entryType.id, id, (txRepository, txDb, bulkId) =>
-            updateOne({
-                repository: txRepository,
-                db: txDb,
-                entryType,
-                id: bulkId,
-                data: params.data,
-            })
+
+    const ids = Array.isArray(params.id) ? params.id : [params.id];
+    return runUpdateWithHooks(entryType.id, ids, params.data, () =>
+        runOnIds(entryType.id, params.id, (repository, db, id) =>
+            updateOne({ repository, db, entryType, id, data: params.data })
         )
     );
 }
