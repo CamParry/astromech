@@ -43,7 +43,6 @@ type FieldContext = {
  * writes each row, and fires the entry update hooks around the write.
  */
 export async function update(params: EntryUpdateParams): Promise<Entry | Entry[]> {
-    // Guards
     if (params.data.fields !== undefined && isPublicBranded(params.data.fields)) {
         throw new PublicShapeWriteError();
     }
@@ -81,14 +80,11 @@ async function updateOne(params: {
 }): Promise<Entry> {
     const { repository, db, entryType, id, data } = params;
 
-    // Lookups
     const currentEntry = await loadAndAssertType(repository, entryType.id, id);
 
-    // Validation
     const titled = entryType.titleField !== false;
     const validated = validate(updateEntrySchema({ titled }), data);
 
-    // Fields
     const patch = validated.fields;
     const patchedFieldNames = patch ? getPatchedFieldNames(patch) : [];
     const fields = patch
@@ -101,7 +97,7 @@ async function updateOne(params: {
           })
         : undefined;
 
-    // Version — before the slug is uniquified, so it compares what the caller sent.
+    // Snapshot before the slug is uniquified, so the version compares what the caller sent.
     if (
         entryType.capabilities.versioning &&
         repository.versions &&
@@ -114,7 +110,6 @@ async function updateOne(params: {
         await snapshotVersion(repository.versions, currentEntry);
     }
 
-    // Defaults
     const publishedAt =
         validated.status === 'published' && !currentEntry.publishedAt
             ? new Date()
@@ -126,7 +121,6 @@ async function updateOne(params: {
         validated.slug
     );
 
-    // Persist
     const entry = asEntry(
         await repository.update(id, {
             title: validated.title,

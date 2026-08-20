@@ -40,7 +40,6 @@ type FieldContext = {
  * the entry create hooks, and writes the row with its relationship index.
  */
 export async function create(params: EntryCreateParams): Promise<Entry> {
-    // Guards
     if (params.fields !== undefined && isPublicBranded(params.fields)) {
         throw new PublicShapeWriteError();
     }
@@ -51,11 +50,9 @@ export async function create(params: EntryCreateParams): Promise<Entry> {
         throw new UnknownEntryTypeError(type);
     }
 
-    // Lookups
     const repository = getEntryRepository(type);
     const user = await getCurrentUser();
 
-    // Validation
     const titled = entryType.titleField !== false;
     const validated = validate(createEntrySchema({ titled }), {
         title: params.title,
@@ -65,7 +62,6 @@ export async function create(params: EntryCreateParams): Promise<Entry> {
         publishedAt: params.publishedAt,
     });
 
-    // Defaults
     const title = validated.title ?? '';
     const status = validated.status ?? 'unpublished';
     const locale = params.locale ?? getDefaultLocale();
@@ -101,7 +97,7 @@ export async function create(params: EntryCreateParams): Promise<Entry> {
 
     await runBeforeHooks('entry:beforeCreate', { type, data, user }, user);
 
-    // Persist — write the row and its relationship index atomically.
+    // Write the row and its relationship index atomically.
     const entry = await repository.transaction(async (txRepository, txDb) => {
         const created = asEntry(await txRepository.create({ type, ...data }));
         await indexEntryRelationships(created, data.fields, type, txDb);

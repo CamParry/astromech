@@ -12,11 +12,9 @@ import { getStagingRepository } from '../../internal/type-config';
 export async function createStaged(params: { type: string; id: string }): Promise<Entry> {
     const { type, id } = params;
 
-    // Lookups
     const { repository, staging } = getStagingRepository(type);
     const canonical = await loadAndAssertType(repository, type, id);
 
-    // Guards
     if (canonical.stagedFor != null) {
         throw new Error(`Entry '${id}' is itself a staged change and cannot be staged.`);
     }
@@ -26,7 +24,7 @@ export async function createStaged(params: { type: string; id: string }): Promis
         throw new StagedEntryExistsError({ canonicalId: id, stagedId: existing.id });
     }
 
-    // Persist — a staged row copies the canonical's content but gets a FRESH
+    // A staged row copies the canonical's content but gets a FRESH
     // localeGroup (it does not join the canonical's translation group) and is
     // always unpublished. The slug is shared with the canonical (kept as-is).
     // Passing no localeGroup is what asks the repository's table to mint a fresh one.

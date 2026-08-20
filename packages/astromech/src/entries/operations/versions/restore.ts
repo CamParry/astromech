@@ -17,7 +17,6 @@ export async function restoreVersion(params: {
 }): Promise<Entry> {
     const { type, id, versionId } = params;
 
-    // Lookups
     const repository = getEntryRepository(type);
     if (!repository.versions) throw new Error('Version not found');
 
@@ -32,7 +31,6 @@ export async function restoreVersion(params: {
     // itself reversible.
     await snapshotVersion(repository.versions, currentEntry);
 
-    // Persist
     const slug = await uniqueSlugIfChanged(repository, type, currentEntry, version.slug);
 
     const restoredFields = (version.fields as JsonObject) ?? currentEntry.fields;

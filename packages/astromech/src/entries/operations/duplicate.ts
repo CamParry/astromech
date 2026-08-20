@@ -15,11 +15,9 @@ export async function duplicate(params: {
 }): Promise<Entry> {
     const { type, id, overrides } = params;
 
-    // Lookups
     const repository = getEntryRepository(type);
     const source = await loadAndAssertType(repository, type, id);
 
-    // Defaults
     const locale = overrides?.locale ?? source.locale;
     const status = overrides?.status ?? 'unpublished';
     const title = overrides?.title ?? source.title;
@@ -31,7 +29,6 @@ export async function duplicate(params: {
     const baseSlug = overrides?.slug ?? source.slug;
     const slug = baseSlug ? await repository.uniqueSlug(type, locale, baseSlug) : null;
 
-    // Persist
     const created = await repository.create({
         type,
         title,
