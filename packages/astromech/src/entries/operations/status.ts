@@ -10,6 +10,10 @@ import { validate } from '../internal/validate';
 import { scheduleEntrySchema } from '../schema';
 import { update } from './update';
 
+/**
+ * Publishes one entry or many by moving them to `published`. Throws if the
+ * type does not support statuses.
+ */
 export async function publish(params: {
     type: string;
     id: string | readonly string[];
@@ -22,6 +26,10 @@ export async function publish(params: {
     });
 }
 
+/**
+ * Unpublishes one entry or many by moving them to `unpublished`. Throws if the
+ * type does not support statuses.
+ */
 export async function unpublish(params: {
     type: string;
     id: string | readonly string[];
@@ -34,6 +42,10 @@ export async function unpublish(params: {
     });
 }
 
+/**
+ * Schedules one entry or many to publish at `publishedAt`. Throws if the type
+ * does not support statuses, or a 422 when the date fails validation.
+ */
 export async function schedule(params: {
     type: string;
     id: string | readonly string[];

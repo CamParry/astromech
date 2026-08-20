@@ -12,13 +12,22 @@ import { getStagingRepository, isVersioningEnabled } from '../../internal/type-c
 import { createEntryLookups } from '../../lookups';
 import { entryValidationMode } from '../../validation-mode.shared';
 
+/**
+ * Merges the staged change into its canonical entry: validates the staged
+ * content at the canonical's status, overwrites the canonical in place, and
+ * deletes the staged row. Throws if there is no staged change, or a 422 when a
+ * field validator reports.
+ */
 export async function mergeStaged(params: { type: string; id: string }): Promise<Entry> {
     const { type, id } = params;
+
+    // Lookups
     const { repository, staging } = getStagingRepository(type);
     const canonical = await loadAndAssertType(repository, type, id);
     const staged = await staging.getByCanonical(id);
     if (!staged) throw new Error(`No staged change for entry '${id}'`);
 
+    // Validation
     // Merging is the promotion moment: editing the staged row validates at the
     // draft stage (it is unpublished), so this is the first write where the
     // canonical's own status decides whether completeness is enforced. Run it
@@ -55,6 +64,9 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
 
     const versioningOn = isVersioningEnabled(type);
 
+    // Backs up the canonical, overwrites it with the staged content, and
+    // hard-deletes the staged row — all in one transaction so a partial
+    // failure rolls back.
     const run = async (
         txRepository: EntryRepository,
         txDb: RepositoryDb | undefined
