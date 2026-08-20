@@ -1,42 +1,10 @@
 /**
- * `evaluateConfirmation(method, args, options)` — the runaway-loop brake.
- *
- * A mutating call arrives without an answer and is turned back with
- * `input_required` plus the question to put to a human; the caller re-issues the
- * same call carrying the answer. Three actions, borrowed from MCP elicitation:
- * `accept` / `decline` / `cancel`.
- *
- * This is NOT a security boundary and must never be described as one. It is
- * stateless, so the "human approved this" it acts on is just a value the caller
- * supplied — a caller that wants to proceed can write
- * `_confirm: {action: 'accept'}` itself and nothing here can tell that apart
- * from a click. What it buys is a stop between an agent deciding to do something
- * and it happening: one extra turn, with the method and its concrete target
- * spelled out, which is enough to break a loop that has started deleting things.
- * `policies/scoped-services.ts` is the boundary; confirmation over an unscoped
- * handle protects nothing.
- *
- * Where real proof is needed, it has to arrive on a channel the requester does
- * not control — MCP's URL-mode elicitation, GitHub's sudo mode, S3 MFA-delete.
- * We already have that shape: staged entries plus a preview token, reviewed in
- * admin under a real session. That is layer 3 and it is not this file.
- *
- * A pure function at DISPATCH level rather than a service wrapper, deliberately:
- * MCP, the CLI and the in-process tool-loop all dispatch by manifest method, so
- * a wrapper per service handle would be three wrappers over the same decision.
- * Keeping it pure also keeps the module free of domain imports — and free of the
- * process-global state that made CVE-2026-48529 out of GitHub's lockdown cache.
- *
- * Three result-ish nouns sit close together and are not interchangeable:
- * `ConfirmAnswer` is the caller's reply, `ConfirmDecision` the verdict, and
- * `ConfirmationResult` why a call stopped.
+ * The runaway-loop brake: a mutating call without an answer is turned back
+ * with `input_required` until the caller re-issues it with `_confirm`. This is
+ * NOT a security boundary — `policies/scoped-services.ts` is the actual gate.
  */
 
 import type { ManifestMethod } from '@/types/index';
-
-// ============================================================================
-// Types
-// ============================================================================
 
 /** Elicitation's three actions. */
 export type ConfirmAction = 'accept' | 'decline' | 'cancel';
@@ -56,14 +24,9 @@ export type ConfirmRequest = {
 };
 
 /**
- * Why a call did not proceed.
- *
- * `declined` and `cancelled` are kept apart because elicitation keeps them
- * apart, and the difference is meaningful to whatever asked: a decline is an
- * answer ("no, don't do this") and the agent should move on; a cancel is the
- * absence of one ("abort, I'm not answering") and re-asking may be reasonable.
- * Both leave persisted state untouched — the check runs before the service, so
- * nothing has happened yet in either case.
+ * Why a call did not proceed. `declined` is an explicit no; `cancelled` is
+ * the absence of an answer — callers should treat them differently. Neither
+ * has touched persisted state, since the check runs before the service.
  */
 export type ConfirmationResult =
     | { status: 'input_required'; requests: ConfirmRequest[] }
@@ -71,10 +34,9 @@ export type ConfirmationResult =
     | { status: 'cancelled'; method: string };
 
 /**
- * Which methods need confirming. A predicate over the method, with two named
- * presets rather than a hardcoded rule — the right threshold differs per caller,
- * and a transport that wants "everything that touches users" should not have to
- * fork this module to get it.
+ * Which methods need confirming: a predicate over the method, with `mutating`
+ * and `destructive` presets so a caller doesn't have to fork this module for
+ * a custom threshold.
  */
 export type ConfirmTrigger =
     | 'mutating'
@@ -92,36 +54,20 @@ export type ConfirmDecision =
     | { proceed: true; args: Record<string, unknown> }
     | { proceed: false; outcome: ConfirmationResult };
 
-// ============================================================================
-// The reserved key
-// ============================================================================
-
 /**
- * Where the answer rides.
- *
- * Underscore-reserved, matching the convention already used for the keys the
- * system owns inside author-shaped data — `_type`, `_disabled` and `_id` on
- * block and repeater instances. It sits in the argument object because P0a
- * normalised every service method to a single parameter object, so there is one
- * place to put it that every method shares.
+ * Where the answer rides. Underscore-reserved, matching `_type`/`_disabled`/`_id`
+ * on block and repeater instances; it lives in the argument object since every
+ * service method takes a single parameter object.
  */
 export const CONFIRM_KEY = '_confirm';
 
 /** Argument keys that, when present, name what a call is about to act on. */
 const TARGET_KEYS = ['type', 'id', 'key'] as const;
 
-// ============================================================================
-// Reading the answer
-// ============================================================================
-
 /**
  * The answer carried in `args`, or null when there isn't a usable one.
- *
- * Garbage fails CLOSED — an unrecognised `action`, a string where an object
- * belongs, `null`, an empty object all read as "not answered" and get asked
- * again. The alternative is a malformed answer being treated as any particular
- * action, and the only value that could be is `accept`, which would make a
- * typo into an approval.
+ * Garbage fails CLOSED — an unrecognised `action` or malformed value reads as
+ * "not answered" rather than risk a typo being read as `accept`.
  */
 function readAnswer(args: Record<string, unknown>): ConfirmAnswer | null {
     const raw = args[CONFIRM_KEY];
@@ -139,10 +85,6 @@ function stripConfirm(args: Record<string, unknown>): Record<string, unknown> {
     return rest;
 }
 
-// ============================================================================
-// The question
-// ============================================================================
-
 /** `type "posts", id "01J…"` — the parts of `args` that say what is being acted on. */
 function describeTarget(args: Record<string, unknown>): string {
     const parts: string[] = [];
@@ -155,12 +97,9 @@ function describeTarget(args: Record<string, unknown>): string {
 }
 
 /**
- * The question a human is actually asked.
- *
- * It names the method id and, where the arguments carry one, the target. A
- * prompt reading "confirm this action?" is useless to the person it exists for
- * — they cannot tell a draft being saved from a site being emptied — and the
- * whole value of confirming is in that sentence.
+ * The question a human is actually asked: names the method id and, where the
+ * arguments carry one, the target. "Confirm this action?" would be useless —
+ * the value of confirming is in that specific sentence.
  */
 export function confirmMessage(
     method: ManifestMethod,
@@ -174,17 +113,10 @@ export function confirmMessage(
     return `Run ${subject}? ${effect}`;
 }
 
-// ============================================================================
-// Triggering
-// ============================================================================
-
 /**
- * Does this method need an answer before it runs?
- *
- * Exported because a transport has to know the same thing this module does
- * before a call arrives — an MCP tool that will be confirmed must advertise the
- * reserved key in its schema, or it publishes a schema forbidding the one
- * argument that can unblock it.
+ * Does this method need an answer before it runs? Exported because a
+ * transport must know this before a call arrives — e.g. an MCP tool has to
+ * advertise the reserved key in its schema when it will be confirmed.
  */
 export function triggersConfirmation(
     method: ManifestMethod,
@@ -196,17 +128,10 @@ export function triggersConfirmation(
     return method.mutates;
 }
 
-// ============================================================================
-// The decision
-// ============================================================================
-
 /**
- * Decide whether `method` may run with `args`.
- *
- * `_confirm` is stripped on EVERY path, confirmed or not. A service must never
- * see it: a method that got handed a stray one would pass it to a Zod schema
- * that rejects unknown keys, or — worse, on a method that takes a loose `fields`
- * record — store it.
+ * Decide whether `method` may run with `args`. `_confirm` is stripped on
+ * EVERY path, confirmed or not — a service must never see it, since a stray
+ * key would fail Zod validation or get stored on a loose `fields` record.
  */
 export function evaluateConfirmation(
     method: ManifestMethod,

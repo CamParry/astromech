@@ -7,10 +7,6 @@ import {
     parseInstancePath,
 } from '@/fields/field-path';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function f(name: string): FieldPathSegment {
     return { kind: 'field', name };
 }
@@ -18,10 +14,6 @@ function f(name: string): FieldPathSegment {
 function item(id: string): FieldPathSegment {
     return { kind: 'item', id };
 }
-
-// ---------------------------------------------------------------------------
-// isValidFieldName
-// ---------------------------------------------------------------------------
 
 describe('isValidFieldName', () => {
     const valid = [
@@ -60,10 +52,6 @@ describe('isValidFieldName', () => {
         }
     });
 });
-
-// ---------------------------------------------------------------------------
-// formatInstancePath — happy paths
-// ---------------------------------------------------------------------------
 
 describe('formatInstancePath', () => {
     it('single field', () => {
@@ -126,10 +114,6 @@ describe('formatInstancePath', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// formatInstancePath — throw cases
-// ---------------------------------------------------------------------------
-
 describe('formatInstancePath validation', () => {
     it('throws on an empty segment array', () => {
         expect(() => formatInstancePath([])).toThrow(/at least one segment/);
@@ -182,10 +166,6 @@ describe('formatInstancePath validation', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// formatSchemaPath
-// ---------------------------------------------------------------------------
-
 describe('formatSchemaPath', () => {
     it('matches the instance path when there are no item selectors', () => {
         expect(formatSchemaPath([f('seo'), f('title')])).toBe('seo.title');
@@ -231,10 +211,6 @@ describe('formatSchemaPath', () => {
         );
     });
 });
-
-// ---------------------------------------------------------------------------
-// parseInstancePath — happy paths
-// ---------------------------------------------------------------------------
 
 describe('parseInstancePath', () => {
     it('single field', () => {
@@ -289,10 +265,6 @@ describe('parseInstancePath', () => {
         ]);
     });
 });
-
-// ---------------------------------------------------------------------------
-// parseInstancePath — throw cases
-// ---------------------------------------------------------------------------
 
 describe('parseInstancePath validation', () => {
     it('throws on an empty string', () => {
@@ -355,10 +327,6 @@ describe('parseInstancePath validation', () => {
         expect(() => parseInstancePath('foo[a1]..bar')).toThrow(/empty component/);
     });
 });
-
-// ---------------------------------------------------------------------------
-// Round trip
-// ---------------------------------------------------------------------------
 
 describe('round trip', () => {
     const cases: { label: string; segments: FieldPathSegment[] }[] = [

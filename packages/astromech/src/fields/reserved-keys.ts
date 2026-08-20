@@ -1,18 +1,7 @@
 /**
- * Reserved instance keys — single source of truth.
- *
- * Underscore-prefixed keys used in stored container/instance shapes
- * (group / repeater / blocks / tree items). Consumed by:
- *   - codegen (`codegen/type-generator.ts`) — which TS line each key emits, and
- *     in which shape (full / public);
- *   - the runtime public-read strip (`entries/visibility.ts`) — which keys are
- *     editorial metadata that must be removed from public reads.
- *
- * Centralising the `inPublic` semantics keeps codegen and the runtime strip from
- * drifting (e.g. codegen omitting a key from the public type while the strip
- * forgets to delete it, or vice versa). The typed instance shapes themselves
- * (`use-blocks-field.ts`, `use-tree-field.ts`, generated `.d.ts`) keep using the
- * literal property names — those are typed accesses, not membership checks.
+ * Reserved instance keys — single source of truth for underscore-prefixed
+ * keys in stored container/instance shapes, consumed by codegen and the
+ * runtime public-read strip so the two can't drift on which keys to omit.
  */
 
 /** The reserved instance key names. */

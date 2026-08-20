@@ -1,16 +1,7 @@
 /**
- * Raw HTTP routes for the backups plugin.
- * Mounted at `/api/plugins/backups/*` by the plugin runtime.
- *
- * Only the two STREAMING endpoints live here — a gzipped artifact going out,
- * and a gunzipped one going back into the database. Everything else the plugin
- * exposes is plain JSON and belongs on `defineServiceMethod` (see
- * `../service/backups.ts`), where it is typed and discoverable through the
- * method manifest; a raw route is invisible to the CLI and MCP.
- *
- * Access values use bare permission keys — the mount layer calls
- * resolvePluginPermission(namespace, key) which auto-namespaces them to
- * `plugin:backups:<key>` since they contain no colon.
+ * Raw HTTP routes for the backups plugin, mounted at `/api/plugins/backups/*`.
+ * Only the two streaming endpoints live here (artifact download and restore);
+ * everything else the plugin exposes is plain JSON via `../service/backups.ts`.
  */
 import type { BackupRunRow } from '../tables/runs';
 import type { PluginContext, PluginRawRoute } from 'astromech';
@@ -28,10 +19,6 @@ import { backupRunsTable } from '../tables/runs';
  */
 const RUNS_TABLE = backupRunsTable.name;
 
-// ============================================================================
-// Shared helpers
-// ============================================================================
-
 /** Returns true when the backup artifact exists and has not been rotated away. */
 function isArtifactAvailable(row: BackupRunRow): boolean {
     return (
@@ -47,10 +34,6 @@ function parseSegment(pathname: string, offset: number): string {
     const parts = pathname.split('/').filter(Boolean);
     return parts[parts.length - 1 - offset] ?? '';
 }
-
-// ============================================================================
-// Handlers
-// ============================================================================
 
 async function downloadArtifact(request: Request, ctx: PluginContext): Promise<Response> {
     const url = new URL(request.url);
@@ -138,10 +121,7 @@ async function restoreFromBackup(
     }
 }
 
-// ============================================================================
-// Route array factory
-// ============================================================================
-
+/** The download and restore raw routes, using `defaultKeep` as the pre-restore snapshot's retention. */
 export function buildBackupRoutes(defaultKeep: number): PluginRawRoute[] {
     return [
         {

@@ -46,10 +46,6 @@ const restrictToVerticalAxis: Modifier = ({ transform }) => ({
     x: 0,
 });
 
-// ============================================================================
-// Sortable sibling list
-// ============================================================================
-
 type SortableSiblingListProps = {
     nodes: TreeNode[];
     parentId: string | null;
@@ -134,10 +130,6 @@ function SortableSiblingList({
         </DndContext>
     );
 }
-
-// ============================================================================
-// SortableTreeNode
-// ============================================================================
 
 type SortableTreeNodeProps = {
     node: TreeNode;
@@ -404,10 +396,7 @@ function SortableTreeNode({
     );
 }
 
-// ============================================================================
-// TreeField (root)
-// ============================================================================
-
+/** Field input for a nested, reorderable, indentable tree of field groups. */
 export function TreeField({
     name,
     value,

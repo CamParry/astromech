@@ -58,10 +58,6 @@ afterEach(() => {
     vi.unstubAllGlobals();
 });
 
-// ============================================================================
-// The table-driven cases
-// ============================================================================
-
 const entry = { id: 'e1', type: 'post', title: 'One' } as unknown as Entry;
 const entries = [entry];
 const media = { id: 'm1', filename: 'a.png' } as unknown as Media;
@@ -84,7 +80,7 @@ type Case = {
 };
 
 const CASES: Case[] = [
-    // ── entries ─────────────────────────────────────────────────────────────
+    // entries
     {
         name: 'entries.query — one type',
         payload: page,
@@ -387,7 +383,7 @@ const CASES: Case[] = [
         result: undefined,
     },
 
-    // ── media ───────────────────────────────────────────────────────────────
+    // media
     {
         name: 'media.query — no params',
         payload: page,
@@ -445,7 +441,7 @@ const CASES: Case[] = [
         result: [{ type: 'post', id: 'e1' }],
     },
 
-    // ── settings ────────────────────────────────────────────────────────────
+    // settings
     {
         name: 'settings.all',
         payload: { data: [setting] },
@@ -480,7 +476,7 @@ const CASES: Case[] = [
         result: setting,
     },
 
-    // ── users ───────────────────────────────────────────────────────────────
+    // users
     {
         name: 'users.query — no params',
         payload: page,
@@ -533,7 +529,7 @@ const CASES: Case[] = [
         result: undefined,
     },
 
-    // ── notifications ───────────────────────────────────────────────────────
+    // notifications
     {
         name: 'notifications.list',
         payload: { data: [notification] },
@@ -580,10 +576,6 @@ describe('every client method builds its request from the route table', () => {
         expect(result).toEqual(testCase.result);
     });
 });
-
-// ============================================================================
-// The methods the table cannot describe
-// ============================================================================
 
 describe('the multipart media routes', () => {
     const file = (): File => new File(['x'], 'a.png', { type: 'image/png' });

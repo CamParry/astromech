@@ -1,15 +1,7 @@
 /**
- * Turning a validation error map into one sentence an author can act on.
- *
- * The error map keys on the `_id` path grammar (`sections[a1].items[b2].title`),
- * which is addressing, not language: it names container ITEMS by their persisted
- * id, and it carries a field's declared name rather than its label. A summary
- * built straight from those keys would be no more use than the fixed string it
- * replaces, so the path is walked back through the field tree to the labels the
- * schema author actually wrote.
- *
- * Pure module — no React, no `t` binding, no DOM. The caller owns resolving a
- * `Label` against its namespace and owns the `t` used for the sentence itself.
+ * Turns a validation error map into one sentence an author can act on, by
+ * walking the `_id` path grammar back through the field tree to the labels
+ * the schema author actually wrote. Pure module — no React, no DOM.
  */
 
 import type { Field, FieldErrors, Label } from '@/types/index';
@@ -28,23 +20,15 @@ const CHAIN_SEPARATOR = ' → ';
 /** Joins one named field to the next. */
 const LIST_SEPARATOR = ', ';
 
-// ============================================================================
-// Path → labels
-// ============================================================================
-
 /** The declared label of a field, or the same fallback its own label renders. */
 function labelOf(field: Field): Label {
     return field.label ?? titleCase(field.name);
 }
 
 /**
- * The fields a path may continue into from `field`, or `null` when the step is
- * unresolvable.
- *
- * `group`/`repeater`/`tree` declare one child list, so the step is exact. A
- * `blocks` item's type lives in the VALUE (`_type`), which a path does not
- * carry, so every block definition is a candidate — the step is only safe when
- * they agree on what the next name means.
+ * The fields a path may continue into from `field`, or `null` when the step
+ * is unresolvable. A `blocks` item's type lives in the value, not the path,
+ * so every block definition is a candidate; the step is safe only when they agree.
  */
 function childrenOf(field: Field): Field[] | null {
     if (field.fields !== undefined) return flattenFieldNodes(field.fields);
@@ -55,18 +39,9 @@ function childrenOf(field: Field): Field[] | null {
 }
 
 /**
- * Resolve an error path back to the field's declared label.
- *
- * Errors key on the `_id` path grammar, which names container ITEMS by their
- * persisted id — meaningless to an author. Only the `field` segments identify
- * a definition, so item segments are stepped over: `sections[a1].title`
- * resolves through `sections` to `title`.
- *
- * Returns the whole chain, so the caller can render `Sections → Title` or just
- * the last label. `null` means the path could not be resolved — a malformed
- * path, a field the admin config does not declare, or a `blocks` step whose
- * candidate definitions disagree — and the caller should fall back to the path
- * itself rather than print a guess.
+ * Resolve an error path back to the field's declared label chain (e.g.
+ * `Sections → Title`). Returns `null` when the path can't be resolved — a
+ * malformed path, an undeclared field, or an ambiguous `blocks` step.
  */
 export function fieldLabelPathForError(
     definitions: Field[],
@@ -110,16 +85,10 @@ function sameLabel(a: Label, b: Label): boolean {
     return a.$t === b.$t;
 }
 
-// ============================================================================
-// Labels → sentence
-// ============================================================================
-
 /**
  * Build the toast shown when a submit is refused: name the failing fields, up
- * to `NAMED_LIMIT`, then count the rest.
- *
- * `names` are already display strings — the caller resolved each `Label` chain
- * against the right namespace, or fell back to the raw path.
+ * to `NAMED_LIMIT`, then count the rest. `names` are already display strings
+ * resolved by the caller.
  */
 export function validationSummaryMessage(names: string[], t: TFunction): string {
     if (names.length === 0) return t('entries.fixFieldsUnnamed');

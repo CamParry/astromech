@@ -1,10 +1,7 @@
 /**
- * Field-input registry — core registrations.
- *
- * Side-effect module imported once at the admin SPA entrypoint (main.tsx).
- * Registers the 26 built-in field-input components keyed by field type.
- * Plugin custom field types are NOT registered here; FormField falls through
- * to the lazy plugin-field path when getFieldComponent returns undefined.
+ * Field-input registry — core registrations. Side-effect module imported
+ * once at the admin SPA entrypoint; registers the built-in field-input
+ * components keyed by field type. Plugin field types register elsewhere.
  */
 import { BlocksField } from '@/admin/components/fields/blocks-field';
 import { BooleanField } from '@/admin/components/fields/boolean-field';

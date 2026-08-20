@@ -7,9 +7,8 @@ import { resetBindingEnv, resolveBinding, setBindingEnv } from '@/cloudflare/bin
 // `d1-local-emulation.test.ts`, which boots workerd; the `cloudflare:workers`
 // branch by nothing, since that specifier only resolves inside a Worker.
 //
-// Leaving the env unset would now fall through to wrangler and boot workerd,
-// because this package depends on it — that is a real resolution, not the
-// failure it used to be.
+// Leaving the env unset falls through to wrangler and boots workerd,
+// because this package depends on it — a real resolution.
 
 describe('resolveBinding()', () => {
     beforeEach(() => {

@@ -146,10 +146,6 @@ describe('generateClientTypes with plugin field types', () => {
     });
 });
 
-// ============================================================================
-// Plugin entry typegen
-// ============================================================================
-
 describe('generateClientTypes — plugin entry types', () => {
     const baseConfig = {
         basePath: '/cms',

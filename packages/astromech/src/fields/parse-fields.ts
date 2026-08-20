@@ -1,57 +1,7 @@
 /**
- * `parseFields` runs each field through coerce, then default, then validate.
- *
- * Pure logic: no domain/DB imports. The `reads` handle on `ctx` is the
- * injection point for any async checks (uniqueness, references).
- *
- * Public API via `astromech/fields` (`parseFields`). Entries is not its
- * only consumer: any plugin that composes `Field[]` at runtime can
- * validate through the same coerce → default → validate path as core.
- *
- * Nested fields (group/repeater/blocks/tree) are recursed into: a field type
- * with a `children` slot reports its nested value scopes, each of which is run
- * through the same coerce → default → validate pass. Errors are keyed by the
- * `_id`-based path grammar (`fields/field-path.ts`), so a nested error lands on
- * `sections[a1].items[b2].title` and a top-level one stays the bare field name.
- * Nothing here switches on field type.
- *
- * Validation splits in two along `ctx.validation`. COMPLETENESS — `required` and a
- * container's `min` item count — answers "is this finished?" and runs only when
- * `'complete'`, so a draft save can leave work half-done. CORRECTNESS —
- * everything else, including a container's `max` — answers "is what you typed
- * valid?" and runs on every write, because storing a malformed URL is a
- * data-integrity problem rather than an incomplete one.
- *
- * A field reports at most ONE message. The checks short-circuit in the order
- * `required` → container item counts → the type's own `validate` →
- * the author's declarative `field.validation` rules (in declaration order). The
- * type's validator precedes the author's rules because an author rule ("must be
- * on example.com") is unevaluable against a value that is not even a URL.
- * `FieldErrors` is still `Record<string, string[]>` on the wire — the array just
- * carries one entry.
- *
- * An author rule carries a `severity`. `'error'` (the default) files into
- * `errors` and blocks the write; `'warning'` files into `warnings` and does not.
- * A field can report one of each, in the same fixed order and under the same
- * path key. `required`, container item counts and the type's own validator are
- * error-only. Warnings are evaluated only when `ctx.collectWarnings` is set:
- * a `{ unique: true, severity: 'warning' }` rule costs a database read and the
- * server has no consumer for the result — only the editor does.
- *
- * `ctx.resourceValidate` runs last, over the coerced values, whether or not the
- * fields reported. It returns a form-level string or a map of path → message;
- * on a key a field already claimed, the field's own error wins as the more
- * specific one.
- *
- * The values it returns hold only keys the schema declares: a key belonging to
- * no declared field is dropped, silently, because it has no field to report an
- * error against and a PATCH-merge write would otherwise carry it forever.
- *
- * `ctx.coerceOnly` names the root fields a patch actually carries. Coercion then
- * runs for those fields and their subtrees only, while defaults, `children()`
- * normalization and validation still run over the whole merged resource. A
- * coercer is not guaranteed idempotent, so re-running one over a value the
- * caller never mentioned would rewrite stored data behind their back.
+ * `parseFields` runs each field through coerce, then default, then validate,
+ * recursing into nested containers via `children`. Validation splits along
+ * `ctx.validation`: completeness only when `'complete'`; correctness always runs.
  */
 
 import type {
@@ -68,10 +18,6 @@ import { formatInstancePath, isValidFieldName } from './field-path';
 import { getFieldType } from './field-type-registry';
 import { flattenFieldNodes } from './flatten';
 import { projectToSchema } from './values';
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function isEmpty(v: unknown): boolean {
     return (
@@ -97,10 +43,6 @@ function fieldErrorPath(segments: readonly FieldPathSegment[], field: Field): st
     }
     return formatInstancePath(segments);
 }
-
-// ---------------------------------------------------------------------------
-// Rule runner
-// ---------------------------------------------------------------------------
 
 // A rule that cannot judge the value it was given reports the mismatch rather
 // than passing. The field type's own validator normally catches this first, so
@@ -203,10 +145,6 @@ async function runRule(
 
     return null;
 }
-
-// ---------------------------------------------------------------------------
-// parseFields
-// ---------------------------------------------------------------------------
 
 /**
  * The caller-supplied half of the validation context — everything not per-field.

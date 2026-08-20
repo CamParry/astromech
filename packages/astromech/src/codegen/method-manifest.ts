@@ -1,15 +1,7 @@
 /**
  * Produces a JSON catalogue of every service-method contract: core domain
- * methods (users, media, settings, notifications), per-type entry methods, and plugin
- * service methods. Pure function — callers are responsible for writing the
- * result to disk or injecting it into a virtual module.
- *
- * Every schema is authored in the domain that owns the method; this file only
- * projects contracts into the manifest shape (`ManifestMethod`, declared in
- * `types/methods.ts` so consumers share the emitter's declaration). A method's
- * `input` is its ARGUMENT object, not the HTTP body.
- *
- * Schema version: 2
+ * methods, per-type entry methods, and plugin service methods. Pure
+ * function — a method's `input` is its ARGUMENT object, not the HTTP body.
  */
 import type { Capability } from '@/entries/capabilities';
 import type { EntryMethodContract } from '@/entries/methods';
@@ -47,19 +39,10 @@ import { usersContract } from '@/users/contract';
  */
 export const METHOD_MANIFEST_FILENAME = 'astromech.methods.json';
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
 /**
  * Convert a Zod schema to a JSON Schema object. Returns null on any error so
- * a single broken schema does not abort the whole manifest.
- *
- * `io` must match which side of a transforming schema is being described. A
- * contract's `input` is what the caller passes IN, so a `z.string().datetime()`
- * that transforms to a `Date` has to render as the string — Zod's default
- * (`'output'`) renders the `Date`, which is unrepresentable and degrades to `{}`,
- * telling an AI consumer nothing about what to send.
+ * a single broken schema does not abort the whole manifest. `io` must match
+ * which side of a transforming schema is being described (input vs output).
  */
 function toJSONSchema(
     schema: z.ZodType,
@@ -92,10 +75,6 @@ function methodCapabilityMet(
 ): boolean {
     return requires === undefined || capabilities[requires];
 }
-
-// ============================================================================
-// Core contracts group
-// ============================================================================
 
 function buildCoreMethods(): CoreManifestMethod[] {
     // The domain prefix is paired with the catalogue here, so a method's name is
@@ -154,10 +133,6 @@ function buildCoreMethods(): CoreManifestMethod[] {
 
     return methods;
 }
-
-// ============================================================================
-// Entries group
-// ============================================================================
 
 function buildEntriesMethods(
     config: ResolvedConfig,
@@ -259,10 +234,6 @@ function projectEntryMethod(
     return method;
 }
 
-// ============================================================================
-// Plugin service methods group
-// ============================================================================
-
 function normaliseAccess(access: PluginAccess): ManifestAccess {
     if (typeof access === 'object') return 'permission';
     return access;
@@ -314,10 +285,6 @@ function buildPluginServiceMethods(plugins: PluginDefinition[]): PluginManifestM
     return methods;
 }
 
-// ============================================================================
-// Public API
-// ============================================================================
-
 /**
  * Catalogue every service method in the resolved config. Callers that write the
  * manifest to disk serialise it with `serialiseMethodManifest`; the rest read
@@ -333,11 +300,9 @@ export function generateMethodManifest(
         ...buildPluginServiceMethods(plugins),
     ];
 
-    // Stable output: `id` is unique, so ordering by it alone is a TOTAL order —
-    // no tiebreakers, nothing left to chance. Compared by code unit rather than
-    // `localeCompare`, whose result depends on the host's default locale and ICU
-    // build: the MCP tool list renders at prompt position 0, so a reorder
-    // between machines would invalidate every downstream prompt cache.
+    // Stable output: `id` is unique, so sorting by it is a TOTAL order. Compared
+    // by code unit, not `localeCompare` (locale/ICU dependent) — the MCP tool
+    // list renders at prompt position 0, so a reorder would bust the prompt cache.
     methods.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
     return { version: 2, methods };

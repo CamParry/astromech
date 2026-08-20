@@ -37,26 +37,15 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
     const app = new OpenAPIHono<AppEnv>();
     const api = `${config.basePath}/api`;
 
-    // ========================================================================
-    // Error handling
-    // ========================================================================
-
     app.onError(onError);
     app.notFound(onNotFound);
-
-    // ========================================================================
-    // Request scope — identity resolves from the request, on first ask
-    // ========================================================================
 
     // `app.fetch` is a public entry point, so the app establishes its own scope
     // rather than requiring an ambient one. Nesting inside the Astro
     // middleware's is free: a request nobody asks about resolves nothing.
     app.use('*', (c, next) => runWithRequest(c.req.raw, () => next()));
 
-    // ========================================================================
-    // Security headers — applied to all responses
-    // ========================================================================
-
+    // Security headers, applied to all responses.
     const headers = config.security?.headers;
 
     app.use(
@@ -76,10 +65,7 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
         });
     }
 
-    // ========================================================================
-    // CORS — same-origin only by default; opt-in additional origins via config
-    // ========================================================================
-
+    // CORS: same-origin only by default; opt in additional origins via config.
     const allowed = config.cors?.origins ?? [];
 
     app.use(
@@ -95,9 +81,7 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
         })
     );
 
-    // ========================================================================
-    // Public routes (no auth required)
-    // ========================================================================
+    // Public routes — no auth required.
 
     // Media serving at its own top-level prefix — public and identity-free.
     // Registered above `requireAuth` so no future widening of that middleware
@@ -131,21 +115,15 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
     // per request: at construction it would open a dialect in the CLI and MCP.
     app.on(['GET', 'POST'], `${api}/auth/*`, (c) => getAuth().handler(c.req.raw));
 
-    // ========================================================================
-    // Plugin RPC + raw routes — enforce access per-method (incl. public), so
+    // Plugin RPC + raw routes enforce access per-method (incl. public), so
     // they mount before the API-wide requireAuth.
-    // ========================================================================
-
     app.route(`${api}/plugins`, pluginsRouter);
 
     // CRON poke — enforces its own auth (admin session OR bearer secret), so it
     // mounts before the API-wide requireAuth to allow sessionless external pokes.
     app.route(`${api}/cron`, cronRouter);
 
-    // ========================================================================
-    // All remaining API routes require authentication
-    // ========================================================================
-
+    // All remaining API routes require authentication.
     app.use(`${api}/*`, requireAuth);
 
     // GET /me — current user + role (used by admin SPA). Not in a route table:
@@ -153,10 +131,6 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
     app.get(`${api}/me`, (c) => {
         return c.json({ data: { user: c.var.user, role: c.var.role } });
     });
-
-    // ========================================================================
-    // Route mounting
-    // ========================================================================
 
     app.route(`${api}/entries`, entriesRouter);
     app.route(`${api}/users`, usersRouter);
@@ -167,10 +141,6 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
 
     // One route over the whole method manifest, beside the REST surface.
     app.route(`${api}/rpc`, rpcRouter);
-
-    // ========================================================================
-    // OpenAPI spec + Swagger UI
-    // ========================================================================
 
     app.doc(`${api}/openapi.json`, {
         openapi: '3.0.0',

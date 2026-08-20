@@ -8,6 +8,7 @@ export type SeoMetaValue = {
     description?: string;
 };
 
+/** Parse a stored `seo` field value into a tolerant `{ title?, description? }`. */
 export function parseSeoMetaValue(value: unknown): SeoMetaValue {
     if (value === null || typeof value !== 'object' || Array.isArray(value)) {
         return {};

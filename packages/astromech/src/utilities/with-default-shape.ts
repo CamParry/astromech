@@ -1,25 +1,15 @@
 /**
- * `withDefaultShape(entries, shape)` — wrap an EntriesService so that read calls
- * (`query` / `get`) inject `full: true` when the caller did NOT explicitly
- * supply a `full` key. An explicit per-call value always wins.
- *
- * Used to give privileged handles (hook context `ctx.entries`, admin fetch
- * client) a default of `full` while leaving the bare `Astromech.entries`
- * default at `public` (absent `full` ⇒ public, per spec §7.1).
- *
- * `withDefaultSettingsShape` does the same for the other domain that carries a
- * shape axis, so plugin altitude is `full` consistently across both rather than
- * only where a call site remembered to ask.
+ * `withDefaultShape(entries, shape)` wraps an `EntriesService` so `query`/`get`
+ * inject `full: true` when the caller didn't ask — an explicit per-call value
+ * always wins. `withDefaultSettingsShape` does the same for settings.
  */
 
 import type { EntriesService, SettingsService } from '@/types/index';
 
 /**
  * Return a thin wrapper around `entries` that injects `full: true` into
- * `query()` and `get()` calls where the caller did not specify `full`.
- *
- * All mutation methods (`create`, `update`, `delete`, …) are forwarded
- * unchanged — mutations are always full/trusted and carry no shape flag.
+ * `query()`/`get()` when the caller didn't specify `full`. Mutation methods
+ * are forwarded unchanged.
  */
 export function withDefaultShape(
     entries: EntriesService,
@@ -70,11 +60,8 @@ export function withDefaultShape(
 
 /**
  * Return a thin wrapper around `settings` that injects `full: true` into
- * `all()` and `get()` calls where the caller did not specify `full`. Settings
- * are private by default, so without this a trusted caller silently reads
- * `null` for its own private keys.
- *
- * `set` is forwarded unchanged — writes carry no shape flag.
+ * `all()`/`get()` when the caller didn't specify `full` — settings are
+ * private by default. `set` is forwarded unchanged.
  */
 export function withDefaultSettingsShape(
     settings: SettingsService,

@@ -67,10 +67,6 @@ function relationStagedFlags(entryId: string): Promise<boolean[]> {
         .then((rels) => rels.map((r) => r.sourceStaged));
 }
 
-// ============================================================================
-// createStaged
-// ============================================================================
-
 describe('createStaged', () => {
     it('copies content + relations into a fresh, unpublished, linked row', async () => {
         const target = await api.create({
@@ -128,10 +124,6 @@ describe('createStaged', () => {
     });
 });
 
-// ============================================================================
-// getStaged
-// ============================================================================
-
 describe('getStaged', () => {
     it('returns null when the canonical has no staged change', async () => {
         const canonical = await api.create({ type: 'post', title: 'X', slug: 'x' });
@@ -146,10 +138,6 @@ describe('getStaged', () => {
         expect(got?.stagedFor).toBe(canonical.id);
     });
 });
-
-// ============================================================================
-// mergeStaged
-// ============================================================================
 
 describe('mergeStaged', () => {
     it('merges staged content + relations into the canonical, preserving id/slug/status', async () => {
@@ -253,10 +241,6 @@ describe('mergeStaged', () => {
         );
     });
 });
-
-// ============================================================================
-// mergeStaged — field validation
-// ============================================================================
 
 /**
  * Merging is the promotion moment: the staged row itself is unpublished, so
@@ -427,10 +411,6 @@ describe('mergeStaged — field validation', () => {
     });
 });
 
-// ============================================================================
-// update — uniqueness across a canonical and its staged copy
-// ============================================================================
-
 /**
  * A staged row holds a COPY of its canonical's content, so on a `unique` field
  * the two rows legitimately hold the same value. Editing either must not
@@ -576,10 +556,6 @@ describe('update — uniqueness across a canonical and its staged copy', () => {
         });
     });
 });
-
-// ============================================================================
-// deleteStaged
-// ============================================================================
 
 describe('deleteStaged', () => {
     it('hard-deletes the staged change and leaves the canonical untouched', async () => {

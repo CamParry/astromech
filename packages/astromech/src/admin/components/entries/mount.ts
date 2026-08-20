@@ -1,20 +1,7 @@
 /**
- * Entry admin mount — the single parameter object that lets the shared entry
- * page components (`entries-list-page`, `entry-new-page`, `entry-edit-page`,
- * `entry-versions-page`) serve both root entry types and plugin-namespaced
- * entry types without behavioural divergence.
- *
- * Root routes build a mount bound to `Astromech.entries`, an empty cache
- * scope (keys byte-identical to today's), `/entries/{type}` link bases, and
- * `entry:{type}:{action}` permission strings. Plugin routes build a mount on
- * the SAME client — there is one entries service — carrying the plugin type's
- * QUALIFIED id (`redirects/redirect`), the plugin name as cache scope,
- * `/plugin/{name}/entries/{type}` link bases, and
- * `plugin:{namespace}:entry:{type}:{action}` permission strings.
- *
- * Phase 4 refits the page bodies onto the definition layer (derived
- * Table/Form definitions + cell/field registries); the page shells stay
- * hand-written and consume those definitions.
+ * Entry admin mount: the parameter object that lets the shared entry page
+ * components serve both root and plugin-namespaced entry types without
+ * behavioural divergence.
  */
 
 import type { AdminConfig, EntriesService } from '@/types/index';
@@ -44,11 +31,8 @@ export type EntriesMount = {
 
 /**
  * Build the mount for a plugin-namespaced entry type, or `null` when the
- * plugin or type is unknown (caller renders standard not-found UI).
- *
- * `type` is the BARE type from the route params (`redirect`); the mount carries
- * the qualified id the entries service addresses it by, while URLs and
- * permission strings keep the bare form they have always used.
+ * plugin or type is unknown. `type` is the bare id from the route; the mount
+ * carries the qualified id the entries service uses internally.
  */
 export function buildPluginEntriesMount(
     plugins: AdminConfig['plugins'],
@@ -71,15 +55,10 @@ export function buildPluginEntriesMount(
     };
 }
 
-// ============================================================================
-// List search params (URL-synced)
-// ============================================================================
-
 /**
  * URL search-param shape for the entries list, shared by the root and plugin
- * list routes so both persist the same filter/sort/page state to the URL. The
- * shared `EntriesListPage` reads it via `useSearch({ strict: false })`, so the
- * validator must live on every route that renders the page.
+ * list routes so both persist the same filter/sort/page state. The shared
+ * `EntriesListPage` reads it via `useSearch({ strict: false })`.
  */
 export type EntriesListSearch = {
     q?: string;

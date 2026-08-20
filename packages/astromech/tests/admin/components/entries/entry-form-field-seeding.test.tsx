@@ -168,9 +168,7 @@ function control(selector: string): HTMLElement {
     return el;
 }
 
-// ============================================================================
 // A — the fact the rest of this file rests on
-// ============================================================================
 
 describe('the field tree and the TanStack default-value copy', () => {
     it('renders once against an empty `fields` before the copy lands', () => {
@@ -190,9 +188,7 @@ describe('the field tree and the TanStack default-value copy', () => {
     });
 });
 
-// ============================================================================
 // key-value — snapshots its pairs with no re-seed guard
-// ============================================================================
 
 describe('key-value on a fetched entry', () => {
     const META: Field = { name: 'meta', type: 'key-value', label: 'Meta' };
@@ -247,9 +243,7 @@ describe('key-value on a fetched entry', () => {
     });
 });
 
-// ============================================================================
 // group — the stateless container, which the same race does NOT reach
-// ============================================================================
 
 describe('group on a fetched entry', () => {
     it('keeps the untouched sibling when one sub-field is edited', async () => {

@@ -49,10 +49,6 @@ declare global {
     var __astromechBackupRunning: boolean | undefined;
 }
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
 /** Absolute path for tmp files created in this test run. */
 function makeTmpDir(): string {
     return join(tmpdir(), `astromech-backups-test-${randomUUID()}`);
@@ -148,10 +144,6 @@ function makeStorage(dir: string): PluginStorage {
     };
 }
 
-// ============================================================================
-// Test state
-// ============================================================================
-
 let tmpBase: string;
 let dbPath: string;
 let storageDir: string;
@@ -171,10 +163,6 @@ afterEach(async () => {
     globalThis.__astromechBackupRunning = false;
     await rm(tmpBase, { recursive: true, force: true });
 });
-
-// ============================================================================
-// 1. libsql dump → restore round-trip
-// ============================================================================
 
 describe('libsql.dump / restore', () => {
     it('should round-trip a table full of rows', async () => {
@@ -220,10 +208,6 @@ describe('libsql.dump / restore', () => {
     });
 });
 
-// ============================================================================
-// 2. restore preserves listed tables
-// ============================================================================
-
 describe('libsql.restore — preserve', () => {
     it('should NOT revert preserved tables while reverting non-preserved tables', async () => {
         const { db, driver } = await makeFileDb(dbPath);
@@ -268,10 +252,6 @@ describe('libsql.restore — preserve', () => {
     });
 });
 
-// ============================================================================
-// 3. performBackup — success path
-// ============================================================================
-
 describe('performBackup — success', () => {
     it('should create a gzip artifact in storage and a success run row', async () => {
         const { db, driver } = await makeFileDb(dbPath);
@@ -298,9 +278,7 @@ describe('performBackup — success', () => {
     });
 });
 
-// ============================================================================
 // 4. performBackup — failure path (no dump capability)
-// ============================================================================
 
 describe('performBackup — failure', () => {
     it('should mark the run as failed when dump is not supported', async () => {
@@ -322,10 +300,6 @@ describe('performBackup — failure', () => {
         expect(artifacts).toHaveLength(0);
     });
 });
-
-// ============================================================================
-// 5. rotate keep-N
-// ============================================================================
 
 describe('rotate', () => {
     it('should delete the oldest artifacts when runs exceed keep', async () => {
@@ -534,10 +508,6 @@ describe('rotate — pre-restore snapshots', () => {
     });
 });
 
-// ============================================================================
-// 6. in-process guard
-// ============================================================================
-
 describe('isBackupRunning / in-process guard', () => {
     it('should return false when no backup is running', () => {
         globalThis.__astromechBackupRunning = false;
@@ -589,10 +559,6 @@ describe('isBackupRunning / in-process guard', () => {
         expect(isBackupRunning()).toBe(false);
     });
 });
-
-// ============================================================================
-// 7. resolveKeep — the retention setting
-// ============================================================================
 
 describe('resolveKeep', () => {
     /**

@@ -29,10 +29,6 @@ const postEntry: AiContextReference = {
     label: 'Hello world',
 };
 
-// ============================================================================
-// Store
-// ============================================================================
-
 describe('createAiContextStore', () => {
     it('should keep the order minted on first registration when a key re-registers', () => {
         const store = createAiContextStore();
@@ -106,10 +102,6 @@ describe('createAiContextStore', () => {
         expect(store.getSnapshot().map((item) => item.depth)).toEqual([5, 0]);
     });
 });
-
-// ============================================================================
-// Hooks
-// ============================================================================
 
 describe('useAiContext', () => {
     it('should publish the reference the route declares', () => {

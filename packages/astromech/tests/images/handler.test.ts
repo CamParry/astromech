@@ -7,9 +7,6 @@ import { handleMediaRequest } from '@/media/serving/handler';
 import { setImageConfig } from '@/media/serving/image/registry';
 import { setStorageDriver } from '@/storage/registry';
 
-// ---------------------------------------------------------------------------
-// Minimal JPEG header bytes (SOF0 marker with 1x1 dimensions)
-// ---------------------------------------------------------------------------
 function makeJpegBytes(): Uint8Array {
     // Minimal valid JPEG: SOI + APP0 + SOF0 + EOI
     return new Uint8Array([
@@ -51,9 +48,6 @@ function makeJpegBytes(): Uint8Array {
     ]);
 }
 
-// ---------------------------------------------------------------------------
-// In-memory fake StorageDriver
-// ---------------------------------------------------------------------------
 function makeMemoryStorage(): StorageDriver {
     const store = new Map<string, Uint8Array>();
     return {
@@ -122,9 +116,6 @@ function makeMemoryStorage(): StorageDriver {
     } as StorageDriver & { _store: Map<string, Uint8Array> };
 }
 
-// ---------------------------------------------------------------------------
-// Fake ImageDriver
-// ---------------------------------------------------------------------------
 const VARIANT_BYTES = new TextEncoder().encode('VARIANT');
 
 function makeFakeImageDriver() {
@@ -140,9 +131,6 @@ function makeFakeImageDriver() {
     return { driver, calls };
 }
 
-// ---------------------------------------------------------------------------
-// Setup
-// ---------------------------------------------------------------------------
 let storage: ReturnType<typeof makeMemoryStorage> & { _store: Map<string, Uint8Array> };
 let fakeDriver: ReturnType<typeof makeFakeImageDriver>;
 
@@ -163,17 +151,10 @@ beforeEach(async () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 async function readBody(res: Response): Promise<Uint8Array> {
     const buf = await res.arrayBuffer();
     return new Uint8Array(buf);
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 describe('handleMediaRequest', () => {
     it('1. no params → 200 original bytes', async () => {
@@ -354,10 +335,6 @@ describe('handleMediaRequest', () => {
         expect(body).toEqual(jpegBytes);
     });
 });
-
-// ---------------------------------------------------------------------------
-// Range requests — originals only (video seeking). Spec §7, §9.
-// ---------------------------------------------------------------------------
 
 const CLIP = 'abcdefghijklmnopqrstuvwxyz'; // 26 bytes
 

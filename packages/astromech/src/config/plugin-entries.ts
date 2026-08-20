@@ -30,8 +30,8 @@ export function assertPluginsValid(plugins: PluginDefinition[]): void {
 
 /**
  * Resolve every plugin's entry types into the namespaced map. The live
- * `storage` instance is stripped here and registered into the storage registry
- * at boot (`registerPlugins`).
+ * `repository` instance is stripped here and registered into the entry
+ * repository registry at boot (`registerPlugins`).
  */
 export function resolvePluginEntries(
     plugins: PluginDefinition[]

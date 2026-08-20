@@ -1,12 +1,7 @@
 /**
- * Segment-wise permission matching.
- *
- * Grammar: `resource[:identifier]:action` segments joined by `:`.
- * - `*` as the entire pattern grants everything.
- * - `*` mid-pattern matches exactly one segment.
- * - A trailing `*` matches one or more remaining segments.
- *
- * Check strings are always concrete (callers never pass wildcards in `check`).
+ * Segment-wise permission matching: `resource[:identifier]:action` joined
+ * by `:`. `*` alone grants everything, mid-pattern matches one segment, and
+ * a trailing `*` matches one or more remaining segments.
  */
 export function matchesPermission(pattern: string, check: string): boolean {
     if (pattern === '*') return true;

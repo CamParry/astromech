@@ -1,24 +1,7 @@
 /**
  * Migration statement/file renderer — `TableOp[]` (from `diff.ts`) → SQL
- * statements → a complete generated migration module's TS source.
- *
- * Pure, browser-safe (no fs imports) — `generate.ts` is the Node-only
- * orchestrator that writes the rendered source to disk. Statement rendering
- * for `createTable`/`dropTable`/`addColumn`/`dropIndex`/`createIndex` reuses
- * `ddl.ts`'s `renderCreateTable`/`renderCreateIndex`/`renderColumnClause` so
- * the generator and the direct emit path never diverge in SQL shape.
- *
- * `rebuildTable` is the one op with no native SQLite equivalent — SQLite has
- * no `ALTER COLUMN`/`DROP COLUMN` that survives CHECK/index constraints, so a
- * changed table is rebuilt wholesale:
- * `PRAGMA defer_foreign_keys = true` → `CREATE __new_x` → `INSERT…SELECT`
- * (COALESCE-backfilling any nullable→NOT NULL column) → `DROP x` →
- * `RENAME __new_x TO x` → recreate every index. No self-managed
- * `BEGIN`/`COMMIT` — Kysely's `Migrator` already wraps each migration in a
- * transaction, and `defer_foreign_keys` is tx-scoped (auto-resets on commit).
- *
- * The rendered module has no `down()` — migrations are forward-only (a
- * descriptor is *state*, not history; reverting is a fresh forward migration).
+ * statements → a complete generated migration module's TS source. Pure,
+ * browser-safe; reuses `ddl.ts`'s renderers so SQL shape never diverges.
  */
 
 import type { TableOp } from './diff';

@@ -1,11 +1,7 @@
 /**
- * Settings service — the settings capability verbs (all / get / set).
- *
- * A bare service: it talks to storage (the settings table) and applies the
- * public/private key visibility rule. Unaware of delivery shape — the Local API,
- * HTTP API, etc. project it. Visibility is per-feature, data-model-specific
- * read-shaping, so it lives beside the service it serves (./visibility.js),
- * not as a cross-cutting policy.
+ * Settings service — the settings capability verbs (all / get / set). Talks
+ * to the repository and applies the public/private key visibility rule.
+ * Unaware of delivery shape — the Local API, HTTP API, etc. project it.
  */
 
 import type { SettingRow } from './tables';

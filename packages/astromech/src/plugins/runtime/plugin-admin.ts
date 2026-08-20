@@ -1,17 +1,7 @@
 /**
- * Derivation of a plugin's admin-shell metadata from `admin.pages` — pages
- * are the core concept: each page is a `component` view or an auto-rendered
- * `fields` form, and appears in the sidebar unless it opts out (`nav: false`).
- * The sidebar tree (grouped under the plugin's `label`/`icon`) and the
- * serializable page list are both derived here, with permission strings
- * resolved (`resolvePluginPermission`) so the browser never needs to know the
- * namespacing rule.
- *
- * Both origins (host and plugin) produce `ResolvedAdminPage` so the renderer
- * is origin-agnostic. The only difference is:
- * - Host:   `baseKey = path`, `key = path`, permission defaults `settings:read`
- * - Plugin: `baseKey = 'plugin:<ns>:<path>'`, `key = '<name><path>'`, permission
- *           defaults `settings:read` for settings pages, null for component pages.
+ * Derives a plugin's admin-shell metadata from `admin.pages`: the sidebar
+ * tree grouped under the plugin's label/icon, and the flattened page list,
+ * with permission strings resolved so the browser never needs the namespacing rule.
  */
 
 import type { EntryFields, ResolvedEntryFields } from '@/types/fields';
@@ -28,10 +18,7 @@ import {
     titleCaseNamespace,
 } from './plugin-identity';
 
-// ---------------------------------------------------------------------------
-// Field normalisation (mirrors config-resolver's toResolvedFields)
-// ---------------------------------------------------------------------------
-
+// Mirrors config-resolver's toResolvedFields.
 function toResolvedFields(fields: EntryFields | undefined): ResolvedEntryFields {
     if (fields === undefined) return { main: [], sidebar: [] };
     if (Array.isArray(fields)) return { main: fields, sidebar: [] };
@@ -113,9 +100,8 @@ export function derivePluginNav(
     const entryChildren: PluginNavItem[] = pluginEntryTypes(def).map(
         ([type, entryType]) => {
             // Matches the mounted entries API guard exactly:
-            // `plugin:{permissionNamespace}:entry:{type}:{action}`. Built
-            // directly (not via resolvePluginPermission, which only namespaces
-            // bare keys and would pass this `:`-containing string through).
+            // `plugin:{permissionNamespace}:entry:{type}:{action}`. Built directly,
+            // not via resolvePluginPermission, which would pass this `:`-string through.
             const item: PluginNavItem = {
                 label: entryType.plural,
                 to: `/plugin/${identity.namespace}/entries/${type}`,
@@ -129,12 +115,8 @@ export function derivePluginNav(
         .filter((page) => page.nav !== false)
         .map((page) => {
             // page.label is Label (string | i18n descriptor); resolve to string
-            // for the nav item (PluginNavItem.label is string). Plain strings
-            // pass through; i18n descriptors carry their key (resolved in the
-            // browser via resolveLabel). We store the raw value here and the
-            // sidebar resolves it — PluginNavItem.label must be string, so for
-            // i18n descriptors we use the $t key as a fallback display value
-            // until the browser resolves it.
+            // for the nav item. i18n descriptors fall back to the $t key here
+            // until the browser resolves them via resolveLabel.
             const labelStr: string =
                 typeof page.label === 'string' ? page.label : page.label.$t;
 

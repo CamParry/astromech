@@ -1,14 +1,7 @@
 /**
- * `package` → plugin namespace. A pure leaf because two capabilities need the
- * same derivation and neither may import the other: `plugins/runtime` resolves
- * a plugin's full identity from it, and `database/define-plugin-table` needs
- * the same string (and the same *literal type*) to build a plugin's table
- * prefix at module load.
- *
- * The rules, in order — see `plugins/runtime/plugin-identity.ts` for the why:
- *   1. `@astromech/*` strips its scope (first-party; the npm scope is ours).
- *   2. everything else drops the leading `@` and keeps its scope.
- *   3. lowercase, then `/` and `-` → `_`.
+ * `package` → plugin namespace. A pure leaf shared by `plugins/runtime`
+ * (identity resolution) and `database/define-plugin-table` (literal table
+ * prefix), so both derive the same string and the same literal type.
  */
 
 /** Every occurrence of `From` in `S` replaced with `To`; `string` stays `string`. */
@@ -36,16 +29,9 @@ export type PluginNamespace<P extends string> =
           : Underscored<Lowercase<P>>;
 
 /**
- * The one namespace a plugin owns, derived from its package name.
- *
- *     `@astromech/redirects`    → `redirects`
- *     `@acme/seo`               → `acme_seo`
- *     `acme-seo`                → `acme_seo`
- *     `@acme-digital/seo-tools` → `acme_digital_seo_tools`
- *
- * Generic over the literal so `definePluginTable` can build a literal table
- * name — `PluginDB` derives its Kysely keys from that literal and silently
- * degrades to `string` keys without it.
+ * The one namespace a plugin owns, derived from its package name (e.g.
+ * `@astromech/redirects` → `redirects`, `acme-seo` → `acme_seo`). Generic
+ * over the literal so `definePluginTable` can build a literal table name.
  */
 export function pluginNamespace<const P extends string>(pkg: P): PluginNamespace<P> {
     const lower = pkg.toLowerCase();
@@ -56,14 +42,9 @@ export function pluginNamespace<const P extends string>(pkg: P): PluginNamespace
 }
 
 /**
- * The JS-identifier form, for service property keys and HTTP route segments:
- * `acme_seo` → `acmeSeo`.
- *
- * LOSSY, and deliberately not inverted anywhere. A separator followed by a
- * character with no uppercase form collapses (`acme_2fa` → `acme2fa`), so two
- * distinct namespaces can land on one service key. That is a hard error rather
- * than a caveat: `assertNoPluginCollisions` rejects the plugin set at boot,
- * which is what lets every consumer treat the key as unique.
+ * The JS-identifier form, for service property keys and route segments
+ * (`acme_seo` → `acmeSeo`). LOSSY: two namespaces can collide on one key,
+ * which `assertNoPluginCollisions` rejects at boot rather than silently allowing.
  */
 export function pluginServiceKey(namespace: string): string {
     return namespace.replace(/_(.)/g, (_, char: string) => char.toUpperCase());

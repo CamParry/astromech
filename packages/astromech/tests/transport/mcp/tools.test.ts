@@ -12,14 +12,10 @@ import type {
 import { describe, expect, it } from 'vitest';
 import { buildTools } from '@/transport/mcp/tools';
 
-// ============================================================================
-// Sample manifest
-// ============================================================================
-
 /**
- * A tool's `inputSchema` is now the manifest's own `input`, so these fixtures
- * carry real schemas rather than relying on adapter-side literals. A method with
- * no `input` is skipped by design — `idSchema` is what most of these need.
+ * A tool's `inputSchema` is the manifest's own `input`, so these fixtures
+ * carry real schemas. A method with no `input` is skipped by design —
+ * `idSchema` is what most of these need.
  */
 function idSchema(...extra: string[]): JsonSchemaObject {
     return {
@@ -165,10 +161,6 @@ const sampleManifest: MethodManifest = {
     ],
 };
 
-// ============================================================================
-// Tests
-// ============================================================================
-
 describe('buildTools', () => {
     it('returns tools + dispatch + skipped', () => {
         const result = buildTools(sampleManifest);
@@ -193,8 +185,6 @@ describe('buildTools', () => {
         const { tools, skipped } = buildTools(sampleManifest);
         const toolNames = tools.map((t) => t.name);
 
-        // Plugin methods used to return null from every adapter. P1 dispatches
-        // them like anything else.
         expect(toolNames).toContain('plugins_foo_bar');
 
         // What remains skipped is skipped for a reason the METHOD stated.
@@ -289,9 +279,7 @@ describe('buildTools', () => {
     });
 
     it('a method with no input schema is skipped, not given a synthesised one', () => {
-        // The adapters used to carry hand-written `inputSchema` literals, which is
-        // how MCP's `users.update` tool drifted from the contract. A tool now
-        // exists only if the manifest gave it a schema.
+        // A tool exists only if the manifest gave it a schema.
         const schemaless: MethodManifest = {
             version: 2,
             methods: [core('users', 'get', { mutates: false })],

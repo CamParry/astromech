@@ -7,11 +7,9 @@ import { AstromechError } from '@/errors/index';
 import { CLOUDFLARE_IMAGES_DRIVER } from '@/media/image-drivers';
 
 /**
- * `media.access: 'private'` and the Cloudflare Images driver cannot coexist.
- * That driver transforms *by URL* — it hands `originUrl` (our own media route)
- * to Cloudflare's network and lets Cloudflare fetch the origin itself. A private
- * media route refuses exactly that request, so every optimised image would fail
- * at the edge. Caught here, at config resolution, rather than in production.
+ * `media.access: 'private'` and the Cloudflare Images driver cannot coexist:
+ * that driver transforms by URL, handing `originUrl` to Cloudflare's network
+ * to fetch — which a private media route refuses. Caught at config resolution.
  */
 export function assertMediaAccessCompatible(
     access: MediaAccess,

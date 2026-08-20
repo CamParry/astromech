@@ -1,21 +1,7 @@
 /**
- * Sibling-value access for field renderers.
- *
- * The entry field tree renders from a single root `values` object that
- * re-renders on every change (see `EntryFieldColumn`). Two contexts expose
- * that to any field renderer that needs to read a *sibling's* value — e.g. a
- * computed/preview field — without prop-drilling or coupling to the form
- * library:
- *
- *  - `FieldValuesProvider` carries the root entry values, set once at the
- *    column root.
- *  - `FieldPathProvider` carries the current field's full dotted path, set by
- *    `FormField` around each control. Inside a `group`/`repeater` this path is
- *    prefixed (e.g. `seo.title`), so siblings resolve relative to the
- *    container.
- *
- * `useFieldValue('title')` reads the sibling at the same level as the calling
- * field. Deep cross-container reads are out of scope.
+ * Sibling-value access for field renderers. `FieldValuesProvider` carries
+ * the root entry values, `FieldPathProvider` carries the current field's
+ * dotted path; `useFieldValue(name)` reads a sibling relative to it.
  */
 
 import React from 'react';
@@ -23,6 +9,7 @@ import React from 'react';
 const FieldValuesContext = React.createContext<Record<string, unknown> | null>(null);
 const FieldPathContext = React.createContext<string | null>(null);
 
+/** Provides the root entry values, set once at the column root. */
 export function FieldValuesProvider({
     values,
     children,
@@ -37,6 +24,7 @@ export function FieldValuesProvider({
     );
 }
 
+/** Provides the current field's dotted path, set by `FormField` around each control. */
 export function FieldPathProvider({
     path,
     children,
@@ -57,9 +45,8 @@ function readPath(root: Record<string, unknown>, segments: string[]): unknown {
 }
 
 /**
- * Read the current value of a sibling field by name, relative to the calling
- * field's container. Reactive: the field re-renders when the value changes
- * (the whole tree re-renders on edit). Returns `undefined` outside a field
+ * Reads the current value of a sibling field by name, relative to the
+ * calling field's container. Reactive; returns `undefined` outside a field
  * tree or when the sibling has no value yet.
  */
 export function useFieldValue(name: string): unknown {

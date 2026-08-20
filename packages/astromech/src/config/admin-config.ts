@@ -46,6 +46,7 @@ export function toAdminEntryType(entryType: ResolvedEntryType): AdminEntryType {
     };
 }
 
+/** Build the full `AdminConfig` — plugins, roles, locales, entries, and pages — served to the virtual module. */
 export function buildAdminConfig(
     config: AstromechConfig,
     resolvedConfig: ResolvedConfig

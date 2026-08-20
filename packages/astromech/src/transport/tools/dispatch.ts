@@ -1,22 +1,9 @@
 /**
  * Tool Dispatch
  *
- * ONE dispatcher for every manifest method, shared by every consumer of the tool
- * surface — the MCP server and the AI tool-loop alike. A tool's name,
- * description, schema and annotations are all projections of manifest fields,
- * and `invoke` resolves the service method by key at call time. There is no
- * per-domain adapter, and no `switch` over method names.
- *
- * Every adapter this replaced was a second declaration of a method that already
- * described itself, and the second declaration is what drifted: `users_update`
- * advertised a hand-written schema that rejected custom user fields for months.
- * A dispatcher that cannot restate a method cannot disagree with it, and adding
- * a contract is now all it takes to get a tool.
- *
- * A method is skipped only for a reason it declares — no input schema, a
- * `binaryInput` a JSON-RPC transport cannot carry, or a `sessionScoped` subject
- * a transport with no signed-in user cannot supply. Each skip carries that
- * reason so the server can log deliberate omissions as deliberate.
+ * One dispatcher for every manifest method, shared by the MCP server and the
+ * AI tool loop: a tool's schema and invoke are projections of manifest
+ * fields, so no per-domain adapter can drift from the method it describes.
  */
 
 import type { ScopedServices } from '@/policies/scoped-services';
@@ -30,10 +17,6 @@ import type {
     ToolDefinition,
 } from '@/types/index';
 import { confirmMessage } from '@/policies/confirmation';
-
-// ============================================================================
-// Types
-// ============================================================================
 
 // The dispatch shapes live in the pure leaf so `types/plugins.ts` can name them.
 export type { ToolAnnotations, ToolDefinition } from '@/types/index';
@@ -57,10 +40,6 @@ type ResolvedInvoke = { ok: true; invoke: Invoke } | { ok: false; reason: string
 
 /** A strategy for turning a manifest method into the call it maps to. */
 type ResolveStrategy = (manifest: ManifestMethod) => ResolvedInvoke;
-
-// ============================================================================
-// Service resolution
-// ============================================================================
 
 /**
  * Core domain services, keyed by the manifest's `domain`. Imported lazily so
@@ -145,10 +124,6 @@ async function invokePluginMethod(
     );
 }
 
-// ============================================================================
-// Naming
-// ============================================================================
-
 /**
  * The tool name for a method. MCP names must match `^[a-zA-Z0-9_-]{1,128}$`, so
  * every separator is an underscore; `buildTools` still sanitises, because a
@@ -168,10 +143,6 @@ function toolNameFor(manifest: ManifestMethod): string {
                 : `entries_${manifest.mount}_${manifest.entryType}_${manifest.method}`;
     }
 }
-
-// ============================================================================
-// Public builders
-// ============================================================================
 
 /**
  * Build a ToolDefinition from a ManifestMethod, or explain why the method is not
@@ -243,9 +214,7 @@ function buildDispatchWith(
     };
 }
 
-// ============================================================================
 // Resolution — raw services
-// ============================================================================
 
 /** The raw-service call this method maps to. */
 function resolveInvoke(manifest: ManifestMethod): ResolvedInvoke {
@@ -315,9 +284,7 @@ function noServiceReason(manifest: ManifestMethod): string {
     return `no service registered for domain "${manifest.name}"`;
 }
 
-// ============================================================================
 // Resolution — scoped to a role
-// ============================================================================
 
 /** The role's scoped handle, built on first use and reused after it. */
 type ScopedHandle = () => Promise<ScopedServices>;

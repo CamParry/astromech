@@ -1,12 +1,7 @@
 /**
  * The composition root: the `Astromech` type, the `createAstromech` /
- * `getAstromech` pair, the process-wide instance registry, and the `build`
- * sequence that boots a runtime.
- *
- * `createAstromech` boots and registers the instance; `getAstromech` only reads
- * it — one instance per process. `build` runs the whole sequence inline, in the
- * order it happens: resolve the config, fill the backend registries, verify the
- * schema, register the jobs and plugin runtime, boot the plugins, assemble.
+ * `getAstromech` pair, and the `build` sequence that boots a runtime —
+ * resolve config, fill registries, verify schema, boot plugins, assemble.
  */
 
 import type {
@@ -92,12 +87,8 @@ const registry = createRegistry<Registered>('astromech', { required: false });
 
 /**
  * Boots the Astromech instance and returns it. A later call with the same
- * config object returns the same instance; a call with a different config
- * throws — one config per process.
- *
- * Runs synchronously up to `registry.set`, registering the in-flight promise
- * before it yields, so a second call arriving during boot joins that boot
- * rather than starting a second one.
+ * config object returns the same instance; a different config throws. Runs
+ * synchronously up to `registry.set` so a concurrent call joins the boot.
  */
 export function createAstromech(options: {
     config: AstromechConfig;

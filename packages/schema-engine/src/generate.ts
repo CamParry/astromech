@@ -1,16 +1,7 @@
 /**
  * Migration generator — reads/writes an app's `migrations/` directory
- * (`snapshot.json`, `journal.json`, the generated `.ts` migration files, and
- * `index.ts`), wiring `diff.ts` (snapshot diff) → `render.ts` (diff → SQL/TS)
- * into one call.
- *
- * Node-only (uses `node:fs/promises` + `node:path`) — generation is a dev/CI
- * step, never a runtime one. It is deliberately NOT part of the package's main
- * entry: `.` stays pure and edge-safe, this module is the `./generate` subpath.
- *
- * Journal ordering is by `idx` alone and there is no `id`/`prevId` snapshot
- * chain, so a divergent parallel generation run surfaces as a `snapshot.json`
- * merge conflict rather than a silent hash mismatch.
+ * (snapshot, journal, generated files), wiring diff → render into one call.
+ * Node-only: a dev/CI step, not part of the package's edge-safe main entry.
  */
 import type { TableOp } from './diff';
 import type { Snapshot, SnapshotTable, SqlDialect } from './model';
@@ -21,15 +12,15 @@ import { diffSnapshots } from './diff';
 import { serializeSnapshot } from './model';
 import { renderMigrationFile, renderStatementLine } from './render';
 
+/** Outcome of a generate call: nothing changed, or the file/tag/warnings written. */
 export type GenerateResult =
     | { status: 'no-changes' }
     | { status: 'generated'; file: string; tag: string; warnings: string[] };
 
 /**
- * What a hand-authored migration sees: the state the chain is currently at, and
- * the state the descriptors say it should reach. Authors build ops out of
- * `next`'s tables rather than re-deriving them, so the SQL that lands is the
- * same SQL the generator would have rendered.
+ * What a hand-authored migration sees: the state the chain is at, and the
+ * state the descriptors say it should reach. Authors build ops from `next`'s
+ * tables, so the SQL that lands matches what the generator would render.
  */
 export type MigrationOpsContext = {
     prev: Snapshot | null;
@@ -81,15 +72,11 @@ function migrationVarName(idx: number): string {
     return `m${String(idx).padStart(4, '0')}`;
 }
 
-/** Regenerate `index.ts` — the static `MigrationProvider` — from every
- *  journal entry, ordered by `idx`. Static imports only (no dynamic
- *  discovery): an edge bundler can't do runtime `fs` scanning.
- *
- *  Sibling specifiers carry no extension. The files on disk are `.ts`, and the
- *  two loaders that read them disagree about extensions: a `.ts` specifier
- *  needs `allowImportingTsExtensions` in the app's tsconfig, and a `.js` one
- *  resolves under `tsx` but not under plain Node. Extensionless resolves in
- *  both, and under `moduleResolution: bundler`. */
+/**
+ * Regenerate `index.ts` — the static `MigrationProvider` — from every journal
+ * entry, ordered by `idx`. Static imports only: an edge bundler can't do
+ * runtime `fs` scanning, so sibling specifiers stay extensionless for cross-loader resolution.
+ */
 function renderIndexFile(entries: JournalEntry[]): string {
     const sorted = [...entries].sort((a, b) => a.idx - b.idx);
     const imports = sorted
@@ -116,10 +103,8 @@ function renderIndexFile(entries: JournalEntry[]): string {
 
 /**
  * Write `index.ts` if what the journal renders to differs from what is on disk.
- *
- * Called on every run, not only when a migration is written: `index.ts` is
- * derived wholly from `journal.json`, so a change to {@link renderIndexFile}
- * would otherwise reach an existing app only on its next schema change.
+ * Called on every run, not only when a migration is written, since `index.ts`
+ * is derived wholly from `journal.json`.
  */
 async function syncIndexFile(dir: string, entries: JournalEntry[]): Promise<void> {
     if (entries.length === 0) return;
@@ -144,14 +129,8 @@ async function readState(
 
 /**
  * Render `ops` into a new `NNNN_<name>.ts` and advance the directory's state:
- * append to `journal.json`, rewrite `snapshot.json` to `next`, regenerate
- * `index.ts`.
- *
- * The ONLY writer of migration artefacts. Both the diffed path and the
- * hand-authored path go through it, which is what keeps `snapshot.json` a
- * machine-written file in every case — a hand-edited snapshot would turn the
- * drift gate into a lie, since the gate's whole job is to compare that file
- * against the descriptors.
+ * append to `journal.json`, rewrite `snapshot.json`, regenerate `index.ts`.
+ * The only writer of migration artefacts, for both the diffed and hand-authored paths.
  */
 async function writeMigration(opts: {
     dir: string;
@@ -194,9 +173,8 @@ async function writeMigration(opts: {
 
 /**
  * Diff the given snapshot against `<dir>/snapshot.json` and, if anything
- * changed, write a new migration. Throws (writing nothing) if the diff has any
- * validation errors. Warnings are returned, not printed — surfacing them is the
- * caller's job.
+ * changed, write a new migration. Throws (writing nothing) on validation
+ * errors; warnings are returned, not printed.
  */
 export async function generateMigrations(opts: {
     dir: string;
@@ -235,20 +213,9 @@ export async function generateMigrations(opts: {
 }
 
 /**
- * The escape hatch for transitions the differ refuses.
- *
- * The generator has no rename op and its rebuild path copies same-named columns
- * only, so a few genuine reshapes (swapping a primary key, adding a NOT NULL
- * column with no SQL-literal default) have no derivable plan. Rather than
- * hand-writing a migration and its artefacts — which is how `snapshot.json`
- * ends up disagreeing with the chain — the author supplies only the OPS, and
- * every artefact is still rendered by {@link writeMigration}.
- *
- * The division of labour: the generator owns the destination, the author owns
- * the route. `snapshot.json` is still written from the descriptors, so a
- * following `db:generate` must report no changes, and the migration-chain ↔
- * descriptor parity test still executes the real SQL and compares the result.
- * Those two together are what verify a hand-authored route actually arrives.
+ * The escape hatch for transitions the differ refuses: the caller supplies
+ * the ops directly, and every artefact is still rendered by {@link writeMigration}
+ * so `snapshot.json` stays machine-written and in sync with the chain.
  */
 export async function generateMigrationFromOps(opts: {
     dir: string;
@@ -296,10 +263,6 @@ export async function generateMigrationFromOps(opts: {
     });
 }
 
-// ============================================================================
-// Rebaseline — re-emit the baseline migration from the current snapshot
-// ============================================================================
-
 export type RebaselineResult = {
     /** The baseline's journal tag, e.g. `0000_baseline`. */
     tag: string;
@@ -314,13 +277,7 @@ export type RebaselineResult = {
 /**
  * Rewrite `<dir>/<baseline>.ts` from `snapshot`, keeping the blocks of any table
  * the snapshot does not describe, then rewrite `snapshot.json`, `journal.json`
- * and `index.ts` to match.
- *
- * A renderer change is a re-render, not a diff — the snapshot records schema
- * state, not the SQL text it renders to — so there is no migration the differ
- * could emit for it. Rewriting history is what closes that gap, and it is legal
- * only before a release: `collapse` (folding a longer chain into the baseline)
- * therefore has to be asked for, never inferred.
+ * and `index.ts` to match. `collapse` folds a longer chain into the baseline.
  */
 export async function rebaselineMigrations(opts: {
     dir: string;
@@ -477,13 +434,8 @@ function parseTableBlocks(source: string, path: string): TableBlock[] {
 
 /**
  * Refuse to delete a later migration holding anything the regenerated baseline
- * cannot reproduce. Descriptor-backed DDL is safe to drop — the emitter renders
- * it again from the snapshot — but a statement on a table the snapshot does not
- * describe, or any data statement, exists only in that file.
- *
- * `__new_<table>` is the exception: it is the rebuild path's own temp table, and
- * its `INSERT … SELECT` moves rows between two shapes of a table the emitter
- * re-renders whole. That is emitter output, not authored intent.
+ * cannot reproduce: descriptor-backed DDL is safe to drop, but a statement on a
+ * table the snapshot doesn't describe, or any data statement, exists only here.
  */
 async function assertCollapsible(path: string, snapshot: Snapshot): Promise<void> {
     const source = await readFileIfExists(path);

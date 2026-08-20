@@ -373,10 +373,9 @@ describe('onTick / runDue', () => {
         consoleError.mockRestore();
     });
 
-    // Regression: the runner used to read config via
-    // `await import('virtual:astromech/config')`, which crashes in the plain-Node
-    // scheduler tick (ERR_UNSUPPORTED_ESM_URL_SCHEME — protocol 'virtual:'). It
-    // now reads the resolved config from the config registry, filled at boot.
+    // The runner reads the resolved config from the config registry, filled at
+    // boot — `await import('virtual:astromech/config')` crashes in the plain-Node
+    // scheduler tick (ERR_UNSUPPORTED_ESM_URL_SCHEME — protocol 'virtual:').
     describe('config source (no virtual: import)', () => {
         it('10. throws a clear error when the config registry is unset', async () => {
             // Clear the registry that setupTestConfig populated in beforeEach.

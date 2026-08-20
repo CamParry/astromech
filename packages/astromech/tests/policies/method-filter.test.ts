@@ -14,10 +14,6 @@ import type {
 import { describe, expect, it } from 'vitest';
 import { filterMethods } from '@/policies/method-filter';
 
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
-
 function coreMethod(domain: string, name: string, mutates: boolean): CoreManifestMethod {
     return {
         id: `${domain}.${name}`,
@@ -66,10 +62,6 @@ const methods: ManifestMethod[] = [
 const ids = (result: { methods: ManifestMethod[] }): string[] =>
     result.methods.map((m) => m.id);
 
-// ---------------------------------------------------------------------------
-// readOnly
-// ---------------------------------------------------------------------------
-
 describe('readOnly', () => {
     it('drops a mutating method even when include names it explicitly', () => {
         // THE verify criterion. GitHub's MCP server documents `--read-only` as
@@ -102,10 +94,6 @@ describe('readOnly', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// exclude / include
-// ---------------------------------------------------------------------------
-
 describe('exclude', () => {
     it('drops the named method, with a reason', () => {
         const result = filterMethods(methods, { exclude: ['settings.set'] });
@@ -135,10 +123,6 @@ describe('include', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// Matching
-// ---------------------------------------------------------------------------
-
 describe('pattern matching', () => {
     it('prefix-matches on a trailing star', () => {
         const result = filterMethods(methods, { include: ['entries.*'] });
@@ -167,10 +151,6 @@ describe('pattern matching', () => {
         expect(ids(result)).toContain('entries.posts.publish');
     });
 });
-
-// ---------------------------------------------------------------------------
-// Accounting
-// ---------------------------------------------------------------------------
 
 describe('accounting', () => {
     it('accounts for every dropped method exactly once', () => {

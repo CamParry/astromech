@@ -49,10 +49,6 @@ function mountWithError(field: Field, value: unknown): Mounted {
     };
 }
 
-// ============================================================================
-// No live region
-// ============================================================================
-
 describe('field error markup', () => {
     it('renders the message without any live-region role', () => {
         const { host, unmount } = mountWithError({ name: 'title', type: 'text' }, '');
@@ -76,10 +72,6 @@ describe('field error markup', () => {
         unmount();
     });
 });
-
-// ============================================================================
-// The association every control must carry
-// ============================================================================
 
 /**
  * One case per field type that renders a focusable control.

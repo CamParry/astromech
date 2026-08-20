@@ -8,10 +8,7 @@ import { useAuth } from '../context/auth';
 
 export { hasPermission };
 
-// ============================================================================
-// Hook
-// ============================================================================
-
+/** Permission checks for the signed-in user, scoped by collection where relevant. */
 export function usePermissions() {
     const { user } = useAuth();
     const permissions = user?.permissions ?? [];

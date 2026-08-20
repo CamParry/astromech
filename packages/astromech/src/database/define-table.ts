@@ -1,38 +1,11 @@
 /**
- * `defineTable` — the table definition primitive.
- *
- * One `Table` is the single source of truth for a table, yielding BOTH:
- *
- *   1. **Domain Row types** (`TableSelect`/`TableInsert`/`TableUpdate`) — the
- *      rich shapes storage callers see: `Date` for timestamps, parsed objects
- *      for `json<T>`, `boolean` for booleans, `string` for ids/references.
- *      These replace the drizzle `$inferSelect`/`$inferInsert` row types.
- *
- *   2. **Kysely table types** (`KyselyOf`) — the *storage* shapes the query
- *      layer sees before/after the row codec runs: ISO-`string` timestamps,
- *      JSON-`string`, `number` (0/1) booleans, `Generated<>` wrapping any column
- *      an app/SQL default fills. Assembled into the `DB` interface; used for
- *      where-clause literal types, `selectAll()` results and order-by columns.
- *      Insert/update values are encoded + cast through, so the Kysely cell's
- *      insert precision is intentionally loose.
- *
- * The runtime object also carries the per-column codec (`serialize`/`parse`/
- * `default`) that `database/codec.ts` drives, replacing the hand-written CODECS
- * map for our tables. DDL emit / snapshot diffing are later steps; this module
- * is types + codec only, so `indexes`/`reference` metadata is stored but unused.
- *
- * Ids are ULID (`ulidx`) unless a column asks for `format: 'uuid'`; timestamps
- * serialize to ISO-8601 TEXT in a text column, which is also the format
- * better-auth writes into the tables it shares with us. Both dialects (SQLite,
- * Postgres) compare ISO strings correctly (fixed-width, lexicographic).
+ * `defineTable` — the table definition primitive. One `Table` yields domain
+ * row types (`TableSelect`/`TableInsert`/`TableUpdate`) and Kysely storage
+ * types (`KyselyOf`), plus the per-column codec `database/codec.ts` drives.
  */
 
 import type { ColumnType, Generated } from 'kysely';
 import { ulid } from 'ulidx';
-
-// ============================================================================
-// Runtime shapes
-// ============================================================================
 
 export type ColumnKind =
     | 'id'
@@ -86,10 +59,7 @@ export type IndexSpec = {
     where?: string;
 };
 
-// ============================================================================
 // Phantom column config — encodes the type facts for inference
-// ============================================================================
-
 type ColConfig = {
     /** Domain type (Date, parsed object, boolean, string, number). */
     data: unknown;
@@ -110,10 +80,6 @@ export type Column<C extends ColConfig = ColConfig> = ColumnRuntime & {
 
 export type AnyCols = Record<string, Column>;
 
-// ============================================================================
-// Type-level helpers
-// ============================================================================
-
 type Or<A, B> = A extends true ? true : B extends true ? true : false;
 type Not<A> = A extends true ? false : true;
 /**
@@ -126,10 +92,6 @@ type FlagTrue<O, K extends PropertyKey> = O extends Record<K, true> ? true : fal
 type HasKey<O, K extends PropertyKey> =
     O extends Record<K, infer V> ? (undefined extends V ? false : true) : false;
 type Prettify<T> = { [K in keyof T]: T[K] } & {};
-
-// ============================================================================
-// Per-kind option types
-// ============================================================================
 
 type TextOpts = {
     notNull?: boolean;
@@ -224,10 +186,7 @@ type RefConfig<O extends RefOpts> = {
     hasDefault: false;
 };
 
-// ============================================================================
-// Codec primitives (the format flip lives here)
-// ============================================================================
-
+// Codec primitives — the storage format flip lives here
 const passthrough = (v: unknown): unknown => v;
 // Always stringify: a JSON column whose value *is* a string (`settings.set(k,
 // 'a-string')`) must still round-trip, and `jsonParse` unconditionally parses.
@@ -242,10 +201,6 @@ const isoParse = (v: unknown): unknown =>
     // back when that table declared seconds storage. Tolerated so those rows
     // still decode; every writer produces ISO now.
     typeof v === 'number' ? new Date(v * 1000) : new Date(v as string);
-
-// ============================================================================
-// `col` factory
-// ============================================================================
 
 function id(o?: IdOpts): Column<{
     data: string;
@@ -454,10 +409,6 @@ function index(
 /** The `index` helper handed to a `defineTable` indexes callback. */
 export type IndexFactory = typeof index;
 
-// ============================================================================
-// `defineTable`
-// ============================================================================
-
 /**
  * `N` carries the SQL table name as a literal so downstream types can derive
  * the Kysely (CamelCasePlugin) key from it — see `PluginDB` in
@@ -499,10 +450,6 @@ export function defineTable<const C extends AnyCols, const N extends string>(
         indexes: options.indexes ? options.indexes({ index }) : [],
     };
 }
-
-// ============================================================================
-// Type inference — derive row + Kysely table types from a `Table`
-// ============================================================================
 
 type ConfigOf<T> = T extends Column<infer C> ? C : never;
 type DomainData<T> = ConfigOf<T>['data'];

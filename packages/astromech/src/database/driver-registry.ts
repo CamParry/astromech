@@ -1,9 +1,7 @@
 /**
- * Database Driver Registry
- *
- * Retains the full driver object (including optional dump/restore) so
- * plugins can feature-detect capabilities at runtime. Mirrors the storage
- * registry pattern.
+ * Database driver registry — retains the full driver object (including
+ * optional dump/restore) so plugins can feature-detect capabilities at
+ * runtime. Mirrors the storage registry pattern.
  */
 
 import type { DatabaseDriver } from '@/types/index';

@@ -111,10 +111,6 @@ function hidden(name: string): HTMLInputElement {
     return el;
 }
 
-// ============================================================================
-// media
-// ============================================================================
-
 describe('media on a fetched entry', () => {
     const cover: Field = { name: 'cover', type: 'media' };
     const gallery: Field = { name: 'gallery', type: 'media', multiple: true };
@@ -189,10 +185,6 @@ describe('media on a fetched entry', () => {
         expect(f.commits).toEqual([]);
     });
 });
-
-// ============================================================================
-// relationship
-// ============================================================================
 
 describe('relationship on a fetched entry', () => {
     const author: Field = { name: 'author', type: 'relationship', target: 'author' };

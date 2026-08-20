@@ -15,16 +15,14 @@ import type {
     EntryUpdateData,
 } from './services';
 
-// ============================================================================
-// Typed Entry
-// ============================================================================
-
-// Open interface — augmented by generated types (.astro/astromech.d.ts)
-// Each entry shape: { fields: EntryTypeFields, fieldsPublic: PublicFields, relations: EntryTypeRelations }
+/**
+ * Open interface augmented by generated types (`.astro/astromech.d.ts`). Each
+ * entry shape: `{ fields, fieldsPublic, relations }`.
+ */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
 export interface AstromechEntryTypes {}
 
-// Generic helpers — extract fields/fieldsPublic from any entry-type map by key
+// Extract fields/fieldsPublic from any entry-type map by key
 type FieldsForMap<Map, T extends keyof Map> = Map[T] extends { fields: infer F }
     ? F
     : never;
@@ -34,7 +32,7 @@ type PublicFieldsForMap<Map, T extends keyof Map> = Map[T] extends {
     ? P
     : JsonObject & { readonly __shape?: 'public' };
 
-// Typed entry — the Entry type but with typed fields
+/** The `Entry` type with `fields` narrowed to `TFields`. */
 export type TypedEntry<TFields> = Omit<Entry, 'fields'> & {
     fields: TFields;
 };
@@ -59,10 +57,6 @@ export type PublicFieldsFor<T extends keyof AstromechEntryTypes> = PublicFieldsF
     T
 >;
 
-// ============================================================================
-// Typed Entries API
-// ============================================================================
-
 /**
  * Layered overloads above the wide `EntriesService`, parameterised by an entry-type
  * map. Literal-type `type` args return `TypedEntry<FieldsFor<T>>`; the wide
@@ -72,7 +66,6 @@ export type PublicFieldsFor<T extends keyof AstromechEntryTypes> = PublicFieldsF
  * `AstromechEntryTypes`.
  */
 export type TypedEntriesServiceFor<EntryMap> = {
-    // ── query ────────────────────────────────────────────────────────────────
     // full: true — returns the full (admin) shape
     query<T extends keyof EntryMap>(
         params: { type: T; full: true } & Omit<EntryQueryParams, 'type' | 'full'>
@@ -92,7 +85,6 @@ export type TypedEntriesServiceFor<EntryMap> = {
         params: { type: string | readonly string[] } & Omit<EntryQueryParams, 'type'>
     ): Promise<QueryResult<Entry>>;
 
-    // ── get ──────────────────────────────────────────────────────────────────
     // full: true — returns the full (admin) shape
     get<T extends keyof EntryMap>(params: {
         type: T;
@@ -113,7 +105,6 @@ export type TypedEntriesServiceFor<EntryMap> = {
         full?: boolean;
     }): Promise<Entry | null>;
 
-    // ── create ───────────────────────────────────────────────────────────────
     create<T extends keyof EntryMap>(params: {
         type: T;
         title: string;
@@ -136,7 +127,6 @@ export type TypedEntriesServiceFor<EntryMap> = {
         publishedAt?: Date | null;
     }): Promise<Entry>;
 
-    // ── update ───────────────────────────────────────────────────────────────
     update<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
@@ -166,7 +156,6 @@ export type TypedEntriesServiceFor<EntryMap> = {
         data: EntryUpdateData;
     }): Promise<Entry[]>;
 
-    // ── duplicate ────────────────────────────────────────────────────────────
     duplicate<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
@@ -185,7 +174,6 @@ export type TypedEntriesServiceFor<EntryMap> = {
         overrides?: EntryDuplicateOverrides;
     }): Promise<Entry>;
 
-    // ── publish ──────────────────────────────────────────────────────────────
     publish<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
@@ -197,7 +185,6 @@ export type TypedEntriesServiceFor<EntryMap> = {
     publish(params: { type: string; id: string }): Promise<Entry>;
     publish(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
 
-    // ── unpublish ────────────────────────────────────────────────────────────
     unpublish<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
@@ -209,7 +196,6 @@ export type TypedEntriesServiceFor<EntryMap> = {
     unpublish(params: { type: string; id: string }): Promise<Entry>;
     unpublish(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
 
-    // ── schedule ─────────────────────────────────────────────────────────────
     schedule<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
@@ -227,7 +213,6 @@ export type TypedEntriesServiceFor<EntryMap> = {
         publishedAt: Date;
     }): Promise<Entry[]>;
 
-    // ── restore ──────────────────────────────────────────────────────────────
     restore<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
@@ -239,7 +224,6 @@ export type TypedEntriesServiceFor<EntryMap> = {
     restore(params: { type: string; id: string }): Promise<Entry>;
     restore(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
 
-    // ── versions / restoreVersion ────────────────────────────────────────────
     versions(params: { type: string; id: string }): Promise<EntryVersion[]>;
     restoreVersion<T extends keyof EntryMap>(params: {
         type: T;

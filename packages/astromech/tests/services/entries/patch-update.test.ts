@@ -13,10 +13,6 @@ import { entriesService } from '@/entries/index';
 
 const api = entriesService;
 
-// ---------------------------------------------------------------------------
-// Config
-// ---------------------------------------------------------------------------
-
 /**
  * `meta` is typed by the caller so a test can create data under one schema and
  * update it under another — the drift that makes re-coercion observable. Both
@@ -87,10 +83,6 @@ beforeEach(async () => {
     setupTestConfig(makePatchConfig());
 });
 
-// ---------------------------------------------------------------------------
-// Merge basics
-// ---------------------------------------------------------------------------
-
 describe('update — root-level merge', () => {
     it('keeps fields the patch omits', async () => {
         const entry = await api.create({
@@ -154,10 +146,6 @@ describe('update — root-level merge', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// The AI write-back regression
-// ---------------------------------------------------------------------------
-
 describe('update — public-shape write-back', () => {
     it('keeps a private field the public read stripped', async () => {
         const entry = await api.create({
@@ -185,10 +173,6 @@ describe('update — public-shape write-back', () => {
         expect(updated.fields.body).toBe('B2');
     });
 });
-
-// ---------------------------------------------------------------------------
-// Coercion scoping
-// ---------------------------------------------------------------------------
 
 describe('update — coercion is scoped to the patch', () => {
     it('leaves an untouched field uncoerced when the schema has drifted', async () => {
@@ -221,10 +205,6 @@ describe('update — coercion is scoped to the patch', () => {
         expect(touched.fields.meta).toEqual({ views: '3' });
     });
 });
-
-// ---------------------------------------------------------------------------
-// Validation against the merged document
-// ---------------------------------------------------------------------------
 
 describe('update — validation sees the merged document', () => {
     it('a required field absent from the patch does not block a publish', async () => {
@@ -299,10 +279,6 @@ describe('update — validation sees the merged document', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// Schema projection
-// ---------------------------------------------------------------------------
-
 describe('update — projection to the schema', () => {
     it('drops a key no field definition claims', async () => {
         const entry = await api.create({
@@ -343,10 +319,6 @@ describe('update — projection to the schema', () => {
         expect(updated.fields).toEqual({ anything: 'kept', other: 'also kept' });
     });
 });
-
-// ---------------------------------------------------------------------------
-// Versioning
-// ---------------------------------------------------------------------------
 
 describe('update — version snapshots', () => {
     it('creates no version when the patch changes nothing', async () => {

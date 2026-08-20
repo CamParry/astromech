@@ -1,12 +1,7 @@
 /**
- * i18next initialisation for the Astromech admin SPA.
- *
- * Import this module once at the SPA entry point. After that, use the
- * `useTranslation` hook or `t()` helper from `react-i18next` anywhere.
- *
- * Plugin locale bundles (spec §3.11) lazy-load from the code-gen
- * `virtual:astromech/plugins/components` i18n map into per-plugin
- * namespaces (= permissionNamespace); fallback follows core (`en`).
+ * i18next initialisation for the Astromech admin SPA, imported once at the
+ * entry point. Plugin locale bundles lazy-load into per-plugin namespaces
+ * (keyed by permissionNamespace), falling back to core `en`.
  */
 
 import i18n from 'i18next';

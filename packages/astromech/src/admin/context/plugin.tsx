@@ -1,10 +1,7 @@
 /**
- * Plugin UI context + `useAstromechPlugin()` (spec §8).
- *
- * The `/plugin/$` catch-all provides the identity of the plugin whose
- * surface is rendering; the hook hands plugin components their runtime
- * toolbox: `{ service, toast, modal, currentUser, navigate, t }`, with `t`
- * pre-scoped to the plugin's i18n namespace (= its derived namespace).
+ * Plugin UI context and `useAstromechPlugin()`. The `/plugin/$` catch-all
+ * provides the plugin identity; the hook hands plugin components their
+ * runtime toolbox (service, toast, modal, currentUser, navigate, t).
  */
 
 import { useNavigate } from '@tanstack/react-router';
@@ -20,11 +17,8 @@ export type PluginUiIdentity = {
     namespace: string;
     /**
      * The plugin's derived service key, e.g. `acmeSeo` — the
-     * `astromechClient.plugins.*` property. Supplied by whoever renders the
-     * surface rather than computed from `namespace` here: the namespace →
-     * service key derivation is lossy, so it cannot be run backwards, and
-     * running it forwards in the browser would be a second implementation of a
-     * rule the server already resolved.
+     * `astromechClient.plugins.*` property. Supplied by the renderer rather
+     * than derived here, since namespace → service key is lossy to invert.
      */
     serviceKey: string;
     /** i18n namespace + permission anchor. Same string as `namespace`. */
@@ -33,6 +27,7 @@ export type PluginUiIdentity = {
 
 const PluginUiContext = React.createContext<PluginUiIdentity | null>(null);
 
+/** Provides the identity of the plugin whose surface is rendering. */
 export function PluginUiProvider({
     identity,
     children,
@@ -45,6 +40,7 @@ export function PluginUiProvider({
     );
 }
 
+/** A plugin component's runtime toolbox: service, toast, modal, currentUser, navigate, t. */
 export function useAstromechPlugin() {
     const identity = React.useContext(PluginUiContext);
     if (!identity) {
@@ -63,10 +59,8 @@ export function useAstromechPlugin() {
     return {
         plugin: identity.namespace,
         /**
-         * The `/api/plugins/<serviceKey>` route segment. Needed only to build a
-         * URL for a raw (streaming) route by hand — RPC methods are already
-         * bound on `service`. Exposed rather than derived because the
-         * namespace → service key mapping is lossy in that direction.
+         * The `/api/plugins/<serviceKey>` route segment, for building a raw
+         * (streaming) route URL by hand; RPC methods are already bound on `service`.
          */
         serviceKey: identity.serviceKey,
         service: (astromechClient.plugins as Record<string, unknown>)[

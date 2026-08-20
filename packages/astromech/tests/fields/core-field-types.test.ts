@@ -255,10 +255,6 @@ describe('core field types', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// Validator coverage
-// ---------------------------------------------------------------------------
-
 // `validate` is required on `FieldType`, so this only bites one registered
 // through a cast. It is the property that lets the declarative rules assume a
 // well-typed value.

@@ -1,13 +1,8 @@
 /**
- * The permissions this plugin makes grantable. Keys are declared **bare** — no
- * prefix, no `:` — and core namespaces them to `plugin:demo_rating:{key}`. The
- * declaration feeds both the `astromech permissions` catalogue and the
- * factory's grant accessor, so a site enumerates exactly what it hands out:
+ * The permissions this plugin makes grantable. Bare keys; core namespaces them
+ * to `plugin:demo_rating:{key}`. A site enumerates the ones it grants:
  *
  *   roles: { editor: { permissions: [...rating.permissions('view')] } }
- *
- * Nothing is granted automatically. `admin` holds `*` and so already has this;
- * every other role opts in.
  */
 
 import { definePermissions } from 'astromech';

@@ -1,12 +1,5 @@
 /**
- * Shared entry version history page body.
- *
- * Extracted (Phase 3 Slice 6) verbatim from
- * `pages/_protected/entries/$type/$id/versions.tsx`, parameterized by an
- * `EntriesMount`. Behaviour and markup are unchanged from the original page;
- * the differences are the mount-bound api/cacheScope and the `basePath`-built
- * links.
- *
+ * Shared entry version history page body, parameterized by an `EntriesMount`.
  * Two-column layout: version list sidebar left, diff view right.
  */
 
@@ -33,10 +26,6 @@ import { formatDatetime } from '@/utilities/dates';
 // Mount link bases are runtime strings; address `Link` by string `to`.
 type LinkProps = Omit<React.ComponentProps<typeof RouterLink>, 'to'> & { to: string };
 const Link = RouterLink as unknown as (props: LinkProps) => React.ReactElement;
-
-// ============================================================================
-// Helpers
-// ============================================================================
 
 type DiffEntry = {
     field: string;
@@ -91,10 +80,6 @@ function renderFieldValue(value: unknown): React.ReactElement {
     }
     return <span>{String(value)}</span>;
 }
-
-// ============================================================================
-// Sub-components
-// ============================================================================
 
 type VersionItemProps = {
     version: EntryVersion;
@@ -204,10 +189,6 @@ function DiffView({
         </div>
     );
 }
-
-// ============================================================================
-// Page
-// ============================================================================
 
 export function EntryVersionsPage({
     mount,

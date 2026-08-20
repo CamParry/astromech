@@ -25,10 +25,6 @@ beforeEach(async () => {
     setupTestConfig(cfg);
 });
 
-// ============================================================================
-// issue / revoke
-// ============================================================================
-
 describe('issuePreviewToken', () => {
     it('returns a plaintext token and requires the staging capability', async () => {
         const e = await api.create({ type: 'post', title: 'X', slug: 'x' });
@@ -66,8 +62,7 @@ describe('issuePreviewToken', () => {
     });
 
     it('defaults to a TTL rather than issuing a token that never expires', async () => {
-        // Every token issued before this defaulted to `null` — forever — which
-        // matters now the confirm gate hands preview links out for review.
+        // Matters because the confirm gate hands preview links out for review.
         // Asserted through `isValid` with a moved clock, inside a tolerance
         // window, rather than against an exact stored timestamp.
         const e = await api.create({ type: 'post', title: 'X', slug: 'x' });
@@ -109,10 +104,6 @@ describe('issuePreviewToken', () => {
         );
     });
 });
-
-// ============================================================================
-// query() preview by slug
-// ============================================================================
 
 describe('query() with previewToken', () => {
     it('returns an unpublished entry only with a valid token (404 semantics otherwise)', async () => {
@@ -228,10 +219,6 @@ describe('query() with previewToken', () => {
         expect(res.data).toHaveLength(0);
     });
 });
-
-// ============================================================================
-// get() preview by id
-// ============================================================================
 
 describe('get() with previewToken', () => {
     it('returns the unpublished canonical only with a valid token', async () => {

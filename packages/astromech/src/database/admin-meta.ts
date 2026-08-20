@@ -1,10 +1,7 @@
 /**
  * Admin metadata — a `Table` projected into the admin's existing
- * table-column/field vocabulary (`CellKind`, `Field['type']`).
- *
- * Pure, serializable — no db imports. Lets a table-backed admin surface (e.g.
- * step 5's `tableRepository` replacement) describe itself for the shell's list/
- * form renderers without hand-maintaining a parallel column list per table.
+ * table-column/field vocabulary (`CellKind`, `Field['type']`). Pure,
+ * serializable, and lets a table describe itself to the shell's renderers.
  */
 
 import type { ColumnKind, Table } from '@/database/define-table';

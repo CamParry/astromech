@@ -8,9 +8,7 @@ import type { Field, FieldValidationContext, FieldValidator } from '@/types/fiel
 import { slugify } from '@/utilities/strings';
 import { isUnsafeHref } from './rich-text/safe-links';
 
-// ---------------------------------------------------------------------------
 // email
-// ---------------------------------------------------------------------------
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -21,9 +19,7 @@ export const validateEmail: FieldValidator = async (ctx) =>
         ? true
         : 'Must be a valid email address';
 
-// ---------------------------------------------------------------------------
 // url
-// ---------------------------------------------------------------------------
 
 export const coerceUrl = (value: unknown): unknown =>
     typeof value === 'string' ? value.trim() : value;
@@ -37,9 +33,7 @@ export const validateUrl: FieldValidator = async (ctx) => {
     }
 };
 
-// ---------------------------------------------------------------------------
 // slug
-// ---------------------------------------------------------------------------
 
 /**
  * A slug is stored exactly as `slugify` would write it, so a value that
@@ -54,9 +48,7 @@ export const validateSlug: FieldValidator = async (ctx) => {
     return `Must be lowercase letters, numbers and hyphens${suggestion}`;
 };
 
-// ---------------------------------------------------------------------------
 // json
-// ---------------------------------------------------------------------------
 
 /** Recursive JSON-shape guard. Rejects functions/undefined/symbols/bigint and non-finite numbers. */
 export function isJsonValue(value: unknown): boolean {
@@ -73,9 +65,7 @@ export function isJsonValue(value: unknown): boolean {
 export const validateJson: FieldValidator = async (ctx) =>
     isJsonValue(ctx.value) ? true : 'Must be valid JSON';
 
-// ---------------------------------------------------------------------------
 // key-value
-// ---------------------------------------------------------------------------
 
 export const coerceKeyValue = (value: unknown): unknown => {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) return value;
@@ -94,9 +84,7 @@ export const validateKeyValue: FieldValidator = async (ctx) => {
         : 'Must be a set of key/value pairs';
 };
 
-// ---------------------------------------------------------------------------
 // choice — select, radio-group, multiselect, checkbox-group
-// ---------------------------------------------------------------------------
 
 /** The field's declared option values, as a set. */
 function optionValues(field: Field): Set<string> {
@@ -128,9 +116,7 @@ export const validateMultiChoice: FieldValidator = async (ctx) => {
     return true;
 };
 
-// ---------------------------------------------------------------------------
 // number — number, range
-// ---------------------------------------------------------------------------
 
 /**
  * Parse a numeric string, since an HTML form posts every value as text.
@@ -149,16 +135,12 @@ export const validateNumber: FieldValidator = async (ctx) =>
         ? true
         : 'Must be a number';
 
-// ---------------------------------------------------------------------------
 // boolean
-// ---------------------------------------------------------------------------
 
 export const validateBoolean: FieldValidator = async (ctx) =>
     typeof ctx.value === 'boolean' ? true : 'Must be true or false';
 
-// ---------------------------------------------------------------------------
 // date, datetime
-// ---------------------------------------------------------------------------
 
 /**
  * Callers pass a `Date` as often as a string. Both land in a JSON column as an
@@ -173,9 +155,7 @@ export const validateDate: FieldValidator = async (ctx) => {
     return Number.isNaN(Date.parse(ctx.value)) ? 'Must be a valid date' : true;
 };
 
-// ---------------------------------------------------------------------------
 // reference — media, relationship
-// ---------------------------------------------------------------------------
 
 /**
  * A reference is stored as an id, or a list of ids when `multiple`.
@@ -233,16 +213,12 @@ function referenceMessage(value: unknown, many: boolean): string {
     return `Must be ${expected}`;
 }
 
-// ---------------------------------------------------------------------------
 // text — text, textarea
-// ---------------------------------------------------------------------------
 
 export const validateText: FieldValidator = async (ctx) =>
     typeof ctx.value === 'string' ? true : 'Must be text';
 
-// ---------------------------------------------------------------------------
 // color
-// ---------------------------------------------------------------------------
 
 /** The forms the color picker writes and an API caller can reasonably send. */
 const HEX_COLOR_RE = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
@@ -261,9 +237,7 @@ export const validateColor: FieldValidator = async (ctx) => {
         : 'Must be a hex colour such as #3366ff, or an rgb()/hsl() colour';
 };
 
-// ---------------------------------------------------------------------------
 // link
-// ---------------------------------------------------------------------------
 
 /** A relative url is resolved against this to be parsed at all. */
 const URL_REFERENCE_BASE = 'https://astromech.invalid/';
@@ -307,9 +281,7 @@ function linkUrlProblem(url: string): string | null {
     }
 }
 
-// ---------------------------------------------------------------------------
 // nested fields — group, repeater, blocks, tree
-// ---------------------------------------------------------------------------
 
 /** A group holds one object of child values. */
 export const validateGroup: FieldValidator = async (ctx) => {

@@ -1,11 +1,7 @@
 /**
- * Settings service method contracts — the declared shape + permission + effect
- * for each settings verb. The single source the HTTP transport enforces against
- * (via permissionsFor) and the method manifest reads.
- *
- * `input` is the METHOD's argument object, not the HTTP body: `settings.set` is
- * called `set({ key, value })` — the key is a path parameter on the wire, so the
- * body schema alone would describe half the call.
+ * Settings service method contracts — the declared shape + permission +
+ * effect for each verb. `input` is the method's argument object, not the
+ * HTTP body: `settings.set` is `set({ key, value })`, key on the wire path.
  */
 
 import type { ServiceMethodContract } from '@/types/index';

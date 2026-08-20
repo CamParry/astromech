@@ -1,9 +1,7 @@
 /**
- * Cell-renderer registry — cell kind → React cell component.
- *
- * Module-level Map (no globalThis): the admin SPA is a single Vite bundle with
- * one module graph, so there is no tsup multi-entry chunk duplication to guard
- * against (contrast src/storage/entries/registry.ts, which must use globalThis).
+ * Cell-renderer registry — cell kind → React cell component. A module-level
+ * Map suffices (no globalThis): the admin SPA is a single Vite bundle with
+ * one module graph, so there's no multi-entry chunk duplication to guard against.
  */
 import type { CellKind, CellRenderer } from '@/types/index';
 

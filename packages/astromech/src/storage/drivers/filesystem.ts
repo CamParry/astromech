@@ -1,12 +1,7 @@
 /**
- * Filesystem storage driver for local/Node.js development.
- *
- * Writes files to a local directory by key. Keys may be nested
- * (e.g. `variants/<id>/<v>/<w>.<f>`). Not suitable for Cloudflare Workers —
- * use the R2 driver in production.
- *
- * Cannot sign URLs, so `getSignedUploadUrl`/`getSignedDownloadUrl` are absent
- * entirely; `getPublicUrl` returns a path under `urlPrefix`.
+ * Filesystem storage driver for local/Node.js development. Writes files to
+ * a local directory by key (keys may be nested). Cannot sign URLs — use the
+ * R2 driver in production.
  */
 
 import type {
@@ -25,11 +20,9 @@ type FilesystemOptions = {
     /** Absolute or cwd-relative path to write files, e.g. `'./public/uploads'` */
     dir: string;
     /**
-     * Public URL prefix at which `dir` is already being served — e.g.
-     * `'/uploads'` when `dir` is `'./public/uploads'`. Opt-in and deliberately
-     * undefaulted: nothing here can verify that `dir` is web-served at all, and
-     * guessing a prefix for a directory outside `public/` would hand out URLs
-     * that 404. Omit it and media is served through the media route instead.
+     * Public URL prefix at which `dir` is already served — e.g. `'/uploads'`
+     * for `dir: './public/uploads'`. Opt-in: omit it and media is served
+     * through the media route instead.
      */
     urlPrefix?: string;
 };

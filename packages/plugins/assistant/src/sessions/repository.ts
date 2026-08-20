@@ -20,6 +20,7 @@ export const MAX_SESSION_CHARS = 512 * 1024;
 
 export type SessionsRepository = ReturnType<typeof createSessionsRepository>;
 
+/** The session repository: load, save and clear one user's transcript. */
 export function createSessionsRepository(db: PluginContext['db']) {
     const repository = createRepository(sessionsTable, db);
 

@@ -1,10 +1,7 @@
 /**
- * Plugin custom field types.
- *
- * Collects `fields: [...]` registrations across the plugin set and guards
- * against collisions — with core field types and between plugins. Validation
- * runs at config resolution (crash-loud); the collected map feeds the
- * type generator and the `virtual:astromech/plugins/components` code-gen.
+ * Plugin custom field types: collects `fields: [...]` registrations across
+ * the plugin set and guards against collisions, with core types and between
+ * plugins. The collected map feeds the type generator and client code-gen.
  */
 
 import type { PluginDefinition, PluginFieldTypeRegistration } from '@/types/index';

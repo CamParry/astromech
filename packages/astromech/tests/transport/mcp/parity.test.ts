@@ -38,10 +38,6 @@ vi.mock('@/entries/service', () => ({
     },
 }));
 
-// ============================================================================
-// Stubs — resolveConfig requires a db + storage but never calls them here
-// ============================================================================
-
 const driver: DatabaseDriver = {
     type: 'test',
     getInstance() {
@@ -123,10 +119,6 @@ const resolved = resolveConfig({
 
 const manifest = generateMethodManifest(resolved, [testPlugin]);
 
-// ============================================================================
-// Tests
-// ============================================================================
-
 describe('contract ↔ MCP tool schema parity', () => {
     it('the fixture manifest is non-trivial', () => {
         // Guards the assertions below against silently passing on an empty list.
@@ -202,10 +194,6 @@ describe('contract ↔ MCP tool schema parity', () => {
     });
 });
 
-// ============================================================================
-// Coverage — the manifest and the tool list describe the same surface
-// ============================================================================
-
 describe('manifest ↔ MCP tool coverage', () => {
     const { tools, dispatch, skipped } = buildTools(manifest);
 
@@ -216,9 +204,8 @@ describe('manifest ↔ MCP tool coverage', () => {
     });
 
     it('skips only methods that declared themselves uncallable', () => {
-        // The P1 acceptance condition: with one generic dispatcher, "no adapter
-        // written yet" is no longer a reason anything is missing. What is left
-        // out is left out because the CONTRACT said so.
+        // The P1 acceptance condition: with one generic dispatcher, what is
+        // left out is left out because the CONTRACT said so.
         expect(skipped.map((s) => s.id).sort()).toEqual([
             'media.replace',
             'media.upload',
@@ -329,9 +316,7 @@ describe('manifest ↔ MCP tool coverage', () => {
     });
 });
 
-// ============================================================================
 // Method filtering — the DISPATCH map is what actually lets a call through
-// ============================================================================
 
 describe('filtered methods ↔ MCP tools', () => {
     /** Filter the real manifest, then build tools from it exactly as the transport does. */

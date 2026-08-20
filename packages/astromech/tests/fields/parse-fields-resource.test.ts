@@ -11,10 +11,6 @@ import type { Field, ResourceValidator, ValidationMode } from '@/types/fields';
 import { describe, expect, it, vi } from 'vitest';
 import { parseFields } from '@/fields/parse-fields';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 type CtxOverrides = Partial<{
     operation: 'create' | 'update';
     validation: ValidationMode;
@@ -39,10 +35,6 @@ function field(def: Partial<Field> & { name: string; type: string }): Field {
 }
 
 const title = field({ name: 'title', type: 'text' });
-
-// ---------------------------------------------------------------------------
-// What it reports
-// ---------------------------------------------------------------------------
 
 describe('resource validator results', () => {
     it('a string becomes a form-level message and leaves errors empty', async () => {
@@ -95,10 +87,6 @@ describe('resource validator results', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// Interaction with field errors
-// ---------------------------------------------------------------------------
-
 describe('resource validator and field errors', () => {
     it("a field's own error keeps a key the resource validator also claims", async () => {
         const { errors } = await parseFields(
@@ -123,10 +111,6 @@ describe('resource validator and field errors', () => {
         expect(form).toEqual(['Form-level problem']);
     });
 });
-
-// ---------------------------------------------------------------------------
-// What it receives
-// ---------------------------------------------------------------------------
 
 describe('resource validation context', () => {
     it('receives the coerced values', async () => {

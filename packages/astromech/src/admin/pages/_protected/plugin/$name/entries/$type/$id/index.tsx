@@ -1,9 +1,7 @@
 /**
- * Plugin entry-type edit route.
- *
- * Builds a plugin `EntriesMount` and renders the shared `EntryEditPage`. No
- * loader prefetch: the page's `useEntry` hook fetches via the one entries
- * client, addressing the type by its qualified id.
+ * Plugin entry-type edit route. Builds a plugin `EntriesMount` and renders
+ * the shared `EntryEditPage`; no loader prefetch, the page's `useEntry`
+ * hook fetches instead.
  */
 
 import type { EntriesService } from '@/types/index';

@@ -1,63 +1,7 @@
 /**
- * Field path grammar — the single shared addressing scheme for nested field data.
- *
- * Two independent subsystems have to agree, character for character, on how a
- * value buried inside a `group` / `repeater` / `blocks` / `tree` container is
- * named:
- *   - the field validation pipeline, which keys its error map by these paths;
- *   - the admin field renderers, which rebuild the same path so that
- *     `useFieldError(path)` finds the error the server produced.
- * A single mismatch means an error that exists but is never displayed, so the
- * grammar lives here rather than being re-derived at each site. A future
- * relationships index will key on the schema-path form.
- *
- * ## Items are addressed by `_id`, never by array index
- *
- * A container stores its items as an array, and that array's order is the only
- * place item order lives. Editors reorder, insert and delete items, so an
- * item's index shifts between form load and save — a path like `blocks[2].title`
- * can silently point at a different item than the one it was built for. The
- * persisted `_id` doesn't move, so `item` segments select by id.
- *
- * ## Two rendered forms
- *
- * An *instance* path locates a value: `field` segments join with `.`, and an
- * `item` segment renders as `[<id>]` appended directly to the segment before it
- * with no separating dot.
- *
- *     seo.title
- *     blocks[6f1e2a].heading
- *     sections[a1].items[b2].title
- *
- * A *schema* path locates a field *definition* rather than a value, so the
- * particular item is irrelevant: it is identical except every `item` segment
- * renders as empty brackets.
- *
- *     sections[].items[].title
- *
- * ## `_children` is never a segment
- *
- * The `tree` field type self-nests through a structural `_children` array. Item
- * ids are unique across a whole tree, so a node at any depth addresses as
- * `nav[<id>].label` — the depth never appears in the path. Paths chain only
- * through fields a schema author declared; structural keys (`_children`) are
- * skipped entirely.
- *
- * Item ids are opaque strings — real ones come from `crypto.randomUUID()`, which
- * contains `-` — so nothing here assumes an id character set beyond the brackets
- * it must not contain.
- *
- * Pure module: its only import is type-only (erased at build), so it is safe to
- * load in the browser. The formatters and parser are deliberately not
- * re-exported from `fields/index.js`, because that barrel reaches server code
- * and browser consumers must deep-import this file instead. `isValidFieldName`
- * is the one exception: it is on the public `astromech/fields` surface so a
- * plugin composing fields from stored JSON can check a name it did not author.
- *
- * `FieldPathSegment` itself is declared with the other field contracts in
- * `types/fields.ts` — the field type and the validation context both
- * reference it, and the pure leaf layer may not import a capability. It is
- * re-exported here so this module stays the one place to reach for the grammar.
+ * Field path grammar — the shared addressing scheme for nested field data,
+ * used by both the validation pipeline and the admin renderers. Items are
+ * addressed by `_id`, never array index; see `formatInstancePath`/`formatSchemaPath`.
  */
 
 import type { FieldPathSegment } from '@/types/fields';

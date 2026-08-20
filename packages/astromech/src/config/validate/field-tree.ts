@@ -45,10 +45,9 @@ export function validateFieldTree(
 }
 
 /**
- * Reject two data fields that write the same key. The value namespace is flat —
- * layout fields are unwrapped and `main` and `sidebar` share one value object —
- * so a name repeated at any depth under them silently overwrites in storage.
- * Layout names are excluded: they carry no value.
+ * Reject two data fields that write the same key. The value namespace is
+ * flat — layout fields are unwrapped and `main`/`sidebar` share one value
+ * object, so a name repeated at any depth would overwrite silently.
  */
 export function assertUniqueDataNames(
     typeKey: string,

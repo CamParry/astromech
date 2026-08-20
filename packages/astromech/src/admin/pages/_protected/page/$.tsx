@@ -1,11 +1,7 @@
 /**
  * Host-defined admin pages catch-all — mounts everything under `/admin/page/*`.
- *
- * Looks up the page by splat path in `adminConfig.pages` (resolved unified
- * ResolvedAdminPage[]), then renders:
- * - `fields` mode → shared SettingsPageForm (query-load, dirty tracking, header save)
- * - `component` mode → shared ComponentPageView, over the lazy import code-gen'd
- *   into `virtual:astromech/plugins/components` as `hostPages`
+ * Looks up the page by splat path in `adminConfig.pages`, then renders a
+ * `SettingsPageForm` (fields mode) or `ComponentPageView` (component mode).
  */
 
 import { createFileRoute } from '@tanstack/react-router';
@@ -19,10 +15,6 @@ import { EmptyState, Page, PageContent } from '@/admin/components/ui/index';
 import { useAiContext } from '@/admin/context/ai-context';
 import { usePermissions } from '@/admin/hooks/index';
 import { resolveLabel } from '@/admin/i18n/labels';
-
-// ============================================================================
-// Route component
-// ============================================================================
 
 function AppPage(): React.ReactElement {
     const params = Route.useParams();

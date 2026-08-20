@@ -55,10 +55,6 @@ const withId = (item: Record<string, unknown>): ItemWithId => ({
     _id: typeof item._id === 'string' ? item._id : crypto.randomUUID(),
 });
 
-// ============================================================================
-// SortableRepeaterItem
-// ============================================================================
-
 type SortableRepeaterItemProps = {
     item: ItemWithId;
     index: number;
@@ -244,10 +240,7 @@ function SortableRepeaterItem({
     );
 }
 
-// ============================================================================
-// RepeaterField
-// ============================================================================
-
+/** Field input for a repeatable list of field groups, with drag-to-reorder. */
 export function RepeaterField({
     name,
     value,

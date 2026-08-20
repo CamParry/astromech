@@ -3,33 +3,15 @@ import type { PluginNamespace } from '@/utilities/plugin-namespace';
 import { pluginNamespace, pluginServiceKey } from '@/utilities/plugin-namespace';
 
 /**
- * Plugin identity derivation and validation.
- *
- * `package` is the single canonical identifier a plugin declares. Every other
- * representation — table prefix, permission namespace, i18n namespace, HTTP
- * route segment, service key — derives from it mechanically. There is no
- * declared name, no alias, and no site-level override: a plugin's physical
- * table names are baked into its shipped migration SQL, so nothing an
- * override could move at boot actually moves.
- *
- * Derivation runs ONE direction — `package` → `namespace` → `serviceKey` — and
- * no consumer inverts it. Both steps are lossy, so an inverse would be a guess;
- * code that needs another form of an identifier resolves the identity once and
- * reads the field it wants. Anything that re-derives a string backwards from a
- * route segment or a property key is a bug.
- *
- * npm is the uniqueness authority for `package`; the lossy steps below it are
- * policed by {@link assertNoPluginCollisions}.
+ * Plugin identity derivation and validation. `package` is the single
+ * canonical identifier a plugin declares; every other form (table prefix,
+ * permission namespace, service key) derives from it mechanically, one direction only.
  */
 
 /**
- * The derivation itself lives in a pure leaf: `database/define-plugin-table`
- * needs the same string — and the same literal type — to build a plugin's
- * table prefix, and the database capability may not import the plugin runtime.
- * Re-exported here because this module is the plugin-identity surface every
- * other internal consumer imports from. Not part of the public surface — see
- * roadmap/completed/plugin-authoring-experience.md (2c): a plugin reads its
- * own resolved identity off `ctx.plugin` instead of deriving it.
+ * Re-exported from `database/define-plugin-table`, which needs the same
+ * string and type to build a plugin's table prefix without importing the
+ * plugin runtime. Not part of the public surface.
  */
 export { pluginNamespace, pluginServiceKey };
 export type { PluginNamespace };
@@ -40,10 +22,9 @@ export function pluginTablePrefix(namespace: string): string {
 }
 
 /**
- * In-tree module-specifier root for a plugin's admin assets (page/field
- * components, locale bundles) — `@/plugins/{namespace}`. When a plugin
- * graduates to its own package this becomes `{package}`, swapped here in one
- * place rather than at every asset site.
+ * In-tree module-specifier root for a plugin's admin assets —
+ * `@/plugins/{namespace}`. Becomes `{package}` once a plugin graduates to its
+ * own package, swapped here in one place rather than at every asset site.
  */
 export function pluginAssetRoot(namespace: string): string {
     return `@/plugins/${namespace}`;
@@ -100,20 +81,9 @@ export function resolvePluginPermission(namespace: string, permission: string): 
 }
 
 /**
- * Throw a build error if two plugins collide on either derived identifier.
- *
- * Both derivation steps are lossy, and each has its own collision:
- *   - `package` → `namespace` — `@acme/seo` and unscoped `acme-seo` both give
- *     `acme_seo`, which would share a table prefix and a permission namespace.
- *   - `namespace` → `serviceKey` — `acme_2fa` and `acme2fa` both give `acme2fa`,
- *     which would share an `Astromech.plugins.*` key and an HTTP route segment.
- *
- * The second check is what makes `serviceKey` safe to treat as a unique lookup
- * key everywhere else, so nothing has to invert the derivation to find a plugin.
- *
- * There is no override for either: the identifiers derive from the package
- * name, so this is the plugin authors' problem to resolve by renaming a
- * package, not the site's.
+ * Throw a build error if two plugins collide on either derived identifier:
+ * `package` → `namespace` (table prefix, permission namespace) or
+ * `namespace` → `serviceKey` (property key, HTTP route segment). No override.
  */
 export function assertNoPluginCollisions(
     defs: PluginDefinition[]
@@ -149,10 +119,6 @@ export function assertNoPluginCollisions(
 
     return identities;
 }
-
-// ============================================================================
-// Dependency checks (existence + basic semver range)
-// ============================================================================
 
 type SemVer = { major: number; minor: number; patch: number };
 
@@ -213,10 +179,8 @@ export function satisfiesRange(version: string, range: string): boolean {
 
 /**
  * Validate `dependsOn` declarations across the loaded plugin set: each
- * dependency must be present, satisfy the declared range (when both versions
- * are known), and appear *before* its dependent in `plugins: []` — execution
- * order is array order, so dependencies must resolve first. No auto-install /
- * negotiation / reordering. Throws a build error on failure.
+ * dependency must be present, satisfy its range, and appear before its
+ * dependent in `plugins: []`, since execution order is array order. Throws on failure.
  */
 export function checkPluginDependencies(defs: PluginDefinition[]): void {
     const indexByPackage = new Map<string, number>();

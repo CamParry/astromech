@@ -45,10 +45,6 @@ import { mediaRouter } from '@/transport/http/routes/media';
 import { settingsRouter } from '@/transport/http/routes/settings';
 import { usersRouter } from '@/transport/http/routes/users';
 
-// ---------------------------------------------------------------------------
-// Harness
-// ---------------------------------------------------------------------------
-
 type ErrorBody = {
     error: {
         code: string;
@@ -238,10 +234,6 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 
-// ---------------------------------------------------------------------------
-// entries
-// ---------------------------------------------------------------------------
-
 describe('PUT /entries/:type/:id — invalid field value', () => {
     async function createPost(app: OpenAPIHono<{ Variables: AuthVariables }>) {
         const res = await app.request('/entries/post', {
@@ -341,10 +333,6 @@ describe('POST /entries/:type/:id/staged — a service ValidationError', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// resource validator
-// ---------------------------------------------------------------------------
-
 describe('POST /entries/:type — resource validator', () => {
     it('carries a form-level message in details.form', async () => {
         const app = mountedApp();
@@ -396,10 +384,6 @@ describe('POST /entries/:type — resource validator', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// users
-// ---------------------------------------------------------------------------
-
 describe('users routes — invalid field value', () => {
     it('POST /users 422s with details.fields', async () => {
         const app = mountedApp();
@@ -437,10 +421,6 @@ describe('users routes — invalid field value', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// media
-// ---------------------------------------------------------------------------
-
 describe('PUT /media/:id — invalid field value', () => {
     it('422s with details.fields', async () => {
         const item = await mediaService.upload({
@@ -463,10 +443,6 @@ describe('PUT /media/:id — invalid field value', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// settings
-// ---------------------------------------------------------------------------
-
 describe('PUT /settings/:key — invalid field value', () => {
     it('422s with details.fields', async () => {
         const app = mountedApp();
@@ -484,10 +460,6 @@ describe('PUT /settings/:key — invalid field value', () => {
         });
     });
 });
-
-// ---------------------------------------------------------------------------
-// Non-ValidationError failures are still 500s
-// ---------------------------------------------------------------------------
 
 describe('a non-ValidationError failure', () => {
     it('still returns 500 INTERNAL_ERROR, and is logged', async () => {

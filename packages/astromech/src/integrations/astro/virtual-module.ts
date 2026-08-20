@@ -3,6 +3,7 @@
  * graph import.
  */
 
+/** Minimal Vite plugin shape for serving one virtual module. */
 export type VirtualModulePlugin = {
     name: string;
     resolveId(id: string): string | undefined;

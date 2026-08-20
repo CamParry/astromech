@@ -1,9 +1,7 @@
 /**
- * Entry create route — root entry types.
- *
- * Thin wrapper around the shared `EntryNewPage`. Carries the `locale` search
- * param through to the page (drives non-default-locale create flows). A
- * qualified type redirects to the plugin route.
+ * Entry create route — root entry types. Wraps the shared `EntryNewPage`,
+ * carrying the `locale` search param through; a qualified type redirects
+ * to the plugin route.
  */
 
 import type { EntriesMount } from '@/admin/components/entries/mount';

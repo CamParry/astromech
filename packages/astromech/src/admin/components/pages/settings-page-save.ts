@@ -1,10 +1,7 @@
 /**
  * Shared save helper for settings pages (app pages and plugin settings pages).
- *
- * Non-translatable: writes one blob at `baseKey`.
- * Translatable: partitions the values by field `translatable` flag, then
- * writes the shared (non-translatable) fields to `baseKey` and the
- * per-locale fields to `baseKey:<locale>`.
+ * Non-translatable: writes one blob at `baseKey`. Translatable: partitions by
+ * field `translatable` flag into `baseKey` (shared) and `baseKey:<locale>`.
  */
 
 import type { ResolvedEntryFields } from '@/types/fields';

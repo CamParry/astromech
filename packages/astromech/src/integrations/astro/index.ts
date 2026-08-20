@@ -2,11 +2,6 @@
  * Astromech's Astro integration. It loads the site's `astromech.config.ts`,
  * hands Astro the Vite config, injects the routes and the middleware, writes
  * the generated types and method manifest, and runs migrations.
- *
- * @example
- * // astro.config.mjs
- * import { astromech } from 'astromech/astro';
- * export default defineConfig({ integrations: [astromech()] });
  */
 
 import type { AstromechConfig, ResolvedConfig } from '@/types/index';
@@ -25,6 +20,7 @@ export type AstromechIntegrationOptions = {
     configFile?: string;
 };
 
+/** Build the Astro integration object registered in `astro.config.mjs`. */
 export function astromech(options: AstromechIntegrationOptions = {}): AstroIntegration {
     // dist/integrations/astro/index.js — go up three levels to reach package src/
     const packageSource = fileURLToPath(new URL('../../../src', import.meta.url));

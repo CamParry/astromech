@@ -2,10 +2,6 @@
  * Backups settings — an auto-rendered settings form at
  * `/admin/plugin/backups/settings`. Holds the retention count, which overrides
  * the `keep` option so an admin can change it without a redeploy.
- *
- * Values are stored as one object blob at `plugin:backups:/settings` in the
- * core settings table; `resolveKeep` in `../backup.ts` reads `retention` out
- * of it.
  */
 
 import { defineAdminPage } from 'astromech';

@@ -1,10 +1,7 @@
 /**
- * A media thumbnail that requests an image VARIANT rather than the original.
- *
- * The library used to point every tile at `Media.url` — a 1600px original
- * decoded into a 180px box, megabytes per page. Variants come off the media
- * route, which generates them on demand, so the only inputs needed are the
- * route, the width allowlist and the record's version.
+ * A media thumbnail that requests an image variant rather than the
+ * original. Variants come off the media route, generated on demand from
+ * the width allowlist and the record's version.
  */
 
 import type { Media } from '@/types/index';

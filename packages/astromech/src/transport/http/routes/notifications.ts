@@ -2,15 +2,8 @@
  * Notifications Routes
  *
  * Session-scoped — every call names the authenticated user, and filtering on
- * that id is the authorization. No permission contracts; the four methods
- * declare `sessionScoped` instead (`notifications/contract.ts`), and the scoped
- * handle fills `userId` from the request context.
- *
- * Routes:
- *   GET    /notifications        → notifications.list
- *   GET    /notifications/count  → notifications.count (bespoke)
- *   DELETE /notifications        → notifications.dismissAll
- *   DELETE /notifications/:id    → notifications.dismiss
+ * that id is the authorization; the four methods declare `sessionScoped`
+ * instead of a permission contract, and the scoped handle fills `userId`.
  */
 import type { RestRoute } from './rest-route';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
@@ -36,10 +29,7 @@ export const NOTIFICATIONS_ROUTES: RestRoute[] = attachHandlers(
 mountRestRoutes(router, notificationsContract, NOTIFICATIONS_ROUTES);
 documentBespokeRoutes(router, notificationsContract, NOTIFICATIONS_ROUTE_SPECS);
 
-// ============================================================================
 // GET /notifications/count — bespoke
-// ============================================================================
-
 // Not in the table: the method returns a scalar, and the route wraps it as
 // `{ data: { count } }` rather than the `{ data }` envelope.
 router.get('/count', async (c) => {

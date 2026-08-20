@@ -17,11 +17,9 @@ import {
 } from '@/config/validate/field-tree';
 
 /**
- * Resolve the capability set for an entry type.
- *
- * When storage supports a capability, the config default applies.
- * When storage does NOT support a capability and the user has not explicitly
- * requested it, the capability defaults to false (Phase 3: narrower sets).
+ * Resolve the capability set for an entry type. When storage supports a
+ * capability, the config default applies; when it doesn't and the user
+ * hasn't requested it, the capability defaults to false.
  */
 export function toResolvedEntryCapabilities(
     entryType: EntryType,
@@ -43,11 +41,8 @@ export function toResolvedEntryCapabilities(
 
 /**
  * Crash-loud validation for an entry type's capabilities and titleField.
- *
- * (a) Any capability explicitly requested by the config but not in
- *     storageSupports throws with a message mirroring plugin-runtime.ts style.
- * (b) titleField values other than 'title' or false are rejected: a type is
- *     titled on `title` or titleless, with no third option.
+ * Rejects any capability requested but unsupported by storage, and any
+ * titleField value other than `'title'` or `false`.
  */
 export function assertEntryTypeValid(
     typeKey: string,
@@ -109,12 +104,9 @@ export function collectSearchable(nodes: Field[], out: string[]): void {
 }
 
 /**
- * Resolve a single entry type: validate capabilities + titleField (crash-loud
- * on mismatch) and strip the live `storage` instance, which `ResolvedEntryType`
- * omits — a type's storage is reached through `entries/repository/registry.js`,
- * keyed by type, not off the config. `typeKey` is the type's addressable id —
- * the root `entries` key, or the qualified `{plugin}/{type}` key for plugin
- * types — stamped onto the result as `id` and used in error messages.
+ * Resolve a single entry type: validate capabilities and titleField
+ * (crash-loud on mismatch) and strip the live `storage` instance. `typeKey`
+ * is stamped onto the result as `id`, used in error messages.
  */
 export function toResolvedEntryType(
     typeKey: string,

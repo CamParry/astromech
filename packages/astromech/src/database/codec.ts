@@ -1,44 +1,15 @@
 /**
  * Row codec — bridges domain values (Date, parsed object, boolean) and storage
- * values for the Kysely query layer, reproducing the conversions Drizzle did
- * silently but `@libsql/client` does not.
- *
- * Two tiers, divided by whether the caller can hold the table's `Table`:
- *
- *   - **Table-keyed** (`decodeWith`/`encodeWith`/`encodePatchWith`) — the
- *     primary path, and the only one used for the 11 tables we own. A
- *     `defineTable` table carries per-column `serialize`/`parse`/`default`
- *     fns, so the caller passes the one it already has and the codec needs
- *     no table registry at all. Each column declares its own storage format,
- *     so `users` (TEXT ids and ISO-8601 TEXT timestamps — better-auth's adapter
- *     writes it too) converts through the same path as any other table.
- *
- *   - **Table-name-keyed** (`decode`/`encode`/`encodePatch`) — for the rows whose
- *     `Table` the caller *cannot* hold. Exactly two cases:
- *       1. `sessions`, `accounts` and `verifications`, which have no descriptor:
- *          nothing of ours writes them, better-auth's adapter owns them outright,
- *          so their conversions are hand-listed in `LEGACY_CODECS`.
- *       2. a plugin table reached by name — resolved through the tables
- *          `registerPlugins` hands to `registerTableCodec` at boot. The
- *          registry is mutable only because the table set is unknown until config
- *          resolves.
- *
- * There was a third tier: a hand-maintained name→`Table` map that let our own
- * tables be addressed by name as well. Every core call site passes its `Table`
- * now, so it is gone — adding a table no longer means remembering to list it
- * here, and this file imports no table at all (which keeps it a plain
- * `database/` leaf rather than a consumer of the schema aggregator).
- *
- * Keys are camelCase to match the active `CamelCasePlugin`. Do NOT use
- * `ParseJSONResultsPlugin` — it would corrupt TEXT columns holding JSON-ish
- * values (e.g. a setting `value` of `"123"`).
+ * values for Kysely, reproducing the conversions Drizzle did silently.
+ * Table-keyed (`*With`) functions are the primary path; name-keyed ones cover
+ * better-auth's tables and plugin tables reached by name.
  */
 
 import type { KyselyOf, Table, TableSelect } from '@/database/define-table';
 import type { Insertable, Updateable } from 'kysely';
 import { AstromechError } from '@/errors/index';
 
-// ── Plugin tables (registered at boot) ──────────────────────────────────────
+// Plugin tables (registered at boot)
 
 const PLUGIN_TABLES = new Map<string, Table>();
 
@@ -86,11 +57,9 @@ function sameTable(a: Table, b: Table): boolean {
     return aKeys.length === bKeys.length && aKeys.every((key, i) => key === bKeys[i]);
 }
 
-// ── Tables with no descriptor (better-auth) ─────────────────────────────────
-//
-// better-auth's adapter writes ISO-8601 TEXT timestamps, so `ts` parses and
-// serializes ISO. A number on the way in is tolerated for rows written when
-// these columns were assumed to be unix seconds; nothing writes one now.
+// Tables with no descriptor (better-auth) — its adapter writes ISO-8601 TEXT
+// timestamps, so `ts` parses/serializes ISO; a numeric legacy value (assumed
+// unix seconds) is tolerated but nothing writes one now.
 type LegacyKind = 'ts' | 'json' | 'bool';
 type LegacyCodec = Record<string, LegacyKind>;
 
@@ -105,14 +74,9 @@ const LEGACY_CODECS: Record<string, LegacyCodec> = {
     verifications: { expiresAt: 'ts', createdAt: 'ts', updatedAt: 'ts' },
 };
 
-// ============================================================================
-// Table-name-keyed API — the better-auth tables with no `Table`, plus any plugin
-// table a caller reaches by name. A name that matches neither passes through
-// untouched (only `undefined` keys are dropped), because there is nothing to
-// convert it by; if that name is one of ours, the caller wants `*With` below.
-// Exported from `astromech/database/schema` for seed scripts, which insert into
-// `accounts` directly.
-// ============================================================================
+// Table-name-keyed API — the better-auth tables with no `Table`, plus any
+// plugin table reached by name. A name matching neither passes through
+// untouched; if it's one of ours, the caller wants `*With` below.
 
 /** Storage → JS for one row of a better-auth or plugin table, keyed by name. */
 export function decode<T extends Record<string, unknown>>(tableName: string, row: T): T {
@@ -166,12 +130,9 @@ export function encodePatch(
     return serializeLegacy(legacy, values);
 }
 
-// ============================================================================
 // Table-keyed API — the primary path. The caller passes the `Table` it
 // already holds, so there is no name→table map to keep in step with the
-// `DB` interface, and plugin code converts its own rows without knowing the
-// `DB` key at all. Exported from root `astromech`.
-// ============================================================================
+// `DB` interface; plugin code converts its own rows without knowing the key.
 
 /**
  * Storage → JS for one table's row. Call on every row a query returns
@@ -232,10 +193,6 @@ export function encodePatchWith<D extends Table>(
 ): Updateable<KyselyOf<D>> {
     return serializeTable(table, values) as Updateable<KyselyOf<D>>;
 }
-
-// ============================================================================
-// Internals
-// ============================================================================
 
 function serializeTable(
     table: Table,

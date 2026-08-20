@@ -53,10 +53,6 @@ function baseConfig(overrides: Partial<AstromechConfig> = {}): AstromechConfig {
     };
 }
 
-// ---------------------------------------------------------------------------
-// (a) Default: no public keys
-// ---------------------------------------------------------------------------
-
 describe('publicSettingKeys — default', () => {
     it('is an empty array when no plugins and no publicSettings', () => {
         const resolved = resolveConfig(baseConfig());
@@ -87,9 +83,7 @@ describe('publicSettingKeys — default', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
 // (b) Plugin page with `public: true` → key + prefix
-// ---------------------------------------------------------------------------
 
 describe('publicSettingKeys — plugin page public: true', () => {
     it('adds the plugin settings key and its locale prefix', () => {
@@ -153,9 +147,7 @@ describe('publicSettingKeys — plugin page public: true', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
 // (c) config.publicSettings derives key + prefix
-// ---------------------------------------------------------------------------
 
 describe('publicSettingKeys — config.publicSettings', () => {
     it('includes raw publicSettings entries', () => {
@@ -185,10 +177,6 @@ describe('publicSettingKeys — config.publicSettings', () => {
         expect(resolved.publicSettingKeys).toEqual(['my-key', 'my-key:']);
     });
 });
-
-// ---------------------------------------------------------------------------
-// (d) No duplicates
-// ---------------------------------------------------------------------------
 
 describe('publicSettingKeys — no duplicates', () => {
     it('does not duplicate a key when plugin page key and publicSettings overlap', () => {

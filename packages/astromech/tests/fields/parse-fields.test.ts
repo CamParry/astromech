@@ -4,10 +4,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { registerFieldType } from '@/fields/field-type-registry';
 import { parseFields } from '@/fields/parse-fields';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 type CtxOverrides = Partial<{
     operation: 'create' | 'update';
     validation: ValidationMode;
@@ -29,10 +25,6 @@ function fakeCtx(overrides: CtxOverrides = {}) {
 function field(def: Partial<Field> & { name: string; type: string }): Field {
     return def as Field;
 }
-
-// ---------------------------------------------------------------------------
-// required
-// ---------------------------------------------------------------------------
 
 describe('required', () => {
     it('empty + required → error keyed by field name', async () => {
@@ -98,13 +90,11 @@ describe('required', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
 // stage: completeness vs correctness
 //
 // `required` and a container's `min` are COMPLETENESS — "is this finished?" —
 // and run only at `'publish'`. Everything else, `max` included, is CORRECTNESS
 // and runs on every write.
-// ---------------------------------------------------------------------------
 
 describe('stage', () => {
     const bounded = field({
@@ -261,10 +251,6 @@ describe('stage', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// default
-// ---------------------------------------------------------------------------
-
 describe('default', () => {
     it('create + absent → field.defaultValue applied', async () => {
         const { values } = await parseFields(
@@ -313,10 +299,6 @@ describe('default', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// coerce
-// ---------------------------------------------------------------------------
-
 describe('coerce', () => {
     // Register a throwaway field type with a trim coerce fn.
     registerFieldType({
@@ -347,10 +329,6 @@ describe('coerce', () => {
         expect(errors.name).toEqual(['This field is required']);
     });
 });
-
-// ---------------------------------------------------------------------------
-// Rule: minLength
-// ---------------------------------------------------------------------------
 
 describe('rule: minLength', () => {
     it('pass: string meets min length', async () => {
@@ -413,10 +391,6 @@ describe('rule: minLength', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// Rule: maxLength
-// ---------------------------------------------------------------------------
-
 describe('rule: maxLength', () => {
     it('pass: string at max length', async () => {
         const { errors } = await parseFields(
@@ -436,10 +410,6 @@ describe('rule: maxLength', () => {
         expect(errors.slug).toEqual(['Must be at most 5 characters']);
     });
 });
-
-// ---------------------------------------------------------------------------
-// Rule: min
-// ---------------------------------------------------------------------------
 
 describe('rule: min', () => {
     it('pass: number meets minimum', async () => {
@@ -470,10 +440,6 @@ describe('rule: min', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// Rule: max
-// ---------------------------------------------------------------------------
-
 describe('rule: max', () => {
     it('pass: number at maximum', async () => {
         const { errors } = await parseFields(
@@ -493,10 +459,6 @@ describe('rule: max', () => {
         expect(errors.score).toEqual(['Must be at most 100']);
     });
 });
-
-// ---------------------------------------------------------------------------
-// Rule: pattern
-// ---------------------------------------------------------------------------
 
 describe('rule: pattern', () => {
     it('pass: string matches pattern', async () => {
@@ -550,10 +512,6 @@ describe('rule: pattern', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// Rule: email
-// ---------------------------------------------------------------------------
-
 describe('rule: email', () => {
     it('pass: valid email', async () => {
         const { errors } = await parseFields(
@@ -574,10 +532,6 @@ describe('rule: email', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// Rule: url
-// ---------------------------------------------------------------------------
-
 describe('rule: url', () => {
     it('pass: valid URL', async () => {
         const { errors } = await parseFields(
@@ -597,10 +551,6 @@ describe('rule: url', () => {
         expect(errors.website).toEqual(['Must be a valid URL']);
     });
 });
-
-// ---------------------------------------------------------------------------
-// Rule: enum
-// ---------------------------------------------------------------------------
 
 describe('rule: enum', () => {
     it('pass: value in enum', async () => {
@@ -667,12 +617,10 @@ describe('rule: enum', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
 // One message per field, in a fixed order
 //
 // A field reports its FIRST failure only: required → container counts → the
 // type's own validator → the author's declarative rules in declaration order.
-// ---------------------------------------------------------------------------
 
 describe('one message per field', () => {
     it('two failing rules → only the first-declared one is reported', async () => {
@@ -771,10 +719,6 @@ describe('one message per field', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// Rule: unique
-// ---------------------------------------------------------------------------
-
 describe('rule: unique', () => {
     it('isUnique returns true → no error', async () => {
         const isUnique = vi.fn(async () => true);
@@ -804,10 +748,6 @@ describe('rule: unique', () => {
         );
     });
 });
-
-// ---------------------------------------------------------------------------
-// Rule: custom
-// ---------------------------------------------------------------------------
 
 describe('rule: custom', () => {
     it('custom returns true → no error', async () => {
@@ -907,10 +847,6 @@ describe('rule: custom', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// Layout flattening
-// ---------------------------------------------------------------------------
-
 describe('layout flattening', () => {
     it('section wrapping a required field → error keyed by inner field name', async () => {
         const { errors } = await parseFields(
@@ -952,9 +888,7 @@ describe('layout flattening', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
 // Nested fields — keyed by path, never by bare child name
-// ---------------------------------------------------------------------------
 
 describe('nested fields', () => {
     /**
@@ -980,10 +914,6 @@ describe('nested fields', () => {
         expect(errors.address).toBeUndefined();
     });
 });
-
-// ---------------------------------------------------------------------------
-// Unknown keys & clean state
-// ---------------------------------------------------------------------------
 
 describe('unknown keys', () => {
     it('a key matching no declared field is dropped', async () => {

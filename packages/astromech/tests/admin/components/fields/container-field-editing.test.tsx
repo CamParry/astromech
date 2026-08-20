@@ -104,10 +104,6 @@ function pathShapedKeys(obj: Record<string, unknown>): string[] {
     return Object.keys(obj).filter((key) => /[.[\]]/.test(key));
 }
 
-// ============================================================================
-// repeater
-// ============================================================================
-
 describe('repeater sub-field editing', () => {
     const socials: Field = {
         name: 'socials',
@@ -176,10 +172,6 @@ describe('repeater sub-field editing', () => {
     });
 });
 
-// ============================================================================
-// group
-// ============================================================================
-
 describe('group sub-field editing', () => {
     const quote: Field = {
         name: 'quote',
@@ -218,10 +210,6 @@ describe('group sub-field editing', () => {
         f.unmount();
     });
 });
-
-// ============================================================================
-// blocks
-// ============================================================================
 
 describe('blocks sub-field editing', () => {
     const content: Field = {
@@ -280,10 +268,6 @@ describe('blocks sub-field editing', () => {
         f.unmount();
     });
 });
-
-// ============================================================================
-// tree
-// ============================================================================
 
 describe('tree sub-field editing', () => {
     const nav: Field = {
@@ -347,9 +331,7 @@ describe('tree sub-field editing', () => {
     });
 });
 
-// ============================================================================
 // nesting — the recursion, not just one level
-// ============================================================================
 
 describe('group nested in a repeater item', () => {
     const people: Field = {

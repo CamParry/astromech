@@ -1,9 +1,7 @@
 /**
- * Admin edit path for an entry, from its wire type id.
- *
- * A plugin entry type lives at `/plugin/<ns>/entries/<bare-type>/<id>`. The root
- * `/entries/<qualified>/<id>` route redirects there, so both forms resolve, but
- * links are built in the canonical plugin shape.
+ * Admin edit path for an entry, from its wire type id. A plugin entry type
+ * lives at `/plugin/<ns>/entries/<bare-type>/<id>`; the root route redirects
+ * there, but links are built in the canonical plugin shape.
  */
 
 import { parseEntryTypeId } from '@/entries/type-ids.shared';

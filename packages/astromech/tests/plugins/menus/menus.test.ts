@@ -19,8 +19,6 @@ import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { settingsService } from '@/settings/index';
 
-// ── helpers ──────────────────────────────────────────────────────────────────
-
 type MenusService = {
     get(input: { key: string; locale?: string }): Promise<MenuItem[] | null>;
 };
@@ -53,14 +51,10 @@ function makeMenusConfig(
     };
 }
 
-// ── setup ─────────────────────────────────────────────────────────────────────
-
 beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeMenusConfig());
 });
-
-// ── plugin structure tests ────────────────────────────────────────────────────
 
 describe('menus — plugin structure', () => {
     it('generates one settings page per configured menu', () => {
@@ -112,8 +106,6 @@ describe('menus — plugin structure', () => {
         expect(pages[0]?.permission).toBe('settings:read');
     });
 });
-
-// ── Service tests ────────────────────────────────────────────────────────────
 
 describe('menus.get — unconfigured key', () => {
     it('returns null for a key not in the menus config', async () => {

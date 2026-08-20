@@ -11,18 +11,9 @@ import { createRelationshipRepository } from '@/database/repository/relationship
 import { mediaTable } from '@/database/tables';
 
 /**
- * Media storage — the only place Kysely touches the `media` table.
- *
- * Row CRUD goes through `createRepository(mediaTable)`, which owns encoding, `updatedAt`
- * stamping and row decoding. `list`/`count` stay on the raw handle because the
- * mime-bucket filter is not expressible in the flat `where` DSL: `documents` is an
- * OR and `other` is a raw negated-LIKE fragment. They compile their DSL-expressible
- * part (the filename search) with the wrapper's own `where`, handed out by
- * `query()`, and AND the bucket predicate onto it — so the two share ONE predicate
- * and cannot drift apart.
- *
- * The file-storage driver calls (`put`/`delete`, variant cleanup) stay in the
- * service: they are not database access.
+ * Media repository — the only place Kysely touches the `media` table.
+ * `list`/`count` stay on the raw handle because the mime-bucket filter isn't
+ * expressible in the flat `where` DSL; blob writes stay in the service.
  */
 
 type Predicate = ReturnType<QueryHandle<typeof mediaTable>['where']>;

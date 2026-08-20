@@ -1,8 +1,7 @@
 /**
  * Loads the app-owned migration provider from the app's working directory.
- *
- * jiti rather than `import()`: the generated module and its siblings are
- * TypeScript, which plain Node cannot load.
+ * Uses jiti rather than `import()`: the generated module and its siblings
+ * are TypeScript, which plain Node cannot load.
  */
 
 import type { MigrationProvider } from 'kysely';

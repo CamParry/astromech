@@ -1,8 +1,7 @@
 /**
  * The base for errors Astromech throws on purpose: a broken invariant, a
- * misconfiguration, a driver failure. `name` marks the origin on any console
- * that prints an uncaught error (Astro, Workers, the CLI, MCP), and `name` is
- * never serialised into an HTTP response, so the marker stays off the wire.
+ * misconfiguration, a driver failure. `name` marks the origin in logs but is
+ * never serialised into an HTTP response.
  */
 export class AstromechError extends Error {
     constructor(message: string, options?: { cause?: unknown }) {

@@ -1,16 +1,7 @@
 /**
- * Shared entry-type list page body.
- *
- * Parameterized by a single `EntriesMount` so it serves both root entry
- * types and plugin-namespaced entry types. Columns render through the
- * rendering layer: `resolveTable(config)` builds the ordered column set and each
- * cell is resolved from the cell registry by kind (Phase 4). The page shell —
- * toolbar, filters, bulk actions, view toggle, context menus — stays
- * hand-written and consumes the resolved table.
- *
- * Shows a searchable, filterable, paginated table or grid of entries. Supports
- * bulk selection and row-level actions (edit, duplicate, trash/restore).
- * Per-type view preference is persisted to localStorage.
+ * Shared entry-type list page body, parameterized by an `EntriesMount` so it
+ * serves both root and plugin-namespaced entry types. Searchable, filterable,
+ * paginated table/grid of entries with bulk actions and per-type view state.
  */
 
 import type { EntriesListSearch, EntriesMount } from './mount';
@@ -86,19 +77,11 @@ import {
 } from '@/admin/rendering/resolve';
 import { resolveContentLocale } from '@/utilities/locale';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 type StatusFilter = 'all' | 'unpublished' | 'published' | 'scheduled' | 'trashed';
 
 type BulkAction = 'publish' | 'unpublish' | 'trash' | 'delete' | 'restore';
 
 type ViewMode = 'list' | 'grid';
-
-// ============================================================================
-// Helpers
-// ============================================================================
 
 const ALL_COLUMNS = [
     'title',
@@ -148,10 +131,6 @@ function writeStoredColumns(type: string, cols: Set<string>): void {
 }
 
 const PER_PAGE = 20;
-
-// ============================================================================
-// Sub-components
-// ============================================================================
 
 type RowActionsProps = {
     entry: Entry;
@@ -225,10 +204,6 @@ function buildRowItems(props: RowActionsProps): DropdownItem[] {
     }
     return items;
 }
-
-// ============================================================================
-// Table row with context menu
-// ============================================================================
 
 type EntryTableRowProps = RowActionsProps & {
     selected: boolean;
@@ -320,10 +295,6 @@ function EntryTableRow({
         </>
     );
 }
-
-// ============================================================================
-// Grid card with context menu
-// ============================================================================
 
 type EntryCardProps = RowActionsProps & {
     columns: TableColumn[];
@@ -439,10 +410,6 @@ function EntryCard({
         </>
     );
 }
-
-// ============================================================================
-// Page
-// ============================================================================
 
 /** Partial URL-search update; an explicit `undefined` value clears that key. */
 type EntriesSearchPatch = {

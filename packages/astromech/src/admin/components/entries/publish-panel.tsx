@@ -11,10 +11,6 @@ import { useTranslation } from 'react-i18next';
 import { formatDatetime } from '@/utilities/dates';
 import { Input, Panel, Select } from '../ui/index';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 export type PublishPanelProps = {
     status: EntryStatus;
     /** Form state for the `datetime-local` input, so a `YYYY-MM-DDTHH:mm` string. */
@@ -25,10 +21,6 @@ export type PublishPanelProps = {
     onPublishedAtChange: (value: string) => void;
     readOnly?: boolean;
 };
-
-// ============================================================================
-// Component
-// ============================================================================
 
 export function PublishPanel({
     status,

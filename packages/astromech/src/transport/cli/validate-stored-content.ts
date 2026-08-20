@@ -4,20 +4,6 @@
  * Validation is write-time only, so tightening a rule never flags rows already
  * stored. `validateStoredContent` walks stored content and reports every row
  * whose field data the CURRENT rules would reject. It writes nothing.
- *
- * ## Staying inert
- *
- * The pipeline's returned values are DISCARDED. It copies its input, but the
- * copy is shallow and `children()` mints item uuids into what it hands back —
- * dropping the result is what keeps the run read-only. `coerceOnly: new Set()`
- * turns coercion off entirely (defaults, `children()` normalization and
- * validation still run), so a finding never depends on a coercer having
- * rewritten the stored value first. The consequence: a stored value a coercer
- * would repair is reported, so the findings are a SUPERSET of what a write
- * today would reject.
- *
- * Each domain's context otherwise mirrors its own update path. `excludeId`
- * matters most: without it every stored row's `unique` rule collides with itself.
  */
 
 import type { FieldErrors } from '@/types/fields';
@@ -75,10 +61,6 @@ export async function validateStoredContent(
 
     return report;
 }
-
-// ============================================================================
-// Entries
-// ============================================================================
 
 /**
  * Every live entry row, from the `entries` table and from the types backed by
@@ -188,10 +170,6 @@ function tableBackedEntryTypes(type: string | undefined): string[] {
         .filter(hasEntryRepositoryOverride)
         .filter((candidate) => type === undefined || candidate === type);
 }
-
-// ============================================================================
-// Media, users and settings
-// ============================================================================
 
 /**
  * Media rows, with `media/operations/update.ts`'s context. Rows come straight
@@ -337,10 +315,6 @@ async function checkSettings(report: ValidationReport): Promise<void> {
         );
     }
 }
-
-// ============================================================================
-// Shared
-// ============================================================================
 
 /** Append one pipeline result's errors, then its form-level messages. */
 function collect(

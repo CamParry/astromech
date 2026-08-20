@@ -1,15 +1,9 @@
 /**
  * `astromech plugin:purge <package>`
  *
- * Removes every trace of an uninstalled plugin from the app's database: its
- * `plugin_<namespace>_*` tables, its `plugin_<namespace>_*` rows in
- * `kysely_migration`, and its `_astromech_plugins` tracking row. Destructive and
- * irreversible — the plugin must already be gone from `astromech.config.ts`,
- * otherwise the next boot would simply recreate everything this dropped.
- *
- * Takes the package name (`@astromech/redirects`), not the namespace: at a
- * destructive call site the canonical identifier is the unambiguous one, and
- * the namespace is derived from it here.
+ * Removes every trace of an uninstalled plugin from the app's database —
+ * destructive and irreversible. Takes the package name, not the namespace,
+ * since a destructive call site needs the unambiguous identifier.
  */
 
 import type { DB } from '@/database/types';

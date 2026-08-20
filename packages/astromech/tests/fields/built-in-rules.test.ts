@@ -26,10 +26,6 @@ import {
 } from '@/fields/built-in-rules';
 import { parseFields } from '@/fields/parse-fields';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function ctx(value: unknown): FieldValidationContext {
     return {
         value,
@@ -52,10 +48,6 @@ function fakeCtx() {
         lookups: { isUnique: async () => true },
     };
 }
-
-// ---------------------------------------------------------------------------
-// email
-// ---------------------------------------------------------------------------
 
 describe('coerceEmail', () => {
     it('trims a string', () => {
@@ -87,10 +79,6 @@ describe('validateEmail', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// url
-// ---------------------------------------------------------------------------
-
 describe('coerceUrl', () => {
     it('trims a string', () => {
         expect(coerceUrl('  https://example.com  ')).toBe('https://example.com');
@@ -115,10 +103,6 @@ describe('validateUrl', () => {
         expect(await validateUrl(ctx(42))).toBe('Must be a valid URL');
     });
 });
-
-// ---------------------------------------------------------------------------
-// slug
-// ---------------------------------------------------------------------------
 
 describe('validateSlug', () => {
     it('an already-normal slug → true', async () => {
@@ -148,10 +132,6 @@ describe('validateSlug', () => {
         expect(await validateSlug(ctx(42))).toBe('Must be text');
     });
 });
-
-// ---------------------------------------------------------------------------
-// isJsonValue / validateJson
-// ---------------------------------------------------------------------------
 
 describe('isJsonValue', () => {
     it('null → true', () => expect(isJsonValue(null)).toBe(true));
@@ -185,10 +165,6 @@ describe('validateJson', () => {
         expect(await validateJson(ctx(NaN))).toBe('Must be valid JSON');
     });
 });
-
-// ---------------------------------------------------------------------------
-// key-value
-// ---------------------------------------------------------------------------
 
 describe('coerceKeyValue', () => {
     it('plain object: filters empty keys and null/undefined values, stringifies non-strings', () => {
@@ -233,10 +209,6 @@ describe('validateKeyValue', () => {
         );
     });
 });
-
-// ---------------------------------------------------------------------------
-// parseFields integration
-// ---------------------------------------------------------------------------
 
 describe('parseFields integration', () => {
     it('email field with invalid value → errors.f', async () => {
@@ -299,10 +271,6 @@ describe('parseFields integration', () => {
         expect(values.f).toEqual({ a: '1' });
     });
 });
-
-// ---------------------------------------------------------------------------
-// choice
-// ---------------------------------------------------------------------------
 
 describe('validateChoice', () => {
     const field: Field = {
@@ -372,10 +340,6 @@ describe('validateMultiChoice', () => {
         );
     });
 });
-
-// ---------------------------------------------------------------------------
-// number, boolean, date
-// ---------------------------------------------------------------------------
 
 describe('coerceNumber', () => {
     it('parses a numeric string', () => {
@@ -452,10 +416,6 @@ describe('validateDate', () => {
         expect(await validateDate(ctx(1735689600000))).toBe('Must be a date');
     });
 });
-
-// ---------------------------------------------------------------------------
-// reference
-// ---------------------------------------------------------------------------
 
 describe('validateReference', () => {
     const single: Field = { name: 'f', type: 'relationship', target: 'post' };
@@ -573,10 +533,6 @@ describe('validateReference', () => {
         });
     });
 });
-
-// ---------------------------------------------------------------------------
-// text, link, containers
-// ---------------------------------------------------------------------------
 
 describe('validateText', () => {
     it('accepts a string', async () => {

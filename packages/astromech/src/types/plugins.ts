@@ -32,18 +32,10 @@ import type { z } from '@hono/zod-openapi';
 import type { Kysely, MigrationProvider } from 'kysely';
 import type { ComponentType, ReactElement } from 'react';
 
-// ============================================================================
-// Email overrides (carried over from the prior plugin surface)
-// ============================================================================
-
 export type EmailTemplateOverride = {
     name: string;
     component: ComponentType<Record<string, unknown>>;
 };
-
-// ============================================================================
-// Plugin Context — unified across hooks / service / cron / api
-// ============================================================================
 
 /** Storage scoped to a plugin — keys are transparently namespaced under `plugin/<alias>/`. */
 export type PluginStorage = {
@@ -121,6 +113,7 @@ export type PluginConfigView = Pick<
     entryTypesWithField(fieldName: string): string[];
 };
 
+/** Everything a plugin's hooks, service methods, cron jobs and routes run with. */
 export type PluginContext = {
     db: Kysely<DB>;
     /**
@@ -187,10 +180,6 @@ export type PluginContext = {
      */
     methods: PluginMethods;
 };
-
-// ============================================================================
-// Service methods + raw escape hatch
-// ============================================================================
 
 /**
  * Access policy for a plugin service method or raw route. There is no
@@ -269,19 +258,11 @@ export type PluginRawRoute = {
     handler: (request: Request, ctx: PluginContext) => Promise<Response> | Response;
 };
 
-// ============================================================================
-// CRON
-// ============================================================================
-
 export type PluginCronJob = {
     name: string;
     schedule: string;
     handler: (ctx: PluginContext) => Promise<void> | void;
 };
-
-// ============================================================================
-// Admin surfaces
-// ============================================================================
 
 /**
  * Derived sidebar tree node. Plugin authors don't write these — core derives
@@ -339,10 +320,6 @@ export type PluginFieldTypeRegistration = {
     serverValidate?: FieldValidator;
 };
 
-// ============================================================================
-// Plugin Definition
-// ============================================================================
-
 /**
  * What a plugin declares about itself, and nothing more. `package` is the one
  * canonical identifier — the namespace behind every table prefix, permission
@@ -398,7 +375,7 @@ export type PluginDefinition = PluginIdentity & {
      */
     root?: string;
 
-    // ── Declarative surfaces ────────────────────────────────────────────
+    // Declarative surfaces
     /**
      * The permission keys this plugin makes grantable, declared with
      * `definePermissions` — a flat record of **bare** keys (no `:`), which core
@@ -458,7 +435,7 @@ export type PluginDefinition = PluginIdentity & {
     dependsOn?: Record<string, string>;
     emails?: EmailTemplateOverride[];
 
-    // ── Imperative escape hatch ─────────────────────────────────────────
+    // Imperative escape hatch
     /** Runs once per runtime boot. Optional. */
     setup?: (ctx: PluginContext) => void | Promise<void>;
 };

@@ -20,10 +20,6 @@ import {
 
 declare const __ASTROMECH_BASE_PATH__: string;
 
-// ============================================================================
-// Href normalisation
-// ============================================================================
-
 /**
  * `href` is stored admin-relative (e.g. `/entries/123`). `navigate` is already
  * scoped to the admin basepath, so an href carrying the base (`/cms/entries`)
@@ -37,10 +33,6 @@ function toAdminRelative(href: string): string {
     }
     return href;
 }
-
-// ============================================================================
-// Relative time formatter
-// ============================================================================
 
 function formatRelativeTime(dateStr: string): string {
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -56,10 +48,6 @@ function formatRelativeTime(dateStr: string): string {
     if (hours < 24) return rtf.format(-hours, 'hour');
     return rtf.format(-days, 'day');
 }
-
-// ============================================================================
-// Notification row
-// ============================================================================
 
 type NotificationRowProps = {
     notification: Notification;
@@ -111,10 +99,7 @@ function NotificationRow({ notification, onDismiss, onClick }: NotificationRowPr
     );
 }
 
-// ============================================================================
-// Bell component
-// ============================================================================
-
+/** Topbar bell trigger with unread badge and a lazily-loaded dropdown panel. */
 export function NotificationBell() {
     const { t } = useTranslation();
     const navigate = useNavigate();

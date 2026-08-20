@@ -11,9 +11,8 @@ export type SelectionResult = {
 
 /**
  * Row selection for a list. Pass `scope` — a string identifying the active
- * query — to drop the selection whenever it changes: a selection made under
- * one filter must not survive into another, or a bulk action operates on rows
- * the user can no longer see.
+ * query — to drop the selection whenever it changes, so a selection made
+ * under one filter doesn't survive into another.
  */
 export function useSelection<T extends { id: string }>(
     items: T[],

@@ -18,10 +18,6 @@ import { UnknownSortKeyError } from '@/entries/errors';
 import { entriesService } from '@/entries/index';
 import { tableRepository } from '@/entries/repository/table';
 
-// ============================================================================
-// Scratch table definition
-// ============================================================================
-
 /** Crockford base32, the ULID alphabet — ids are 26 uppercase chars. */
 const ULID = /^[0-9A-HJKMNP-TV-Z]{26}$/;
 
@@ -39,10 +35,6 @@ const testLinksTable = defineTable('test_links', ({ col }) => ({
 
 const repository = tableRepository(testLinksTable);
 
-// ============================================================================
-// Test setup
-// ============================================================================
-
 beforeEach(async () => {
     const db = await createTestDb();
     setupTestConfig();
@@ -59,20 +51,12 @@ beforeEach(async () => {
         )`.execute(db);
 });
 
-// ============================================================================
-// supports
-// ============================================================================
-
 describe('supports', () => {
     it('declares no capabilities (empty frozen array)', () => {
         expect(repository.supports).toEqual([]);
         expect(Object.isFrozen(repository.supports)).toBe(true);
     });
 });
-
-// ============================================================================
-// create
-// ============================================================================
 
 describe('create', () => {
     it('generates an id, sets timestamps, writes field columns', async () => {
@@ -126,10 +110,6 @@ describe('create', () => {
     });
 });
 
-// ============================================================================
-// get
-// ============================================================================
-
 describe('get', () => {
     it('returns null for missing id', async () => {
         const result = await repository.get('no-such-id');
@@ -146,10 +126,6 @@ describe('get', () => {
         expect(got?.fields['from']).toBe('/a');
     });
 });
-
-// ============================================================================
-// update
-// ============================================================================
 
 describe('update', () => {
     it('merges fields and bumps updatedAt; createdAt unchanged', async () => {
@@ -180,10 +156,6 @@ describe('update', () => {
     });
 });
 
-// ============================================================================
-// delete
-// ============================================================================
-
 describe('delete', () => {
     it('hard-deletes the row', async () => {
         const created = await repository.create({
@@ -195,10 +167,6 @@ describe('delete', () => {
         expect(gone).toBeNull();
     });
 });
-
-// ============================================================================
-// existingIds
-// ============================================================================
 
 describe('existingIds', () => {
     it('reports the ids this table holds and omits the rest', async () => {
@@ -216,10 +184,6 @@ describe('existingIds', () => {
         expect(await repository.existingIds?.([])).toEqual(new Set());
     });
 });
-
-// ============================================================================
-// list — pagination
-// ============================================================================
 
 describe('list – pagination', () => {
     async function seed(n: number) {
@@ -252,10 +216,6 @@ describe('list – pagination', () => {
         expect(res.total).toBe(7);
     });
 });
-
-// ============================================================================
-// list — sort
-// ============================================================================
 
 describe('list – sort', () => {
     it('sorts asc/desc on a field column', async () => {
@@ -308,10 +268,6 @@ describe('list – sort', () => {
         ).rejects.toThrow(UnknownSortKeyError);
     });
 });
-
-// ============================================================================
-// list — where filters
-// ============================================================================
 
 describe('list – where filters', () => {
     it('eq filter', async () => {
@@ -401,10 +357,6 @@ describe('list – where filters', () => {
     });
 });
 
-// ============================================================================
-// list — search + searchFields
-// ============================================================================
-
 describe('list – search and searchFields', () => {
     it('matches either column when searching two searchFields', async () => {
         await repository.create({
@@ -474,10 +426,6 @@ describe('list – search and searchFields', () => {
     });
 });
 
-// ============================================================================
-// uniqueSlug
-// ============================================================================
-
 describe('uniqueSlug', () => {
     it('throws with an instructional error', () => {
         expect(() => repository.uniqueSlug('link', 'en', 'some-slug')).toThrow(
@@ -485,10 +433,6 @@ describe('uniqueSlug', () => {
         );
     });
 });
-
-// ============================================================================
-// transaction
-// ============================================================================
 
 describe('transaction', () => {
     // NOTE: libsql :memory: opens a new connection after a transaction completes
@@ -549,10 +493,6 @@ describe('transaction', () => {
         expect(ids).toHaveLength(2);
     });
 });
-
-// ============================================================================
-// Orchestrator integration
-// ============================================================================
 
 describe('entries-service integration', () => {
     function makeLinksPlugin(): PluginDefinition {

@@ -1,15 +1,7 @@
 /**
- * Pure partition + merge helpers for settings-page per-locale storage.
- *
- * No DB, no virtual modules, no side-effects — safe to import in tests.
- *
- * Storage model:
- *   `<path>`           → shared (non-translatable top-level) fields
- *   `<path>:<locale>`  → per-locale (translatable) fields
- *
- * "Top-level data field" = walk the tree; layout fields are transparent;
- * nested fields (group/repeater/blocks) and leaves are a single key whose
- * own `translatable` flag governs.
+ * Pure partition + merge helpers for settings-page per-locale storage. No
+ * DB, no virtual modules — safe to import in tests. `<path>` holds shared
+ * fields, `<path>:<locale>` holds per-locale (translatable) fields.
  */
 
 import type { ResolvedEntryFields } from '@/types/fields';
@@ -23,9 +15,8 @@ export type PartitionedGlobalValues = {
 
 /**
  * Split a values object by each top-level field's `translatable` flag.
- * Fields with `translatable === false` go to `shared`; all others go to
- * `perLocale`. Unknown keys (not found in the field tree) default to
- * `perLocale` (safe).
+ * `translatable === false` goes to `shared`; everything else, including
+ * unknown keys, goes to `perLocale`.
  */
 export function partitionGlobalValues(
     fields: ResolvedEntryFields,
@@ -58,15 +49,9 @@ export function mergeGlobalValues(
 }
 
 /**
- * Locale-aware merge for `settings.get`.
- *
- * Given a `base` value stored at `<key>` and an optional `localeValue` stored
- * at `<key>:<locale>`, returns:
- * - `{ ...base, ...localeValue }` when BOTH are plain (non-array) objects.
- * - `base` in every other case (scalar base, null base, null/absent locale
- *   value, or array on either side).
- *
- * Pure — no DB, no virtual-module imports.
+ * Locale-aware merge for `settings.get`: `{ ...base, ...localeValue }` when
+ * both are plain objects, else `base` unchanged (scalar, null, or an array
+ * on either side). Pure — no DB, no virtual-module imports.
  */
 export function mergeLocaleSetting(
     base: JsonValue | null,

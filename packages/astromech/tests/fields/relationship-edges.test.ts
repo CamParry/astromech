@@ -228,9 +228,7 @@ describe('collectRelationshipEdges — determinism', () => {
     });
 });
 
-// ============================================================================
 // collectRelationshipSchemaPaths — definitions only, no values
-// ============================================================================
 
 describe('collectRelationshipSchemaPaths', () => {
     it('returns an empty list for a schema declaring no relations', () => {

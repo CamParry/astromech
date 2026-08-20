@@ -6,20 +6,12 @@ import {
     partitionGlobalValues,
 } from '@/settings/index';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function fields(
     main: ResolvedEntryFields['main'],
     sidebar: ResolvedEntryFields['sidebar'] = []
 ): ResolvedEntryFields {
     return { main, sidebar };
 }
-
-// ---------------------------------------------------------------------------
-// partitionGlobalValues
-// ---------------------------------------------------------------------------
 
 describe('partitionGlobalValues', () => {
     describe('non-translatable top-level fields', () => {
@@ -259,10 +251,6 @@ describe('partitionGlobalValues', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// mergeGlobalValues
-// ---------------------------------------------------------------------------
-
 describe('mergeGlobalValues', () => {
     it('merges shared and perLocale', () => {
         const result = mergeGlobalValues({ logo: 'l.png' }, { title: 'T' });
@@ -289,10 +277,6 @@ describe('mergeGlobalValues', () => {
         expect(result).toEqual({});
     });
 });
-
-// ---------------------------------------------------------------------------
-// mergeLocaleSetting
-// ---------------------------------------------------------------------------
 
 describe('mergeLocaleSetting', () => {
     it('should merge two plain objects with locale values winning on conflict', () => {

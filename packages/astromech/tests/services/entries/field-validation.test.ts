@@ -11,10 +11,6 @@ import { entriesService } from '@/entries/index';
 
 const api = entriesService;
 
-// ---------------------------------------------------------------------------
-// Custom config with validation-heavy fields on `post`
-// ---------------------------------------------------------------------------
-
 function makeValidationConfig(): AstromechConfig {
     const base = makeTestConfig();
     return {
@@ -73,10 +69,6 @@ beforeEach(async () => {
     setupTestConfig(makeValidationConfig());
 });
 
-// ============================================================================
-// create: required field
-// ============================================================================
-
 describe('create — required field', () => {
     it('rejects when required field is absent', async () => {
         await expect(
@@ -106,10 +98,6 @@ describe('create — required field', () => {
         });
     });
 });
-
-// ============================================================================
-// stage: completeness is publish-only
-// ============================================================================
 
 describe('validation stage — derived from the status the row will hold', () => {
     it('an unpublished create with a missing required field succeeds', async () => {
@@ -208,10 +196,6 @@ describe('validation stage — derived from the status the row will hold', () =>
     });
 });
 
-// ============================================================================
-// stage: a type with statuses OFF is always a publish
-// ============================================================================
-
 describe('validation stage — statuses: false', () => {
     it('rejects a missing required field on create', async () => {
         await expect(api.create({ type: 'snippet', fields: {} })).rejects.toMatchObject({
@@ -230,10 +214,6 @@ describe('validation stage — statuses: false', () => {
         });
     });
 });
-
-// ============================================================================
-// create: defaultValue
-// ============================================================================
 
 describe('create — defaultValue', () => {
     it('applies defaultValue when field is absent', async () => {
@@ -254,10 +234,6 @@ describe('create — defaultValue', () => {
         expect(entry.fields.status_label).toBe('active');
     });
 });
-
-// ============================================================================
-// create: slug validation
-// ============================================================================
 
 describe('create — slug validation', () => {
     it('rejects a slug value that is not already normalized', async () => {
@@ -287,10 +263,6 @@ describe('create — slug validation', () => {
     });
 });
 
-// ============================================================================
-// create: email validation
-// ============================================================================
-
 describe('create — email validation', () => {
     it('rejects an invalid email value', async () => {
         await expect(
@@ -317,10 +289,6 @@ describe('create — email validation', () => {
     });
 });
 
-// ============================================================================
-// create: all valid fields
-// ============================================================================
-
 describe('create — valid fields', () => {
     it('persists coerced field values on success', async () => {
         const entry = await api.create({
@@ -340,10 +308,6 @@ describe('create — valid fields', () => {
         expect(entry.fields.status_label).toBe('pending'); // default applied
     });
 });
-
-// ============================================================================
-// create: uniqueness
-// ============================================================================
 
 describe('create — uniqueness', () => {
     it('rejects a second entry with a duplicate unique-field value', async () => {
@@ -378,10 +342,6 @@ describe('create — uniqueness', () => {
         expect(entry.fields.code).toBe('y');
     });
 });
-
-// ============================================================================
-// update: email validation
-// ============================================================================
 
 describe('update — email validation', () => {
     it('rejects an invalid email value on update', async () => {
@@ -420,10 +380,6 @@ describe('update — email validation', () => {
     });
 });
 
-// ============================================================================
-// update: does not create a spurious version on invalid update
-// ============================================================================
-
 describe('update — no spurious version on invalid update', () => {
     it('does not create a version when the update is rejected by field validation', async () => {
         const entry = await api.create({
@@ -451,10 +407,6 @@ describe('update — no spurious version on invalid update', () => {
         expect(versionsAfter).toHaveLength(0);
     });
 });
-
-// ============================================================================
-// update: uniqueness excludes self
-// ============================================================================
 
 describe('update — uniqueness excludes self', () => {
     it('does not trip "Already in use" when an entry keeps its own unique value', async () => {

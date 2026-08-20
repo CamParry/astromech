@@ -1,29 +1,7 @@
 /**
- * S3 storage driver for any S3-compatible endpoint — AWS S3, MinIO, Backblaze,
- * and Cloudflare R2's S3 API (`<ACCOUNT_ID>.r2.cloudflarestorage.com`).
- *
- * This is the *only* way to get signed URLs on R2: an R2 **binding** cannot
- * sign at all, so `r2({ binding })` omits `getSignedUploadUrl` entirely and a
- * deployment that needs direct client uploads must point `s3()` at R2's
- * S3-compatible endpoint with R2 API tokens.
- *
- * Signing is SigV4 over plain `fetch` via `aws4fetch` — no AWS SDK. The SDK is
- * a large, Node-flavoured dependency and this driver has to run unchanged on
- * Workers; `aws4fetch` is ~6kB and behaves identically in both runtimes.
- *
- * **Environment fallback is Node-only.** Any omitted option falls back to
- * `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`,
- * `S3_SECRET_ACCESS_KEY` and `S3_PUBLIC_URL` — but on Workers there is no
- * `process.env`; secrets arrive through the binding `env`, so every value must
- * be passed explicitly there. The environment is read defensively so that
- * merely constructing the driver on Workers can never throw, and missing
- * values are only reported on first use: the same config module is loaded by
- * the CLI in plain Node, where construction must always succeed.
- *
- * **Path-style addressing throughout** (`${endpoint}/${bucket}/${key}`).
- * Virtual-host style is deliberately unsupported: R2's S3 endpoint and MinIO
- * both require path-style, and AWS regional endpoints accept it — so one form
- * covers every target. Do not "fix" this.
+ * S3 storage driver for any S3-compatible endpoint — AWS S3, MinIO,
+ * Backblaze, and R2's S3 API. The only way to get signed URLs on R2, since
+ * an R2 binding can't sign. Signs via `aws4fetch` (SigV4), no AWS SDK.
  */
 
 import type {

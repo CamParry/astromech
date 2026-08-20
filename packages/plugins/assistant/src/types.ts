@@ -42,12 +42,9 @@ export type ChatRequest = {
 };
 
 /**
- * One call held back for a human decision.
- *
- * Distinct from core's `ConfirmRequest`, which belongs to the stateless
- * dispatch-level brake in `policies/confirmation.ts`: that one carries the
- * arguments a caller may re-post, this one names a server-held row that the
- * arguments are read back from.
+ * One call held back for a human decision. Distinct from core's
+ * `ConfirmRequest`: this one names a server-held row the arguments are read
+ * back from, rather than carrying arguments a caller may re-post.
  */
 export type ApprovalRequest = {
     approvalId: string;

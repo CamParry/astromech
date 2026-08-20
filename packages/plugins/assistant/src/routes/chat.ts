@@ -100,18 +100,9 @@ async function handleChat(
 }
 
 /**
- * Parse the browser's body, or null when it is not a chat request. The
- * `aiContext` items stay unchecked past being an array: `formatAiContextMessage`
- * sanitises every value it interpolates.
- *
- * Trust boundary: a client holding the transcript can forge a tool result.
- * That is bounded here because the drawer is authenticated as the signed-in
- * user and every tool call is re-checked through `scopedServices`, so a forged
- * result can mislead the model but cannot widen what the user may do.
- * A forged `decisions` entry is bounded the same way: an approval is a row this
- * user owns, claimed only while it is pending and unexpired, and the call runs
- * with the arguments off that row — so naming an id is not approving anything,
- * and editing the posted call cannot change what an approval runs.
+ * Parse the browser's body, or null when it is not a chat request. A client
+ * holding the transcript can forge a tool result or a `decisions` entry, but
+ * every call is re-checked through `scopedServices`, bounding what it can do.
  */
 export async function readChatRequest(request: Request): Promise<ChatRequest | null> {
     let parsed: unknown;

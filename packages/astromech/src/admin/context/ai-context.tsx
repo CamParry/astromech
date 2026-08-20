@@ -1,9 +1,7 @@
 /**
- * AI context for the Astromech admin SPA.
- *
- * Routes declare what the user is looking at via `useAiContext`; the chat
- * drawer reads the collected references with `useAiContextItems`. The store
- * lives on the `_protected` layout, so references survive navigation.
+ * AI context for the Astromech admin SPA. Routes declare what the user is
+ * looking at via `useAiContext`; the chat drawer reads the collected
+ * references with `useAiContextItems`.
  */
 
 import type { AiContextItem, AiContextReference } from '@/types/ai-context';
@@ -16,10 +14,6 @@ import React, {
     useSyncExternalStore,
 } from 'react';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 export type AiContextStore = {
     register(key: string, reference: AiContextReference, depth: number): void;
     unregister(key: string): void;
@@ -27,15 +21,7 @@ export type AiContextStore = {
     getSnapshot(): readonly AiContextItem[];
 };
 
-// ============================================================================
-// Context
-// ============================================================================
-
 const AiContextStoreContext = createContext<AiContextStore | null>(null);
-
-// ============================================================================
-// Store
-// ============================================================================
 
 /**
  * Hold the references currently declared by mounted routes, keyed per hook
@@ -90,14 +76,11 @@ function sameReference(a: AiContextReference, b: AiContextReference): boolean {
     return a.kind === b.kind && a.type === b.type && a.id === b.id && a.label === b.label;
 }
 
-// ============================================================================
-// Provider
-// ============================================================================
-
 type AiContextProviderProps = {
     children: React.ReactNode;
 };
 
+/** Mounts an `AiContextStore` and makes it available to `useAiContext` and `useAiContextItems`. */
 export function AiContextProvider({ children }: AiContextProviderProps) {
     const [store] = useState(() => createAiContextStore());
 
@@ -107,10 +90,6 @@ export function AiContextProvider({ children }: AiContextProviderProps) {
         </AiContextStoreContext.Provider>
     );
 }
-
-// ============================================================================
-// Hooks
-// ============================================================================
 
 /**
  * Declare what this route is showing for as long as it is mounted. A `null`

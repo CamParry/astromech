@@ -2,10 +2,6 @@ import type { ComponentProps } from 'react';
 import { clsx } from 'clsx';
 import { ChevronDown, ChevronsUpDown, ChevronUp } from 'lucide-react';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 export type SortDirection = 'asc' | 'desc' | null;
 
 type SortThProps = ComponentProps<'th'> & {
@@ -13,10 +9,6 @@ type SortThProps = ComponentProps<'th'> & {
     currentSort: { key: string; direction: SortDirection } | null;
     onSort: (key: string, direction: SortDirection) => void;
 };
-
-// ============================================================================
-// Components
-// ============================================================================
 
 const Root = ({ className, children, ...props }: ComponentProps<'table'>) => (
     <div className="am-table-wrapper">
@@ -109,6 +101,7 @@ const Empty = ({ colSpan, children, ...props }: EmptyProps) => (
     </tr>
 );
 
+/** Compound table component: `Table.Root`, `Table.Row`, `Table.SortTh`, etc. */
 export const Table = {
     Root,
     Head,

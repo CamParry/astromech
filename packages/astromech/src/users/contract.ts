@@ -1,15 +1,7 @@
 /**
- * Users service method contracts — declared permission + effect per users verb.
- *
- * These declare the PRIMARY method permission. Secondary authorization that isn't
- * a single method permission (self-access on read/update, the last-admin guard)
- * stays explicit in the route, per the services-architecture decision that such
- * rules are identity/policy concerns, not the method's declared permission.
- *
- * `input` is the METHOD's argument object, not the HTTP body: `users.update` is
- * called `update({ id, data })`, so the contract composes the body schema into
- * that shape rather than declaring the body alone. The routes still parse the
- * body schemas directly — nothing here changes what the wire accepts.
+ * Users service method contracts — declared permission + effect per users
+ * verb. `input` is the METHOD's argument object, not the HTTP body: `update`
+ * takes `{ id, data }`, so the contract composes the body schema into that shape.
  */
 
 import type { ServiceMethodContract } from '@/types/index';

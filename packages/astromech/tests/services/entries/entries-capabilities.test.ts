@@ -12,10 +12,6 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { CapabilityError } from '@/entries/errors';
 import { entriesService } from '@/entries/service';
 
-// ---------------------------------------------------------------------------
-// Config with capability-restricted types
-// ---------------------------------------------------------------------------
-
 function makeCapabilityTestConfig(): AstromechConfig {
     return {
         db: {
@@ -86,27 +82,15 @@ function makeCapabilityTestConfig(): AstromechConfig {
     };
 }
 
-// ---------------------------------------------------------------------------
-// Setup
-// ---------------------------------------------------------------------------
-
 beforeAll(async () => {
     await createTestDb();
     setupTestConfig(makeCapabilityTestConfig());
 });
 
-// ---------------------------------------------------------------------------
-// Helper: create a minimal entry for a type.
-// ---------------------------------------------------------------------------
-
 async function createEntry(type: string): Promise<string> {
     const entry = await entriesService.create({ type, title: `Test ${type}` });
     return entry.id;
 }
-
-// ---------------------------------------------------------------------------
-// statuses capability
-// ---------------------------------------------------------------------------
 
 describe('statuses capability', () => {
     it('publish throws CapabilityError on statuses-off type', async () => {
@@ -149,10 +133,6 @@ describe('statuses capability', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// trash capability
-// ---------------------------------------------------------------------------
-
 describe('trash capability', () => {
     it('trash throws CapabilityError on trash-off type', async () => {
         const id = await createEntry('notrash');
@@ -187,9 +167,7 @@ describe('trash capability', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
 // versioning (lenient — returns [] for versioning-off types)
-// ---------------------------------------------------------------------------
 
 describe('versioning leniency', () => {
     it('versions returns [] for versioning-off type', async () => {

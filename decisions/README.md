@@ -117,3 +117,4 @@ Distinct from the neighbouring directories:
 - [0075](0075-repository-for-data-access.md) — the DB-access layer renames `storage` → `repository`, freeing `storage` to mean file/blob only; supersedes 0003 on the "no repository wrapper" naming point
 - [0076](0076-the-repository-always-exposes-transaction.md) — `transaction` is a required repository method that degrades to sequential writes internally on a no-transaction driver; supersedes 0028 on the call-site-visibility point
 - [0077](0077-a-single-mutation-is-a-batch-of-one.md) — one transactional batch primitive for every mutating operation: single is a batch of one, explicit-id batches are atomic and return the rows, the per-item grid and filter-based best-effort are reserved
+- [0078](0078-the-comment-contract.md) — the comment contract: no section banners, `/** */` blocks on the public surface, and a hard three-line header cap

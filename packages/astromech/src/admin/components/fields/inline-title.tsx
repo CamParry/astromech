@@ -1,12 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './inline-title.css';
 
-// ============================================================================
-// InlineTitle — click-to-edit label shared by blocks & repeater item headers.
-// Stores into the reserved `_title` key. Empty commits omit the key entirely
-// (default-by-absence), falling back to the supplied default label.
-// ============================================================================
-
 type InlineTitleProps = {
     /** Current custom title (the stored `_title`), or undefined when unset. */
     value: string | undefined;
@@ -20,6 +14,10 @@ type InlineTitleProps = {
     disabled?: boolean;
 };
 
+/**
+ * Click-to-edit label shared by blocks and repeater item headers. Stores into
+ * the reserved `_title` key; an empty commit clears it, falling back to `fallback`.
+ */
 export function InlineTitle({
     value,
     fallback,

@@ -31,9 +31,7 @@ if (process.env.ASTROMECH_LOG_CONFIG_EVAL === '1') {
     console.log('[demo] config evaluated');
 }
 
-// ---------------------------------------------------------------------------
-// Block catalog — shared by `page` and `caseStudy`
-// ---------------------------------------------------------------------------
+// Block catalog — shared by `page` and `caseStudy`.
 const blockCatalog = [
     fields.block('hero', {
         label: 'Hero',

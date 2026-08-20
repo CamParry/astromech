@@ -1,9 +1,7 @@
 /**
- * Registration of the media, admin shell and API routes.
- *
- * Auth and plugin routes are not injected here: they mount inside the Hono app
- * under `${basePath}/api/*`, which the `${basePath}/api/[...path]` catch-all
- * already serves.
+ * Registration of the media, admin shell and API routes. Auth and plugin
+ * routes are not injected here — they mount inside the Hono app under
+ * `${basePath}/api/*`, already served by the catch-all below.
  */
 
 import type { ResolvedConfig } from '@/types/index';

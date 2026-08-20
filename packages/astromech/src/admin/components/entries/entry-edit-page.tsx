@@ -1,14 +1,7 @@
 /**
- * Shared entry edit page body.
- *
- * Parameterized by an `EntriesMount`; serves root and plugin-namespaced
- * entry types. Field layout comes from the rendering layer:
- * `resolveForm(config)` splits field groups into main/sidebar/tab and
- * resolves the title/slug/status capability flags; each field input is
- * resolved from the field registry by type (Phase 4).
- *
- * Two-column layout: sticky action bar, main content fields left, metadata
- * sidebar right.
+ * Shared entry edit page body, parameterized by an `EntriesMount`; serves
+ * root and plugin-namespaced entry types. Two-column layout: sticky action
+ * bar, main content fields left, metadata sidebar right.
  */
 
 import type { EntriesMount } from './mount';
@@ -85,10 +78,6 @@ import { EntryFormErrors } from './entry-form-errors';
 type LinkProps = Omit<React.ComponentProps<typeof RouterLink>, 'to'> & { to: string };
 const Link = RouterLink as unknown as (props: LinkProps) => React.ReactElement;
 
-// ============================================================================
-// Status badge
-// ============================================================================
-
 type StatusBadgeProps = { status: EntryStatus };
 
 function StatusBadge({ status }: StatusBadgeProps): React.ReactElement {
@@ -108,21 +97,10 @@ function StatusBadge({ status }: StatusBadgeProps): React.ReactElement {
     return <Badge variant={variant}>{label}</Badge>;
 }
 
-// ============================================================================
-// Page
-// ============================================================================
-
 /**
- * Keyed by entry id.
- *
- * `LocaleSwitcher`, staging and duplicate all navigate to a DIFFERENT id on the
- * SAME route, so the route component is never remounted. Without the key the
- * body keeps one `FormApi` — and TanStack Form only copies changed
- * `defaultValues` in while the form is untouched, so after any edit the
- * previous row's values stay on screen and a save writes them to the new id.
- * A `form.reset` alone would not fix it either: the stateful field containers
- * (repeater, key-value editor, blocks, tree) seed their local state once and
- * never resync, so remount is the only reset that reaches them.
+ * Keyed by entry id: staging and duplicate navigate to a different id on the
+ * same route, so without the key TanStack Form and the stateful field
+ * containers (repeater, blocks, tree) would keep stale state from the last id.
  */
 export function EntryEditPage({
     mount,
@@ -239,7 +217,7 @@ function EntryEditPageBody({
     // change, so the unsaved-changes indicator would miss most edits.
     const isDirty = useStore(form.store, (state) => state.isDirty);
 
-    // ── Forward versioning (staged entries) ─────────────────────────────────
+    // Forward versioning: staged entries.
     const confirm = useConfirm();
     const hasStaging = capabilities?.staging === true;
     const canPublish = hasPermission(mount.permissionFor('publish'));

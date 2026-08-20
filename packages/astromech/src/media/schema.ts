@@ -1,9 +1,5 @@
 import { z } from '@hono/zod-openapi';
 
-// ============================================================================
-// Zod Schemas
-// ============================================================================
-
 export const updateMediaSchema = z
     .object({
         alt: z.string().optional(),

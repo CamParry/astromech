@@ -1,15 +1,7 @@
 /**
  * Plugin pages catch-all — mounts everything under `/admin/plugin/{name}/*`.
- *
- * Plugin routes merge into the file-based tree through this single
- * runtime-resolved route (spec §7): the splat (`{name}{path}`) looks up the
- * page registration code-gen'd into `virtual:astromech/plugins/components` and
- * hands it, behind a permission check, to the shared ComponentPageView — which
- * owns the lazy load, the error boundary and the page shell.
- *
- * Settings pages (those with `fields`, no `component`) use the shared
- * SettingsPageForm renderer — same layout as host pages: header save button,
- * dirty indicator, locale switcher.
+ * Looks up the page by splat, then renders either the shared
+ * `SettingsPageForm` (fields mode) or `ComponentPageView` (component mode).
  */
 
 import { createFileRoute } from '@tanstack/react-router';

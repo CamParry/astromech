@@ -1,13 +1,7 @@
 /**
- * Relationship index storage — the only place Kysely touches the relationships
- * table. Composed by every domain that can hold a relationship field (entries,
- * users, media).
- *
- * The index is derived from field data, so every write is a wholesale replace
- * of one source's edge set: one DELETE, then one chunked INSERT. Not a set-diff
- * — a diff needs an "which rows went away" branch, and that branch is exactly
- * where Payload's stale-relationship bug lives. The index is small and
- * rebuildable, so the extra write volume is the cheaper side of that trade.
+ * Relationship index storage — the only place Kysely touches the
+ * relationships table. Every write is a wholesale replace of one source's
+ * edge set (DELETE then chunked INSERT), never a set-diff.
  */
 import type { RelationshipRow } from '@/database/tables';
 import type { Db } from '@/database/types';

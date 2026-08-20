@@ -1,15 +1,7 @@
 /**
- * Recursive entry field renderer.
- *
- * Renders a column (`main`/`sidebar`) of the entry field tree. Layout fields
- * are presentational over a FLAT data model — `section` (Panel), `accordion`
- * (Collapsible), `tabs`/`tab` (tab strip) — so their children read and write
- * top-level data keys via the same flat `values`/`onChange`. Nested fields
- * (`group`/`repeater`/`blocks`) and leaf fields render through `FormField`,
- * which owns their own (possibly nested) value.
- *
- * At the column root, a run of consecutive non-layout fields is wrapped in an
- * implicit `Panel`; layout fields render as standalone blocks.
+ * Recursive entry field renderer. Renders a column of the entry field tree;
+ * layout fields (`section`, `accordion`, `tabs`) are presentational over a
+ * flat data model, while nested/leaf fields render through `FormField`.
  */
 
 import type { Field } from '@/types/index';
@@ -167,10 +159,9 @@ function TabsContainer({
 }
 
 /**
- * Render a column of fields. Layout fields render standalone; a run of
- * consecutive non-layout fields is grouped into an implicit Panel — unless
- * `surface` is false (tab bodies), where loose fields render bare and the author
- * nests a `section` when a surface is wanted.
+ * Renders a column of fields. Layout fields render standalone; a run of
+ * consecutive non-layout fields is grouped into an implicit Panel, unless
+ * `surface` is false, where loose fields render bare.
  */
 export function EntryFieldColumn({
     nodes,

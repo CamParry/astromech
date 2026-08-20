@@ -1,14 +1,7 @@
 /**
  * Annotate a method manifest for one role — "which of these may I call?"
- *
- * ADVISORY UX ONLY. The annotation exists so a caller can be told up front that
- * it cannot publish, instead of discovering it by spending a turn on a call that
- * refuses; and so `astromech methods --role editor` can show a human what a role
- * actually reaches. It is NOT the security boundary — `scopeMethods`/
- * `scopeEntries` in `policies/scoped-services.ts` are, and they hold whether or
- * not anything read this. Never trust a model to respect the annotation: a model
- * that ignores it and calls anyway gets a `PermissionDeniedError` and nothing
- * happens (ai-integration decision 11).
+ * ADVISORY UX ONLY: not the security boundary — `scopeMethods`/`scopeEntries`
+ * in `policies/scoped-services.ts` are, and hold regardless of this.
  */
 
 import type { ManifestMethod, Permission, Role } from '@/types/index';
@@ -20,12 +13,9 @@ export type AnnotatedManifestMethod = ManifestMethod & {
 };
 
 /**
- * Whether one role may call one method — `null` where only a call can tell.
- *
- * A dynamic permission is `null` rather than a guess: it resolves from the call
- * input (which entry type, in practice), and answering it here would mean
- * inventing an input. A missing role holds nothing, so every gated method is
- * denied — the same rule `permissionsFor` applies.
+ * Whether one role may call one method — `null` where only a call can tell
+ * (a dynamic permission resolves from the call input). A missing role holds
+ * nothing, so every gated method is denied, the same rule `permissionsFor` applies.
  */
 function allowedFor(
     method: ManifestMethod,

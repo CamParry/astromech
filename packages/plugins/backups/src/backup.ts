@@ -1,9 +1,7 @@
 /**
- * Core backup logic — dump, compress, store, and rotate old artifacts.
- *
- * Overlap guard: a module-level globalThis flag prevents a second performBackup
- * call from overlapping within the same process. Multi-instance (e.g. multiple
- * Workers) overlap is NOT guarded in v1 — single-instance self-hosted assumption.
+ * Core backup logic — dump, compress, store, and rotate old artifacts. A
+ * module-level flag guards against overlapping runs within one process only;
+ * multi-instance overlap is not guarded.
  */
 
 import type { BackupRunRow } from './tables/runs';
@@ -13,22 +11,19 @@ import { createGzip } from 'node:zlib';
 import { BACKUPS_SETTINGS_PATH } from './pages/settings';
 import { createBackupRunsRepository } from './repository';
 
-// ============================================================================
-// In-process overlap guard
-// ============================================================================
-
 declare global {
     var __astromechBackupRunning: boolean | undefined;
 }
 
+/** Whether a backup is currently running in this process (overlap guard). */
 export function isBackupRunning(): boolean {
     return globalThis.__astromechBackupRunning === true;
 }
 
-// ============================================================================
-// Core
-// ============================================================================
-
+/**
+ * Run one backup: dump the database, gzip it, store it, record run status,
+ * and rotate old artifacts on success.
+ */
 export async function performBackup(
     ctx: PluginContext,
     trigger: 'scheduled' | 'manual' | 'pre-restore',
@@ -91,7 +86,6 @@ export async function performBackup(
 
             const successRow = success ?? row;
 
-            // Rotate old artifacts after a successful run.
             await rotate(ctx, opts.keep);
 
             return successRow;
@@ -111,20 +105,10 @@ export async function performBackup(
     }
 }
 
-// ============================================================================
-// resolveKeep — shared across cron handler (index.ts) and HTTP routes
-// ============================================================================
-
 /**
- * Read the retention setting for this plugin from the settings store.
- *
- * The settings page writes one object blob at its own key —
- * `plugin:<permissionNamespace>:<page path>`, the `baseKey` core derives — so
- * the value read here is `{ retention }`, not a bare number. Reads through
- * `ctx.settings` are full-shaped by default (plugin altitude is trusted server
- * code), so a private setting needs no options here.
- *
- * Falls back to `fallback` if the setting is absent or not a valid positive number.
+ * Read the retention setting for this plugin from the settings store, shared
+ * across the cron handler and HTTP routes. Falls back to `fallback` if the
+ * setting is absent or not a valid positive number.
  */
 export async function resolveKeep(ctx: PluginContext, fallback: number): Promise<number> {
     const key = `plugin:${ctx.plugin.permissionNamespace}:${BACKUPS_SETTINGS_PATH}`;
@@ -145,12 +129,8 @@ export async function resolveKeep(ctx: PluginContext, fallback: number): Promise
 
 /**
  * Rotate artifacts: delete storage objects for successful runs beyond the
- * first `keep`, ordered oldest-first. The table is the source of truth —
- * we only touch artifacts that haven't already been deleted (`artifactDeletedAt IS NULL`).
- *
- * `rotationCandidates` decides what is eligible: already-rotated rows and
- * `pre-restore` snapshots are not in the list, so neither is counted against
- * `keep`.
+ * first `keep`, ordered oldest-first. `rotationCandidates` decides what is
+ * eligible — already-rotated rows and `pre-restore` snapshots are excluded.
  */
 export async function rotate(ctx: PluginContext, keep: number): Promise<void> {
     const runs = createBackupRunsRepository(ctx.db);

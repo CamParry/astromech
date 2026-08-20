@@ -2,10 +2,6 @@ import type { JSONContent } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { parseRichText, renderRichText } from '@/fields/rich-text/index';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 /** A paragraph carrying the attribute defaults the schema fills in. */
 function paragraph(...content: JSONContent[]): JSONContent {
     return { type: 'paragraph', attrs: { textAlign: null, balance: false }, content };
@@ -89,10 +85,6 @@ const richDoc: JSONContent = {
     ],
 };
 
-// ---------------------------------------------------------------------------
-// Round trip
-// ---------------------------------------------------------------------------
-
 describe('parseRichText round trip', () => {
     it('returns the same document render produced HTML from', () => {
         expect(parseRichText(renderRichText(richDoc))).toEqual(richDoc);
@@ -115,10 +107,6 @@ describe('parseRichText round trip', () => {
         expect(parseRichText(renderRichText(headings))).toEqual(headings);
     });
 });
-
-// ---------------------------------------------------------------------------
-// Marks that exclude one another
-// ---------------------------------------------------------------------------
 
 describe('parseRichText with mutually exclusive marks', () => {
     // `code` declares excludes: '_', so the schema keeps it and drops the rest.
@@ -160,10 +148,6 @@ describe('parseRichText with mutually exclusive marks', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// allow list
-// ---------------------------------------------------------------------------
-
 describe('parseRichText with an allow list', () => {
     it('produces no heading when the field forbids headings', () => {
         const result = parseRichText('<h1>x</h1><p>y</p>', { heading: false });
@@ -183,10 +167,6 @@ describe('parseRichText with an allow list', () => {
         ).toEqual({ type: 'doc', content: [paragraph({ type: 'text', text: 'x' })] });
     });
 });
-
-// ---------------------------------------------------------------------------
-// Unsafe hrefs
-// ---------------------------------------------------------------------------
 
 describe('parseRichText with unsafe hrefs', () => {
     /** The marks on the single text node of a single-paragraph document. */
@@ -244,10 +224,6 @@ describe('parseRichText with unsafe hrefs', () => {
         ]);
     });
 });
-
-// ---------------------------------------------------------------------------
-// Degenerate input
-// ---------------------------------------------------------------------------
 
 describe('parseRichText with degenerate input', () => {
     it('returns a document holding one empty paragraph for an empty string', () => {

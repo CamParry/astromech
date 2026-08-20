@@ -24,10 +24,6 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { resetBindingEnv, setBindingEnv } from '@/cloudflare/bindings';
 import { d1 } from '@/database/drivers/d1';
 
-// ---------------------------------------------------------------------------
-// Fake D1Database — real SQLite underneath via libsql, D1 result shape on top
-// ---------------------------------------------------------------------------
-
 /** Test-only schema; deliberately unrelated to the app's `DB` type. */
 type TestSchema = {
     crud_test: { id: string; name: string; count: number };
@@ -82,10 +78,6 @@ function makeFakeD1(client: Client): D1DatabaseLike {
     };
 }
 
-// ---------------------------------------------------------------------------
-// Shared fixture: one file-backed libsql db behind the fake for the whole file
-// ---------------------------------------------------------------------------
-
 const TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'astromech-d1-test-'));
 let client: Client;
 let fakeDb: D1DatabaseLike;
@@ -104,10 +96,6 @@ afterAll(() => {
 afterEach(() => {
     resetBindingEnv();
 });
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 describe('d1()', () => {
     it('getInstance() is synchronous and does not resolve the binding', () => {

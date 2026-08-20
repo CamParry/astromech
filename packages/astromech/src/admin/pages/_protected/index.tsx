@@ -24,10 +24,6 @@ import { useAiContext } from '@/admin/context/ai-context';
 import { astromechClient } from '@/transport/http/client/index';
 import { formatDate } from '@/utilities/dates';
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
 function statusVariant(
     status: string
 ): 'unpublished' | 'published' | 'scheduled' | 'default' {
@@ -36,10 +32,6 @@ function statusVariant(
     if (status === 'scheduled') return 'scheduled';
     return 'default';
 }
-
-// ============================================================================
-// Collection stat card
-// ============================================================================
 
 function StatCard({
     collectionKey,
@@ -68,10 +60,6 @@ function StatCard({
         </Panel>
     );
 }
-
-// ============================================================================
-// Recent activity
-// ============================================================================
 
 type RecentEntry = Entry & { collectionKey: string; collectionLabel: string };
 
@@ -117,10 +105,6 @@ function useRecentEntries(): RecentActivityResult {
 
     return { data: data ?? [], isLoading };
 }
-
-// ============================================================================
-// Page
-// ============================================================================
 
 function DashboardPage(): React.ReactElement {
     const { t } = useTranslation();

@@ -1,22 +1,9 @@
 /**
  * The REST route table — the wire facts of the HTTP API, as data.
  *
- * A row states `(verb, base, path, method id)` plus the handful of wire details
- * neither side can derive: the success status, the response envelope, the key
- * the request body lands under, and the names the wire uses where they differ
- * from the method's argument object. Both halves of the HTTP transport read it:
- * `transport/http/routes/` attaches a server handler to each row and documents
- * every row in `/openapi.json`, and `transport/http/client/` builds its URL,
- * body and unwrapping from the same rows. Neither restates the other's facts.
- *
- * It is a `*.shared.ts` file because the fetch client runs in a browser and
- * imports it: the marker is what lets it cross that boundary, and
- * `shared-files-stay-browser-safe` holds it to what the admin bundle may hold.
- * It names no service, imports nothing, and holds no config.
- *
- * A row marked `handler: 'bespoke'` has no generic server handler: the route is
- * written out by hand in its domain file, for the reason recorded there. It is
- * still public API, so it still appears here and still reaches the document.
+ * A row states `(verb, base, path, method id)` plus the wire details neither
+ * side can derive. `transport/http/routes/` attaches a server handler to each
+ * row; `transport/http/client/` builds its URL, body and unwrapping from it.
  */
 
 /** The verbs the table uses. */
@@ -67,10 +54,6 @@ export type HttpRouteSpec = {
 
 /** A route with the mount path of the router that serves it. */
 export type MountedRoute = HttpRouteSpec & { base: string };
-
-// ============================================================================
-// Entries — /entries
-// ============================================================================
 
 /**
  * Every entry type is served here, addressed by the type id the entries service
@@ -229,10 +212,6 @@ export const ENTRIES_ROUTE_SPECS = [
     },
 ] as const satisfies readonly HttpRouteSpec[];
 
-// ============================================================================
-// Users — /users
-// ============================================================================
-
 export const USERS_ROUTE_SPECS = [
     { verb: 'get', path: '/', id: 'users.query', envelope: 'raw' },
     { verb: 'post', path: '/', id: 'users.create', status: 201 },
@@ -253,10 +232,6 @@ export const USERS_ROUTE_SPECS = [
     },
 ] as const satisfies readonly HttpRouteSpec[];
 
-// ============================================================================
-// Media — /media
-// ============================================================================
-
 /**
  * `POST /media/upload` and `POST /media/:id/replace` are absent by design: their
  * body is multipart and a `File` has no JSON representation, so there is no
@@ -270,19 +245,11 @@ export const MEDIA_ROUTE_SPECS = [
     { verb: 'get', path: '/:id/usage', id: 'media.usedBy', handler: 'bespoke' },
 ] as const satisfies readonly HttpRouteSpec[];
 
-// ============================================================================
-// Settings — /settings
-// ============================================================================
-
 export const SETTINGS_ROUTE_SPECS = [
     { verb: 'get', path: '/', id: 'settings.all' },
     { verb: 'put', path: '/:key', id: 'settings.set' },
     { verb: 'get', path: '/:key', id: 'settings.get', handler: 'bespoke' },
 ] as const satisfies readonly HttpRouteSpec[];
-
-// ============================================================================
-// Notifications — /notifications
-// ============================================================================
 
 export const NOTIFICATIONS_ROUTE_SPECS = [
     { verb: 'get', path: '/', id: 'notifications.list' },
@@ -290,10 +257,6 @@ export const NOTIFICATIONS_ROUTE_SPECS = [
     { verb: 'delete', path: '/:id', id: 'notifications.dismiss', envelope: 'empty' },
     { verb: 'get', path: '/count', id: 'notifications.count', handler: 'bespoke' },
 ] as const satisfies readonly HttpRouteSpec[];
-
-// ============================================================================
-// The whole surface
-// ============================================================================
 
 /** `specs`, each carrying the mount path of the router that serves it. */
 function mountedAt(base: string, specs: readonly HttpRouteSpec[]): MountedRoute[] {

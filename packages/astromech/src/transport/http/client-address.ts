@@ -1,8 +1,7 @@
 /**
  * The connecting address of an HTTP request — the client identity abuse
  * controls key on. Only sources set by infrastructure are read, so a caller
- * cannot mint a new identity per request; when none is available the address is
- * absent and the caller goes unmetered.
+ * cannot mint a new identity per request.
  */
 
 import type { TrustProxy } from '@/types/index';

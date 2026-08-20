@@ -1,11 +1,7 @@
 /**
- * User storage — the only place Kysely touches the `users` table.
- *
- * Row CRUD goes through `createRepository(usersTable)`, which owns encoding,
- * `updatedAt` stamping and row decoding. `list`/`count` stay on the raw handle
- * because the name/email search is an OR, which the flat `where` DSL cannot
- * express; they compile their DSL-expressible part with the wrapper's own
- * `where`, handed out by `query()`, so the two share one predicate.
+ * User storage — the only place Kysely touches the `users` table. Row CRUD
+ * goes through `createRepository(usersTable)`; `list`/`count` stay on the
+ * raw handle since name/email search is an OR the flat `where` DSL can't express.
  */
 
 import type { UserRow } from './tables';
@@ -41,10 +37,6 @@ export type UserListParams = {
     offset?: number | undefined;
 };
 
-// ============================================================================
-// Query helpers
-// ============================================================================
-
 const SORTABLE_COLS = ['name', 'email', 'createdAt', 'updatedAt', 'roleSlug'] as const;
 type SortableCol = (typeof SORTABLE_COLS)[number];
 
@@ -65,10 +57,6 @@ function buildOrderBy(
     );
     return clauses.length > 0 ? clauses : [{ col: 'name', dir: 'asc' }];
 }
-
-// ============================================================================
-// Factory
-// ============================================================================
 
 export type UserRepository = ReturnType<typeof createUserRepository>;
 

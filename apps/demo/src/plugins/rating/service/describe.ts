@@ -1,14 +1,7 @@
 /**
- * A minimal service method, so the teaching plugin demonstrates plugin RPC and
- * not only its admin surfaces.
- *
- * It is also the repo's only service method on a MULTI-WORD plugin namespace,
- * which makes it the one place the identity derivation is observable
- * end-to-end: `demo-rating` → namespace `demo_rating` → service key
- * `demoRating`. Both transports address it by the service key —
- * `Astromech.plugins.demoRating.describe()` locally, `POST
- * /cms/api/plugins/demoRating/describe` over HTTP — and the namespace never appears
- * on the wire.
+ * A minimal service method, so the teaching plugin demonstrates plugin RPC.
+ * The repo's only service on a multi-word namespace: `demo-rating` derives
+ * the service key `demoRating`, which both transports address it by.
  */
 
 import { defineServiceMethod, noInput } from 'astromech';

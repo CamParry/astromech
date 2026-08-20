@@ -1,22 +1,7 @@
 /**
- * R2 storage driver for Cloudflare Workers.
- *
- * Normal usage names a binding: `r2({ binding: 'MEDIA' })`. The same
- * `astromech.config.ts` is loaded both by the Worker and by the CLI in plain
- * Node, and a resolved bucket object is not reachable from Node — a binding
- * NAME resolves in either runtime, so the driver resolves it lazily on first
- * use (see `@/cloudflare/bindings.js`) rather than at construction.
- *
- * `bucket` remains as an escape hatch for callers that already hold a
- * resolved R2 bucket binding: `r2({ bucket: env.MY_BUCKET })`.
- *
- * R2 buckets have no public URL by default. Pass `publicUrl` (an r2.dev subdomain
- * or a custom domain bound to the bucket) to enable `getPublicUrl`. Without it,
- * `getPublicUrl` returns `null` and callers must serve objects via a Worker route.
- *
- * R2 bindings cannot produce signed URLs at all, so `getSignedUploadUrl` and
- * `getSignedDownloadUrl` are absent here — use the S3 driver against R2's
- * S3-compatible endpoint when signing is required.
+ * R2 storage driver for Cloudflare Workers. Normally names a binding
+ * (`r2({ binding: 'MEDIA' })`), resolved lazily since a plain Node process
+ * (the CLI) can't reach a resolved bucket object at config-load time.
  */
 
 import type {

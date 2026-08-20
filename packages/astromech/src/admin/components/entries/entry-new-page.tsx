@@ -1,17 +1,7 @@
 /**
- * Shared entry create page body.
- *
- * Parameterized by an `EntriesMount`; serves root and plugin-namespaced
- * entry types. Field layout comes from the rendering layer:
- * `resolveForm(config)` splits field groups into main/sidebar/tab and
- * resolves the title/slug/status capability flags; each field input is
- * resolved from the field registry by type (Phase 4).
- *
- * Two-column layout with field groups in main/sidebar positions. Includes
- * title, optional slug, and a status panel. Non-default-locale creation
- * surfaces a modal asking whether to translate an existing entry, start blank
- * in the new locale (joining an existing group), or create a fresh standalone
- * entry.
+ * Shared entry create page body, parameterized by an `EntriesMount`; serves
+ * root and plugin-namespaced entry types. Two-column layout with title,
+ * optional slug, and a status panel; non-default-locale creates prompt a modal.
  */
 
 import type { EntriesMount } from './mount';
@@ -50,15 +40,7 @@ import { resolveAdminEntryType, resolveForm } from '@/admin/rendering/resolve';
 import { resolveContentLocale } from '@/utilities/locale';
 import { EntryFormErrors } from './entry-form-errors';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 type CreateMode = 'translate' | 'blank-in-group' | 'standalone';
-
-// ============================================================================
-// Modal
-// ============================================================================
 
 type CreateLocaleModalProps = {
     open: boolean;
@@ -209,10 +191,6 @@ function RadioOption({
         </label>
     );
 }
-
-// ============================================================================
-// Page
-// ============================================================================
 
 export function EntryNewPage({
     mount,

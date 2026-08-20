@@ -52,9 +52,7 @@ function renderedErrors(html: string): string[] {
     );
 }
 
-// ============================================================================
 // Top level — the path and the bare name coincide
-// ============================================================================
 
 describe('FormField error lookup', () => {
     it('renders a top-level error keyed by the bare field name', () => {
@@ -69,10 +67,6 @@ describe('FormField error lookup', () => {
         expect(renderedErrors(html)).toEqual([]);
     });
 });
-
-// ============================================================================
-// group — dotted paths
-// ============================================================================
 
 describe('group field errors', () => {
     const seo: Field = {
@@ -117,9 +111,7 @@ describe('group field errors', () => {
     });
 });
 
-// ============================================================================
 // repeater / blocks / tree — item selectors address by `_id`, not index
-// ============================================================================
 
 describe('repeater field errors', () => {
     const links: Field = {

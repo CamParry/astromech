@@ -45,10 +45,9 @@ export const setSchedulerDriver = scheduler.set;
 export const getSchedulerDriver = scheduler.get;
 
 /**
- * The driver factory an integration nominates for a config naming no scheduler.
- * A registry rather than a module-level variable because the Cloudflare
- * worker entry ships as its own tsup chunk (`dist/cloudflare/index.js`) and boot
- * ships in another, so the two copies would not share a plain variable.
+ * The driver factory an integration nominates for a config naming no
+ * scheduler. A registry, not a module variable, because the Cloudflare
+ * worker entry ships as its own tsup chunk from boot.
  */
 const defaultScheduler = createRegistry<() => SchedulerDriver>('defaultScheduler', {
     required: false,

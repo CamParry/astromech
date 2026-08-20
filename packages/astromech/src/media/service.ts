@@ -1,11 +1,7 @@
 /**
- * Media service — the media CRUD verbs.
- *
- * Thin assembler: wires the per-operation functions in `operations/**` into the
- * public `MediaService` object. All policy (validation, field processing,
- * relationship indexing, blob writes, delivery-URL resolution) lives in
- * `operations/**` + `internal/**`; persistence flows through the storage seam.
- * Consumers reach it as `app.media`.
+ * Media service — the media CRUD verbs. Thin assembler: wires the
+ * per-operation functions in `operations/**` into the public `MediaService`
+ * object. All policy lives in `operations/**` + `internal/**`.
  */
 
 import type { MediaService } from '@/types/index';

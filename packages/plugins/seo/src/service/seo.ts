@@ -57,10 +57,10 @@ function entryPath(ctx: PluginContext, type: string, entry: Entry): string | nul
 }
 
 export const seoService = {
-    // Published entries across the plugin footprint, as sitemap URL data.
-    // Public so the app's /sitemap.xml endpoint can call it.
-    // `undefined` input: takes no argument, so callers invoke `.sitemap()` bare.
-    // `noInput()` is what still lets it be published as a tool.
+    /**
+     * Published entries across the plugin footprint, as sitemap URL data.
+     * Public so the app's `/sitemap.xml` endpoint can call it.
+     */
     sitemap: defineServiceMethod<undefined, SeoSitemap>({
         access: 'public',
         summary: 'List sitemap URLs for all SEO-tracked entries.',
@@ -81,8 +81,10 @@ export const seoService = {
         },
     }),
 
-    // Resolved meta for one published entry: the `seo` field with fallbacks to
-    // the entry title and the default OG image setting.
+    /**
+     * Resolved meta for one published entry: the `seo` field with fallbacks
+     * to the entry title and the default OG image setting.
+     */
     meta: defineServiceMethod<{ type: string; slug: string }, SeoResolvedMeta | null>({
         access: 'public',
         summary: 'Resolve the SEO meta tags for one entry by type + slug.',
@@ -112,8 +114,7 @@ export const seoService = {
         },
     }),
 
-    // SEO health across every entry in the footprint — drives the overview
-    // dashboard page.
+    /** SEO health across every entry in the footprint — drives the overview dashboard page. */
     overview: defineServiceMethod<undefined, SeoOverview>({
         access: { permission: 'view' },
         summary: 'Report SEO coverage across all tracked entries.',

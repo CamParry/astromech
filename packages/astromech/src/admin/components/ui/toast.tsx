@@ -1,17 +1,10 @@
 /**
- * Toast notification system built on Base UI Toast.
- *
- * Maintains the existing useToast() API so all call sites are unchanged:
- *   const { toast, dismiss } = useToast();
- *   toast({ message: 'Saved', variant: 'success' });
+ * Toast notification system built on Base UI Toast, exposed via `useToast()`
+ * (`const { toast, dismiss } = useToast()`).
  */
 
 import { Toast } from '@base-ui/react/toast';
 import React from 'react';
-
-// ============================================================================
-// Types
-// ============================================================================
 
 type ToastVariant = 'success' | 'error' | 'info' | 'warning';
 
@@ -26,10 +19,7 @@ type ToastData = {
     variant?: ToastVariant;
 };
 
-// ============================================================================
-// Internal viewport — rendered inside Toast.Provider
-// ============================================================================
-
+// Rendered inside Toast.Provider, below.
 function ToastViewport(): React.ReactElement {
     const { toasts } = Toast.useToastManager();
     return (
@@ -62,10 +52,7 @@ function ToastViewport(): React.ReactElement {
     );
 }
 
-// ============================================================================
-// Provider
-// ============================================================================
-
+/** Wraps the app in Base UI's toast provider and mounts the viewport. */
 export function ToastProvider({
     children,
 }: {
@@ -81,10 +68,7 @@ export function ToastProvider({
     );
 }
 
-// ============================================================================
-// Hook — same API as before
-// ============================================================================
-
+/** Access the toast manager: `toast(opts)` to show, `dismiss(id)` to hide. */
 export function useToast(): {
     toast: (opts: ToastOptions) => void;
     dismiss: (id: string) => void;

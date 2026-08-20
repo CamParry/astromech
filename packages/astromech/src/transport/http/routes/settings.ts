@@ -2,11 +2,6 @@
  * Settings Routes
  *
  * Key-value settings read and write.
- *
- * Routes:
- *   GET  /settings         → settings.all
- *   GET  /settings/:key    → settings.get (bespoke)
- *   PUT  /settings/:key    → settings.set
  */
 import type { RestRoute } from './rest-route';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
@@ -38,10 +33,7 @@ export const SETTINGS_ROUTES: RestRoute[] = attachHandlers(SETTINGS_ROUTE_SPECS,
 mountRestRoutes(router, settingsContract, SETTINGS_ROUTES);
 documentBespokeRoutes(router, settingsContract, SETTINGS_ROUTE_SPECS);
 
-// ============================================================================
 // GET /settings/:key — bespoke
-// ============================================================================
-
 // Not in the table: `settings.get` returns the value alone, and the route
 // re-attaches the path param as `{ data: { key, value } }`.
 router.get('/:key', async (c) => {

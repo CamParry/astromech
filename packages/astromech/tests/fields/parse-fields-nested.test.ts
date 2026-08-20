@@ -11,10 +11,6 @@ import type { Field, FieldValidationContext, ValidationMode } from '@/types/fiel
 import { describe, expect, it } from 'vitest';
 import { parseFields } from '@/fields/parse-fields';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function fakeCtx(operation: 'create' | 'update' = 'create', validation?: ValidationMode) {
     return {
         operation,
@@ -43,10 +39,6 @@ type Item = Record<string, unknown>;
 function items(values: Record<string, unknown>, name: string): Item[] {
     return values[name] as Item[];
 }
-
-// ---------------------------------------------------------------------------
-// group
-// ---------------------------------------------------------------------------
 
 describe('group', () => {
     const seo = field({
@@ -174,10 +166,6 @@ describe('group', () => {
         expect(values.seo).toEqual({ noindex: false, title: 'Untitled' });
     });
 });
-
-// ---------------------------------------------------------------------------
-// repeater
-// ---------------------------------------------------------------------------
 
 describe('repeater', () => {
     const sections = field({
@@ -407,10 +395,6 @@ describe('repeater', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// blocks
-// ---------------------------------------------------------------------------
-
 describe('blocks', () => {
     const content = field({
         name: 'content',
@@ -563,10 +547,6 @@ describe('blocks', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// tree
-// ---------------------------------------------------------------------------
-
 describe('tree', () => {
     const nav = field({
         name: 'nav',
@@ -693,10 +673,6 @@ describe('tree', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// Container item counts (min / max)
-// ---------------------------------------------------------------------------
-
 describe('container item counts', () => {
     const bounded = field({
         name: 'sections',
@@ -809,10 +785,6 @@ describe('container item counts', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// stage inside containers
-// ---------------------------------------------------------------------------
-
 describe('stage below a container', () => {
     const sections = field({
         name: 'sections',
@@ -850,10 +822,6 @@ describe('stage below a container', () => {
         expect(errors).toEqual({ 'sections[a1].link': ['Must be a valid URL'] });
     });
 });
-
-// ---------------------------------------------------------------------------
-// Scope resolution
-// ---------------------------------------------------------------------------
 
 describe('scope resolution', () => {
     it('ctx.values inside an item is the ITEM, not the root record', async () => {
@@ -982,10 +950,6 @@ describe('scope resolution', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// Top-level keys unchanged
-// ---------------------------------------------------------------------------
-
 describe('top-level error keys', () => {
     it('a top-level field still keys by its bare name', async () => {
         const { errors } = await parseFields(
@@ -1012,10 +976,6 @@ describe('top-level error keys', () => {
         expect(Object.keys(errors)).toEqual(['sections']);
     });
 });
-
-// ---------------------------------------------------------------------------
-// Field names the path grammar cannot address
-// ---------------------------------------------------------------------------
 
 describe('invalid field names', () => {
     it('a top-level name containing a dot throws, naming the field and the rule', async () => {

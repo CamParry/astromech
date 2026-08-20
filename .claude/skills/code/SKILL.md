@@ -37,12 +37,14 @@ Names are not a place to be creative. Before naming anything, find what this exa
 
 ## Comments
 
-- **One short block above every function.** This is open-source — a reader needs to know what each one does.
-- **Three lines of text maximum**, file headers included. More only for genuinely complex logic.
+- **A doc block above every exported function, type, and the file itself.** Write it as a JSDoc `/** … */` block, not a run of `//` lines. This is open-source; a reader needs to know what each public thing does. Private local helpers may skip the block when the name already says it.
+- **`//` is for inline notes only.** Don't write a file header, type doc, or function doc as a run of `//` lines.
+- **Three lines of text maximum**, file headers included. This is a hard cap: content that overflows (cross-references, layer models, prior art) belongs in `ARCHITECTURE.md` or `decisions/`, so trim it out rather than relocating it into a longer header.
 - Say what it does and where it fits. **Why only when the code would otherwise read as wrong.**
 - Inline comments only for non-obvious behaviour. Never restate the code.
+- **No section banners.** No `// ====`, `// ----`, or any ruled divider used to label a region of a file. A file that feels like it needs internal signposts wants splitting, not banners.
 - **No flair, no rhetorical emphasis** ("this is the whole point", "THIS IS THE ONLY…").
-- **No history, no rejected alternatives, no naming justifications.** Established naming needs no defence in a comment — put the record in `decisions/`.
+- **No history, no rejected alternatives, no naming justifications.** Established naming needs no defence in a comment; put the record in `decisions/`.
 
 ## Data access (repository pattern)
 

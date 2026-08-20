@@ -1,9 +1,7 @@
 /**
- * Flatten an entry's field tree to its top-level data fields.
- *
- * Layout fields are transparent — their children keep top-level data keys, so
- * they are unwrapped. Nested fields own a single top-level key and nest their
- * children, so they are treated as opaque leaves here.
+ * Flatten an entry's field tree to its top-level data fields. Layout fields
+ * are transparent (unwrapped); nested fields own one top-level key and are
+ * treated as opaque leaves.
  */
 
 import type { Field, ResolvedEntryFields } from '@/types/fields';

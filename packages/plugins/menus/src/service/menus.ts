@@ -25,8 +25,7 @@ async function resolveEntryRef(
     entryId: string,
     locale: string | undefined
 ): Promise<string | null> {
-    // Query all entry types to find the one holding this id.
-    // We query all types because the relationship field stores only the id.
+    // Query every entry type, since the relationship field stores only the id.
     for (const [type, config] of Object.entries(ctx.config.entries)) {
         if (!config.url) continue;
         try {
@@ -87,6 +86,7 @@ async function walkNodes(
     return result;
 }
 
+/** The `get` service method, scoped to the plugin's configured menus. */
 export function buildMenusService(
     configs: MenuConfig[]
 ): Record<string, AnyServiceMethod> {

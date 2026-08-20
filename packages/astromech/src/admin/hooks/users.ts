@@ -14,10 +14,6 @@ import { astromechClient } from '@/transport/http/client/index';
 import { useToast } from '../components/ui/index';
 import { queryKeys } from './use-query-keys';
 
-// ============================================================================
-// Query hooks
-// ============================================================================
-
 export function useUsersQuery(params?: UserQueryParams) {
     return useQuery({
         queryKey: queryKeys.users.list(params as Record<string, unknown>),
@@ -35,10 +31,6 @@ export function userQueryOptions(id: string) {
 export function useUser(id: string) {
     return useQuery(userQueryOptions(id));
 }
-
-// ============================================================================
-// Mutation hooks
-// ============================================================================
 
 export function useCreateUser(options?: { onSuccess?: (user: User) => void }) {
     const queryClient = useQueryClient();

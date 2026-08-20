@@ -69,9 +69,7 @@ function control<T extends HTMLElement>(selector: string): T {
     return el;
 }
 
-// ============================================================================
 // The text-shaped inputs — one control, one string
-// ============================================================================
 
 /** `[field, stored value, what the author types, what that commits]`. */
 const TEXT_INPUTS: [Field, string, string, unknown][] = [
@@ -125,9 +123,7 @@ describe.each(TEXT_INPUTS)('%o', (field, stored, typed, committed) => {
     });
 });
 
-// ============================================================================
 // number — the one text-shaped input that does not commit a string
-// ============================================================================
 
 describe('number', () => {
     const field: Field = { name: 'rank', type: 'number' };
@@ -152,10 +148,6 @@ describe('number', () => {
     });
 });
 
-// ============================================================================
-// boolean
-// ============================================================================
-
 describe('boolean', () => {
     const field: Field = { name: 'featured', type: 'boolean' };
 
@@ -171,9 +163,7 @@ describe('boolean', () => {
     });
 });
 
-// ============================================================================
 // select and multiselect — a Base UI popup, not a native <select>
-// ============================================================================
 
 describe('select', () => {
     const field: Field = {
@@ -225,10 +215,6 @@ describe('multiselect', () => {
     });
 });
 
-// ============================================================================
-// checkbox-group and radio-group
-// ============================================================================
-
 describe('checkbox-group', () => {
     const field: Field = {
         name: 'topics',
@@ -275,9 +261,7 @@ describe('radio-group', () => {
     });
 });
 
-// ============================================================================
 // range and color — value in, no local copy
-// ============================================================================
 
 describe('range', () => {
     const field: Field = { name: 'weight', type: 'range', min: 0, max: 10 };

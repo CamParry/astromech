@@ -1,12 +1,7 @@
 /**
- * CommandPalette — Cmd+K global search and navigation palette.
- *
- * Provides a context/provider for open state, a global keyboard shortcut,
- * and a modal UI with grouped, filterable navigation items.
- *
- * Static shortcuts (nav, entry-type list pages, plugin pages) are always
- * filtered client-side. When the query is non-empty, live search is also
- * performed via React Query across entries, users, and media in parallel.
+ * Cmd+K global search and navigation palette: a context/provider for open
+ * state, a keyboard shortcut, and a modal with grouped, filterable nav items.
+ * Static shortcuts filter client-side; a non-empty query also runs live search.
  */
 
 import type { AdminEntryType, Entry, Media, User } from '@/types/index';
@@ -34,18 +29,10 @@ import { usePermissions } from '../../hooks/index';
 import { useDebounce } from '../../hooks/use-debounce';
 import { EntryTypeIcon } from './entry-type-icon';
 
-// ============================================================================
-// Lucide icon helper
-// ============================================================================
-
 function lucideIcon(name: string | undefined, Fallback: LucideIcon): LucideIcon {
     if (name === undefined) return Fallback;
     return (icons[name as keyof typeof icons] ?? Fallback) as LucideIcon;
 }
-
-// ============================================================================
-// Types
-// ============================================================================
 
 /** Groups rendered in the palette. Static = always computed client-side. */
 type StaticGroup = 'Navigation' | 'EntryTypes' | 'Pages';
@@ -82,12 +69,9 @@ type CommandPaletteContextValue = {
     setOpen: (open: boolean) => void;
 };
 
-// ============================================================================
-// Context
-// ============================================================================
-
 const CommandPaletteContext = createContext<CommandPaletteContextValue | null>(null);
 
+/** Reads open state from `CommandPaletteProvider`. */
 export function useCommandPalette(): CommandPaletteContextValue {
     const ctx = useContext(CommandPaletteContext);
     if (ctx === null) {
@@ -96,14 +80,11 @@ export function useCommandPalette(): CommandPaletteContextValue {
     return ctx;
 }
 
-// ============================================================================
-// Provider
-// ============================================================================
-
 type CommandPaletteProviderProps = {
     children: React.ReactNode;
 };
 
+/** Provides the palette's open state and installs the Cmd+K/Ctrl+K shortcut. */
 export function CommandPaletteProvider({
     children,
 }: CommandPaletteProviderProps): React.ReactElement {
@@ -130,20 +111,13 @@ export function CommandPaletteProvider({
     );
 }
 
-// ============================================================================
-// Live search result shape
-// ============================================================================
-
 type LiveResults = {
     entries: Entry[];
     users: User[];
     media: Media[];
 };
 
-// ============================================================================
-// Command Palette modal
-// ============================================================================
-
+/** The Cmd+K modal: input, static/live grouped results, and keyboard navigation. */
 export function CommandPalette(): React.ReactElement {
     const { open, setOpen } = useCommandPalette();
     const { t } = useTranslation();
@@ -156,8 +130,6 @@ export function CommandPalette(): React.ReactElement {
 
     // Debounce the typed query for live search
     const debouncedQuery = useDebounce(query.trim(), 200);
-
-    // ── Static shortcuts ────────────────────────────────────────────────────
 
     const navItems: StaticCommandItem[] = useMemo(
         () => [
@@ -257,8 +229,6 @@ export function CommandPalette(): React.ReactElement {
         query.trim() === ''
             ? allStaticItems
             : allStaticItems.filter((item) => item.label.toLowerCase().includes(q));
-
-    // ── Live search ─────────────────────────────────────────────────────────
 
     // Determine which root entry types are readable
     const readableRootTypes = useMemo(
@@ -424,8 +394,6 @@ export function CommandPalette(): React.ReactElement {
             };
         });
     }, [liveQuery.data]);
-
-    // ── Groups assembly ─────────────────────────────────────────────────────
 
     type GroupDef = {
         label: string;

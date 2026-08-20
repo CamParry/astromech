@@ -1,10 +1,7 @@
 /**
- * Users service — the user CRUD verbs.
- *
- * Thin assembler: wires the per-operation functions in `operations/**` into the
- * public `UsersService` object. All policy (validation, field processing,
- * relationship indexing) lives in `operations/**` + `internal/**`; persistence
- * flows through the storage seam. Consumers reach it as `app.users`.
+ * Users service — the user CRUD verbs. Thin assembler: wires the
+ * per-operation functions into `UsersService`. All policy lives in
+ * `operations/**` + `internal/**`; consumers reach it as `app.users`.
  */
 
 import type { UsersService } from '@/types/index';

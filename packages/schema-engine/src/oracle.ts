@@ -2,23 +2,12 @@ import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 
 /**
- * Schema oracle — a normalized `sqlite_master` dump.
- *
- * The parity primitive: two databases built by different routes (an applied
- * migration chain vs. a direct `renderTableStatements` emit) are equivalent iff
- * their `dumpSchema` output matches. Whitespace inside each stored `sql` is
- * collapsed, and identifier quoting is normalized to backticks, so neither
- * registers as drift.
- *
- * Quoting has to be normalized because `ALTER TABLE … RENAME TO` — the last step
- * of every rebuild — rewrites the stored DDL with the new name double-quoted.
- * A rebuilt table would otherwise differ from a freshly emitted one forever, on
- * nothing but a quote character.
- *
- * Auto-created internal rows are excluded — anything named `sqlite_*`, plus the
- * NULL-`sql` rows SQLite records for implicit indexes.
+ * Schema oracle — a normalized `sqlite_master` dump. The parity primitive: two
+ * databases built by different routes are equivalent iff their `dumpSchema`
+ * output matches, once whitespace and identifier quoting are normalized.
  */
 
+/** One row of a normalized `sqlite_master` dump — see {@link dumpSchema}. */
 export type SchemaRow = {
     type: 'table' | 'index';
     name: string;

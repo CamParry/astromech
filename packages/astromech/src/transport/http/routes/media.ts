@@ -2,15 +2,6 @@
  * Media Routes
  *
  * File upload, listing, replace, update, and delete.
- *
- * Routes:
- *   GET    /media              → media.query
- *   GET    /media/:id          → media.get
- *   GET    /media/:id/usage    → media.usedBy (bespoke)
- *   POST   /media/upload       → media.upload (bespoke)
- *   POST   /media/:id/replace  → media.replace (bespoke)
- *   PUT    /media/:id          → media.update
- *   DELETE /media/:id          → media.delete
  */
 import type { RestRoute } from './rest-route';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
@@ -84,10 +75,7 @@ function queryArgs(c: Context<Env>): MediaQueryParams {
     return params;
 }
 
-// ============================================================================
 // GET /media/:id/usage — bespoke
-// ============================================================================
-
 // Not in the table: it pre-flights `media.get` to turn an unknown id into a
 // 404, so one handler makes two method calls.
 router.get('/:id/usage', async (c) => {
@@ -102,10 +90,7 @@ router.get('/:id/usage', async (c) => {
     return c.json({ data });
 });
 
-// ============================================================================
 // POST /media/upload — bespoke
-// ============================================================================
-
 // Not in the table: `binaryInput`. The body is multipart and a `File` has no
 // JSON representation, so no contract schema can validate the call.
 router.post('/upload', async (c) => {
@@ -123,10 +108,7 @@ router.post('/upload', async (c) => {
     return c.json({ data: media }, 201);
 });
 
-// ============================================================================
 // POST /media/:id/replace — bespoke
-// ============================================================================
-
 // Not in the table: `binaryInput`, plus the same `media.get` pre-flight.
 router.post('/:id/replace', async (c) => {
     const { id } = c.req.param();

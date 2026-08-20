@@ -58,6 +58,7 @@ function makeImg(
     return img;
 }
 
+/** Compute `<picture>`/`<img>` attrs (sources, sizes, blurhash) for one media record. */
 export function buildImageAttrs(
     input: ImageAttrsInput,
     options: ImageAttrsOptions,

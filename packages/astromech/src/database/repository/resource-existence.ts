@@ -1,9 +1,7 @@
 /**
  * Existence checks for the three targetable resources (entry, user, media).
- *
- * Lives in the database capability so any domain can ask the question without
- * importing a peer service. Answers only "does this row exist" — no visibility,
- * no shaping — because its one caller deletes author data on a `false`.
+ * Lives in the database capability so any domain can ask without importing a
+ * peer service. Answers only "does this row exist" — no visibility, no shaping.
  */
 
 import type { Db } from '@/database/types';

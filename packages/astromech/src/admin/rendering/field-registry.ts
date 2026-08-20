@@ -1,10 +1,7 @@
 /**
- * Field-input registry — field type → React input component.
- *
- * Module-level Map (no globalThis); same single-SPA-bundle rationale as
- * cell-registry.ts. Plugin custom field types are NOT registered here — they
- * are discovered lazily via the virtual plugin-components module; callers fall
- * through to that path when getFieldComponent returns undefined.
+ * Field-input registry — field type → React input component. Plugin custom
+ * field types are not registered here; they're discovered lazily via the
+ * virtual plugin-components module when `getFieldComponent` returns undefined.
  */
 import type { BaseFieldProps } from '@/types/index';
 import type * as React from 'react';

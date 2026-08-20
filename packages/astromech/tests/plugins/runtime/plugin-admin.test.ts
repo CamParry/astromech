@@ -84,10 +84,6 @@ describe('derivePluginNav — entry types', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// derivePluginPages — unified ResolvedAdminPage
-// ---------------------------------------------------------------------------
-
 describe('derivePluginPages — unified ResolvedAdminPage', () => {
     it('produces namespaced baseKey for settings pages', () => {
         const plugin: PluginDefinition = {

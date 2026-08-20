@@ -5,10 +5,6 @@
 import { describe, expect, it } from 'vitest';
 import { coerceToDoc } from '@/admin/components/fields/richtext-field';
 
-// ============================================================================
-// coerceToDoc
-// ============================================================================
-
 describe('coerceToDoc', () => {
     it('returns undefined for null', () => {
         expect(coerceToDoc(null)).toBeUndefined();

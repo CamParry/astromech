@@ -107,9 +107,7 @@ const INVALID_URL = 'not a url';
 
 const linkField: Field = { name: 'link', type: 'url' };
 
-// ============================================================================
 // Blur — gated on dirty
-// ============================================================================
 
 describe('reveal on blur', () => {
     it('should reveal nothing when a pristine field holds an invalid value', async () => {
@@ -152,9 +150,7 @@ describe('reveal on blur', () => {
     });
 });
 
-// ============================================================================
 // Change — "reward early", once something is already showing
-// ============================================================================
 
 describe('re-validation while showing an error', () => {
     it('should clear a revealed error on the change that fixes it, with no second blur', async () => {
@@ -184,10 +180,6 @@ describe('re-validation while showing an error', () => {
         m.unmount();
     });
 });
-
-// ============================================================================
-// Completeness is publish-only
-// ============================================================================
 
 describe('required', () => {
     const titleField: Field = { name: 'title', type: 'text', required: true };
@@ -223,10 +215,6 @@ describe('required', () => {
     });
 });
 
-// ============================================================================
-// Data-dependent checks are skipped in silence
-// ============================================================================
-
 describe('server-only rules', () => {
     it('should never produce a client error for a `unique` rule', async () => {
         const slug: Field = {
@@ -261,9 +249,7 @@ describe('server-only rules', () => {
     });
 });
 
-// ============================================================================
 // Nested containers — the `_id`-bracket path grammar
-// ============================================================================
 
 describe('nested fields', () => {
     const items: Field = {
@@ -306,9 +292,7 @@ describe('nested fields', () => {
     });
 });
 
-// ============================================================================
 // Warnings — advisory, and the browser's alone
-// ============================================================================
 
 describe('warnings', () => {
     /** A length cap the author is nudged about but never stopped by. */
@@ -377,10 +361,6 @@ describe('warnings', () => {
     });
 });
 
-// ============================================================================
-// Server errors
-// ============================================================================
-
 describe('server errors', () => {
     it('should merge server errors into what the UI renders', async () => {
         const m = mountValidation([linkField], { link: 'https://example.com' });
@@ -436,10 +416,6 @@ describe('server errors', () => {
         m.unmount();
     });
 });
-
-// ============================================================================
-// The live form state must not be written to
-// ============================================================================
 
 describe('form state', () => {
     it('should not seed defaults into the values it was handed', async () => {

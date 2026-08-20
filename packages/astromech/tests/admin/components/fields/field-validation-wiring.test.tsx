@@ -98,9 +98,7 @@ function mountField(field: Field, value: unknown): Mounted {
     };
 }
 
-// ============================================================================
 // Change — reported against the full path
-// ============================================================================
 
 describe('change reporting', () => {
     it('should report a top-level change under the bare field name', () => {
@@ -147,9 +145,7 @@ describe('change reporting', () => {
     });
 });
 
-// ============================================================================
 // Blur — reported by the innermost wrapper only
-// ============================================================================
 
 describe('blur reporting', () => {
     it('should report a top-level blur under the bare field name', () => {
@@ -198,9 +194,7 @@ describe('blur reporting', () => {
     });
 });
 
-// ============================================================================
 // No provider — every other FormField consumer is unaffected
-// ============================================================================
 
 describe('without a provider', () => {
     it('should render and accept input with no validation handlers in scope', () => {

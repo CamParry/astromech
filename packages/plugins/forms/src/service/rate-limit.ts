@@ -1,12 +1,7 @@
 /**
- * Fixed-window rate limit for `submit`, held in process.
- *
- * Counters are capped: at `MAX_KEYS` the window that started longest ago is
- * dropped to make room, so the map cannot grow without bound.
- *
- * Multi-instance (e.g. several Workers) is NOT guarded — each instance counts
- * its own traffic, the same single-instance self-hosted assumption the backups
- * overlap guard makes.
+ * Fixed-window rate limit for `submit`, held in process. Counters are capped:
+ * at `MAX_KEYS` the oldest window is dropped to make room. Multi-instance
+ * deployments are not guarded — each instance counts its own traffic.
  */
 
 export type RateLimitOptions = { limit: number; windowMs: number };

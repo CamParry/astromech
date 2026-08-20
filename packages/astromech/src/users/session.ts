@@ -1,10 +1,7 @@
 /**
- * Session resolution.
- *
- * The single place a Better Auth session is turned into an Astromech identity
- * (full user row + resolved role). It lives in the `users` domain rather than a
- * transport, and `request-context/` is its one caller: every entry point reads
- * identity through the request scope instead of hand-building a user shape.
+ * Session resolution: the single place a Better Auth session is turned into
+ * an Astromech identity (full user row + resolved role). Lives in the
+ * `users` domain; `request-context/` is its one caller.
  */
 
 import type { Role, User } from '@/types/index';

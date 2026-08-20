@@ -1,9 +1,7 @@
 /**
- * Storage driver registry.
- *
- * globalThis-backed (see `@/registry.js`) so the driver `initRuntime`
- * sets is visible to the local transport however it was reached — module-scope
- * state duplicates across the package's entry chunks.
+ * Storage driver registry, globalThis-backed (see `@/registry.js`) so the
+ * driver `initRuntime` sets is visible everywhere it's reached — module
+ * state duplicates across the package's entry chunks otherwise.
  */
 
 import type { StorageDriver } from '@/types/index';

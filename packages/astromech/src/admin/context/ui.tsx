@@ -7,10 +7,6 @@
 
 import React, { createContext, useContext, useState } from 'react';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 type UiContextValue = {
     sidebarOpen: boolean;
     toggleSidebar: () => void;
@@ -19,20 +15,13 @@ type UiContextValue = {
     setShortcutsOpen: (open: boolean) => void;
 };
 
-// ============================================================================
-// Context
-// ============================================================================
-
 const UiContext = createContext<UiContextValue | null>(null);
-
-// ============================================================================
-// Provider
-// ============================================================================
 
 type UiProviderProps = {
     children: React.ReactNode;
 };
 
+/** Provides global UI state: sidebar open/closed and the shortcuts modal. */
 export function UiProvider({ children }: UiProviderProps) {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -56,10 +45,7 @@ export function UiProvider({ children }: UiProviderProps) {
     );
 }
 
-// ============================================================================
-// Hook
-// ============================================================================
-
+/** Reads sidebar and shortcuts-modal state from `UiProvider`. */
 export function useUi(): UiContextValue {
     const ctx = useContext(UiContext);
     if (ctx === null) {

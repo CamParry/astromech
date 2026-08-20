@@ -1,11 +1,7 @@
 /**
- * The notifications service as in-process consumers hold it: the same domain
- * methods with `userId` filled from the request context, the way the HTTP routes
- * fill it from `c.var.user`.
- *
- * In-process code is trusted, but a session-scoped method still needs a session:
- * outside a request there is no user for it to act as, and one error says so
- * rather than four stubs claiming the methods do not exist.
+ * The notifications service as in-process consumers hold it: the same
+ * domain methods with `userId` filled from the request context. A
+ * session-scoped method still needs a session — one error says so.
  */
 
 import type { Notification, NotificationsService } from '@/types/index';

@@ -16,10 +16,6 @@ import { astromechClient } from '@/transport/http/client/index';
 import { useToast } from '../components/ui/index';
 import { queryKeys } from './use-query-keys';
 
-// ============================================================================
-// Query hooks
-// ============================================================================
-
 export function useMediaQuery(params?: MediaQueryParams) {
     return useQuery({
         queryKey: queryKeys.media.list(params as Record<string, unknown>),
@@ -49,10 +45,6 @@ export function useMediaUsage(id: string, enabled = true) {
         enabled,
     });
 }
-
-// ============================================================================
-// Mutation hooks
-// ============================================================================
 
 export function useUpdateMedia(
     id: string,
