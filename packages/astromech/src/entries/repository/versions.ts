@@ -11,8 +11,9 @@ import { entryVersionsTable } from '@/database/tables';
 
 export type VersionRepository = ReturnType<typeof createVersionRepository>;
 
-export function createVersionRepository(db: Db = getDb()) {
-    const repository = createRepository(entryVersionsTable, db);
+export function createVersionRepository(db?: Db) {
+    const database = db ?? getDb();
+    const repository = createRepository(entryVersionsTable, database);
 
     /** Create a new version snapshot. */
     async function create(data: NewEntryVersionRow): Promise<EntryVersionRow> {

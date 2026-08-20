@@ -22,8 +22,9 @@ export async function hashPreviewToken(plaintext: string): Promise<string> {
         .join('');
 }
 
-export function createPreviewTokenRepository(db: Db = getDb()) {
-    const repository = createRepository(entryPreviewTokensTable, db);
+export function createPreviewTokenRepository(db?: Db) {
+    const database = db ?? getDb();
+    const repository = createRepository(entryPreviewTokensTable, database);
 
     /** Replace any existing token for `entryId` with a freshly-hashed one. */
     async function issue(

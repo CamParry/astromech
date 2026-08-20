@@ -13,6 +13,7 @@ import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { encodeWith } from '@/database/codec';
 import { entriesTable } from '@/database/tables';
+import { transaction } from '@/database/transaction';
 import { BUILT_IN_SUPPORTS } from '@/entries/capabilities';
 import { createBuiltInEntryRepository } from '@/entries/repository/built-in';
 
@@ -306,60 +307,51 @@ describe('translatable sub-surface', () => {
 });
 
 describe('transaction', () => {
-    // The callback runs against a tx-bound storage; a throw rejects and rolls
-    // back. NOTE: on libsql :memory: a rollback poisons the *connection* — any
-    // later query on the same handle throws "no such table". So we assert only
-    // the thrown error and do NOT re-query the same db (same caveat the bulk
-    // characterization test documents).
-    it('rejects and rolls back when the callback throws', async () => {
+    // `EntryRepository` no longer carries its own `transaction`; the storage
+    // joins whatever scope `database/transaction.ts`'s `transaction()` opens,
+    // since every operation resolves its handle per call through `getDb()`.
+
+    it('rolls back atomically when the callback throws', async () => {
         const e = await repository.create({ type: 'post', title: 'Keep', slug: 'keep' });
-        // The harness driver always supports transactions — asserted so a
-        // regression there surfaces here rather than as a confusing TypeError.
-        expect(repository.transaction).toBeDefined();
         await expect(
-            repository.transaction!(async (tx) => {
-                await tx.update(e.id, { title: 'Changed' });
+            transaction(async () => {
+                await repository.update(e.id, { title: 'Changed' });
                 throw new Error('boom');
             })
         ).rejects.toThrow('boom');
+
+        const after = await repository.get(e.id);
+        expect(after?.title).toBe('Keep');
     });
 
-    // `transaction()` must open on the storage's own bound handle, not the
-    // `getDb()` registered base connection — otherwise writes could escape the
-    // outer transaction entirely.
-    //
-    // Two databases make that observable deterministically. A nested tx cannot:
-    // Kysely refuses `.transaction()` on a `Transaction` outright ("calling the
-    // transaction method for a Transaction is not supported"), so with the bound
-    // handle the inner call fails loudly rather than joining or escaping.
-    it('opens its transaction on the bound handle, not the registered base db', async () => {
-        const bound = await createTestDb();
-        const boundRepository = createBuiltInEntryRepository({ db: bound });
-        // Registering a second db makes it the `getDb()` base; boundRepository stays
-        // bound to the first.
-        const base = await createTestDb();
-        const baseRepository = createBuiltInEntryRepository({ db: base });
-
-        expect(boundRepository.transaction).toBeDefined();
-        await boundRepository.transaction!(async (tx) => {
-            await tx.create({ type: 'post', title: 'Bound', slug: 'bound' });
-        });
-
-        const onBound = await boundRepository.list({ type: 'post', limit: 'all' });
-        expect(onBound.data.map((e) => e.title)).toEqual(['Bound']);
-        const onBase = await baseRepository.list({ type: 'post', limit: 'all' });
-        expect(onBase.data).toEqual([]);
-    });
-
-    it('binds the tx storage so writes inside the callback take effect', async () => {
+    it('commits writes made inside the callback', async () => {
         const e = await repository.create({ type: 'post', title: 'Before', slug: 'b' });
-        // The committed value is observed via the in-tx return; libsql :memory:
-        // routes the tx through a separate connection, so a post-commit read on
-        // the base handle is unreliable here — assert the tx result instead.
-        expect(repository.transaction).toBeDefined();
-        const result = await repository.transaction!(async (tx) =>
-            tx.update(e.id, { title: 'After' })
+        const result = await transaction(async () =>
+            repository.update(e.id, { title: 'After' })
         );
         expect(result.title).toBe('After');
+
+        const after = await repository.get(e.id);
+        expect(after?.title).toBe('After');
+    });
+
+    // Nesting joins the outer transaction (decisions/0080, superseding 0055's
+    // throw): a `transaction()` call while a scope is open runs its body on the
+    // same handle, so the inner write is part of the outer commit.
+    it('joins an already-open scope rather than opening a nested transaction', async () => {
+        const created = await transaction(async () => {
+            const outer = await repository.create({
+                type: 'post',
+                title: 'Outer',
+                slug: 'outer',
+            });
+            await transaction(async () => {
+                await repository.update(outer.id, { title: 'Inner' });
+            });
+            return outer;
+        });
+
+        const after = await repository.get(created.id);
+        expect(after?.title).toBe('Inner');
     });
 });

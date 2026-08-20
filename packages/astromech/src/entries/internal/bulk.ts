@@ -1,17 +1,17 @@
 /**
  * Entry mutation dispatch: run a per-id operation over one or many ids, a single
  * id being a batch of one. `runBulk` is the inner primitive — it loops per-id
- * inside a single storage transaction (when the storage supports one), aborting
- * with a `BulkOperationError` that names the failed id and those that already
- * succeeded. `runOnIds` routes an array through it and a single id through a
- * transaction of its own.
+ * inside one `transaction()` scope, aborting with a `BulkOperationError` that
+ * names the failed id and those that already succeeded. `runOnIds` routes an
+ * array through it and a single id through a transaction of its own.
  *
- * Per-id callbacks receive the (tx-bound) storage and a db handle — `undefined`
- * when the storage has no transaction, in which case relationship storage falls
- * back to the registered db.
+ * Per-id callbacks still receive a db handle for shape compatibility with their
+ * callers; it is always `undefined` now — `getDb()` resolves the open
+ * `transaction()` scope on its own, so nothing needs it passed by hand.
  */
 
 import type { EntryRepository, RepositoryDb } from '../repository/types';
+import { transaction } from '@/database/transaction';
 import { BulkOperationError } from '../errors';
 import { getEntryRepository } from '../repository/registry';
 
@@ -26,15 +26,12 @@ async function runBulk<T>(
 ): Promise<T[]> {
     if (ids.length === 0) return [];
     const repository = getEntryRepository(type);
-    const run = async (
-        txRepository: EntryRepository,
-        db: RepositoryDb | undefined
-    ): Promise<T[]> => {
+    return transaction(async (): Promise<T[]> => {
         const results: T[] = [];
         const succeeded: string[] = [];
         for (const id of ids) {
             try {
-                results.push(await perId(txRepository, db, id));
+                results.push(await perId(repository, undefined, id));
                 succeeded.push(id);
             } catch (err) {
                 throw new BulkOperationError({
@@ -46,8 +43,7 @@ async function runBulk<T>(
             }
         }
         return results;
-    };
-    return repository.transaction(run);
+    });
 }
 
 /**
@@ -69,7 +65,7 @@ export async function runOnIds<T>(
     // is atomic too, but surface a failure as the plain error — there are no
     // siblings to name, so no BulkOperationError wrapping.
     const repository = getEntryRepository(type);
-    return repository.transaction((repo, db) => perId(repo, db, id as string));
+    return transaction(() => perId(repository, undefined, id as string));
 }
 
 /** Void form of `runOnIds`, for operations that return nothing. */

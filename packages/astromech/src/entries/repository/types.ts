@@ -8,11 +8,11 @@
  * mounts a single-table storage that declares no capabilities and so only needs
  * the five base methods.
  *
- * Shape: five base methods (list/get/create/update/delete), an always-present
- * `transaction`, and three optional capability groups (trash/versions/
- * translatable) required iff the corresponding capability is declared in
- * `supports`. `statuses`/`slug` carry no methods — they gate which EntryWrite
- * keys / ListParams the entries service passes.
+ * Shape: five base methods (list/get/create/update/delete) and three optional
+ * capability groups (trash/versions/translatable) required iff the
+ * corresponding capability is declared in `supports`. `statuses`/`slug` carry
+ * no methods — they gate which EntryWrite keys / ListParams the entries
+ * service passes.
  */
 
 import type { Db } from '@/database/types';
@@ -129,18 +129,6 @@ export type EntryRepository<R extends EntryRow = EntryRow> = {
      * cleanup leaves references to its types alone.
      */
     existingIds?(ids: string[]): Promise<Set<string>>;
-
-    /**
-     * Always present. When the driver supports interactive transactions it runs
-     * `fn` atomically with the tx-bound repository and the raw tx db handle;
-     * otherwise (e.g. D1) it runs `fn` sequentially with `db` undefined and no
-     * atomicity, so callers never branch. The raw tx db handle lets the entries
-     * service keep core relationship persistence (which lives outside the storage
-     * contract) atomic with the storage writes.
-     */
-    transaction<T>(
-        fn: (repository: EntryRepository<R>, db: RepositoryDb | undefined) => Promise<T>
-    ): Promise<T>;
 
     /**
      * Compute the unique slug for a base slug under (type, locale), excluding an

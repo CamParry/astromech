@@ -145,22 +145,22 @@ thread reviews the diff and runs the gate itself.
 
 **Stage 0 — scoped transactions** (`decisions/0080`)
 
-- [ ] Add `database/transaction.ts`: an `AsyncLocalStorage<Db>` in the
+- [x] Add `database/transaction.ts`: an `AsyncLocalStorage<Db>` in the
       `globalThis` registry (the pattern `request-context` uses), `transaction(fn)`
       that joins an open scope, degrades on `supportsTransactions() === false`,
       and otherwise runs `getDb().transaction().execute((trx) => store.run(trx, fn))`.
-- [ ] `getDb()` in `database/registry.ts` returns the stored handle first.
-- [ ] `createRelationshipRepository`, `createVersionRepository`,
+- [x] `getDb()` in `database/registry.ts` returns the stored handle first.
+- [x] `createRelationshipRepository`, `createVersionRepository`,
       `createPreviewTokenRepository` and the two helpers in
       `database/repository/resource-existence.ts` take `db?: Db` and resolve
       `db ?? getDb()` per call, not in a default parameter.
-- [ ] Remove `transaction` from `EntryRepository` (`repository/types.ts`,
+- [x] Remove `transaction` from `EntryRepository` (`repository/types.ts`,
       `built-in.ts`, `table.ts`). Point existing callers (`create`, `staging/merge`,
       `internal/bulk.ts`) at the new function; `bulk.ts` is deleted in stage 3,
       so a minimal edit is enough here.
-- [ ] Remove the `db` parameter from `indexEntryRelationships` and
+- [x] Remove the `db` parameter from `indexEntryRelationships` and
       `pruneDanglingRelations` and every call site.
-- [ ] Gate, plus `pnpm run check:boot`. A test that opens `transaction()` and
+- [x] Gate, plus `pnpm run check:boot`. A test that opens `transaction()` and
       asserts a nested call joins rather than throws, replacing the 0055 test.
 
 **Stage 1 — one hook runner** (`decisions/0081`)

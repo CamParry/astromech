@@ -41,9 +41,10 @@ export type RelationshipIndexSource = {
  */
 const INSERT_CHUNK_ROWS = 12;
 
-/** Defaults to the registered db; pass a tx handle to scope it to a transaction. */
-export function createRelationshipRepository(db: Db = getDb()) {
-    const repository = createRepository(relationshipsTable, db);
+/** Resolves `getDb()` per call unless a handle is passed — a test seam only. */
+export function createRelationshipRepository(db?: Db) {
+    const database = db ?? getDb();
+    const repository = createRepository(relationshipsTable, database);
 
     /**
      * Replace every edge recorded for one source. The delete covers the whole

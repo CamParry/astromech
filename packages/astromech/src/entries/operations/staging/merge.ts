@@ -1,7 +1,7 @@
-import type { EntryRepository, RepositoryDb } from '../../repository/types';
 import type { Entry, JsonObject } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { createRelationshipRepository } from '@/database/repository/relationships';
+import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/type-ids.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { assertNoFieldErrors, parseFields } from '@/fields/parse-fields';
@@ -64,15 +64,12 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
     // Backs up the canonical, overwrites it with the staged content, and
     // hard-deletes the staged row — all in one transaction so a partial
     // failure rolls back.
-    const run = async (
-        txRepository: EntryRepository,
-        txDb: RepositoryDb | undefined
-    ): Promise<Entry> => {
+    return transaction(async (): Promise<Entry> => {
         // 1. Backup (conditional on versioning): snapshot the canonical first so
         //    a partial failure leaves a recoverable version.
-        if (versioningOn && txRepository.versions) {
-            const latestNumber = await txRepository.versions.latestNumber(id);
-            await txRepository.versions.create({
+        if (versioningOn && repository.versions) {
+            const latestNumber = await repository.versions.latestNumber(id);
+            await repository.versions.create({
                 entryId: id,
                 versionNumber: latestNumber + 1,
                 title: canonical.title,
@@ -86,22 +83,20 @@ export async function mergeStaged(params: { type: string; id: string }): Promise
         //    refs stable) with the staged content. Status is intentionally
         //    left untouched: merging is content-only — publishing (or not) is
         //    a separate action, so an unpublished canonical stays unpublished.
-        const updated = await txRepository.update(id, {
+        const updated = await repository.update(id, {
             title: staged.title,
             fields: mergedFields,
         });
 
         // The canonical now holds the staged content, so its index rows derive
         // from that content — and from a source that is no longer staged.
-        await indexEntryRelationships(updated, mergedFields, type, txDb);
+        await indexEntryRelationships(updated, mergedFields, type);
 
         // 3. Cleanup: hard-delete the staged entry (its versions cascade; its
         //    index rows are not FK-bound, so drop them explicitly).
-        await createRelationshipRepository(txDb).deleteByResource(staged.id, 'entry');
-        await txRepository.delete(staged.id);
+        await createRelationshipRepository().deleteByResource(staged.id, 'entry');
+        await repository.delete(staged.id);
 
         return asEntry(updated);
-    };
-
-    return repository.transaction(run);
+    });
 }

@@ -33,22 +33,13 @@
  * field column); an unknown name throws, as it does for built-in storage.
  *
  * uniqueSlug: not supported — throws with an instructional error.
- * transaction: wraps fn in a Kysely tx, rebinding a new tableRepository instance.
- *   Absent entirely when the active driver has no interactive transactions.
  */
 
-import type {
-    EntryRepository,
-    EntryRow,
-    EntryWrite,
-    ListParams,
-    RepositoryDb,
-} from './types';
+import type { EntryRepository, EntryRow, EntryWrite, ListParams } from './types';
 import type { Column, Table } from '@/database/define-table';
 import type { QueryHandle, Repository } from '@/database/repository/create-repository';
 import type { Db } from '@/database/types';
 import type { JsonObject } from '@/types/index';
-import { supportsTransactions } from '@/database/capabilities';
 import { decodeWith } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 import { RelationshipFilterUnsupportedError, UnknownSortKeyError } from '../errors';
@@ -93,39 +84,6 @@ class TableRepository implements EntryRepository<EntryRow> {
             this.createdAtCol = options?.timestamps?.createdAt ?? 'createdAt';
             this.updatedAtCol = options?.timestamps?.updatedAt ?? 'updatedAt';
         }
-    }
-
-    /**
-     * Atomic when the driver supports interactive transactions; otherwise runs
-     * `fn` sequentially with `db` undefined and no atomicity.
-     */
-    public async transaction<T>(
-        fn: (
-            repository: EntryRepository<EntryRow>,
-            db: RepositoryDb | undefined
-        ) => Promise<T>
-    ): Promise<T> {
-        if (!supportsTransactions()) return fn(this, undefined);
-        const { db } = this.repository.query();
-        return db.transaction().execute(async (trx) => {
-            let timestamps: TableRepositoryOptions['timestamps'];
-            if (this.createdAtCol === false) {
-                timestamps = false;
-            } else if (this.updatedAtCol === false) {
-                timestamps = { createdAt: this.createdAtCol };
-            } else {
-                timestamps = {
-                    createdAt: this.createdAtCol,
-                    updatedAt: this.updatedAtCol,
-                };
-            }
-            const txRepository = new TableRepository(
-                this.table,
-                { idColumn: this.idCol, timestamps },
-                trx as unknown as Db
-            );
-            return fn(txRepository, trx as unknown as RepositoryDb);
-        });
     }
 
     private getColumns(): Record<string, Column> {

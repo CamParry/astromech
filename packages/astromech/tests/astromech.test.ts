@@ -52,7 +52,6 @@ const throwingRepository: EntryRepository = {
     create: throwing,
     update: throwing,
     delete: throwing,
-    transaction: throwing,
     uniqueSlug: throwing,
 };
 

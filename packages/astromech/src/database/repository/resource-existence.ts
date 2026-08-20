@@ -20,14 +20,15 @@ const ID_CHUNK = 100;
 export async function existingResourceIds(
     kind: TargetKind,
     ids: string[],
-    db: Db = getDb()
+    db?: Db
 ): Promise<Set<string>> {
+    const database = db ?? getDb();
     const unique = Array.from(new Set(ids));
     if (unique.length === 0) return new Set();
 
     const found = new Set<string>();
     for (let i = 0; i < unique.length; i += ID_CHUNK) {
-        for (const id of await selectIds(db, kind, unique.slice(i, i + ID_CHUNK))) {
+        for (const id of await selectIds(database, kind, unique.slice(i, i + ID_CHUNK))) {
             found.add(id);
         }
     }
@@ -41,12 +42,13 @@ export async function existingResourceIds(
  */
 export async function existingEntryTypes(
     ids: string[],
-    db: Db = getDb()
+    db?: Db
 ): Promise<Map<string, string>> {
+    const database = db ?? getDb();
     const unique = Array.from(new Set(ids));
     const types = new Map<string, string>();
     for (let i = 0; i < unique.length; i += ID_CHUNK) {
-        const rows = await db
+        const rows = await database
             .selectFrom('entries')
             .select(['id', 'type'])
             .where('id', 'in', unique.slice(i, i + ID_CHUNK))

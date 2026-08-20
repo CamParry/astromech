@@ -7,12 +7,12 @@
  * `relationships` index (that is `internal/relationships.ts`).
  */
 
-import type { RepositoryDb } from '../repository/types';
 import type { RelationshipDeclaration, TargetKind } from '@/fields/relationship-edges';
 import type { Field } from '@/types/fields';
 import type { JsonObject } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { existingResourceIds } from '@/database/repository/resource-existence';
+import { getTransactionScope } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/type-ids.shared';
 import { parseInstancePath } from '@/fields/field-path';
 import {
@@ -35,8 +35,7 @@ type ExistingIds = (ids: string[]) => Promise<Set<string>>;
  */
 export async function pruneDanglingRelations(
     definitions: Field[],
-    values: JsonObject,
-    db?: RepositoryDb
+    values: JsonObject
 ): Promise<{ values: JsonObject; dropped: number }> {
     const edges = collectRelationshipEdges(definitions, values);
     if (edges.length === 0) return { values, dropped: 0 };
@@ -53,8 +52,7 @@ export async function pruneDanglingRelations(
             kind,
             await existingResourceIds(
                 kind,
-                ofKind.map((edge) => edge.targetId),
-                db
+                ofKind.map((edge) => edge.targetId)
             )
         );
     }
@@ -63,13 +61,13 @@ export async function pruneDanglingRelations(
     // answers for its own ids through the hook the declaration was cleared on.
     const readsByPath = storageReadsByPath(definitions);
 
-    // A supplied `db` is the caller's transaction handle, while a registered
-    // storage is bound to its own — so reading one here answers from a
-    // different snapshot, where a row written earlier in this transaction looks
-    // missing and its live reference gets pruned. Those targets go UNCHECKED
-    // instead: a kept dangling id is dropped by the next write (decisions/0004),
-    // a deleted live one is gone.
-    const insideTransaction = db !== undefined;
+    // Inside an open `transaction()` scope, a registered storage's own reads may
+    // still be bound to a handle outside it — so reading one here can answer
+    // from a different snapshot, where a row written earlier in this
+    // transaction looks missing and its live reference gets pruned. Those
+    // targets go UNCHECKED instead: a kept dangling id is dropped by the next
+    // write (decisions/0004), a deleted live one is gone.
+    const insideTransaction = getTransactionScope() !== undefined;
 
     const readByTarget = new Map<string, ExistingIds>();
     if (!insideTransaction) {

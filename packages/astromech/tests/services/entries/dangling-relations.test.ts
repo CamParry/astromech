@@ -7,7 +7,7 @@
  * its own table rather than in `entries` — must survive.
  */
 
-import type { EntryRepository, RepositoryDb } from '@/entries/repository/types';
+import type { EntryRepository } from '@/entries/repository/types';
 import type {
     AstromechConfig,
     Entry,
@@ -19,9 +19,10 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { defineTable } from '@/database/define-table';
+import { setDb } from '@/database/registry';
 import { createRelationshipRepository } from '@/database/repository/relationships';
+import { transaction } from '@/database/transaction';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
-import { getEntryRepository } from '@/entries/repository/registry';
 import { tableRepository } from '@/entries/repository/table';
 import { entriesService as api } from '@/entries/service';
 import { createMediaRepository } from '@/media/repository';
@@ -313,12 +314,13 @@ describe('pruneDanglingRelations (directly)', () => {
         selectFrom(): never {
             throw new Error('existence query should not run');
         },
-    } as unknown as RepositoryDb;
+    } as unknown as Parameters<typeof setDb>[0];
 
     it('leaves values holding no relation untouched, and runs no query', async () => {
         const values: JsonObject = { plain: 'nothing to prune' };
+        setDb(explodingDb);
 
-        const result = await pruneDanglingRelations(docFields, values, explodingDb);
+        const result = await pruneDanglingRelations(docFields, values);
 
         expect(result).toEqual({ values, dropped: 0 });
         expect(result.values).toBe(values);
@@ -329,18 +331,12 @@ describe('pruneDanglingRelations (directly)', () => {
     // all and the reference stands.
     it('keeps a table-backed reference when pruning inside a transaction', async () => {
         const missing = '01JQZZZZZZZZZZZZZZZZZZZZZZ';
-        const repository = getEntryRepository('doc');
-        if (repository.transaction === undefined) throw new Error('no transactions');
 
         const outside = await pruneDanglingRelations(docFields, { link: missing });
         expect(outside).toEqual({ values: { link: null }, dropped: 1 });
 
-        await repository.transaction(async (_txRepository, txDb) => {
-            const inside = await pruneDanglingRelations(
-                docFields,
-                { link: missing },
-                txDb
-            );
+        await transaction(async () => {
+            const inside = await pruneDanglingRelations(docFields, { link: missing });
             expect(inside.dropped).toBe(0);
             expect(inside.values['link']).toBe(missing);
         });

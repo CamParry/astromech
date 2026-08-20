@@ -14,6 +14,7 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { defineTable } from '@/database/define-table';
+import { transaction } from '@/database/transaction';
 import { UnknownSortKeyError } from '@/entries/errors';
 import { entriesService } from '@/entries/index';
 import { tableRepository } from '@/entries/repository/table';
@@ -435,31 +436,21 @@ describe('uniqueSlug', () => {
 });
 
 describe('transaction', () => {
-    // NOTE: libsql :memory: opens a new connection after a transaction completes
-    // (the old connection is detached), so post-transaction state cannot be
-    // verified via getDb(). These tests instead verify: (a) the exception
-    // propagates on rollback, (b) writes are visible within the callback, and
-    // (c) the returned storage inside the callback is fully functional.
-
-    function runTx<T>(
-        fn: Parameters<NonNullable<typeof repository.transaction>>[0]
-    ): Promise<T> {
-        if (!repository.transaction)
-            throw new Error('tableRepository must have transaction');
-        return repository.transaction(fn) as Promise<T>;
-    }
+    // `EntryRepository` no longer carries its own `transaction`; the storage
+    // joins whatever scope `database/transaction.ts`'s `transaction()` opens,
+    // since every operation resolves its handle per call through `getDb()`.
 
     it('propagates exception from the callback (rollback path)', async () => {
         let createdInsideTx = false;
 
         await expect(
-            runTx(async (txRepository) => {
-                const rec = await txRepository.create({
+            transaction(async () => {
+                const rec = await repository.create({
                     type: 'link',
                     fields: { from: '/tx1', to: '/ok' },
                 });
                 // Write is visible inside the transaction callback.
-                const found = await txRepository.get(rec.id);
+                const found = await repository.get(rec.id);
                 expect(found?.id).toBe(rec.id);
                 createdInsideTx = true;
                 throw new Error('simulated failure');
@@ -473,18 +464,18 @@ describe('transaction', () => {
     it('returns the result of the callback (commit path)', async () => {
         const ids: string[] = [];
 
-        const result = await runTx<string>(async (txRepository) => {
-            const a = await txRepository.create({
+        const result = await transaction(async () => {
+            const a = await repository.create({
                 type: 'link',
                 fields: { from: '/tx1', to: '/a' },
             });
-            const b = await txRepository.create({
+            const b = await repository.create({
                 type: 'link',
                 fields: { from: '/tx2', to: '/b' },
             });
             ids.push(a.id, b.id);
             // Both writes visible inside the callback.
-            const res = await txRepository.list({ type: 'link', limit: 'all' });
+            const res = await repository.list({ type: 'link', limit: 'all' });
             expect(res.data).toHaveLength(2);
             return 'done';
         });

@@ -131,7 +131,7 @@ async function updateOne(params: {
         })
     );
     if (fields) {
-        await indexEntryRelationships(entry, fields, entryType.id, db);
+        await indexEntryRelationships(entry, fields, entryType.id);
         await propagateSharedFields({
             repository,
             entryType,
@@ -153,7 +153,7 @@ async function toStoredFields(
     patchedFieldNames: string[],
     context: FieldContext
 ): Promise<JsonObject> {
-    const { repository, db, entryType, currentEntry, status } = context;
+    const { repository, entryType, currentEntry, status } = context;
     const definitions = flattenEntryFields(entryType.fields);
     const excludeIds = await getUniquenessExcludeIds({
         repository,
@@ -192,8 +192,7 @@ async function toStoredFields(
     // and before the write, so the index derives from pruned values.
     const pruned = await pruneDanglingRelations(
         definitions,
-        projectToSchema(parsed.values, definitions) as JsonObject,
-        db
+        projectToSchema(parsed.values, definitions) as JsonObject
     );
     return pruned.values;
 }

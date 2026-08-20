@@ -7,6 +7,7 @@ import type {
     ResolvedEntryType,
 } from '@/types/index';
 import { getConfig } from '@/config/registry';
+import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/type-ids.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { assertNoFieldErrors, parseFields } from '@/fields/parse-fields';
@@ -98,9 +99,9 @@ export async function create(params: EntryCreateParams): Promise<Entry> {
     await runBeforeHooks('entry:beforeCreate', { type, data, user }, user);
 
     // Write the row and its relationship index atomically.
-    const entry = await repository.transaction(async (txRepository, txDb) => {
-        const created = asEntry(await txRepository.create({ type, ...data }));
-        await indexEntryRelationships(created, data.fields, type, txDb);
+    const entry = await transaction(async () => {
+        const created = asEntry(await repository.create({ type, ...data }));
+        await indexEntryRelationships(created, data.fields, type);
         return created;
     });
 

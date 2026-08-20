@@ -4,7 +4,6 @@
  * collector that enumerates every entry as a source.
  */
 
-import type { RepositoryDb } from '../repository/types';
 import type { RelationshipIndexSource } from '@/database/repository/relationships';
 import type { RelationshipEdge } from '@/fields/relationship-edges';
 import type { JsonObject } from '@/types/index';
@@ -24,13 +23,12 @@ import { entriesTable } from '../tables';
 export async function indexEntryRelationships(
     entry: { id: string; stagedFor?: string | null },
     fields: JsonObject,
-    typeName: string,
-    db?: RepositoryDb
+    typeName: string
 ): Promise<void> {
     const edges = entryEdges(typeName, fields);
     if (edges === null) return;
 
-    await createRelationshipRepository(db).replaceForSource(
+    await createRelationshipRepository().replaceForSource(
         {
             id: entry.id,
             kind: 'entry',

@@ -3,9 +3,9 @@
  *
  * Owns row CRUD on `entries`, list filters/search/sort/pagination, slug
  * uniquification, status/publishedAt column writes, the trash/versions/
- * translatable capability groups, locale-map enrichment, and Kysely transactions.
- * Policy (validation, hooks, relationships, versioning *decisions*, bulk
- * dispatch) stays in the entries service.
+ * translatable capability groups, and locale-map enrichment. Policy (validation,
+ * hooks, relationships, versioning *decisions*, bulk dispatch) stays in the
+ * entries service.
  *
  * Row access goes through `createRepository(entriesTable)` — the `Table`-backed CRUD
  * wrapper — which owns encoding, `updatedAt` stamping and result decoding. Four
@@ -26,8 +26,8 @@
  * `deletedAt` write and every read filters `deletedAt: null` itself.
  *
  * No `virtual:astromech/config` import — this stays directly testable. Resolves
- * the db per-op like the original data layer; `transaction` rebinds a fresh
- * instance to the Kysely tx handle.
+ * the db per-op like the original data layer, through `getDb()` and the
+ * scoped transaction it reads first (`database/transaction.ts`).
  */
 
 import type { EntryRow } from '../tables';
@@ -48,7 +48,6 @@ import type {
     SortOption,
 } from '@/types/index';
 import type { ExpressionBuilder, Updateable } from 'kysely';
-import { supportsTransactions } from '@/database/capabilities';
 import { decodeWith, encodePatchWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
@@ -272,32 +271,6 @@ export function createBuiltInEntryRepository(opts?: { db?: Db; defaultLocale?: s
     const repository = createRepository(entriesTable, dbOverride);
 
     const supports: readonly Capability[] = BUILT_IN_SUPPORTS;
-
-    async function transaction<T>(
-        fn: (repository: EntryRepository<Entry>, db: Db | undefined) => Promise<T>
-    ): Promise<T> {
-        if (!supportsTransactions()) {
-            return fn(
-                createBuiltInEntryRepository({
-                    ...(dbOverride ? { db: dbOverride } : {}),
-                    defaultLocale,
-                }),
-                undefined
-            );
-        }
-        // `handle()`, not `getDb()`: a storage already bound to a tx handle must
-        // nest on that handle, or it opens a second transaction on the base
-        // connection and the inner writes escape the outer rollback.
-        return handle()
-            .transaction()
-            .execute(async (trx) => {
-                const txRepository = createBuiltInEntryRepository({
-                    db: trx,
-                    defaultLocale,
-                });
-                return fn(txRepository, trx);
-            });
-    }
 
     /** Ids with a row in `entries` — trashed and staged rows included. */
     async function existingIds(ids: string[]): Promise<Set<string>> {
@@ -570,9 +543,6 @@ export function createBuiltInEntryRepository(opts?: { db?: Db; defaultLocale?: s
 
     return {
         supports,
-        // Always present; degrades to sequential internally when the driver
-        // lacks interactive transactions.
-        transaction,
         existingIds,
         uniqueSlug,
         list,
