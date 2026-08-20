@@ -1,7 +1,7 @@
 # 0055 — Storage does not nest transactions
 
 **Date:** 2026-08-16
-**Status:** accepted
+**Status:** superseded by 0080
 
 A tx-bound storage's `transaction()` throws. Storage does not emulate nested
 transactions with savepoints, and the loud failure is the contract, not a gap.

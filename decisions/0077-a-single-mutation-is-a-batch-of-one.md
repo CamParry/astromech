@@ -1,7 +1,7 @@
 # 0077 — A single mutation is a batch of one; explicit-id batches are atomic
 
 **Date:** 2026-08-20
-**Status:** accepted
+**Status:** accepted; the shared batch primitive is superseded by 0080, the semantics stand
 
 Every mutating entry operation runs through one transactional batch primitive. A
 single id is a batch of one. A batch addressed by explicit ids is atomic and

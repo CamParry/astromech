@@ -1,7 +1,7 @@
 # 0076 — The repository always exposes `transaction`
 
 **Date:** 2026-08-20
-**Status:** accepted
+**Status:** superseded by 0080
 **Supersedes:** 0028 (the call-site-visibility point only)
 
 Every `EntryRepository` now has a required `transaction` method. On a driver with
