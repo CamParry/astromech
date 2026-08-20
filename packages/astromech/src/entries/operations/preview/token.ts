@@ -25,6 +25,12 @@ import { previewTokenSchema } from '../../schema';
  */
 export const DEFAULT_PREVIEW_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+/**
+ * Issues a preview token for a canonical entry: returns the plaintext once and
+ * stores only its hash. Throws when the type can't stage or the id names a
+ * staged change. Omitted `expiresAt` takes the default TTL; explicit null never
+ * expires.
+ */
 export async function issuePreviewToken(params: {
     type: string;
     id: string;
@@ -60,6 +66,10 @@ export async function issuePreviewToken(params: {
     return { token };
 }
 
+/**
+ * Revokes any preview token for the entry. Throws when the type can't stage or
+ * no entry of that type matches the id.
+ */
 export async function revokePreviewToken(params: {
     type: string;
     id: string;

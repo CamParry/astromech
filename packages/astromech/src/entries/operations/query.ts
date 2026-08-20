@@ -17,6 +17,11 @@ import { getEntryRepository } from '../repository/registry';
 import { applyVisibility, markPublic } from '../visibility';
 import { runPreviewQuery } from './preview/read';
 
+/**
+ * Lists entries of one or more types, paginated and filtered to the caller's
+ * visibility shape. A `previewToken` takes the preview path; a public read of
+ * trashed rows throws, since the public shape can never return them.
+ */
 export async function query(
     params: EntryQueryParams & { type: string | readonly string[] }
 ): Promise<QueryResult<Entry>> {

@@ -65,7 +65,7 @@ async function loadSources(
 
     const loaded = new Map<string, EntryRow>();
     for (const [type, ids] of idsByType) {
-        const repository = storageFor(type);
+        const repository = repositoryFor(type);
         if (repository === null) continue;
         const records = await Promise.all(
             Array.from(ids, (id) => repository.get(id, { includeTrashed: true }))
@@ -77,8 +77,8 @@ async function loadSources(
     return loaded;
 }
 
-/** A type dropped from config since its rows were written has no storage. */
-function storageFor(type: string): EntryRepository | null {
+/** A type dropped from config since its rows were written has no repository. */
+function repositoryFor(type: string): EntryRepository | null {
     try {
         return getEntryRepository(type);
     } catch {

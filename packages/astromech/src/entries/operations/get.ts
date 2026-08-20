@@ -8,6 +8,12 @@ import { getEntryRepository } from '../repository/registry';
 import { applyVisibility, markPublic } from '../visibility';
 import { runPreviewGet } from './preview/read';
 
+/**
+ * Gets one entry by type and id, filtered to the caller's visibility shape.
+ * Returns null when no row matches, its type differs, or visibility hides it.
+ * A `previewToken` takes the token-authorized preview path that skips the
+ * publish gate.
+ */
 export async function get(params: {
     type: string;
     id: string;

@@ -14,6 +14,11 @@ import { asEntry } from '../../internal/records';
 import { getDefaultLocale } from '../../internal/type-config';
 import { getEntryRepository } from '../../repository/registry';
 
+/**
+ * Preview list read by filters (see the file header). Returns an empty result
+ * when the token or type is absent, or when no canonical passes the token
+ * check; with `staged`, swaps each match for its staged change or skips it.
+ */
 export async function runPreviewQuery(
     params: EntryQueryParams & { type: string | readonly string[] }
 ): Promise<QueryResult<Entry>> {
