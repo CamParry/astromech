@@ -19,26 +19,9 @@ import {
 /**
  * The server half of the REST route table.
  *
- * The rows are data, in `http-routes.shared.ts`, which the fetch client reads
- * too. This file attaches the one genuinely per-route piece of server code
- * — `args`, how path params, query string and body become the method's argument
- * object — and `mountRestRoutes` does the rest: read the contract's permission,
- * build the argument object, validate it against the method's own contract
- * schema, dispatch through `scopedServices` so the role is enforced by the
- * handle rather than by a check the handler remembered to write, and wrap the
- * result in the envelope.
- *
- * The permission is read BEFORE the body, so a request that is both unauthorized
- * and malformed answers 403 rather than telling the caller its body was wrong.
- *
- * Each route also registers itself in the router's OpenAPI document, so
- * `/openapi.json` describes the table rather than a hand-written subset of it.
- *
- * A handler needing anything else (a permission no contract states, a body that
- * is not JSON, a response outside the closed envelope set) keeps its explicit
- * `router.get(...)` and the reason it is not generic — but its row stays in the
- * shared table marked `handler: 'bespoke'`, and `documentBespokeRoutes` puts it
- * in the document with the rest. A hand-written handler is still public API.
+ * The rows are data, in `http-routes.shared.ts`; this file attaches the
+ * per-route server code — `args` — and `mountRestRoutes` validates, dispatches
+ * through `scopedServices` and wraps the result in the envelope.
  */
 
 type Env = { Variables: AuthVariables };
@@ -222,10 +205,6 @@ function respond(c: Context<Env>, route: HttpRouteSpec, result: unknown): Respon
     }
 }
 
-// ============================================================================
-// OpenAPI document
-// ============================================================================
-
 /**
  * Register one row in the router's OpenAPI document, if a contract describes it.
  * A row whose method has no contract in this catalogue is silently absent, which
@@ -317,10 +296,6 @@ function renameShape(
         )
     );
 }
-
-// ============================================================================
-// Helpers
-// ============================================================================
 
 /** Does this mount resolve its catalogue per request? */
 function isPerRequest(contracts: RestContracts): contracts is PerRequestContracts {

@@ -8,10 +8,6 @@ import { astromechClient } from '@/transport/http/client/index';
 import { useToast } from '../components/ui/index';
 import { queryKeys } from './use-query-keys';
 
-// ============================================================================
-// Query hooks
-// ============================================================================
-
 export function useNotifications(params?: Record<string, unknown>, enabled = true) {
     return useQuery({
         queryKey: queryKeys.notifications.list(params),
@@ -28,10 +24,6 @@ export function useNotificationCount() {
         refetchOnWindowFocus: true,
     });
 }
-
-// ============================================================================
-// Mutation hooks
-// ============================================================================
 
 export function useDismiss() {
     const queryClient = useQueryClient();

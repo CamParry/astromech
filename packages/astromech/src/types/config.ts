@@ -18,10 +18,6 @@ import type { EntryRepository } from '@/entries/repository/types';
 import type { ImageFormat } from '@/media/serving/image/url.shared';
 import type { Dialect, Kysely } from 'kysely';
 
-// ============================================================================
-// Drivers
-// ============================================================================
-
 export type DbDump = {
     /** Raw bytes of a consistent SQLite snapshot. */
     stream: ReadableStream<Uint8Array>;
@@ -95,7 +91,6 @@ export type StorageList = {
 export type StorageDriver = {
     name: string;
 
-    // --- required ---
     put(
         key: string,
         body: ReadableStream | Uint8Array,
@@ -109,10 +104,10 @@ export type StorageDriver = {
         opts?: { cursor?: string; limit?: number }
     ): Promise<StorageList>;
 
-    // --- optional capabilities, feature-detected at the call site ---
-    // Detection is load-bearing, not politeness: an R2 binding cannot sign URLs
-    // at all and `filesystem()` cannot either, so these are genuinely absent on
-    // shipped drivers. Never assume a method exists.
+    // Optional capabilities, feature-detected at the call site. Detection is
+    // load-bearing, not politeness: an R2 binding cannot sign URLs at all and
+    // `filesystem()` cannot either, so these are genuinely absent on shipped
+    // drivers. Never assume a method exists.
     /** Permanent, cacheable, CDN-frontable URL. Null when the driver has none. */
     getPublicUrl?(key: string): string | null;
     /** Time-limited upload URL for direct client uploads. */
@@ -165,10 +160,6 @@ export type SchedulerDriver = {
     start(onTick: (now: Date) => Promise<void>): void | Promise<void>;
     stop?(): void | Promise<void>;
 };
-
-// ============================================================================
-// Entry Types
-// ============================================================================
 
 export type SlugConfig = {
     source?: string;
@@ -280,10 +271,6 @@ export type ResolvedEntryType = Omit<EntryType, 'repository' | 'fields' | 'type'
     fields: ResolvedEntryFields;
 };
 
-// ============================================================================
-// Configuration
-// ============================================================================
-
 export type TrashConfig = {
     enabled?: boolean;
     retentionDays?: number;
@@ -340,10 +327,6 @@ export type UsersConfig = {
      */
     validate?: ResourceValidator;
 };
-
-// ============================================================================
-// Unified Admin Pages (host + plugin, settings form or custom component)
-// ============================================================================
 
 /**
  * One shape for host + plugin pages. Exactly one of `fields` / `component`
@@ -428,6 +411,7 @@ export type ResolvedAdminPage = {
     public: boolean;
 };
 
+/** The config object passed to `defineConfig`. */
 export type AstromechConfig = {
     db: DatabaseDriver;
     storage: StorageDriver;
@@ -539,10 +523,7 @@ export type ResolvedConfig = Omit<
     timezone: string;
 };
 
-// ============================================================================
-// Admin Config (virtual module shape exposed to admin SPA)
-// ============================================================================
-
+/** Admin Config — the virtual-module shape exposed to the admin SPA. */
 export type AdminConfig = {
     /** URL prefix for the admin panel; the API is served at `${basePath}/api`. */
     basePath: string;

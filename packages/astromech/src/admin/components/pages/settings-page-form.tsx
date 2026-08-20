@@ -1,12 +1,7 @@
 /**
- * Shared settings-page form renderer, used by both host pages (`/page/*`) and
- * plugin settings pages (`/plugin/*`). Owns: query-load + synchronous seed,
- * dirty tracking, Page/PageHeader shell with header save button + unsaved-
- * changes indicator + locale switcher, save via saveSettingsPage.
- *
- * Parameterized by pre-resolved `baseKey` and `fields` so the caller is
- * origin-agnostic (host pages pass `baseKey = path`; plugin pages pass
- * `baseKey = 'plugin:<ns>:<path>'`).
+ * Shared settings-page form renderer, used by host pages (`/page/*`) and
+ * plugin settings pages (`/plugin/*`). Parameterized by pre-resolved
+ * `baseKey` and `fields` so the caller is origin-agnostic.
  */
 
 import type { Label, ResolvedEntryFields } from '@/types/index';
@@ -30,17 +25,9 @@ import { resolveLabel } from '@/admin/i18n/labels';
 import { astromechClient } from '@/transport/http/client/index';
 import { resolveContentLocale } from '@/utilities/locale';
 
-// ============================================================================
-// Query key
-// ============================================================================
-
 function settingsPageKey(baseKey: string, locale: string | undefined) {
     return ['settings-page', baseKey, locale ?? '__shared__'] as const;
 }
-
-// ============================================================================
-// Props
-// ============================================================================
 
 export type SettingsPageFormProps = {
     baseKey: string;
@@ -49,10 +36,6 @@ export type SettingsPageFormProps = {
     translatable: boolean;
     readOnly: boolean;
 };
-
-// ============================================================================
-// Component
-// ============================================================================
 
 export function SettingsPageForm({
     baseKey,

@@ -1,17 +1,9 @@
 /**
  * Manifest RPC route
  *
- * `POST /rpc/{method id}` calls any service method the method manifest declares:
- * the id addresses the method, the JSON body is its argument object, and
- * `buildScopedDispatch` supplies the call already scoped to the caller's role. A
- * method the dispatcher cannot build is refused with the reason it declares, so
- * `media.upload` fails as binary input rather than as a generic bad request.
- *
- * An id containing a slash (a plugin entry type's qualified id) must be
- * percent-encoded, exactly as `/settings/:key` requires of a slashed key.
- *
- * Mounted after `requireAuth`: the role is what the dispatch is built from, and
- * a session-scoped method takes its subject from the request context.
+ * `POST /rpc/{method id}` calls any service method the manifest declares: the
+ * id addresses the method, the JSON body is its argument object, and
+ * `buildScopedDispatch` supplies the call already scoped to the caller's role.
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
@@ -31,10 +23,6 @@ import { resolveScopedMethod } from '@/transport/tools/scoped-tools';
 type Env = { Variables: AuthVariables };
 
 const router = new OpenAPIHono<Env>();
-
-// ============================================================================
-// POST /rpc/:id
-// ============================================================================
 
 router.post('/:id', async (c) => {
     const id = c.req.param('id');

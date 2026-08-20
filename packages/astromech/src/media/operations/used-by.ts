@@ -13,12 +13,8 @@ import { createMediaRepository } from '../repository';
 
 /**
  * Every relationships-index edge pointing at this media item — one row per
- * edge, so a source using the same file at two paths yields two rows.
- *
- * Titles resolve here rather than in the admin, so this returns the same
- * shape as `entries.incomingRelationships`. Two wire shapes for "what
- * references this" is the split worth avoiding; reading a peer domain to
- * name a row is not.
+ * edge, so a source using the same file at two paths yields two rows. Titles
+ * resolve here so this returns the same shape as `entries.incomingRelationships`.
  */
 export async function usedBy(params: { id: string }): Promise<MediaUsage[]> {
     const { id } = params;
@@ -48,10 +44,9 @@ export async function usedBy(params: { id: string }): Promise<MediaUsage[]> {
 }
 
 /**
- * Display name per source, keyed by kind+id. Entry sources load through their
- * OWN type's storage — the target's storage would silently miss every source of
- * another type. A source that will not load keeps an empty title and the caller
- * falls back to its id.
+ * Display name per source, keyed by kind+id. Entry sources load through
+ * their own type's repository — the target's would silently miss sources
+ * of another type. A source that fails to load keeps an empty title.
  */
 async function resolveSourceTitles(
     rows: readonly RelationshipRow[]

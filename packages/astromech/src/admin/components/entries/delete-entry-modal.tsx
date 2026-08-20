@@ -1,8 +1,7 @@
 /**
- * DeleteEntryModal — confirmation modal for trashing or permanently deleting
- * an entry. Surfaces:
- *  - cascade-locales toggle (only when the entry has sibling locales)
- *  - incoming-relationships list (only when other entries reference this one)
+ * Confirmation modal for trashing or permanently deleting an entry. Surfaces
+ * a cascade-locales toggle and an incoming-relationships list, each shown
+ * only when relevant.
  */
 
 import type { Entry, IncomingRelationship } from '@/types/index';

@@ -9,10 +9,6 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { usersService } from '@/users/service';
 
-// ---------------------------------------------------------------------------
-// Config with custom user fields
-// ---------------------------------------------------------------------------
-
 function makeUserFieldConfig(): AstromechConfig {
     return {
         ...makeTestConfig(),
@@ -41,10 +37,6 @@ beforeEach(async () => {
     setupTestConfig(makeUserFieldConfig());
 });
 
-// ---------------------------------------------------------------------------
-// create: required field
-// ---------------------------------------------------------------------------
-
 describe('usersService.create — required field', () => {
     it('rejects when required custom field is absent', async () => {
         await expect(
@@ -69,10 +61,6 @@ describe('usersService.create — required field', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// create: defaultValue
-// ---------------------------------------------------------------------------
-
 describe('usersService.create — defaultValue', () => {
     it('applies defaultValue when field is absent', async () => {
         const user = await usersService.create({
@@ -92,10 +80,6 @@ describe('usersService.create — defaultValue', () => {
         expect(user.fields?.tier).toBe('pro');
     });
 });
-
-// ---------------------------------------------------------------------------
-// create: slug field
-// ---------------------------------------------------------------------------
 
 describe('usersService.create — slug field', () => {
     it('rejects a value that is not already a slug', async () => {
@@ -124,10 +108,6 @@ describe('usersService.create — slug field', () => {
         expect(user.fields?.handle).toBe('alice-smith');
     });
 });
-
-// ---------------------------------------------------------------------------
-// create: uniqueness
-// ---------------------------------------------------------------------------
 
 describe('usersService.create — uniqueness', () => {
     it('rejects a duplicate badge', async () => {
@@ -163,10 +143,6 @@ describe('usersService.create — uniqueness', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// update: validation + coercion
-// ---------------------------------------------------------------------------
-
 describe('usersService.update — validation', () => {
     it('rejects when a required field is removed on update', async () => {
         const user = await usersService.create({
@@ -197,10 +173,6 @@ describe('usersService.update — validation', () => {
         expect(updated.fields?.handle).toBe('new-handle');
     });
 });
-
-// ---------------------------------------------------------------------------
-// update: uniqueness excludes self
-// ---------------------------------------------------------------------------
 
 describe('usersService.update — uniqueness self-exclusion', () => {
     it('does not trip "Already in use" when the user keeps its own badge', async () => {
@@ -241,10 +213,6 @@ describe('usersService.update — uniqueness self-exclusion', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// update: fields merge
-// ---------------------------------------------------------------------------
-
 describe('usersService.update — fields merge', () => {
     it('keeps fields the patch omits', async () => {
         const user = await usersService.create({
@@ -259,10 +227,6 @@ describe('usersService.update — fields merge', () => {
         expect(updated.fields).toMatchObject({ bio: 'Hi', badge: 'gold', tier: 'pro' });
     });
 });
-
-// ---------------------------------------------------------------------------
-// update: no fields → skips validation
-// ---------------------------------------------------------------------------
 
 describe('usersService.update — no fields key', () => {
     it('updates name without triggering field validation', async () => {

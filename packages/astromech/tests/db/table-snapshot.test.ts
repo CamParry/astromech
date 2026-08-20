@@ -68,10 +68,6 @@ describe('toSnapshotTable timestamp storage', () => {
     });
 });
 
-// ============================================================================
-// Fixtures
-// ============================================================================
-
 const parent = defineTable('parent', ({ col }) => ({
     id: col.id(),
     name: col.text({ notNull: true }),

@@ -1,12 +1,7 @@
 /**
- * Query and mutation hooks for entries.
- *
- * Query hooks wrap useQuery for reading entry data.
- * Mutation hooks wrap useMutation, baking in cache invalidation and toasts
- * for consistent operations. Page-specific callbacks (e.g. navigation) are
- * accepted via optional onSuccess.
- *
- * Client surface: options-object, type required.
+ * Query and mutation hooks for entries. Mutation hooks bake in cache
+ * invalidation and toasts; page-specific callbacks (e.g. navigation) are
+ * accepted via optional onSuccess. Options-object client surface, type required.
  */
 
 import type {
@@ -27,15 +22,10 @@ import { AstromechApiError, astromechClient } from '@/transport/http/client/inde
 import { useToast } from '../components/ui/index';
 import { queryKeys, scopedEntryKeys } from './use-query-keys';
 
-// ============================================================================
-// Mount scoping
-// ============================================================================
-
 /**
- * Optional mount binding. Root callers omit both (defaults reproduce today's
- * behaviour exactly: the root `astromechClient.entries` client and unprefixed
- * keys). Plugin callers pass the bound entries client and the plugin name as
- * scope.
+ * Optional mount binding: root callers omit both (root client, unprefixed
+ * keys); plugin callers pass the bound entries client and the plugin name
+ * as cache scope.
  */
 export type EntryHookScope = {
     /**
@@ -54,10 +44,6 @@ function resolveApi(scope?: EntryHookScope): EntriesService {
 function resolveKeys(scope?: EntryHookScope) {
     return scopedEntryKeys(scope?.cacheScope ?? '');
 }
-
-// ============================================================================
-// Query hooks
-// ============================================================================
 
 export function useEntriesQuery(
     params: EntryQueryParams & { type: string | readonly string[] },
@@ -138,10 +124,6 @@ export function useEntriesByIds(type: string, ids: string[], enabled = true) {
         enabled: enabled && ids.length > 0,
     });
 }
-
-// ============================================================================
-// Mutation hooks
-// ============================================================================
 
 export function useCreateEntry() {
     const queryClient = useQueryClient();
@@ -394,10 +376,7 @@ export function useScheduleEntry(
     });
 }
 
-// ============================================================================
-// Bulk mutation hooks (atomic — single client call per action)
-// ============================================================================
-
+// Bulk mutation hooks: each is atomic, a single client call per action.
 function bulkErrorMessage(err: unknown, fallback: string): string {
     if (err instanceof Error) {
         const failedId = (err as { failedId?: string }).failedId;
@@ -551,12 +530,9 @@ export function useRestoreEntryVersion(
 }
 
 /**
- * Mutation: create a new entry that joins an existing locale group as a
- * translation of `sourceId`. Used by the LocaleSwitcher "Create translation" CTA.
- *
- * Implementation: reads the source via astromechClient.entries.get, then calls
- * astromechClient.entries.duplicate({ type, id: sourceId, overrides: { locale,
- * localeGroup } }) so the new row inherits the source's localeGroup.
+ * Create a new entry that joins an existing locale group as a translation
+ * of `sourceId`, inheriting its `localeGroup`. Used by the LocaleSwitcher's
+ * "Create translation" action.
  */
 export function useCreateTranslation(
     type: string,
@@ -595,10 +571,7 @@ export function useCreateTranslation(
     });
 }
 
-// ============================================================================
-// Forward versioning (staged entries) hooks
-// ============================================================================
-
+// Forward versioning: hooks for staged entries.
 /** The canonical entry's staged change, or null. */
 export function useGetStaged(
     type: string,
@@ -616,10 +589,9 @@ export function useGetStaged(
 }
 
 /**
- * Stage a change on a canonical entry. On success the new staged entry is
- * returned; if one already exists the API replies 409 and `onConflict` is called
- * with the existing staged id so the page can redirect to it (the service stays
- * dumb — the UI owns the redirect).
+ * Stage a change on a canonical entry. On a 409 (a staged change already
+ * exists), `onConflict` is called with the existing staged id so the page
+ * can redirect to it.
  */
 export function useCreateStaged(
     type: string,

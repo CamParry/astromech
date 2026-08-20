@@ -1,9 +1,7 @@
 /**
- * Email driver registry.
- *
- * globalThis-backed (see `@/registry.js`) so the driver `initRuntime`
- * sets is visible to every reader, whichever entry chunk it came through. Email
- * is optional — reads probe rather than throw.
+ * Email driver registry, globalThis-backed (see `@/registry.js`) so the
+ * driver `initRuntime` sets is visible to every reader. Email is optional —
+ * reads probe rather than throw.
  */
 
 import type { EmailDriver } from '@/types/index';

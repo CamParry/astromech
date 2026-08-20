@@ -4,10 +4,6 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { filesystem } from '@/storage/drivers/filesystem';
 
-// ---------------------------------------------------------------------------
-// Helper: drain a ReadableStream into Uint8Array
-// ---------------------------------------------------------------------------
-
 async function drain(stream: ReadableStream): Promise<Uint8Array> {
     const reader = (stream as ReadableStream<Uint8Array>).getReader();
     const chunks: Uint8Array[] = [];
@@ -29,10 +25,6 @@ async function drain(stream: ReadableStream): Promise<Uint8Array> {
     }
     return out;
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 let dir: string;
 let driver: ReturnType<typeof filesystem>;

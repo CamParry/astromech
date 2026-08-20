@@ -9,9 +9,8 @@ import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 
 /**
  * Each source contributes both an exact key and a `key:` prefix, so a
- * translatable key exposes its per-locale variants (`globals:en`) too. An entry
- * in `publicSettings` that is already a prefix (ends with `:`) is taken as
- * written.
+ * translatable key exposes its per-locale variants too. An entry already
+ * a prefix (ends with `:`) is taken as written.
  */
 export function resolvePublicSettingKeys(options: {
     adminPages: readonly ResolvedAdminPage[];

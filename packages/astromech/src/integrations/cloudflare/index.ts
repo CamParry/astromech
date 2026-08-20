@@ -2,12 +2,6 @@
  * Astromech's Cloudflare Workers integration. It wraps the Astro adapter's
  * worker entry with a `scheduled()` handler, so a site exports both from one
  * file.
- *
- * @example
- * // the site's src/worker.ts
- * import astro from '@astrojs/cloudflare/entrypoints/server';
- * import { createWorkerEntry } from 'astromech/cloudflare';
- * export default createWorkerEntry(astro);
  */
 
 import { createAstromech } from '@/astromech';

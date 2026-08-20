@@ -8,9 +8,8 @@ import { parseEntryTypeId, resolveEntryType } from '@/entries/type-ids.shared';
 
 /**
  * Any relationship field whose `target` is qualified (`{plugin}/{type}`) must
- * resolve against the fully-built {entries, pluginEntries}. Bare targets keep
- * existing behavior (no new validation here). Crashes loud naming the entry
- * type, field, target.
+ * resolve against the fully-built `{entries, pluginEntries}`. Bare targets
+ * are not checked here. Crashes loud, naming the entry type, field, target.
  */
 export function assertQualifiedRelationshipTargets(
     config: Pick<ResolvedConfig, 'entries' | 'pluginEntries'>

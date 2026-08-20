@@ -2,17 +2,9 @@
  * Core domain types — entries, users, media, settings, roles, relationships
  */
 
-// ============================================================================
-// Utility Types
-// ============================================================================
-
 export type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
 export type JsonObject = { [key: string]: JsonValue };
 export type JsonArray = JsonValue[];
-
-// ============================================================================
-// Resources
-// ============================================================================
 
 /**
  * What carries fields and runs the field pipeline — an entry, a user, a media
@@ -21,12 +13,9 @@ export type JsonArray = JsonValue[];
  */
 export type ResourceType = 'entry' | 'user' | 'media' | 'setting';
 
-// ============================================================================
-// Entries
-// ============================================================================
-
 export type EntryStatus = 'unpublished' | 'published' | 'scheduled';
 
+/** A content record — the primary object of an entry type. */
 export type Entry = {
     id: string;
     type: string;
@@ -73,17 +62,9 @@ export type EntryVersion = {
     createdBy: string | null;
 };
 
-// ============================================================================
-// Relationships
-// ============================================================================
-
 // A relationship row has no hand-written type: it is a derived index whose
 // shape comes from its `Table`, so `RelationshipRow` in `database/schema.ts`
 // is the one definition. A second copy here could only drift out of date.
-
-// ============================================================================
-// Media
-// ============================================================================
 
 export type MediaMetadata = {
     blurhash?: string | null;
@@ -93,6 +74,7 @@ export type MediaMetadata = {
     pageCount?: number;
 };
 
+/** An uploaded file — an image, video, document or other stored asset. */
 export type Media = {
     id: string;
     filename: string;
@@ -110,10 +92,6 @@ export type Media = {
     updatedAt: Date;
     createdBy: string | null;
 };
-
-// ============================================================================
-// Users & Roles
-// ============================================================================
 
 /**
  * Permission strings follow `resource[:identifier]:action` — action always last.
@@ -151,6 +129,7 @@ export type Role = {
     isBuiltIn: boolean;
 };
 
+/** An admin user account. */
 export type User = {
     id: string;
     email: string;
@@ -162,10 +141,6 @@ export type User = {
     createdAt: Date;
     updatedAt: Date;
 };
-
-// ============================================================================
-// Notifications
-// ============================================================================
 
 export type Notification = {
     id: string;
@@ -187,10 +162,6 @@ export type NotifyInput = {
     /** Admin-relative click-through path (e.g. `/entries/123`), without the admin base prefix. */
     href?: string;
 };
-
-// ============================================================================
-// Settings
-// ============================================================================
 
 export type Setting = {
     key: string;

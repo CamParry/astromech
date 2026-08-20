@@ -1,9 +1,7 @@
 /**
  * Code-gen for the `virtual:astromech/plugins/components` virtual module.
- *
- * Browser-bound assets must be statically importable, so this module CODE-GENS
- * lazy `import()` calls from the string import specifiers in plugin definitions
- * (spec §11) and in the host app's own `admin.pages`.
+ * Browser-bound assets must be statically importable, so this generates
+ * lazy `import()` calls from the string specifiers in plugin definitions.
  */
 
 import type { AdminPage, AdminSlotContribution, AdminSlotName } from '@/types/config';
@@ -16,18 +14,9 @@ import {
 } from '@/plugins/runtime/plugin-identity';
 
 /**
- * Turn a plugin's asset specifier into one this module can emit an `import()`
- * for. Relative specifiers resolve against the plugin's declared `root`, which
- * is what lets a plugin's sub-modules name their own files (`'./admin/pages/
- * overview.tsx'`) without knowing the plugin's identity or its location on
- * disk.
- *
- *   - `root` is a `file:` URL (`import.meta.url`) → an absolute path, which is
- *     what an unpublished plugin needs: its assets have no package specifier.
- *   - `root` is anything else, or absent → `<root ?? package>/<path>`, the
- *     subpath a published package exports the asset under.
- *   - Non-relative specifiers pass through untouched, so an asset from another
- *     package can still be named directly.
+ * Turn a plugin's asset specifier into one this module can emit an
+ * `import()` for. Relative specifiers resolve against the plugin's declared
+ * `root` (a `file:` URL for unpublished plugins, else `<root ?? package>`).
  */
 function resolveAssetSpecifier(def: PluginDefinition, specifier: string): string {
     if (!specifier.startsWith('./') && !specifier.startsWith('../')) return specifier;
@@ -42,12 +31,9 @@ function resolveAssetSpecifier(def: PluginDefinition, specifier: string): string
 }
 
 /**
- * Turn a host `admin.pages` component specifier into one this module can emit
- * an `import()` for. A host page has no plugin `root`, so relative specifiers
- * resolve against the Astro project root (`file:` URL) — which is what lets a
- * host page name its own file the way it appears in the repo
- * (`'./src/admin/pages/site-status.tsx'`). Non-relative specifiers pass through
- * untouched, so a page component can still come from a package.
+ * Turn a host `admin.pages` component specifier into one this module can
+ * emit an `import()` for. A host page has no plugin `root`, so relative
+ * specifiers resolve against the Astro project root instead.
  */
 function resolveHostSpecifier(root: string, specifier: string): string {
     if (!specifier.startsWith('./') && !specifier.startsWith('../')) return specifier;
@@ -59,6 +45,7 @@ function labelText(label: AdminPage['label']): string {
     return typeof label === 'string' ? label : label.$t;
 }
 
+/** Generate the module source: field-type, page, slot and i18n loaders for every installed plugin. */
 export function generatePluginClientManifest(
     plugins: PluginDefinition[],
     host?: { pages: AdminPage[]; root: string }
@@ -90,10 +77,9 @@ export function generatePluginClientManifest(
             });
     });
 
-    // Host `admin.pages` component views, keyed by the bare `path` — exactly the
-    // `/page/$` splat. Host keys are NOT namespaced: namespacing is the rule for
-    // plugin registrations only. Permissions are taken verbatim (a host page
-    // authors a real permission key, not a bare plugin-relative one).
+    // Host `admin.pages` component views, keyed by the bare `path` — exactly
+    // the `/page/$` splat. Host keys are NOT namespaced (that's the plugin
+    // rule); permissions are taken verbatim, since a host page authors a real key.
     const hostRoot = host?.root ?? '';
     const hostPageLines = (host?.pages ?? [])
         .filter((page) => page.component !== undefined)

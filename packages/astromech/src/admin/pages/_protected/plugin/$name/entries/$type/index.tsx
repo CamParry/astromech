@@ -1,11 +1,7 @@
 /**
- * Plugin entry-type list route.
- *
- * Static segments (`/plugin/$name/entries/$type`) outrank the `/plugin/$`
- * splat, so plugin entry types get real file-based routes. Builds a plugin
- * `EntriesMount` from `adminConfig.plugins` + the one entries client and
- * renders the shared `EntriesListPage`. Unknown plugin/type falls back to the
- * standard not-found UI.
+ * Plugin entry-type list route. Builds a plugin `EntriesMount` from
+ * `adminConfig.plugins` and renders the shared `EntriesListPage`; an unknown
+ * plugin/type falls back to the standard not-found UI.
  */
 
 import type { EntriesService } from '@/types/index';

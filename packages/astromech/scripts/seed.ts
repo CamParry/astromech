@@ -32,10 +32,6 @@ type SeededEntry = { id: string; type: string; fields: Record<string, unknown> }
 
 const seededEntries: SeededEntry[] = [];
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
-
 async function seed(): Promise<void> {
     console.log('Seeding dev database…\n');
 
@@ -44,16 +40,11 @@ async function seed(): Promise<void> {
     await db.deleteFrom('media').execute();
     console.log('  Cleared entries, relationships, and media\n');
 
-    // -------------------------------------------------------------------------
-    // Users
-    // -------------------------------------------------------------------------
     const adminId = await upsertUser('admin@astromech.dev', 'Alex Admin', 'admin');
     await upsertUser('editor@astromech.dev', 'Emma Editor', 'editor');
     console.log('  Created 2 users (admin, editor)\n');
 
-    // -------------------------------------------------------------------------
     // Media — rows only; no files are written to public/uploads.
-    // -------------------------------------------------------------------------
     const mediaHeroId = crypto.randomUUID();
     const mediaPortraitId = crypto.randomUUID();
     const mediaDiagramId = crypto.randomUUID();
@@ -138,9 +129,7 @@ async function seed(): Promise<void> {
         .execute();
     console.log('  Created 4 media items\n');
 
-    // -------------------------------------------------------------------------
     // Categories + tags — the taxonomy the posts point at.
-    // -------------------------------------------------------------------------
     const catGuidesId = crypto.randomUUID();
     const catEngineeringId = crypto.randomUUID();
 
@@ -225,9 +214,7 @@ async function seed(): Promise<void> {
     ]);
     console.log('  Created 2 categories and 3 tags\n');
 
-    // -------------------------------------------------------------------------
     // Authors — richtext, repeater, and a top-level media relation.
-    // -------------------------------------------------------------------------
     const authorDevonId = crypto.randomUUID();
     const authorRinId = crypto.randomUUID();
 
@@ -280,10 +267,8 @@ async function seed(): Promise<void> {
     ]);
     console.log('  Created 2 authors\n');
 
-    // -------------------------------------------------------------------------
     // Pages — blocks (relations nested inside them), an entry relation, and the
     // Open Graph media field from the social tab.
-    // -------------------------------------------------------------------------
     const pageHomeId = crypto.randomUUID();
     const pageAboutId = crypto.randomUUID();
     const pageHomeGroup = crypto.randomUUID();
@@ -391,9 +376,7 @@ async function seed(): Promise<void> {
     ]);
     console.log('  Created 2 pages\n');
 
-    // -------------------------------------------------------------------------
     // Posts — richtext body, date, and the full taxonomy sidebar.
-    // -------------------------------------------------------------------------
     const post1Id = crypto.randomUUID();
     const post2Id = crypto.randomUUID();
     const post3Id = crypto.randomUUID();
@@ -492,9 +475,7 @@ async function seed(): Promise<void> {
     ]);
     console.log('  Created 3 posts\n');
 
-    // -------------------------------------------------------------------------
     // Case study — repeater, group, select, and both media relation arities.
-    // -------------------------------------------------------------------------
     await insertEntries([
         {
             id: crypto.randomUUID(),
@@ -548,9 +529,7 @@ async function seed(): Promise<void> {
     ]);
     console.log('  Created 1 case study\n');
 
-    // -------------------------------------------------------------------------
     // French translations — same locale groups, own relation copies.
-    // -------------------------------------------------------------------------
     await insertEntries([
         {
             id: crypto.randomUUID(),
@@ -611,9 +590,7 @@ async function seed(): Promise<void> {
     ]);
     console.log('  Created 2 French translations (1 page, 1 post)\n');
 
-    // -------------------------------------------------------------------------
     // Relationships index — derived last, once every source row exists.
-    // -------------------------------------------------------------------------
     await indexRelationships();
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -628,10 +605,6 @@ async function seed(): Promise<void> {
     console.log('  Login: admin@astromech.dev / password');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 /** Create a credential user if the email is free; returns the user id either way. */
 async function upsertUser(

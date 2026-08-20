@@ -19,10 +19,6 @@ const DECLINED = 'The user declined this call, so it was not run.';
 /** What a call the user walked away from answers with. */
 const ABANDONED = 'The user moved on without answering this, so it was not run.';
 
-// ============================================================================
-// Pausing
-// ============================================================================
-
 /**
  * Record every mutating call in an assistant turn as pending and return the
  * requests to put to the user. Empty when the turn mutates nothing, which is
@@ -65,10 +61,6 @@ export function mutatingCalls(
     }
     return mutating;
 }
-
-// ============================================================================
-// Resuming
-// ============================================================================
 
 /**
  * Answer a turn the previous response paused on, or `null` when the transcript

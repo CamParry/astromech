@@ -1,11 +1,7 @@
 /**
- * Plugin-registered custom field types.
- *
- * Renderers are lazy-loaded from `virtual:astromech/plugins/components`
- * (code-gen'd import() calls). Each loaded module default-exports the
- * renderer and may export `validate(value, field)`; validation errors render
- * inline. The registration's `defaultValue` fills in when the field has no
- * stored value yet.
+ * Plugin-registered custom field types, lazy-loaded from
+ * `virtual:astromech/plugins/components`. A loaded module default-exports
+ * the renderer and may export `validate(value, field)` for inline errors.
  */
 
 import type { BaseFieldProps } from '@/types/index';
@@ -65,6 +61,7 @@ function lazyFieldFor(type: string): LazyField {
     return lazy;
 }
 
+/** Renders the lazy-loaded field component registered for `props.field.type`. */
 export function PluginField(props: BaseFieldProps): React.ReactElement {
     const Lazy = lazyFieldFor(props.field.type);
     const entry = fieldTypes[props.field.type];

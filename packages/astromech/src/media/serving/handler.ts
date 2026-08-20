@@ -57,6 +57,7 @@ function extOf(filename: string): string {
     return dot >= 0 ? filename.slice(dot + 1) : '';
 }
 
+/** Serve one media/image request: original, redirect to canonical variant, or transform on a cache miss. */
 export async function handleMediaRequest(info: MediaRequestInfo): Promise<Response> {
     const { id, search, origin, ifNoneMatch, range } = info;
 
@@ -193,14 +194,9 @@ export async function handleMediaRequest(info: MediaRequestInfo): Promise<Respon
 type ByteRange = { start: number; end: number | null } | { suffix: number };
 
 /**
- * Parse a single-range `Range` header.
- *
- * Returns null for everything we serve whole: an absent header, a unit other
- * than `bytes`, a malformed spec, and — deliberately — a multi-range request
- * (`bytes=0-99,200-299`). RFC 9110 lets a server ignore a `Range` it does not
- * support and answer 200 with the full representation, which is what a null
- * here means. Suffix ranges (`bytes=-500`, the last 500 bytes) ARE supported:
- * silently mis-serving one as `start=0` is the trap this shape avoids.
+ * Parse a single-range `Range` header. Returns null for anything served
+ * whole — absent, wrong unit, malformed, or (deliberately) multi-range.
+ * Suffix ranges (`bytes=-500`) are supported, not mis-served as `start=0`.
  */
 function parseByteRange(header: string | null | undefined): ByteRange | null {
     if (typeof header !== 'string' || header === '') return null;

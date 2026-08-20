@@ -10,10 +10,6 @@ import { describe, expect, it } from 'vitest';
 import { registerFieldType } from '@/fields/field-type-registry';
 import { parseFields } from '@/fields/parse-fields';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 type CtxOverrides = Partial<{
     operation: 'create' | 'update';
     validation: ValidationMode;
@@ -43,10 +39,6 @@ registerFieldType({
     coerce: (v) => (typeof v === 'string' ? `${v}!` : v),
     validate: async () => true,
 });
-
-// ---------------------------------------------------------------------------
-// Root-level scoping
-// ---------------------------------------------------------------------------
 
 describe('coerceOnly — root fields', () => {
     const defs = [
@@ -78,10 +70,6 @@ describe('coerceOnly — root fields', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// Subtree inheritance
-// ---------------------------------------------------------------------------
-
 describe('coerceOnly — container subtrees', () => {
     const defs = [
         field({
@@ -111,10 +99,6 @@ describe('coerceOnly — container subtrees', () => {
         });
     });
 });
-
-// ---------------------------------------------------------------------------
-// The rest of `parseFields` is unaffected
-// ---------------------------------------------------------------------------
 
 describe('coerceOnly — validation still covers every field', () => {
     it('an uncoerced field is still validated', async () => {

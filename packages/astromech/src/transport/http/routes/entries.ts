@@ -1,17 +1,9 @@
 /**
  * Entry Routes
  *
- * Every entry type is served here, addressed by the type id the entries service
- * itself uses: bare (`post`) for a root type, qualified (`redirects/redirect`)
- * for a plugin type, URL-encoded into the `:type` segment. The id is passed to
- * the service verbatim, and the permission an action needs is derived from the
- * id's own shape — the single source that keeps plugin entries out of the
- * `entry:*` wildcard.
- *
- * The 30 routes are declared in `http-routes.shared.ts`; 24 of them get
- * their server handler from the map below. The six that cannot follow it, each
- * carrying the reason — they are still declared, still documented, and still
- * reachable by the fetch client.
+ * Every entry type is served here, addressed by the type id the entries
+ * service itself uses — bare for a root type, qualified for a plugin type.
+ * The 30 routes live in `http-routes.shared.ts`; six get a bespoke handler.
  */
 import type { ContractCatalogue, RestRoute } from './rest-route';
 import type { EntryMethodContract, EntryMethodName } from '@/entries/methods';
@@ -69,9 +61,7 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
     return router;
 }
 
-// ============================================================================
-// The handlers, one per generic row of ENTRIES_ROUTE_SPECS
-// ============================================================================
+// The handlers, one per generic row of ENTRIES_ROUTE_SPECS.
 
 /** The query string the list route accepts. `dir` is the only one that can fail. */
 const listQuery = z.object({
@@ -171,10 +161,6 @@ export const ENTRIES_ROUTES: RestRoute[] = attachHandlers(ENTRIES_ROUTE_SPECS, {
     },
 });
 
-// ============================================================================
-// Arguments
-// ============================================================================
-
 /**
  * A path param the route has already matched. A bare `Context` cannot say which
  * params a path declares, so the type is widened and narrowed back here.
@@ -245,10 +231,6 @@ function cascadeLocales(c: Context<Env>): boolean {
     const value = c.req.query('cascadeLocales');
     return value === 'true' || value === '1';
 }
-
-// ============================================================================
-// Contracts and preconditions
-// ============================================================================
 
 /** One entry type's method catalogue, built once per resolved type. */
 const CONTRACTS_BY_TYPE = new WeakMap<
@@ -368,10 +350,6 @@ function fieldCapabilitiesDenied(
     return null;
 }
 
-// ============================================================================
-// Bespoke handlers
-// ============================================================================
-
 const bulkUpdateSchema = z.object({
     ids: z.array(z.string().min(1)).min(1),
     data: titledUpdateEntrySchema,
@@ -379,10 +357,7 @@ const bulkUpdateSchema = z.object({
 
 /** The six handlers the table cannot express, each with the reason. */
 function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
-    // ========================================================================
-    // POST /entries/query  (cross-type)
-    // ========================================================================
-
+    // POST /entries/query (cross-type)
     // Not in the table: `type` arrives in the body and may be a list, and an
     // absent one answers a hand-rolled `invalid_input` 400 outside ApiErrorCode.
     router.post('/query', async (c) => {
@@ -437,10 +412,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         }
     });
 
-    // ========================================================================
     // POST /entries/:type
-    // ========================================================================
-
     // Not in the table: a per-FIELD capability 409 — `status`/`publishedAt` need
     // `statuses` and `slug` needs `slug`, which no contract states.
     router.post('/:type', async (c) => {
@@ -479,10 +451,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         return c.json({ data: entry }, 201);
     });
 
-    // ========================================================================
     // POST /entries/:type/bulk-update
-    // ========================================================================
-
     // Not in the table: the per-field capability 409, plus `status: 'published'`
     // demanding the publish permission on an update method.
     router.post('/:type/bulk-update', async (c) => {
@@ -512,10 +481,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         return c.json({ data: entries });
     });
 
-    // ========================================================================
     // PUT /entries/:type/:id
-    // ========================================================================
-
     // Not in the table: the same per-field capability 409 and publish escalation.
     router.put('/:type/:id', async (c) => {
         const { type, id } = c.req.param();
@@ -558,10 +524,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         return c.json({ data: entry });
     });
 
-    // ========================================================================
-    // DELETE /entries/:type/:id  (soft delete)
-    // ========================================================================
-
+    // DELETE /entries/:type/:id (soft delete)
     // Not in the table: the method id is chosen at request time from the type's
     // `trash` capability — trash it if the type keeps a bin, delete it if not.
     router.delete('/:type/:id', async (c) => {
@@ -577,10 +540,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         return c.json({ success: true });
     });
 
-    // ========================================================================
     // POST /entries/:type/:id/staged
-    // ========================================================================
-
     // Not in the table: `StagedEntryExistsError` answers a 409 carrying
     // `details.stagedId`. Every other throw is re-raised for `onError`.
     router.post('/:type/:id/staged', async (c) => {

@@ -1,10 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { s3 } from '@/storage/drivers/s3';
 
-// ---------------------------------------------------------------------------
 // fetch stub — aws4fetch signs and then calls global fetch, so every assertion
 // about the wire format is an assertion about the Request it hands over.
-// ---------------------------------------------------------------------------
 
 const CREDENTIALS = {
     endpoint: 'https://accountid.r2.cloudflarestorage.com',
@@ -61,10 +59,6 @@ beforeEach(() => {
 afterEach(() => {
     vi.unstubAllGlobals();
 });
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 describe('s3()', () => {
     describe('name', () => {

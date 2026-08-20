@@ -1,10 +1,7 @@
 /**
- * MediaDetailModal
- *
- * Opens when a media item is clicked in the library. A two-thirds preview with
- * the file's metadata beneath it, a one-third edit column, and the actions in
- * a footer — delete separated from cancel/update so the destructive one is not
- * adjacent to the one people aim for.
+ * Opens when a media item is clicked in the library: a two-thirds preview
+ * with metadata beneath it, a one-third edit column, and footer actions —
+ * delete kept apart from cancel/update so it isn't adjacent to either.
  */
 
 import type { Media } from '@/types/index';

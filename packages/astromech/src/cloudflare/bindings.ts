@@ -1,25 +1,7 @@
 /**
- * Cross-runtime Cloudflare binding resolution.
- *
- * `import { env } from 'cloudflare:workers'` makes bindings available at
- * *module* scope on Workers — the platform only forbids I/O outside a request
- * context, not reading a binding reference, so resolving one at startup is
- * fine. That specifier simply does not resolve in plain Node, though, and the
- * CLI (`db:generate`, `db:init`, scripts, tests) loads the full app config in
- * a plain Node process — see `project_app_owned_migrations.md`. A config that
- * imported `cloudflare:workers` directly would break every CLI command.
- *
- * So drivers are configured with binding NAMES ('MEDIA', 'DB'), not binding
- * objects — a string resolves in every runtime, an import specifier does
- * not — and this module resolves a name to its value by detecting the host:
- *
- *   - Workers → `cloudflare:workers`
- *   - Node    → wrangler's `getPlatformProxy()`, which emulates the Workers
- *     platform against `wrangler.jsonc` in a Node process
- *
- * Both imports are dynamic, chosen at runtime behind a non-literal specifier,
- * so a Node build never attempts to resolve `cloudflare:workers` and a
- * Workers build never bundles `wrangler`.
+ * Cross-runtime Cloudflare binding resolution. Drivers reference bindings by
+ * name ('MEDIA', 'DB'), not object, because `cloudflare:workers` doesn't
+ * resolve in the Node processes that also load the app config.
  */
 
 import { AstromechError } from '@/errors/index';
@@ -37,10 +19,9 @@ type WranglerModule = {
 };
 
 /**
- * The resolved environment is memoised as a *promise* so concurrent callers
- * share one detection, and on `globalThis` for the same reason every other
- * boot-wired registry is — tsup emits several entry chunks and a module-level
- * variable would be duplicated across them.
+ * Memoised as a promise so concurrent callers share one detection, and
+ * stored on `globalThis` because tsup emits several entry chunks that
+ * would otherwise each get their own copy of a module-level variable.
  */
 const bindingEnv = createRegistry<Promise<BindingEnv>>('cloudflareEnv', {
     required: false,

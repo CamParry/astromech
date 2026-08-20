@@ -14,10 +14,6 @@ import {
     PublicShapeWriteError,
 } from '@/entries/visibility';
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
 const NOW = new Date('2026-06-15T12:00:00Z');
 
 function audience(now = NOW): AudienceContext {
@@ -51,9 +47,7 @@ function fullOpts(fields: Field[] = []): VisibilityOptions {
     return { shape: 'full', fields, audience: audience() };
 }
 
-// ============================================================================
 // (a) Private field stripped in public, present in full
-// ============================================================================
 
 describe('private field projection', () => {
     const fields: Field[] = [
@@ -91,9 +85,7 @@ describe('private field projection', () => {
     });
 });
 
-// ============================================================================
 // (b) _disabled item removed; _disabled/_title deleted on survivors; _type/_id kept
-// ============================================================================
 
 describe('structural strip (_disabled items)', () => {
     const fields: Field[] = [
@@ -166,9 +158,7 @@ describe('structural strip (_disabled items)', () => {
     });
 });
 
-// ============================================================================
 // (c) Draft / scheduled-future row → null in public
-// ============================================================================
 
 describe('row filter (audience)', () => {
     it('returns null for unpublished entries in public', () => {
@@ -214,10 +204,6 @@ describe('row filter (audience)', () => {
         expect(applyVisibility(entry, fullOpts())).not.toBeNull();
     });
 });
-
-// ============================================================================
-// (d) Nested blocks-in-repeater strip
-// ============================================================================
 
 describe('nested blocks-in-repeater strip', () => {
     const fields: Field[] = [
@@ -290,9 +276,7 @@ describe('nested blocks-in-repeater strip', () => {
     });
 });
 
-// ============================================================================
 // (e) A relation value is a raw id and passes through untouched
-// ============================================================================
 
 describe('relation values', () => {
     const fields: Field[] = [
@@ -322,10 +306,6 @@ describe('relation values', () => {
     });
 });
 
-// ============================================================================
-// markPublic / isPublicBranded
-// ============================================================================
-
 describe('public brand helpers', () => {
     it('markPublic stamps a non-enumerable brand', () => {
         const obj = { foo: 'bar' };
@@ -347,10 +327,6 @@ describe('public brand helpers', () => {
     });
 });
 
-// ============================================================================
-// PublicShapeWriteError
-// ============================================================================
-
 describe('PublicShapeWriteError', () => {
     it('is an instance of Error', () => {
         const err = new PublicShapeWriteError();
@@ -359,10 +335,6 @@ describe('PublicShapeWriteError', () => {
         expect(err.message).toContain('public');
     });
 });
-
-// ============================================================================
-// Write-back guard: public-read value → update throws; fresh object does not
-// ============================================================================
 
 describe('write-back guard via isPublicBranded', () => {
     it('throws PublicShapeWriteError when branded fields passed to update', () => {

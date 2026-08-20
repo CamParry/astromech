@@ -24,10 +24,6 @@ import {
 import { useAstromechPlugin } from 'astromech/ui/app';
 import React, { useState } from 'react';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 /**
  * The plugin's own JSON methods, as `useAstromechPlugin().service` exposes
  * them. Restore and download are not here — they stream, so they stay raw
@@ -43,10 +39,6 @@ type ConfirmState =
     | { kind: 'restore'; run: BackupRunRow }
     | { kind: 'delete'; run: BackupRunRow }
     | null;
-
-// ============================================================================
-// Helpers
-// ============================================================================
 
 declare const __ASTROMECH_BASE_PATH__: string;
 
@@ -93,10 +85,6 @@ function formatDate(date: Date | null | undefined): string {
         timeStyle: 'short',
     }).format(date instanceof Date ? date : new Date(date));
 }
-
-// ============================================================================
-// Component
-// ============================================================================
 
 export default function BackupsPage(): React.ReactElement {
     const { plugin, serviceKey, service, toast, t } = useAstromechPlugin();
@@ -171,8 +159,6 @@ export default function BackupsPage(): React.ReactElement {
 
     const capabilities = data?.capabilities ?? { canDump: true, canRestore: true };
 
-    // ---- loading / error guards ----
-
     if (isLoading) {
         return <PageLoading />;
     }
@@ -186,8 +172,6 @@ export default function BackupsPage(): React.ReactElement {
     }
 
     const runs = data.runs;
-
-    // ---- confirm dialog helpers ----
 
     function handleRestoreClick(run: BackupRunRow): void {
         setConfirmState({ kind: 'restore', run });
@@ -235,8 +219,6 @@ export default function BackupsPage(): React.ReactElement {
             : confirmState.kind === 'restore'
               ? t('backups.restore.confirmLabel')
               : t('backups.delete.confirmLabel');
-
-    // ---- download URL ----
 
     // Streams a gzipped artifact, so it stays a raw route and is linked directly.
     function downloadUrl(run: BackupRunRow): string {

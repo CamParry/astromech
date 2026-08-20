@@ -1,11 +1,7 @@
 /**
- * Rich-text render helper — JSON → HTML string.
- *
- * Uses @tiptap/static-renderer (DOM-free, Cloudflare-Worker-safe).
- * The same shared extensions from rich-text-extensions are used here
- * and in the editor, so they cannot drift.
- *
- * Called by the public-shape projection in visibility.ts.
+ * Rich-text render helper — JSON → HTML string via `@tiptap/static-renderer`
+ * (DOM-free, Worker-safe). Shares extensions with the editor so they cannot
+ * drift. Called by the public-shape projection in `visibility.ts`.
  */
 
 import type { RichTextAllow } from '@/types/fields';
@@ -13,10 +9,6 @@ import type { JSONContent } from '@tiptap/core';
 import { renderToHTMLString } from '@tiptap/static-renderer';
 import { buildRichTextExtensions } from './extensions';
 import { isUnsafeHref } from './safe-links';
-
-// ============================================================================
-// Sanitization
-// ============================================================================
 
 /** Strip dangerous href schemes and inline event handlers from an HTML string. */
 function sanitize(html: string): string {
@@ -58,10 +50,6 @@ function sanitize(html: string): string {
     return result;
 }
 
-// ============================================================================
-// Render
-// ============================================================================
-
 /**
  * Render a ProseMirror JSON document to a sanitized HTML string.
  *
@@ -85,9 +73,5 @@ export function renderRichText(
 
     return sanitize(html);
 }
-
-// ============================================================================
-// Parse
-// ============================================================================
 
 export { parseRichText } from './parse';

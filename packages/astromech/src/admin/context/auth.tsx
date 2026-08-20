@@ -1,19 +1,13 @@
 /**
- * Auth context for the Astromech admin SPA.
- *
- * Session state is owned by React Query (`sessionQueryOptions`) so that route
- * `beforeLoad` guards can ensureQueryData the same key the React tree reads.
- * Uses Better Auth endpoints via fetch with `credentials: 'include'`.
+ * Auth context for the Astromech admin SPA. Session state is owned by React
+ * Query (`sessionQueryOptions`) so route `beforeLoad` guards and the React
+ * tree read the same cached key. Uses Better Auth endpoints via fetch.
  */
 
 import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { createContext, useContext } from 'react';
 
 declare const __ASTROMECH_BASE_PATH__: string;
-
-// ============================================================================
-// Types
-// ============================================================================
 
 export type AuthUser = {
     id: string;
@@ -49,10 +43,6 @@ type MeResponse = {
     };
 };
 
-// ============================================================================
-// Session query
-// ============================================================================
-
 async function fetchSession(): Promise<AuthUser | null> {
     const res = await fetch(`${__ASTROMECH_BASE_PATH__}/api/me`, {
         credentials: 'include',
@@ -62,6 +52,7 @@ async function fetchSession(): Promise<AuthUser | null> {
     return { ...data.user, permissions: data.role.permissions };
 }
 
+/** React Query options for the session; shared so route `beforeLoad` guards and the React tree read the same cache entry. */
 export const sessionQueryOptions = queryOptions({
     queryKey: ['session'] as const,
     queryFn: fetchSession,
@@ -69,16 +60,13 @@ export const sessionQueryOptions = queryOptions({
     retry: false,
 });
 
-// ============================================================================
-// Context
-// ============================================================================
-
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 type AuthProviderProps = {
     children: React.ReactNode;
 };
 
+/** Provides the session user and login/logout actions, backed by `sessionQueryOptions`. */
 export function AuthProvider({ children }: AuthProviderProps) {
     const queryClient = useQueryClient();
     const { data, isPending } = useQuery(sessionQueryOptions);
@@ -114,10 +102,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     );
 }
 
-// ============================================================================
-// Hooks
-// ============================================================================
-
+/** Reads the session user and login/logout actions from `AuthProvider`. */
 export function useAuth(): AuthContextValue {
     const ctx = useContext(AuthContext);
     if (ctx === null) {
@@ -126,6 +111,7 @@ export function useAuth(): AuthContextValue {
     return ctx;
 }
 
+/** Same as `useAuth`, for call sites within a route already guarded by an auth check. */
 export function useRequireAuth(): AuthContextValue {
     return useAuth();
 }

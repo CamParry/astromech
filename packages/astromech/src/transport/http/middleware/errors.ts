@@ -10,10 +10,6 @@ import type { ZodError } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import { ValidationError } from '@/errors/validation';
 
-// ============================================================================
-// Error Types
-// ============================================================================
-
 export type ApiErrorCode =
     | 'NOT_FOUND'
     | 'UNAUTHORIZED'
@@ -31,18 +27,11 @@ export type ApiErrorDetails = {
     [key: string]: unknown;
 };
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
 function generateErrorId(): string {
     return `err_${Math.random().toString(36).slice(2, 9)}`;
 }
 
-// ============================================================================
-// Response Factory
-// ============================================================================
-
+/** Build the canonical `{ error }` envelope every error response shares. */
 export function apiError(
     c: Context,
     status: number,
@@ -63,10 +52,6 @@ export function apiError(
         status as ContentfulStatusCode
     );
 }
-
-// ============================================================================
-// Convenience Factories
-// ============================================================================
 
 export function notFound(c: Context, message = 'Not found'): Response {
     return apiError(c, 404, 'NOT_FOUND', message);
@@ -114,10 +99,6 @@ export function internalError(
     return apiError(c, 500, 'INTERNAL_ERROR', message);
 }
 
-// ============================================================================
-// App-Level Handlers
-// ============================================================================
-
 /**
  * OpenAPIHono's own request-validation envelope, for a request that fails the
  * schema its documented operation declares. Distinct from the canonical error
@@ -159,6 +140,7 @@ export function fromZodError(
     return validationFailed(c, fields);
 }
 
+/** Hono's app-level error handler: canonicalises HTTPException, ValidationError and unknown errors alike. */
 export const onError: ErrorHandler = (err, c) => {
     if (err instanceof HTTPException) {
         return apiError(c, err.status, 'INTERNAL_ERROR', err.message);

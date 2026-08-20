@@ -1,14 +1,7 @@
 /**
- * Permission catalogue — every grantable permission a resolved config produces,
- * in one flat list. Pure function: no DB, no I/O, no boot.
- *
- * Three sources, mirroring where a permission comes from: `core` (the fixed set
- * core enforces), `entry` (derived per registered entry type — nothing declares
- * these), and `plugin` (each plugin's `permissions` declaration, namespaced).
- *
- * Consumed by `astromech permissions`; the shape it iterates is deliberately
- * the same as `codegen/method-manifest.ts`, so the two never disagree about
- * which types and plugins exist.
+ * Permission catalogue — every grantable permission a resolved config
+ * produces, in one flat list. Pure function; three sources: `core`, `entry`
+ * (derived per registered type) and `plugin` (each plugin's declaration).
  */
 
 import type { PermissionDeclarations } from '@/permissions/define';
@@ -67,10 +60,6 @@ const SOURCE_ORDER: Record<PermissionCatalogueEntry['source'], number> = {
     entry: 1,
     plugin: 2,
 };
-
-// ============================================================================
-// Groups
-// ============================================================================
 
 function buildCorePermissions(): PermissionCatalogueEntry[] {
     // Widened: `CORE_PERMISSIONS` infers literal declarations, so an entry
@@ -157,10 +146,6 @@ function buildPluginPermissions(plugins: PluginDefinition[]): PermissionCatalogu
 
     return entries;
 }
-
-// ============================================================================
-// Public API
-// ============================================================================
 
 /** Every grantable permission in the resolved config, deterministically ordered. */
 export function buildPermissionCatalogue(

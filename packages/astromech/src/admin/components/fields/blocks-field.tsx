@@ -46,10 +46,6 @@ const restrictToVerticalAxis: Modifier = ({ transform }) => ({
     x: 0,
 });
 
-// ============================================================================
-// useClickOutside
-// ============================================================================
-
 function useClickOutside(
     ref: React.RefObject<HTMLElement | null>,
     handler: () => void
@@ -63,10 +59,6 @@ function useClickOutside(
         return () => document.removeEventListener('mousedown', listener);
     }, [ref, handler]);
 }
-
-// ============================================================================
-// BlockPicker
-// ============================================================================
 
 type BlockPickerProps = {
     blocks: Block[];
@@ -106,10 +98,6 @@ function BlockPicker({
         </div>
     );
 }
-
-// ============================================================================
-// SortableBlock
-// ============================================================================
 
 type SortableBlockProps = {
     block: BlockWithId;
@@ -286,10 +274,7 @@ function SortableBlock({
     );
 }
 
-// ============================================================================
-// BlocksField
-// ============================================================================
-
+/** Field input for a reorderable list of typed content blocks. */
 export function BlocksField({
     name,
     value,

@@ -10,6 +10,7 @@ import { createJiti } from 'jiti';
 
 export const DEFAULT_CONFIG_FILE = './astromech.config.ts';
 
+/** Load the author's config file and return its default export. */
 export async function loadConfigFile(
     rootDir: string,
     configFile?: string

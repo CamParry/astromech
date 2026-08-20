@@ -1,20 +1,13 @@
 /**
- * Settings visibility helpers.
- *
- * Determines whether a setting key is publicly readable based on the
- * `publicSettingKeys` list derived from `ResolvedConfig`.
- *
- * No DB access, no virtual-module imports — pure, testable logic.
+ * Settings visibility helpers: whether a setting key is publicly readable,
+ * based on the `publicSettingKeys` list from `ResolvedConfig`. Pure — no
+ * DB access, no virtual-module imports.
  */
 
 /**
- * Test whether a setting `key` is publicly readable according to
- * `publicSettingKeys`.
- *
- * A key is public when it:
- *   - exactly matches an entry in `publicSettingKeys`, OR
- *   - matches a prefix entry ending with `':'` (covers per-locale variants
- *     such as `'globals:en'` when `'globals:'` is in the list).
+ * Test whether a setting `key` is publicly readable: an exact match in
+ * `publicSettingKeys`, or a `':'`-suffixed prefix entry covering per-locale
+ * variants like `'globals:en'` under `'globals:'`.
  */
 export function isPublicSettingKey(key: string, publicKeys: string[]): boolean {
     for (const entry of publicKeys) {

@@ -3,11 +3,9 @@
  */
 
 /**
- * Slugify any string into a URL-friendly hyphenated token: lowercase, strip
- * apostrophes (so `Mother's Day` → `mothers-day`, not `mother-s-day`), collapse
- * every remaining run of non-alphanumeric characters (spaces, punctuation,
- * underscores) to a single hyphen, trim edge hyphens. `seo.section` →
- * `seo-section`.
+ * Slugify a string into a URL-friendly hyphenated token: lowercase, strip
+ * apostrophes, collapse every run of non-alphanumeric characters to a
+ * single hyphen, trim edge hyphens. `seo.section` → `seo-section`.
  */
 export function slugify(s: string): string {
     return s

@@ -10,18 +10,9 @@ import type {
 import { DEFAULT_MIGRATION_LOCK_TABLE, DEFAULT_MIGRATION_TABLE, sql } from 'kysely';
 
 /**
- * Kysely introspector for Cloudflare D1.
- *
- * Kysely's `SqliteIntrospector` collects column metadata with a single query
- * that joins the table list against `pragma_table_info(tl.name)` — a pragma
- * table-valued function whose argument is a *column reference*. D1 runs behind
- * a SQLite authorizer that rejects exactly that form with `SQLITE_AUTH`; the
- * same function is allowed when its argument is a literal or a bound parameter.
- *
- * `Migrator` introspects before it creates its own bookkeeping table, so on D1
- * that one query fails every migration run. This issues one bound
- * `pragma_table_info(?)` per table instead, and reproduces the rest of
- * `SqliteIntrospector`'s output so both drivers report identical metadata.
+ * Kysely introspector for Cloudflare D1. `SqliteIntrospector`'s joined
+ * `pragma_table_info(tl.name)` query is rejected by D1's SQL authorizer; this
+ * issues one bound `pragma_table_info(?)` per table instead.
  */
 
 type MasterRow = { name: string; sql: string | null; type: string };

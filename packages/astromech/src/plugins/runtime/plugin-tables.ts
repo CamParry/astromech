@@ -1,15 +1,7 @@
 /**
- * Plugin table collection + convention enforcement.
- *
- * Plugins may ship their own tables (an escape valve for data that doesn't fit
- * entries), declared with `definePluginTable`.
- * Table names must be prefixed `plugin_{namespace}_` to namespace them and
- * prevent collisions; there are no cross-plugin foreign keys (soft string refs only).
- * This module collects the tables and enforces the prefix at
- * config-resolution time (crash loud).
- *
- * Plugins generate their own migrations with `astromech plugin:generate`, which
- * reads their tables directly; core `db:generate` covers core tables only.
+ * Plugin table collection + convention enforcement. Plugins may ship their
+ * own tables (`definePluginTable`), prefixed `plugin_{namespace}_` to
+ * prevent collisions; this module collects them and enforces the prefix.
  */
 
 import type { Table } from '@/database/define-table';

@@ -1,31 +1,7 @@
 /**
  * Snapshot differ — two `Snapshot`s → the ordered `TableOp`s that carry one to
- * the other, plus generate-time validation.
- *
- * Pure, browser-safe (no fs/db imports) — `generate.ts` is the Node-only
- * orchestrator that reads/writes snapshots on disk and calls this. The rules:
- *
- *   - `prev === null` → every table is a `createTable` (no warnings).
- *   - A table present in `prev` but not `next` → `dropTable` + warning
- *     (removal IS the intent — no `--force`/prompt).
- *   - A table present in `next` but not `prev` → `createTable`.
- *   - Per common table: any column change other than a *purely additive*
- *     column (nullable, or NOT NULL with a literal default, and not a PK)
- *     forces ONE `rebuildTable` op that subsumes every column/FK/index change
- *     on that table (SQLite has no `ALTER COLUMN`/`DROP COLUMN` that survives
- *     CHECK/index constraints, so a changed table is rebuilt wholesale via
- *     `CREATE __new_x` → copy → `DROP` → `RENAME`). Everything else that's
- *     purely additive fast-paths to native `ALTER TABLE ADD COLUMN` /
- *     `CREATE INDEX` / `DROP INDEX`.
- *   - Impossible states (a rebuild's `INSERT…SELECT` can't backfill a NOT
- *     NULL column with no SQL literal, an index naming an unknown column, a
- *     duplicate index name) are collected as hard errors — the caller
- *     (`generate.ts`) refuses to write anything when any exist.
- *
- * Op ordering in the result: `dropIndex`, `dropTable`, `createTable`,
- * `addColumn`, `rebuildTable`, `createIndex` — drops before creates, and
- * rebuilds (which subsume their own index recreation) before any standalone
- * index op so a rebuilt table's fresh indexes are never redundantly touched.
+ * the other, plus generate-time validation. Pure, browser-safe (no fs/db
+ * imports); `generate.ts` is the Node-only orchestrator that calls this.
  */
 
 import type {
@@ -37,6 +13,7 @@ import type {
 } from './model';
 import { MAX_IDENTIFIER_BYTES } from './identifiers';
 
+/** One structural change to a table, as emitted by {@link diffSnapshots}. */
 export type TableOp =
     | { kind: 'createTable'; table: SnapshotTable }
     | { kind: 'dropTable'; name: string }
@@ -49,6 +26,7 @@ export type TableOp =
           copy: { column: string; coalesceDefault?: string | number }[];
       };
 
+/** The result of a {@link diffSnapshots} call. */
 export type DiffResult = { ops: TableOp[]; errors: string[]; warnings: string[] };
 
 function columnsEqual(a: SnapshotColumn, b: SnapshotColumn): boolean {
@@ -126,7 +104,6 @@ function diffTable(
     for (const [colName, nextCol] of nextCols) {
         const prevCol = prevCols.get(colName);
         if (!prevCol) {
-            // Added column.
             if (nextCol.notNull && nextCol.default === undefined) {
                 acc.errors.push(
                     `column "${colName}" on table "${nextTable.name}" is NOT NULL with no ` +
@@ -245,8 +222,7 @@ function diffTable(
 /**
  * A rebuild of a table another table references `ON DELETE cascade` is refused:
  * the rebuild's `DROP TABLE` fires those cascades and deletes the children's
- * rows. `PRAGMA defer_foreign_keys` defers enforcement, not cascade actions, so
- * nothing at apply time catches it.
+ * rows, and nothing at apply time catches it.
  */
 function cascadeRebuildErrors(
     rebuildOps: TableOp[],

@@ -1,14 +1,7 @@
 /**
- * Demo marketing-site seed — Phase 27f
- *
- * Clears all content entries (page / post / author / caseStudy / category / tag)
- * plus relationships, redirects, and settings on every run. Preserves auth rows
- * (users + accounts) — creates admin@astromech.dev / password if missing.
- *
- * Run from the repo root:
- *   npm run db:seed:demo
- * or directly:
- *   tsx demo/seed.ts
+ * Demo marketing-site seed. Clears all content entries plus relationships,
+ * redirects and settings on every run; preserves auth rows and creates
+ * admin@astromech.dev / password if missing. Run with `tsx demo/seed.ts`.
  */
 
 import type { Field, PluginDB } from 'astromech';
@@ -74,10 +67,6 @@ const pluginDb = db.withTables<PluginDB<{ redirects: typeof redirectsTable }>>()
 
 const now = new Date();
 const PUBLISHED_AT = now;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 async function upsertAdmin(): Promise<string> {
     const email = 'admin@astromech.dev';
@@ -209,16 +198,10 @@ async function upsertSetting(key: string, value: unknown): Promise<void> {
         .execute();
 }
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
-
+/** Clears content (keeps users / accounts / sessions / roles) and reseeds it. */
 async function seed(): Promise<void> {
     console.log('Seeding demo marketing database…\n');
 
-    // -------------------------------------------------------------------------
-    // Clear content (keep users / accounts / sessions / roles)
-    // -------------------------------------------------------------------------
     const CONTENT_TYPES = ['page', 'post', 'author', 'caseStudy', 'category', 'tag'];
 
     // Delete relationships whose source is a content entry of these types
@@ -248,18 +231,11 @@ async function seed(): Promise<void> {
 
     console.log('  Cleared content entries, relationships, settings, redirects, media\n');
 
-    // -------------------------------------------------------------------------
-    // Admin user
-    // -------------------------------------------------------------------------
     const adminId = await upsertAdmin();
     console.log();
 
-    // -------------------------------------------------------------------------
-    // Media — real placeholder photos downloaded from picsum.photos (deterministic
-    // per seed), written to demo/public/uploads/<id>.jpg so /_media/<id>.jpg serves
-    // them. Falls back to a flat sharp-generated colour if the download fails, so
-    // seeding never hard-fails offline.
-    // -------------------------------------------------------------------------
+    // Media: deterministic placeholder photos from picsum.photos, falling
+    // back to a flat sharp-generated colour if the download fails.
 
     type Bg = { r: number; g: number; b: number };
 
@@ -456,9 +432,6 @@ async function seed(): Promise<void> {
         .execute();
     console.log(`  Created ${mediaRows.length} media items\n`);
 
-    // -------------------------------------------------------------------------
-    // Categories
-    // -------------------------------------------------------------------------
     const catEngineeringId = crypto.randomUUID();
     const catProductId = crypto.randomUUID();
     const catCommunityId = crypto.randomUUID();
@@ -537,9 +510,6 @@ async function seed(): Promise<void> {
     ] as Record<string, unknown>[]);
     console.log('  Created 4 categories\n');
 
-    // -------------------------------------------------------------------------
-    // Tags
-    // -------------------------------------------------------------------------
     const tagAstroId = crypto.randomUUID();
     const tagCloudflareId = crypto.randomUUID();
     const tagTypescriptId = crypto.randomUUID();
@@ -620,9 +590,7 @@ async function seed(): Promise<void> {
     ] as Record<string, unknown>[]);
     console.log('  Created 5 tags\n');
 
-    // -------------------------------------------------------------------------
-    // Authors (3) — title column holds the author name
-    // -------------------------------------------------------------------------
+    // Authors: the title column holds the author name.
     const authorAlexId = crypto.randomUUID();
     const authorPriyaId = crypto.randomUUID();
     const authorTomId = crypto.randomUUID();
@@ -730,9 +698,6 @@ async function seed(): Promise<void> {
     ] as Record<string, unknown>[]);
     console.log('  Created 3 authors\n');
 
-    // -------------------------------------------------------------------------
-    // Pages (home, features, pricing, about) with blocks
-    // -------------------------------------------------------------------------
     const pageHomeId = crypto.randomUUID();
     const pageFeaturesId = crypto.randomUUID();
     const pagePricingId = crypto.randomUUID();
@@ -746,7 +711,6 @@ async function seed(): Promise<void> {
     const bid = () => crypto.randomUUID();
 
     await insertEntries([
-        // ---- home ----
         {
             id: pageHomeId,
             type: 'page',
@@ -846,7 +810,6 @@ async function seed(): Promise<void> {
             createdBy: adminId,
         },
 
-        // ---- features ----
         {
             id: pageFeaturesId,
             type: 'page',
@@ -954,7 +917,6 @@ async function seed(): Promise<void> {
             createdBy: adminId,
         },
 
-        // ---- pricing ----
         {
             id: pagePricingId,
             type: 'page',
@@ -1015,7 +977,6 @@ async function seed(): Promise<void> {
             createdBy: adminId,
         },
 
-        // ---- about ----
         {
             id: pageAboutId,
             type: 'page',
@@ -1099,9 +1060,6 @@ async function seed(): Promise<void> {
     ] as Record<string, unknown>[]);
     console.log('  Created 4 pages (home, features, pricing, about)\n');
 
-    // -------------------------------------------------------------------------
-    // Posts (6 en)
-    // -------------------------------------------------------------------------
     const post1Id = crypto.randomUUID();
     const post2Id = crypto.randomUUID();
     const post3Id = crypto.randomUUID();
@@ -1467,9 +1425,6 @@ async function seed(): Promise<void> {
 
     console.log('  Created 6 posts (en)\n');
 
-    // -------------------------------------------------------------------------
-    // Case Studies (3)
-    // -------------------------------------------------------------------------
     const cs1Id = crypto.randomUUID();
     const cs2Id = crypto.randomUUID();
     const cs3Id = crypto.randomUUID();
@@ -1650,9 +1605,6 @@ async function seed(): Promise<void> {
 
     console.log('  Created 3 case studies\n');
 
-    // -------------------------------------------------------------------------
-    // French translations — home page + 1 post
-    // -------------------------------------------------------------------------
     const pageHomeFrId = crypto.randomUUID();
     const post1FrId = crypto.randomUUID();
 
@@ -1775,16 +1727,11 @@ async function seed(): Promise<void> {
 
     console.log('  Created 2 French translations (home page + 1 post)\n');
 
-    // -------------------------------------------------------------------------
-    // Globals settings (translatable)
-    //
-    // Partition by field translatable flag per settings-page-values.ts:
-    //   - Non-translatable fields (logo, copyright, socials.url) → key `globals`
-    //   - Translatable fields (siteName, tagline, footerText, mainMenu, footerMenu,
-    //     platform labels) → key `globals:en` and `globals:fr`
-    //
-    // settings.get('globals', { locale: 'en' }) merges `globals` + `globals:en`.
-    // -------------------------------------------------------------------------
+    /**
+     * Globals settings are partitioned by field: non-translatable fields key
+     * under `globals`, translatable ones under `globals:en`/`globals:fr`.
+     * `settings.get('globals', { locale })` merges the two.
+     */
     const globalsShared = {
         copyright: '© 2026 Astromech. All rights reserved.',
         // logo media field — leave null (no logo media row)
@@ -1820,9 +1767,7 @@ async function seed(): Promise<void> {
     await upsertSetting('globals:fr', globalsFr);
     console.log('  Wrote globals settings (shared + en + fr)\n');
 
-    // -------------------------------------------------------------------------
-    // Menus plugin settings (plugin:menus:/menus/<key>[:<locale>])
-    // -------------------------------------------------------------------------
+    // Menus plugin settings, keyed `plugin:menus:/menus/<key>[:<locale>]`.
 
     // Shared base (non-translatable fields — items are translatable so kept per-locale)
     const menusShared = {};
@@ -1889,9 +1834,6 @@ async function seed(): Promise<void> {
     await upsertSetting('plugin:menus:/menus/footer:fr', footerMenuFr);
     console.log('  Wrote menus plugin settings (main + footer, en + fr)\n');
 
-    // -------------------------------------------------------------------------
-    // Redirects
-    // -------------------------------------------------------------------------
     // The redirects table is the plugin's own, so its rows go through the
     // plugin's own table codec rather than being hand-built: `encodeWith` mints
     // the ULID id and the ISO-TEXT createdAt/updatedAt from the table's
@@ -1918,13 +1860,11 @@ async function seed(): Promise<void> {
         .execute();
     console.log('  Created 3 redirects\n');
 
-    // -------------------------------------------------------------------------
-    // Forms — one published contact form. `forms/form` uses core (default)
-    // entry storage, so it's seeded exactly like any other entry. `fields`
-    // composes stored block instances — `_type`/`_id` are core's reserved
-    // block-instance keys (see packages/plugins/forms/src/entries/form.ts for
-    // the exact per-kind config keys and the notifications tab's field names).
-    // -------------------------------------------------------------------------
+    /**
+     * One published contact form. `forms/form` uses core (default) entry
+     * storage, so it's seeded like any other entry — see
+     * packages/plugins/forms/src/entries/form.ts for the block config keys.
+     */
     const formContactId = crypto.randomUUID();
 
     await insertEntries([
@@ -2010,15 +1950,9 @@ async function seed(): Promise<void> {
     ] as Record<string, unknown>[]);
     console.log('  Created 1 form (contact)\n');
 
-    // -------------------------------------------------------------------------
-    // Relationships index — derived from the field data written above, never
-    // hand-written. Runs last so every entry it reads has been seeded.
-    // -------------------------------------------------------------------------
+    // Runs last so every entry it reads has been seeded.
     await indexRelationships();
 
-    // -------------------------------------------------------------------------
-    // Summary
-    // -------------------------------------------------------------------------
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('  Seed complete');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

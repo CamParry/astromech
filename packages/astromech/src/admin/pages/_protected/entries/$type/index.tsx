@@ -1,10 +1,7 @@
 /**
- * Entry type list route — root entry types.
- *
- * Thin wrapper: builds the root `EntriesMount` (root entries client,
- * unscoped cache, `/entries/{type}` links, `entry:{type}:{action}` permissions)
- * and renders the shared `EntriesListPage`. A qualified type redirects to the
- * plugin route.
+ * Entry type list route — root entry types. Builds the root `EntriesMount`
+ * and renders the shared `EntriesListPage`; a qualified type redirects to
+ * the plugin route.
  */
 import type { EntriesMount } from '@/admin/components/entries/mount';
 import type { EntriesService } from '@/types/index';

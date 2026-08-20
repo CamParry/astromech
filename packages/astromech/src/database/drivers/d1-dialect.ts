@@ -13,22 +13,9 @@ import { AstromechError } from '@/errors/index';
 import { D1Introspector } from './d1-introspector';
 
 /**
- * Hand-written Kysely dialect for Cloudflare D1.
- *
- * Not `kysely-d1`: that package hard-throws on `db.transaction()` (fine — D1
- * genuinely has none), but it also pins `kysely: "*"`, is single-maintainer/
- * lightly-maintained, and — the real blocker — resolves its `D1Database`
- * synchronously at construction. `d1({ binding: 'DB' })` needs the binding
- * resolved lazily and asynchronously (see `@/cloudflare/bindings.js`), which
- * only a dialect we own can do while keeping `getInstance()` synchronous.
- *
- * D1 itself has no interactive transactions — `batch()` is its only atomicity
- * primitive, and it cannot interleave application logic between statements —
- * so `beginTransaction`/`commitTransaction`/`rollbackTransaction` throw. SQL
- * generation is otherwise ordinary SQLite, so this reuses Kysely's
- * `SqliteAdapter`/`SqliteQueryCompiler` and supplies the D1-specific
- * `Driver`/`DatabaseConnection` pair. Introspection needs its own
- * implementation — see `D1Introspector` for the query D1's authorizer rejects.
+ * Hand-written Kysely dialect for Cloudflare D1. Not `kysely-d1`: that
+ * package resolves its `D1Database` synchronously, but `d1({ binding })`
+ * needs lazy, async resolution while keeping `getInstance()` synchronous.
  */
 
 /** Structural subset of Cloudflare's D1Database we depend on. */

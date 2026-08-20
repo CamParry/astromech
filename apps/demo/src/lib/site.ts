@@ -69,13 +69,8 @@ export function localizedPath(path: string, locale: Locale): string {
 }
 
 /**
- * Given the `locales` map from an entry (locale → entry id) and the current
- * locale, resolve the slug of the sibling entry for that locale.
- * Returns null if no sibling exists for the target locale.
- *
- * NOTE: an entry's `locales` map stores `{ [locale]: entryId }`.
- * To get the slug for a different locale, you need to fetch that entry.
- * This helper just returns the entry id so the caller can fetch it.
+ * The sibling entry id for `locale` from an entry's `locales` map, or `null`.
+ * Returns an id, not a slug — the caller fetches that entry for the slug.
  */
 export function siblingEntryId(
     localesMap: Record<string, string>,
@@ -83,8 +78,6 @@ export function siblingEntryId(
 ): string | null {
     return localesMap[locale] ?? null;
 }
-
-// ── UI string dictionary ─────────────────────────────────────────────────────
 
 type UiKey =
     | 'readMore'

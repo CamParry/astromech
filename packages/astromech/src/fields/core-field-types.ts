@@ -1,11 +1,7 @@
 /**
- * Core field types — one entry per data-bearing field type.
- *
- * Layout fields are intentionally excluded: they emit no data and need no
- * entry. The nested fields additionally fill the `children` slot, which
- * normalizes the stored value and reports the nested value scopes inside it —
- * how the pipeline recurses without switching on field type. `TERMINOLOGY.md`
- * states the two categories and their membership.
+ * Core field types — one entry per data-bearing field type. Layout fields are
+ * excluded: they emit no data. Nested types fill `children`, normalizing the
+ * stored value and reporting nested scopes for the pipeline to recurse into.
  */
 
 import type {
@@ -68,9 +64,7 @@ import {
 import { RESERVED_KEY } from './reserved-keys';
 import { coerceRichText, validateRichText } from './rich-text/validate';
 
-// ---------------------------------------------------------------------------
 // Container children — normalization + scope discovery
-// ---------------------------------------------------------------------------
 
 /**
  * Guard against a pathological (or hostile) `tree` value recursing deeply enough

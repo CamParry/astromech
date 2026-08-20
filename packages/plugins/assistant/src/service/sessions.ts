@@ -22,6 +22,7 @@ export type ChatSession = {
     pending: ApprovalRequest[];
 };
 
+/** The `getSession` / `clearSession` service methods for the signed-in user's chat. */
 export function buildSessionsService(options: ResolvedAssistantOptions) {
     return {
         getSession: defineServiceMethod<undefined, ChatSession>({

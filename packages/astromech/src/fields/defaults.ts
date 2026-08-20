@@ -1,11 +1,7 @@
 /**
- * Build the value record a set of field definitions starts life with.
- *
- * The pipeline applies defaults on `create` only (`fields/parse-fields.ts`), so a
- * container item added while EDITING an existing resource would otherwise never
- * see them. The admin seeds an added item through here instead.
- *
- * Pure: no domain/DB imports.
+ * Build the value record a set of field definitions starts life with. The
+ * pipeline applies defaults on `create` only, so the admin seeds a container
+ * item added while editing an existing resource through here instead.
  */
 
 import type { Field } from '@/types/fields';

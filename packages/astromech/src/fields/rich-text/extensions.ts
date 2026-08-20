@@ -1,19 +1,7 @@
 /**
- * Shared TipTap extension factory for rich-text fields.
- *
- * Imported by:
- *   - admin/components/ui/rich-text-extensions.ts (browser editor)
- *   - fields/rich-text/index.ts (renderRichText, the static renderer)
- *   - fields/rich-text/schema.ts (the cached schema parse and validate share)
- *
- * One factory feeds every direction, so an `allow` list cannot mean one thing
- * to the editor and another to a write.
- *
- * StarterKit v3 bundles Link and Underline; configure them via StarterKit
- * options rather than standalone imports to avoid duplicate schemas.
- *
- * The `document`, `text`, and `gapcursor` StarterKit options only accept
- * `false` (no config object) — omit them to keep the default (enabled).
+ * Shared TipTap extension factory for rich-text fields — one factory feeds
+ * the editor, the static renderer and the schema cache, so an `allow` list
+ * means the same thing everywhere. Configure via StarterKit, not standalone imports.
  */
 
 import type { RichTextAllow } from '@/types/fields';
@@ -23,9 +11,7 @@ import { Placeholder } from '@tiptap/extension-placeholder';
 import TextAlign from '@tiptap/extension-text-align';
 import StarterKit from '@tiptap/starter-kit';
 
-// ============================================================================
 // TextBalance extension — inline style; always on
-// ============================================================================
 
 declare module '@tiptap/core' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions

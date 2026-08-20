@@ -9,17 +9,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { mediaService } from '@/media/service';
 import { setStorageDriver } from '@/storage/registry';
 
-// ---------------------------------------------------------------------------
-// Minimal file helpers
-// ---------------------------------------------------------------------------
-
 function textFile(name = 'doc.txt'): File {
     return new File(['hello' as BlobPart], name, { type: 'text/plain' });
 }
-
-// ---------------------------------------------------------------------------
-// Tracking storage (reuse pattern from service.test.ts)
-// ---------------------------------------------------------------------------
 
 function makeTrackingStorage(): StorageDriver {
     const store = new Map<string, Uint8Array>();
@@ -71,10 +63,6 @@ function makeTrackingStorage(): StorageDriver {
     };
 }
 
-// ---------------------------------------------------------------------------
-// Config with custom media fields
-// ---------------------------------------------------------------------------
-
 function makeMediaFieldConfig(): AstromechConfig {
     return {
         ...makeTestConfig(),
@@ -99,10 +87,6 @@ beforeEach(async () => {
     setStorageDriver(makeTrackingStorage());
 });
 
-// ---------------------------------------------------------------------------
-// update: required field
-// ---------------------------------------------------------------------------
-
 describe('mediaService.update — required field', () => {
     it('rejects when required field is absent', async () => {
         const m = await mediaService.upload({ file: textFile() });
@@ -124,10 +108,6 @@ describe('mediaService.update — required field', () => {
         });
     });
 });
-
-// ---------------------------------------------------------------------------
-// update: slug field
-// ---------------------------------------------------------------------------
 
 describe('mediaService.update — slug field', () => {
     it('rejects a value that is not already a slug', async () => {
@@ -160,10 +140,6 @@ describe('mediaService.update — slug field', () => {
         expect(updated.fields?.slug_field).toBe('my-image-title');
     });
 });
-
-// ---------------------------------------------------------------------------
-// update: uniqueness
-// ---------------------------------------------------------------------------
 
 describe('mediaService.update — uniqueness', () => {
     it('rejects a duplicate tag across two media items', async () => {
@@ -219,10 +195,6 @@ describe('mediaService.update — uniqueness', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// update: fields merge
-// ---------------------------------------------------------------------------
-
 describe('mediaService.update — fields merge', () => {
     it('keeps fields the patch omits', async () => {
         const m = await mediaService.upload({ file: textFile() });
@@ -241,10 +213,6 @@ describe('mediaService.update — fields merge', () => {
         });
     });
 });
-
-// ---------------------------------------------------------------------------
-// update: no fields → skips validation
-// ---------------------------------------------------------------------------
 
 describe('mediaService.update — no fields key', () => {
     it('updates alt without triggering field validation', async () => {

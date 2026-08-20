@@ -1,13 +1,7 @@
 /**
- * Runtime registry for the generated method manifest.
- *
- * Lives in `codegen/` because `codegen/` owns the method manifest as a concept,
- * not because this file generates anything: `method-manifest.ts` generates it,
- * this is the runtime registry holding the generated result, and the two belong
- * beside each other rather than split across `codegen/` and a `boot/` that would
- * hold nothing but this. `generateMethodManifest` needs the RAW plugin
- * definitions, whose Zod schemas cannot survive JSON, so the manifest is
- * generated once at boot and read here rather than written to disk.
+ * Runtime registry for the generated method manifest. Lives in `codegen/`
+ * because it owns the manifest concept; `method-manifest.ts` generates it,
+ * this holds the boot-generated result rather than a round-trip through disk.
  */
 
 import type { MethodManifest } from '@/types/index';

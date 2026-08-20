@@ -115,3 +115,4 @@ Distinct from the neighbouring directories:
 - [0073](0073-acronyms-are-title-case.md) — an acronym in an identifier is title-case with no length exception (`Ai`, `Ui`, `Url`, `Http`); `Id` at 112 uses is why the two-letter carve-out loses
 - [0074](0074-leaves-are-placed-by-subject.md) — `utilities/registry.ts` lifts to the source root, four files leave `utilities/` for their subject, `admin/lib/`, `admin/support/` and `entries/utils/` dissolve; a pure leaf is placed by subject and may be imported from any layer
 - [0075](0075-repository-for-data-access.md) — the DB-access layer renames `storage` → `repository`, freeing `storage` to mean file/blob only; supersedes 0003 on the "no repository wrapper" naming point
+- [0076](0076-the-comment-contract.md) — the comment contract: no section banners, `/** */` blocks on the public surface, and a hard three-line header cap

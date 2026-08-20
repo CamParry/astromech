@@ -1,9 +1,7 @@
 /**
- * PluginSlot — renders every permission-visible plugin contribution for a
- * named admin-shell slot (global-overlay, right-drawer, toolbar).
- *
- * Returns null when the slot has no visible contributions so an empty wrapper
- * collapses via CSS :empty.
+ * Renders every permission-visible plugin contribution for a named
+ * admin-shell slot. Returns null when nothing is visible, so an empty
+ * wrapper collapses via CSS `:empty`.
  */
 
 import type { AdminSlotName } from '@/types/config';
@@ -27,7 +25,6 @@ function lazyFor(
     return lazy;
 }
 
-/** Renders every permission-visible plugin contribution for a named admin-shell slot. */
 export function PluginSlot({ name }: { name: AdminSlotName }): React.ReactElement | null {
     const { hasPermission } = usePermissions();
     const contributions = slots[name] ?? [];

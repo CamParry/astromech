@@ -1,11 +1,9 @@
 /**
  * `astromech plugin:generate`
  *
- * Run from inside a plugin package: diffs the plugin's own `definePluginTable`
- * tables against its `migrations/snapshot.json` and writes a migration into
- * the plugin package's own `migrations/` directory. There is no app and no
- * database here — the table module is loaded with jiti and nothing else is
- * touched, so this must never load `astromech.config.ts`.
+ * Run from inside a plugin package: diffs its own `definePluginTable` tables
+ * against `migrations/snapshot.json` and writes a migration. No app, no
+ * database — never loads `astromech.config.ts`.
  */
 
 import type { Table } from '@/database/define-table';

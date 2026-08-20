@@ -11,10 +11,6 @@ import type { Field, ValidationMode } from '@/types/fields';
 import { describe, expect, it, vi } from 'vitest';
 import { parseFields } from '@/fields/parse-fields';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 type CtxOverrides = Partial<{
     operation: 'create' | 'update';
     validation: ValidationMode;
@@ -37,10 +33,6 @@ function fakeCtx(overrides: CtxOverrides = {}) {
 function field(def: Partial<Field> & { name: string; type: string }): Field {
     return def as Field;
 }
-
-// ---------------------------------------------------------------------------
-// Where a warning lands
-// ---------------------------------------------------------------------------
 
 describe('warning severity', () => {
     const slug = field({
@@ -87,10 +79,6 @@ describe('warning severity', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// One message per severity
-// ---------------------------------------------------------------------------
-
 describe('one message per severity', () => {
     it('an error rule and a warning rule both report, one message each', async () => {
         const { errors, warnings } = await parseFields(
@@ -136,10 +124,6 @@ describe('one message per severity', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// Error-only checks suppress warnings on the same field
-// ---------------------------------------------------------------------------
-
 describe('error-only checks suppress warnings', () => {
     it('required + empty → the error, and no warning', async () => {
         const advisory = vi.fn(async () => 'Advisory');
@@ -182,10 +166,6 @@ describe('error-only checks suppress warnings', () => {
         expect(warnings).toEqual({});
     });
 });
-
-// ---------------------------------------------------------------------------
-// Path grammar
-// ---------------------------------------------------------------------------
 
 describe('nested warnings', () => {
     it('a warning inside a repeater keys by the item path', async () => {

@@ -12,8 +12,6 @@ import type { LengthStatus } from './utilities/length';
  */
 export const SEO_FIELD_NAME = 'seo';
 
-// ── Service method shapes ─────────────────────────────────────────────────
-
 export type SeoSitemapUrl = {
     loc: string;
     /** ISO timestamp of the entry's last update. */

@@ -1,13 +1,7 @@
 /**
- * LibSQL / Turso Database Driver
- *
- * For local development (SQLite file) and Turso (remote SQLite).
- * URL and auth token are read from environment variables if not provided explicitly.
- *
- * Usage:
- *   import { libsql } from 'astromech/database/libsql';
- *   db: libsql()                          // reads DATABASE_URL from env
- *   db: libsql({ url: 'file:./dev.db' })  // explicit URL
+ * LibSQL / Turso database driver — for local development (SQLite file) and
+ * Turso (remote SQLite). URL and auth token read from env vars unless
+ * provided explicitly (`libsql()` or `libsql({ url: 'file:./dev.db' })`).
  */
 
 import type { DB } from '@/database/types';

@@ -17,10 +17,6 @@ vi.mock('@/policies/method-filter', () => ({ filterMethods: vi.fn() }));
 vi.mock('@/policies/annotate-manifest', () => ({ annotateManifest: vi.fn() }));
 vi.mock('@/transport/tools/dispatch', () => ({ buildScopedDispatch: vi.fn() }));
 
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
-
 const role: Role = { slug: 'editor', name: 'Editor', permissions: [], isBuiltIn: true };
 
 /** A core manifest method — the shape `buildScopedDispatch` accepts. */
@@ -88,10 +84,6 @@ beforeEach(() => {
         tool: dispatchFor(method),
     }));
 });
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 describe('buildScopedTools', () => {
     it('throws when the manifest is missing', () => {

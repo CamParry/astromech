@@ -118,10 +118,6 @@ async function createMedia(filename: string): Promise<string> {
     return row.id;
 }
 
-// ============================================================================
-// The predicate
-// ============================================================================
-
 describe('where.references', () => {
     it('returns only the entries referencing the target at that path', async () => {
         const target = await api.create({ type: 'post', title: 'Target' });
@@ -252,10 +248,6 @@ describe('where.references', () => {
     });
 });
 
-// ============================================================================
-// Path validation
-// ============================================================================
-
 describe('where.references validation', () => {
     it('throws for a path no queried type declares, naming the path', async () => {
         const target = await api.create({ type: 'post', title: 'Target' });
@@ -325,10 +317,6 @@ describe('where.references validation', () => {
     });
 });
 
-// ============================================================================
-// Table-backed storage
-// ============================================================================
-
 describe('where.references on a table-backed type', () => {
     it('throws rather than returning unfiltered rows', async () => {
         const target = await api.create({ type: 'post', title: 'Target' });
@@ -357,10 +345,6 @@ describe('where.references on a table-backed type', () => {
     });
 });
 
-// ============================================================================
-// Unknown where key
-// ============================================================================
-
 describe('where with an unrecognized key', () => {
     it('throws rather than silently returning every row', async () => {
         await api.create({ type: 'post', title: 'Target' });
@@ -382,10 +366,6 @@ describe('where with an unrecognized key', () => {
         ).rejects.toThrow(/category/);
     });
 });
-
-// ============================================================================
-// Unknown sort key
-// ============================================================================
 
 describe('sort naming a field outside the allowlist', () => {
     it('throws rather than silently answering the default order', async () => {

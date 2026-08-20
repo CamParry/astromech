@@ -1,13 +1,7 @@
 /**
- * Sharp image driver for Node.js environments.
- *
- * Transforms images to avif/webp at a given width using the `sharp` library.
- * Quality is baked per-format (spec decision: no `quality` URL param):
- *   - avif → 50
- *   - webp → 78
- *
- * Also generates a BlurHash placeholder string from a 32×32 downscaled raster.
- * Not suitable for Cloudflare Workers — use the Cloudflare Images driver there.
+ * Sharp image driver for Node.js: transforms to avif/webp at a given width,
+ * quality baked per-format (avif 50, webp 78), and generates a BlurHash
+ * placeholder. Not for Cloudflare Workers — use the Cloudflare driver there.
  */
 
 import type { ImageDriver, ImageSource } from '@/types/index';

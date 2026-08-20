@@ -10,21 +10,8 @@ import { collectUserRelationshipSources } from '@/users/internal/relationships';
  * Relationships index repair — rebuild and drift check.
  *
  * The index is a derived function of (schema, data), so a config change
- * invalidates it exactly as a data change does. These two are the repair path:
- * `rebuildRelationshipIndex` recomputes and replaces, `checkRelationshipIndex`
- * recomputes and diffs without writing. Neither runs automatically at startup —
- * an automatic repair hides the drift it papers over.
- *
- * ## Only ever recompute from STORED data
- *
- * The edge traversal mints a missing item `_id` with `crypto.randomUUID()`, so
- * it is non-deterministic on data that has never been through `parseFields`.
- * A rebuild is safe only because every collector reads stored rows, whose items
- * already carry their ids — re-deriving from raw input would invent fresh ids
- * on every run and produce instance paths that address nothing.
- *
- * Both functions load every source's field data into memory. That is fine for a
- * SQLite-only v1 and is the first thing to revisit if this ever needs to scale.
+ * invalidates it exactly as a data change does. `rebuildRelationshipIndex`
+ * recomputes and replaces; `checkRelationshipIndex` recomputes and diffs only.
  */
 
 /** Scope of a repair run. `type` is an ENTRY type; it never covers user or media. */

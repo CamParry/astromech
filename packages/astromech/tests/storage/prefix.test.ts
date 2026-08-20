@@ -2,10 +2,8 @@ import type { StorageDriver, StorageList } from '@/types/index';
 import { describe, expect, it } from 'vitest';
 import { deletePrefix, listAll } from '@/storage/prefix';
 
-// ---------------------------------------------------------------------------
 // Paginating fake driver — `list` never returns more than `pageSize` keys and
 // hands back a cursor while more remain.
-// ---------------------------------------------------------------------------
 
 function makePagedDriver(
     keys: string[],

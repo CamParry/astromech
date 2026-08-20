@@ -14,6 +14,7 @@ type BaseLayoutProps = {
     children: ReactNode;
 };
 
+/** Shared HTML layout for transactional emails: card container plus footer. */
 export function BaseLayout({ preview, children }: BaseLayoutProps) {
     return (
         <Html lang="en">

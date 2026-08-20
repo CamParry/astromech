@@ -15,20 +15,10 @@ import { settingsTable } from '@/settings/tables';
 import { rolesTable, usersTable } from '@/users/tables';
 
 /**
- * Aggregate schema surface for Astromech.
- *
- * Re-exports every table's `defineTable` table and row types from its domain
- * module. `sessions`, `accounts` and `verifications` have no descriptor — nothing
- * of ours writes them, so better-auth's adapter owns them outright and they are
- * hand-authored in the app's baseline. `relationships` and `cron` are defined
- * here as they have no dedicated domain module. Consumed by `database/types.ts` (assembles the Kysely
- * `DB`) and `astromech/database/schema`. NOT by `database/codec.ts` — the codec
- * is keyed by `Table`, so every caller passes the one it already holds.
+ * Aggregate schema surface for Astromech — re-exports every table's
+ * `defineTable` descriptor and row types. `sessions`/`accounts`/`verifications`
+ * have no descriptor here; better-auth's adapter owns them via the app baseline.
  */
-
-// ============================================================================
-// Users / RBAC
-// ============================================================================
 
 export {
     rolesTable,
@@ -37,10 +27,6 @@ export {
     type NewRoleRow,
     type UserRow,
 } from '@/users/tables';
-
-// ============================================================================
-// Entries
-// ============================================================================
 
 export {
     entriesTable,
@@ -54,10 +40,6 @@ export {
     type NewEntryPreviewTokenRow,
 } from '@/entries/tables';
 
-// ============================================================================
-// Media / Settings / Notifications
-// ============================================================================
-
 export { mediaTable, type MediaRow, type NewMediaRow } from '@/media/tables';
 export { settingsTable, type SettingRow, type NewSettingRow } from '@/settings/tables';
 export {
@@ -66,22 +48,10 @@ export {
     type NewNotificationRow,
 } from '@/notifications/tables';
 
-// ============================================================================
-// Relationships
-// ============================================================================
-
 /**
- * The relationships index — DERIVED from field data, never authoritative.
- *
- * Read for exactly three things: reverse lookup, filter-by-relation, and
- * delete-time information. A forward read takes the id out of the field data
- * itself, so a wrong row here is repaired by a rebuild rather than being data
- * loss — which is what makes it safe for the table to be polymorphic.
- *
- * No surrogate id: the natural key IS the row. No `position`, because order
- * lives in field data's array order and a second copy of it would drift. No
- * `createdAt`, because on a row that is rewritten wholesale it would mean "last
- * indexed", not "when the relation was made".
+ * The relationships index — DERIVED from field data, never authoritative. Used
+ * for reverse lookup, filter-by-relation, and delete-time info. No surrogate
+ * id: the natural key IS the row, so a rebuild repairs a wrong row safely.
  */
 export const relationshipsTable = defineTable(
     'relationships',
@@ -112,18 +82,10 @@ export const relationshipsTable = defineTable(
 export type RelationshipRow = TableSelect<typeof relationshipsTable>;
 export type NewRelationshipRow = TableInsert<typeof relationshipsTable>;
 
-// ============================================================================
-// Cron
-// ============================================================================
-
 /**
- * Scheduler state — the single source of truth for cron cadence and the
- * multi-instance lock. Seeded from registered jobs' default `schedule` on first
- * tick; the stored row is authoritative thereafter (runtime-editable).
- *
- * `lock` is a claim-EXPIRY timestamp that doubles as the claim token: a tick
- * CAS-claims a job by writing an expiry; a crashed claim auto-expires so the
- * next tick can retry.
+ * Scheduler state — single source of truth for cron cadence and the
+ * multi-instance lock, seeded from jobs' default `schedule` on first tick.
+ * `lock` is a claim-EXPIRY timestamp; a crashed claim auto-expires for retry.
  */
 export const cronTable = defineTable('_astromech_cron', ({ col }) => ({
     name: col.text({ primaryKey: true }),
@@ -137,19 +99,10 @@ export const cronTable = defineTable('_astromech_cron', ({ col }) => ({
 export type CronRow = TableSelect<typeof cronTable>;
 export type NewCronRow = TableInsert<typeof cronTable>;
 
-// ============================================================================
-// Installed-plugin tracking
-// ============================================================================
-
 /**
- * One row per plugin present in `config.plugins`, upserted at boot. Its job is
- * to make *removed* plugins visible: a plugin dropped from the config leaves
- * its tables and migration rows behind, and this table is the only record that
- * they were ever ours to clean up (`astromech plugin:purge <package>`).
- *
- * Keyed on `package` — the canonical identifier — with a UNIQUE `namespace`, so
- * two plugins deriving the same namespace collide as a database constraint at
- * migrate time rather than only in the config-resolution check.
+ * One row per plugin present in `config.plugins`, upserted at boot. Makes
+ * *removed* plugins visible for `astromech plugin:purge`. Keyed on `package`,
+ * with a UNIQUE `namespace` so colliding namespaces fail as a DB constraint.
  */
 export const pluginsTable = defineTable('_astromech_plugins', ({ col }) => ({
     package: col.text({ primaryKey: true }),
@@ -161,18 +114,10 @@ export const pluginsTable = defineTable('_astromech_plugins', ({ col }) => ({
 export type PluginTrackingRow = TableSelect<typeof pluginsTable>;
 export type NewPluginTrackingRow = TableInsert<typeof pluginsTable>;
 
-// ============================================================================
-// Core table list — every `defineTable`-backed table we own
-// ============================================================================
-
 /**
- * The 11 `defineTable`-backed tables the CMS itself owns, in one place. Consumed
- * by the DDL-parity test, the migration generator and `db:generate` — anywhere
- * that needs "every core table `defineTable` owns" without re-listing the
- * imports by hand. Does NOT include `sessions`/`accounts`/`verifications`
- * (hand-authored in the app baseline — see `codec.ts`) nor any plugin's tables:
- * plugins own their own tables and generate their own migrations via
- * `plugin:generate`.
+ * The `defineTable`-backed tables the CMS itself owns, in one place — consumed
+ * by the DDL-parity test, the migration generator and `db:generate`. Excludes
+ * `sessions`/`accounts`/`verifications` (hand-authored) and plugin tables.
  */
 export const CORE_TABLES: Table[] = [
     rolesTable,

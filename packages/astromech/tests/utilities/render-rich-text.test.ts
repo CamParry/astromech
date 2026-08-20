@@ -6,10 +6,6 @@ import type { JSONContent } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { renderRichText } from '@/fields/rich-text/index';
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
 function doc(...content: JSONContent[]): JSONContent {
     return { type: 'doc', content };
 }
@@ -39,10 +35,6 @@ function orderedList(...items: JSONContent[]): JSONContent {
 function listItem(content: JSONContent): JSONContent {
     return { type: 'listItem', content: [content] };
 }
-
-// ============================================================================
-// JSON → HTML round-trip
-// ============================================================================
 
 describe('renderRichText — round-trip', () => {
     it('renders a paragraph', () => {
@@ -128,10 +120,6 @@ describe('renderRichText — round-trip', () => {
     });
 });
 
-// ============================================================================
-// Sanitization
-// ============================================================================
-
 describe('renderRichText — sanitization', () => {
     it('strips javascript: href', () => {
         const json = doc(
@@ -168,10 +156,6 @@ describe('renderRichText — sanitization', () => {
     });
 });
 
-// ============================================================================
-// allow subset
-// ============================================================================
-
 describe('renderRichText — allow subset', () => {
     it('renders a heading when heading is allowed', () => {
         const json = doc(heading(2, text('Section')));
@@ -179,10 +163,6 @@ describe('renderRichText — allow subset', () => {
         expect(html).toContain('<h2');
     });
 });
-
-// ============================================================================
-// New-tab link
-// ============================================================================
 
 describe('renderRichText — new-tab link', () => {
     it('renders target="_blank" and rel="noopener noreferrer" for new-tab links', () => {
@@ -217,10 +197,6 @@ describe('renderRichText — new-tab link', () => {
     });
 });
 
-// ============================================================================
-// TextBalance (text-wrap: balance)
-// ============================================================================
-
 describe('renderRichText — text balance', () => {
     it('renders text-wrap: balance on a balanced paragraph', () => {
         const json = doc({
@@ -243,10 +219,6 @@ describe('renderRichText — text balance', () => {
         expect(html).toContain('text-wrap: balance');
     });
 });
-
-// ============================================================================
-// Style allow-list (sanitizer)
-// ============================================================================
 
 describe('renderRichText — style allow-list', () => {
     it('preserves text-align in style attribute', () => {

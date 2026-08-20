@@ -1,13 +1,7 @@
 /**
- * CRON due-evaluator.
- *
- * `onTick(now)` is the core scheduler: it seeds the cron table from registered
- * jobs (idempotent), finds jobs due at `now`, CAS-claims each against the
- * shared `_astromech_cron` lock (the multi-instance double-fire guard), runs
- * the handler, then records last_run/next_run and releases the claim — all
- * gated on the exact claim token so a stale instance can never clobber a newer
- * claim. Cadence is read from the TABLE (runtime-editable), not the registry;
- * the registry only supplies handlers + seed schedules.
+ * CRON due-evaluator. `onTick(now)` seeds the cron table from registered
+ * jobs, finds jobs due, CAS-claims each against the shared lock, runs the
+ * handler, then records the run and releases the claim.
  */
 import type { CronRepository } from '@/cron/repository';
 import { Cron } from 'croner';
@@ -63,7 +57,7 @@ async function seed(
 export async function runDue(now: Date): Promise<void> {
     // Cron handlers are handed the raw Kysely handle — that is their public
     // contract, so the runner still resolves one even though its own queries go
-    // through the storage.
+    // through the repository.
     const db = getDb();
     const config = getConfig();
     const timezone = config.timezone ?? 'UTC';

@@ -1,9 +1,7 @@
 /**
- * Entry version history route — root entry types.
- *
- * Thin wrapper around the shared `EntryVersionsPage`. The loader prefetches the
- * entry and its versions via the root-scoped query options. A qualified type
- * redirects to the plugin route.
+ * Entry version history route — root entry types. Wraps the shared
+ * `EntryVersionsPage`; the loader prefetches the entry and its versions,
+ * and a qualified type redirects to the plugin route.
  */
 
 import type { EntriesMount } from '@/admin/components/entries/mount';

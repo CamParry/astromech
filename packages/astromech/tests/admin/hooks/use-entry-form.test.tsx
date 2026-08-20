@@ -118,10 +118,6 @@ async function settle(): Promise<void> {
     });
 }
 
-// ============================================================================
-// Publish runs the title validator
-// ============================================================================
-
 describe('handlePublish', () => {
     it('does not fire the publish mutation when the title is empty', async () => {
         const mounted = mountForm({ title: '', fields: { body: 'written' } });
@@ -179,10 +175,6 @@ describe('handlePublish', () => {
         mounted.unmount();
     });
 });
-
-// ============================================================================
-// Save is unchanged
-// ============================================================================
 
 describe('handleSave', () => {
     it('does not fire the save mutation when the title is empty', async () => {

@@ -3,10 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { assertEntryTypeValid, toResolvedEntryCapabilities } from '@/config/entry-types';
 import { BUILT_IN_SUPPORTS } from '@/entries/capabilities';
 
-// ============================================================================
-// toResolvedEntryCapabilities — defaults
-// ============================================================================
-
 describe('toResolvedEntryCapabilities — defaults', () => {
     const emptyCfg: EntryType = {
         single: 'Item',
@@ -44,10 +40,6 @@ describe('toResolvedEntryCapabilities — defaults', () => {
     });
 });
 
-// ============================================================================
-// toResolvedEntryCapabilities — explicit opt-outs
-// ============================================================================
-
 describe('toResolvedEntryCapabilities — explicit opt-outs', () => {
     it('statuses:false resolves off', () => {
         const cfg: EntryType = {
@@ -76,10 +68,6 @@ describe('toResolvedEntryCapabilities — explicit opt-outs', () => {
         expect(toResolvedEntryCapabilities(cfg, BUILT_IN_SUPPORTS).trash).toBe(false);
     });
 });
-
-// ============================================================================
-// toResolvedEntryCapabilities — versioning boolean + object forms
-// ============================================================================
 
 describe('toResolvedEntryCapabilities — versioning', () => {
     it('versioning:true resolves on', () => {
@@ -111,10 +99,6 @@ describe('toResolvedEntryCapabilities — versioning', () => {
         expect(toResolvedEntryCapabilities(cfg, BUILT_IN_SUPPORTS).versioning).toBe(true);
     });
 });
-
-// ============================================================================
-// toResolvedEntryCapabilities — staging (independent of versioning)
-// ============================================================================
 
 describe('toResolvedEntryCapabilities — staging', () => {
     it('staging:true resolves on with built-in storage', () => {
@@ -166,10 +150,6 @@ describe('toResolvedEntryCapabilities — staging', () => {
     });
 });
 
-// ============================================================================
-// toResolvedEntryCapabilities — narrower storageSupports
-// ============================================================================
-
 describe('toResolvedEntryCapabilities — narrower storageSupports', () => {
     const emptyCfg: EntryType = {
         single: 'Item',
@@ -192,10 +172,6 @@ describe('toResolvedEntryCapabilities — narrower storageSupports', () => {
         expect(caps.trash).toBe(false);
     });
 });
-
-// ============================================================================
-// assertEntryTypeValid — capability mismatch throws
-// ============================================================================
 
 describe('assertEntryTypeValid — capability mismatch', () => {
     it('throws when explicitly-requested capability is unsupported', () => {
@@ -233,10 +209,6 @@ describe('assertEntryTypeValid — capability mismatch', () => {
         ).not.toThrow();
     });
 });
-
-// ============================================================================
-// assertEntryTypeValid — titleField validation
-// ============================================================================
 
 describe('assertEntryTypeValid — titleField', () => {
     it("'title' is valid", () => {

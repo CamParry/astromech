@@ -119,10 +119,6 @@ describe('create without a locale group', () => {
     });
 });
 
-// ============================================================================
-// inherited values run through the field pipeline
-// ============================================================================
-
 /** `category` becomes a required non-translatable field on `post`. */
 function makeRequiredCategoryConfig(): AstromechConfig {
     const base = makeTestConfig();

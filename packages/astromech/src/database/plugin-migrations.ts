@@ -1,14 +1,7 @@
 /**
- * Plugin migration collection — the CMS-specific half of the plugin migration
- * story.
- *
- * The merge half (`mergeMigrationProviders`) is engine-generic and lives in
- * `@astromech/schema-engine`: it knows nothing about plugins beyond
- * `{ alias, provider }`. This is the half that has to read `PluginDefinition`s,
- * so it lives here.
- *
- * Kept deliberately dependency-light: `boot/boot.ts` imports it, and boot must
- * stay service-free (no transitive `virtual:astromech/config`).
+ * Plugin migration collection — the CMS-specific half of the plugin
+ * migration story; the engine-generic merge lives in `@astromech/schema-engine`.
+ * Dependency-light: `boot/boot.ts` imports it and must stay service-free.
  */
 
 import type { PluginDefinition } from '@/types/index';

@@ -14,10 +14,6 @@ import {
 } from '@/policies/confirmation';
 import { buildDispatch } from '@/transport/tools/dispatch';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 /** Shape of one tool as returned to the MCP client's ListTools response. */
 export type McpToolDef = {
     name: string;
@@ -41,10 +37,6 @@ type BuildToolsResult = {
     dispatch: Map<string, Invoke>;
     skipped: SkippedMethod[];
 };
-
-// ============================================================================
-// Confirmation
-// ============================================================================
 
 /**
  * The gate is not a filter, so it lives on the INVOKE rather than on the tool
@@ -103,10 +95,6 @@ function withConfirmProperty(schema: JsonSchemaObject): JsonSchemaObject {
         properties: { ...existing, [CONFIRM_KEY]: CONFIRM_PROPERTY_SCHEMA },
     };
 }
-
-// ============================================================================
-// Builder
-// ============================================================================
 
 /**
  * Build the MCP tool list and dispatch map from the method manifest.

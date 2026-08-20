@@ -1,11 +1,7 @@
 /**
  * @astromech/seo — search metadata for any entry type: a composed `seo` field
- * group (meta title + description + search preview), an SEO health dashboard, a
- * default-OG-image setting, and public
- * `sitemap` / `meta` service methods. Attach via `seoSection()` on an entry
- * type's `fields`; the footprint is derived from field presence, never
- * declared. The app renders `/sitemap.xml` and meta tags itself — see the
- * README recipes.
+ * group, an SEO health dashboard, a default-OG-image setting, and public
+ * `sitemap` / `meta` service methods. Attach via `seoSection()` on an entry type's `fields`.
  */
 
 import type { ServiceInterface } from 'astromech';

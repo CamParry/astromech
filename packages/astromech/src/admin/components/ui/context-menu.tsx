@@ -2,10 +2,6 @@ import type { DropdownItem } from './dropdown';
 import { Menu } from '@base-ui/react/menu';
 import React, { useCallback, useRef, useState } from 'react';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 type ContextMenuProps = {
     items: DropdownItem[];
     children: React.ReactNode;
@@ -21,10 +17,6 @@ type UseContextMenuReturn = {
     contextMenuNode: React.ReactNode;
 };
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
 function buildVirtualAnchor(pos: CursorPosition): {
     getBoundingClientRect: () => DOMRect;
 } {
@@ -33,10 +25,7 @@ function buildVirtualAnchor(pos: CursorPosition): {
     };
 }
 
-// ============================================================================
-// Hook — for use with Table.Row and other DOM elements
-// ============================================================================
-
+/** Wires a right-click context menu to a DOM element, e.g. `Table.Row`. */
 export function useContextMenu(items: DropdownItem[]): UseContextMenuReturn {
     const [open, setOpen] = useState(false);
     const [position, setPosition] = useState<CursorPosition>({ x: 0, y: 0 });
@@ -117,10 +106,7 @@ export function useContextMenu(items: DropdownItem[]): UseContextMenuReturn {
     return { onContextMenu, contextMenuNode };
 }
 
-// ============================================================================
-// Component — for non-table use (e.g. grid cards)
-// ============================================================================
-
+/** Wraps `children` with a right-click context menu, for non-table use (e.g. grid cards). */
 export function ContextMenu({ items, children }: ContextMenuProps): React.ReactElement {
     const { onContextMenu, contextMenuNode } = useContextMenu(items);
 

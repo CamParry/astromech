@@ -1,11 +1,7 @@
 /**
- * Shared form logic for collection entry create and edit pages.
- *
- * Owns: useForm setup, buildPayload, save/publish mutations, Cmd+S shortcut,
- * beforeunload dirty-state guard, and toast error handling.
- *
- * The caller supplies `saveFn` / `publishFn` as the actual client calls so that
- * create and edit can use different endpoints while sharing everything else.
+ * Shared form logic for collection entry create and edit pages: useForm setup,
+ * save/publish mutations, Cmd+S shortcut, and beforeunload dirty-state guard.
+ * The caller supplies `saveFn`/`publishFn` so create and edit share the rest.
  */
 
 import type {
@@ -32,10 +28,6 @@ import { AstromechApiError } from '../../transport/http/client/index';
 import { useToast } from '../components/ui/index';
 import { useHotkeys } from './index';
 import { useFieldValidation } from './use-field-validation';
-
-// ============================================================================
-// Types
-// ============================================================================
 
 export type EntryFormValues = {
     title: string;
@@ -93,10 +85,6 @@ type UseEntryFormOptions = {
     /** When true, save and publish actions become no-ops. */
     readOnly?: boolean;
 };
-
-// ============================================================================
-// Hook
-// ============================================================================
 
 export function useEntryForm({
     fieldDefinitions,

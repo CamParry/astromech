@@ -2,13 +2,6 @@
  * Users Routes
  *
  * CRUD operations for CMS users.
- *
- * Routes:
- *   GET    /users         → users.query
- *   GET    /users/:id     → users.get (bespoke)
- *   POST   /users         → users.create
- *   PUT    /users/:id     → users.update (bespoke)
- *   DELETE /users/:id     → users.delete (bespoke)
  */
 import type { RestRoute } from './rest-route';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
@@ -67,10 +60,7 @@ function queryArgs(c: Context<Env>): UserQueryParams {
     return params;
 }
 
-// ============================================================================
 // GET /users/:id — bespoke
-// ============================================================================
-
 // Not in the table: self-access. A caller reading its own row passes without
 // `users:read`, which no method contract can state.
 router.get('/:id', async (c) => {
@@ -85,10 +75,7 @@ router.get('/:id', async (c) => {
     return c.json({ data: user });
 });
 
-// ============================================================================
 // PUT /users/:id — bespoke
-// ============================================================================
-
 // Not in the table: self-access, a `roleSlug` change that still demands
 // `users:update`, and the last-admin guard — which is a second storage call.
 router.put('/:id', async (c) => {
@@ -132,10 +119,7 @@ router.put('/:id', async (c) => {
     return c.json({ data: user });
 });
 
-// ============================================================================
 // DELETE /users/:id — bespoke
-// ============================================================================
-
 // Not in the table: the last-admin guard, a second storage call no contract
 // can state.
 router.delete('/:id', async (c) => {

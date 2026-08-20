@@ -58,10 +58,6 @@ const simplePage = (overrides: Partial<AdminPage> = {}): AdminPage => ({
     ...overrides,
 });
 
-// ---------------------------------------------------------------------------
-// admin.pages — absence
-// ---------------------------------------------------------------------------
-
 describe('resolveConfig adminPages — absence', () => {
     it('should return [] when admin is not set', () => {
         const resolved = resolveConfig(baseConfig());
@@ -73,10 +69,6 @@ describe('resolveConfig adminPages — absence', () => {
         expect(resolved.adminPages).toEqual([]);
     });
 });
-
-// ---------------------------------------------------------------------------
-// resolveAdminPage — field normalization
-// ---------------------------------------------------------------------------
 
 describe('resolveConfig adminPages — flat fields normalization', () => {
     it('should normalize a flat fields array to { main, sidebar: [] }', () => {
@@ -131,10 +123,6 @@ describe('resolveConfig adminPages — flat fields normalization', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// resolveAdminPage — scalar fields preserved
-// ---------------------------------------------------------------------------
-
 describe('resolveConfig adminPages — scalar fields preserved', () => {
     it('should preserve path, label, and icon', () => {
         const resolved = resolveConfig(
@@ -162,10 +150,6 @@ describe('resolveConfig adminPages — scalar fields preserved', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// resolveAdminPage — translatable flag
-// ---------------------------------------------------------------------------
-
 describe('resolveConfig adminPages — translatable flag', () => {
     it('should default translatable to false when not set', () => {
         const resolved = resolveConfig(baseConfig({ admin: { pages: [simplePage()] } }));
@@ -190,10 +174,6 @@ describe('resolveConfig adminPages — translatable flag', () => {
         expect(resolved.adminPages[0]?.translatable).toBe(false);
     });
 });
-
-// ---------------------------------------------------------------------------
-// resolveAdminPage — field tree validation (reuses validateFieldTree)
-// ---------------------------------------------------------------------------
 
 describe('resolveConfig adminPages — field tree validation', () => {
     it('should throw when a tab appears outside of tabs in main fields', () => {
@@ -285,10 +265,6 @@ describe('resolveConfig adminPages — field tree validation', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// resolveConfig — multiple pages, order preserved
-// ---------------------------------------------------------------------------
-
 describe('resolveConfig adminPages — multiple pages', () => {
     it('should preserve order of multiple admin pages', () => {
         const resolved = resolveConfig(
@@ -329,10 +305,6 @@ describe('resolveConfig adminPages — multiple pages', () => {
         expect('icon' in (resolved.adminPages[1] ?? {})).toBe(false);
     });
 });
-
-// ---------------------------------------------------------------------------
-// Unified ResolvedAdminPage shape — new fields
-// ---------------------------------------------------------------------------
 
 describe('resolveConfig adminPages — unified ResolvedAdminPage shape', () => {
     it('host page has baseKey equal to path', () => {
@@ -376,9 +348,7 @@ describe('resolveConfig adminPages — unified ResolvedAdminPage shape', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
 // XOR validation — exactly one of fields / component
-// ---------------------------------------------------------------------------
 
 describe('resolveConfig adminPages — XOR validation', () => {
     it('throws when neither fields nor component is provided', () => {
@@ -417,10 +387,6 @@ describe('resolveConfig adminPages — XOR validation', () => {
         ).not.toThrow();
     });
 });
-
-// ---------------------------------------------------------------------------
-// Host component-mode pages
-// ---------------------------------------------------------------------------
 
 describe('resolveConfig adminPages — component mode', () => {
     const componentPage = (overrides: Partial<AdminPage> = {}): AdminPage => ({
@@ -485,10 +451,6 @@ describe('resolveConfig adminPages — component mode', () => {
         expect(resolved.adminPages[0]?.public).toBe(false);
     });
 });
-
-// ---------------------------------------------------------------------------
-// defineAdminPage round-trip
-// ---------------------------------------------------------------------------
 
 describe('defineAdminPage — round-trip', () => {
     it('returns the page unchanged (fields mode)', () => {

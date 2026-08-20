@@ -22,29 +22,9 @@ import {
 import { AstromechError } from '@/errors/index';
 
 /**
- * `Table` → snapshot conversion — the CMS half of the old `ddl.ts`.
- *
- * `@astromech/schema-engine` owns everything below this line: the `Snapshot`
- * model, the DDL renderers, the differ, the migration generator. This module is
- * the thin layer that turns a live `Table` into the plain snapshot
- * data the engine consumes, and re-exposes the engine's table-in
- * convenience wrappers (`emitCreateTable`/`emitCreateIndexes`/
- * `emitTableStatements`).
- *
- * `createSnapshot` captures exactly what determines a table's shape on disk:
- * column storage type/nullability/primary-key/SQL-default/enum values, foreign
- * keys, and indexes (explicit + the unique indexes synthesized from
- * column-level `unique: true`). App-side-only facts (`appDefault`, `onUpdate`,
- * `serialize`/`parse`) are deliberately excluded — they never affect DDL, and
- * including them would trigger a migration diff on a purely app-side change.
- *
- * Deterministic: tables sorted by name, columns/indexes kept in each table's
- * declaration order (the source of the migration generator's rebuild column
- * mapping).
- *
- * Pure and browser-safe (no db imports). Every function takes a `SqlDialect`
- * tag rather than inspecting a driver — the seam a Postgres emitter slots into
- * later.
+ * `Table` → snapshot conversion. `@astromech/schema-engine` owns the
+ * `Snapshot` model, DDL renderers, differ and migration generator; this is
+ * the thin, pure, browser-safe layer that turns a live `Table` into one.
  */
 
 export type {

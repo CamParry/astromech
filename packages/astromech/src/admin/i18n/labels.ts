@@ -1,11 +1,7 @@
 /**
- * Label seam (spec §4) — resolve a config-time `Label` to a display string.
- *
- * Config never translates; it captures keys via `t(key)` → `{ $t }`. The admin
- * resolves them here against the one translation runtime (i18next):
- *   - descriptor `{ $t }` → `t(key, { ns })`
- *   - plain string        → the literal
- *   - omitted             → `Titlecase(name)`
+ * Label seam: resolves a config-time `Label` to a display string against
+ * i18next. A `{ $t }` descriptor calls `t(key, { ns })`, a plain string is
+ * the literal, and an omitted value falls back to `Titlecase(name)`.
  */
 
 import type { Label } from '@/types/index';

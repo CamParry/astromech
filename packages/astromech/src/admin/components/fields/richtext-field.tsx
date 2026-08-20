@@ -5,21 +5,10 @@ import type { JSONContent } from '@tiptap/core';
 import React from 'react';
 import { RichTextEditor } from '@/admin/components/ui/rich-text-editor';
 
-// ============================================================================
-// Legacy coercion
-// ============================================================================
-
 /**
- * Coerce an incoming field value to a valid ProseMirror JSON doc.
- *
- * - If value is already an object (JSON doc), return it as-is.
- * - If value is a non-empty string (legacy HTML), wrap the plain text in a
- *   paragraph doc. Full HTML→JSON parse requires a DOM; in the browser we
- *   could use generateJSON but that adds a dependency and a DOM round-trip
- *   just to get into the editor. TipTap's editor will handle legacy HTML
- *   strings natively when passed as `content` — so we only wrap plain fallback
- *   here for null/undefined/non-string.
- * - null / undefined → undefined (empty editor).
+ * Coerce an incoming field value to a valid ProseMirror JSON doc. Passes an
+ * object through, wraps a legacy plain-text string in a paragraph doc, and
+ * returns undefined for null/undefined (empty editor).
  */
 export function coerceToDoc(value: unknown): JSONContent | undefined {
     if (value === null || value === undefined) return undefined;
@@ -29,12 +18,7 @@ export function coerceToDoc(value: unknown): JSONContent | undefined {
     }
 
     if (typeof value === 'string' && value.trim() !== '') {
-        // Legacy HTML string: pass through as a content string — TipTap editor
-        // will parse it via its built-in HTML parser (which is DOM-based and
-        // only runs in the browser). The editor accepts string content directly.
-        // Return a minimal doc wrapping the text so the type stays JSONContent.
-        // If the string looks like HTML we produce a single paragraph with the
-        // raw text as a fallback — the actual re-hydration in the editor handles it.
+        // Legacy string value: wrap as plain text so the return type stays JSONContent.
         return {
             type: 'doc',
             content: [
@@ -49,10 +33,7 @@ export function coerceToDoc(value: unknown): JSONContent | undefined {
     return undefined;
 }
 
-// ============================================================================
-// Field component
-// ============================================================================
-
+/** Field input wrapping `RichTextEditor`, coercing the stored value to a doc. */
 export function RichtextField({
     name,
     value,

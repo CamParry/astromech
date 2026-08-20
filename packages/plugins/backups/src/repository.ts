@@ -1,14 +1,7 @@
 /**
  * Backup-run storage — the one place this plugin's table meets the database.
- *
- * `createRepository` owns encoding, `where`-value serialization and row decoding,
- * so nothing above this file spells the table name or reaches for a codec.
- * `backup.ts`, `routes/backups.ts` and `service/backups.ts` each used to carry
- * their own copy of the same `ctx.db` cast plus a `TABLE` const — three
- * restatements of one access pattern, which is what this module replaces.
- *
- * The handle is an argument, not a lookup: a plugin is *handed* its database on
- * `ctx.db` and must never reach for core's registry.
+ * `createRepository` owns encoding, `where`-value serialization and row
+ * decoding, so nothing above this file spells the table name or a codec.
  */
 import type { BackupRunRow } from './tables/runs';
 import type { Patch, PluginContext } from 'astromech';
@@ -20,6 +13,7 @@ export type BackupRunPatch = Patch<typeof backupRunsTable>;
 
 export type BackupRunsRepository = ReturnType<typeof createBackupRunsRepository>;
 
+/** The run-row repository: query/mutate methods over `backupRunsTable`. */
 export function createBackupRunsRepository(db: PluginContext['db']) {
     const repository = createRepository(backupRunsTable, db);
 
@@ -55,13 +49,9 @@ export function createBackupRunsRepository(db: PluginContext['db']) {
     }
 
     /**
-     * Apply a status transition, returning the updated row — or `null` when the
-     * row has vanished underneath us.
-     *
-     * Deliberately not `storage.update`, which throws on a missing row: every
-     * caller is finishing a run it opened itself and falls back to the row it
-     * already holds, so a lost bookkeeping row must not turn into a thrown
-     * backup. The follow-up read only runs when the update matched.
+     * Apply a status transition, returning the updated row — or `null` when
+     * the row has vanished underneath us. Deliberately not `storage.update`,
+     * which throws on a missing row.
      */
     async function patch(
         id: string,
@@ -73,17 +63,8 @@ export function createBackupRunsRepository(db: PluginContext['db']) {
 
     /**
      * Successful runs whose artifact is still present, newest first — the input
-     * to rotation, which keeps the head of this list and drops the tail. The
-     * table is the source of truth, so an already-rotated row is excluded here
-     * rather than re-deleted.
-     *
-     * `pre-restore` snapshots are excluded: they are the undo for a restore, so
-     * they must neither be rotated away nor count against keep-N and push a
-     * scheduled backup out of the window.
-     *
-     * `startedAt` is ISO-8601 TEXT with millisecond precision, but two runs can
-     * still share a millisecond, so `id` breaks the tie — a ULID leads with its
-     * timestamp, so id-desc agrees with startedAt-desc.
+     * to rotation, which keeps the head and drops the tail. `pre-restore`
+     * snapshots are excluded, since they must never be rotated or count against `keep`.
      */
     async function rotationCandidates(): Promise<BackupRunRow[]> {
         return repository.findMany({

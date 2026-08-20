@@ -3,10 +3,6 @@ import sharpLib from 'sharp';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { sharp } from '@/media/serving/image/drivers/sharp';
 
-// ---------------------------------------------------------------------------
-// Shared test fixture
-// ---------------------------------------------------------------------------
-
 let sourceBytes: Uint8Array;
 let src: ImageSource;
 
@@ -30,10 +26,6 @@ beforeAll(async () => {
     };
 });
 
-// ---------------------------------------------------------------------------
-// transform — webp
-// ---------------------------------------------------------------------------
-
 describe('sharp driver — transform webp', () => {
     it('returns contentType image/webp', async () => {
         const driver = sharp();
@@ -56,10 +48,6 @@ describe('sharp driver — transform webp', () => {
         expect(meta.format).toBe('webp');
     });
 });
-
-// ---------------------------------------------------------------------------
-// transform — avif
-// ---------------------------------------------------------------------------
 
 describe('sharp driver — transform avif', () => {
     it('returns contentType image/avif', async () => {
@@ -85,9 +73,7 @@ describe('sharp driver — transform avif', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
 // withoutEnlargement — never upscale
-// ---------------------------------------------------------------------------
 
 describe('sharp driver — withoutEnlargement', () => {
     it('does not upscale an 800px source to 2000px', async () => {
@@ -97,10 +83,6 @@ describe('sharp driver — withoutEnlargement', () => {
         expect(meta.width).toBe(800);
     });
 });
-
-// ---------------------------------------------------------------------------
-// placeholder
-// ---------------------------------------------------------------------------
 
 describe('sharp driver — placeholder', () => {
     it('returns a non-empty blurhash string', async () => {

@@ -1,10 +1,7 @@
 /**
- * Locale-tag utilities (BCP-47 / RFC 4647 "lookup").
- *
- * Display locale (e.g. `en-GB`) drives admin UI formatting + interface strings;
- * content locales (e.g. `en`, `fr`) are what entries are tagged with and what
- * the API matches exactly. These helpers bridge the two: a display tag resolves
- * down its fallback chain to an available content locale.
+ * Locale-tag utilities (BCP-47 / RFC 4647 "lookup"). Bridges the admin's
+ * display locale (`en-GB`) to a content locale entries are tagged with
+ * (`en`), resolving down the display tag's fallback chain.
  */
 
 /** RFC 4647 lookup chain: `'en-GB'` → `['en-GB','en']`. */

@@ -28,10 +28,6 @@ beforeEach(async () => {
     setupTestConfig();
 });
 
-// ============================================================================
-// create
-// ============================================================================
-
 describe('titleless create', () => {
     it('succeeds with no title and persists title as empty string', async () => {
         const e = await api.create({ type: 'snippet', fields: { key: 'k', value: 'v' } });
@@ -75,10 +71,6 @@ describe('titleless create', () => {
     });
 });
 
-// ============================================================================
-// titled types are unchanged
-// ============================================================================
-
 describe('titled types still require a title', () => {
     it('throws a validation error when the title is omitted', async () => {
         try {
@@ -101,10 +93,6 @@ describe('titled types still require a title', () => {
     });
 });
 
-// ============================================================================
-// update
-// ============================================================================
-
 describe('titleless update', () => {
     it('updates fields and leaves title empty', async () => {
         const e = await api.create({
@@ -124,10 +112,6 @@ describe('titleless update', () => {
     });
 });
 
-// ============================================================================
-// search
-// ============================================================================
-
 describe('titleless search', () => {
     it('matches nothing (search runs a LIKE on the empty title)', async () => {
         await api.create({ type: 'snippet', fields: { key: 'k', value: 'v' } });
@@ -145,10 +129,6 @@ describe('titleless search', () => {
         expect(result.data).toHaveLength(1);
     });
 });
-
-// ============================================================================
-// relationships into a titleless target
-// ============================================================================
 
 describe('relationships targeting a titleless type', () => {
     it('reports the empty sourceTitle for a titled source referencing a snippet', async () => {

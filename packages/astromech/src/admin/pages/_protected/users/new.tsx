@@ -25,19 +25,11 @@ import {
 } from '@/admin/components/ui/index';
 import { useCreateUser, usePermissions } from '@/admin/hooks/index';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 type FormValues = {
     name: string;
     email: string;
     roleSlug: string;
 };
-
-// ============================================================================
-// Page
-// ============================================================================
 
 function UserCreatePage(): React.ReactElement {
     const { t } = useTranslation();

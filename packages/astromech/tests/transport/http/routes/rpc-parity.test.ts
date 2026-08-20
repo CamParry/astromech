@@ -32,10 +32,6 @@ vi.mock('@/users/session', () => ({ getSession: vi.fn() }));
 
 const mockGetSession = vi.mocked(getSession);
 
-// ============================================================================
-// Fixture — a plugin covers the two refusals only a plugin method produces
-// ============================================================================
-
 const testPlugin: PluginDefinition = {
     package: '@test/my-plugin',
     entries: [
@@ -68,10 +64,6 @@ const testPlugin: PluginDefinition = {
 function testConfig(): AstromechConfig {
     return { ...makeTestConfig(), plugins: [testPlugin] };
 }
-
-// ============================================================================
-// Harness
-// ============================================================================
 
 let manifest: MethodManifest;
 let signedInUser: User;
@@ -122,10 +114,6 @@ type ErrorBody = { error: { code: string; message: string } };
 beforeEach(() => {
     mockGetSession.mockReset();
 });
-
-// ============================================================================
-// Parity — the manifest and the route describe the same surface
-// ============================================================================
 
 describe('manifest ↔ RPC route parity', () => {
     it('reaches or refuses every manifest method, with no third outcome', async () => {
@@ -204,10 +192,6 @@ describe('manifest ↔ RPC route parity', () => {
         expect(res.status).toBe(200);
     });
 });
-
-// ============================================================================
-// The route's own behaviour
-// ============================================================================
 
 describe('POST /rpc/:id', () => {
     it('returns the { data } envelope the REST routes return', async () => {

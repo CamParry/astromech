@@ -1,10 +1,7 @@
 /**
- * `@astromech/schema-engine` — the pure, edge/D1-safe surface.
- *
- * Everything here is free of `node:fs`, so it is safe in a Worker or a browser
- * bundle. The Node-only generator (which reads and writes an app's
- * `migrations/` directory) is deliberately absent: import it from the
- * `@astromech/schema-engine/generate` subpath instead.
+ * `@astromech/schema-engine` — the pure, edge/D1-safe surface. Free of
+ * `node:fs`, so it is safe in a Worker or browser bundle. The Node-only
+ * generator lives at the `@astromech/schema-engine/generate` subpath instead.
  */
 
 export type {

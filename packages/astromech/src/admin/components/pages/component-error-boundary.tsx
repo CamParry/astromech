@@ -1,8 +1,7 @@
 /**
- * React error boundary around any externally-authored admin component (spec
- * §3.12): a throw inside a plugin field, slot, page or a host page component
- * never takes down the admin shell. The fallback is localized and names the
- * `source` — the owning plugin's namespace, or the page path for a host page.
+ * React error boundary around any externally-authored admin component: a
+ * throw inside a plugin field, slot, or page never takes down the admin
+ * shell. The fallback names `source` — the plugin namespace or page path.
  */
 
 import React from 'react';

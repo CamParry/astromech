@@ -1,9 +1,8 @@
 /**
  * The `--allow-remote` flag, shared by every command that opens the database.
  *
- * Its own module, like `filter-args.ts` and `confirm-args.ts`: the flag has one
- * meaning across the whole CLI — proceed against a remote database — and
- * declaring it per command is how the wording and the default drift apart.
+ * Its own module: the flag has one meaning across the CLI — proceed against a
+ * remote database — and declaring it per command is how that drifts.
  */
 
 import type { ArgsDef } from 'citty';

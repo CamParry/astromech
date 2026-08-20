@@ -57,13 +57,9 @@ export const queryKeys = {
 } as const;
 
 /**
- * Cache-scope-aware entry query keys.
- *
- * Root types use scope `''`, which produces keys byte-identical to
- * `queryKeys.entries.*` so existing invalidations keep working unchanged.
- * Plugin types pass the plugin name as the scope, which prefixes a
- * disambiguating segment so a plugin `redirect` type can't collide with a
- * root `redirect` type in the cache.
+ * Cache-scope-aware entry query keys. Root types use scope `''`, producing
+ * keys identical to `queryKeys.entries.*`; plugin types pass the plugin
+ * name, prefixing a segment so a plugin type can't collide with a root one.
  */
 export function scopedEntryKeys(cacheScope: string) {
     if (cacheScope === '') return queryKeys.entries;

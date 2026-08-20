@@ -324,15 +324,14 @@ describe('transaction', () => {
         ).rejects.toThrow('boom');
     });
 
-    // `transaction()` used to call `getDb()` rather than the storage's own
-    // `handle()`, so a storage bound to another handle (the tx handle it was
-    // rebound to, in production) opened its transaction on the *registered base*
-    // connection instead — its writes escaping the outer transaction entirely.
+    // `transaction()` must open on the storage's own bound handle, not the
+    // `getDb()` registered base connection — otherwise writes could escape the
+    // outer transaction entirely.
     //
     // Two databases make that observable deterministically. A nested tx cannot:
     // Kysely refuses `.transaction()` on a `Transaction` outright ("calling the
     // transaction method for a Transaction is not supported"), so with the bound
-    // handle the inner call now fails loudly rather than joining or escaping.
+    // handle the inner call fails loudly rather than joining or escaping.
     it('opens its transaction on the bound handle, not the registered base db', async () => {
         const bound = await createTestDb();
         const boundRepository = createBuiltInEntryRepository({ db: bound });

@@ -1,9 +1,7 @@
 /**
- * "Used by" panel — the entries, users and media items that reference one media
- * item, grouped by source kind and entry type.
- *
- * `media.usedBy` resolves display titles server-side, the same shape
- * `entries.incomingRelationships` returns, so this only groups and links.
+ * "Used by" panel — the entries, users and media items that reference one
+ * media item, grouped by source kind and entry type. `media.usedBy` resolves
+ * display titles server-side, so this component only groups and links.
  */
 
 import type { MediaUsage } from '@/types/index';

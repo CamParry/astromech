@@ -1,29 +1,13 @@
 /**
- * The Kysely `DB` interface — the storage-shaped type surface for the query layer.
- *
- * The 11 tables we own are derived from their `defineTable` objects via
- * `KyselyOf<>`: timestamps are ISO-8601 **TEXT** (`string`), JSON columns are
- * `string`, booleans are `number` (0/1), and
- * `Generated<>` marks any column an app/SQL default fills. These are the *storage*
- * shapes Kysely sees before the row codec turns them into the rich domain Row
- * types (`EntryRow`, …), so storage methods keep returning identical shapes to
- * their callers.
- *
- * `sessions`, `accounts` and `verifications` stay **hand-typed**: nothing of
- * ours writes them, so they have no descriptor and keep the codec's name-keyed
- * timestamp/json/bool handling (see `codec.ts`). Their timestamps are the ISO
- * TEXT better-auth's adapter writes, same as ours.
- *
- * Keys are **camelCase**; the active Kysely instance runs `CamelCasePlugin`, so
- * these map to snake_case DDL columns automatically (result rows come back
- * camelCase).
+ * The Kysely `DB` interface — the storage-shaped type surface for the query
+ * layer. Core tables are derived from their `defineTable` objects via
+ * `KyselyOf<>`; `sessions`/`accounts`/`verifications` stay hand-typed.
  */
 
 import type { KyselyOf } from '@/database/define-table';
 // Every table comes through the `database/schema.ts` aggregator rather than
-// from each domain directly — that indirection is the whole reason the
-// aggregator exists, and it keeps the rest of `database/` below the domains in
-// the dependency graph (see the `database-no-upward-except-aggregate` rule).
+// from each domain directly, keeping `database/` below the domains in the
+// dependency graph (see the `database-no-upward-except-aggregate` rule).
 import type {
     cronTable,
     entriesTable,
@@ -40,7 +24,7 @@ import type {
 import type { Kysely, Transaction } from 'kysely';
 
 export type DB = {
-    // ── 11 ours — derived from defineTable tables ───────────────────────────
+    // Ours — derived from defineTable tables
     roles: KyselyOf<typeof rolesTable>;
     users: KyselyOf<typeof usersTable>;
     entries: KyselyOf<typeof entriesTable>;
@@ -55,7 +39,7 @@ export type DB = {
     _astromech_cron: KyselyOf<typeof cronTable>;
     _astromech_plugins: KyselyOf<typeof pluginsTable>;
 
-    // ── 3 better-auth — hand-typed ──────────────────────────────────────────
+    // better-auth — hand-typed
     sessions: SessionsTable;
     accounts: AccountsTable;
     verifications: VerificationsTable;

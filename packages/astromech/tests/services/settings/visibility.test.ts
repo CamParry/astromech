@@ -8,10 +8,6 @@ import { describe, expect, it } from 'vitest';
 import { isPublicSettingKey } from '@/settings/index';
 
 describe('isPublicSettingKey', () => {
-    // -----------------------------------------------------------------------
-    // (a) Private key excluded from public read
-    // -----------------------------------------------------------------------
-
     it('returns false for a key not in the public list', () => {
         expect(isPublicSettingKey('secret', ['globals', 'globals:'])).toBe(false);
     });
@@ -20,10 +16,6 @@ describe('isPublicSettingKey', () => {
         expect(isPublicSettingKey('globals', [])).toBe(false);
     });
 
-    // -----------------------------------------------------------------------
-    // (b) Exact-match key is public
-    // -----------------------------------------------------------------------
-
     it('returns true for an exact-match key', () => {
         expect(isPublicSettingKey('globals', ['globals', 'globals:'])).toBe(true);
     });
@@ -31,10 +23,6 @@ describe('isPublicSettingKey', () => {
     it('returns true for a raw publicSettings entry', () => {
         expect(isPublicSettingKey('my-key', ['my-key'])).toBe(true);
     });
-
-    // -----------------------------------------------------------------------
-    // (c) Prefix match covers per-locale variants
-    // -----------------------------------------------------------------------
 
     it('returns true for a per-locale key when the prefix is listed', () => {
         expect(isPublicSettingKey('globals:en', ['globals', 'globals:'])).toBe(true);
@@ -54,10 +42,6 @@ describe('isPublicSettingKey', () => {
         expect(isPublicSettingKey('other:en', ['globals:'])).toBe(false);
     });
 
-    // -----------------------------------------------------------------------
-    // (d) Multiple keys — only the matching one grants access
-    // -----------------------------------------------------------------------
-
     it('returns false when only unrelated keys are listed', () => {
         expect(isPublicSettingKey('secret', ['globals', 'site:', 'theme'])).toBe(false);
     });
@@ -69,10 +53,6 @@ describe('isPublicSettingKey', () => {
     it('returns true when a prefix in the list matches', () => {
         expect(isPublicSettingKey('site:en', ['globals', 'site:', 'theme'])).toBe(true);
     });
-
-    // -----------------------------------------------------------------------
-    // (e) Prefix entries ending with ':' only — no false positives
-    // -----------------------------------------------------------------------
 
     it('a prefix ending with colon does not match an unrelated key that happens to contain a colon', () => {
         expect(isPublicSettingKey('plugin:other:path', ['globals:'])).toBe(false);

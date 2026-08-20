@@ -2,13 +2,6 @@
  * demo-rating — a teaching plugin that exercises the external-plugin surface:
  * a custom `rating` field type, a component admin page, an auto-rendered
  * settings form, a service method, localized strings, and a declared permission.
- *
- * It is structured exactly like a first-party plugin (types / permissions /
- * fields / pages / a thin `index`), but authored as an *external* plugin: it
- * imports from the published `astromech` package and lives outside any
- * published package, so `root: import.meta.url` resolves its relative asset
- * specifiers (component/i18n) against this file rather than a package
- * specifier. See `apps/docs/plugins/authoring.md` for the full convention.
  */
 
 import { definePlugin } from 'astromech';

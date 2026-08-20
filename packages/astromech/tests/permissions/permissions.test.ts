@@ -20,9 +20,7 @@ import {
 } from '@/permissions/index';
 import { definePlugin } from '@/plugins/define-plugin';
 
-// ============================================================================
 // hasPermission — new grammar (resource[:identifier]:action, action last)
-// ============================================================================
 
 describe('hasPermission', () => {
     describe('exact match', () => {
@@ -102,9 +100,7 @@ describe('hasPermission', () => {
     });
 });
 
-// ============================================================================
 // can() — built-in roles secure-by-default
-// ============================================================================
 
 describe('can — built-in roles', () => {
     const roles = resolveRoles({});
@@ -147,10 +143,6 @@ describe('can — built-in roles', () => {
     });
 });
 
-// ============================================================================
-// BUILT_IN_ROLES shape check
-// ============================================================================
-
 describe('BUILT_IN_ROLES', () => {
     it('editor has entry:* and media permissions but not users/settings', () => {
         const editorBuiltIn = BUILT_IN_ROLES['editor'];
@@ -172,9 +164,7 @@ describe('BUILT_IN_ROLES', () => {
     });
 });
 
-// ============================================================================
 // permissionsForBuiltInRole — defensive copy of a built-in role's permissions
-// ============================================================================
 
 describe('permissionsForBuiltInRole', () => {
     it('returns the editor permissions including entry:*', () => {
@@ -188,9 +178,7 @@ describe('permissionsForBuiltInRole', () => {
     });
 });
 
-// ============================================================================
 // definePermissions — bare keys only
-// ============================================================================
 
 describe('definePermissions', () => {
     it('returns the declaration unchanged', () => {
@@ -204,10 +192,6 @@ describe('definePermissions', () => {
         ).toThrow(/one level deep/);
     });
 });
-
-// ============================================================================
-// entryPermissions — derived grants for a (plugin) entry type
-// ============================================================================
 
 describe('entryPermissions', () => {
     it('maps every action for a plugin-mounted type', () => {
@@ -232,9 +216,7 @@ describe('entryPermissions', () => {
     });
 });
 
-// ============================================================================
 // plugin.permissions(...keys) — owner-prefixed, never core permissions
-// ============================================================================
 
 describe('plugin permissions (via definePlugin)', () => {
     const plugin = definePlugin({
@@ -281,10 +263,6 @@ describe('plugin permissions (via definePlugin)', () => {
         expect(hasPermission(permissions, 'plugin:seo:view')).toBe(false);
     });
 });
-
-// ============================================================================
-// buildPermissionCatalogue — core + derived entry + plugin permissions
-// ============================================================================
 
 describe('buildPermissionCatalogue', () => {
     const driver: DatabaseDriver = {

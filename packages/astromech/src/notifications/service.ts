@@ -1,13 +1,7 @@
 /**
  * Notifications service — the per-user inbox verbs, plus the privileged
- * server-side `notify()` emit.
- *
- * Every verb NAMES the user it acts for, and filtering on that `userId` is the
- * authorization: there is no permission to hold, only rows that are yours. The
- * client-facing `NotificationsService` (`types/services.ts`) omits it because
- * each transport fills it from the session — the HTTP routes from `c.var.user`,
- * the scoped handle and the Local API from the request context. The contracts in
- * `methods.ts` declare that with `sessionScoped`; `decisions/0037` is why.
+ * server-side `notify()` emit. Every verb names the user it acts for;
+ * filtering on that `userId` is the authorization, not a permission.
  */
 
 import type { NotificationRow } from './tables';

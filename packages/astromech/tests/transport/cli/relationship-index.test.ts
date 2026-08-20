@@ -206,10 +206,6 @@ function driftCount(report: {
     return report.missing.length + report.unexpected.length + report.mismatched.length;
 }
 
-// ============================================================================
-// Parity
-// ============================================================================
-
 describe('checkRelationshipIndex', () => {
     it('reports no drift for content written through the service write paths', async () => {
         await seedContent();
@@ -256,10 +252,6 @@ describe('checkRelationshipIndex', () => {
         expect(report.unexpected).toEqual([]);
     });
 });
-
-// ============================================================================
-// Repair
-// ============================================================================
 
 describe('rebuildRelationshipIndex', () => {
     it('detects a deleted row as missing and restores it', async () => {
@@ -336,10 +328,6 @@ describe('rebuildRelationshipIndex', () => {
         expect(second.orphanRowsRemoved).toBe(0);
     });
 });
-
-// ============================================================================
-// `--type` scoping
-// ============================================================================
 
 describe('rebuildRelationshipIndex({ type })', () => {
     it('repairs the named type and leaves other types and user/media rows alone', async () => {

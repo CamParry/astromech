@@ -1,13 +1,7 @@
 /**
- * Public field-renderer surface (`astromech/ui/fields`, spec §8).
- *
- * Plugin custom field types compose from these core renderers plus the
- * `astromech/ui` atoms. Every renderer takes the standard `BaseFieldProps`.
- *
- * `useFieldControl` is for a field type that renders its OWN control rather than
- * composing from the atoms: the atoms self-apply the enclosing `FieldWrapper`'s
- * `aria-invalid`/`aria-describedby`, and this is how a hand-rolled control reads
- * the same state and spreads the same ARIA onto itself.
+ * Public field-renderer surface. Plugin custom field types compose from
+ * these core renderers plus the `astromech/ui` atoms; every renderer takes
+ * `BaseFieldProps`. `useFieldControl` is for a field with its own control.
  */
 
 export { FormField } from './form-field';

@@ -1,9 +1,7 @@
 /**
- * Client Type Generator
- *
- * Generates a .d.ts file from the resolved Astromech config so that
- * `Astromech.entryTypes.posts.get()` returns a typed entry specific
- * to the `posts` entry type.
+ * Generates the `.astro/astromech.d.ts` client type declarations from the
+ * resolved config, so `Astromech.entryTypes.posts.get()` returns a typed
+ * entry specific to the `posts` entry type.
  */
 
 import type {
@@ -17,10 +15,6 @@ import type {
 import { getFieldType } from '@/fields/field-type-registry';
 import { RESERVED_KEY_META } from '@/fields/reserved-keys';
 
-// ============================================================================
-// Naming Helpers
-// ============================================================================
-
 /**
  * Convert a collection slug (snake_case, kebab-case, camelCase) to PascalCase.
  * e.g. "blog_posts" → "BlogPosts", "my-collection" → "MyCollection"
@@ -30,10 +24,6 @@ function toPascalCase(name: string): string {
         .replace(/[-_](.)/g, (_, char: string) => char.toUpperCase())
         .replace(/^(.)/, (_, char: string) => char.toUpperCase());
 }
-
-// ============================================================================
-// Field Type Mapping
-// ============================================================================
 
 /**
  * Layout field types — presentational, no stored value. Their children
@@ -48,10 +38,8 @@ const RELATION_TYPES = new Set(['relationship', 'media']);
 
 /**
  * TS emission + public visibility for reserved instance keys lives in
- * `RESERVED_KEY_META` (`fields/reserved-keys.ts`) — the single source shared with
- * the runtime public-read strip. `_id`/`_type` are identity keys (present in both
- * shapes); `_disabled`/`_title` are editorial metadata (full shape only). Which
- * keys a container owns comes from its field type's `reservedKeys`.
+ * `RESERVED_KEY_META` — the single source shared with the runtime
+ * public-read strip. Which keys a container owns comes from `reservedKeys`.
  */
 
 /** Reserved-key type lines a container emits for the given shape, in declared order. */
@@ -72,12 +60,9 @@ function propertyKey(name: string): string {
 }
 
 /**
- * Walk a Field[] and return all data-bearing nodes, with layout
- * fields (section/tabs/tab/accordion) transparently flattened in-place.
- * Nested fields (group/repeater/blocks) and leaf fields are returned as-is —
- * they each become a single property on the containing object.
- *
- * When `shape === 'public'`, fields marked `private: true` are excluded.
+ * Walk a Field[] and return all data-bearing nodes, with layout fields
+ * (section/tabs/tab/accordion) flattened in-place. When `shape === 'public'`,
+ * fields marked `private: true` are excluded.
  */
 function collectDataFields(fields: Field[], shape: 'full' | 'public' = 'full'): Field[] {
     const result: Field[] = [];
@@ -94,12 +79,9 @@ function collectDataFields(fields: Field[], shape: 'full' | 'public' = 'full'): 
 }
 
 /**
- * Build the body lines of an object type from a Field[].
- * Used for top-level collections and recursively for group/repeater children.
- * Each line is indented by `indent` spaces.
- *
- * `hoisted` — optional accumulator for top-level type declarations that
- * cannot be expressed inline (e.g. self-referential tree node types).
+ * Build the body lines of an object type from a Field[], indented by
+ * `indent` spaces. Used for top-level collections and recursively for
+ * group/repeater children; `hoisted` collects self-referential tree aliases.
  */
 function buildObjectLines(
     fields: Field[],
@@ -120,17 +102,9 @@ function buildObjectLines(
 }
 
 /**
- * Map a Field to its TypeScript type string for the Fields type.
- * Plugin-registered types use their `typeGen` (default `JsonValue`). Returns
- * null for layout field types (they never appear as a field line —
- * collectDataFields flattens them away before this is called) and for
- * unrecognised types.
- *
- * `hoisted` — optional accumulator; tree fields push a named type alias here so
- * the self-referential node type terminates without infinite inlining.
- *
- * `shape` — 'full' emits all instance keys; 'public' omits `_disabled`/`_title`
- * from block/repeater/tree element types and skips `private` child fields.
+ * Map a Field to its TypeScript type string for the Fields type. Returns
+ * null for layout fields (flattened before this is reached) and unrecognised
+ * types. `hoisted` collects named aliases for self-referential (tree) types.
  */
 function fieldToTsType(
     field: Field,
@@ -152,10 +126,9 @@ function fieldToTsType(
     const fieldType = getFieldType(field.type);
     if (fieldType === undefined) return null;
 
-    // A `children` slot marks a nested field. Those need the recursion + hoisting
-    // context that the field type's pure `tsType(field, shape)` signature can't
-    // carry, so they're emitted here. Their reserved instance keys come from
-    // `fieldType.reservedKeys`; this code owns only the recursion structure.
+    // A `children` slot marks a nested field, needing recursion + hoisting the
+    // field type's pure `tsType(field, shape)` can't carry, so it's emitted
+    // here; reserved instance keys still come from `fieldType.reservedKeys`.
     if (fieldType.children !== undefined) {
         switch (field.type) {
             case 'group': {
@@ -214,12 +187,9 @@ function fieldToTsType(
             }
 
             case 'blocks': {
-                // Heterogeneous array; `_type` discriminates the block variant and
-                // the intersected `JsonObject` carries arbitrary block data. The
-                // intersection rather than an inline `[key: string]` index
-                // signature is what keeps the element a `JsonObject`: an inline
-                // signature would have to admit `undefined` to cover the optional
-                // reserved keys, and `JsonValue | undefined` is not `JsonValue`.
+                // Heterogeneous array; `_type` discriminates the block variant. The
+                // intersected `JsonObject` (not an inline index signature) keeps the
+                // element a `JsonObject`, since an index signature would admit `undefined`.
                 const reserved = reservedKeyLines(fieldType, shape);
                 return `Array<import('astromech').JsonObject & { ${reserved.join(' ')} }>`;
             }
@@ -230,12 +200,9 @@ function fieldToTsType(
 }
 
 /**
- * Map a Field to its populated TypeScript type string for the Relations type.
- * Returns null if the field is not a relation/media field.
- *
- * `knownCollections` — bare root collection keys.
- * `qualifiedTargetMap` — qualified target ids (`plugin/type`) → Fields type name.
- * `shape` — 'public' references `…FieldsPublic`; 'full' references `…Fields`.
+ * Map a Field to its populated TypeScript type string for the Relations
+ * type; null if the field is not a relation/media field. `shape` selects
+ * between `…Fields` and `…FieldsPublic` target references.
  */
 function fieldToRelationType(
     field: Field,
@@ -275,10 +242,6 @@ function fieldToRelationType(
 
     return isMultiple ? `${single}[]` : single;
 }
-
-// ============================================================================
-// Per-Collection Generation
-// ============================================================================
 
 type CollectionTypeBlock = {
     collectionKey: string;
@@ -322,8 +285,7 @@ function generateCollectionTypes(
 
     // A type alias, not an interface: only an alias of an object type gets the
     // implicit index signature that makes it assignable to `Entry['fields']`
-    // (`JsonObject`). An interface never does, so `TypedEntry<PostFields>` could
-    // not be passed where an `Entry` was expected.
+    // (`JsonObject`); an interface never does.
     const mainType =
         fieldLines.length > 0
             ? `export type ${fieldsName} = {\n${fieldLines.join('\n')}\n};`
@@ -372,14 +334,6 @@ function generateCollectionTypes(
     return { collectionKey, fieldsType, fieldsPublicType, relationsType };
 }
 
-// ============================================================================
-// Main Export
-// ============================================================================
-
-/**
- * Generate the full content of the `.astro/astromech.d.ts` type declaration file.
- */
-
 /** Derive the type-name prefix for a plugin entry type. */
 function pluginEntryPrefix(pluginName: string, typeName: string): string {
     return `Plugin${toPascalCase(pluginName)}${toPascalCase(typeName)}`;
@@ -394,10 +348,9 @@ type PluginEntryBlock = {
 };
 
 /**
- * Generate per-plugin entry types (`Fields`/`FieldsPublic`/`Relations`),
- * so a root collection's relationship field can target a qualified plugin entry
- * type (`redirects/redirect`). Returns an empty array when there are no plugin
- * entries.
+ * Generate per-plugin entry types (`Fields`/`FieldsPublic`/`Relations`), so
+ * a root collection's relationship field can target a qualified plugin entry
+ * type (`redirects/redirect`). Empty array when there are no plugin entries.
  */
 function generatePluginEntryBlocks(
     pluginEntries: Record<string, Record<string, { fields: ResolvedEntryFields }>>,
@@ -466,6 +419,7 @@ function generatePluginAugmentations(plugins: PluginDefinition[]): string[] {
     ];
 }
 
+/** Generate the full content of the `.astro/astromech.d.ts` type declaration file. */
 export function generateClientTypes(
     config: ResolvedConfig,
     pluginFieldTypes = new Map<string, PluginFieldTypeRegistration>(),

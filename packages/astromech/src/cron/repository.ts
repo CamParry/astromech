@@ -1,14 +1,7 @@
 /**
- * Cron storage — the only place Kysely touches the `_astromech_cron` table.
- *
- * Thin domain vocabulary over `createRepository(cronTable)`, which owns encoding, value
- * serialization and row decoding. Three of the four methods still drop to
- * `query()`, because the scheduler's predicates are things the flat `where` DSL
- * cannot express: the due test and the claim test are both ORs, and the seed is
- * an insert-or-IGNORE, which `upsert` — always an update on conflict — is the
- * wrong tool for. Every value crossing the boundary still goes through the
- * table, so `enabled: true` becomes INTEGER 1 and a `Date` becomes the
- * ISO-TEXT these columns store.
+ * Cron repository — the only place Kysely touches the `_astromech_cron`
+ * table. Three of the four methods still drop to `query()`, because the
+ * scheduler's due/claim predicates are ORs the flat `where` DSL can't express.
  */
 import type { CronRow, NewCronRow } from '@/database/tables';
 import type { Db } from '@/database/types';
@@ -56,10 +49,9 @@ export function createCronRepository(db?: Db) {
     }
 
     /**
-     * CAS-claim a job for this tick by writing `expiry` into `lock`, but only if
-     * the job is unlocked or its previous claim has already expired. `true` means
-     * this caller owns the run — the cross-instance double-fire guard. A crashed
-     * claim auto-expires, so the next tick past `expiry` can retry.
+     * CAS-claim a job for this tick by writing `expiry` into `lock`, but only
+     * if unlocked or the previous claim expired. `true` means this caller owns
+     * the run — the cross-instance double-fire guard; a crashed claim auto-expires.
      */
     async function claim(name: string, now: Date, expiry: Date): Promise<boolean> {
         const { db: handle, table, where } = repository.query();
@@ -81,9 +73,8 @@ export function createCronRepository(db?: Db) {
 
     /**
      * Record a completed run and release the claim, gated on the exact claim
-     * token. If our lease expired and the job was re-claimed meanwhile, this
-     * matches 0 rows and leaves the new owner's state untouched — that gating is
-     * what closes the ABA window.
+     * token. If the lease expired and another instance re-claimed it, this
+     * matches 0 rows and leaves the new owner's state untouched — closing the ABA window.
      */
     async function recordRunAndRelease(
         name: string,

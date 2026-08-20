@@ -1,35 +1,10 @@
 /**
- * `filterMethods(methods, filter)` — the set of methods a transport may expose.
- *
- * Filtering is STRUCTURAL where an annotation is advisory. `annotate-manifest.ts`
- * tells a caller "you may not call this"; a filtered-out method is not in the
- * tool list, has no dispatch entry, and cannot be named. That difference is the
- * whole point: an annotation depends on the caller respecting it, and an agent is
- * exactly the caller that does not.
- *
- * This is the layer the ecosystem converged on. GitHub's MCP server ships
- * `--read-only` as "a strict security filter that takes precedence over any other
- * configuration, disabling write tools even when explicitly requested"; Stripe's
- * ships the same flag. Their precedence is copied here deliberately, including
- * the part that looks like a bug — `readOnly` beats an explicit `include`. A
- * caller that can widen a read-only method list by naming a method has a
- * read-only flag that documents an intention rather than enforcing one.
- *
- * `readOnly` keys off `mutates`, which is a REQUIRED field on every service
- * method and therefore on every manifest method, so there is no method this
- * cannot classify. There is no "unknown effect" bucket to fail closed into.
- *
- * This is NOT the permission boundary — `policies/scoped-services.ts` is. A
- * filter decides what a transport OFFERS; permissions decide what a role may
- * do with what it was offered. Filtering the methods of a handle that was
- * never scoped grants nothing.
+ * The set of methods a transport may expose. Filtering is STRUCTURAL where
+ * `annotate-manifest.ts` is advisory — a filtered-out method has no dispatch
+ * entry. NOT the permission boundary: `policies/scoped-services.ts` is that.
  */
 
 import type { ManifestMethod } from '@/types/index';
-
-// ============================================================================
-// Types
-// ============================================================================
 
 export type MethodFilter = {
     /**
@@ -50,26 +25,10 @@ export type FilterResult = {
     excluded: ExcludedMethod[];
 };
 
-// ============================================================================
-// Matching
-// ============================================================================
-
 /**
- * Does `pattern` address `method`?
- *
- * The grammar is deliberately two rules and no more:
- *
- * - an exact match against the method's `id` OR its `name`
- * - a trailing `*`, which prefix-matches against either
- *
- * So `entries.*` addresses every entry method, and `entries.posts.publish`
- * addresses exactly one. `name` is matched as well as `id` because a human
- * typing `--exclude users.delete` means the method, and `users.delete` happens
- * to be both. Note that `name` is not unique (`entries.create` names every entry
- * type's create), which makes a name pattern a broad instrument on purpose.
- *
- * There is no fuller glob syntax — no `?`, no mid-string `*`, no braces. A
- * filter that needs a regex engine to predict is a filter nobody can audit.
+ * Does `pattern` address `method`? Exact match against `id` or `name`, or a
+ * trailing `*` prefix-matching either — no fuller glob syntax, since a filter
+ * that needs a regex engine to predict is one nobody can audit.
  */
 function matches(pattern: string, method: ManifestMethod): boolean {
     if (pattern.endsWith('*')) {
@@ -84,25 +43,10 @@ function matchesAny(patterns: string[], method: ManifestMethod): boolean {
     return patterns.some((pattern) => matches(pattern, method));
 }
 
-// ============================================================================
-// Filtering
-// ============================================================================
-
 /**
- * Narrow a manifest's methods down to the ones `filter` allows.
- *
- * Precedence, in order, first rule to fire wins:
- *
- * 1. `readOnly` drops anything with `mutates: true`, even when `include` names it.
- * 2. `exclude` drops a match.
- * 3. `include`, when non-empty, keeps only matches.
- *
- * Every dropped method is reported in `excluded` with the reason it was dropped,
- * and `methods.length + excluded.length` always equals the input length. Nothing
- * is dropped silently: a list that quietly shrinks reads to a caller as "that
- * method does not exist", which sends it hunting for a bug in the wrong place.
- *
- * An empty filter is a no-op — every method through, `excluded` empty.
+ * Narrow a manifest's methods down to the ones `filter` allows: `readOnly`
+ * drops mutating methods first (even ones `include` names), then `exclude`,
+ * then `include`. Every dropped method is reported in `excluded` with a reason.
  */
 export function filterMethods(
     methods: ManifestMethod[],

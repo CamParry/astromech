@@ -11,10 +11,6 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { settingsService } from '@/settings/service';
 
-// ---------------------------------------------------------------------------
-// Config
-// ---------------------------------------------------------------------------
-
 const PAGE_PATH = 'site';
 // baseKey = page.path (resolveAdminPage sets baseKey: page.path)
 const BASE_KEY = PAGE_PATH;
@@ -54,10 +50,6 @@ beforeEach(async () => {
     setupTestConfig(makeSettingsFieldConfig());
 });
 
-// ---------------------------------------------------------------------------
-// Email validation
-// ---------------------------------------------------------------------------
-
 describe('settingsService.set — email field', () => {
     it('rejects an invalid email', async () => {
         await expect(
@@ -77,10 +69,6 @@ describe('settingsService.set — email field', () => {
         ).resolves.toBeDefined();
     });
 });
-
-// ---------------------------------------------------------------------------
-// Slug field
-// ---------------------------------------------------------------------------
 
 describe('settingsService.set — slug field', () => {
     it('rejects a value that is not already a slug', async () => {
@@ -103,10 +91,6 @@ describe('settingsService.set — slug field', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// Present-only semantics
-// ---------------------------------------------------------------------------
-
 describe('settingsService.set — present-only semantics', () => {
     it('does NOT reject when a required field is absent from the blob (only present fields validated)', async () => {
         // `title` is required but not included here — should NOT fail because
@@ -117,9 +101,7 @@ describe('settingsService.set — present-only semantics', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
 // Pass-through (no matching page / non-object value)
-// ---------------------------------------------------------------------------
 
 describe('settingsService.set — pass-through cases', () => {
     it('resolves without validation for a key with no matching admin page', async () => {
@@ -134,10 +116,6 @@ describe('settingsService.set — pass-through cases', () => {
         ).resolves.toBeDefined();
     });
 });
-
-// ---------------------------------------------------------------------------
-// Uniqueness
-// ---------------------------------------------------------------------------
 
 describe('settingsService.set — unique field', () => {
     it('rejects when another key under the same baseKey holds the same unique value', async () => {

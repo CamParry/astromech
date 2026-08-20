@@ -5,6 +5,7 @@ type PasswordResetEmailProps = {
     url: string;
 };
 
+/** Password-reset email body, rendered inside `BaseLayout`. */
 export function PasswordResetEmail({ url }: PasswordResetEmailProps) {
     return (
         <BaseLayout preview="Reset your password">

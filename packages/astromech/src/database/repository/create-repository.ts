@@ -1,50 +1,7 @@
 /**
- * `createRepository` — the generic, `defineTable`-backed CRUD object.
- *
- * One `Table` in, a typed `findOne`/`findMany`/`count`/`create`/
- * `update`/`delete`/`updateMany`/`deleteMany`/`upsert` surface out. It composes
- * *inside* the existing `createXRepository` factories rather than replacing them:
- * those keep the transaction rebinding point and the domain vocabulary
- * (`getLatestNumber`, `publishDueScheduled`, …), which a generic wrapper cannot
- * absorb. Pass the tx handle as the second argument to rebind.
- *
- * ## Why the wrapper owns value serialization
- *
- * Every value reaching SQL — insert cells, patch cells AND `where` comparison
- * literals — is a *domain* value (a `Date`, a `boolean`, a parsed object) and
- * must pass through that column's `col.serialize` first. Our timestamps are
- * ISO-8601 TEXT, so an unserialized `Date` handed to a `lte` predicate compares
- * against the string representation of a JS Date object: it silently returns
- * the wrong rows rather than failing. Drizzle did this implicitly via column
- * mode; Kysely does not, so the column codec does it here, once, for everyone.
- *
- * Three consequences worth stating explicitly:
- *
- *   - **Each element of an `in`/`notIn` array is serialized individually** — the
- *     array itself is not a column value.
- *   - **`like` patterns are passed through RAW.** A pattern is a SQL literal,
- *     not a domain value; `col.serialize` would corrupt it (a json column's
- *     serializer would JSON-quote it, for instance).
- *   - **`null` bypasses serialization entirely** — it renders as `IS NULL` /
- *     `IS NOT NULL`.
- *
- * ## Why `json` columns are excluded from operator detection
- *
- * A per-column operator object (`{ gte: x }`) and a json column's *value* are
- * both plain objects, so "is this an operator object?" cannot be answered by
- * shape alone. It is answered by the `Table`: if the column's kind is
- * `'json'`, an object is always a value. A json column that genuinely needs an
- * operator comparison drops to `query()`.
- *
- * ## Deliberate difference from `tableRepository`
- *
- * A bare `null` in `where` means `IS NULL`, not "no filter". Omitting the key
- * (or passing `undefined`) is how you mean unfiltered; a `null` you deliberately
- * passed should filter.
- *
- * Unknown column keys throw rather than being skipped — a `where` naming a
- * column the table does not have is a config bug, and a silently-dropped
- * predicate returns too many rows.
+ * `createRepository` — the generic, `defineTable`-backed CRUD object. One
+ * `Table` in, a typed find/create/update/delete/upsert surface out. The
+ * wrapper serializes every value crossing into SQL via the column codec.
  */
 
 import type {
@@ -65,10 +22,6 @@ import {
 import { getDb } from '@/database/registry';
 import { AstromechError } from '@/errors/index';
 
-// ============================================================================
-// Query-layer types
-// ============================================================================
-
 /**
  * A `Table` may be any shape, so the wrapper queries through a fully
  * generic `DB` interface rather than the typed core one. Correctness of the
@@ -80,10 +33,6 @@ type Schema = Record<string, Record<string, unknown>>;
 export type GenericDb = Kysely<Schema>;
 
 type WhereFn = (eb: ExpressionBuilder<Schema, string>) => Expression<SqlBool>;
-
-// ============================================================================
-// Public DSL types
-// ============================================================================
 
 type WhereOps<V> = {
     eq?: V | null;
@@ -201,19 +150,11 @@ export type Repository<D extends Table> = {
     query(): QueryHandle<D>;
 };
 
-// ============================================================================
-// Operator vocabulary
-// ============================================================================
-
 const OPERATORS = ['eq', 'ne', 'in', 'notIn', 'gt', 'gte', 'lt', 'lte', 'like'] as const;
 
 const OPERATOR_KEYS = new Set<string>(OPERATORS);
 
 const RANGE_SQL = { gt: '>', gte: '>=', lt: '<', lte: '<=' } as const;
-
-// ============================================================================
-// Factory
-// ============================================================================
 
 export function createRepository<D extends Table>(table: D, db?: Db): Repository<D> {
     const tableKey = kyselyTableKey(table.name);
@@ -262,7 +203,7 @@ export function createRepository<D extends Table>(table: D, db?: Db): Repository
         return decodeWith(table, row);
     }
 
-    // ── where ───────────────────────────────────────────────────────────────
+    // where
 
     /**
      * `true` when a plain object should be read as `{ gte: …, like: … }` rather
@@ -375,7 +316,7 @@ export function createRepository<D extends Table>(table: D, db?: Db): Repository
         };
     }
 
-    // ── writes ──────────────────────────────────────────────────────────────
+    // writes
 
     /**
      * Patch → storage cells. `encodePatchWith` never injects defaults, so the
@@ -391,7 +332,7 @@ export function createRepository<D extends Table>(table: D, db?: Db): Repository
         return encodePatchWith(table, values);
     }
 
-    // ── surface ─────────────────────────────────────────────────────────────
+    // surface
 
     async function findOne(where: Where<D>): Promise<TableSelect<D> | null> {
         const row = await handle()
@@ -545,10 +486,6 @@ export function createRepository<D extends Table>(table: D, db?: Db): Repository
         query,
     };
 }
-
-// ============================================================================
-// Internals
-// ============================================================================
 
 /**
  * The `Table` row types are generic over `D`, so TypeScript cannot see that

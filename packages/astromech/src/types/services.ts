@@ -27,10 +27,6 @@ import type {
     UserQueryParams,
 } from './query';
 
-// ============================================================================
-// Entry options
-// ============================================================================
-
 /**
  * Lightweight summary of an inbound relationship row — used by the delete
  * confirmation modal to surface entries that reference the one being deleted.
@@ -116,10 +112,7 @@ export type EntryDuplicateOverrides = Partial<{
     status: EntryStatus;
 }>;
 
-// ============================================================================
-// Entries API (unified, type-scoped, options-object)
-// ============================================================================
-
+/** The entries domain's service contract — unified, type-scoped, options-object. */
 export type EntriesService = {
     query(
         params: EntryQueryParams & { type: string | readonly string[] }
@@ -190,9 +183,9 @@ export type EntriesService = {
         id: string;
     }): Promise<IncomingRelationship[]>;
 
-    // ── Forward versioning (staged entries) ────────────────────────────────
-    // All take the *canonical* entry id. Require the `staging` capability
-    // (built-in storage) on the type; the service throws otherwise.
+    // Forward versioning (staged entries) — all take the *canonical* entry id.
+    // Require the `staging` capability (built-in storage) on the type; the
+    // service throws otherwise.
 
     /** Stage a change: copy the canonical's content into a new linked row.
      * Throws `StagedEntryExistsError` if one already exists. */
@@ -217,10 +210,7 @@ export type EntriesService = {
     revokePreviewToken(params: { type: string; id: string }): Promise<void>;
 };
 
-// ============================================================================
-// Media, Settings, Users APIs
-// ============================================================================
-
+/** The media domain's service contract. */
 export type MediaService = {
     query(params?: MediaQueryParams): Promise<QueryResult<Media>>;
     get(params: { id: string }): Promise<Media | null>;
@@ -239,6 +229,7 @@ export type MediaService = {
     usedBy(params: { id: string }): Promise<MediaUsage[]>;
 };
 
+/** The settings domain's service contract. */
 export type SettingsService = {
     /**
      * Return all settings. Without `full: true` only public-marked keys are
@@ -258,6 +249,7 @@ export type SettingsService = {
     set(params: { key: string; value: JsonValue }): Promise<Setting>;
 };
 
+/** The users domain's service contract. */
 export type UsersService = {
     query(params?: UserQueryParams): Promise<QueryResult<User>>;
     get(params: { id: string }): Promise<User | null>;
@@ -278,10 +270,6 @@ export type UsersService = {
     }): Promise<User>;
     delete(params: { id: string }): Promise<void>;
 };
-
-// ============================================================================
-// Notifications API (session-scoped)
-// ============================================================================
 
 /**
  * The CLIENT's notifications API. No `userId` anywhere: every method acts on the

@@ -1,9 +1,7 @@
 /**
- * Image header dimension reader.
- *
- * Reads intrinsic pixel dimensions from the leading bytes of an image without
- * fully decoding it. Uses Uint8Array + DataView exclusively — no Node Buffer
- * APIs — so it runs safely on Cloudflare Workers.
+ * Image header dimension reader. Reads intrinsic pixel dimensions from an
+ * image's leading bytes without fully decoding it, using Uint8Array +
+ * DataView only — no Node Buffer APIs — so it runs on Cloudflare Workers.
  */
 
 /** True only for raster bitmap types we can optimise (transform). Excludes svg, gif, video, pdf, etc. */

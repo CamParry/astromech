@@ -1,13 +1,7 @@
 /**
  * Service methods for @astromech/backups — the JSON half of the plugin's API.
- *
- * Only the two streaming endpoints (artifact download, artifact restore) stay
- * on `rawRoutes`; everything that is plain JSON belongs here, where it is
- * typed, callable off `Astromech.plugins.backups` and off `service` in the
- * admin page, and visible to the method manifest the CLI and MCP discover from.
- *
- * Row access goes through `createBackupRunsRepository`, which owns the table name,
- * the codec and the ordering.
+ * Only the two streaming endpoints (download, restore) stay on `rawRoutes`;
+ * everything else that is plain JSON belongs here, typed and discoverable.
  */
 
 import type { BackupRunRow } from '../tables/runs';
@@ -16,10 +10,6 @@ import { isBackupRunning, performBackup, resolveKeep } from '../backup';
 import { createBackupRunsRepository } from '../repository';
 
 const MAX_RUNS = 100;
-
-// ============================================================================
-// Result shapes
-// ============================================================================
 
 /** Driver capabilities, feature-detected per request so the UI can grey out actions. */
 export type BackupCapabilities = {
@@ -44,10 +34,7 @@ export type DeleteRunResult =
     | { ok: true; id: string }
     | { ok: false; reason: 'not-found' };
 
-// ============================================================================
-// Service
-// ============================================================================
-
+/** The `listRuns` / `triggerRun` / `deleteRun` service methods, using `defaultKeep` as the fallback retention. */
 export function buildBackupsService(defaultKeep: number) {
     return {
         listRuns: defineServiceMethod<undefined, ListRunsResult>({

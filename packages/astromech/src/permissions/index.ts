@@ -23,18 +23,10 @@ export {
 
 type ConfigWithRoles = Pick<AstromechConfig, 'roles'> | Pick<ResolvedConfig, 'roles'>;
 
-// ============================================================================
-// Core permissions
-// ============================================================================
-
 /**
  * Every permission core itself enforces — the core half of the permission
- * catalogue, and the set the built-in roles select from.
- *
- * Declared through {@link defineAbsolutePermissions} because these keys are the
- * full permission strings: core is the root namespace, so there is nothing to
- * prefix them with. Entry permissions are absent by design — they are derived
- * per registered type (`entryPermission`), not declared.
+ * catalogue, declared through {@link defineAbsolutePermissions} since these
+ * keys are already full strings (core is the root namespace).
  */
 export const CORE_PERMISSIONS = defineAbsolutePermissions({
     'admin:access': {
@@ -75,14 +67,9 @@ function corePermissions(...keys: CorePermissionKey[]): Permission[] {
     return [...keys];
 }
 
-// ============================================================================
-// Built-in Roles
-// ============================================================================
-
 // Wildcards are matcher features, not grantable units, so they are literals
-// here rather than members of CORE_PERMISSIONS. The `entry:*` trailing wildcard
-// covers all entry types and all actions, including cross-cutting permissions
-// like `entry:read:full`.
+// here rather than members of CORE_PERMISSIONS. The `entry:*` wildcard covers
+// all entry types and actions, including `entry:read:full`.
 const EDITOR_PERMISSIONS: Permission[] = [
     ...corePermissions(
         'admin:access',
@@ -96,9 +83,8 @@ const EDITOR_PERMISSIONS: Permission[] = [
 
 /**
  * Cross-cutting permission: request the full (admin/editor) shape on any
- * entry read. Covered by `entry:*` (editor) and `*` (admin) via the trailing-
- * wildcard matcher — future member/anonymous roles that lack `entry:*` will
- * not have this permission.
+ * entry read. Covered by `entry:*` (editor) and `*` (admin) via the
+ * trailing-wildcard matcher.
  */
 export const PERMISSION_ENTRY_READ_FULL = 'entry:read:full' as Permission;
 
@@ -128,10 +114,6 @@ export function permissionsForBuiltInRole(slug: BuiltInRoleSlug): Permission[] {
     }
     return [...role.permissions];
 }
-
-// ============================================================================
-// Resolution
-// ============================================================================
 
 /** Merge built-in roles with config-defined roles. Config roles take precedence. */
 export function resolveRoles(config: ConfigWithRoles): Record<string, Role> {
@@ -173,10 +155,6 @@ export function resolveRole(
         }
     );
 }
-
-// ============================================================================
-// Permission Checking (segment-wise matcher re-exported from permission-match.ts)
-// ============================================================================
 
 /** Convenience wrapper: check whether a role grants a permission. */
 export function can(role: Role, permission: Permission): boolean {

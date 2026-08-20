@@ -1,13 +1,7 @@
 /**
  * Shared renderer for `component`-mode admin pages, used by both the host
- * (`/page/*`) and plugin (`/plugin/*`) catch-alls. Owns: the module-level
- * `React.lazy` cache, the Page shell, the error boundary and the Suspense
- * fallback.
- *
- * Parameterized by a pre-resolved `load` + `cacheKey` so the caller is
- * origin-agnostic. `identity` is supplied only by plugin surfaces — a host page
- * has no plugin identity, so it gets no `PluginUiProvider` and its components
- * must not call `useAstromechPlugin()`.
+ * and plugin catch-alls. Parameterized by a pre-resolved `load` + `cacheKey`;
+ * `identity` is supplied only by plugin surfaces, which get a `PluginUiProvider`.
  */
 import type { PluginUiIdentity } from '@/admin/context/plugin';
 import React from 'react';

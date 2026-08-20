@@ -43,10 +43,9 @@ function buildAuth(): Auth<BetterAuthOptions> {
                 updatedAt: 'updated_at',
             },
             additionalFields: {
-                // Signup inserts through better-auth's own Kysely instance,
-                // so the role it writes is declared here rather than left to
-                // a column default. `input: false` stops a signup body
-                // naming its own role.
+                // Signup inserts through better-auth's own Kysely instance, so
+                // the role it writes is declared here rather than left to a
+                // column default. `input: false` stops a signup body naming its own role.
                 roleSlug: {
                     type: 'string',
                     fieldName: 'role_slug',

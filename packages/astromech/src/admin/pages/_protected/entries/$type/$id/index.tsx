@@ -1,9 +1,7 @@
 /**
- * Entry edit route — root entry types.
- *
- * Thin wrapper around the shared `EntryEditPage`. The loader prefetches the
- * entry via the root-scoped query options. A qualified type redirects to the
- * plugin route.
+ * Entry edit route — root entry types. Wraps the shared `EntryEditPage`; the
+ * loader prefetches the entry, and a qualified type redirects to the plugin
+ * route.
  */
 
 import type { EntriesMount } from '@/admin/components/entries/mount';

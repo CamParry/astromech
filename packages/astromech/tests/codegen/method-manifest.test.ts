@@ -11,10 +11,6 @@ import {
 } from '@/codegen/method-manifest';
 import { resolveConfig } from '@/config/resolve';
 
-// ============================================================================
-// Minimal stubs — resolveConfig needs db + storage but doesn't call them here
-// ============================================================================
-
 const driver: DatabaseDriver = {
     type: 'test',
     getInstance() {
@@ -43,10 +39,6 @@ const storageDriver: StorageDriver = {
         return { keys: [] };
     },
 };
-
-// ============================================================================
-// Fixtures
-// ============================================================================
 
 /** Plugin with an entry type and two service methods to cover the access branches. */
 const testPlugin: PluginDefinition = {
@@ -130,10 +122,6 @@ function findMethod(
     );
 }
 
-// ============================================================================
-// generateMethodManifest — manifest envelope
-// ============================================================================
-
 describe('generateMethodManifest', () => {
     it('should serialise to parseable JSON', () => {
         const result = serialiseMethodManifest(generateMethodManifest(resolved, []));
@@ -156,10 +144,6 @@ describe('generateMethodManifest', () => {
         expect(result.endsWith('\n')).toBe(true);
     });
 });
-
-// ============================================================================
-// Core methods
-// ============================================================================
 
 describe('generateMethodManifest — core methods', () => {
     it('should include users.create with source core and permission users:create', () => {
@@ -239,10 +223,6 @@ describe('generateMethodManifest — core methods', () => {
         expect(methods.some((m) => String(m['name']).startsWith('settings.'))).toBe(true);
     });
 });
-
-// ============================================================================
-// Root entry methods
-// ============================================================================
 
 describe('generateMethodManifest — root entries', () => {
     it('should emit entries.query for root type posts with mount root', () => {
@@ -363,10 +343,6 @@ describe('generateMethodManifest — root entries', () => {
     });
 });
 
-// ============================================================================
-// Forward versioning (staged entries) methods
-// ============================================================================
-
 describe('generateMethodManifest — staged-entry methods', () => {
     const STAGING_ACTIONS: Record<string, string> = {
         createStaged: 'update',
@@ -400,10 +376,6 @@ describe('generateMethodManifest — staged-entry methods', () => {
         expect(findMethod(methods, 'entries.publish', 'articles')).toBeDefined();
     });
 });
-
-// ============================================================================
-// Plugin entry methods
-// ============================================================================
 
 describe('generateMethodManifest — plugin entries', () => {
     it('should emit entries.query for plugin entry type widget', () => {
@@ -449,10 +421,6 @@ describe('generateMethodManifest — plugin entries', () => {
         });
     });
 });
-
-// ============================================================================
-// Plugin service methods
-// ============================================================================
 
 describe('generateMethodManifest — plugin service methods', () => {
     it('should emit plugins.testMyPlugin.doSomething (service key) with source plugin', () => {

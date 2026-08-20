@@ -6,12 +6,9 @@ import { getImageConfig } from '../serving/image/registry';
 import { contentVersion } from '../serving/image/version';
 
 /**
- * Store an uploaded file under `key` and extract image metadata.
- *
- * Optimisable images are buffered once — their bytes are needed for dimension
- * extraction, the blurhash placeholder, and the content-hash version. Every
- * other type (video, PDF, …) is streamed straight to storage and never buffered
- * (the "stream, never buffer" abuse guard, spec §8).
+ * Store an uploaded file under `key` and extract image metadata. Optimisable
+ * images are buffered once for dimension/blurhash/version extraction; every
+ * other type streams straight to storage, never buffered.
  */
 export async function storeFile(
     driver: StorageDriver,

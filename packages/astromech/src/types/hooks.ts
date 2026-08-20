@@ -16,10 +16,6 @@
 import type { Entry, EntryStatus, JsonObject, Media, User } from './domain';
 import type { PluginContext } from './plugins';
 
-// ============================================================================
-// Hook Context Types (core events)
-// ============================================================================
-
 /**
  * `data` is the row about to be written, not a copy of it: a `beforeCreate`
  * handler that assigns to it changes what is persisted and what the
@@ -91,10 +87,6 @@ export type ApiResponseContext = {
     user: User | null;
 };
 
-// ============================================================================
-// Hook Registry (open)
-// ============================================================================
-
 /**
  * The set of core events Astromech fires. `before*` handlers gate the
  * operation (a throw aborts); `after*` handlers run post-commit and are
@@ -151,7 +143,6 @@ export type CoreHookHandlers = {
 
 export type KnownCoreEvent = keyof CoreHookHandlers;
 
-/** Any event name — a known core event or a plugin-declared custom event. */
 /**
  * Augmented by the generated `astromech.d.ts` with events plugins declare via
  * `hookEvents`. Empty by default.
@@ -159,6 +150,7 @@ export type KnownCoreEvent = keyof CoreHookHandlers;
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
 export interface AstromechPluginHookEvents {}
 
+/** Any event name — a known core event or a plugin-declared custom event. */
 export type HookEvent = KnownCoreEvent | keyof AstromechPluginHookEvents | (string & {});
 
 /**

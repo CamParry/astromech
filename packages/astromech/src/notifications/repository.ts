@@ -1,14 +1,7 @@
 /**
- * Notification storage — the only place Kysely touches the `notifications` table.
- *
- * Thin domain vocabulary over `createRepository(notificationsTable)`, which owns encoding,
- * value serialization and row decoding. `createMany` is the one thing the wrapper
- * cannot express: `notify()` fans one notification out to every targeted user, and
- * the wrapper's `create` is single-row, so going through it would turn one INSERT
- * into N round-trips.
- *
- * The `users` lookups `notify()` needs live in `users/storage.ts` — they are that
- * table's rows, not this one's.
+ * Notification repository — the only place Kysely touches the
+ * `notifications` table. `createMany` fans one notification out to every
+ * targeted user in a single INSERT, which the wrapper's single-row `create` can't.
  */
 
 import type { NewNotificationRow, NotificationRow } from './tables';

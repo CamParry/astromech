@@ -1,25 +1,9 @@
 /**
  * Plugin RPC + raw routes — mounted at `/api/plugins/*`.
  *
- * RPC: `POST /plugins/{serviceKey}/{method}` calls a plugin's declared service
- * method (JSON in/out). Raw routes (binary/multipart/streaming escape hatch)
- * mount at `/plugins/{serviceKey}{route.path}` and receive a Web-standard
- * Request via a thin wrapper (the plugin never touches Hono).
- *
- * The route segment is the plugin's service key (`acmeSeo`), not its namespace
- * (`acme_seo`), so that the HTTP client can put its property key straight into
- * the URL: `serviceKey` is derived from `namespace` lossily, and mounting on
- * the namespace would force the client to invert that derivation. Everything
- * below the routing layer — permissions, table prefixes — still keys on the
- * namespace, reached through the resolved identity.
- *
- * A plugin's ENTRY types are not served here. They live on the single entries
- * router at `/entries/{qualified type}` like every other entry type, which
- * derives `plugin:{ns}:entry:{type}:{action}` from the qualified id itself.
- *
- * Every method/route declares `access`; this router enforces it against the
- * resolved session. It mounts BEFORE the app-wide `requireAuth`, so `public`
- * methods work without a session.
+ * RPC calls a plugin's declared service method (JSON in/out); raw routes are
+ * a binary/multipart/streaming escape hatch. Mounts before the app-wide
+ * `requireAuth`, since every method/route enforces its own declared `access`.
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
@@ -70,8 +54,7 @@ function enforceAccess(
     return null;
 }
 
-// ── Raw escape-hatch routes (registered before the RPC catch-all) ──────────
-
+// Raw escape-hatch routes, registered before the RPC catch-all.
 // Not in a route table: the verb and path are plugin-declared, the handler
 // takes a Web `Request`, and access is `PluginAccess` rather than a contract
 // permission — so `scopedServices` has nothing to scope.
@@ -93,8 +76,7 @@ for (const { identity, route } of getPluginRawRoutes()) {
     });
 }
 
-// ── RPC: POST /plugins/{serviceKey}/{method} ───────────────────────────────
-
+// RPC: POST /plugins/{serviceKey}/{method}
 // Not in a route table: the method id is two path params resolved at request
 // time against the plugin service registry, access is `PluginAccess`, and the
 // handler's result is returned unenveloped.

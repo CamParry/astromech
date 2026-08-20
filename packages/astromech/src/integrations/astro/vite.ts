@@ -105,10 +105,9 @@ export function createViteConfig({
 }
 
 /**
- * Source for `virtual:astromech/config`. Re-exporting the author's module puts
- * the live config in the SSR graph, so functions and class instances survive
- * where a JSON literal destroyed them. It carries the config as written: the
- * resolved one is produced once by boot and read from `config/registry.ts`.
+ * Source for `virtual:astromech/config`. Re-exporting the author's module
+ * puts the live config in the SSR graph, so functions and class instances
+ * survive where a JSON literal would destroy them.
  */
 function liveConfigModule(configPath: string): string {
     return [

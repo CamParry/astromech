@@ -141,8 +141,7 @@ export async function* runAssistantLoop(input: {
 
 /**
  * The calls a step left unanswered — the ones whose tool declined to run.
- * Provider-executed calls are skipped: the provider runs and answers those
- * itself, so they are never waiting on an approval.
+ * Provider-executed calls are skipped, since the provider answers those itself.
  */
 function unexecutedCalls(messages: ChatMessage[]): ToolCallPart[] {
     const answered = new Set<string>();

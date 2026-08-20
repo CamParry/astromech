@@ -10,14 +10,8 @@ import { formatAiContextMessage } from 'astromech';
 
 /**
  * The system prompt and turns to send. AI context goes after the final user
- * turn: the API requires a `role: 'system'` message to follow a user turn and
- * to be last or followed by an assistant turn. That also keeps it past the last
- * cache breakpoint, so navigating does not invalidate the cached prefix. With
- * no user turn to follow, it rides in the system prompt instead.
- *
- * Reaching the model there needs `allowSystemInMessages`, and the Anthropic
- * mapper keeps a later system block inline only because a top-level prompt is
- * always sent — the first one it sees is hoisted.
+ * turn to stay past the last cache breakpoint; with no user turn to follow,
+ * it rides in the system prompt instead.
  */
 export function buildRequest(
     messages: ChatMessage[],

@@ -1,12 +1,7 @@
 /**
- * `astromech call <method-id> --args <json|@file>` — one command over the whole
- * service surface. The manifest resolves the id, `buildDispatch` supplies the
- * call, and the contract's own schema validates the arguments, so a method needs
- * no command of its own to be reachable from a shell.
- *
- * `buildDispatch` is the trusted, unscoped path — the CLI has no signed-in user
- * and no role — so a `sessionScoped` method is refused with the reason it
- * declares rather than called on a guessed subject.
+ * `astromech call <method-id> --args <json|@file>` — one command over the
+ * whole service surface, resolved through the manifest and `buildDispatch`.
+ * Unscoped: the CLI has no role, so a `sessionScoped` method is refused.
  */
 
 import type { ManifestMethod, ToolDefinition } from '@/types/index';

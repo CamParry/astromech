@@ -1,7 +1,3 @@
-// ============================================================================
-// Hook
-// ============================================================================
-
 import type { Field } from '@/types/index';
 import { useCallback, useRef, useState } from 'react';
 // Deep import: the `fields/` barrel reaches server code (virtual config / DB).
@@ -9,11 +5,9 @@ import { buildDefaultValues } from '@/fields/defaults';
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- idiomatic non-null assertions in tree-field traversal */
 /**
- * useTreeField — state management for the tree field component.
- *
- * Internally flattens the recursive tree into an ordered list of `FlatNode`s
- * (each carrying its depth and parentId). All mutations operate on the flat
- * list and rebuild the tree before committing.
+ * State management for the tree field component. Internally flattens the
+ * recursive tree into an ordered list of `FlatNode`s (depth + parentId); all
+ * mutations operate on the flat list and rebuild the tree before committing.
  */
 
 export type TreeNode = {
@@ -28,10 +22,6 @@ export type FlatNode = {
     depth: number;
     parentId: string | null;
 };
-
-// ============================================================================
-// Tree ↔ flat-list conversion
-// ============================================================================
 
 export function flattenTree(
     nodes: TreeNode[],
@@ -78,10 +68,6 @@ export function buildTree(flat: FlatNode[]): TreeNode[] {
 
     return roots;
 }
-
-// ============================================================================
-// Node helpers
-// ============================================================================
 
 function withId(data: Partial<TreeNode> = {}): TreeNode {
     return {

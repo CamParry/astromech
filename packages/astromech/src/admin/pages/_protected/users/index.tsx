@@ -1,8 +1,6 @@
 /**
- * Users list page.
- *
- * Shows a table of all users with avatar, name, email, and joined date.
- * Search and page state are synced to the URL. Supports row-level edit and
+ * Users list page: table of users with avatar, name, email, and joined date.
+ * Search and page state are synced to the URL; supports row-level edit and
  * delete actions.
  */
 
@@ -37,10 +35,6 @@ type UsersSearch = {
     q?: string;
     page?: number;
 };
-
-// ============================================================================
-// Page
-// ============================================================================
 
 function UsersIndexPage(): React.ReactElement {
     const { t } = useTranslation();

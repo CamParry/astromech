@@ -29,11 +29,9 @@ export function FieldControlProvider({
 }
 
 /**
- * Lets a control self-mark from the enclosing `FieldWrapper`'s message state.
- * `FieldWrapper` owns the message; controls add only ARIA + a class. A warning
- * describes the control but never sets `aria-invalid`: the value is advisory,
- * not rejected, and an invalid control would be announced as an error and could
- * block a native submit. Outside a wrapper the context default yields nothing.
+ * Lets a control self-mark from the enclosing `FieldWrapper`'s message
+ * state. A warning never sets `aria-invalid` (it's advisory, not
+ * rejected); outside a wrapper the context default yields nothing.
  */
 export function useFieldControl(): {
     hasError: boolean;

@@ -1,25 +1,7 @@
 /**
- * Client-side field validation for the entry form.
- *
- * This is not a second rule engine. It runs the SAME `parseFields` the server
- * runs, over the same `Field[]` the server was given — the admin
- * config is built from the very same definitions and shipped to the browser.
- * There is therefore nothing to keep in sync: a new rule, a new field type or a
- * changed message appears here the moment it appears on the server.
- *
- * What the browser skips is decided by DATA-DEPENDENCE, not by
- * declarative-vs-imperative. A check that needs a database read cannot run here;
- * everything else can, including the type-intrinsic field-type validators
- * (`url`, `email`, `json`, `key-value`), which are pure core code already in
- * this bundle.
- *
- * Reveal policy (when a message is allowed to become visible) lives here too —
- * see `reportBlur`. The pipeline decides what is wrong; this hook decides when
- * the author is told.
- *
- * Warnings are advisory and block nothing, so only an editor has any use for
- * them: the server never asks the pipeline to collect them, and they have no
- * wire representation. They exist solely here, alongside the errors.
+ * Client-side field validation for the entry form. Runs the same
+ * `parseFields` pipeline the server runs, so a new rule appears here the
+ * moment it appears on the server; data-dependent checks are skipped.
  */
 
 import type { Field, FieldErrors, FieldLookups, ValidationMode } from '@/types/index';
@@ -28,15 +10,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { parseFields } from '@/fields/parse-fields';
 
 /**
- * Data-dependent checks are server-only and are skipped in silence.
- *
- * `unique` needs a read the browser cannot make, and so does a relationship's
- * target-type check — omitting the `entryTypes` port is what tells the pipeline
- * to skip it. `custom` is a function, so `JSON.stringify` flattens the rule to
- * `{}` on its way into the admin config and the pipeline's `runRule` falls
- * through every branch — inert, but by accident, so don't rely on it silently.
- * None is surfaced as a "pending" state: the server runs them all on submit and
- * answers with a 422.
+ * Data-dependent checks are server-only and skipped in silence: `unique` and
+ * a relationship's target-type check need a DB read the browser cannot make.
+ * None is surfaced as "pending" — the server re-runs them all on submit.
  */
 const CLIENT_LOOKUPS: FieldLookups = { isUnique: () => Promise.resolve(true) };
 

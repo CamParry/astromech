@@ -3,10 +3,6 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { resetBindingEnv, setBindingEnv } from '@/cloudflare/bindings';
 import { r2 } from '@/storage/drivers/r2';
 
-// ---------------------------------------------------------------------------
-// In-memory R2 fake
-// ---------------------------------------------------------------------------
-
 type StoredObject = { bytes: Uint8Array; contentType?: string };
 
 const UPLOADED = new Date('2026-07-28T12:00:00.000Z');
@@ -149,10 +145,6 @@ function makeFakeBucket(opts?: {
     };
 }
 
-// ---------------------------------------------------------------------------
-// Helper: drain a ReadableStream into Uint8Array
-// ---------------------------------------------------------------------------
-
 async function drain(stream: ReadableStream): Promise<Uint8Array> {
     const reader = (stream as ReadableStream<Uint8Array>).getReader();
     const chunks: Uint8Array[] = [];
@@ -174,10 +166,6 @@ async function drain(stream: ReadableStream): Promise<Uint8Array> {
     }
     return out;
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 describe('r2()', () => {
     describe('name', () => {
@@ -347,7 +335,7 @@ describe('r2()', () => {
             const first = await pagedDriver.list('variants/abc/');
             expect(first.keys).toEqual(page1);
             expect(first.cursor).toBe('page2');
-            // One call per list(): the driver no longer loops internally.
+            // One call per list(): the driver does not loop internally.
             expect(pagedBucket.listCallCount).toBe(1);
             if (first.cursor === undefined) throw new Error('expected a cursor');
 

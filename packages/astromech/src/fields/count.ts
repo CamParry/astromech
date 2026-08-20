@@ -1,9 +1,7 @@
 /**
  * Character-count analysis for text inputs — pure and browser/server safe.
- *
- * Powers the advisory counter on `text`/`textarea` fields (`field.count`) and is
- * reused by plugins that audit content length. The range is soft: exceeding
- * `max` is allowed, it just reports `long`.
+ * Powers the advisory counter on `text`/`textarea` fields (`field.count`).
+ * Soft: exceeding `max` is allowed, it just reports `long`.
  */
 
 /** Soft recommended length range. Either bound may be omitted. */

@@ -16,10 +16,6 @@ import type {
 import { describe, expect, it } from 'vitest';
 import { evaluateConfirmation } from '@/policies/confirmation';
 
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
-
 function coreMethod(
     domain: string,
     name: string,
@@ -73,10 +69,6 @@ function refusal(decision: ConfirmDecision) {
     return decision.outcome;
 }
 
-// ---------------------------------------------------------------------------
-// Triggering
-// ---------------------------------------------------------------------------
-
 describe('triggering', () => {
     it('never gates a non-mutating method, under either preset', () => {
         for (const trigger of ['mutating', 'destructive'] as const) {
@@ -125,10 +117,6 @@ describe('triggering', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// The question
-// ---------------------------------------------------------------------------
-
 describe('input_required', () => {
     it('asks a question naming the method and the concrete target', () => {
         // A prompt that says "confirm this action?" is useless to the human it
@@ -168,10 +156,6 @@ describe('input_required', () => {
         expect(outcome.requests[0]?.message).toContain('destructive');
     });
 });
-
-// ---------------------------------------------------------------------------
-// The three actions
-// ---------------------------------------------------------------------------
 
 describe('answers', () => {
     it('proceeds on accept, handing on args with no reserved key', () => {
@@ -223,10 +207,6 @@ describe('answers', () => {
         }
     });
 });
-
-// ---------------------------------------------------------------------------
-// The reserved key
-// ---------------------------------------------------------------------------
 
 describe('the reserved key', () => {
     it('is stripped even when the method is not gated', () => {

@@ -1,12 +1,7 @@
 /**
- * Registry — the primitive every subsystem registry is built on.
- *
- * Backed by `globalThis`, never a module-level singleton: the package ships two
- * separate tsup builds, and six `exports` subpaths can resolve to either `src`
- * or `dist`, so one module can be instantiated more than once in a process. The
- * global namespace is the only thing every copy shares. The application
- * registry in `src/astromech.ts` depends on that: two copies of it would boot
- * the runtime twice.
+ * Registry — the primitive every subsystem registry is built on. Backed by
+ * `globalThis`, never a module-level singleton: several `exports` subpaths
+ * can resolve to `src` or `dist`, so one module may be instantiated twice.
  */
 
 import { AstromechError } from '@/errors/index';

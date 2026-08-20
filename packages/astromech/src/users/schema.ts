@@ -1,10 +1,6 @@
 import { z } from '@hono/zod-openapi';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 
-// ============================================================================
-// Zod schemas
-// ============================================================================
-
 export const createUserSchema = z
     .object({
         email: z.string().email('Must be a valid email address'),

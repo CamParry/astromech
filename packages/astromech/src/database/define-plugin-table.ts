@@ -12,38 +12,9 @@ import { defineTable } from '@/database/define-table';
 import { pluginNamespace } from '@/utilities/plugin-namespace';
 
 /**
- * `definePluginTable` — the scoped table factory a plugin package uses to
- * declare one of its own tables.
- *
- * A plugin's tables live in the same database as the app's, so they are
- * namespaced: `plugin_<namespace>_<name>`, where the namespace derives from the
- * plugin's `package` and nothing else. Taking the package as the first argument
- * means no call site hand-writes a prefixed string, no plugin can accidentally
- * ship an unprefixed table, and the prefix can never disagree with the one the
- * runtime computes for permissions, routes and migrations.
- *
- * The package is passed here as a value — rather than read from the plugin's
- * definition — because the prefix has to exist as a literal *type* for
- * `PluginDB` to key on, and a table declared at module scope cannot reach
- * a value that lives inside `definePlugin`. Keep that literal in a
- * dependency-free module the definition also imports, so the package name is
- * still written exactly once.
- *
- * ```ts
- * import { definePluginTable } from 'astromech';
- * import { BACKUPS_PACKAGE } from '../types';
- *
- * export const runsTable = definePluginTable(BACKUPS_PACKAGE, 'runs', ({ col }) => ({
- *     id: col.id(),
- *     status: col.text({ notNull: true }),
- * }));
- * // runsTable.name === 'plugin_backups_runs'
- * ```
- *
- * Singular, matching the one-file-per-table layout. The `cols`/`indexes`
- * callbacks are `defineTable`'s verbatim, so authoring a plugin table reads
- * identically to authoring a core one. Index names are prefixed too — two
- * plugins may both want `idx_lookup`.
+ * `definePluginTable` — the scoped table factory a plugin uses to declare one
+ * of its own tables, namespaced `plugin_<namespace>_<name>` so no plugin can
+ * ship an unprefixed table and the prefix always matches what the runtime computes.
  */
 
 /** Accepted first argument: the package name, or any object carrying one. */
@@ -108,10 +79,6 @@ export function definePluginTable<
             : undefined
     );
 }
-
-// ============================================================================
-// `PluginDB` — the Kysely interface for a plugin's own tables
-// ============================================================================
 
 type NameOf<D> = D extends Table<AnyCols, infer N> ? N : never;
 

@@ -5,20 +5,12 @@
 
 import type { Entry } from './domain';
 
-// ============================================================================
-// Locale Sentinels
-// ============================================================================
-
 /** Sentinel for query({ locale }) meaning "rows across all locales". */
 export type AllLocales = 'all';
 
-// ============================================================================
-// Query Types
-// ============================================================================
-
 export type SortDirection = 'asc' | 'desc';
 
-// Drizzle-style: { createdAt: 'desc' } or [{ status: 'asc' }, { createdAt: 'desc' }]
+/** Drizzle-style: `{ createdAt: 'desc' }` or `[{ status: 'asc' }, { createdAt: 'desc' }]`. */
 export type SortOption = Record<string, SortDirection>;
 
 /**
@@ -77,10 +69,6 @@ export type QueryResult<T = Entry> = {
 
 /** @deprecated Use QueryResult instead */
 export type EntryQueryResult<T = Entry> = QueryResult<T>;
-
-// ============================================================================
-// Per-domain query params
-// ============================================================================
 
 export type UserQueryParams = {
     search?: string;

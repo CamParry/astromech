@@ -1,10 +1,6 @@
 /**
- * The `--read-only` / `--include` / `--exclude` flag trio, shared by `astromech
- * mcp` and `astromech methods`.
- *
- * Shared rather than declared twice so the two commands cannot drift: `methods`
- * exists to let a human see exactly what `mcp` will serve, and that only holds
- * if both parse the same flags into the same options.
+ * The `--read-only` / `--include` / `--exclude` flag trio, shared by
+ * `astromech mcp` and `astromech methods` so the two commands cannot drift.
  */
 
 import type { MethodFilter } from '@/policies/method-filter';

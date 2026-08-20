@@ -1,13 +1,7 @@
 /**
- * Resolved rendering contracts — JSON-serializable shapes for admin entry pages.
- *
- * They are resolved (client-side) from AdminEntryType and reference
- * renderers by STRING KEY (cell kind, field type), never by component reference,
- * so they stay serializable. The admin registries resolve those keys to React
- * components. See src/admin/rendering/.
- *
- * Dependency rule: this module imports only ./fields.js and ./domain.js — never
- * ./config.js (config.ts imports CellKind from here; the dependency is one-way).
+ * Resolved rendering contracts — JSON-serializable shapes for admin entry
+ * pages, resolved client-side from `AdminEntryType`. Renderers are referenced
+ * by string key, never by component reference, so they stay serializable.
  */
 import type { Entry } from './domain';
 import type { Field, Label } from './fields';

@@ -32,6 +32,7 @@ export type ClaimedApproval = {
 
 export type ApprovalsRepository = ReturnType<typeof createApprovalsRepository>;
 
+/** The approval repository: mint, claim, expire and reject pending calls. */
 export function createApprovalsRepository(db: PluginContext['db']) {
     const repository = createRepository(approvalsTable, db);
 

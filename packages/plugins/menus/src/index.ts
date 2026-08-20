@@ -2,13 +2,6 @@
  * @astromech/menus — developer-declared navigation menus stored as settings
  * blobs, edited through generated per-menu admin pages, and read via a public
  * service method that resolves entry refs to front-end URLs.
- *
- * Usage:
- *   menus({ menus: [{ key: 'main', label: 'Main Navigation' }, ...] })
- *
- * Service:
- *   const items = await Astromech.plugins.menus.get({ key: 'main', locale: 'en' });
- *   // → [{ label, url?, newTab?, children: [...] }]
  */
 
 import type { MenuItem, MenusOptions } from './types';

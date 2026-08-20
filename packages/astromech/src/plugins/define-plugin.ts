@@ -2,41 +2,9 @@ import type { Permission, PluginDefinition, PluginFactory } from '@/types/index'
 import { pluginNamespace } from '@/utilities/plugin-namespace';
 
 /**
- * Define a plugin from one object — identity and behaviour together, the way
- * `defineConfig` takes one config. `package` is a key like any other, so a
- * plugin never has to hand its own identity to itself, and nothing inside the
- * package needs to import an identity module to build a namespaced string.
- *
- * Pass a plain definition, or a factory when the plugin takes options. Either
- * way the result is a **factory**, so sites always call it: `plugins: [seo(),
- * redirects({ … })]`.
- *
- * Relative asset specifiers (`'./admin/pages/overview.tsx'`) on `fields`,
- * `admin.pages`, `admin.slots` and `i18n` resolve against `root` — see
- * {@link PluginDefinition.root}.
- *
- * The factory carries a `permissions(...keys)` accessor that selects individual
- * keys from the definition's `permissions` declaration and returns them already
- * namespaced, so a site composes roles straight off the plugin and enumerates
- * exactly what it grants: `[...seo.permissions('view', 'write')]`.
- *
- * A factory MUST be a pure data builder: Astromech calls it once with no
- * options to read identity and permission declarations, and again for each site
- * instantiation.
- *
- * @example
- * export const seo = definePlugin({
- *     package: '@astromech/seo',
- *     label: 'SEO',
- *     fields: [seoPreviewField],
- * });
- *
- * @example
- * export const redirects = definePlugin((options?: RedirectsOptions) => ({
- *     package: '@astromech/redirects',
- *     entries: [redirectEntryType],
- *     ...(options?.generateOnSlugChange !== false && { hooks: [slugChangeHook] }),
- * }));
+ * Define a plugin from one object — identity and behaviour together. Pass a
+ * plain definition or a factory (for plugins taking options); either way the
+ * result is a factory a site calls: `plugins: [seo(), redirects({ ... })]`.
  */
 export function definePlugin<const Def extends PluginDefinition, Options = void>(
     source: Def | ((options?: Options) => Def)

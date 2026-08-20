@@ -1,10 +1,7 @@
 /**
- * Entry i18n namespace seam (spec §4.1).
- *
- * Label keys captured by `t(key)` resolve against a namespace derived from the
- * route: plugin entry types use the plugin name (= route `$name`), root entry
- * types use the core `translation` namespace. The entry pages wrap their body
- * in `EntryNamespaceProvider`; components read it via `useLabel`.
+ * Entry i18n namespace seam. Label keys resolve against a namespace derived
+ * from the route: plugin entry types use the plugin name, root types use
+ * `translation`. Entry pages wrap their body in `EntryNamespaceProvider`.
  */
 
 import type { Label } from '@/types/index';
@@ -16,6 +13,7 @@ const CORE_NS = 'translation';
 
 const EntryNamespaceContext = React.createContext<string>(CORE_NS);
 
+/** Provides the active i18n namespace to `useEntryNamespace` and `useLabel`. */
 export function EntryNamespaceProvider({
     namespace,
     children,
@@ -30,6 +28,7 @@ export function EntryNamespaceProvider({
     );
 }
 
+/** Reads the active i18n namespace from `EntryNamespaceProvider`. */
 export function useEntryNamespace(): string {
     return React.useContext(EntryNamespaceContext);
 }

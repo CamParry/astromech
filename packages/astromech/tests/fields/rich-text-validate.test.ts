@@ -8,10 +8,6 @@ import {
     validateRichTextDocument,
 } from '@/fields/rich-text/validate';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 const doc = {
     type: 'doc',
     content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hello' }] }],
@@ -46,10 +42,6 @@ function fakeCtx() {
         lookups: { isUnique: async () => true },
     };
 }
-
-// ---------------------------------------------------------------------------
-// validateRichTextDocument
-// ---------------------------------------------------------------------------
 
 describe('validateRichTextDocument', () => {
     it('accepts a valid document', () => {
@@ -98,9 +90,7 @@ describe('validateRichTextDocument', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
 // Executable link schemes — `fromJSON` and `check()` never look at an href
-// ---------------------------------------------------------------------------
 
 describe('validateRichTextDocument rejects executable link schemes', () => {
     /** A one-paragraph document whose only text carries a link mark. */
@@ -216,10 +206,6 @@ describe('validateRichTextDocument rejects executable link schemes', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// allow list
-// ---------------------------------------------------------------------------
-
 describe('validateRichTextDocument with an allow list', () => {
     it('accepts a heading when headings are allowed', () => {
         expect(validateRichTextDocument(heading)).toBe(true);
@@ -233,10 +219,6 @@ describe('validateRichTextDocument with an allow list', () => {
         expect(validateRichTextDocument(doc, { heading: false })).toBe(true);
     });
 });
-
-// ---------------------------------------------------------------------------
-// validateRichText
-// ---------------------------------------------------------------------------
 
 describe('validateRichText', () => {
     it('accepts a valid document', async () => {
@@ -255,10 +237,6 @@ describe('validateRichText', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// coerceRichText
-// ---------------------------------------------------------------------------
-
 describe('coerceRichText', () => {
     it('maps an empty string to null', () => {
         expect(coerceRichText('')).toBe(null);
@@ -272,9 +250,7 @@ describe('coerceRichText', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
 // Through the pipeline — the validator has to actually fire on a write
-// ---------------------------------------------------------------------------
 
 describe('rich text through parseFields', () => {
     const fields: Field[] = [{ name: 'body', type: 'richtext' }];
@@ -305,10 +281,6 @@ describe('rich text through parseFields', () => {
         expect(result.errors['body']?.[0]).toMatch(/heading/);
     });
 });
-
-// ---------------------------------------------------------------------------
-// The regression this exists for: a public-shape read written back
-// ---------------------------------------------------------------------------
 
 describe('public-shape write-back', () => {
     it('rejects the rendered HTML a public read returns, after a JSON round trip', async () => {

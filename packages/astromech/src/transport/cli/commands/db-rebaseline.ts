@@ -1,13 +1,8 @@
 /**
  * `astromech db:rebaseline`
  *
- * Re-emits the baseline migration and `snapshot.json` from the current core
- * tables, so a change in the DDL *renderer* (which the differ structurally
- * cannot see, since the snapshot records schema state rather than SQL text)
- * reaches the committed chain. Tables with no descriptor are copied verbatim.
- *
- * `--collapse` additionally folds every migration past the baseline into it.
- * Both modes rewrite history, which is legal only before a release.
+ * Re-emits the baseline migration and snapshot from the current core tables.
+ * `--collapse` folds later migrations into it too — legal only before release.
  */
 
 import { resolve } from 'node:path';

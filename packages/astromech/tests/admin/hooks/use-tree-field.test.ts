@@ -2,10 +2,6 @@ import type { TreeNode } from '@/admin/hooks/use-tree-field';
 import { describe, expect, it } from 'vitest';
 import { buildTree, flattenTree } from '@/admin/hooks/use-tree-field';
 
-// ============================================================================
-// flattenTree
-// ============================================================================
-
 describe('flattenTree', () => {
     it('flattens a single root node', () => {
         const nodes: TreeNode[] = [{ _id: 'a', label: 'A' }];
@@ -44,10 +40,6 @@ describe('flattenTree', () => {
         expect(flat.map((f) => f.parentId)).toEqual([null, 'a', 'b', null]);
     });
 });
-
-// ============================================================================
-// buildTree
-// ============================================================================
 
 describe('buildTree', () => {
     it('rebuilds a single root node', () => {
@@ -97,10 +89,6 @@ describe('buildTree', () => {
         expect('_children' in tree[1]!).toBe(false);
     });
 });
-
-// ============================================================================
-// Mutation helpers (pure utility — exercise via direct array manipulation)
-// ============================================================================
 
 describe('_id stability', () => {
     it('_id values survive a flatten → buildTree round-trip', () => {

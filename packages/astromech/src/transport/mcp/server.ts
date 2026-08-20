@@ -14,10 +14,6 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { buildTools } from './tools';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 type CreateMcpServerResult = {
     server: Server;
     tools: McpToolDef[];
@@ -33,10 +29,6 @@ type CreateMcpServerResult = {
 export function toToolResultText(result: unknown): string {
     return JSON.stringify(result ?? null, null, 2);
 }
-
-// ============================================================================
-// Factory
-// ============================================================================
 
 /**
  * @param confirm Confirmation policy, applied inside the dispatch map so a

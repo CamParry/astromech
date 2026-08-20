@@ -19,17 +19,9 @@ export function toMedia(row: MediaRow): Media {
 }
 
 /**
- * Resolve the delivery URL for a media record — the one place the `media.access`
- * policy is applied, because `toMedia` is the one place a `Media.url` is made.
- *
- * `access: 'public'` prefers the driver's own URL; anything else (and any driver
- * without one) falls back to the proxying media route, which is what keeps
- * `filesystem()` in dev and `r2()` without a `publicUrl` working unchanged.
- *
- * A public URL must be PERMANENT. Astro bakes these into static HTML at build
- * time, and the same strings end up in `og:image`, RSS and email — so nothing
- * expiring may ever be returned from here. That is why presigned URLs are an
- * upload path, not the delivery path.
+ * Resolve the delivery URL for a media record. `access: 'public'` prefers
+ * the driver's own URL, falling back to the proxying media route otherwise.
+ * Must return a PERMANENT URL — these get baked into static HTML and email.
  */
 function resolveMediaUrl(id: string, filename: string): string {
     const config = getConfig();

@@ -1,10 +1,7 @@
 /**
- * LocaleSwitcher — shows available locales for an entry's group and allows
- * navigating to existing sibling rows or creating new translations.
- *
- * Reads {@link Entry.locales} directly (no separate query). For missing locales,
- * fires the "create translation" mutation which dispatches Astromech.entries.duplicate
- * with the source's localeGroup, joining the new row to the existing group.
+ * Shows available locales for an entry's group; navigates to existing
+ * sibling rows or fires a "create translation" mutation that duplicates the
+ * entry into the target locale, joining the same group.
  */
 
 import { useNavigate } from '@tanstack/react-router';
@@ -12,10 +9,6 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCreateTranslation } from '../../hooks/entries';
 import { Select } from '../ui/index';
-
-// ============================================================================
-// Types
-// ============================================================================
 
 type LocaleSwitcherProps = {
     /** The entry currently being viewed/edited. */
@@ -29,10 +22,6 @@ type LocaleSwitcherProps = {
     type: string;
     compact?: boolean;
 };
-
-// ============================================================================
-// Component
-// ============================================================================
 
 export function LocaleSwitcher({
     currentEntryId,

@@ -1,27 +1,7 @@
 /**
- * `scopedServices(role)` — the service handles a caller cannot exceed.
- *
- * This is what an untrusted transport (a remote/agent tool-loop, anything acting
- * under a role) is handed INSTEAD of the raw domain services. Every
- * method on the handle checks its own contract before calling through, so the
- * caller's authority is a property of the object it holds rather than of the
- * checks it remembered to write: pass a handle scoped to an editor and there is
- * no reachable path to `users.delete`.
- *
- * It fails CLOSED. A method with no contract is refused, not allowed — a
- * method that cannot say what it requires cannot be granted, and "undescribed
- * therefore ungated" is exactly how a privileged method reaches a caller that
- * was never meant to have it.
- *
- * It is also where a `sessionScoped` contract gets its subject: the handle fills
- * `userId` from the request context, so a per-user method's authority is the
- * caller's identity rather than an argument it chose. `decisions/0037` is why.
- *
- * This does NOT replace `permissionsFor`. Its `allows`/`allowsMethod` remain
- * the seam for route checks that carry custom logic the contract cannot state
- * — `users.get` allowing self-access without `users:read`, the last-admin guard.
- * Those routes keep asking; this handle is for callers that should not be asked
- * to.
+ * The service handles a caller cannot exceed — an untrusted transport is
+ * handed this instead of the raw domain services, so authority is a property
+ * of the handle, not of checks each caller remembered to write. Fails CLOSED.
  */
 import type { EntryMethodName } from '@/entries/methods';
 import type { NotificationsDomainService } from '@/notifications/service';
@@ -52,11 +32,9 @@ import { usersContract } from '@/users/contract';
 import { usersService } from '@/users/service';
 
 /**
- * A domain's contract catalogue, keyed by service method name.
- *
- * Read at `Input = unknown` — the same generality `codegen/method-manifest.ts`
- * reads the catalogues at. Nothing here inspects an input type; it only resolves
- * the declared permission, so the input side stays unknown.
+ * A domain's contract catalogue, keyed by service method name. Read at
+ * `Input = unknown`, the same generality `codegen/method-manifest.ts` uses,
+ * since nothing here inspects an input type.
  */
 type ContractCatalogue = Record<string, ServiceMethodContract>;
 
@@ -67,14 +45,9 @@ type ServiceRecord = Record<string, unknown>;
 type ServiceFn = (...args: unknown[]) => unknown;
 
 /**
- * The input a session-scoped method is called with: the caller's own `userId`,
- * pinned LAST so a caller-supplied one is overwritten rather than trusted. Such
- * a method declares no permission — you may always reach your own rows — so the
- * pinning is the whole of its authorization, exactly as `scopeEntries` pins the
- * entry type it derives a permission from.
- *
- * Refused outright when nobody is signed in: the method's subject comes from the
- * session, and there is no sensible subject for a caller that has none.
+ * The input a session-scoped method is called with: the caller's own
+ * `userId`, pinned LAST so a caller-supplied one is overwritten. Refused
+ * outright when nobody is signed in, since there is no subject to act as.
  */
 async function sessionInput(
     id: string,
@@ -103,17 +76,9 @@ function resolvePermission(
 }
 
 /**
- * Wrap every method of `service` in its declared permission check.
- *
- * The returned object keeps `service`'s type: a denied method still EXISTS, it
- * refuses. Hiding the key instead would turn "you may not" into "no such
- * method", which reads as a bug to every caller and to an AI tool-loop alike.
- *
- * A permission refusal THROWS rather than returning a rejected promise, so the
- * wrapper can cover a synchronous method as honestly as an async one. A
- * session-scoped method rejects instead — its subject needs an await.
- *
- * @param domain Name the method ids are built from (`users` → `users.create`).
+ * Wrap every method of `service` in its declared permission check. A denied
+ * method still EXISTS on the returned object and throws, rather than
+ * disappearing as if it were never there — even for a synchronous method.
  */
 export function scopeMethods<S extends object>(
     service: S,
@@ -140,9 +105,8 @@ export function scopeMethods<S extends object>(
                 throw new PermissionDeniedError(id, resolvePermission(contract, input));
             }
             // Called on the service so a method reaching for a sibling through
-            // `this` keeps working. Only the session-scoped branch is async —
-            // resolving the subject needs an await, and such a method is async
-            // anyway.
+            // `this` keeps working. Only the session-scoped branch is async,
+            // since resolving the subject needs an await.
             if (contract.sessionScoped === true) {
                 return (async (): Promise<unknown> =>
                     fn.apply(service, [await sessionInput(id, input)]))();
@@ -156,11 +120,8 @@ export function scopeMethods<S extends object>(
 
 /**
  * The entry types one call targets, or null when the call names none.
- *
- * `query` accepts a list of types (a cross-type listing), so a call can target
- * more than one; every method takes `{ type, ... }`. A call must hold the
- * permission for EVERY type it touches — a list is not a way to reach a type the
- * role lacks by pairing it with one it holds.
+ * `query` accepts a list (cross-type listing), and a call must hold the
+ * permission for EVERY type it touches — not just one in the list.
  */
 function targetedTypes(input: unknown): string[] | null {
     if (typeof input !== 'object' || input === null) return null;
@@ -174,13 +135,8 @@ function targetedTypes(input: unknown): string[] | null {
 
 /**
  * Does this call ask for the full (admin) shape rather than the public one?
- *
- * `full` is a second axis of authority that no per-type permission covers, and
- * it travels in the SAME argument object as `type` — so a wrapper that checked
- * only `entry:<type>:read` would hand the admin projection to anyone holding
- * plain read. Checked for every method, not only the ones whose signature
- * declares `full` today: a method that grows the option must not silently grow
- * a bypass with it.
+ * `full` is a second axis of authority no per-type permission covers, checked
+ * for every method so growing the option can't silently grow a bypass.
  */
 function wantsFullShape(input: unknown): boolean {
     if (typeof input !== 'object' || input === null) return false;
@@ -188,20 +144,9 @@ function wantsFullShape(input: unknown): boolean {
 }
 
 /**
- * Scope the entries service. Entries needs its own wrapper because its
- * permission is per (type, action) — `entry:posts:update` is not
- * `entry:pages:update` — so the check cannot come from a fixed contract, only
- * from the type the call actually names.
- *
- * The (method → action) pairing is read from `ENTRY_METHOD_ACTIONS`, the same
- * declaration the per-type contracts and the manifest are built from. A method
- * missing from it, or a call that names no usable type, is refused: a permission
- * this wrapper had to guess at would be a permission it could guess wrong.
- *
- * `entry:read:full` is enforced here too. It was enforced ONLY in the HTTP
- * entries routes, which is the layer this handle exists to replace for callers
- * that get no route — so leaving it there would have made `{ full: true }` a
- * way past the projection for every caller holding a bare read.
+ * Scope the entries service: its permission is per (type, action)
+ * (`entry:posts:update` ≠ `entry:pages:update`), read from
+ * `ENTRY_METHOD_ACTIONS`, so the check cannot come from a fixed contract.
  */
 export function scopeEntries(
     service: EntriesService,

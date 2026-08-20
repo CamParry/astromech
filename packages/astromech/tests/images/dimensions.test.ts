@@ -4,10 +4,6 @@ import {
     readImageDimensions,
 } from '@/media/serving/image/dimensions';
 
-// ---------------------------------------------------------------------------
-// isOptimisableImage
-// ---------------------------------------------------------------------------
-
 describe('isOptimisableImage', () => {
     it('returns true for jpeg', () =>
         expect(isOptimisableImage('image/jpeg')).toBe(true));
@@ -36,10 +32,6 @@ describe('isOptimisableImage', () => {
     it('ignores charset suffix', () =>
         expect(isOptimisableImage('image/png; charset=utf-8')).toBe(true));
 });
-
-// ---------------------------------------------------------------------------
-// Helpers to build minimal headers
-// ---------------------------------------------------------------------------
 
 /** Build a minimal PNG header with the given dimensions. */
 function makePng(width: number, height: number): Uint8Array {
@@ -233,10 +225,6 @@ function makeWebpVP8X(width: number, height: number): Uint8Array {
     buf[29] = (h >> 16) & 0xff;
     return buf;
 }
-
-// ---------------------------------------------------------------------------
-// readImageDimensions
-// ---------------------------------------------------------------------------
 
 describe('readImageDimensions', () => {
     it('returns null for empty buffer', () => {

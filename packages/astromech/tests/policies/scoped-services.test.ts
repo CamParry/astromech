@@ -32,10 +32,6 @@ function role(...permissions: Permission[]): Role {
     return { slug: 'test', name: 'Test', permissions, isBuiltIn: false };
 }
 
-// ---------------------------------------------------------------------------
-// scopeMethods
-// ---------------------------------------------------------------------------
-
 function makeService() {
     return {
         read: vi.fn((_input?: unknown) => Promise.resolve('read-result')),
@@ -162,10 +158,6 @@ describe('scopeMethods', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// scopeMethods — session-scoped contracts (decisions/0037)
-// ---------------------------------------------------------------------------
-
 const sessionContracts = {
     read: { sessionScoped: true, mutates: false },
 } satisfies Record<string, ServiceMethodContract>;
@@ -223,10 +215,6 @@ describe('scopeMethods — session-scoped', () => {
         expect(service.read).toHaveBeenCalledWith({ key: 'site.title' });
     });
 });
-
-// ---------------------------------------------------------------------------
-// scopeEntries
-// ---------------------------------------------------------------------------
 
 function makeEntriesStub() {
     return {
@@ -347,10 +335,6 @@ describe('scopeEntries', () => {
     });
 });
 
-// ---------------------------------------------------------------------------
-// scopedServices — the composed handle over the real services
-// ---------------------------------------------------------------------------
-
 describe('scopedServices', () => {
     it('refuses a real core method the role lacks', () => {
         const scoped = scopedServices(role('users:read'));
@@ -387,10 +371,6 @@ describe('scopedServices', () => {
         expect(() => scoped.users.query()).toThrow(PermissionDeniedError);
     });
 });
-
-// ---------------------------------------------------------------------------
-// annotateManifest
-// ---------------------------------------------------------------------------
 
 function coreMethod(
     name: string,

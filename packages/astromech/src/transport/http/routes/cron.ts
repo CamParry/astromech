@@ -1,12 +1,9 @@
 /**
  * CRON trigger route
  *
- * POST /cron/run — run a due-evaluation tick (only jobs whose stored schedule
- * is due fire). Auth: an admin session OR a shared-secret bearer token, so
- * external pollers (system crontab / serverless / uptime pingers) can drive the
- * scheduler on runtimes without an in-process timer. Mounts ahead of the
- * app-wide requireAuth (it enforces its own auth), so a sessionless bearer poke
- * is not pre-rejected.
+ * POST /cron/run runs a due-evaluation tick, authorized by an admin session or
+ * a shared-secret bearer token so external pollers can drive the scheduler.
+ * Mounts ahead of the app-wide requireAuth since it enforces its own auth.
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';

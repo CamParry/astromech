@@ -26,10 +26,6 @@ beforeEach(async () => {
     setupTestConfig();
 });
 
-// ============================================================================
-// create
-// ============================================================================
-
 describe('create', () => {
     it('returns an unpublished entry with generated id/slug and persisted fields', async () => {
         const e = await api.create({
@@ -83,10 +79,6 @@ describe('create', () => {
     });
 });
 
-// ============================================================================
-// get
-// ============================================================================
-
 describe('get', () => {
     it('returns the entry by id with a populated locales map', async () => {
         const en = await api.create({ type: 'post', title: 'EN', locale: 'en' });
@@ -127,10 +119,6 @@ describe('get', () => {
         expect(await api.get({ type: 'post', id: e.id })).toBeNull();
     });
 });
-
-// ============================================================================
-// query
-// ============================================================================
 
 describe('query', () => {
     it('paginates with page/limit/total/pages', async () => {
@@ -209,8 +197,8 @@ describe('query', () => {
     });
 
     it('rejects a trashed read in the public shape', async () => {
-        // Public visibility drops every trashed row, so the combination used to
-        // return an empty list indistinguishable from "nothing is trashed".
+        // Public visibility drops every trashed row, so the combination would
+        // otherwise return an empty list indistinguishable from "nothing is trashed".
         const a = await api.create({ type: 'post', title: 'A', status: 'published' });
         await api.trash({ type: 'post', id: a.id });
 
@@ -253,10 +241,6 @@ describe('query', () => {
     });
 });
 
-// ============================================================================
-// update
-// ============================================================================
-
 describe('update', () => {
     it('updates title/fields and bumps updatedAt', async () => {
         const e = await api.create({ type: 'post', title: 'Old', fields: { body: 'a' } });
@@ -297,10 +281,6 @@ describe('update', () => {
         expect(updated.slug).toBe('taken-2');
     });
 });
-
-// ============================================================================
-// versioning (post: versioning ON)
-// ============================================================================
 
 describe('versioning (on)', () => {
     // CHARACTERIZED: the version snapshot captures the PRE-update state.
@@ -385,10 +365,6 @@ describe('versioning (on)', () => {
     });
 });
 
-// ============================================================================
-// versioning (note: versioning OFF)
-// ============================================================================
-
 describe('versioning (off)', () => {
     it('creates no versions on update and versions() returns []', async () => {
         const n = await api.create({ type: 'note', title: 'N', fields: { body: 'a' } });
@@ -396,10 +372,6 @@ describe('versioning (off)', () => {
         expect(await api.versions({ type: 'note', id: n.id })).toEqual([]);
     });
 });
-
-// ============================================================================
-// translatable
-// ============================================================================
 
 describe('translatable', () => {
     async function makePair(): Promise<{ en: Entry; de: Entry }> {
@@ -452,10 +424,6 @@ describe('translatable', () => {
     });
 });
 
-// ============================================================================
-// publish / unpublish / schedule
-// ============================================================================
-
 describe('publish / unpublish / schedule', () => {
     it('publish sets status published and publishedAt', async () => {
         const e = await api.create({ type: 'post', title: 'P' });
@@ -481,10 +449,6 @@ describe('publish / unpublish / schedule', () => {
         expect(sch.publishedAt?.getTime()).toBe(future.getTime());
     });
 });
-
-// ============================================================================
-// trash / restore / delete / emptyTrash
-// ============================================================================
 
 describe('trash / restore / delete / emptyTrash', () => {
     it('trash sets deletedAt and excludes from default query; restore clears it', async () => {
@@ -541,10 +505,6 @@ describe('trash / restore / delete / emptyTrash', () => {
     });
 });
 
-// ============================================================================
-// duplicate
-// ============================================================================
-
 describe('duplicate', () => {
     it('copies title/fields, applies overrides, and assigns a new id', async () => {
         const src = await api.create({
@@ -589,10 +549,6 @@ describe('duplicate', () => {
         expect(rels.map((r) => r.targetId)).toEqual([target.id]);
     });
 });
-
-// ============================================================================
-// relationships
-// ============================================================================
 
 describe('relationships', () => {
     // A relationship field value in `fields` is the bare target id(s) (string or
@@ -656,10 +612,6 @@ describe('relationships', () => {
     });
 });
 
-// ============================================================================
-// bulk
-// ============================================================================
-
 describe('bulk', () => {
     it('applies a bulk update across an id array', async () => {
         const a = await api.create({ type: 'post', title: 'A' });
@@ -702,10 +654,6 @@ describe('bulk', () => {
         expect(res).toEqual([]);
     });
 });
-
-// ============================================================================
-// hooks
-// ============================================================================
 
 describe('hooks', () => {
     // Hooks are registered via the plugin runtime (`registerPlugins`). A probe

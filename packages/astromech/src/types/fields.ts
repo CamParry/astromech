@@ -8,10 +8,7 @@
 
 import type { ResourceType, User } from './domain';
 
-// ============================================================================
-// Field Types
-// ============================================================================
-
+/** Every built-in field type, including layout fields. */
 export const CORE_FIELD_TYPES = [
     'text',
     'textarea',
@@ -105,10 +102,6 @@ export type ValidationRule = (
     | { custom: FieldValidator }
 ) & { severity?: ValidationSeverity };
 
-// ============================================================================
-// Field paths
-// ============================================================================
-
 /**
  * One step of a field path: a declared field, or one item of a container.
  *
@@ -122,12 +115,7 @@ export type FieldPathSegment =
     | { kind: 'field'; name: string }
     | { kind: 'item'; id: string };
 
-// ============================================================================
-// Validation contract (server-side field pipeline)
-//
-// The field-type + pipeline implementation lives in `fields/`; these are the
-// shared types. See specs/field-system-and-validation.md §4.
-// ============================================================================
+// Validation contract (server-side field pipeline) — implementation lives in fields/
 
 /** Per-field validation errors — the `422 details.fields` wire shape. */
 export type FieldErrors = Record<string, string[]>;
@@ -314,6 +302,7 @@ export type RichTextAllow = {
     textAlign?: boolean;
 };
 
+/** A field declaration — one node in an entry's schema tree. */
 export type Field = {
     name: string;
     type: AnyFieldType;

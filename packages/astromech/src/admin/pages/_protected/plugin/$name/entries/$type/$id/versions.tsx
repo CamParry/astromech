@@ -1,9 +1,7 @@
 /**
- * Plugin entry-type version history route.
- *
- * Capability-gated at the mount level: types with versioning off (e.g.
- * redirects) never link here. Builds a plugin `EntriesMount` and renders the
- * shared `EntryVersionsPage`.
+ * Plugin entry-type version history route. Builds a plugin `EntriesMount`
+ * and renders the shared `EntryVersionsPage`; types with versioning off
+ * never link here.
  */
 
 import type { EntriesService } from '@/types/index';

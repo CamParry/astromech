@@ -1,10 +1,7 @@
 /**
- * Media service method contracts — declared permission + effect per media verb.
- * The single source the HTTP transport enforces against and the manifest reads.
- *
- * `input` is the METHOD's argument object, not the HTTP body: `media.update` is
- * called `update({ id, data })`, so the contract composes the body schema into
- * that shape rather than declaring the body alone.
+ * Media service method contracts — declared permission + effect per verb.
+ * `input` is the method's argument object, not the HTTP body: `media.update`
+ * is called `update({ id, data })`, composing the body schema into that shape.
  */
 
 import type { ServiceMethodContract } from '@/types/index';

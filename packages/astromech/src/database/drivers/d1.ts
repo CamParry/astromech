@@ -1,20 +1,7 @@
 /**
- * Cloudflare D1 Database Driver
- *
- * Usage:
- *   import { d1 } from 'astromech/database/d1';
- *   db: d1({ binding: 'DB' })
- *
- * Two permanent caveats, both driven by what D1 actually exposes:
- *   - No interactive transactions. `batch()` is D1's only atomicity primitive
- *     and cannot interleave application logic, so this driver declares
- *     `supportsTransactions: false` and entry storage degrades to sequential
- *     writes rather than pretending to support `db.transaction()`.
- *   - No `dump`/`restore`. D1 export is control-plane only (`wrangler d1
- *     export`, the REST API, Time Travel) — there is no in-process snapshot
- *     API to call. The backups plugin feature-detects the missing methods and
- *     reports `canDump: false` with an explanatory error instead of assuming
- *     every driver can dump.
+ * Cloudflare D1 database driver. Two permanent caveats: no interactive
+ * transactions (`batch()` is D1's only atomicity primitive, so this declares
+ * `supportsTransactions: false`), and no in-process `dump`/`restore`.
  */
 import type { D1DatabaseLike } from './d1-dialect';
 import type { DB } from '@/database/types';

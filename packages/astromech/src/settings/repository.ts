@@ -1,9 +1,7 @@
 /**
- * Settings storage — the only place Kysely touches the `settings` table.
- *
- * Thin domain vocabulary over `createRepository(settingsTable)`, which owns encoding,
- * value serialization and row decoding. The public/private key rule is a read
- * shape, not a query, so it stays in the service.
+ * Settings repository — the only place Kysely touches the `settings` table.
+ * The public/private key rule is a read shape, not a query, so it stays in
+ * the service.
  */
 
 import type { SettingRow } from './tables';

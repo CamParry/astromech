@@ -1,28 +1,7 @@
 /**
- * Relationship edge extraction — the one traversal that derives the
- * relationships index from field data.
- *
- * Field data is the single source of truth for a relation; the index is a
- * rebuildable derivative of it. This module is that derivation, and it is
- * shared by every resource that can hold a relationship field (entries, users,
- * media) so no resource can silently index nothing.
- *
- * It recurses through `fieldType.children()` — the same field-type-driven
- * recursion the validation pipeline uses — so a relationship nested inside a
- * `group`/`repeater`/`blocks`/`tree` yields edges at any depth, and paths are
- * rendered by `field-path.ts` so they match the addresses the validation
- * pipeline and the admin renderers already agree on.
- *
- * ## Only ever run this on processed data
- *
- * `children()` mints a missing item `_id` with `crypto.randomUUID()`, so it is
- * non-deterministic on data that has never been through `parseFields`. Given
- * raw input it would invent ids on every call and produce instance paths that
- * address nothing in storage. Every caller must pass the post-`parseFields`
- * values that were (or are about to be) written — which is also why a rebuild
- * from stored data is safe: stored items already carry their ids.
- *
- * Pure: no db, no config, no `virtual:` import.
+ * Relationship edge extraction — derives the relationships index from field
+ * data via `fieldType.children()`. Only ever run this on data that has been
+ * through `parseFields`; `children()` mints ids and is non-deterministic on raw input.
  */
 
 import type { Field, FieldPathSegment } from '@/types/fields';

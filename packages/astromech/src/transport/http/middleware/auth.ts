@@ -2,8 +2,7 @@
  * Auth Middleware
  *
  * Attaches the current user + role to the Hono context, reading both from the
- * request scope the app's root middleware established. Asking is what resolves
- * the session, so a route mounted below one of these is the first to pay for it.
+ * request scope the app's root middleware established.
  */
 
 import type { Role, User } from '@/types/index';

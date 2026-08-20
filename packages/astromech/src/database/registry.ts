@@ -1,8 +1,6 @@
 /**
- * Database Registry
- *
- * Stores the active database instance, set once at startup by the
- * Astromech integration. Mirrors the storage registry pattern.
+ * Database registry — stores the active database instance, set once at
+ * startup by the Astromech integration. Mirrors the storage registry pattern.
  */
 
 import type { DB } from '@/database/types';

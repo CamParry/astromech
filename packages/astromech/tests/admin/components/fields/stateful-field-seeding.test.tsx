@@ -79,10 +79,6 @@ function input(name: string): HTMLInputElement {
     return el;
 }
 
-// ============================================================================
-// blocks
-// ============================================================================
-
 describe('blocks on a fetched entry', () => {
     const content: Field = {
         name: 'content',
@@ -145,10 +141,6 @@ describe('blocks on a fetched entry', () => {
         ]);
     });
 });
-
-// ============================================================================
-// tree
-// ============================================================================
 
 describe('tree on a fetched entry', () => {
     const nav: Field = {
@@ -220,9 +212,7 @@ describe('tree on a fetched entry', () => {
     });
 });
 
-// ============================================================================
 // json — snapshots its text with no re-seed guard (open defect)
-// ============================================================================
 
 describe('json on a fetched entry', () => {
     const data: Field = { name: 'data', type: 'json' };
@@ -253,9 +243,7 @@ describe('json on a fetched entry', () => {
     });
 });
 
-// ============================================================================
 // richtext — TipTap applies `content` only when it builds the editor (open defect)
-// ============================================================================
 
 describe('richtext on a fetched entry', () => {
     const body: Field = { name: 'body', type: 'richtext' };

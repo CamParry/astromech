@@ -14,20 +14,10 @@ import { SEO_DESCRIPTION_RANGE, SEO_TITLE_RANGE } from '../utilities/length';
 export type SeoSectionOptions = { label?: Label };
 
 /**
- * `seoSection()` is host-facing: a site calls it directly from its own
- * entry-type config, before any plugin runtime exists, so there is no
- * `PluginContext` to read `ctx.plugin.namespace` from. `NAMESPACE` is a
- * deliberate package-local stand-in for that — the real fix is hanging
- * host-facing helpers off the plugin factory (`seo.section()`), tracked as
- * Phase 3 in roadmap/completed/plugin-authoring-experience.md. The
- * `@astromech/seo` → `seo` derivation is stable and collision-checked at
- * resolve time, so hand-writing it here is safe, just not elegant.
- *
- * Plugin labels are composed into arbitrary entry types (including core
- * ones), so a bare `t('seo.x')` would resolve against the host entry's
- * namespace and miss. Prefixing with the namespace (`seo:seo.x`) pins
- * resolution to this plugin's bundle regardless of where the section is
- * mounted.
+ * `seoSection()` is host-facing: a site calls it from its own entry-type
+ * config, before any plugin runtime exists, so there is no `PluginContext` to
+ * read the namespace from. Prefixing keys with it pins message resolution to
+ * this plugin's bundle regardless of which entry type the section is mounted on.
  */
 const NAMESPACE = 'seo';
 
@@ -37,9 +27,8 @@ function tKey(key: string): MessageRef {
 
 /**
  * Field-section factory — compose into an entry type's `fields`. Renders a
- * titled `section` (the visible panel) wrapping an unboxed `group` that
- * namespaces the data under `SEO_FIELD_NAME` (the `{ title, description }`
- * stored shape). The group carries the data key; the section is presentational.
+ * titled `section` wrapping an unboxed `group` that namespaces the data
+ * under `SEO_FIELD_NAME`; the group carries the data key, the section presents.
  */
 export function seoSection(options?: SeoSectionOptions): Field {
     return section('seoSection', {

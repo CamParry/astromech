@@ -19,28 +19,10 @@ import type {
 import { HTTP_ROUTES } from '@/transport/http/routes/http-routes.shared';
 
 /**
- * `astromechClient` — the fetch-based client for client-side JavaScript (the
- * React admin, a browser app). Public as the named and default export of
- * `astromech/fetch`.
- *
- * It holds no URLs of its own. Every method resolves its route from
- * `routes/http-routes.shared.ts`, the same rows the server mounts and documents:
- * fill the path params from the arguments, send what is left as a query string
- * or a JSON body, and unwrap the row's envelope. A method reachable through two
- * routes (one id or a list of them) picks between them on the shape of the
- * argument, which is the only fact the row cannot state.
- *
- * The exceptions are declared, not implicit. `OVERRIDES` per domain names each
- * method that needs client-side work the table cannot describe — the admin's
- * full-shape default, a query string a service param does not match one-to-one,
- * a 404 that means "no value" — and each still gets its URL from the table.
- * `media.upload` and `media.replace` are the only methods written out end to
- * end: their body is `FormData`, so there is no row to read.
+ * `astromechClient` — the fetch-based client for client-side JavaScript,
+ * exported from `astromech/fetch`. It holds no URLs of its own: every method
+ * resolves its route from `routes/http-routes.shared.ts` and unwraps the envelope.
  */
-
-// ============================================================================
-// Typed API Error
-// ============================================================================
 
 export class AstromechApiError extends Error {
     readonly id: string;
@@ -66,17 +48,9 @@ export class AstromechApiError extends Error {
     }
 }
 
-// ============================================================================
-// Client Configuration
-// ============================================================================
-
 declare const __ASTROMECH_BASE_PATH__: string;
 
 let apiBase = `${typeof __ASTROMECH_BASE_PATH__ !== 'undefined' ? __ASTROMECH_BASE_PATH__ : '/cms'}/api`;
-
-// ============================================================================
-// Error event helper
-// ============================================================================
 
 function emitApiError(err: AstromechApiError | Error): void {
     if (typeof window === 'undefined') return;
@@ -86,10 +60,6 @@ function emitApiError(err: AstromechApiError | Error): void {
             : { type: 'unknown' as const, message: err.message };
     window.dispatchEvent(new CustomEvent('astromech:api-error', { detail }));
 }
-
-// ============================================================================
-// Fetch Helpers
-// ============================================================================
 
 type FetchOptions = {
     method?: string;
@@ -167,10 +137,6 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
 
     return response.json() as Promise<T>;
 }
-
-// ============================================================================
-// The route table, from the client's side
-// ============================================================================
 
 type Args = Record<string, unknown>;
 
@@ -279,10 +245,6 @@ function restService<T extends object>(
     });
 }
 
-// ============================================================================
-// Entries
-// ============================================================================
-
 /**
  * Create an EntriesService backed by HTTP fetch.
  *
@@ -322,10 +284,6 @@ export function createEntriesService(
 /** Root entries API — admin fetch client defaults to full shape (authenticated admin). */
 const entriesService: EntriesService = createEntriesService('/entries', 'full');
 
-// ============================================================================
-// Listing helpers
-// ============================================================================
-
 /**
  * The wire's listing params. `sort` is an object on the service and two query
  * params on the wire, and a multi-key sort has no wire form at all — the REST
@@ -341,10 +299,6 @@ function listingArgs(params: {
     if (sort === undefined || Array.isArray(sort)) return { ...rest };
     return { ...rest, sort: Object.keys(sort)[0], dir: Object.values(sort)[0] };
 }
-
-// ============================================================================
-// Media
-// ============================================================================
 
 /**
  * A multipart upload — the two media routes with no row in the table, because a
@@ -381,10 +335,6 @@ const mediaService = restService<MediaService>('media', callRoute, {
         return uploadFile(`/media/${id}/replace`, file);
     },
 });
-
-// ============================================================================
-// Settings
-// ============================================================================
 
 /** `settings.get`, with a missing setting read back as `null` rather than a 404. */
 async function settingValue(key: string): Promise<Setting['value'] | null> {
@@ -428,18 +378,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-// ============================================================================
-// Users
-// ============================================================================
-
 const usersService = restService<UsersService>('users', callRoute, {
     query: (params) =>
         callRoute('users.query', listingArgs((params ?? {}) as UserQueryParams)),
 });
-
-// ============================================================================
-// Notifications
-// ============================================================================
 
 const notificationsService = restService<NotificationsService>(
     'notifications',
@@ -455,13 +397,11 @@ const notificationsService = restService<NotificationsService>(
     }
 );
 
-// ============================================================================
-// Plugins API — HTTP shims to /api/plugins/{name}/{method} (RPC: POST JSON)
-//
-// Synthesised lazily by a Proxy: no name list, no codegen. The server enforces
-// existence and `access`; an unknown name/method simply 404s on call.
-// ============================================================================
-
+/**
+ * Plugins API — HTTP shims to /api/plugins/{name}/{method} (RPC: POST JSON).
+ * Synthesised lazily by a Proxy: no name list, no codegen. An unknown
+ * name/method simply 404s on call; the server enforces existence and `access`.
+ */
 type FetchMethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
 
 const pluginsApi: PluginServiceNamespace = new Proxy({} as PluginServiceNamespace, {
@@ -487,10 +427,6 @@ const pluginsApi: PluginServiceNamespace = new Proxy({} as PluginServiceNamespac
         });
     },
 });
-
-// ============================================================================
-// Export Client
-// ============================================================================
 
 export const astromechClient = {
     entries: entriesService as unknown as TypedEntriesService,

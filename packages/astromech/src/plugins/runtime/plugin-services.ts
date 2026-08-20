@@ -1,15 +1,7 @@
 /**
- * The plugin service namespace — `plugins.<serviceKey>.<method>(input)`. The key
- * is the plugin's service key (`acmeSeo`), matching the HTTP transport's route
- * segment exactly, so the two transports address plugins identically.
- *
- * Methods resolve against the runtime registry (populated at boot from the live
- * plugin definitions) and call the plugin's handler directly against the DB,
- * with a freshly-built PluginContext. In-process calls bypass `access` checks by
- * design — the HTTP API is the enforcement boundary.
- *
- * A Proxy resolves names/methods lazily so the registry need not be populated
- * at module-load time.
+ * The plugin service namespace — `plugins.<serviceKey>.<method>(input)`,
+ * matching the HTTP transport's route segment. In-process calls bypass
+ * `access` checks by design; the HTTP API is the enforcement boundary.
  */
 
 import type { PluginContext, PluginServiceNamespace } from '@/types/index';

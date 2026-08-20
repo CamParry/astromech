@@ -1,12 +1,7 @@
 /**
- * Notifications service method contracts — declared subject + effect per verb.
- * The single source the manifest reads and the scoped handle enforces against.
- *
- * All four are `sessionScoped`: they act on the caller's own rows, so `userId`
- * is filled from the request context and is absent from every `input` schema —
- * it is not the caller's to pass. None declares a permission, because reaching
- * your own notifications is not a grant anyone hands out; having a session is
- * the whole of the authority. `decisions/0037` is the record.
+ * Notifications service method contracts — declared subject + effect per
+ * verb. All four are `sessionScoped`: they act on the caller's own rows, so
+ * `userId` is filled from context, not passed. See `decisions/0037`.
  */
 
 import type { ServiceMethodContract } from '@/types/index';

@@ -1,19 +1,7 @@
 /**
- * The Snapshot model — a schema's DDL-affecting state, as plain data.
- *
- * A snapshot captures exactly what determines a table's shape on disk: column
- * storage type / nullability / primary-key / SQL default / enum values, foreign
- * keys, and indexes. Nothing else belongs in it — the differ treats any change
- * as a schema change, so caller-side facts that never reach the DDL (app-level
- * defaults, codecs, …) must be excluded or every such edit would generate a
- * spurious migration.
- *
- * The wire format is stable: `serializeSnapshot` is a plain
- * `JSON.stringify(snapshot, null, 2)` over data the caller supplies in the
- * order it wants preserved (tables keyed by name, columns and indexes in
- * declaration order — the source of a rebuild's column mapping). There is no
- * `id`/`prevId` chain: divergent parallel generation runs surface as a snapshot
- * merge conflict rather than a silent hash mismatch.
+ * The Snapshot model — a schema's DDL-affecting state, as plain data. Captures
+ * exactly what determines a table's shape on disk; nothing else belongs in it,
+ * since the differ treats any change as a schema change.
  */
 
 export type SqlDialect = 'sqlite';

@@ -133,10 +133,6 @@ async function submissionRows(): Promise<Record<string, unknown>[]> {
     return rows as Record<string, unknown>[];
 }
 
-// ============================================================================
-// get
-// ============================================================================
-
 describe('forms.get', () => {
     beforeEach(async () => {
         await setup({ spam: SPAM });
@@ -238,10 +234,6 @@ describe('forms.get', () => {
     });
 });
 
-// ============================================================================
-// submit
-// ============================================================================
-
 describe('forms.submit', () => {
     beforeEach(async () => {
         await setup();
@@ -295,10 +287,6 @@ describe('forms.submit', () => {
         expect(await submissionRows()).toHaveLength(0);
     });
 });
-
-// ============================================================================
-// forms:beforeSubmit gating
-// ============================================================================
 
 describe('forms.submit — the beforeSubmit gate', () => {
     beforeEach(async () => {
@@ -355,10 +343,6 @@ describe('forms.submit — the beforeSubmit gate', () => {
         });
     });
 });
-
-// ============================================================================
-// emails
-// ============================================================================
 
 describe('forms.submit — emails', () => {
     const NOTIFYING = {

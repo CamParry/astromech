@@ -2,6 +2,7 @@ import type { FieldErrors } from '@/types/fields';
 import type { ZodIssue } from 'zod';
 import { ZodIssueCode } from 'zod';
 
+/** Thrown for a failed field/resource validation; the shape the 422 handler reads. */
 export class ValidationError extends Error {
     public readonly issues: ZodIssue[];
     /**
@@ -25,10 +26,9 @@ export class ValidationError extends Error {
     }
 
     /**
-     * Build a ValidationError from the field pipeline's per-field error map plus
-     * any form-level messages. Synthesises matching `issues` (custom code,
-     * single-segment path; empty path for a form message, which belongs to no
-     * field) so any consumer reading `.issues` stays consistent.
+     * Build a ValidationError from the field pipeline's per-field error map
+     * plus form-level messages. Synthesises matching `issues` so any
+     * consumer reading `.issues` stays consistent.
      */
     static fromFieldErrors(fields: FieldErrors, form?: string[]): ValidationError {
         const issues: ZodIssue[] = [

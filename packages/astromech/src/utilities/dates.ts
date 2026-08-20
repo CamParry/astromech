@@ -1,11 +1,7 @@
 /**
- * Date formatting utilities.
- *
- * Display formatting uses `Intl.DateTimeFormat` so the rendered format follows
- * a locale (e.g. `14 Jun 2026` for `en-GB` vs `Jun 14, 2026` for `en-US`). The
- * locale is install-wide — set once at admin boot from the config's
- * `defaultLocale` via {@link setDateLocale}. When unset, the runtime default
- * locale is used.
+ * Date formatting utilities. Display formatting uses `Intl.DateTimeFormat`
+ * so the rendered format follows a locale, set install-wide once at admin
+ * boot via {@link setDateLocale}; unset falls back to the runtime default.
  */
 
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';

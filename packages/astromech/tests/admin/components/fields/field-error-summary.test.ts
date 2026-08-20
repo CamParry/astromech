@@ -21,10 +21,6 @@ import {
 } from '@/admin/components/fields/field-error-summary';
 import en from '@/admin/locales/en.json' with { type: 'json' };
 
-// ============================================================================
-// Path → label chain
-// ============================================================================
-
 const definitions: Field[] = [
     { name: 'title', type: 'text', label: 'Headline' },
     // No label — resolves to the same fallback the field's own label renders.
@@ -136,10 +132,6 @@ describe('fieldLabelPathForError', () => {
     });
 });
 
-// ============================================================================
-// Label chain → sentence
-// ============================================================================
-
 let t: TFunction;
 
 beforeAll(async () => {
@@ -187,10 +179,6 @@ describe('validationSummaryMessage', () => {
         );
     });
 });
-
-// ============================================================================
-// Map → names
-// ============================================================================
 
 describe('fieldErrorNames', () => {
     it('joins a nested chain and keeps map order', () => {

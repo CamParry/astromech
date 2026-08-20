@@ -2,26 +2,15 @@ import type { Kysely, Migration, MigrationProvider } from 'kysely';
 import { Migrator } from 'kysely';
 
 /**
- * Kysely migration runner.
- *
- * Thin wrapper over Kysely's `Migrator` that runs a `MigrationProvider` to the
- * latest migration and throws (surfacing the underlying error, named by the
- * migration that failed) if any step fails. The caller supplies the provider —
- * typically the generated `migrationProvider` that `generate.ts` writes into an
- * app's `migrations/index.ts`, optionally merged with plugin-owned providers by
- * `mergeMigrationProviders`.
+ * Kysely migration runner — a thin wrapper over `Migrator` that runs a
+ * `MigrationProvider` to the latest migration and throws, naming the migration
+ * that failed. The caller typically supplies `generate.ts`'s generated provider.
  */
 
 /**
- * Runs `provider` to the latest migration.
- *
- * `allowUnorderedMigrations` is opt-in because it is only correct for a chain
- * that merges plugin-owned migrations into the app's own (see
- * `mergeMigrationProviders`). Plugin migrations are merged at apply time, so
- * installing a new plugin can introduce a migration whose name sorts BEFORE
- * migrations already recorded in `kysely_migration` — Kysely rejects that by
- * default. An app-only chain should leave the option off so that genuinely
- * out-of-order history stays an error.
+ * Runs `provider` to the latest migration. `allowUnorderedMigrations` is
+ * opt-in: it is only correct for a chain that merges plugin-owned migrations
+ * into the app's own, via {@link mergeMigrationProviders}.
  */
 export async function migrateToLatest<T>(
     db: Kysely<T>,
@@ -51,17 +40,9 @@ export async function migrateToLatest<T>(
 
 /**
  * Merges plugin-owned migration providers into the app's own, producing one
- * provider for one `kysely_migration` table.
- *
- * Plugin migrations are keyed `plugin_<alias>_<name>` so that two plugins (or a
- * plugin and the app) can each own a `0000_init` without colliding. The prefix
- * exists ONLY here, at apply time: migration FILES and `journal.json` entries
- * keep their bare `NNNN_<tag>` names, so a plugin's own `migrations/` directory
- * is unaware of the alias it is installed under.
- *
- * Because every migration shares one `kysely_migration` table, the merged chain
- * is not globally sortable — apply it with
- * `migrateToLatest(db, merged, { allowUnorderedMigrations: true })`.
+ * provider for one `kysely_migration` table. Plugin migrations are keyed
+ * `plugin_<alias>_<name>` so a plugin and the app can each own a `0000_init`.
+ * Apply the result with `allowUnorderedMigrations: true`.
  */
 export function mergeMigrationProviders(
     app: MigrationProvider,

@@ -1,9 +1,7 @@
 /**
- * ApiErrorPanel — global 5xx error display.
- *
- * Listens for `astromech:api-error` custom DOM events emitted by apiFetch.
- * - 5xx errors: dismissible modal with full message, error code badge, and ref.
- * - 4xx / unknown: not handled here; individual mutation onError handlers show toasts.
+ * Global 5xx error display. Listens for `astromech:api-error` DOM events
+ * emitted by apiFetch and shows a dismissible modal; 4xx/unknown errors are
+ * left to individual mutation onError handlers.
  */
 
 import type { AstromechApiError } from '@/transport/http/client/index';
@@ -13,20 +11,12 @@ import { Badge } from './badge';
 import { Button } from './button';
 import { Modal } from './modal';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 type ApiErrorDetail = {
     id: string;
     code: string;
     message: string;
     status: number;
 };
-
-// ============================================================================
-// Custom event helpers
-// ============================================================================
 
 export type ApiErrorEventDetail =
     | { type: 'api'; error: AstromechApiError }
@@ -37,10 +27,6 @@ const EVENT_NAME = 'astromech:api-error';
 export function dispatchApiErrorEvent(detail: ApiErrorEventDetail): void {
     window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail }));
 }
-
-// ============================================================================
-// Component
-// ============================================================================
 
 export function ApiErrorPanel(): React.ReactElement {
     const { t } = useTranslation();

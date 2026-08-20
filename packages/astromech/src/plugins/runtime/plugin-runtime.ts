@@ -1,15 +1,7 @@
 /**
- * Plugin runtime.
- *
- * Holds the registry of installed plugins (hooks / service / raw routes),
- * builds the unified PluginContext, and runs hooks with the documented failure
- * semantics: `before*` hooks gate the operation (a throw aborts), `after*`
- * hooks are swallow-and-logged (a throw never rolls back). Custom events fired
- * via `ctx.emit` follow the same by-name convention: an event whose name
- * contains `:before` gates; every other emitted event is swallow-and-logged.
- *
- * Config is injected via `registerPlugins` rather than imported from
- * `virtual:astromech/config`, so this module stays unit-testable.
+ * Plugin runtime: holds the registry of installed plugins, builds the
+ * unified PluginContext, and runs hooks with documented failure semantics —
+ * `before*` gates (throws abort), `after*` is swallow-and-logged.
  */
 
 import type { DB } from '@/database/types';
@@ -76,10 +68,7 @@ import {
     withDefaultShape,
 } from '@/utilities/with-default-shape';
 
-// ============================================================================
-// Registry (globalThis — shared across the package's entry chunks)
-// ============================================================================
-
+// Registry lives on globalThis, shared across the package's entry chunks.
 type HookCallback = (eventCtx: unknown, ctx: PluginContext) => Promise<void> | void;
 
 type RegisteredHook = { identity: ResolvedPluginIdentity; handler: HookCallback };
@@ -148,10 +137,6 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
             s.hooks.set(event, list);
         }
 
-        // `entries` used to be reserved on both the service map and the
-        // raw-route path — it named the per-plugin entries surface. That
-        // surface is gone (entry types live on the one entries service), so
-        // neither name collides with anything any more.
         if (def.service) s.service.set(identity.namespace, def.service);
 
         for (const route of def.rawRoutes ?? []) {
@@ -171,11 +156,9 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
 }
 
 /**
- * Boot all plugins, in `plugins: []` order: validate `requiredEnv`, register
- * cron jobs (names auto-namespaced as `plugin:{name}:{job}`), record the plugin
- * in `_astromech_plugins`, and run `setup()`. Called once at boot, after
- * `registerPlugins`. Failures crash loud, naming the plugin — except the
- * tracking writes, which are best-effort (see `trackPlugin`).
+ * Boot all plugins in `plugins: []` order: validate `requiredEnv`, register
+ * cron jobs, record the plugin in `_astromech_plugins`, and run `setup()`.
+ * Called once at boot, after `registerPlugins`; failures crash loud, naming the plugin.
  */
 export async function bootPlugins(defs: PluginDefinition[]): Promise<void> {
     const env = resolveEnv();
@@ -220,11 +203,9 @@ export async function bootPlugins(defs: PluginDefinition[]): Promise<void> {
 }
 
 /**
- * Upsert one row in `_astromech_plugins`. `installedAt` is written once — a
- * conflict only refreshes `version`, so the original install time survives.
- *
- * Best-effort: the table may not exist yet in odd dev states (a database
- * predating the tracking migration), and boot must not die over bookkeeping.
+ * Upsert one row in `_astromech_plugins`; `installedAt` is written once so
+ * the original install time survives. Best-effort: the table may not exist
+ * yet in odd dev states, and boot must not die over bookkeeping.
  */
 async function trackPlugin(
     pkg: string,
@@ -272,13 +253,9 @@ export function hasHookHandlers(event: string): boolean {
 }
 
 /**
- * Resolved identity for a plugin, by service key (`acmeSeo`) — the single
- * identifier the API surface addresses a plugin by, in both transports and on
- * the wire. Deliberately NOT tolerant of the namespace form: `serviceKey` is
- * derived from `namespace` lossily (`acme_2fa` → `acme2fa`), so accepting both
- * would mean guessing an inverse that does not exist. The namespace stays
- * authoritative for tables, permissions and storage prefixes; look those up
- * through the returned identity, never by re-deriving a string.
+ * Resolved identity for a plugin, by service key (`acmeSeo`) — the API
+ * surface's addressing identifier. Not tolerant of the namespace form, since
+ * `serviceKey` derives from it lossily; look up other fields off the identity.
  */
 export function getPluginIdentity(
     serviceKey: string
@@ -293,10 +270,6 @@ export function getPluginServiceMethods(): Map<string, Record<string, AnyService
 export function getPluginRawRoutes(): RegisteredRawRoute[] {
     return state().rawRoutes;
 }
-
-// ============================================================================
-// Context construction
-// ============================================================================
 
 function resolveEnv(): Record<string, string | undefined> {
     const fromProcess = typeof process !== 'undefined' ? process.env : {};
@@ -371,9 +344,8 @@ async function sendPluginEmail(
 
 /**
  * Build the unified PluginContext for a given plugin, acting user and role.
- * `db` and every domain are lazy getters so a context can be constructed in
- * environments where they are not yet wired (e.g. unit tests that exercise only
- * hook semantics). `clientAddress` is supplied by the HTTP transport only.
+ * `db` and every domain are lazy getters so a context can be constructed
+ * before they're wired (e.g. unit tests). `clientAddress` is HTTP-transport only.
  */
 export function createPluginContext(
     identity: ResolvedPluginIdentity,
@@ -394,12 +366,9 @@ export function createPluginContext(
         user,
         role,
         clientAddress,
-        // The domains, flattened onto the context. These are the global services
-        // — a plugin addresses its own entry types explicitly by their qualified
-        // id (`` `${ctx.plugin.namespace}/redirect` ``) rather than through a
-        // scoping wrapper. Both domains with a shape axis default to `full`:
-        // plugin altitude is trusted server code, and a `public` default hands it
-        // sanitized rich text, stripped private fields and null private settings.
+        // The domains, flattened onto the context — global services; a plugin
+        // addresses its own entry types by qualified id instead of a scoping
+        // wrapper. Domains with a shape axis default to 'full' (trusted server code).
         get entries(): TypedEntriesService {
             return withDefaultShape(
                 typedEntriesService as unknown as EntriesService,
@@ -475,10 +444,6 @@ function emptyConfig(): Omit<PluginConfigView, 'entryTypesWithField'> {
     };
 }
 
-// ============================================================================
-// Hook execution
-// ============================================================================
-
 /**
  * Run the gating handlers for an event. A handler throw propagates to the
  * caller and aborts the operation.
@@ -544,12 +509,9 @@ export async function runAfterHooks<E extends KnownCoreEvent>(
 }
 
 /**
- * Fire a (typically plugin-declared) custom event.
- *
- * Subscriber semantics follow the same by-name convention core uses for its
- * own events: an event whose name marks it as a `before` phase GATES — a
- * throwing subscriber aborts the operation and the error propagates to the
- * caller. Every other event is swallow-and-logged, like `after*` hooks.
+ * Fire a (typically plugin-declared) custom event. Follows the same by-name
+ * convention as core hooks: a name marking a `before` phase gates (a throw
+ * aborts and propagates); every other event is swallow-and-logged.
  */
 export async function emitEvent(
     event: string,

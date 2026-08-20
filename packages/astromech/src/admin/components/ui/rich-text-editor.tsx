@@ -25,10 +25,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useFieldControl } from '@/admin/components/fields/field-control-context';
 import { buildRichTextExtensions } from './rich-text-extensions';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 export type RichTextEditorProps = {
     value?: JSONContent;
     onChange?: (value: JSONContent) => void;
@@ -36,10 +32,6 @@ export type RichTextEditorProps = {
     allow?: RichTextAllow;
     placeholder?: string;
 };
-
-// ============================================================================
-// Helpers
-// ============================================================================
 
 const on = (allow: RichTextAllow | undefined, key: keyof RichTextAllow): boolean =>
     allow === undefined || allow[key] !== false;
@@ -56,15 +48,7 @@ const BLOCK_TYPES = [
 
 type BlockValue = (typeof BLOCK_TYPES)[number]['value'];
 
-// ============================================================================
-// Link popover state
-// ============================================================================
-
 type LinkPopoverState = { open: false } | { open: true; href: string; newTab: boolean };
-
-// ============================================================================
-// Toolbar button
-// ============================================================================
 
 type ToolbarButtonProps = {
     onClick: () => void;
@@ -96,10 +80,6 @@ function ToolbarButton({
         </button>
     );
 }
-
-// ============================================================================
-// Block type dropdown
-// ============================================================================
 
 type BlockDropdownProps = {
     allow: RichTextAllow | undefined;
@@ -189,10 +169,6 @@ function BlockDropdown({
     );
 }
 
-// ============================================================================
-// Link popover
-// ============================================================================
-
 type LinkPopoverProps = {
     state: LinkPopoverState;
     onApply: (href: string, newTab: boolean) => void;
@@ -271,10 +247,7 @@ function LinkPopover({
     );
 }
 
-// ============================================================================
-// Editor component
-// ============================================================================
-
+/** TipTap-based rich text editor with a formatting toolbar, gated by the `allow` list. */
 export function RichTextEditor({
     value,
     onChange,

@@ -80,9 +80,7 @@ export type ServiceMethodContract<Input = unknown, Output = unknown> = {
     binaryInput?: boolean;
 } & ServiceMethodEffect;
 
-// ============================================================================
 // Method manifest — the serialised projection of the contracts
-// ============================================================================
 
 /**
  * A serialised JSON Schema object. `null` records a schema that could not be
@@ -195,9 +193,7 @@ export type MethodManifest = {
     methods: ManifestMethod[];
 };
 
-// ============================================================================
 // Tool dispatch — the callable projection of a manifest method
-// ============================================================================
 
 /** Annotations carried on a tool definition. */
 export type ToolAnnotations = {

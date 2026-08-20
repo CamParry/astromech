@@ -1,11 +1,9 @@
 import React from 'react';
 
 /**
- * Form-level validation messages for an entry form.
- *
- * A live region is right here where it is wrong on a field: it appears in
- * response to a submit the author just made, and names no field for the
- * announcement to clip.
+ * Form-level validation messages for an entry form. A live region here, not
+ * per field, since it appears in response to a submit and names no field
+ * for the announcement to clip.
  */
 export function EntryFormErrors({
     messages,

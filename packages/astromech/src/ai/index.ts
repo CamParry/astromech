@@ -1,9 +1,7 @@
 /**
- * Model access — the whole public surface of the `ai` capability.
- *
- * Nothing configured means `undefined`, and consumers branch on that to disable
- * their feature rather than throwing. The model handed back is already wrapped
- * with core's middleware, so a consumer cannot opt out of it.
+ * Model access — the whole public surface of the `ai` capability. Nothing
+ * configured means `undefined`; consumers branch on that to disable their
+ * feature. The model handed back is already wrapped with core's middleware.
  */
 
 import type { LanguageModelV4 } from '@ai-sdk/provider';

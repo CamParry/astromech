@@ -173,7 +173,7 @@ describe('the entry edit page after a save', () => {
         // network round trip — the session query shares the same staleTime.
         // The type argument is explicit because `setQueryData` wraps its value
         // parameter in `NoInfer`, so the shape has to come from the key or from
-        // here — an object literal alone can no longer drive the inference.
+        // here — an object literal alone cannot drive the inference.
         queryClient.setQueryData<AuthUser>(sessionQueryOptions.queryKey, {
             id: 'u1',
             name: 'Admin',
