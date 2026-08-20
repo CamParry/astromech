@@ -1,7 +1,6 @@
 /**
- * Status transitions — bulk-capable convenience operations that delegate to
- * `update`. (The §4 tree groups these under `bulk/`; per §6 the bulk dispatch
- * lives in `update`, so they sit here as thin status wrappers.)
+ * Status transitions — bulk-capable convenience wrappers that delegate to
+ * `update`, which owns the bulk dispatch.
  */
 
 import type { Entry } from '@/types/index';

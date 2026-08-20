@@ -1,8 +1,7 @@
 /**
- * Preview reads (forward versioning). Resolve canonicals matching the filters
- * WITHOUT the publish gate, verify the token against each, optionally swap to
- * the staged change, and return the preview (public) shape. Unauthorized/absent
- * token → empty result (the front-end renders a 404).
+ * Preview reads (forward versioning): resolve canonicals matching the filters
+ * without the publish gate, verify the token against each, optionally swap to the
+ * staged change, return the preview (public) shape. No/bad token → empty result.
  */
 
 import type { Entry, EntryQueryParams, QueryResult } from '@/types/index';

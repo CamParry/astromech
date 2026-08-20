@@ -1,7 +1,7 @@
 /**
  * Reverse lookup for the delete modal: the entries that reference this one.
  * Reads the relationships index, then loads each source through its OWN type's
- * storage.
+ * repository.
  */
 
 import type { EntryRepository, EntryRow } from '../repository/types';
@@ -25,7 +25,7 @@ export async function incomingRelationships(params: {
     });
 
     // An entry source always carries a `sourceType`; a null one is index
-    // corruption, so drop it rather than guessing a storage for it.
+    // corruption, so drop it rather than guessing a repository for it.
     const sourceRows = rows.filter(
         (row): row is typeof row & { sourceType: string } =>
             row.sourceKind === 'entry' && typeof row.sourceType === 'string'

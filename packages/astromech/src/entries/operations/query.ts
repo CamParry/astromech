@@ -34,13 +34,12 @@ export async function query(
         ? Array.from(typeParam)
         : [typeParam as string];
 
-    // Resolve effective visibility shape.
-    // Step 4 will layer client-level defaults; absent `full` ⇒ public is correct here.
+    // Absent `full` ⇒ public.
     const shape: VisibilityShape = params.full ? 'full' : 'public';
 
     // A public read can never return a trashed row: the public shape forces
     // `status: 'published'` below and `applyVisibility` drops every trashed row
-    // afterwards. Asking for both used to yield an empty list, indistinguishable
+    // afterwards. Asking for both would yield an empty list indistinguishable
     // from "nothing is trashed", so reject it instead.
     if (params.trashed === true && shape === 'public') throw new PublicTrashedReadError();
 
@@ -53,14 +52,13 @@ export async function query(
         ? resolveEntryType(getConfig(), singleType)
         : undefined;
 
-    // Open Q1 (pagination correctness): for public shape, push the status
-    // predicate into the storage where-clause so DB counts are correct.
-    // WhereFilters supports `status: 'published'` (eq). It does NOT support
-    // `publishedAt <= now` (no lte operator) — that check stays in applyVisibility.
-    // NOTE: scheduled rows with publishedAt <= now will be counted but then
-    // filtered in applyVisibility, slightly inflating total/pages when such rows exist.
-    // Only push for types that have the statuses capability; tableRepository-backed
-    // types (statuses: false) have no publication status column.
+    // For the public shape, push the status predicate into the repository
+    // where-clause so DB counts are correct. WhereFilters supports
+    // `status: 'published'` (eq) but not `publishedAt <= now` (no lte operator),
+    // so that check stays in applyVisibility — scheduled rows with
+    // `publishedAt <= now` are counted here and filtered there, slightly
+    // inflating total/pages when such rows exist. Only push for types with the
+    // statuses capability; tableRepository-backed types have no status column.
     const hasStatuses = singleTypeCfg
         ? singleTypeCfg.capabilities.statuses !== false
         : true;
@@ -127,7 +125,7 @@ export async function query(
 
 /**
  * Check `where: { references }` against the queried types' schemas before it
- * reaches storage. One type declaring the path is enough — a cross-type query
+ * reaches the repository. One type declaring the path is enough — a cross-type query
  * is legal and requiring every type to declare it would reject valid reads.
  */
 function assertReferencesFilter(value: unknown, types: string[]): void {

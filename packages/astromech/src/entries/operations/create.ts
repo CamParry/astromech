@@ -110,8 +110,8 @@ export async function create(params: EntryCreateParams): Promise<Entry> {
 }
 
 /**
- * Converts field values for storage: inherits the locale group's shared
- * values, coerces and validates every value, and drops dead relation ids.
+ * Converts field values into the values to store: inherits the locale group's
+ * shared values, coerces and validates every value, and drops dead relation ids.
  * Throws a 422 when a field or the type's own validator reports.
  */
 async function toStoredFields(

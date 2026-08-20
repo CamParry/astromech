@@ -12,24 +12,15 @@ import { previewTokenSchema } from '../../schema';
 
 /**
  * How long a preview token lives when the caller names no expiry: 7 days.
- *
- * A preview token bypasses the publish gate on an entry, and until this existed
- * every one ever issued was still valid — `isValid` treats a null `expiresAt` as
- * "forever", and the operation passed null whenever the caller said nothing. It
- * matters more now the confirm gate hands preview links out as its
- * out-of-band review path.
- *
- * A constant plus the existing per-call `expiresAt` is the whole surface; there
- * is deliberately no config key. Seven days is long enough for a human to get to
- * a review and short enough that a link pasted into a chat log stops working.
+ * `decisions/0079` records why this default exists and why there is no config
+ * key.
  */
 export const DEFAULT_PREVIEW_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * Issues a preview token for a canonical entry: returns the plaintext once and
+ * Issues a preview token for a canonical entry: returns the plaintext once,
  * stores only its hash. Throws when the type can't stage or the id names a
- * staged change. Omitted `expiresAt` takes the default TTL; explicit null never
- * expires.
+ * staged change. Omitted `expiresAt` takes the default TTL, explicit null never expires.
  */
 export async function issuePreviewToken(params: {
     type: string;
@@ -52,12 +43,9 @@ export async function issuePreviewToken(params: {
     // ISO string, and this column is a date. `schedule` validates `publishedAt`
     // the same way for the same reason.
     const { expiresAt } = validate(previewTokenSchema, { expiresAt: params.expiresAt });
-    // Three cases, and `null` is not the same as absent: an omitted `expiresAt`
-    // takes the default TTL, while an explicit `null` still means "never
-    // expires". `previewTokenSchema` permits null (it shares `optionalDate`,
-    // which is `.nullable().optional()`) and the storage's `isValid` honours it,
-    // so the escape hatch stays — it just has to be asked for now, instead of
-    // being what every caller silently got.
+    // `null` is not the same as absent: an omitted `expiresAt` takes the default
+    // TTL, an explicit `null` means "never expires". The repository's `isValid`
+    // honours null (see `decisions/0079`).
     const expiry =
         expiresAt === undefined
             ? new Date(Date.now() + DEFAULT_PREVIEW_TOKEN_TTL_MS)
