@@ -165,20 +165,20 @@ thread reviews the diff and runs the gate itself.
 
 **Stage 1 — one hook runner** (`decisions/0081`)
 
-- [ ] Add `hooks/` as a leaf: `addHook(event, handler)`, `runHook(event, payload)`
+- [x] Add `hooks/` as a leaf: `addHook(event, handler)`, `runHook(event, payload)`
       returning the payload after each handler's non-`undefined` return replaces
       it, and `hasHook(event)`. One loop, no try/catch. The registry goes in the
       `globalThis` namespace like every other registry.
-- [ ] `plugins/runtime/plugin-runtime.ts`: `registerPlugins` calls `addHook`
+- [x] `plugins/runtime/plugin-runtime.ts`: `registerPlugins` calls `addHook`
       per `def.hooks` entry; `ctx.emit` becomes `ctx.runHook`. Delete the registry,
       `dispatchBefore`, `dispatchAfter`, `runBeforeHooks`, `runAfterHooks`,
       `hasHookHandlers` and `emitEvent`.
-- [ ] `types/hooks.ts`: drop the seven events nothing fires (`media:*`,
+- [x] `types/hooks.ts`: drop the seven events nothing fires (`media:*`,
       `auth:*`, `api:*`) and the header paragraph on name-keyed failure
       semantics. Handler type gains a `void | Payload` return.
-- [ ] `entries/operations/create.ts` and `entries/internal/hooks.ts` call `runHook`
+- [x] `entries/operations/create.ts` and `entries/internal/hooks.ts` call `runHook`
       instead; `hooks.ts` itself is deleted in stage 3.
-- [ ] A test that an `after*` handler throw propagates and the row is still
+- [x] A test that an `after*` handler throw propagates and the row is still
       there, and that a `before*` throw leaves no row.
 
 **Stage 2 — delete**

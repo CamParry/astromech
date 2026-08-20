@@ -1,19 +1,10 @@
 /**
- * Hook system types.
- *
- * The registry is OPEN: core fires a known set of events (typed via
- * `CoreHookHandlers`), and plugins may declare and fire their own events
- * (`hookEvents` + `ctx.emit`). A hook event name is therefore
- * `KnownCoreEvent | (string & {})`.
- *
- * Failure semantics are keyed off the event name for both core and custom
- * events: `before*` handlers gate the operation (a throw aborts); `after*`
- * handlers run post-commit and are swallow-and-logged. A custom event emitted
- * via `ctx.emit` follows the same rule by substring — a name containing
- * `:before` gates; everything else is swallow-and-logged.
+ * Hook system types: the event → payload map. Core fires a known set of
+ * events (`CoreHookHandlers`); plugins may declare and fire their own
+ * (`hookEvents`). An event name is `KnownCoreEvent | (string & {})`.
  */
 
-import type { Entry, EntryStatus, JsonObject, Media, User } from './domain';
+import type { Entry, EntryStatus, JsonObject, User } from './domain';
 import type { PluginContext } from './plugins';
 
 /**
@@ -60,86 +51,38 @@ export type EntryDeleteContext = {
     permanent: boolean;
 };
 
-export type MediaUploadContext = {
-    file: File;
-    media: Media;
-    user: User | null;
-};
-
-export type MediaDeleteContext = {
-    media: Media;
-    user: User | null;
-};
-
-export type AuthContext = {
-    user: User;
-    session: unknown;
-};
-
-export type ApiRequestContext = {
-    request: Request;
-    user: User | null;
-};
-
-export type ApiResponseContext = {
-    request: Request;
-    response: Response;
-    user: User | null;
-};
-
-/**
- * The set of core events Astromech fires. `before*` handlers gate the
- * operation (a throw aborts); `after*` handlers run post-commit and are
- * swallow-and-logged (a throw never rolls back).
- */
+// A handler commonly returns nothing; `void` in the union (rather than
+// `undefined`) is what lets a handler omit `return` entirely, which is why
+// this block turns the generally-correct `no-invalid-void-type` rule off.
+/* eslint-disable @typescript-eslint/no-invalid-void-type */
+/** The set of core events Astromech fires, one payload type per event. */
 export type CoreHookHandlers = {
     'entry:beforeCreate': (
         ctx: EntryCreateContext,
         plugin: PluginContext
-    ) => Promise<void> | void;
+    ) => Promise<void | EntryCreateContext> | void | EntryCreateContext;
     'entry:afterCreate': (
         ctx: EntryAfterCreateContext,
         plugin: PluginContext
-    ) => Promise<void> | void;
+    ) => Promise<void | EntryAfterCreateContext> | void | EntryAfterCreateContext;
     'entry:beforeUpdate': (
         ctx: EntryUpdateContext,
         plugin: PluginContext
-    ) => Promise<void> | void;
+    ) => Promise<void | EntryUpdateContext> | void | EntryUpdateContext;
     'entry:afterUpdate': (
         ctx: EntryUpdateContext,
         plugin: PluginContext
-    ) => Promise<void> | void;
+    ) => Promise<void | EntryUpdateContext> | void | EntryUpdateContext;
     'entry:beforeDelete': (
         ctx: EntryDeleteContext,
         plugin: PluginContext
-    ) => Promise<void> | void;
+    ) => Promise<void | EntryDeleteContext> | void | EntryDeleteContext;
     'entry:afterDelete': (
         ctx: EntryDeleteContext,
         plugin: PluginContext
-    ) => Promise<void> | void;
-    'media:beforeUpload': (
-        ctx: MediaUploadContext,
-        plugin: PluginContext
-    ) => Promise<void> | void;
-    'media:afterUpload': (
-        ctx: MediaUploadContext,
-        plugin: PluginContext
-    ) => Promise<void> | void;
-    'media:beforeDelete': (
-        ctx: MediaDeleteContext,
-        plugin: PluginContext
-    ) => Promise<void> | void;
-    'auth:afterLogin': (ctx: AuthContext, plugin: PluginContext) => Promise<void> | void;
-    'auth:afterLogout': (ctx: AuthContext, plugin: PluginContext) => Promise<void> | void;
-    'api:beforeRequest': (
-        ctx: ApiRequestContext,
-        plugin: PluginContext
-    ) => Promise<void> | void;
-    'api:afterRequest': (
-        ctx: ApiResponseContext,
-        plugin: PluginContext
-    ) => Promise<void> | void;
+    ) => Promise<void | EntryDeleteContext> | void | EntryDeleteContext;
 };
+/* eslint-enable @typescript-eslint/no-invalid-void-type */
 
 export type KnownCoreEvent = keyof CoreHookHandlers;
 
@@ -155,12 +98,15 @@ export type HookEvent = KnownCoreEvent | keyof AstromechPluginHookEvents | (stri
 
 /**
  * A handler for a custom (plugin-declared) event. The payload is opaque to
- * core; the second argument is the firing plugin's context.
+ * core; a non-`undefined` return replaces it for the next handler.
  */
+// Same `void`-in-union reasoning as `CoreHookHandlers` above.
+/* eslint-disable @typescript-eslint/no-invalid-void-type */
 export type HookHandler<Payload = unknown> = (
     payload: Payload,
     plugin: PluginContext
-) => Promise<void> | void;
+) => Promise<void | Payload> | void | Payload;
+/* eslint-enable @typescript-eslint/no-invalid-void-type */
 
 /** Union of every core handler signature — the index-signature value type. */
 export type AnyCoreHookHandler = CoreHookHandlers[KnownCoreEvent];
@@ -174,6 +120,9 @@ export type HookHandlerFor<E extends HookEvent> = E extends keyof CoreHookHandle
 
 /** The context a core event's handlers receive, derived from `CoreHookHandlers`. */
 export type HookContextFor<E extends KnownCoreEvent> = Parameters<CoreHookHandlers[E]>[0];
+
+/** The payload type for `event` — known core event, plugin-declared, or custom. */
+export type HookPayloadFor<E extends HookEvent> = Parameters<HookHandlerFor<E>>[0];
 
 /** One hook: an event key bound to its handler. */
 export type Hook = {

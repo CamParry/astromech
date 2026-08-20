@@ -122,11 +122,10 @@ export function buildFormsService(
                         : {}),
                 };
 
-                // Core routes `:before` through `runBeforeHooks`, so a throwing
-                // subscriber (spam, or a third party's) aborts with nothing
-                // persisted.
+                // A throwing subscriber (spam, or a third party's) propagates
+                // from runHook, so nothing is persisted.
                 try {
-                    await ctx.emit(BEFORE_SUBMIT, payload);
+                    await ctx.runHook(BEFORE_SUBMIT, payload);
                 } catch (error) {
                     return formError(
                         error instanceof Error ? error.message : 'Submission rejected'
@@ -152,8 +151,8 @@ export function buildFormsService(
                     ...payload,
                     submissionId: submission.id,
                 };
-                // Post-commit, and swallow-and-logged by core.
-                await ctx.emit(AFTER_SUBMIT, after);
+                // Post-commit; a throwing subscriber propagates from here.
+                await ctx.runHook(AFTER_SUBMIT, after);
 
                 // The row is committed, so a delivery failure is logged, not returned.
                 try {

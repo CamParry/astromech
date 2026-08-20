@@ -1,16 +1,14 @@
 /**
  * Plugin runtime: holds the registry of installed plugins, builds the
- * unified PluginContext, and runs hooks with documented failure semantics —
- * `before*` gates (throws abort), `after*` is swallow-and-logged.
+ * unified PluginContext, and registers each plugin's hooks with the `hooks/`
+ * leaf — a caller like any other (`decisions/0081`).
  */
 
 import type { DB } from '@/database/types';
 import type {
     AnyServiceMethod,
     EntriesService,
-    HookContextFor,
     HookHandler,
-    KnownCoreEvent,
     MediaService,
     NotificationsService,
     NotifyInput,
@@ -46,6 +44,7 @@ import {
 import { qualifyEntryType } from '@/entries/type-ids.shared';
 import { AstromechError } from '@/errors/index';
 import { flattenEntryFields } from '@/fields/flatten';
+import { addHook, clearHooks, runHook } from '@/hooks/index';
 import { mediaService } from '@/media/index';
 import { currentUserNotificationsService, notify } from '@/notifications/index';
 import {
@@ -56,7 +55,7 @@ import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { isTable } from '@/plugins/runtime/plugin-tables';
 import { createPluginTrackingRepository } from '@/plugins/runtime/plugin-tracking-repository';
 import { createRegistry } from '@/registry';
-import { getCurrentRole } from '@/request-context/index';
+import { getCurrentRole, getCurrentUser } from '@/request-context/index';
 import { settingsService } from '@/settings/index';
 import { listAll } from '@/storage/prefix';
 import { getStorageDriver } from '@/storage/registry';
@@ -69,20 +68,16 @@ import {
 } from '@/utilities/with-default-shape';
 
 // Registry lives on globalThis, shared across the package's entry chunks.
-type HookCallback = (eventCtx: unknown, ctx: PluginContext) => Promise<void> | void;
-
-type RegisteredHook = { identity: ResolvedPluginIdentity; handler: HookCallback };
 type RegisteredRawRoute = { identity: ResolvedPluginIdentity; route: PluginRawRoute };
 
 type PluginRuntimeState = {
     config: ResolvedConfig | null;
     identities: ResolvedPluginIdentity[];
-    hooks: Map<string, RegisteredHook[]>;
     service: Map<string, Record<string, AnyServiceMethod>>;
     rawRoutes: RegisteredRawRoute[];
 };
 
-// One registry holding all five fields rather than five registries:
+// One registry holding all four fields rather than four registries:
 // `registerPlugins` rewrites them together in a single pass.
 const runtime = createRegistry<PluginRuntimeState>('pluginRuntime', {
     required: false,
@@ -95,7 +90,6 @@ function state(): PluginRuntimeState {
     const created: PluginRuntimeState = {
         config: null,
         identities: [],
-        hooks: new Map(),
         service: new Map(),
         rawRoutes: [],
     };
@@ -112,11 +106,11 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
     const s = state();
     s.config = config;
     s.identities = [];
-    s.hooks = new Map();
     s.service = new Map();
     s.rawRoutes = [];
-    // Drop stale plugin storages before re-registering (test setups re-run this).
+    // Drop stale plugin storages and hooks before re-registering (test setups re-run this).
     resetEntryRepositoryOverrides();
+    clearHooks();
 
     for (const def of defs) {
         const identity = resolvePluginIdentity(def);
@@ -132,9 +126,16 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
 
         for (const { event, handler } of def.hooks ?? []) {
             if (!handler) continue;
-            const list = s.hooks.get(event) ?? [];
-            list.push({ identity, handler: handler as HookCallback });
-            s.hooks.set(event, list);
+            addHook(event, async (payload: unknown) => {
+                const [user, role] = await Promise.all([
+                    getCurrentUser(),
+                    getCurrentRole(),
+                ]);
+                return (handler as HookHandler)(
+                    payload,
+                    createPluginContext(identity, user, role)
+                );
+            });
         }
 
         if (def.service) s.service.set(identity.namespace, def.service);
@@ -245,11 +246,6 @@ async function warnOnUntrackedRemovals(configured: string[]): Promise<void> {
 
 export function getPluginIdentities(): ResolvedPluginIdentity[] {
     return state().identities;
-}
-
-/** Whether any plugin subscribes to an event — lets callers skip hook setup work. */
-export function hasHookHandlers(event: string): boolean {
-    return (state().hooks.get(event)?.length ?? 0) > 0;
 }
 
 /**
@@ -399,7 +395,7 @@ export function createPluginContext(
             }),
         logger: makeLogger(identity.namespace),
         env: resolveEnv(),
-        emit: (event, payload) => emitEvent(event, payload, user),
+        runHook: (event, payload) => runHook(event, payload),
         storage: {
             put: (key, body, opts) => getStorageDriver().put(PREFIX + key, body, opts),
             get: (key) => getStorageDriver().get(PREFIX + key),
@@ -442,85 +438,4 @@ function emptyConfig(): Omit<PluginConfigView, 'entryTypesWithField'> {
         mediaRoute: '/_media',
         media: { access: 'public' },
     };
-}
-
-/**
- * Run the gating handlers for an event. A handler throw propagates to the
- * caller and aborts the operation.
- */
-async function dispatchBefore(
-    event: string,
-    eventCtx: unknown,
-    user: User | null
-): Promise<void> {
-    for (const { identity, handler } of state().hooks.get(event) ?? []) {
-        // The event → handler pairing is enforced at registration
-        // (`HookHandlerFor`), not here: the registry stores a union.
-        const role = await getCurrentRole();
-        await (handler as HookHandler)(
-            eventCtx,
-            createPluginContext(identity, user, role)
-        );
-    }
-}
-
-/**
- * Run the swallow-and-logged handlers for an event. A throw is logged with
- * plugin attribution and never rolls back committed work.
- */
-async function dispatchAfter(
-    event: string,
-    eventCtx: unknown,
-    user: User | null
-): Promise<void> {
-    for (const { identity, handler } of state().hooks.get(event) ?? []) {
-        const ctx = createPluginContext(identity, user, await getCurrentRole());
-        try {
-            // Same as `dispatchBefore`: pairing is a registration-time guarantee.
-            await (handler as HookHandler)(eventCtx, ctx);
-        } catch (error) {
-            ctx.logger.error(`hook "${event}" failed`, error);
-        }
-    }
-}
-
-/**
- * Run `before*` hooks for a core event. A handler throw propagates to the
- * caller and aborts the operation (validation gate).
- */
-export async function runBeforeHooks<E extends KnownCoreEvent>(
-    event: E,
-    eventCtx: HookContextFor<E>,
-    user: User | null
-): Promise<void> {
-    await dispatchBefore(event, eventCtx, user);
-}
-
-/**
- * Run `after*` hooks for a core event. Each handler is swallow-and-logged with
- * plugin attribution; a throw never rolls back committed work.
- */
-export async function runAfterHooks<E extends KnownCoreEvent>(
-    event: E,
-    eventCtx: HookContextFor<E>,
-    user: User | null
-): Promise<void> {
-    await dispatchAfter(event, eventCtx, user);
-}
-
-/**
- * Fire a (typically plugin-declared) custom event. Follows the same by-name
- * convention as core hooks: a name marking a `before` phase gates (a throw
- * aborts and propagates); every other event is swallow-and-logged.
- */
-export async function emitEvent(
-    event: string,
-    payload: unknown,
-    user: User | null
-): Promise<void> {
-    if (event.includes(':before')) {
-        await dispatchBefore(event, payload, user);
-        return;
-    }
-    await dispatchAfter(event, payload, user);
 }

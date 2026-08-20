@@ -122,7 +122,7 @@ function makeCtx(
             error: () => undefined,
         },
         env: {},
-        emit: async () => undefined,
+        runHook: async (_event, payload) => payload,
         notify: async () => undefined,
         storage,
         database,

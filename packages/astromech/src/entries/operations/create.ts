@@ -11,7 +11,7 @@ import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/type-ids.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { assertNoFieldErrors, parseFields } from '@/fields/parse-fields';
-import { runAfterHooks, runBeforeHooks } from '@/plugins/runtime/plugin-runtime';
+import { runHook } from '@/hooks/index';
 import { getCurrentUser } from '@/request-context/index';
 import { UnknownEntryTypeError } from '../errors';
 import { pruneDanglingRelations } from '../internal/dangling-relations';
@@ -96,7 +96,7 @@ export async function create(params: EntryCreateParams): Promise<Entry> {
         publishedAt,
     };
 
-    await runBeforeHooks('entry:beforeCreate', { type, data, user }, user);
+    await runHook('entry:beforeCreate', { type, data, user });
 
     // Write the row and its relationship index atomically.
     const entry = await transaction(async () => {
@@ -105,7 +105,7 @@ export async function create(params: EntryCreateParams): Promise<Entry> {
         return created;
     });
 
-    await runAfterHooks('entry:afterCreate', { type, data, user, entry }, user);
+    await runHook('entry:afterCreate', { type, data, user, entry });
 
     return entry;
 }

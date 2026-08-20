@@ -12,20 +12,19 @@ import { createElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getCronJobs } from '@/cron/registry';
 import { setEmailDriver } from '@/email/registry';
+import { runHook } from '@/hooks/index';
 import { defineHook } from '@/plugins/define-hook';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import {
     bootPlugins,
     createPluginContext,
-    emitEvent,
     getPluginIdentity,
     getPluginRawRoutes,
     getPluginServiceMethods,
     registerPlugins,
-    runAfterHooks,
-    runBeforeHooks,
 } from '@/plugins/runtime/plugin-runtime';
 import { globals } from '@/registry';
+import { runWithContext } from '@/request-context/index';
 import { buildScopedTools } from '@/transport/tools/scoped-tools';
 
 vi.mock('@/transport/tools/scoped-tools', () => ({
@@ -259,8 +258,8 @@ describe('createPluginContext', () => {
     });
 });
 
-describe('runBeforeHooks', () => {
-    it('passes the event context and plugin context to the handler', async () => {
+describe('registerPlugins hooks', () => {
+    it('runs a registered handler with the event context and the current-user plugin context', async () => {
         const seen: { event: unknown; user: User | null }[] = [];
         registerPlugins(
             [
@@ -279,16 +278,14 @@ describe('runBeforeHooks', () => {
             config
         );
 
-        // Dispatch never reads the context, so a partial stands in for a full one.
-        await runBeforeHooks(
-            'entry:beforeCreate',
-            { type: 'posts' } as EntryCreateContext,
-            user
+        await runWithContext(
+            { request: new Request('http://localhost/'), user, role: null },
+            () => runHook('entry:beforeCreate', { type: 'posts' } as EntryCreateContext)
         );
         expect(seen).toEqual([{ event: { type: 'posts' }, user }]);
     });
 
-    it('propagates a throw (aborts the operation)', async () => {
+    it('propagates a throw from a before* handler (aborts the operation)', async () => {
         registerPlugins(
             [
                 def({
@@ -304,14 +301,11 @@ describe('runBeforeHooks', () => {
         );
 
         await expect(
-            runBeforeHooks('entry:beforeCreate', {} as EntryCreateContext, null)
+            runHook('entry:beforeCreate', {} as EntryCreateContext)
         ).rejects.toThrow('blocked');
     });
-});
 
-describe('runAfterHooks', () => {
-    it('swallows a throw, logs it, and still runs other handlers', async () => {
-        const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    it('propagates a throw from an after* handler too, and stops running further handlers', async () => {
         let secondRan = false;
 
         registerPlugins(
@@ -337,13 +331,29 @@ describe('runAfterHooks', () => {
         );
 
         await expect(
-            runAfterHooks('entry:afterUpdate', {} as EntryUpdateContext, null)
-        ).resolves.toBeUndefined();
-        expect(secondRan).toBe(true);
-        expect(errorSpy).toHaveBeenCalledWith(
-            expect.stringContaining('[plugin:boom]'),
-            expect.any(Error)
+            runHook('entry:afterUpdate', {} as EntryUpdateContext)
+        ).rejects.toThrow('after-fail');
+        expect(secondRan).toBe(false);
+    });
+
+    it('runs a custom, plugin-declared event', async () => {
+        const payloads: unknown[] = [];
+        registerPlugins(
+            [
+                def({
+                    package: '@astromech/sub',
+                    hooks: [
+                        defineHook('forms:afterSubmit', (payload: unknown) => {
+                            payloads.push(payload);
+                        }),
+                    ],
+                }),
+            ],
+            config
         );
+
+        await runHook('forms:afterSubmit', { id: 42 });
+        expect(payloads).toEqual([{ id: 42 }]);
     });
 });
 
@@ -408,27 +418,5 @@ describe('bootPlugins', () => {
                 }),
             ])
         ).rejects.toThrow(/@astromech\/boom.*setup\(\) failed.*db unreachable/);
-    });
-});
-
-describe('emitEvent', () => {
-    it('fires custom-event subscribers with swallow-and-log semantics', async () => {
-        const payloads: unknown[] = [];
-        registerPlugins(
-            [
-                def({
-                    package: '@astromech/sub',
-                    hooks: [
-                        defineHook('forms:afterSubmit', (payload: unknown) => {
-                            payloads.push(payload);
-                        }),
-                    ],
-                }),
-            ],
-            config
-        );
-
-        await emitEvent('forms:afterSubmit', { id: 42 }, null);
-        expect(payloads).toEqual([{ id: 42 }]);
     });
 });

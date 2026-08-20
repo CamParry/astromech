@@ -16,7 +16,7 @@ import type {
 } from './config';
 import type { NotifyInput, Permission, Role, User } from './domain';
 import type { Field, FieldValidator } from './fields';
-import type { PluginHooks } from './hooks';
+import type { HookEvent, HookPayloadFor, PluginHooks } from './hooks';
 import type { ServiceMethodEffect, ToolDefinition } from './methods';
 import type {
     MediaService,
@@ -164,12 +164,14 @@ export type PluginContext = {
     /** Env vars (resolved via import.meta.env in Vite/Astro SSR). Never the browser. */
     env: Record<string, string | undefined>;
     /**
-     * Fire a (typically plugin-declared) hook event. Follows core's `before*`
-     * gating convention by name: an event whose name contains `:before` gates
-     * the operation (a throwing subscriber aborts, and the error propagates to
-     * the caller); every other event is swallow-and-logged.
+     * Run `event`'s handlers in registration order, replacing the payload with
+     * any non-`undefined` return; a handler throw propagates to the caller
+     * (`decisions/0081-one-hook-runner-a-throw-propagates.md`).
      */
-    emit: (event: string, payload: unknown) => Promise<void>;
+    runHook: <E extends HookEvent>(
+        event: E,
+        payload: HookPayloadFor<E>
+    ) => Promise<HookPayloadFor<E>>;
     /** Storage scoped to this plugin — keys are namespaced under `plugin/<alias>/` transparently. */
     storage: PluginStorage;
     /** Database maintenance capabilities (feature-detected per driver). Distinct from `db` (the query instance). */
@@ -413,9 +415,8 @@ export type PluginDefinition = PluginIdentity & {
     rawRoutes?: PluginRawRoute[];
     hooks?: PluginHooks;
     /**
-     * Custom events this plugin fires via `ctx.emit`. Type-augmented in 18b.
-     * An event name containing `:before` gates the operation on emit (a
-     * throwing subscriber aborts); every other event is swallow-and-logged.
+     * Custom events this plugin fires via `ctx.runHook`. Type-augmented in 18b
+     * so a subscriber's payload type is checked against `AstromechPluginHookEvents`.
      */
     hookEvents?: string[];
     cron?: PluginCronJob[];

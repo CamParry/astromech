@@ -7,17 +7,13 @@
  */
 
 import type { Entry, EntryUpdateData } from '@/types/index';
-import {
-    hasHookHandlers,
-    runAfterHooks,
-    runBeforeHooks,
-} from '@/plugins/runtime/plugin-runtime';
+import { hasHook, runHook } from '@/hooks/index';
 import { getCurrentUser } from '@/request-context/index';
 import { getEntryRepository } from '../repository/registry';
 import { loadAndAssertType } from './records';
 
 export function hasEntryHooks(...events: string[]): boolean {
-    return events.some((event) => hasHookHandlers(event));
+    return events.some((event) => hasHook(event));
 }
 
 export async function loadEntrySnapshot(type: string, id: string): Promise<Entry> {
@@ -39,11 +35,11 @@ export async function runUpdateWithHooks<T>(
     const user = await getCurrentUser();
     const before = await Promise.all(ids.map((id) => loadEntrySnapshot(type, id)));
     for (const entry of before) {
-        await runBeforeHooks('entry:beforeUpdate', { type, entry, data, user }, user);
+        await runHook('entry:beforeUpdate', { type, entry, data, user });
     }
     const result = await op();
     for (const entry of before) {
-        await runAfterHooks('entry:afterUpdate', { type, entry, data, user }, user);
+        await runHook('entry:afterUpdate', { type, entry, data, user });
     }
     return result;
 }
@@ -68,14 +64,10 @@ export async function runDeleteWithHooks(
         ids.map((entryId) => loadEntrySnapshot(type, entryId))
     );
     for (const entry of before) {
-        await runBeforeHooks(
-            'entry:beforeDelete',
-            { type, entry, user, permanent },
-            user
-        );
+        await runHook('entry:beforeDelete', { type, entry, user, permanent });
     }
     await op();
     for (const entry of before) {
-        await runAfterHooks('entry:afterDelete', { type, entry, user, permanent }, user);
+        await runHook('entry:afterDelete', { type, entry, user, permanent });
     }
 }

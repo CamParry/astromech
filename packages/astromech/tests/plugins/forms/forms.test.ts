@@ -9,9 +9,8 @@
  *   carry them; the allow-list projection is the only thing keeping them off
  *   the wire. One test proves both halves of that.
  * - a throwing `forms:beforeSubmit` subscriber must abort the submission. That
- *   is the core `emitEvent` gating change exercised end to end — before it,
- *   every emitted event was swallow-and-logged and a rejected spam check would
- *   have been saved anyway.
+ *   is `runHook`'s throw-propagates behaviour exercised end to end
+ *   (`decisions/0081-one-hook-runner-a-throw-propagates.md`).
  *
  * `plugin_forms_submissions` is created by the plugin's own generated migration
  * chain, which the harness applies (forms is in `FIRST_PARTY_PLUGIN_MIGRATIONS`)

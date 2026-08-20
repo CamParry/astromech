@@ -700,4 +700,47 @@ describe('hooks', () => {
         const rows = await getDb().selectFrom('entries').selectAll().execute();
         expect(rows).toHaveLength(0);
     });
+
+    // `decisions/0081-one-hook-runner-a-throw-propagates.md`: a throw now
+    // propagates from an after* handler instead of being swallowed and logged,
+    // and the write it followed stays committed.
+    it('a throwing afterDelete propagates, but the row is still gone', async () => {
+        const entry = await api.create({ type: 'post', title: 'Doomed' });
+        const resolved = setupTestConfig();
+        const probe: PluginDefinition = {
+            package: '@test/probe',
+            hooks: [
+                defineHook('entry:afterDelete', () => {
+                    throw new Error('after-delete-fail');
+                }),
+            ],
+        };
+        registerTestPlugins([probe], resolved);
+
+        await expect(api.delete({ type: 'post', id: entry.id })).rejects.toThrow(
+            'after-delete-fail'
+        );
+        const rows = await getDb().selectFrom('entries').selectAll().execute();
+        expect(rows).toHaveLength(0);
+    });
+
+    it('a throwing beforeDelete aborts the delete, leaving the row in place', async () => {
+        const entry = await api.create({ type: 'post', title: 'Safe' });
+        const resolved = setupTestConfig();
+        const probe: PluginDefinition = {
+            package: '@test/probe',
+            hooks: [
+                defineHook('entry:beforeDelete', () => {
+                    throw new Error('before-delete-fail');
+                }),
+            ],
+        };
+        registerTestPlugins([probe], resolved);
+
+        await expect(api.delete({ type: 'post', id: entry.id })).rejects.toThrow(
+            'before-delete-fail'
+        );
+        const rows = await getDb().selectFrom('entries').selectAll().execute();
+        expect(rows).toHaveLength(1);
+    });
 });
