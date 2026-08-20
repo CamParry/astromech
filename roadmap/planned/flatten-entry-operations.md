@@ -92,7 +92,7 @@ export async function deleteEntries(params: {
     const relationships = createRelationshipRepository();
 
     for (const entry of entries) {
-        await emit('entry:beforeDelete', { type, entry, user, permanent: true });
+        await runHook('entry:beforeDelete', { type, entry, user, permanent: true });
     }
 
     await transaction(async () => {
@@ -109,7 +109,7 @@ export async function deleteEntries(params: {
     });
 
     for (const entry of entries) {
-        await emit('entry:afterDelete', { type, entry, user, permanent: true });   // a throw propagates; the write stays
+        await runHook('entry:afterDelete', { type, entry, user, permanent: true });   // a throw propagates; the write stays
     }
 }
 ```
@@ -165,18 +165,18 @@ thread reviews the diff and runs the gate itself.
 
 **Stage 1 — one hook runner** (`decisions/0081`)
 
-- [ ] Add `hooks/` as a leaf: `subscribe(event, handler)`, `emit(event, payload)`
+- [ ] Add `hooks/` as a leaf: `addHook(event, handler)`, `runHook(event, payload)`
       returning the payload after each handler's non-`undefined` return replaces
-      it, and `hasSubscribers(event)`. One loop, no try/catch. The registry goes
-      in the `globalThis` namespace like every other registry.
-- [ ] `plugins/runtime/plugin-runtime.ts`: `registerPlugins` calls `subscribe`
-      per `def.hooks` entry; `ctx.emit` forwards to `emit`. Delete the registry,
+      it, and `hasHook(event)`. One loop, no try/catch. The registry goes in the
+      `globalThis` namespace like every other registry.
+- [ ] `plugins/runtime/plugin-runtime.ts`: `registerPlugins` calls `addHook`
+      per `def.hooks` entry; `ctx.emit` becomes `ctx.runHook`. Delete the registry,
       `dispatchBefore`, `dispatchAfter`, `runBeforeHooks`, `runAfterHooks`,
       `hasHookHandlers` and `emitEvent`.
 - [ ] `types/hooks.ts`: drop the seven events nothing fires (`media:*`,
       `auth:*`, `api:*`) and the header paragraph on name-keyed failure
       semantics. Handler type gains a `void | Payload` return.
-- [ ] `entries/operations/create.ts` and `entries/internal/hooks.ts` call `emit`
+- [ ] `entries/operations/create.ts` and `entries/internal/hooks.ts` call `runHook`
       instead; `hooks.ts` itself is deleted in stage 3.
 - [ ] A test that an `after*` handler throw propagates and the row is still
       there, and that a `before*` throw leaves no row.

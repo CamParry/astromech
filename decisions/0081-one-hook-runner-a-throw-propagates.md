@@ -3,12 +3,12 @@
 **Date:** 2026-08-21
 **Status:** accepted
 
-Hooks live in their own leaf, `hooks/`, with `subscribe(event, handler)`,
-`emit(event, payload)` and `hasSubscribers(event)`. There is one runner. A
+Hooks live in their own leaf, `hooks/`, with `addHook(event, handler)`,
+`runHook(event, payload)` and `hasHook(event)`. There is one runner. A
 handler's return value, when not `undefined`, replaces the payload for the next
-handler and is what `emit` returns. A handler throw propagates to the caller
-from the point `emit` was called, whatever the event is named. The plugin
-runtime is one subscriber among any.
+handler and is what `runHook` returns. A handler throw propagates to the caller
+from the point `runHook` was called, whatever the event is named. The plugin
+runtime registers hooks like any other caller.
 
 ## Context
 
@@ -53,10 +53,10 @@ difference visible in the API rather than inferring it from a name.
 
 ## Decision
 
-- **One runner.** `emit` loops the subscribers in registration order, awaits
+- **One runner.** `runHook` loops the handlers in registration order, awaits
   each, and replaces the payload with any non-`undefined` return. No try/catch.
-- **A throw propagates, always.** From `emit`, at the line the operation called
-  it. The operation does not catch it either. A `before*` throw happens before
+- **A throw propagates, always.** From `runHook`, at the line the operation
+  called it. The operation does not catch it either. A `before*` throw happens before
   any write and aborts the operation; an `after*` throw happens after commit and
   the write stays. That is WordPress: an email that fails in a save hook does
   not un-save the post, and a developer can catch it where it surfaces.
@@ -68,8 +68,13 @@ difference visible in the API rather than inferring it from a name.
   closes. `decisions/0080-transactions-are-scoped-not-threaded.md` records the
   scope.
 - **`hooks/` is a leaf.** It depends on nothing above `types/`. The plugin runtime
-  calls `subscribe` for each entry in `def.hooks` at registration and is
-  otherwise uninvolved. Core may subscribe to its own events.
+  calls `addHook` for each entry in `def.hooks` at registration and is
+  otherwise uninvolved. Core may hook its own events.
+- **The names are the hook vocabulary, not the event-bus one.** `addHook` /
+  `runHook` / `hasHook` are Fastify's and Astro's verbs (`fastify.addHook`,
+  Astro's `runHookConfigSetup`). `emit` / `subscribe` were rejected: `emit` is
+  `EventEmitter`'s word for fire-and-forget with no return, which is the
+  opposite of a runner that hands back the payload.
 - **Every declared event is fired, or it is deleted.** A type for an event with
   no emitter is removed from `types/hooks.ts` until something emits it.
 
@@ -89,14 +94,14 @@ difference visible in the API rather than inferring it from a name.
 - **Separate `action` / `filter` primitives (WordPress, Directus).** Worth
   considering later if an event that must never carry a return appears. Today
   every event carries a payload, and "ignore the return" is a property of the
-  caller, not the engine, so one `emit` covers both.
+  caller, not the engine, so one `runHook` covers both.
 
 ## Consequences
 
 - `plugins/runtime/plugin-runtime.ts` loses the registry, `dispatchBefore`,
   `dispatchAfter`, `runBeforeHooks`, `runAfterHooks`, `hasHookHandlers` and
-  `emitEvent`; `ctx.emit` forwards to `hooks/emit`.
-- `entries/internal/hooks.ts` is deleted; operations call `emit` inline per
+  `emitEvent`; `ctx.emit` becomes `ctx.runHook`.
+- `entries/internal/hooks.ts` is deleted; operations call `runHook` inline per
   `roadmap/planned/flatten-entry-operations.md`.
 - `types/hooks.ts` drops the seven unfired events and the header paragraph on
   name-keyed failure semantics.

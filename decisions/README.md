@@ -120,4 +120,4 @@ Distinct from the neighbouring directories:
 - [0078](0078-the-comment-contract.md) — the comment contract: no section banners, `/** */` blocks on the public surface, and a hard three-line header cap
 - [0079](0079-default-preview-token-ttl.md) — a preview token with no caller-named expiry lives 7 days; explicit null still means never, and there is no config key
 - [0080](0080-transactions-are-scoped-not-threaded.md) — `transaction(fn)` is a `database/` function whose handle propagates through `AsyncLocalStorage`; no `db` parameter, nesting joins; supersedes 0076, 0055 and 0077's shared-primitive mechanism
-- [0081](0081-one-hook-runner-a-throw-propagates.md) — hooks move to a `hooks/` leaf with one runner; a handler throw propagates from `emit` whatever the event is named; the plugin runtime is a subscriber; unfired events are deleted
+- [0081](0081-one-hook-runner-a-throw-propagates.md) — hooks move to a `hooks/` leaf with one runner (`addHook` / `runHook` / `hasHook`); a handler throw propagates from `runHook` whatever the event is named; the plugin runtime is a subscriber; unfired events are deleted
