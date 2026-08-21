@@ -76,10 +76,12 @@ the noun.
 
 ## The work
 
-Each stage is one commit on `main`, written by a `coder` sub-agent, gated by
-the main thread. The service tests under `packages/astromech/tests/services/`
+Four commits on `main`, one per stage. Stages 1 to 3 were written by a `coder`
+sub-agent and gated by the main thread; stage 4 is documentation and was written
+by the main thread. The service tests under `packages/astromech/tests/services/`
 and the route tests under `packages/astromech/tests/transport/http/` are the
-safety net; nothing here changes behaviour.
+safety net; nothing here changes behaviour, with the one RPC field-path
+exception recorded under stage 2.
 
 **Stage 1 — `entries.create` takes `data`**
 
@@ -136,13 +138,14 @@ which rebases the path back to the flat body the caller sent.
 
 **Stage 4 — close out**
 
-- [ ] `TERMINOLOGY.md` gets no entry (these are conventions, not terms). The
-      `code` skill gets the two rules if it does not state them; check before
-      adding.
-- [ ] A decision record for the two rules, naming `overrides` and `value` as
+- [x] `TERMINOLOGY.md` gets no entry (these are conventions, not terms). The
+      `code` skill states neither rule, so it gains an "Operation signatures"
+      section; its "a function name says what it does" example was `createStaged`,
+      now `createStagedEntry`.
+- [x] A decision record for the two rules, naming `overrides` and `value` as
       the deliberate exceptions and why, and recording that a nested `data`
       moves the RPC transport's validation field paths under `data.` while
-      leaving REST's alone.
+      leaving REST's alone. `decisions/0083-operation-signatures.md`.
 
 ## Not changing
 
