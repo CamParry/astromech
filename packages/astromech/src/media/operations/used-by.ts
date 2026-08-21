@@ -6,7 +6,7 @@
 import type { RelationshipRow } from '@/database/tables';
 import type { MediaUsage } from '@/types/index';
 import { createRelationshipRepository } from '@/database/repository/relationships';
-// Peer domains, read only to name a source row. See the `usedBy` docstring.
+// Peer domains, read only to name a source row. See the `listMediaUsage` docstring.
 import { getEntryRepository } from '@/entries/repository/registry';
 import { createUserRepository } from '@/users/repository';
 import { createMediaRepository } from '../repository';
@@ -16,7 +16,7 @@ import { createMediaRepository } from '../repository';
  * edge, so a source using the same file at two paths yields two rows. Titles
  * resolve here so this returns the same shape as `entries.incomingRelationships`.
  */
-export async function usedBy(params: { id: string }): Promise<MediaUsage[]> {
+export async function listMediaUsage(params: { id: string }): Promise<MediaUsage[]> {
     const { id } = params;
     const row = await createMediaRepository().get(id);
     if (!row) throw new Error(`Media '${id}' not found`);

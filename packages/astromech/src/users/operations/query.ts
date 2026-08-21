@@ -3,7 +3,7 @@ import { toUser } from '../internal/to-user';
 import { createUserRepository } from '../repository';
 
 /** List CMS users, paginated unless `limit: 'all'` asks for the lot. */
-export async function query(params?: UserQueryParams): Promise<QueryResult<User>> {
+export async function queryUsers(params?: UserQueryParams): Promise<QueryResult<User>> {
     const repository = createUserRepository();
     const page = params?.page ?? 1;
     const limit = params?.limit;

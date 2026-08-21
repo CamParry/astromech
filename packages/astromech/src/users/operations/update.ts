@@ -12,11 +12,11 @@ import { toUser } from '../internal/to-user';
 import { validate } from '../internal/validate';
 import { createUserRepository } from '../repository';
 import { updateUserSchema } from '../schema';
-import { get } from './get';
-import { query } from './query';
+import { getUser } from './get';
+import { queryUsers } from './query';
 
 /** Update a user's profile, role and custom fields. */
-export async function update(params: {
+export async function updateUser(params: {
     id: string;
     data: Partial<{
         name: string;
@@ -29,7 +29,7 @@ export async function update(params: {
     const validatedData = validate(updateUserSchema, params.data);
 
     if (validatedData.fields !== undefined) {
-        const current = await get({ id });
+        const current = await getUser({ id });
         const config = getConfig();
         const fieldDefs = flattenFieldNodes(config.users?.fields ?? []);
         const resourceValidate = config.users?.validate;
@@ -46,7 +46,7 @@ export async function update(params: {
             resource: { kind: 'user', record: current },
             user: await getCurrentUser(),
             lookups: fieldLookupsFromRecords({
-                load: async () => (await query({ limit: 'all' })).data,
+                load: async () => (await queryUsers({ limit: 'all' })).data,
                 getId: (r) => r.id,
                 getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
                 excludeId: id,

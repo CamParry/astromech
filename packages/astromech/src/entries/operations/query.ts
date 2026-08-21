@@ -22,7 +22,7 @@ import { runPreviewQuery } from './preview/read';
  * visibility shape. A `previewToken` takes the preview path; a public read of
  * trashed rows throws, since the public shape can never return them.
  */
-export async function query(
+export async function queryEntries(
     params: EntryQueryParams & { type: string | readonly string[] }
 ): Promise<QueryResult<Entry>> {
     // Preview (forward versioning): token-authorized read that bypasses the

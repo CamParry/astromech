@@ -11,10 +11,10 @@ import { toUser } from '../internal/to-user';
 import { validate } from '../internal/validate';
 import { createUserRepository } from '../repository';
 import { createUserSchema } from '../schema';
-import { query } from './query';
+import { queryUsers } from './query';
 
 /** Create a CMS user, running its custom fields through the field pipeline. */
-export async function create(params: { data: UserCreateData }): Promise<User> {
+export async function createUser(params: { data: UserCreateData }): Promise<User> {
     const validated = validate(createUserSchema, params.data);
 
     const config = getConfig();
@@ -28,7 +28,7 @@ export async function create(params: { data: UserCreateData }): Promise<User> {
             resource: { kind: 'user', record: null },
             user: await getCurrentUser(),
             lookups: fieldLookupsFromRecords({
-                load: async () => (await query({ limit: 'all' })).data,
+                load: async () => (await queryUsers({ limit: 'all' })).data,
                 getId: (r) => r.id,
                 getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
                 entryTypes: (relIds) => existingEntryTypes(relIds),

@@ -6,19 +6,19 @@
 
 import type { MediaService } from '@/types/index';
 import { deleteMedia } from './operations/delete';
-import { get } from './operations/get';
-import { query } from './operations/query';
-import { replace } from './operations/replace';
-import { update } from './operations/update';
-import { upload } from './operations/upload';
-import { usedBy } from './operations/used-by';
+import { getMedia } from './operations/get';
+import { queryMedia } from './operations/query';
+import { replaceMedia } from './operations/replace';
+import { updateMedia } from './operations/update';
+import { uploadMedia } from './operations/upload';
+import { listMediaUsage } from './operations/used-by';
 
 export const mediaService: MediaService = {
-    query,
-    get,
-    upload,
-    update,
+    query: queryMedia,
+    get: getMedia,
+    upload: uploadMedia,
+    update: updateMedia,
     delete: deleteMedia,
-    replace,
-    usedBy,
+    replace: replaceMedia,
+    usedBy: listMediaUsage,
 };

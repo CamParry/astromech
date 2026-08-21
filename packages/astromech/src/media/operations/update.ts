@@ -12,11 +12,11 @@ import { toMedia } from '../internal/to-media';
 import { validate } from '../internal/validate';
 import { createMediaRepository } from '../repository';
 import { updateMediaSchema } from '../schema';
-import { get } from './get';
-import { query } from './query';
+import { getMedia } from './get';
+import { queryMedia } from './query';
 
 /** Update a media item's metadata and custom fields. */
-export async function update(params: {
+export async function updateMedia(params: {
     id: string;
     data: Partial<{
         alt: string;
@@ -29,7 +29,7 @@ export async function update(params: {
     const validatedData = validate(updateMediaSchema, params.data);
 
     if (validatedData.fields !== undefined) {
-        const current = await get({ id });
+        const current = await getMedia({ id });
         const config = getConfig();
         const fieldDefs = flattenFieldNodes(config.media?.fields ?? []);
         const resourceValidate = config.media?.validate;
@@ -46,7 +46,7 @@ export async function update(params: {
             resource: { kind: 'media', record: current },
             user: await getCurrentUser(),
             lookups: fieldLookupsFromRecords({
-                load: async () => (await query({ limit: 'all' })).data,
+                load: async () => (await queryMedia({ limit: 'all' })).data,
                 getId: (r) => r.id,
                 getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
                 excludeId: id,

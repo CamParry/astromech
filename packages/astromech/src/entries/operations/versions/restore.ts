@@ -11,7 +11,7 @@ import { getEntryRepository } from '../../repository/registry';
  * version's title, slug, and fields. Throws if the version does not exist or
  * belongs to another entry.
  */
-export async function restoreVersion(params: {
+export async function restoreEntryVersion(params: {
     type: string;
     id: string;
     versionId: string;

@@ -5,16 +5,16 @@
  */
 
 import type { UsersService } from '@/types/index';
-import { create } from './operations/create';
+import { createUser } from './operations/create';
 import { deleteUser } from './operations/delete';
-import { get } from './operations/get';
-import { query } from './operations/query';
-import { update } from './operations/update';
+import { getUser } from './operations/get';
+import { queryUsers } from './operations/query';
+import { updateUser } from './operations/update';
 
 export const usersService: UsersService = {
-    query,
-    get,
-    create,
-    update,
+    query: queryUsers,
+    get: getUser,
+    create: createUser,
+    update: updateUser,
     delete: deleteUser,
 };

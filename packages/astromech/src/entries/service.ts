@@ -10,31 +10,31 @@
 
 import type { EntriesService, EntryUpdateParams } from '@/types/index';
 import { BulkOperationError } from './errors';
-import { create } from './operations/create';
+import { createEntry } from './operations/create';
 import { deleteEntries } from './operations/delete';
-import { duplicate } from './operations/duplicate';
-import { get } from './operations/get';
+import { duplicateEntry } from './operations/duplicate';
+import { getEntry } from './operations/get';
 import { issuePreviewToken, revokePreviewToken } from './operations/preview/token';
-import { query } from './operations/query';
-import { incomingRelationships } from './operations/relationships';
+import { queryEntries } from './operations/query';
+import { listIncomingRelationships } from './operations/relationships';
 import { restoreEntries } from './operations/restore';
-import { createStaged } from './operations/staging/create';
-import { deleteStaged } from './operations/staging/delete';
-import { getStaged } from './operations/staging/get';
-import { mergeStaged } from './operations/staging/merge';
+import { createStagedEntry } from './operations/staging/create';
+import { deleteStagedEntry } from './operations/staging/delete';
+import { getStagedEntry } from './operations/staging/get';
+import { mergeStagedEntry } from './operations/staging/merge';
 import { publishEntries, scheduleEntries, unpublishEntries } from './operations/status';
 import { emptyTrash, trashEntries } from './operations/trash';
 import { updateEntries } from './operations/update';
-import { listVersions } from './operations/versions/list';
-import { restoreVersion } from './operations/versions/restore';
+import { listEntryVersions } from './operations/versions/list';
+import { restoreEntryVersion } from './operations/versions/restore';
 
 /** @deprecated Slug uniqueness is now a storage concern. */
 export { generateUniqueSlug } from './internal/slug';
 
 export const entriesService: EntriesService = {
-    query,
-    get,
-    create,
+    query: queryEntries,
+    get: getEntry,
+    create: createEntry,
     // `update`, `trash`, `restore`, `delete`, `publish`, `unpublish` and
     // `schedule` adapt the `string | readonly string[]` overloads onto the
     // batch-only operations (decisions/0077).
@@ -50,7 +50,7 @@ export const entriesService: EntriesService = {
                 throw many ? err : unwrapBatchOfOne(err);
             });
     }) as EntriesService['update'],
-    duplicate,
+    duplicate: duplicateEntry,
     trash: (params) => {
         const many = Array.isArray(params.id);
         return trashEntries({
@@ -84,8 +84,8 @@ export const entriesService: EntriesService = {
         });
     },
     emptyTrash,
-    versions: listVersions,
-    restoreVersion,
+    versions: listEntryVersions,
+    restoreVersion: restoreEntryVersion,
     publish: ((params: { type: string; id: string | readonly string[] }) => {
         const many = Array.isArray(params.id);
         return publishEntries({ type: params.type, ids: [params.id].flat() })
@@ -118,11 +118,11 @@ export const entriesService: EntriesService = {
                 throw many ? err : unwrapBatchOfOne(err);
             });
     }) as EntriesService['schedule'],
-    incomingRelationships,
-    createStaged,
-    getStaged,
-    mergeStaged,
-    deleteStaged,
+    incomingRelationships: listIncomingRelationships,
+    createStaged: createStagedEntry,
+    getStaged: getStagedEntry,
+    mergeStaged: mergeStagedEntry,
+    deleteStaged: deleteStagedEntry,
     issuePreviewToken,
     revokePreviewToken,
 };

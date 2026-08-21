@@ -6,7 +6,7 @@ import { getStagingRepository } from '../../internal/type-config';
  * Returns the staged copy of an entry, or null if none exists. Throws if the
  * entry does not exist or is the wrong type.
  */
-export async function getStaged(params: {
+export async function getStagedEntry(params: {
     type: string;
     id: string;
 }): Promise<Entry | null> {

@@ -7,7 +7,7 @@ import { toMedia } from '../internal/to-media';
 import { createMediaRepository } from '../repository';
 
 /** Store a new file and insert the row describing it. */
-export async function upload(params: { file: File }): Promise<Media> {
+export async function uploadMedia(params: { file: File }): Promise<Media> {
     const { file } = params;
     const driver = getStorageDriver();
 

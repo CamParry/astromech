@@ -13,7 +13,7 @@ import { runPreviewGet } from './preview/read';
  * Returns null when no row matches, its type differs, or visibility hides it. A
  * `previewToken` takes the token-authorized preview path that skips the publish gate.
  */
-export async function get(params: {
+export async function getEntry(params: {
     type: string;
     id: string;
     locale?: string;

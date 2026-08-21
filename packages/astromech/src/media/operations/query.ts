@@ -3,7 +3,7 @@ import { toMedia } from '../internal/to-media';
 import { createMediaRepository } from '../repository';
 
 /** List media items, paginated unless `limit: 'all'` asks for the lot. */
-export async function query(params?: MediaQueryParams): Promise<QueryResult<Media>> {
+export async function queryMedia(params?: MediaQueryParams): Promise<QueryResult<Media>> {
     const repository = createMediaRepository();
     const page = params?.page ?? 1;
     const limit = params?.limit;

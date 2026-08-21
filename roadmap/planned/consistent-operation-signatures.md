@@ -125,11 +125,14 @@ which rebases the path back to the flat body the caller sent.
 
 **Stage 3 — verb-noun names**
 
-- [ ] Rename per the table, `entries` then `users` then `media`, updating each
-      domain's `service.ts` import. The service object keys do not change.
-- [ ] `grep -rn "operations/" packages/astromech/src --include='*.ts'` for any
-      importer outside `service.ts`; there should be none besides the entries
-      status wrappers importing `updateEntries`.
+- [x] Rename per the table, `entries` then `users` then `media`, updating each
+      domain's `service.ts` import. The service object keys do not change, so
+      the three service objects stop using shorthand and read `key: newName`.
+- [x] `grep -rn "operations/" packages/astromech/src --include='*.ts'` for any
+      importer outside `service.ts`; there was none besides the entries
+      status wrappers importing `updateEntries` and four sibling imports within
+      `users/operations/` and `media/operations/`. No test file changed, which
+      is the check that this was a rename and nothing else.
 
 **Stage 4 — close out**
 

@@ -11,7 +11,7 @@ import { loadAndAssertType } from '../internal/records';
 import { getEntryRepository } from '../repository/registry';
 
 /** One row per index edge: a source referencing the target twice is two rows. */
-export async function incomingRelationships(params: {
+export async function listIncomingRelationships(params: {
     type: string;
     id: string;
 }): Promise<IncomingRelationship[]> {

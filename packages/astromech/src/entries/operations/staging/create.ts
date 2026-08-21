@@ -10,7 +10,10 @@ import { getStagingRepository } from '../../internal/type-config';
  * live row. Throws if the entry is itself a staged change, or if a staged copy
  * already exists.
  */
-export async function createStaged(params: { type: string; id: string }): Promise<Entry> {
+export async function createStagedEntry(params: {
+    type: string;
+    id: string;
+}): Promise<Entry> {
     const { type, id } = params;
 
     const { repository, staging } = getStagingRepository(type);

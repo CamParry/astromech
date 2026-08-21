@@ -8,7 +8,7 @@ import { createMediaRepository } from '../repository';
 import { variantPrefix } from '../serving/image/url.shared';
 
 /** Swap a media item's file, keeping its id, URL shape and metadata row. */
-export async function replace(params: { id: string; file: File }): Promise<Media> {
+export async function replaceMedia(params: { id: string; file: File }): Promise<Media> {
     const { id, file } = params;
     const repository = createMediaRepository();
     const driver = getStorageDriver();

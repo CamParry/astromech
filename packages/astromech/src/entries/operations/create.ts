@@ -40,7 +40,7 @@ type FieldContext = {
  * Creates an entry of the given type: validates input, fills defaults, runs
  * the entry create hooks, and writes the row with its relationship index.
  */
-export async function create(params: EntryCreateParams): Promise<Entry> {
+export async function createEntry(params: EntryCreateParams): Promise<Entry> {
     const { type, data } = params;
 
     if (data.fields !== undefined && isPublicBranded(data.fields)) {

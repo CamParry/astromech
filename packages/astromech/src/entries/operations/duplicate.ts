@@ -9,7 +9,7 @@ import { getEntryRepository } from '../repository/registry';
  * applying any overrides, and indexes the copy's relationships. Throws if the
  * source does not exist or is the wrong type.
  */
-export async function duplicate(params: {
+export async function duplicateEntry(params: {
     type: string;
     id: string;
     overrides?: EntryDuplicateOverrides;

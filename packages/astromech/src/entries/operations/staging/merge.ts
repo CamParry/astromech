@@ -17,7 +17,10 @@ import { entryValidationMode } from '../../validation-mode.shared';
  * content, overwrites the canonical in place, and deletes the staged row.
  * Throws if there is no staged change, or a 422 when a field validator reports.
  */
-export async function mergeStaged(params: { type: string; id: string }): Promise<Entry> {
+export async function mergeStagedEntry(params: {
+    type: string;
+    id: string;
+}): Promise<Entry> {
     const { type, id } = params;
 
     const { repository, staging } = getStagingRepository(type);
