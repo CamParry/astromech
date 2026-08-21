@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Astromech is a lightweight TypeScript CMS — a framework-agnostic core plus an Astro integration, built on TanStack Router and Hono. Read `ARCHITECTURE.md` before changing anything structural: it holds the layer model, the directory map, and the invariants. When it disagrees with the code, the code wins — fix the file.
+Astromech is a lightweight TypeScript CMS — a framework-agnostic core plus an Astro integration, built on TanStack Router and Hono. Read `ARCHITECTURE.md` before changing anything structural: it holds the layer model and the big-picture shape of each subsystem. When it disagrees with the code, the code wins — fix the file.
 
 Nested `AGENTS.md` files cover `packages/astromech`, `packages/plugins`, `apps/demo` and `apps/docs`. The closest one to the file being edited wins.
 
@@ -16,18 +16,27 @@ Nested `AGENTS.md` files cover `packages/astromech`, `packages/plugins`, `apps/d
 
 ## Commands and the gate
 
-`ARCHITECTURE.md` has the gate table. What it doesn't say:
+Before a change lands, all of these pass. The husky pre-commit hook runs lint-staged (eslint --fix + prettier) on touched files. **Never `--no-verify`.** If the hook fails, fix the cause.
 
-- **Root `lint` only covers `astromech` and `@astromech/schema-engine`.** Plugin packages have no lint script, but the pre-commit hook lints their files anyway — so a plugin change can pass `pnpm run lint` and then fail on commit.
-- **`pnpm run check:boot` is not in the pre-commit hook.** It builds `apps/demo`
-  and boots the built server — the only way a defect in the serving process is
-  visible — and a full build is far too slow for a hook. CI runs it; run it by
-  hand after anything that touches boot, the config path or the injected
-  middleware.
-- **Never `--no-verify`.** If the hook fails, fix the cause.
+| Command                       | Checks                                                                                                                                                                                                                        |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm run typecheck`          | `tsc` across every published package, then `astro sync && tsc --noEmit` in `apps/demo`, the only place the generated types are consumed as a site consumes them                                                               |
+| `pnpm run test:run`           | vitest across `packages/schema-engine/tests/`, `packages/astromech/tests/` (mirrors `src/`) and `packages/plugins/assistant/tests/`. The assistant suite needs `build` first                                                  |
+| `pnpm run build`              | tsup. If the DTS worker runs out of memory, raise `NODE_OPTIONS=--max-old-space-size`                                                                                                                                         |
+| `pnpm run lint`               | eslint over `packages/schema-engine/src` and `packages/astromech/src` only. Plugin packages have no lint script, but the pre-commit hook lints their files anyway, so a plugin change can pass `lint` and then fail on commit |
+| `pnpm run lint:css`           | stylelint over `packages/astromech/src/admin/styles/`                                                                                                                                                                         |
+| `pnpm run format:check`       | prettier over the repo                                                                                                                                                                                                        |
+| `pnpm run check:config`       | loads the demo config the way Astro does, catching a config-time import that reaches a domain service                                                                                                                         |
+| `pnpm run check:node-imports` | imports each plugin-facing subpath in plain Node from built `dist`. Runs after `build`                                                                                                                                        |
+| `pnpm run check:exports`      | asserts `exports` and `publishConfig.exports` name the same subpaths and resolve into the same tree                                                                                                                           |
+| `pnpm run check:docs`         | resolves every repo-relative link and backticked path in markdown. Skips `specs/` and `roadmap/planned/`                                                                                                                      |
+| `pnpm run check:boot`         | builds `apps/demo`, boots the built server against a scratch database, and asserts `/` 200, `/cms` 200, `/cms/api/entries/post` 401 and one config evaluation                                                                 |
+
+- **`check:boot` is not in the pre-commit hook** (a full build is far too slow for one). It is the only way a defect in the serving process is visible. CI runs it; run it by hand after anything that touches boot, the config path or the injected middleware.
+- For refactors that move tables, `pnpm run db:generate` must also report "No schema changes".
 - **pnpm is the package manager**, pinned by `packageManager` in the root `package.json`. `npm install` here builds a flat tree that hides undeclared dependencies, which is the failure mode pnpm exists to catch — so every package declares what it imports.
 - **`pnpm-workspace.yaml` holds the workspace globs and the hoist list.** `publicHoistPattern` is not a convenience: the admin ships as source and the host app's Vite has to resolve its client dependencies from the app root, so that list must stay in step with `optimizeDeps.include` in `packages/astromech/src/integrations/astro/vite.ts`. A server dependency Vite cannot resolve gets inlined into the build instead of externalised, and anything loading a native binding by dynamic `require` breaks at request time when that happens.
-- Common commands: `pnpm run build`, `typecheck`, `test:run`, `lint`, `check:docs`, `check:boot`, `format`, `db:generate`, `db:init`.
+- Other commands: `format`, `db:generate`, `db:init`.
 
 ## Documentation
 
