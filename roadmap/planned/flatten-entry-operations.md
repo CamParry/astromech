@@ -191,11 +191,13 @@ thread reviews the diff and runs the gate itself.
 
 **Stage 3 — trash and restore**
 
-- [ ] `operations/trash.ts` `trash` to the target shape; `cascadeLocales` leaves
+- [x] `operations/trash.ts` `trash` to the target shape; `cascadeLocales` leaves
       `repository.trash.trash` the same way. `emptyTrash` gains a `transaction()`
       around its relationship cleanup and purge, which it lacks today.
-- [ ] `operations/restore.ts` to the target shape, returning the rows.
+- [x] `operations/restore.ts` to the target shape, returning the rows.
 - [ ] Delete `internal/bulk.ts` and `internal/hooks.ts` once nothing imports them.
+      (Deferred to Stage 4: `update.ts` still imports `runOnIds` and
+      `runUpdateWithHooks` from them until it is flattened.)
 
 **Stage 4 — update**
 

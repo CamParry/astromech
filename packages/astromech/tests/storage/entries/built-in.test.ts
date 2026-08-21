@@ -222,26 +222,6 @@ describe('trash sub-surface', () => {
         await repository.trash.emptyTrash('post');
         expect(await repository.get(e.id, { includeTrashed: true })).toBeNull();
     });
-
-    it('cascades trash across the locale group', async () => {
-        const en = await repository.create({
-            type: 'post',
-            title: 'EN',
-            slug: 'en',
-            locale: 'en',
-        });
-        const de = await repository.create({
-            type: 'post',
-            title: 'DE',
-            slug: 'de',
-            locale: 'de',
-            localeGroup: en.localeGroup,
-        });
-        await repository.trash.trash(en.id, { cascadeLocales: true });
-        expect(
-            (await repository.get(de.id, { includeTrashed: true }))?.deletedAt
-        ).toBeInstanceOf(Date);
-    });
 });
 
 describe('versions sub-surface', () => {

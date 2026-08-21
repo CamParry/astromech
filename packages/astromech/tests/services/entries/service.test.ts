@@ -505,6 +505,87 @@ describe('trash / restore / delete / emptyTrash', () => {
     });
 });
 
+describe('cascadeLocales', () => {
+    async function makeLocalePair(): Promise<{ en: Entry; de: Entry }> {
+        const en = await api.create({ type: 'post', title: 'EN', locale: 'en' });
+        const de = await api.create({
+            type: 'post',
+            title: 'DE',
+            locale: 'de',
+            localeGroup: en.localeGroup,
+        });
+        return { en, de };
+    }
+
+    it('trash cascades to the live locale group when cascadeLocales is set', async () => {
+        const { en, de } = await makeLocalePair();
+        await api.trash({ type: 'post', id: en.id, cascadeLocales: true });
+
+        const trashed = await api.query({
+            type: 'post',
+            locale: 'all',
+            full: true,
+            trashed: true,
+            where: { id: de.id },
+        });
+        expect(trashed.data[0]?.deletedAt).toBeInstanceOf(Date);
+    });
+
+    it('trash does not cascade when cascadeLocales is omitted', async () => {
+        const { en, de } = await makeLocalePair();
+        await api.trash({ type: 'post', id: en.id });
+
+        // get() only ever returns live rows, so finding `de` here confirms it
+        // was not swept into the trash.
+        const de2 = await api.get({ type: 'post', id: de.id, full: true });
+        expect(de2?.deletedAt).toBeNull();
+    });
+
+    it('delete cascades to the live locale group when cascadeLocales is set', async () => {
+        const { en, de } = await makeLocalePair();
+        await api.delete({ type: 'post', id: en.id, cascadeLocales: true });
+
+        const enRows = await getDb()
+            .selectFrom('entries')
+            .selectAll()
+            .where('id', '=', en.id)
+            .execute();
+        const deRows = await getDb()
+            .selectFrom('entries')
+            .selectAll()
+            .where('id', '=', de.id)
+            .execute();
+        expect(enRows).toHaveLength(0);
+        expect(deRows).toHaveLength(0);
+    });
+
+    it('delete with cascade leaves an already-trashed sibling intact', async () => {
+        const { en, de } = await makeLocalePair();
+        await api.trash({ type: 'post', id: de.id }); // no cascade — de only
+        await api.delete({ type: 'post', id: en.id, cascadeLocales: true });
+
+        const enRows = await getDb()
+            .selectFrom('entries')
+            .selectAll()
+            .where('id', '=', en.id)
+            .execute();
+        expect(enRows).toHaveLength(0);
+
+        // `de` is trashed, not deleted — a permanent delete's cascade only
+        // reaches the LIVE locale group (`withLocaleSiblings` uses
+        // `repository.translatable.siblings`, which excludes trashed rows).
+        const trashedDe = await api.query({
+            type: 'post',
+            locale: 'all',
+            full: true,
+            trashed: true,
+            where: { id: de.id },
+        });
+        expect(trashedDe.data[0]?.id).toBe(de.id);
+        expect(trashedDe.data[0]?.deletedAt).toBeInstanceOf(Date);
+    });
+});
+
 describe('duplicate', () => {
     it('copies title/fields, applies overrides, and assigns a new id', async () => {
         const src = await api.create({

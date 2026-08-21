@@ -144,7 +144,7 @@ export type EntryRepository<R extends EntryRow = EntryRow> = {
 
     /** Present iff `supports` includes 'trash'. */
     trash?: {
-        trash(id: string, opts?: { cascadeLocales?: boolean }): Promise<void>;
+        trash(id: string): Promise<void>;
         restore(id: string): Promise<R>;
         emptyTrash(type: string): Promise<void>;
     };

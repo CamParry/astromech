@@ -413,25 +413,13 @@ export function createBuiltInEntryRepository(opts?: { db?: Db; defaultLocale?: s
     }
 
     const trash = {
-        trash: async (id: string, opts?: { cascadeLocales?: boolean }): Promise<void> => {
+        trash: async (id: string): Promise<void> => {
             const row = await repository.findOne({ id });
             if (!row) throw new Error(`Entry '${id}' not found`);
-            const now = new Date();
 
             // Idempotent: re-trashing an already-trashed entry is a no-op.
             if (row.deletedAt === null) {
-                await repository.update(id, { deletedAt: now });
-            }
-
-            if (opts?.cascadeLocales === true) {
-                await repository.updateMany(
-                    {
-                        localeGroup: row.localeGroup,
-                        id: { ne: id },
-                        deletedAt: null,
-                    },
-                    { deletedAt: now }
-                );
+                await repository.update(id, { deletedAt: new Date() });
             }
         },
 

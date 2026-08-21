@@ -4,7 +4,7 @@
  * resolution. All read the resolved config.
  */
 
-import type { EntryRepository } from '../repository/types';
+import type { EntryRepository, EntryRow } from '../repository/types';
 import type { Capability } from '@/entries/capabilities';
 import type { Field } from '@/types/index';
 import { getConfig } from '@/config/registry';
@@ -64,6 +64,22 @@ export function assertCapability(typeName: string, capability: Capability): void
     if (caps && !caps[capability]) {
         throw new CapabilityError(typeName, capability);
     }
+}
+
+/**
+ * Assert the type supports trash and return its narrowed `trash` group —
+ * the single gate for trash, restore and emptyTrash (replacing a capability
+ * assertion plus a separate `if (!repository.trash) throw` in each).
+ */
+export function requireTrash<R extends EntryRow>(
+    repository: EntryRepository<R>,
+    type: string
+): NonNullable<EntryRepository<R>['trash']> {
+    assertCapability(type, 'trash');
+    // Guaranteed by the capability check above; the storage groups mirror the
+    // type's configured capabilities. The guard narrows for the type system.
+    if (!repository.trash) throw new CapabilityError(type, 'trash');
+    return repository.trash;
 }
 
 /**

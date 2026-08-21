@@ -8,7 +8,7 @@
  * Consumers reach it as `app.entries`.
  */
 
-import type { EntriesService } from '@/types/index';
+import type { EntriesService, Entry } from '@/types/index';
 import { create } from './operations/create';
 import { deleteEntries } from './operations/delete';
 import { duplicate } from './operations/duplicate';
@@ -16,13 +16,13 @@ import { get } from './operations/get';
 import { issuePreviewToken, revokePreviewToken } from './operations/preview/token';
 import { query } from './operations/query';
 import { incomingRelationships } from './operations/relationships';
-import { restore } from './operations/restore';
+import { restoreEntries } from './operations/restore';
 import { createStaged } from './operations/staging/create';
 import { deleteStaged } from './operations/staging/delete';
 import { getStaged } from './operations/staging/get';
 import { mergeStaged } from './operations/staging/merge';
 import { publish, schedule, unpublish } from './operations/status';
-import { emptyTrash, trash } from './operations/trash';
+import { emptyTrash, trashEntries } from './operations/trash';
 import { update } from './operations/update';
 import { listVersions } from './operations/versions/list';
 import { restoreVersion } from './operations/versions/restore';
@@ -36,8 +36,23 @@ export const entriesService: EntriesService = {
     create,
     update: update as EntriesService['update'],
     duplicate,
-    trash,
-    restore: restore as EntriesService['restore'],
+    trash: (params) =>
+        trashEntries({
+            type: params.type,
+            ids: [params.id].flat(),
+            ...(params.cascadeLocales !== undefined
+                ? { cascadeLocales: params.cascadeLocales }
+                : {}),
+        }),
+    // A single id is a batch of one (decisions/0077): `restoreEntries` always
+    // returns the full batch; unwrap it for a single id. The cast is the same
+    // one `update`/`publish`/`unpublish`/`schedule` carry below — TypeScript
+    // can't match a union-returning body against an overloaded property without
+    // it.
+    restore: ((params: { type: string; id: string | readonly string[] }) =>
+        restoreEntries({ type: params.type, ids: [params.id].flat() }).then((rows) =>
+            Array.isArray(params.id) ? rows : (rows[0] as Entry)
+        )) as EntriesService['restore'],
     delete: (params) =>
         deleteEntries({
             type: params.type,
