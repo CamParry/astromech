@@ -195,13 +195,13 @@ thread reviews the diff and runs the gate itself.
       `repository.trash.trash` the same way. `emptyTrash` gains a `transaction()`
       around its relationship cleanup and purge, which it lacks today.
 - [x] `operations/restore.ts` to the target shape, returning the rows.
-- [ ] Delete `internal/bulk.ts` and `internal/hooks.ts` once nothing imports them.
-      (Deferred to Stage 4: `update.ts` still imports `runOnIds` and
-      `runUpdateWithHooks` from them until it is flattened.)
+- [x] Delete `internal/bulk.ts` and `internal/hooks.ts` once nothing imports them.
+      (Done in Stage 4, after `update.ts` dropped its `runOnIds` /
+      `runUpdateWithHooks` imports.)
 
 **Stage 4 — update**
 
-- [ ] `operations/update.ts`: inline the loop, drop `runUpdateWithHooks` and the
+- [x] `operations/update.ts`: inline the loop, drop `runUpdateWithHooks` and the
       `FieldContext.db` field. The body (`updateOne`, `toStoredFields`,
       `getUniquenessExcludeIds`) is already straight-line and stays; only the
       dispatch changes. The status wrappers in `status.ts` are untouched.

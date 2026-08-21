@@ -1,4 +1,4 @@
-import type { EntryRepository, RepositoryDb } from '../repository/types';
+import type { EntryRepository } from '../repository/types';
 import type { Field } from '@/types/fields';
 import type {
     Entry,
@@ -9,15 +9,15 @@ import type {
     ResolvedEntryType,
 } from '@/types/index';
 import { getConfig } from '@/config/registry';
+import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/type-ids.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { assertNoFieldErrors, parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
+import { runHook } from '@/hooks/index';
 import { getCurrentUser } from '@/request-context/index';
-import { UnknownEntryTypeError } from '../errors';
-import { runOnIds } from '../internal/bulk';
+import { BulkOperationError, UnknownEntryTypeError } from '../errors';
 import { pruneDanglingRelations } from '../internal/dangling-relations';
-import { runUpdateWithHooks } from '../internal/hooks';
 import { asEntry, loadAndAssertType } from '../internal/records';
 import { indexEntryRelationships } from '../internal/relationships';
 import { uniqueSlugIfChanged } from '../internal/slug';
@@ -25,6 +25,7 @@ import { propagateSharedFields } from '../internal/translatable';
 import { validate } from '../internal/validate';
 import { changesVersionedContent, snapshotVersion } from '../internal/versions';
 import { createEntryLookups } from '../lookups';
+import { getEntryRepository } from '../repository/registry';
 import { updateEntrySchema } from '../schema';
 import { entryValidationMode } from '../validation-mode.shared';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility';
@@ -32,15 +33,15 @@ import { isPublicBranded, PublicShapeWriteError } from '../visibility';
 /** What the field helpers below need to know about the update in progress. */
 type FieldContext = {
     repository: EntryRepository;
-    db: RepositoryDb | undefined;
     entryType: ResolvedEntryType;
     currentEntry: Entry;
     status: EntryStatus | undefined;
 };
 
 /**
- * Updates one entry or many: validates the patch against the type's schema,
- * writes each row, and fires the entry update hooks around the write.
+ * Updates one entry or many, atomically per batch, firing the entry update
+ * hooks around the write. Throws if an id is missing or of another type
+ * before any hook fires or any row is touched.
  */
 export async function update(params: EntryUpdateParams): Promise<Entry | Entry[]> {
     if (params.data.fields !== undefined && isPublicBranded(params.data.fields)) {
@@ -59,12 +60,67 @@ export async function update(params: EntryUpdateParams): Promise<Entry | Entry[]
         );
     }
 
+    const isBulk = Array.isArray(params.id);
     const ids = Array.isArray(params.id) ? params.id : [params.id];
-    return runUpdateWithHooks(entryType.id, ids, params.data, () =>
-        runOnIds(entryType.id, params.id, (repository, db, id) =>
-            updateOne({ repository, db, entryType, id, data: params.data })
-        )
+    const repository = getEntryRepository(entryType.id);
+    const user = await getCurrentUser();
+
+    // Fetch each row once, at the top: this record feeds both the before-hook
+    // context and updateOne (point 3 — no second load per id).
+    const entries = await Promise.all(
+        ids.map((id) => loadAndAssertType(repository, entryType.id, id))
     );
+
+    for (const entry of entries) {
+        await runHook('entry:beforeUpdate', {
+            type: entryType.id,
+            entry,
+            data: params.data,
+            user,
+        });
+    }
+
+    const results = await transaction(async () => {
+        const out: Entry[] = [];
+        const succeeded: string[] = [];
+        for (const currentEntry of entries) {
+            try {
+                out.push(
+                    await updateOne({
+                        repository,
+                        entryType,
+                        currentEntry,
+                        data: params.data,
+                    })
+                );
+                succeeded.push(currentEntry.id);
+            } catch (err) {
+                // A single id has no siblings to name, so it surfaces the raw
+                // error (the caller's ValidationError, unwrapped) rather than
+                // a BulkOperationError only a multi-id caller can make sense of.
+                if (!isBulk) throw err;
+                throw new BulkOperationError({
+                    failedId: currentEntry.id,
+                    reason: err instanceof Error ? err.message : String(err),
+                    succeededBefore: succeeded,
+                    cause: err,
+                });
+            }
+        }
+        return out;
+    });
+
+    for (const entry of entries) {
+        // A throw here propagates; the write above stays (decisions/0081).
+        await runHook('entry:afterUpdate', {
+            type: entryType.id,
+            entry,
+            data: params.data,
+            user,
+        });
+    }
+
+    return isBulk ? results : (results[0] as Entry);
 }
 
 /**
@@ -73,14 +129,11 @@ export async function update(params: EntryUpdateParams): Promise<Entry | Entry[]
  */
 async function updateOne(params: {
     repository: EntryRepository;
-    db: RepositoryDb | undefined;
     entryType: ResolvedEntryType;
-    id: string;
+    currentEntry: Entry;
     data: EntryUpdateData;
 }): Promise<Entry> {
-    const { repository, db, entryType, id, data } = params;
-
-    const currentEntry = await loadAndAssertType(repository, entryType.id, id);
+    const { repository, entryType, currentEntry, data } = params;
 
     const titled = entryType.titleField !== false;
     const validated = validate(updateEntrySchema({ titled }), data);
@@ -90,7 +143,6 @@ async function updateOne(params: {
     const fields = patch
         ? await toStoredFields(patch, patchedFieldNames, {
               repository,
-              db,
               entryType,
               currentEntry,
               status: validated.status,
@@ -122,7 +174,7 @@ async function updateOne(params: {
     );
 
     const entry = asEntry(
-        await repository.update(id, {
+        await repository.update(currentEntry.id, {
             title: validated.title,
             slug,
             fields,

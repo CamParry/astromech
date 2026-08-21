@@ -706,14 +706,10 @@ describe('bulk', () => {
         expect(res.every((e) => e.status === 'published')).toBe(true);
     });
 
-    // CHARACTERIZED: bulk ops run inside one drizzle transaction. A failing id
-    // throws BulkOperationError carrying failedId + the ids that succeeded
-    // before it; the whole batch is rolled back.
-    //
-    // NOTE: on libsql `:memory:` the transaction rollback leaves the *connection*
-    // poisoned — any later query on the same handle throws "Failed query". So we
-    // assert only the thrown error here and do NOT re-query the same db.
-    it('throws BulkOperationError on a missing id and rolls the batch back', async () => {
+    // CHARACTERIZED: update loads every id before opening a transaction, so a
+    // missing id fails fast with the plain not-found error and never enters
+    // the write loop — nothing is modified, so there is nothing to roll back.
+    it('a missing id in a bulk update fails before any write, atomically', async () => {
         const a = await api.create({ type: 'post', title: 'A' });
         const b = await api.create({ type: 'post', title: 'B' });
 
@@ -723,11 +719,12 @@ describe('bulk', () => {
                 id: [a.id, 'missing-id', b.id],
                 data: { title: 'X' },
             })
-        ).rejects.toMatchObject({
-            name: 'BulkOperationError',
-            failedId: 'missing-id',
-            succeededBefore: [a.id],
-        });
+        ).rejects.toThrow(/missing-id/);
+
+        const aAfter = await api.get({ type: 'post', id: a.id, full: true });
+        const bAfter = await api.get({ type: 'post', id: b.id, full: true });
+        expect(aAfter?.title).not.toBe('X');
+        expect(bAfter?.title).not.toBe('X');
     });
 
     it('bulk update rejecting an empty array is a no-op (no error)', async () => {
