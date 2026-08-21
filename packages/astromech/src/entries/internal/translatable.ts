@@ -6,6 +6,7 @@
 
 import type { EntryRepository } from '../repository/types';
 import type { Entry, JsonObject, ResolvedEntryType } from '@/types/index';
+import { asEntry } from './records';
 import { getNonTranslatableFieldNames } from './type-config';
 
 /**
@@ -66,4 +67,28 @@ export async function propagateSharedFields(params: {
         if (value !== undefined) values[name] = value;
     }
     await repository.translatable.propagateFields(entry.localeGroup, entry.id, values);
+}
+
+/**
+ * Add each entry's live locale siblings to the batch, deduplicated by id
+ * (input entries first). A storage without `translatable` has no siblings to
+ * add. Shared by the delete and trash operations for `cascadeLocales`.
+ */
+export async function withLocaleSiblings(
+    repository: EntryRepository,
+    entries: readonly Entry[]
+): Promise<Entry[]> {
+    if (!repository.translatable) return entries as Entry[];
+
+    const byId = new Map(entries.map((entry) => [entry.id, entry]));
+    for (const entry of entries) {
+        const siblings = await repository.translatable.siblings(
+            entry.localeGroup,
+            entry.id
+        );
+        for (const sibling of siblings) {
+            if (!byId.has(sibling.id)) byId.set(sibling.id, asEntry(sibling));
+        }
+    }
+    return Array.from(byId.values());
 }

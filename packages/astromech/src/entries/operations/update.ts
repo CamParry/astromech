@@ -18,7 +18,7 @@ import { runHook } from '@/hooks/index';
 import { getCurrentUser } from '@/request-context/index';
 import { BulkOperationError, UnknownEntryTypeError } from '../errors';
 import { pruneDanglingRelations } from '../internal/dangling-relations';
-import { asEntry, loadAndAssertType } from '../internal/records';
+import { asEntry, loadEntries } from '../internal/records';
 import { indexEntryRelationships } from '../internal/relationships';
 import { uniqueSlugIfChanged } from '../internal/slug';
 import { propagateSharedFields } from '../internal/translatable';
@@ -67,9 +67,7 @@ export async function update(params: EntryUpdateParams): Promise<Entry | Entry[]
 
     // Fetch each row once, at the top: this record feeds both the before-hook
     // context and updateOne (point 3 — no second load per id).
-    const entries = await Promise.all(
-        ids.map((id) => loadAndAssertType(repository, entryType.id, id))
-    );
+    const entries = await loadEntries(repository, entryType.id, ids);
 
     for (const entry of entries) {
         await runHook('entry:beforeUpdate', {

@@ -39,3 +39,16 @@ export async function loadAndAssertType(
     }
     return record as Entry;
 }
+
+/**
+ * Load and type-assert each id in a batch (including trashed rows), preserving
+ * input order. The batch form of `loadAndAssertType`, shared by the delete,
+ * trash and restore operations.
+ */
+export async function loadEntries(
+    repository: EntryRepository,
+    type: string,
+    ids: readonly string[]
+): Promise<Entry[]> {
+    return Promise.all(ids.map((id) => loadAndAssertType(repository, type, id)));
+}

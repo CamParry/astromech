@@ -1,11 +1,10 @@
-import type { EntryRepository } from '../repository/types';
-import type { Entry } from '@/types/index';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { transaction } from '@/database/transaction';
 import { runHook } from '@/hooks/index';
 import { getCurrentUser } from '@/request-context/index';
 import { BulkOperationError } from '../errors';
-import { asEntry, loadAndAssertType } from '../internal/records';
+import { loadEntries } from '../internal/records';
+import { withLocaleSiblings } from '../internal/translatable';
 import { getEntryRepository } from '../repository/registry';
 
 /**
@@ -54,37 +53,4 @@ export async function deleteEntries(params: {
         // A throw here propagates; the write above stays (decisions/0081).
         await runHook('entry:afterDelete', { type, entry, user, permanent: true });
     }
-}
-
-/** Load and type-assert each id, preserving input order. */
-async function loadEntries(
-    repository: EntryRepository,
-    type: string,
-    ids: readonly string[]
-): Promise<Entry[]> {
-    return Promise.all(ids.map((id) => loadAndAssertType(repository, type, id)));
-}
-
-/**
- * Add each entry's live locale siblings to the batch, deduplicated by id
- * (input entries first). A storage without `translatable` has no siblings to
- * add.
- */
-async function withLocaleSiblings(
-    repository: EntryRepository,
-    entries: readonly Entry[]
-): Promise<Entry[]> {
-    if (!repository.translatable) return entries as Entry[];
-
-    const byId = new Map(entries.map((entry) => [entry.id, entry]));
-    for (const entry of entries) {
-        const siblings = await repository.translatable.siblings(
-            entry.localeGroup,
-            entry.id
-        );
-        for (const sibling of siblings) {
-            if (!byId.has(sibling.id)) byId.set(sibling.id, asEntry(sibling));
-        }
-    }
-    return Array.from(byId.values());
 }

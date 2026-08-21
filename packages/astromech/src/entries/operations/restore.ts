@@ -1,8 +1,7 @@
-import type { EntryRepository } from '../repository/types';
 import type { Entry } from '@/types/index';
 import { transaction } from '@/database/transaction';
 import { BulkOperationError } from '../errors';
-import { asEntry, loadAndAssertType } from '../internal/records';
+import { asEntry, loadEntries } from '../internal/records';
 import { requireTrash } from '../internal/type-config';
 import { getEntryRepository } from '../repository/registry';
 
@@ -38,13 +37,4 @@ export async function restoreEntries(params: {
         }
         return rows;
     });
-}
-
-/** Load and type-assert each id (including trashed rows), preserving input order. */
-async function loadEntries(
-    repository: EntryRepository,
-    type: string,
-    ids: readonly string[]
-): Promise<Entry[]> {
-    return Promise.all(ids.map((id) => loadAndAssertType(repository, type, id)));
 }
