@@ -217,14 +217,16 @@ thread reviews the diff and runs the gate itself.
 
 **Stage 6 — close out**
 
-- [ ] `ARCHITECTURE.md`: the entries section names `transaction()` as a
-      `database/` function and no longer describes `EntryRepository.transaction`.
-      `TERMINOLOGY.md` if any entry describes the handle.
-- [ ] `apps/docs/configuration/database.md` still states the D1 durability
-      difference; confirm, do not restate.
-- [ ] Open a roadmap file for `users/` and `media/` with the same rules, so the
+- [x] `ARCHITECTURE.md`: names `transaction()` as a `database/` function and adds
+      the `hooks/` leaf, dropping the "hook engine" framing of the plugin runtime.
+      `TERMINOLOGY.md` needed no change (no entry describes the handle).
+- [x] `apps/docs/configuration/database.md`: kept the D1 durability difference,
+      corrected the stale mechanism (the removed `EntryRepository.transaction` is
+      now the scoped `transaction()` degrading on `supportsTransactions`).
+- [x] Open a roadmap file for `users/` and `media/` with the same rules, so the
       repository `delete` in each (which already calls
       `createRelationshipRepository(db ?? getDb())`) is brought onto the scope.
+      (`roadmap/planned/flatten-user-and-media-operations.md`)
 
 ## Not changing
 

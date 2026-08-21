@@ -95,11 +95,11 @@ waiting to be filled. D1's only atomicity primitive is `batch()`, which
 executes a list of statements prepared up front — it cannot interleave
 application logic, so it cannot implement an interactive transaction.
 
-`d1()` therefore declares `supportsTransactions: false`, and the entry repository
-**omits its optional `transaction` method** entirely. The operations that would
-otherwise use one — entry create (row + relationship rows), bulk operations,
-and staged-entry merge — already check for it and fall back to sequential
-writes.
+`d1()` therefore declares `supportsTransactions: false`. The scoped
+`transaction(fn)` in `database/` reads that flag: when it is false it runs `fn`
+once with no transaction. So every operation that wraps its writes in
+`transaction()` — entry create, update, delete, trash, restore, duplicate and
+staged-entry merge — **degrades to sequential writes** on D1.
 
 The practical consequence: on D1, a failure partway through one of those
 operations can leave the earlier writes committed. On libsql the same operation

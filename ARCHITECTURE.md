@@ -54,7 +54,8 @@ plugin-authoring API (`definePluginTable`, `createRepository`, codec helpers,
 `Table` type vocabulary, …) is part of the root `astromech` export, not a
 separate subpath. They prove the public surface can build a real plugin;
 cross-package isolation is enforced by each package's `exports` boundary at
-publish time. The plugin **runtime** (hook engine) stays a core capability.
+publish time. The plugin **runtime** stays a core capability; hooks themselves
+live in the `hooks/` leaf it registers into.
 
 Key invariants:
 
@@ -182,7 +183,7 @@ packages/
 │   │   ├── policies/       # authorization policies over the manifest — what an actor may do, not a per-request guard — enforcement (scoped-services), method filtering, manifest annotation and confirmation; no domain logic here
 │   │   │
 │   │   │   ── plugin runtime (capability) ──────────────────────────────────
-│   │   ├── plugins/        # plugins/runtime (hook engine) only — first-party plugins live in packages/plugins/; it imports the domains directly to build PluginContext
+│   │   ├── plugins/        # plugins/runtime only — registers plugin hooks into the hooks/ leaf; first-party plugins live in packages/plugins/; it imports the domains directly to build PluginContext
 │   │   │
 │   │   │   ── domains ────────────────────────────────────────────────────
 │   │   ├── entries/        # entries domain: service (assembler) · operations/ · internal/ · tables · schema · methods · visibility · capabilities · type-ids.shared · entry-url.shared
@@ -193,12 +194,13 @@ packages/
 │   │   │
 │   │   │   ── capabilities ───────────────────────────────────────────────
 │   │   ├── config/         # the config pipeline: load (jiti) · resolve (orchestration) + its named steps · validate/ · admin-config · registry (setConfig/getConfig)
-│   │   ├── database/       # Kysely client/drivers + tables.ts aggregator + migrations.ts (runMigrations / drift check)
+│   │   ├── database/       # Kysely client/drivers + tables.ts aggregator + migrations.ts (runMigrations / drift check) + transaction.ts (the scoped transaction(fn) getDb() joins)
 │   │   ├── storage/        # blob-storage registry + drivers/ (filesystem, r2, s3)
 │   │   ├── cloudflare/     # binding-name resolution across Workers and Node
 │   │   ├── permissions/    # permission model: roles, grammar, BUILT_IN_ROLES, can()
 │   │   ├── fields/         # field/column builder, formatters, rich-text, helpers
 │   │   ├── request-context/ # the AsyncLocalStorage request store, holding the Request that identity resolves from on first ask: index.ts (barrel) + request-context.ts (the service-free leaf)
+│   │   ├── hooks/          # the one hook runner (addHook/runHook/hasHook) — a leaf over types/ and the globalThis registry; a handler throw propagates; the plugin runtime registers into it
 │   │   ├── email/          # email drivers
 │   │   ├── ai/             # model access: getModel / hasModel over the configured models
 │   │   ├── cron/           # scheduled-job infrastructure
