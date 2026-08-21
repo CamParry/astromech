@@ -7,12 +7,14 @@ measurements and the work.
 
 ## What is actually true today
 
-`ARCHITECTURE.md` describes `*.shared.ts` as marking a domain file the admin
-bundle may hold, and says the suffix limits that file to importing the leaves,
-`fields/`, and other `*.shared.ts` files. No tool checks either half. The rules
-that did — `admin-only-client-and-pure-leaves` and
+Nothing checks the suffix and nothing documents it either. The rules that
+enforced it — `admin-only-client-and-pure-leaves` and
 `shared-files-stay-browser-safe` — went with dependency-cruiser in
-`decisions/0070-drop-dependency-cruiser.md`.
+`decisions/0070-drop-dependency-cruiser.md`, and the `ARCHITECTURE.md` rewrite
+in commit `5dd4a8ce` dropped the paragraph that described it. Seven files carry
+a marker that now has no stated meaning anywhere in the repo, which strengthens
+the case below rather than weakening it: whatever replaces it has to be
+something a reader can find.
 
 `packages/astromech/src/integrations/astro/vite.ts` aliases `'@/'` to the whole
 of the package's `src/` inside the consuming project's Vite graph. So the admin
@@ -70,9 +72,15 @@ are cheap once it lands.
       in `packages/astromech/package.json` and its `publishConfig`. Moves no
       source files.
 - [ ] **Retire the `*.shared.ts` suffix** once the entrypoint exists and the
-      admin reaches it. Seven files, plus `ARCHITECTURE.md`. Not before: a
-      marker that enforces nothing is still better than no marker and no
-      entrypoint.
+      admin reaches it. Seven files. Not before: a marker that enforces nothing
+      is still better than no marker and no entrypoint.
+- [ ] **Settle the three `.shared` stems in `entries/`**, handed on from
+      `roadmap/completed/entries-naming-consistency.md`. `entry-url.shared.ts`
+      and `entry-types.shared.ts` prefix with `entry-`;
+      `validation-mode.shared.ts` does not, though it exports
+      `entryValidationMode`. Inside `entries/` the prefix is arguably redundant,
+      which argues for `url.shared.ts`; `entry-url` reads better at the import
+      site. Moot if the suffix retires.
 - [ ] **Fix the two mislabelled files** above. Independent of everything else —
       whether the suffix survives or not, these two do not belong in the set.
 - [ ] **Decide what checks the entrypoint's contents.** Directus issue 26613 is
