@@ -2,7 +2,7 @@
  * Query and mutation hooks for users.
  */
 
-import type { User, UserQueryParams } from '@/types/index';
+import type { User, UserCreateData, UserQueryParams } from '@/types/index';
 import {
     queryOptions,
     useMutation,
@@ -38,8 +38,7 @@ export function useCreateUser(options?: { onSuccess?: (user: User) => void }) {
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: (data: { name: string; email: string; roleSlug: string }) =>
-            astromechClient.users.create(data),
+        mutationFn: (data: UserCreateData) => astromechClient.users.create({ data }),
         onSuccess: (user) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.users.all() });
             toast({ message: t('users.updated'), variant: 'success' });

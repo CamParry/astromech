@@ -93,7 +93,9 @@ async function freshApp(role: Role = adminRole): Promise<OpenAPIHono> {
     manifest = generateMethodManifest(resolved, [testPlugin]);
     setMethodManifest(manifest);
 
-    signedInUser = await usersService.create({ email: 'rpc@test.dev', name: 'RPC' });
+    signedInUser = await usersService.create({
+        data: { email: 'rpc@test.dev', name: 'RPC' },
+    });
     signIn(signedInUser, role);
 
     api = `${resolved.basePath}/api`;
@@ -224,13 +226,18 @@ describe('POST /rpc/:id', () => {
 
     it('422s a body the contract schema rejects', async () => {
         const app = await freshApp();
-        const res = await call(app, 'users.create', { email: 42, name: 'Nope' });
+        const res = await call(app, 'users.create', {
+            data: { email: 42, name: 'Nope' },
+        });
         expect(res.status).toBe(422);
         const body = (await res.json()) as {
             error: { code: string; details: { fields: Record<string, string[]> } };
         };
         expect(body.error.code).toBe('VALIDATION_FAILED');
-        expect(Object.keys(body.error.details.fields)).toContain('email');
+        // The RPC body IS the argument object, and no `bodyKey` rebases the path
+        // as the REST route does — so the field is named from `data`, as
+        // `users.update`'s already is.
+        expect(Object.keys(body.error.details.fields)).toContain('data.email');
     });
 
     it('401s without a session', async () => {
@@ -245,8 +252,7 @@ describe('POST /rpc/:id', () => {
     it('403s a role that lacks the method’s permission, naming it', async () => {
         const app = await freshApp(roleWith([]));
         const res = await call(app, 'users.create', {
-            email: 'new@test.dev',
-            name: 'New',
+            data: { email: 'new@test.dev', name: 'New' },
         });
         expect(res.status).toBe(403);
         const body = (await res.json()) as ErrorBody;

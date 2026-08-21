@@ -38,7 +38,9 @@ const listQuery = z.object({
 
 export const USERS_ROUTES: RestRoute[] = attachHandlers(USERS_ROUTE_SPECS, {
     'get /': { args: queryArgs, query: listQuery },
-    'post /': { args: (c) => c.req.json<Record<string, unknown>>() },
+    'post /': {
+        args: async (c) => ({ data: await c.req.json<Record<string, unknown>>() }),
+    },
 });
 
 mountRestRoutes(router, usersContract, USERS_ROUTES);

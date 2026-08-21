@@ -1,4 +1,4 @@
-import type { JsonObject, User } from '@/types/index';
+import type { JsonObject, User, UserCreateData } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
@@ -14,13 +14,8 @@ import { createUserSchema } from '../schema';
 import { query } from './query';
 
 /** Create a CMS user, running its custom fields through the field pipeline. */
-export async function create(params: {
-    email: string;
-    name: string;
-    fields?: JsonObject;
-    roleSlug?: string;
-}): Promise<User> {
-    const validated = validate(createUserSchema, params);
+export async function create(params: { data: UserCreateData }): Promise<User> {
+    const validated = validate(createUserSchema, params.data);
 
     const config = getConfig();
     const fieldDefs = flattenFieldNodes(config.users?.fields ?? []);

@@ -256,16 +256,19 @@ export type SettingsService = {
     set(params: { key: string; value: JsonValue }): Promise<Setting>;
 };
 
+/** The row `users.create` writes. */
+export type UserCreateData = {
+    email: string;
+    name: string;
+    fields?: JsonObject;
+    roleSlug?: string;
+};
+
 /** The users domain's service contract. */
 export type UsersService = {
     query(params?: UserQueryParams): Promise<QueryResult<User>>;
     get(params: { id: string }): Promise<User | null>;
-    create(params: {
-        email: string;
-        name: string;
-        fields?: JsonObject;
-        roleSlug?: string;
-    }): Promise<User>;
+    create(params: { data: UserCreateData }): Promise<User>;
     update(params: {
         id: string;
         data: Partial<{

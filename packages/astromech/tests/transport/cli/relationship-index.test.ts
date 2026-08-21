@@ -188,9 +188,11 @@ async function seedContent(): Promise<{ article: string; post: string; media: st
         data: { fields: { label: 'One', post: post.id } },
     });
     await usersService.create({
-        email: 'owner@test.dev',
-        name: 'Owner',
-        fields: { avatar: mediaId },
+        data: {
+            email: 'owner@test.dev',
+            name: 'Owner',
+            fields: { avatar: mediaId },
+        },
     });
     await mediaService.update({ id: mediaId, data: { fields: { credit: post.id } } });
 

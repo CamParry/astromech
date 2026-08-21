@@ -215,7 +215,7 @@ export const ENTRIES_ROUTE_SPECS = [
 
 export const USERS_ROUTE_SPECS = [
     { verb: 'get', path: '/', id: 'users.query', envelope: 'raw' },
-    { verb: 'post', path: '/', id: 'users.create', status: 201 },
+    { verb: 'post', path: '/', id: 'users.create', status: 201, bodyKey: 'data' },
     { verb: 'get', path: '/:id', id: 'users.get', handler: 'bespoke' },
     {
         verb: 'put',

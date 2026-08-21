@@ -65,7 +65,9 @@ describe('usersService.query', () => {
 
 describe('usersService create / get / update / delete', () => {
     it('creates with the default role and decoded timestamps', async () => {
-        const created = await usersService.create({ email: 'new@test.dev', name: 'New' });
+        const created = await usersService.create({
+            data: { email: 'new@test.dev', name: 'New' },
+        });
 
         expect(created.roleSlug).toBe(DEFAULT_ROLE_SLUG);
         expect(created.createdAt).toBeInstanceOf(Date);
@@ -75,17 +77,21 @@ describe('usersService create / get / update / delete', () => {
 
     it('creates with an explicit role', async () => {
         const created = await usersService.create({
-            email: 'ed@test.dev',
-            name: 'Ed',
-            roleSlug: 'editor',
+            data: {
+                email: 'ed@test.dev',
+                name: 'Ed',
+                roleSlug: 'editor',
+            },
         });
         expect(created.roleSlug).toBe('editor');
     });
 
     it('leaves columns absent from the patch alone', async () => {
         const created = await usersService.create({
-            email: 'p@test.dev',
-            name: 'Patchable',
+            data: {
+                email: 'p@test.dev',
+                name: 'Patchable',
+            },
         });
 
         const patched = await usersService.update({
@@ -109,8 +115,10 @@ describe('usersService create / get / update / delete', () => {
 
     it('deletes the row', async () => {
         const created = await usersService.create({
-            email: 'd@test.dev',
-            name: 'Doomed',
+            data: {
+                email: 'd@test.dev',
+                name: 'Doomed',
+            },
         });
 
         await usersService.delete({ id: created.id });

@@ -273,7 +273,9 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
 
     it('drops a dead media id and a dead user id', async () => {
         const mediaId = await createMedia();
-        const user = await usersService.create({ email: 'gone@test.dev', name: 'Gone' });
+        const user = await usersService.create({
+            data: { email: 'gone@test.dev', name: 'Gone' },
+        });
         const doc = await api.create({
             type: 'doc',
             data: { title: 'Doc', fields: { avatar: mediaId, owner: user.id } },

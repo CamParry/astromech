@@ -505,7 +505,9 @@ const CASES: Case[] = [
         name: 'users.create',
         payload: { data: user },
         call: () =>
-            client.users.create({ email: 'a@b.c', name: 'A', roleSlug: 'editor' }),
+            client.users.create({
+                data: { email: 'a@b.c', name: 'A', roleSlug: 'editor' },
+            }),
         url: '/cms/api/users',
         method: 'POST',
         body: { email: 'a@b.c', name: 'A', roleSlug: 'editor' },

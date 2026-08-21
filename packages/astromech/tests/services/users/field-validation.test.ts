@@ -40,7 +40,9 @@ beforeEach(async () => {
 describe('usersService.create — required field', () => {
     it('rejects when required custom field is absent', async () => {
         await expect(
-            usersService.create({ email: uniqueEmail(), name: 'Alice', fields: {} })
+            usersService.create({
+                data: { email: uniqueEmail(), name: 'Alice', fields: {} },
+            })
         ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: { bio: ['This field is required'] },
@@ -50,9 +52,11 @@ describe('usersService.create — required field', () => {
     it('rejects when required custom field is empty string', async () => {
         await expect(
             usersService.create({
-                email: uniqueEmail(),
-                name: 'Alice',
-                fields: { bio: '' },
+                data: {
+                    email: uniqueEmail(),
+                    name: 'Alice',
+                    fields: { bio: '' },
+                },
             })
         ).rejects.toMatchObject({
             name: 'ValidationError',
@@ -64,18 +68,22 @@ describe('usersService.create — required field', () => {
 describe('usersService.create — defaultValue', () => {
     it('applies defaultValue when field is absent', async () => {
         const user = await usersService.create({
-            email: uniqueEmail(),
-            name: 'Alice',
-            fields: { bio: 'Hello' },
+            data: {
+                email: uniqueEmail(),
+                name: 'Alice',
+                fields: { bio: 'Hello' },
+            },
         });
         expect(user.fields?.tier).toBe('free');
     });
 
     it('does not override an explicit value with the default', async () => {
         const user = await usersService.create({
-            email: uniqueEmail(),
-            name: 'Alice',
-            fields: { bio: 'Hello', tier: 'pro' },
+            data: {
+                email: uniqueEmail(),
+                name: 'Alice',
+                fields: { bio: 'Hello', tier: 'pro' },
+            },
         });
         expect(user.fields?.tier).toBe('pro');
     });
@@ -85,9 +93,11 @@ describe('usersService.create — slug field', () => {
     it('rejects a value that is not already a slug', async () => {
         await expect(
             usersService.create({
-                email: uniqueEmail(),
-                name: 'Alice',
-                fields: { bio: 'Hi', handle: 'Alice Smith' },
+                data: {
+                    email: uniqueEmail(),
+                    name: 'Alice',
+                    fields: { bio: 'Hi', handle: 'Alice Smith' },
+                },
             })
         ).rejects.toMatchObject({
             name: 'ValidationError',
@@ -101,9 +111,11 @@ describe('usersService.create — slug field', () => {
 
     it('accepts and stores an already-normal slug', async () => {
         const user = await usersService.create({
-            email: uniqueEmail(),
-            name: 'Alice',
-            fields: { bio: 'Hi', handle: 'alice-smith' },
+            data: {
+                email: uniqueEmail(),
+                name: 'Alice',
+                fields: { bio: 'Hi', handle: 'alice-smith' },
+            },
         });
         expect(user.fields?.handle).toBe('alice-smith');
     });
@@ -112,15 +124,19 @@ describe('usersService.create — slug field', () => {
 describe('usersService.create — uniqueness', () => {
     it('rejects a duplicate badge', async () => {
         await usersService.create({
-            email: uniqueEmail(),
-            name: 'Alice',
-            fields: { bio: 'Hi', badge: 'gold' },
+            data: {
+                email: uniqueEmail(),
+                name: 'Alice',
+                fields: { bio: 'Hi', badge: 'gold' },
+            },
         });
         await expect(
             usersService.create({
-                email: uniqueEmail(),
-                name: 'Bob',
-                fields: { bio: 'Hey', badge: 'gold' },
+                data: {
+                    email: uniqueEmail(),
+                    name: 'Bob',
+                    fields: { bio: 'Hey', badge: 'gold' },
+                },
             })
         ).rejects.toMatchObject({
             name: 'ValidationError',
@@ -130,14 +146,18 @@ describe('usersService.create — uniqueness', () => {
 
     it('accepts a different badge', async () => {
         await usersService.create({
-            email: uniqueEmail(),
-            name: 'Alice',
-            fields: { bio: 'Hi', badge: 'gold' },
+            data: {
+                email: uniqueEmail(),
+                name: 'Alice',
+                fields: { bio: 'Hi', badge: 'gold' },
+            },
         });
         const user = await usersService.create({
-            email: uniqueEmail(),
-            name: 'Bob',
-            fields: { bio: 'Hey', badge: 'silver' },
+            data: {
+                email: uniqueEmail(),
+                name: 'Bob',
+                fields: { bio: 'Hey', badge: 'silver' },
+            },
         });
         expect(user.fields?.badge).toBe('silver');
     });
@@ -146,9 +166,11 @@ describe('usersService.create — uniqueness', () => {
 describe('usersService.update — validation', () => {
     it('rejects when a required field is removed on update', async () => {
         const user = await usersService.create({
-            email: uniqueEmail(),
-            name: 'Alice',
-            fields: { bio: 'Hi' },
+            data: {
+                email: uniqueEmail(),
+                name: 'Alice',
+                fields: { bio: 'Hi' },
+            },
         });
         await expect(
             usersService.update({ id: user.id, data: { fields: { bio: '' } } })
@@ -160,9 +182,11 @@ describe('usersService.update — validation', () => {
 
     it('persists validated values on valid update', async () => {
         const user = await usersService.create({
-            email: uniqueEmail(),
-            name: 'Alice',
-            fields: { bio: 'Hi' },
+            data: {
+                email: uniqueEmail(),
+                name: 'Alice',
+                fields: { bio: 'Hi' },
+            },
         });
         const updated = await usersService.update({
             id: user.id,
@@ -177,9 +201,11 @@ describe('usersService.update — validation', () => {
 describe('usersService.update — uniqueness self-exclusion', () => {
     it('does not trip "Already in use" when the user keeps its own badge', async () => {
         const user = await usersService.create({
-            email: uniqueEmail(),
-            name: 'Alice',
-            fields: { bio: 'Hi', badge: 'mycode' },
+            data: {
+                email: uniqueEmail(),
+                name: 'Alice',
+                fields: { bio: 'Hi', badge: 'mycode' },
+            },
         });
         const updated = await usersService.update({
             id: user.id,
@@ -192,14 +218,18 @@ describe('usersService.update — uniqueness self-exclusion', () => {
 
     it('rejects when badge collides with a different user', async () => {
         await usersService.create({
-            email: uniqueEmail(),
-            name: 'Alice',
-            fields: { bio: 'Hi', badge: 'taken' },
+            data: {
+                email: uniqueEmail(),
+                name: 'Alice',
+                fields: { bio: 'Hi', badge: 'taken' },
+            },
         });
         const bob = await usersService.create({
-            email: uniqueEmail(),
-            name: 'Bob',
-            fields: { bio: 'Hey', badge: 'free' },
+            data: {
+                email: uniqueEmail(),
+                name: 'Bob',
+                fields: { bio: 'Hey', badge: 'free' },
+            },
         });
         await expect(
             usersService.update({
@@ -216,9 +246,11 @@ describe('usersService.update — uniqueness self-exclusion', () => {
 describe('usersService.update — fields merge', () => {
     it('keeps fields the patch omits', async () => {
         const user = await usersService.create({
-            email: uniqueEmail(),
-            name: 'Alice',
-            fields: { bio: 'Hi', badge: 'gold' },
+            data: {
+                email: uniqueEmail(),
+                name: 'Alice',
+                fields: { bio: 'Hi', badge: 'gold' },
+            },
         });
         const updated = await usersService.update({
             id: user.id,
@@ -231,9 +263,11 @@ describe('usersService.update — fields merge', () => {
 describe('usersService.update — no fields key', () => {
     it('updates name without triggering field validation', async () => {
         const user = await usersService.create({
-            email: uniqueEmail(),
-            name: 'Alice',
-            fields: { bio: 'Hi' },
+            data: {
+                email: uniqueEmail(),
+                name: 'Alice',
+                fields: { bio: 'Hi' },
+            },
         });
         const updated = await usersService.update({
             id: user.id,

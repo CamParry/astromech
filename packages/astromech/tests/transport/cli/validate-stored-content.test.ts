@@ -133,9 +133,11 @@ describe('validateStoredContent', () => {
             data: { title: 'Fine', fields: { rating: 3, code: 'a' } },
         });
         await usersService.create({
-            email: 'owner@test.dev',
-            name: 'Owner',
-            fields: { nickname: 'ok' },
+            data: {
+                email: 'owner@test.dev',
+                name: 'Owner',
+                fields: { nickname: 'ok' },
+            },
         });
 
         const report = await validateStoredContent();
@@ -158,9 +160,11 @@ describe('validateStoredContent', () => {
             },
         });
         await usersService.create({
-            email: 'owner@test.dev',
-            name: 'Owner',
-            fields: { nickname: 'ok' },
+            data: {
+                email: 'owner@test.dev',
+                name: 'Owner',
+                fields: { nickname: 'ok' },
+            },
         });
         await settingsService.set({ key: 'branding', value: { company: 'Acme' } });
         const before = await snapshot();
@@ -261,9 +265,11 @@ describe('validateStoredContent', () => {
 
     it('reports a user row against the current rules', async () => {
         const user = await usersService.create({
-            email: 'long@test.dev',
-            name: 'Long',
-            fields: { nickname: 'ok' },
+            data: {
+                email: 'long@test.dev',
+                name: 'Long',
+                fields: { nickname: 'ok' },
+            },
         });
         await createUserRepository().update(user.id, {
             fields: { nickname: 'far too long' },

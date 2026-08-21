@@ -169,9 +169,11 @@ describe('mediaService.usedBy', () => {
     it('returns a user source with a null sourceType', async () => {
         const mediaId = await createMedia();
         const user = await usersService.create({
-            email: 'avatar@test.dev',
-            name: 'Avatar Owner',
-            fields: { avatar: mediaId },
+            data: {
+                email: 'avatar@test.dev',
+                name: 'Avatar Owner',
+                fields: { avatar: mediaId },
+            },
         });
 
         expect(await mediaService.usedBy({ id: mediaId })).toEqual([

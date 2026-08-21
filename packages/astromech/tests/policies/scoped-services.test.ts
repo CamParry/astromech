@@ -340,7 +340,7 @@ describe('scopedServices', () => {
         const scoped = scopedServices(role('users:read'));
 
         try {
-            void scoped.users.create({ email: 'a@b.dev', name: 'A' });
+            void scoped.users.create({ data: { email: 'a@b.dev', name: 'A' } });
             expect.unreachable('users.create must be refused for a read-only role');
         } catch (e) {
             expect(e).toBeInstanceOf(PermissionDeniedError);

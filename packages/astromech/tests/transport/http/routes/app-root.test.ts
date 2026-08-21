@@ -64,7 +64,7 @@ describe('GET /setup/check', () => {
 
     it('reports needsSetup: false once a user exists', async () => {
         const app = await freshApp();
-        await usersService.create({ email: 'first@test.dev', name: 'First' });
+        await usersService.create({ data: { email: 'first@test.dev', name: 'First' } });
         const res = await app.request(`${api}/setup/check`);
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({ needsSetup: false });
@@ -84,8 +84,10 @@ describe('GET /me', () => {
     it('returns { data: { user, role } } with a session', async () => {
         const app = await freshApp();
         const user = await usersService.create({
-            email: 'me@test.dev',
-            name: 'Me',
+            data: {
+                email: 'me@test.dev',
+                name: 'Me',
+            },
         });
         signIn(user);
 
@@ -131,7 +133,9 @@ describe('requireAuth covers every mounted domain router', () => {
 
     it('404s an unknown path with the canonical error envelope', async () => {
         const app = await freshApp();
-        const user = await usersService.create({ email: 'x@test.dev', name: 'X' });
+        const user = await usersService.create({
+            data: { email: 'x@test.dev', name: 'X' },
+        });
         signIn(user);
 
         const res = await app.request(`${api}/nope`);

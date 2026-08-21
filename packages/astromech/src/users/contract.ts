@@ -1,7 +1,8 @@
 /**
  * Users service method contracts — declared permission + effect per users
- * verb. `input` is the METHOD's argument object, not the HTTP body: `update`
- * takes `{ id, data }`, so the contract composes the body schema into that shape.
+ * verb. `input` is the METHOD's argument object, not the HTTP body: `create`
+ * takes `{ data }` and `update` takes `{ id, data }`, so the contract composes
+ * the body schema into that shape.
  */
 
 import type { ServiceMethodContract } from '@/types/index';
@@ -23,7 +24,7 @@ export const usersContract = {
     },
     create: {
         summary: 'Create a new CMS user.',
-        input: createUserSchema,
+        input: z.object({ data: createUserSchema }),
         permission: 'users:create',
         mutates: true,
     },

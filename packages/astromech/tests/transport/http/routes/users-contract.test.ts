@@ -22,9 +22,11 @@ function app(role: Role = adminRole, user: User = testUser) {
 /** Create a user through the Local API (no permission checks). */
 async function makeUser(email: string, name: string, roleSlug?: string): Promise<User> {
     return usersService.create({
-        email,
-        name,
-        ...(roleSlug !== undefined && { roleSlug }),
+        data: {
+            email,
+            name,
+            ...(roleSlug !== undefined && { roleSlug }),
+        },
     });
 }
 

@@ -28,10 +28,14 @@ let stranger: User;
 beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeTestConfig());
-    owner = await usersService.create({ email: 'owner@test.dev', name: 'Owner' });
+    owner = await usersService.create({
+        data: { email: 'owner@test.dev', name: 'Owner' },
+    });
     stranger = await usersService.create({
-        email: 'stranger@test.dev',
-        name: 'Stranger',
+        data: {
+            email: 'stranger@test.dev',
+            name: 'Stranger',
+        },
     });
     await notify({
         target: { user: owner.id },

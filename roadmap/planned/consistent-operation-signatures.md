@@ -110,10 +110,18 @@ safety net; nothing here changes behaviour.
 
 **Stage 2 — `users.create` takes `data`**
 
-- [ ] `types/services.ts`, `users/contract.ts`, `users/operations/create.ts`,
-      `http-routes.shared.ts` (`bodyKey: 'data'`), `routes/users.ts`,
-      `admin/hooks/users.ts`.
-- [ ] Tests: thirty-six calls across twelve files, mechanical.
+- [x] `types/services.ts` (`UserCreateData`), `users/contract.ts`,
+      `users/operations/create.ts`, `http-routes.shared.ts` (`bodyKey: 'data'`),
+      `routes/users.ts`, `admin/hooks/users.ts`.
+- [x] Tests: thirty-six calls across twelve files, mechanical but for the RPC
+      field path below.
+
+One behaviour change, on the RPC transport only. `POST /rpc/:id` passes the
+whole body to the contract schema and calls `fromZodError` with no `bodyKey`
+(`packages/astromech/src/transport/http/routes/rpc.ts:41`), so a rejected
+`create` field is now named `data.email` rather than `email`, as `update`'s
+already was. The REST routes are unaffected: they declare `bodyKey: 'data'`,
+which rebases the path back to the flat body the caller sent.
 
 **Stage 3 — verb-noun names**
 
@@ -129,7 +137,9 @@ safety net; nothing here changes behaviour.
       `code` skill gets the two rules if it does not state them; check before
       adding.
 - [ ] A decision record for the two rules, naming `overrides` and `value` as
-      the deliberate exceptions and why.
+      the deliberate exceptions and why, and recording that a nested `data`
+      moves the RPC transport's validation field paths under `data.` while
+      leaving REST's alone.
 
 ## Not changing
 
