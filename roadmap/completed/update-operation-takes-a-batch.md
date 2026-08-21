@@ -57,8 +57,8 @@ does": the atomicity is the same, the error envelope is dropped.
 
 ## The work
 
-One branch, `update-operation-takes-a-batch`, one commit per stage, a `coder`
-sub-agent per stage, the gate run by the main thread.
+Three commits on `main`, one per stage, each written by a `coder` sub-agent and
+gated by the main thread.
 
 **Stage 1 — `update` and the status wrappers**
 
@@ -87,7 +87,7 @@ sub-agent per stage, the gate run by the main thread.
 
 **Stage 3 — close out**
 
-- [ ] A decision record for the error-envelope rule (single id unwraps, the
+- [x] A decision record for the error-envelope rule (single id unwraps, the
       HTTP layer looks through the envelope), marked as refining 0077.
 
 ## Not changing
