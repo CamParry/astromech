@@ -107,24 +107,28 @@ export type TypedEntriesServiceFor<EntryMap> = {
 
     create<T extends keyof EntryMap>(params: {
         type: T;
-        title: string;
-        slug?: string;
-        locale?: string;
-        localeGroup?: string;
-        fields?: Partial<FieldsForMap<EntryMap, T>> & { readonly __shape?: 'full' };
-        status?: EntryStatus;
-        publishedAt?: Date | null;
+        data: {
+            title: string;
+            slug?: string;
+            locale?: string;
+            localeGroup?: string;
+            fields?: Partial<FieldsForMap<EntryMap, T>> & { readonly __shape?: 'full' };
+            status?: EntryStatus;
+            publishedAt?: Date | null;
+        };
     }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>>;
     create(params: {
         type: string;
-        /** Optional for `titleField: false` types; runtime-enforced otherwise. */
-        title?: string;
-        slug?: string;
-        locale?: string;
-        localeGroup?: string;
-        fields?: Record<string, unknown>;
-        status?: EntryStatus;
-        publishedAt?: Date | null;
+        data: {
+            /** Optional for `titleField: false` types; runtime-enforced otherwise. */
+            title?: string;
+            slug?: string;
+            locale?: string;
+            localeGroup?: string;
+            fields?: Record<string, unknown>;
+            status?: EntryStatus;
+            publishedAt?: Date | null;
+        };
     }): Promise<Entry>;
 
     update<T extends keyof EntryMap>(params: {

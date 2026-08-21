@@ -204,7 +204,7 @@ describe('POST /rpc/:id', () => {
 
     it('takes the entry type from the id, not from the body', async () => {
         const app = await freshApp();
-        await entriesService.create({ type: 'post', title: 'Hello' });
+        await entriesService.create({ type: 'post', data: { title: 'Hello' } });
 
         // `full` is the caller's to pass; `type` is not, and is never in the body.
         const res = await call(app, 'entries.post.query', { full: true });

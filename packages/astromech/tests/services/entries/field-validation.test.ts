@@ -74,9 +74,7 @@ describe('create — required field', () => {
         await expect(
             api.create({
                 type: 'post',
-                title: 'T',
-                status: 'published',
-                fields: {},
+                data: { title: 'T', status: 'published', fields: {} },
             })
         ).rejects.toMatchObject({
             name: 'ValidationError',
@@ -88,9 +86,7 @@ describe('create — required field', () => {
         await expect(
             api.create({
                 type: 'post',
-                title: 'T',
-                status: 'published',
-                fields: { title_text: '' },
+                data: { title: 'T', status: 'published', fields: { title_text: '' } },
             })
         ).rejects.toMatchObject({
             name: 'ValidationError',
@@ -103,9 +99,7 @@ describe('validation stage — derived from the status the row will hold', () =>
     it('an unpublished create with a missing required field succeeds', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'Draft',
-            status: 'unpublished',
-            fields: {},
+            data: { title: 'Draft', status: 'unpublished', fields: {} },
         });
         expect(entry.fields.title_text).toBeUndefined();
     });
@@ -114,10 +108,12 @@ describe('validation stage — derived from the status the row will hold', () =>
         await expect(
             api.create({
                 type: 'post',
-                title: 'Later',
-                status: 'scheduled',
-                publishedAt: new Date(Date.now() + 60_000),
-                fields: {},
+                data: {
+                    title: 'Later',
+                    status: 'scheduled',
+                    publishedAt: new Date(Date.now() + 60_000),
+                    fields: {},
+                },
             })
         ).rejects.toMatchObject({
             name: 'ValidationError',
@@ -129,9 +125,11 @@ describe('validation stage — derived from the status the row will hold', () =>
         await expect(
             api.create({
                 type: 'post',
-                title: 'Draft',
-                status: 'unpublished',
-                fields: { contact_email: 'not-an-email' },
+                data: {
+                    title: 'Draft',
+                    status: 'unpublished',
+                    fields: { contact_email: 'not-an-email' },
+                },
             })
         ).rejects.toMatchObject({
             name: 'ValidationError',
@@ -144,9 +142,7 @@ describe('validation stage — derived from the status the row will hold', () =>
     it('an update that keeps the row published enforces completeness', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'Live',
-            status: 'published',
-            fields: { title_text: 'Hello' },
+            data: { title: 'Live', status: 'published', fields: { title_text: 'Hello' } },
         });
         await expect(
             api.update({
@@ -163,9 +159,11 @@ describe('validation stage — derived from the status the row will hold', () =>
     it('an update of an unpublished row may leave a required field empty', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'Draft',
-            status: 'unpublished',
-            fields: { title_text: 'Hello' },
+            data: {
+                title: 'Draft',
+                status: 'unpublished',
+                fields: { title_text: 'Hello' },
+            },
         });
         const updated = await api.update({
             type: 'post',
@@ -179,9 +177,7 @@ describe('validation stage — derived from the status the row will hold', () =>
     it('an update that publishes the row enforces completeness', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'Draft',
-            status: 'unpublished',
-            fields: {},
+            data: { title: 'Draft', status: 'unpublished', fields: {} },
         });
         await expect(
             api.update({
@@ -198,14 +194,19 @@ describe('validation stage — derived from the status the row will hold', () =>
 
 describe('validation stage — statuses: false', () => {
     it('rejects a missing required field on create', async () => {
-        await expect(api.create({ type: 'snippet', fields: {} })).rejects.toMatchObject({
+        await expect(
+            api.create({ type: 'snippet', data: { fields: {} } })
+        ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: { key: ['This field is required'] },
         });
     });
 
     it('rejects a missing required field on update', async () => {
-        const entry = await api.create({ type: 'snippet', fields: { key: 'k' } });
+        const entry = await api.create({
+            type: 'snippet',
+            data: { fields: { key: 'k' } },
+        });
         await expect(
             api.update({ type: 'snippet', id: entry.id, data: { fields: { key: '' } } })
         ).rejects.toMatchObject({
@@ -219,8 +220,7 @@ describe('create — defaultValue', () => {
     it('applies defaultValue when field is absent', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'T',
-            fields: { title_text: 'Hello' },
+            data: { title: 'T', fields: { title_text: 'Hello' } },
         });
         expect(entry.fields.status_label).toBe('pending');
     });
@@ -228,8 +228,7 @@ describe('create — defaultValue', () => {
     it('does not override an explicit value with the default', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'T',
-            fields: { title_text: 'Hello', status_label: 'active' },
+            data: { title: 'T', fields: { title_text: 'Hello', status_label: 'active' } },
         });
         expect(entry.fields.status_label).toBe('active');
     });
@@ -240,8 +239,10 @@ describe('create — slug validation', () => {
         await expect(
             api.create({
                 type: 'post',
-                title: 'T',
-                fields: { title_text: 'Hello', page_slug: 'My Title' },
+                data: {
+                    title: 'T',
+                    fields: { title_text: 'Hello', page_slug: 'My Title' },
+                },
             })
         ).rejects.toMatchObject({
             name: 'ValidationError',
@@ -256,8 +257,7 @@ describe('create — slug validation', () => {
     it('accepts an already-normalized slug', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'T',
-            fields: { title_text: 'Hello', page_slug: 'my-title' },
+            data: { title: 'T', fields: { title_text: 'Hello', page_slug: 'my-title' } },
         });
         expect(entry.fields.page_slug).toBe('my-title');
     });
@@ -268,8 +268,10 @@ describe('create — email validation', () => {
         await expect(
             api.create({
                 type: 'post',
-                title: 'T',
-                fields: { title_text: 'Hello', contact_email: 'not-an-email' },
+                data: {
+                    title: 'T',
+                    fields: { title_text: 'Hello', contact_email: 'not-an-email' },
+                },
             })
         ).rejects.toMatchObject({
             name: 'ValidationError',
@@ -282,8 +284,10 @@ describe('create — email validation', () => {
     it('accepts a valid email value', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'T',
-            fields: { title_text: 'Hello', contact_email: 'user@example.com' },
+            data: {
+                title: 'T',
+                fields: { title_text: 'Hello', contact_email: 'user@example.com' },
+            },
         });
         expect(entry.fields.contact_email).toBe('user@example.com');
     });
@@ -293,12 +297,14 @@ describe('create — valid fields', () => {
     it('persists coerced field values on success', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'T',
-            fields: {
-                title_text: 'Hello World',
-                contact_email: 'hi@example.com',
-                code: 'abc123',
-                page_slug: 'some-page',
+            data: {
+                title: 'T',
+                fields: {
+                    title_text: 'Hello World',
+                    contact_email: 'hi@example.com',
+                    code: 'abc123',
+                    page_slug: 'some-page',
+                },
             },
         });
         expect(entry.fields.title_text).toBe('Hello World');
@@ -313,14 +319,12 @@ describe('create — uniqueness', () => {
     it('rejects a second entry with a duplicate unique-field value', async () => {
         await api.create({
             type: 'post',
-            title: 'First',
-            fields: { title_text: 'T1', code: 'x' },
+            data: { title: 'First', fields: { title_text: 'T1', code: 'x' } },
         });
         await expect(
             api.create({
                 type: 'post',
-                title: 'Second',
-                fields: { title_text: 'T2', code: 'x' },
+                data: { title: 'Second', fields: { title_text: 'T2', code: 'x' } },
             })
         ).rejects.toMatchObject({
             name: 'ValidationError',
@@ -331,13 +335,11 @@ describe('create — uniqueness', () => {
     it('accepts a different unique-field value', async () => {
         await api.create({
             type: 'post',
-            title: 'First',
-            fields: { title_text: 'T1', code: 'x' },
+            data: { title: 'First', fields: { title_text: 'T1', code: 'x' } },
         });
         const entry = await api.create({
             type: 'post',
-            title: 'Second',
-            fields: { title_text: 'T2', code: 'y' },
+            data: { title: 'Second', fields: { title_text: 'T2', code: 'y' } },
         });
         expect(entry.fields.code).toBe('y');
     });
@@ -347,8 +349,7 @@ describe('update — email validation', () => {
     it('rejects an invalid email value on update', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'T',
-            fields: { title_text: 'Hello' },
+            data: { title: 'T', fields: { title_text: 'Hello' } },
         });
         await expect(
             api.update({
@@ -367,8 +368,7 @@ describe('update — email validation', () => {
     it('persists coerced value on valid update', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'T',
-            fields: { title_text: 'Hello' },
+            data: { title: 'T', fields: { title_text: 'Hello' } },
         });
         const updated = await api.update({
             type: 'post',
@@ -384,8 +384,7 @@ describe('update — no spurious version on invalid update', () => {
     it('does not create a version when the update is rejected by field validation', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'V',
-            fields: { title_text: 'Hello' },
+            data: { title: 'V', fields: { title_text: 'Hello' } },
         });
 
         // Immediately after create, version count should be 0
@@ -412,8 +411,7 @@ describe('update — uniqueness excludes self', () => {
     it('does not trip "Already in use" when an entry keeps its own unique value', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'T',
-            fields: { title_text: 'Hello', code: 'mycode' },
+            data: { title: 'T', fields: { title_text: 'Hello', code: 'mycode' } },
         });
 
         // Update with the same code — should succeed (self-exclusion)
@@ -429,13 +427,11 @@ describe('update — uniqueness excludes self', () => {
     it('rejects when the code collides with a DIFFERENT entry', async () => {
         await api.create({
             type: 'post',
-            title: 'A',
-            fields: { title_text: 'A', code: 'taken' },
+            data: { title: 'A', fields: { title_text: 'A', code: 'taken' } },
         });
         const entryB = await api.create({
             type: 'post',
-            title: 'B',
-            fields: { title_text: 'B', code: 'free' },
+            data: { title: 'B', fields: { title_text: 'B', code: 'free' } },
         });
 
         await expect(

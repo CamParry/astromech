@@ -439,13 +439,15 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
 
         const entry = await entriesService.create({
             type,
-            ...(title !== undefined && { title }),
-            ...(slug !== undefined && { slug }),
-            ...(locale !== undefined && { locale }),
-            ...(localeGroup !== undefined && { localeGroup }),
-            ...(fields !== undefined && { fields: fields as JsonObject }),
-            ...(status !== undefined && { status }),
-            ...(publishedAt !== undefined && { publishedAt }),
+            data: {
+                ...(title !== undefined && { title }),
+                ...(slug !== undefined && { slug }),
+                ...(locale !== undefined && { locale }),
+                ...(localeGroup !== undefined && { localeGroup }),
+                ...(fields !== undefined && { fields: fields as JsonObject }),
+                ...(status !== undefined && { status }),
+                ...(publishedAt !== undefined && { publishedAt }),
+            },
         });
 
         return c.json({ data: entry }, 201);

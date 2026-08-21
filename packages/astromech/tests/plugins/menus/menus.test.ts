@@ -274,9 +274,7 @@ describe('menus.get — entry ref resolution', () => {
         // Create a published post entry so it passes the public visibility filter
         const post = await entriesService.create({
             type: 'post',
-            title: 'Hello World',
-            locale: 'en',
-            status: 'published',
+            data: { title: 'Hello World', locale: 'en', status: 'published' },
         });
 
         await writeSetting('plugin:menus:/menus/main', {
@@ -292,9 +290,7 @@ describe('menus.get — entry ref resolution', () => {
     it('prefers entry url over url field when both are set', async () => {
         const post = await entriesService.create({
             type: 'post',
-            title: 'Override Test',
-            locale: 'en',
-            status: 'published',
+            data: { title: 'Override Test', locale: 'en', status: 'published' },
         });
 
         await writeSetting('plugin:menus:/menus/main', {

@@ -60,8 +60,11 @@ let ids: string[];
 beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeTestConfig());
-    const first = await api.create({ type: 'post', title: 'One', slug: 'one' });
-    const second = await api.create({ type: 'post', title: 'Two', slug: 'two' });
+    const first = await api.create({ type: 'post', data: { title: 'One', slug: 'one' } });
+    const second = await api.create({
+        type: 'post',
+        data: { title: 'Two', slug: 'two' },
+    });
     ids = [first.id, second.id];
 });
 
@@ -125,7 +128,10 @@ describe('POST /entries/:type/bulk-update', () => {
     });
 
     it('409s a status change on a type without the statuses capability', async () => {
-        const snippet = await api.create({ type: 'snippet', fields: { key: 'k' } });
+        const snippet = await api.create({
+            type: 'snippet',
+            data: { fields: { key: 'k' } },
+        });
         const res = await post('/snippet/bulk-update', {
             ids: [snippet.id],
             data: { status: 'published' },
@@ -149,7 +155,7 @@ describe('POST /entries/:type/bulk-trash', () => {
 
     it('409s when the type has no trash capability', async () => {
         setupTestConfig(configWithoutTrash());
-        const note = await api.create({ type: 'note', title: 'N', slug: 'n' });
+        const note = await api.create({ type: 'note', data: { title: 'N', slug: 'n' } });
         const res = await post('/note/bulk-trash', { ids: [note.id] });
         expect(res.status).toBe(409);
     });
@@ -201,7 +207,7 @@ describe('POST /entries/:type/bulk-restore', () => {
 
     it('409s when the type has no trash capability', async () => {
         setupTestConfig(configWithoutTrash());
-        const note = await api.create({ type: 'note', title: 'N', slug: 'n2' });
+        const note = await api.create({ type: 'note', data: { title: 'N', slug: 'n2' } });
         const res = await post('/note/bulk-restore', { ids: [note.id] });
         expect(res.status).toBe(409);
     });
@@ -217,7 +223,10 @@ describe('POST /entries/:type/bulk-publish', () => {
     });
 
     it('409s when the type has no statuses capability', async () => {
-        const snippet = await api.create({ type: 'snippet', fields: { key: 'k' } });
+        const snippet = await api.create({
+            type: 'snippet',
+            data: { fields: { key: 'k' } },
+        });
         const res = await post('/snippet/bulk-publish', { ids: [snippet.id] });
         expect(res.status).toBe(409);
     });
@@ -234,7 +243,10 @@ describe('POST /entries/:type/bulk-unpublish', () => {
     });
 
     it('409s when the type has no statuses capability', async () => {
-        const snippet = await api.create({ type: 'snippet', fields: { key: 'k' } });
+        const snippet = await api.create({
+            type: 'snippet',
+            data: { fields: { key: 'k' } },
+        });
         const res = await post('/snippet/bulk-unpublish', { ids: [snippet.id] });
         expect(res.status).toBe(409);
     });
@@ -260,7 +272,10 @@ describe('POST /entries/:type/bulk-schedule', () => {
     });
 
     it('409s when the type has no statuses capability', async () => {
-        const snippet = await api.create({ type: 'snippet', fields: { key: 'k' } });
+        const snippet = await api.create({
+            type: 'snippet',
+            data: { fields: { key: 'k' } },
+        });
         const res = await post('/snippet/bulk-schedule', {
             ids: [snippet.id],
             publishedAt,

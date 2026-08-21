@@ -74,7 +74,10 @@ afterEach(() => {
 
 describe('createStaged atomicity', () => {
     it('rolls back the staged row when relationship persistence throws', async () => {
-        const canonical = await api.create({ type: 'post', title: 'Canonical' });
+        const canonical = await api.create({
+            type: 'post',
+            data: { title: 'Canonical' },
+        });
 
         state.failing = true;
         await expect(

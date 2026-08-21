@@ -20,9 +20,7 @@ beforeEach(async () => {
 async function makeSource(): Promise<Entry> {
     return await api.create({
         type: 'post',
-        title: 'EN',
-        locale: 'en',
-        fields: { body: 'enbody', category: 'news' },
+        data: { title: 'EN', locale: 'en', fields: { body: 'enbody', category: 'news' } },
     });
 }
 
@@ -31,10 +29,7 @@ describe('create into an existing locale group', () => {
         const en = await makeSource();
         const de = await api.create({
             type: 'post',
-            title: 'DE',
-            locale: 'de',
-            localeGroup: en.localeGroup,
-            fields: {},
+            data: { title: 'DE', locale: 'de', localeGroup: en.localeGroup, fields: {} },
         });
 
         expect(de.fields).toEqual({ category: 'news' });
@@ -46,10 +41,12 @@ describe('create into an existing locale group', () => {
         const en = await makeSource();
         const de = await api.create({
             type: 'post',
-            title: 'DE',
-            locale: 'de',
-            localeGroup: en.localeGroup,
-            fields: { body: 'debody' },
+            data: {
+                title: 'DE',
+                locale: 'de',
+                localeGroup: en.localeGroup,
+                fields: { body: 'debody' },
+            },
         });
 
         expect(de.fields['body']).toBe('debody');
@@ -59,10 +56,12 @@ describe('create into an existing locale group', () => {
         const en = await makeSource();
         const de = await api.create({
             type: 'post',
-            title: 'DE',
-            locale: 'de',
-            localeGroup: en.localeGroup,
-            fields: { body: 'debody', category: 'typed-by-hand' },
+            data: {
+                title: 'DE',
+                locale: 'de',
+                localeGroup: en.localeGroup,
+                fields: { body: 'debody', category: 'typed-by-hand' },
+            },
         });
 
         expect(de.fields).toEqual({ body: 'debody', category: 'news' });
@@ -71,16 +70,16 @@ describe('create into an existing locale group', () => {
     it('leaves a supplied value intact when the sibling lacks the key', async () => {
         const en = await api.create({
             type: 'post',
-            title: 'EN',
-            locale: 'en',
-            fields: { body: 'enbody' },
+            data: { title: 'EN', locale: 'en', fields: { body: 'enbody' } },
         });
         const de = await api.create({
             type: 'post',
-            title: 'DE',
-            locale: 'de',
-            localeGroup: en.localeGroup,
-            fields: { category: 'news' },
+            data: {
+                title: 'DE',
+                locale: 'de',
+                localeGroup: en.localeGroup,
+                fields: { category: 'news' },
+            },
         });
 
         expect(de.fields).toEqual({ category: 'news' });
@@ -89,16 +88,16 @@ describe('create into an existing locale group', () => {
     it('inherits nothing for an entry type that is not translatable', async () => {
         const first = await api.create({
             type: 'note',
-            title: 'First',
-            locale: 'en',
-            fields: { body: 'shared?' },
+            data: { title: 'First', locale: 'en', fields: { body: 'shared?' } },
         });
         const second = await api.create({
             type: 'note',
-            title: 'Second',
-            locale: 'de',
-            localeGroup: first.localeGroup,
-            fields: {},
+            data: {
+                title: 'Second',
+                locale: 'de',
+                localeGroup: first.localeGroup,
+                fields: {},
+            },
         });
 
         expect(second.fields).toEqual({});
@@ -110,9 +109,7 @@ describe('create without a locale group', () => {
         await makeSource();
         const fresh = await api.create({
             type: 'post',
-            title: 'Fresh',
-            locale: 'de',
-            fields: { body: 'freshbody' },
+            data: { title: 'Fresh', locale: 'de', fields: { body: 'freshbody' } },
         });
 
         expect(fresh.fields).toEqual({ body: 'freshbody' });
@@ -151,18 +148,22 @@ describe('inherited value is validated', () => {
         setupTestConfig(makeRequiredCategoryConfig());
         const en = await api.create({
             type: 'post',
-            title: 'EN',
-            locale: 'en',
-            status: 'published',
-            fields: { body: 'enbody', category: 'news' },
+            data: {
+                title: 'EN',
+                locale: 'en',
+                status: 'published',
+                fields: { body: 'enbody', category: 'news' },
+            },
         });
         const de = await api.create({
             type: 'post',
-            title: 'DE',
-            locale: 'de',
-            localeGroup: en.localeGroup,
-            status: 'published',
-            fields: { body: 'debody' },
+            data: {
+                title: 'DE',
+                locale: 'de',
+                localeGroup: en.localeGroup,
+                status: 'published',
+                fields: { body: 'debody' },
+            },
         });
 
         expect(de.fields['category']).toBe('news');

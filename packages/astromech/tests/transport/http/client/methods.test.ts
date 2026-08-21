@@ -125,7 +125,7 @@ const CASES: Case[] = [
     },
     {
         name: 'entries.create',
-        call: () => client.entries.create({ type: 'post', title: 'One' }),
+        call: () => client.entries.create({ type: 'post', data: { title: 'One' } }),
         url: '/cms/api/entries/post',
         method: 'POST',
         body: { title: 'One' },

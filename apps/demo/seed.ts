@@ -1210,7 +1210,7 @@ async function seed(): Promise<void> {
                     para(
                         text('Creating a translation is '),
                         text(
-                            "entries.create({ type, locale: 'fr', localeGroup: enEntry.localeGroup, ... })",
+                            "entries.create({ type, data: { locale: 'fr', localeGroup: enEntry.localeGroup, ... } })",
                             'code'
                         ),
                         text(

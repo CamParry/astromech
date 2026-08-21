@@ -27,19 +27,22 @@ beforeEach(async () => {
 
 describe('issuePreviewToken', () => {
     it('returns a plaintext token and requires the staging capability', async () => {
-        const e = await api.create({ type: 'post', title: 'X', slug: 'x' });
+        const e = await api.create({ type: 'post', data: { title: 'X', slug: 'x' } });
         const { token } = await api.issuePreviewToken({ type: 'post', id: e.id });
         expect(typeof token).toBe('string');
         expect(token.length).toBeGreaterThan(16);
 
-        const card = await api.create({ type: 'card', fields: { label: 'c' } });
+        const card = await api.create({ type: 'card', data: { fields: { label: 'c' } } });
         await expect(
             api.issuePreviewToken({ type: 'card', id: card.id })
         ).rejects.toBeInstanceOf(CapabilityError);
     });
 
     it('replaces the previous token (one active token per entry)', async () => {
-        const e = await api.create({ type: 'post', title: 'Hidden', slug: 'hidden' });
+        const e = await api.create({
+            type: 'post',
+            data: { title: 'Hidden', slug: 'hidden' },
+        });
         const { token: first } = await api.issuePreviewToken({ type: 'post', id: e.id });
         const { token: second } = await api.issuePreviewToken({ type: 'post', id: e.id });
         expect(second).not.toBe(first);
@@ -65,7 +68,7 @@ describe('issuePreviewToken', () => {
         // Matters because the confirm gate hands preview links out for review.
         // Asserted through `isValid` with a moved clock, inside a tolerance
         // window, rather than against an exact stored timestamp.
-        const e = await api.create({ type: 'post', title: 'X', slug: 'x' });
+        const e = await api.create({ type: 'post', data: { title: 'X', slug: 'x' } });
         const { token } = await api.issuePreviewToken({ type: 'post', id: e.id });
 
         const repository = createPreviewTokenRepository();
@@ -90,7 +93,7 @@ describe('issuePreviewToken', () => {
     });
 
     it('keeps an explicit null as the opt-in "never expires" escape hatch', async () => {
-        const e = await api.create({ type: 'post', title: 'Y', slug: 'y' });
+        const e = await api.create({ type: 'post', data: { title: 'Y', slug: 'y' } });
         const { token } = await api.issuePreviewToken({
             type: 'post',
             id: e.id,
@@ -107,7 +110,10 @@ describe('issuePreviewToken', () => {
 
 describe('query() with previewToken', () => {
     it('returns an unpublished entry only with a valid token (404 semantics otherwise)', async () => {
-        const e = await api.create({ type: 'post', title: 'Hidden', slug: 'hidden' });
+        const e = await api.create({
+            type: 'post',
+            data: { title: 'Hidden', slug: 'hidden' },
+        });
         expect(e.status).toBe('unpublished');
 
         // No token → normal public behaviour → not returned.
@@ -142,9 +148,7 @@ describe('query() with previewToken', () => {
     it('previews the staged change when staged:true', async () => {
         const canonical = await api.create({
             type: 'post',
-            title: 'Live',
-            slug: 'live',
-            status: 'published',
+            data: { title: 'Live', slug: 'live', status: 'published' },
         });
         const staged = await api.createStaged({ type: 'post', id: canonical.id });
         await api.update({
@@ -178,7 +182,10 @@ describe('query() with previewToken', () => {
     });
 
     it('returns empty for staged:true when there is no staged change', async () => {
-        const e = await api.create({ type: 'post', title: 'Hidden', slug: 'hidden' });
+        const e = await api.create({
+            type: 'post',
+            data: { title: 'Hidden', slug: 'hidden' },
+        });
         const { token } = await api.issuePreviewToken({ type: 'post', id: e.id });
         const res = await api.query({
             type: 'post',
@@ -191,7 +198,10 @@ describe('query() with previewToken', () => {
     });
 
     it('rejects an expired token', async () => {
-        const e = await api.create({ type: 'post', title: 'Hidden', slug: 'hidden' });
+        const e = await api.create({
+            type: 'post',
+            data: { title: 'Hidden', slug: 'hidden' },
+        });
         const { token } = await api.issuePreviewToken({
             type: 'post',
             id: e.id,
@@ -207,7 +217,10 @@ describe('query() with previewToken', () => {
     });
 
     it('stops authorizing after revoke', async () => {
-        const e = await api.create({ type: 'post', title: 'Hidden', slug: 'hidden' });
+        const e = await api.create({
+            type: 'post',
+            data: { title: 'Hidden', slug: 'hidden' },
+        });
         const { token } = await api.issuePreviewToken({ type: 'post', id: e.id });
         await api.revokePreviewToken({ type: 'post', id: e.id });
         const res = await api.query({
@@ -222,7 +235,10 @@ describe('query() with previewToken', () => {
 
 describe('get() with previewToken', () => {
     it('returns the unpublished canonical only with a valid token', async () => {
-        const e = await api.create({ type: 'post', title: 'Hidden', slug: 'hidden' });
+        const e = await api.create({
+            type: 'post',
+            data: { title: 'Hidden', slug: 'hidden' },
+        });
         const { token } = await api.issuePreviewToken({ type: 'post', id: e.id });
 
         expect(await api.get({ type: 'post', id: e.id })).toBeNull(); // public → hidden
@@ -231,7 +247,10 @@ describe('get() with previewToken', () => {
     });
 
     it('never previews a trashed entry', async () => {
-        const e = await api.create({ type: 'post', title: 'Doomed', slug: 'doomed' });
+        const e = await api.create({
+            type: 'post',
+            data: { title: 'Doomed', slug: 'doomed' },
+        });
         const { token } = await api.issuePreviewToken({ type: 'post', id: e.id });
         await api.trash({ type: 'post', id: e.id });
         expect(await api.get({ type: 'post', id: e.id, previewToken: token })).toBeNull();

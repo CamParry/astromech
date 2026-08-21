@@ -89,8 +89,7 @@ describe('mediaService.usedBy', () => {
         const mediaId = await createMedia();
         const article = await entriesService.create({
             type: 'article',
-            title: 'Article',
-            fields: { cover: mediaId },
+            data: { title: 'Article', fields: { cover: mediaId } },
         });
 
         expect(await mediaService.usedBy({ id: mediaId })).toEqual([
@@ -110,8 +109,7 @@ describe('mediaService.usedBy', () => {
         const mediaId = await createMedia();
         await entriesService.create({
             type: 'article',
-            title: 'Nested',
-            fields: { sections: [{ image: mediaId }] },
+            data: { title: 'Nested', fields: { sections: [{ image: mediaId }] } },
         });
 
         const usage = await mediaService.usedBy({ id: mediaId });
@@ -127,8 +125,10 @@ describe('mediaService.usedBy', () => {
         const mediaId = await createMedia();
         const article = await entriesService.create({
             type: 'article',
-            title: 'Twice',
-            fields: { cover: mediaId, sections: [{ image: mediaId }] },
+            data: {
+                title: 'Twice',
+                fields: { cover: mediaId, sections: [{ image: mediaId }] },
+            },
         });
 
         const usage = await mediaService.usedBy({ id: mediaId });
@@ -143,8 +143,7 @@ describe('mediaService.usedBy', () => {
         const mediaId = await createMedia();
         const canonical = await entriesService.create({
             type: 'article',
-            title: 'Canonical',
-            fields: { cover: mediaId },
+            data: { title: 'Canonical', fields: { cover: mediaId } },
         });
         const staged = await entriesService.createStaged({
             type: 'article',

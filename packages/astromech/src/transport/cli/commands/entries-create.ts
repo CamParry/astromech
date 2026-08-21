@@ -1,4 +1,4 @@
-import type { EntryStatus, JsonObject } from '@/types/index';
+import type { EntryCreateData, EntryStatus, JsonObject } from '@/types/index';
 import { defineCommand } from 'citty';
 import { entriesService } from '@/entries/service';
 import { loadConfig } from '../config';
@@ -26,21 +26,19 @@ export default defineCommand({
         try {
             await loadConfig(args.config, toAllowRemoteOption(args));
 
-            const params: Parameters<typeof entriesService.create>[0] = {
-                type: args.type,
-            };
+            const data: EntryCreateData = {};
 
-            if (args.title !== undefined) params.title = args.title;
-            if (args.slug !== undefined) params.slug = args.slug;
-            if (args.locale !== undefined) params.locale = args.locale;
-            if (args.status !== undefined) params.status = args.status as EntryStatus;
+            if (args.title !== undefined) data.title = args.title;
+            if (args.slug !== undefined) data.slug = args.slug;
+            if (args.locale !== undefined) data.locale = args.locale;
+            if (args.status !== undefined) data.status = args.status as EntryStatus;
             if (args.publishedAt !== undefined)
-                params.publishedAt = new Date(args.publishedAt);
+                data.publishedAt = new Date(args.publishedAt);
             if (args.fields !== undefined) {
-                params.fields = (await parseJsonArg(args.fields)) as JsonObject;
+                data.fields = (await parseJsonArg(args.fields)) as JsonObject;
             }
 
-            const entry = await entriesService.create(params);
+            const entry = await entriesService.create({ type: args.type, data });
 
             printResult(entry, {
                 json: args.json,

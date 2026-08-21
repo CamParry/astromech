@@ -30,43 +30,46 @@ beforeEach(async () => {
 
 describe('titleless create', () => {
     it('succeeds with no title and persists title as empty string', async () => {
-        const e = await api.create({ type: 'snippet', fields: { key: 'k', value: 'v' } });
+        const e = await api.create({
+            type: 'snippet',
+            data: { fields: { key: 'k', value: 'v' } },
+        });
         expect(e.type).toBe('snippet');
         expect(e.title).toBe('');
         expect(e.fields).toEqual({ key: 'k', value: 'v' });
     });
 
     it('leaves slug null when no explicit slug is given', async () => {
-        const e = await api.create({ type: 'card', fields: { label: 'a' } });
+        const e = await api.create({ type: 'card', data: { fields: { label: 'a' } } });
         expect(e.slug).toBeNull();
     });
 
     it('does not derive a "-2" style slug for multiple titleless entries', async () => {
-        const a = await api.create({ type: 'card' });
-        const b = await api.create({ type: 'card' });
+        const a = await api.create({ type: 'card', data: {} });
+        const b = await api.create({ type: 'card', data: {} });
         expect(a.slug).toBeNull();
         expect(b.slug).toBeNull();
     });
 
     it('accepts an explicit slug when the slug capability is on', async () => {
-        const e = await api.create({ type: 'card', slug: 'my-card' });
+        const e = await api.create({ type: 'card', data: { slug: 'my-card' } });
         expect(e.slug).toBe('my-card');
     });
 
     it('uniquifies explicit slugs on a titleless type', async () => {
-        const a = await api.create({ type: 'card', slug: 'dup' });
-        const b = await api.create({ type: 'card', slug: 'dup' });
+        const a = await api.create({ type: 'card', data: { slug: 'dup' } });
+        const b = await api.create({ type: 'card', data: { slug: 'dup' } });
         expect(a.slug).toBe('dup');
         expect(b.slug).toBe('dup-2');
     });
 
     it('accepts and stores an explicit title on a titleless type', async () => {
-        const e = await api.create({ type: 'snippet', title: 'Kept' });
+        const e = await api.create({ type: 'snippet', data: { title: 'Kept' } });
         expect(e.title).toBe('Kept');
     });
 
     it('defaults status to unpublished (statuses capability off still stores a status)', async () => {
-        const e = await api.create({ type: 'snippet' });
+        const e = await api.create({ type: 'snippet', data: {} });
         expect(e.status).toBe('unpublished');
     });
 });
@@ -75,7 +78,7 @@ describe('titled types still require a title', () => {
     it('throws a validation error when the title is omitted', async () => {
         try {
             // title omitted — runtime schema still rejects it for titled types
-            await api.create({ type: 'post' });
+            await api.create({ type: 'post', data: {} });
             throw new Error('expected create to throw');
         } catch (err) {
             expect(err).toBeInstanceOf(ValidationError);
@@ -84,7 +87,7 @@ describe('titled types still require a title', () => {
 
     it('rejects an empty-string title on a titled type with "Title is required"', async () => {
         try {
-            await api.create({ type: 'post', title: '' });
+            await api.create({ type: 'post', data: { title: '' } });
             throw new Error('expected create to throw');
         } catch (err) {
             expect(err).toBeInstanceOf(ValidationError);
@@ -97,7 +100,7 @@ describe('titleless update', () => {
     it('updates fields and leaves title empty', async () => {
         const e = await api.create({
             type: 'snippet',
-            fields: { key: 'k', value: 'v1' },
+            data: { fields: { key: 'k', value: 'v1' } },
         });
         const updated = await api.update({
             type: 'snippet',
@@ -114,7 +117,7 @@ describe('titleless update', () => {
 
 describe('titleless search', () => {
     it('matches nothing (search runs a LIKE on the empty title)', async () => {
-        await api.create({ type: 'snippet', fields: { key: 'k', value: 'v' } });
+        await api.create({ type: 'snippet', data: { fields: { key: 'k', value: 'v' } } });
         const result = await api.query({ type: 'snippet', search: 'anything' });
         expect(result.data).toHaveLength(0);
     });
@@ -122,8 +125,7 @@ describe('titleless search', () => {
     it('returns titleless entries when no search term is given', async () => {
         await api.create({
             type: 'snippet',
-            fields: { key: 'k', value: 'v' },
-            status: 'published',
+            data: { fields: { key: 'k', value: 'v' }, status: 'published' },
         });
         const result = await api.query({ type: 'snippet' });
         expect(result.data).toHaveLength(1);
@@ -132,11 +134,13 @@ describe('titleless search', () => {
 
 describe('relationships targeting a titleless type', () => {
     it('reports the empty sourceTitle for a titled source referencing a snippet', async () => {
-        const snippet = await api.create({ type: 'snippet', fields: { key: 'k' } });
+        const snippet = await api.create({
+            type: 'snippet',
+            data: { fields: { key: 'k' } },
+        });
         const bookmark = await api.create({
             type: 'bookmark',
-            title: 'My Bookmark',
-            fields: { snippet: snippet.id },
+            data: { title: 'My Bookmark', fields: { snippet: snippet.id } },
         });
 
         const incoming = await api.incomingRelationships({

@@ -162,11 +162,10 @@ async function createMedia(): Promise<string> {
 
 describe('pruneDanglingRelations (through the entry write path)', () => {
     it('drops a reference to a deleted entry, and the index row with it', async () => {
-        const target = await api.create({ type: 'post', title: 'Target' });
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
         const doc = await api.create({
             type: 'doc',
-            title: 'Doc',
-            fields: { author: target.id },
+            data: { title: 'Doc', fields: { author: target.id } },
         });
         expect(
             await createRelationshipRepository().findBySource(doc.id, 'entry')
@@ -182,13 +181,12 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
     });
 
     it('drops only the dead id from a multi-relation and keeps the order of the rest', async () => {
-        const first = await api.create({ type: 'post', title: 'First' });
-        const dead = await api.create({ type: 'post', title: 'Dead' });
-        const last = await api.create({ type: 'post', title: 'Last' });
+        const first = await api.create({ type: 'post', data: { title: 'First' } });
+        const dead = await api.create({ type: 'post', data: { title: 'Dead' } });
+        const last = await api.create({ type: 'post', data: { title: 'Last' } });
         const doc = await api.create({
             type: 'doc',
-            title: 'Doc',
-            fields: { related: [first.id, dead.id, last.id] },
+            data: { title: 'Doc', fields: { related: [first.id, dead.id, last.id] } },
         });
 
         await api.delete({ type: 'post', id: dead.id });
@@ -198,11 +196,10 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
     });
 
     it('keeps a reference to a TRASHED entry — trashing is not deletion', async () => {
-        const target = await api.create({ type: 'post', title: 'Target' });
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
         const doc = await api.create({
             type: 'doc',
-            title: 'Doc',
-            fields: { author: target.id },
+            data: { title: 'Doc', fields: { author: target.id } },
         });
 
         await api.trash({ type: 'post', id: target.id });
@@ -214,11 +211,13 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
     // `links/link` rows live in `test_links`, so a check against `entries`
     // reports every one of them absent. Its storage answers for them instead.
     it('keeps a reference to a live tableRepository-backed row', async () => {
-        const link = await api.create({ type: 'links/link', fields: { label: 'One' } });
+        const link = await api.create({
+            type: 'links/link',
+            data: { fields: { label: 'One' } },
+        });
         const doc = await api.create({
             type: 'doc',
-            title: 'Doc',
-            fields: { link: link.id },
+            data: { title: 'Doc', fields: { link: link.id } },
         });
 
         const updated = await touch(doc.id);
@@ -231,11 +230,13 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
     // (0077) — and a table-backed target cannot be read from another snapshot
     // inside that transaction, so its reference stands even once the row is gone.
     it('keeps a reference to a deleted tableRepository-backed row — the write is transactional', async () => {
-        const link = await api.create({ type: 'links/link', fields: { label: 'One' } });
+        const link = await api.create({
+            type: 'links/link',
+            data: { fields: { label: 'One' } },
+        });
         const doc = await api.create({
             type: 'doc',
-            title: 'Doc',
-            fields: { link: link.id },
+            data: { title: 'Doc', fields: { link: link.id } },
         });
 
         await api.delete({ type: 'links/link', id: link.id });
@@ -249,8 +250,7 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
     it('keeps a reference whose storage implements no existence check', async () => {
         const doc = await api.create({
             type: 'doc',
-            title: 'Doc',
-            fields: { note: '01JQZZZZZZZZZZZZZZZZZZZZZZ' },
+            data: { title: 'Doc', fields: { note: '01JQZZZZZZZZZZZZZZZZZZZZZZ' } },
         });
 
         const updated = await touch(doc.id);
@@ -263,8 +263,7 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
     it('keeps a reference whose target names no configured entry type', async () => {
         const doc = await api.create({
             type: 'doc',
-            title: 'Doc',
-            fields: { ghost: '01JQZZZZZZZZZZZZZZZZZZZZZZ' },
+            data: { title: 'Doc', fields: { ghost: '01JQZZZZZZZZZZZZZZZZZZZZZZ' } },
         });
 
         const updated = await touch(doc.id);
@@ -277,8 +276,7 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
         const user = await usersService.create({ email: 'gone@test.dev', name: 'Gone' });
         const doc = await api.create({
             type: 'doc',
-            title: 'Doc',
-            fields: { avatar: mediaId, owner: user.id },
+            data: { title: 'Doc', fields: { avatar: mediaId, owner: user.id } },
         });
 
         await createMediaRepository().delete(mediaId);
@@ -290,12 +288,14 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
     });
 
     it('prunes a relation nested in a repeater at its nested path', async () => {
-        const alive = await api.create({ type: 'post', title: 'Alive' });
-        const dead = await api.create({ type: 'post', title: 'Dead' });
+        const alive = await api.create({ type: 'post', data: { title: 'Alive' } });
+        const dead = await api.create({ type: 'post', data: { title: 'Dead' } });
         const doc = await api.create({
             type: 'doc',
-            title: 'Doc',
-            fields: { sections: [{ ref: dead.id }, { ref: alive.id }] },
+            data: {
+                title: 'Doc',
+                fields: { sections: [{ ref: dead.id }, { ref: alive.id }] },
+            },
         });
 
         await api.delete({ type: 'post', id: dead.id });
@@ -343,7 +343,7 @@ describe('pruneDanglingRelations (directly)', () => {
     });
 
     it('reports how many ids it dropped', async () => {
-        const alive = await api.create({ type: 'post', title: 'Alive' });
+        const alive = await api.create({ type: 'post', data: { title: 'Alive' } });
 
         const result = await pruneDanglingRelations(docFields, {
             author: 'no-such-entry',

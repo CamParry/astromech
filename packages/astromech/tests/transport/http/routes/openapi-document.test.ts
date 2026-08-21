@@ -26,17 +26,18 @@ import {
 import { SETTINGS_ROUTES, settingsRouter } from '@/transport/http/routes/settings';
 import { USERS_ROUTES, usersRouter } from '@/transport/http/routes/users';
 
+type Schema = { properties?: Record<string, unknown>; $ref?: string };
+
 type Operation = {
     summary?: string;
     requestBody?: {
-        content: {
-            'application/json': { schema: { properties?: Record<string, unknown> } };
-        };
+        content: { 'application/json': { schema: Schema } };
     };
 };
 
 type Document = {
     paths: Record<string, Record<string, Operation>>;
+    components?: { schemas?: Record<string, Schema> };
 };
 
 /** Every mounted table, against the base path its router serves from. */
@@ -55,10 +56,17 @@ function bespokeRoutes(): MountedRoute[] {
     return HTTP_ROUTES.filter((route) => route.handler === 'bespoke');
 }
 
-/** The JSON request body an operation documents, by property name. */
-function bodyProperties(operation: Operation | undefined): string[] {
+/**
+ * The JSON request body an operation documents, by property name. A `bodyKey`
+ * route documents a named schema, so a `$ref` is followed to its component.
+ */
+function bodyProperties(operation: Operation | undefined, doc: Document): string[] {
     const schema = operation?.requestBody?.content['application/json'].schema;
-    return Object.keys(schema?.properties ?? {});
+    const resolved =
+        schema?.$ref === undefined
+            ? schema
+            : doc.components?.schemas?.[schema.$ref.replace('#/components/schemas/', '')];
+    return Object.keys(resolved?.properties ?? {});
 }
 
 /** The document the five domain routers compose to. */
@@ -125,17 +133,19 @@ describe('the emitted document', () => {
     });
 
     it('describes a bespoke route from its own method contract', () => {
-        const paths = document().paths;
-        expect(paths['/entries/{type}']?.['post']?.summary).toBe(
-            'Create a "{type}" entry.'
-        );
-        // The path already carries `type`, so the body is the rest of the input.
-        expect(bodyProperties(paths['/entries/{type}']?.['post'])).toContain('title');
-        expect(bodyProperties(paths['/entries/{type}']?.['post'])).not.toContain('type');
+        const doc = document();
+        const post = doc.paths['/entries/{type}']?.['post'];
+        expect(post?.summary).toBe('Create a "{type}" entry.');
+        // `type` is in the path, so the body is the method's `data` alone — the
+        // flat payload the wire has always sent.
+        expect(bodyProperties(post, doc)).toContain('title');
+        expect(bodyProperties(post, doc)).not.toContain('type');
+        expect(bodyProperties(post, doc)).not.toContain('data');
     });
 
     it('names the bulk request body `ids`, as the wire does', () => {
-        const paths = document().paths;
+        const doc = document();
+        const paths = doc.paths;
         for (const path of [
             '/entries/{type}/bulk-trash',
             '/entries/{type}/bulk-delete',
@@ -145,7 +155,7 @@ describe('the emitted document', () => {
             '/entries/{type}/bulk-schedule',
             '/entries/{type}/bulk-update',
         ]) {
-            const properties = bodyProperties(paths[path]?.['post']);
+            const properties = bodyProperties(paths[path]?.['post'], doc);
             expect(properties, path).toContain('ids');
             expect(properties, path).not.toContain('id');
         }

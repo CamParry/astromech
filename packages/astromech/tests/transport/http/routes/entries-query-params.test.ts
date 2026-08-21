@@ -41,9 +41,7 @@ beforeEach(async () => {
     for (const title of ['Beta', 'Alpha', 'Gamma']) {
         await api.create({
             type: 'post',
-            title,
-            slug: title.toLowerCase(),
-            status: 'published',
+            data: { title, slug: title.toLowerCase(), status: 'published' },
         });
     }
 });
@@ -205,8 +203,7 @@ describe('cascadeLocales on the delete routes', () => {
         for (const value of ['true', '1', 'yes']) {
             const created = await api.create({
                 type: 'post',
-                title: `C-${value}`,
-                slug: `c-${value}`,
+                data: { title: `C-${value}`, slug: `c-${value}` },
             });
             const res = await app().request(
                 `/entries/post/${created.id}/force?cascadeLocales=${value}`,

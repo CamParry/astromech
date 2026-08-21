@@ -81,6 +81,7 @@ export const ENTRIES_ROUTE_SPECS = [
         path: '/:type',
         id: 'entries.create',
         status: 201,
+        bodyKey: 'data',
         handler: 'bespoke',
     },
     {

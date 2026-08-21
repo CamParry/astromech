@@ -71,8 +71,7 @@ describe('restoreVersion atomicity', () => {
     it('rolls back the snapshot and the update when relationship persistence throws', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'Orig',
-            fields: { body: 'orig' },
+            data: { title: 'Orig', fields: { body: 'orig' } },
         });
         await api.update({
             type: 'post',

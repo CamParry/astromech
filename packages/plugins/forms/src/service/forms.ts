@@ -134,16 +134,18 @@ export function buildFormsService(
 
                 const submission = await ctx.entries.create({
                     type: `${ctx.plugin.namespace}/${SUBMISSION_TYPE}`,
-                    fields: {
-                        formId: form.id,
-                        formSlug: payload.form.slug,
-                        // The COERCED values, not the raw input.
-                        data: values,
-                        summary: buildSummary(definitions, values),
-                        ...(storeMeta && payload.meta !== undefined
-                            ? { meta: payload.meta }
-                            : {}),
-                        submittedAt: new Date(),
+                    data: {
+                        fields: {
+                            formId: form.id,
+                            formSlug: payload.form.slug,
+                            // The COERCED values, not the raw input.
+                            data: values,
+                            summary: buildSummary(definitions, values),
+                            ...(storeMeta && payload.meta !== undefined
+                                ? { meta: payload.meta }
+                                : {}),
+                            submittedAt: new Date(),
+                        },
                     },
                 });
 

@@ -100,7 +100,7 @@ describe('redirects — own-table storage', () => {
     it('create lands in plugin_redirects_redirects, not entries', async () => {
         await redirectEntriesService().create({
             type: REDIRECT,
-            fields: { from: '/old', to: '/new', status: '301', enabled: true },
+            data: { fields: { from: '/old', to: '/new', status: '301', enabled: true } },
         });
 
         const rows = await redirectRows();
@@ -118,8 +118,10 @@ describe('redirects — own-table storage', () => {
     it('stamps the qualified type onto entries read back from the own table', async () => {
         const created = await redirectEntriesService().create({
             type: REDIRECT,
-            fields: { from: '/old', to: '/new', status: '301', enabled: true },
-            status: 'published',
+            data: {
+                fields: { from: '/old', to: '/new', status: '301', enabled: true },
+                status: 'published',
+            },
         });
 
         // query() must return a complete entry — tableRepository rows have no
@@ -145,13 +147,17 @@ describe('redirects — lookup', () => {
         // Redirects must be published to pass the public visibility filter.
         await redirectEntriesService().create({
             type: REDIRECT,
-            fields: { from: '/match', to: '/dest', status: '302', enabled: true },
-            status: 'published',
+            data: {
+                fields: { from: '/match', to: '/dest', status: '302', enabled: true },
+                status: 'published',
+            },
         });
         await redirectEntriesService().create({
             type: REDIRECT,
-            fields: { from: '/off', to: '/nope', status: '301', enabled: false },
-            status: 'published',
+            data: {
+                fields: { from: '/off', to: '/nope', status: '301', enabled: false },
+                status: 'published',
+            },
         });
     });
 
@@ -173,7 +179,10 @@ describe('redirects — lookup', () => {
 
 describe('redirects — slug-change hook', () => {
     it('records a redirect when a root entry slug changes', async () => {
-        const post = await localEntries.create({ type: 'post', title: 'Hello' });
+        const post = await localEntries.create({
+            type: 'post',
+            data: { title: 'Hello' },
+        });
         expect(post.slug).toBe('hello');
 
         await localEntries.update({
@@ -189,7 +198,10 @@ describe('redirects — slug-change hook', () => {
     });
 
     it('creates nothing when the slug is unchanged', async () => {
-        const post = await localEntries.create({ type: 'post', title: 'Stable' });
+        const post = await localEntries.create({
+            type: 'post',
+            data: { title: 'Stable' },
+        });
         await localEntries.update({
             type: 'post',
             id: post.id,
@@ -218,7 +230,7 @@ describe('redirects — hooks observe the qualified type', () => {
 
         await redirectEntriesService().create({
             type: REDIRECT,
-            fields: { from: '/a', to: '/b', status: '301', enabled: true },
+            data: { fields: { from: '/a', to: '/b', status: '301', enabled: true } },
         });
 
         expect(observed).toContain('redirects/redirect');

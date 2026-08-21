@@ -27,7 +27,7 @@ export const slugChangeHook: Hook = defineHook(
         // Qualified id, built from context — `ctx.entries` is the global service.
         await ctx.entries.create({
             type: `${ctx.plugin.namespace}/${REDIRECT_TYPE}`,
-            fields,
+            data: { fields },
         });
     }
 );

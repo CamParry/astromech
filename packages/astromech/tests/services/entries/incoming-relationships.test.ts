@@ -97,11 +97,10 @@ beforeEach(async () => {
 
 describe('incomingRelationships', () => {
     it('returns a source whose entry type is not the target type', async () => {
-        const target = await api.create({ type: 'post', title: 'Target' });
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
         const source = await api.create({
             type: 'article',
-            title: 'Article',
-            fields: { author: target.id },
+            data: { title: 'Article', fields: { author: target.id } },
         });
 
         const incoming = await api.incomingRelationships({ type: 'post', id: target.id });
@@ -118,10 +117,10 @@ describe('incomingRelationships', () => {
 
     // The source lives in its own table, so the target's storage cannot see it.
     it('returns a source held in a different storage backend', async () => {
-        const target = await api.create({ type: 'post', title: 'Target' });
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
         const link = await api.create({
             type: 'links/link',
-            fields: { label: 'A link', post: target.id },
+            data: { fields: { label: 'A link', post: target.id } },
         });
 
         const incoming = await api.incomingRelationships({ type: 'post', id: target.id });
@@ -137,11 +136,13 @@ describe('incomingRelationships', () => {
     });
 
     it('yields one row per schema path when a source references the target twice', async () => {
-        const target = await api.create({ type: 'post', title: 'Target' });
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
         const source = await api.create({
             type: 'article',
-            title: 'Twice',
-            fields: { author: target.id, sections: [{ related: target.id }] },
+            data: {
+                title: 'Twice',
+                fields: { author: target.id, sections: [{ related: target.id }] },
+            },
         });
 
         const incoming = await api.incomingRelationships({ type: 'post', id: target.id });
@@ -156,11 +157,10 @@ describe('incomingRelationships', () => {
 
     // A pending merge referencing the target is a reason not to delete it.
     it('includes a staged source', async () => {
-        const target = await api.create({ type: 'post', title: 'Target' });
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
         const canonical = await api.create({
             type: 'article',
-            title: 'Canonical',
-            fields: { author: target.id },
+            data: { title: 'Canonical', fields: { author: target.id } },
         });
         const staged = await api.createStaged({ type: 'article', id: canonical.id });
 
@@ -172,11 +172,10 @@ describe('incomingRelationships', () => {
     });
 
     it('includes a trashed source', async () => {
-        const target = await api.create({ type: 'post', title: 'Target' });
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
         const source = await api.create({
             type: 'article',
-            title: 'Trashed',
-            fields: { author: target.id },
+            data: { title: 'Trashed', fields: { author: target.id } },
         });
         await api.trash({ type: 'article', id: source.id });
 
@@ -186,7 +185,7 @@ describe('incomingRelationships', () => {
     });
 
     it('returns an empty list when nothing references the target', async () => {
-        const target = await api.create({ type: 'post', title: 'Lonely' });
+        const target = await api.create({ type: 'post', data: { title: 'Lonely' } });
         expect(await api.incomingRelationships({ type: 'post', id: target.id })).toEqual(
             []
         );

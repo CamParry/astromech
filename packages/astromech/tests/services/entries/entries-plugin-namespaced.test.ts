@@ -35,8 +35,7 @@ describe('namespaced plugin entries via the entries service', () => {
     it('round-trips CRUD on a qualified type and stores the qualified id', async () => {
         const created = await entriesService.create({
             type: 'redirects/redirect',
-            title: 'Home',
-            fields: { to: '/' },
+            data: { title: 'Home', fields: { to: '/' } },
         });
         expect(created.type).toBe('redirects/redirect');
 
@@ -65,7 +64,10 @@ describe('namespaced plugin entries via the entries service', () => {
     });
 
     it('leaves root types unaffected', async () => {
-        const post = await entriesService.create({ type: 'post', title: 'A Post' });
+        const post = await entriesService.create({
+            type: 'post',
+            data: { title: 'A Post' },
+        });
         expect(post.type).toBe('post');
         const list = await entriesService.query({ type: 'redirects/redirect' });
         expect(list.data.every((e) => e.type === 'redirects/redirect')).toBe(true);

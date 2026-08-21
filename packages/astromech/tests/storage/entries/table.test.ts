@@ -521,7 +521,7 @@ describe('entries-service integration', () => {
     it('create/get/update/delete round-trip via qualified type id', async () => {
         const created = await entriesService.create({
             type: 'links/link',
-            fields: { from: '/old', to: '/new', status: '301' },
+            data: { fields: { from: '/old', to: '/new', status: '301' } },
         });
 
         expect(created.id).toMatch(ULID);
@@ -552,18 +552,15 @@ describe('entries-service integration', () => {
     it('query honors searchFields from type config', async () => {
         await entriesService.create({
             type: 'links/link',
-            fields: { from: '/hello', to: '/world' },
-            status: 'published',
+            data: { fields: { from: '/hello', to: '/world' }, status: 'published' },
         });
         await entriesService.create({
             type: 'links/link',
-            fields: { from: '/foo', to: '/bar' },
-            status: 'published',
+            data: { fields: { from: '/foo', to: '/bar' }, status: 'published' },
         });
         await entriesService.create({
             type: 'links/link',
-            fields: { from: '/baz', to: '/hello-page' },
-            status: 'published',
+            data: { fields: { from: '/baz', to: '/hello-page' }, status: 'published' },
         });
 
         const res = await entriesService.query({

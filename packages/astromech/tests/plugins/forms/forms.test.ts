@@ -120,10 +120,12 @@ async function createContactForm(
 ): Promise<{ id: string }> {
     return entriesService().create({
         type: FORM,
-        title: 'Contact',
-        slug: 'contact',
-        status: 'published',
-        fields: { enabled: true, fields: CONTACT_BLOCKS, ...fields },
+        data: {
+            title: 'Contact',
+            slug: 'contact',
+            status: 'published',
+            fields: { enabled: true, fields: CONTACT_BLOCKS, ...fields },
+        },
     });
 }
 
@@ -225,9 +227,11 @@ describe('forms.get', () => {
     it('returns null for an unpublished form', async () => {
         await entriesService().create({
             type: FORM,
-            title: 'Draft',
-            slug: 'draft',
-            fields: { enabled: true, fields: CONTACT_BLOCKS },
+            data: {
+                title: 'Draft',
+                slug: 'draft',
+                fields: { enabled: true, fields: CONTACT_BLOCKS },
+            },
         });
         expect(await getForm('draft')).toBeNull();
     });

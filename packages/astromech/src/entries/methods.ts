@@ -209,7 +209,7 @@ export function entryMethodContracts(params: {
         },
         {
             ...base('create'),
-            input: createEntrySchema({ titled }).extend({ type }),
+            input: z.object({ type, data: createEntrySchema({ titled }) }),
         },
         {
             ...base('update'),

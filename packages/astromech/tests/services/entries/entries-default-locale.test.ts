@@ -24,7 +24,7 @@ describe('default locale resolution for locale-less reads', () => {
         cfg.locales = ['en', 'de']; // content locales
         setupTestConfig(cfg);
 
-        await api.create({ type: 'post', title: 'Home', locale: 'en' });
+        await api.create({ type: 'post', data: { title: 'Home', locale: 'en' } });
 
         // No locale passed → entries service default must resolve en-GB → en.
         const res = await api.query({ type: ['post'], full: true, limit: 10 });

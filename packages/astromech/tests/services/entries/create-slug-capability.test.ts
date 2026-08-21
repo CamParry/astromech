@@ -39,7 +39,7 @@ beforeEach(async () => {
 
 describe('a titled type with slug off', () => {
     it('does not derive a slug from the title', async () => {
-        const entry = await api.create({ type: 'note', title: 'My Note' });
+        const entry = await api.create({ type: 'note', data: { title: 'My Note' } });
         expect(entry.title).toBe('My Note');
         expect(entry.slug).toBeNull();
     });
@@ -47,15 +47,14 @@ describe('a titled type with slug off', () => {
     it('ignores an explicit slug rather than storing it', async () => {
         const entry = await api.create({
             type: 'note',
-            title: 'My Note',
-            slug: 'my-note',
+            data: { title: 'My Note', slug: 'my-note' },
         });
         expect(entry.slug).toBeNull();
     });
 
     it('does not collide when two entries share a title', async () => {
-        const first = await api.create({ type: 'note', title: 'Same' });
-        const second = await api.create({ type: 'note', title: 'Same' });
+        const first = await api.create({ type: 'note', data: { title: 'Same' } });
+        const second = await api.create({ type: 'note', data: { title: 'Same' } });
         expect(first.slug).toBeNull();
         expect(second.slug).toBeNull();
     });
@@ -63,13 +62,19 @@ describe('a titled type with slug off', () => {
 
 describe('a titled type with slug on is unaffected', () => {
     it('still derives a slug from the title', async () => {
-        const entry = await api.create({ type: 'post', title: 'My Post' });
+        const entry = await api.create({ type: 'post', data: { title: 'My Post' } });
         expect(entry.slug).toBe('my-post');
     });
 
     it('still stores and uniquifies an explicit slug', async () => {
-        const first = await api.create({ type: 'post', title: 'A', slug: 'dup' });
-        const second = await api.create({ type: 'post', title: 'B', slug: 'dup' });
+        const first = await api.create({
+            type: 'post',
+            data: { title: 'A', slug: 'dup' },
+        });
+        const second = await api.create({
+            type: 'post',
+            data: { title: 'B', slug: 'dup' },
+        });
         expect(first.slug).toBe('dup');
         expect(second.slug).toBe('dup-2');
     });
@@ -77,7 +82,7 @@ describe('a titled type with slug on is unaffected', () => {
 
 describe('a titleless type with slug off', () => {
     it('ignores an explicit slug', async () => {
-        const entry = await api.create({ type: 'snippet', slug: 'a-snippet' });
+        const entry = await api.create({ type: 'snippet', data: { slug: 'a-snippet' } });
         expect(entry.slug).toBeNull();
     });
 });

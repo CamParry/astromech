@@ -87,8 +87,7 @@ describe('update — root-level merge', () => {
     it('keeps fields the patch omits', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'T',
-            fields: { headline: 'H', body: 'B', note: 'N' },
+            data: { title: 'T', fields: { headline: 'H', body: 'B', note: 'N' } },
         });
 
         const updated = one(
@@ -105,8 +104,7 @@ describe('update — root-level merge', () => {
     it('stores an explicit null rather than treating it as a delete', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'T',
-            fields: { headline: 'H', note: 'N' },
+            data: { title: 'T', fields: { headline: 'H', note: 'N' } },
         });
 
         const updated = one(
@@ -124,13 +122,15 @@ describe('update — root-level merge', () => {
     it('replaces a repeater array wholesale', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'T',
-            fields: {
-                headline: 'H',
-                items: [
-                    { _id: 'a1', label: 'one' },
-                    { _id: 'a2', label: 'two' },
-                ],
+            data: {
+                title: 'T',
+                fields: {
+                    headline: 'H',
+                    items: [
+                        { _id: 'a1', label: 'one' },
+                        { _id: 'a2', label: 'two' },
+                    ],
+                },
             },
         });
 
@@ -150,9 +150,11 @@ describe('update — public-shape write-back', () => {
     it('keeps a private field the public read stripped', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'T',
-            status: 'published',
-            fields: { headline: 'H', body: 'B', secret: 'classified' },
+            data: {
+                title: 'T',
+                status: 'published',
+                fields: { headline: 'H', body: 'B', secret: 'classified' },
+            },
         });
 
         // A public read: `secret` is projected away, and the brand that guards
@@ -180,8 +182,7 @@ describe('update — coercion is scoped to the patch', () => {
         setupTestConfig(makePatchConfig('json'));
         const entry = await api.create({
             type: 'post',
-            title: 'T',
-            fields: { headline: 'H', meta: { views: 3 } },
+            data: { title: 'T', fields: { headline: 'H', meta: { views: 3 } } },
         });
 
         setupTestConfig(makePatchConfig('key-value'));
@@ -210,9 +211,7 @@ describe('update — validation sees the merged document', () => {
     it('a required field absent from the patch does not block a publish', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'T',
-            status: 'published',
-            fields: { headline: 'H' },
+            data: { title: 'T', status: 'published', fields: { headline: 'H' } },
         });
 
         const updated = one(
@@ -230,8 +229,7 @@ describe('update — validation sees the merged document', () => {
     it('rejects a patch that makes the merged document invalid', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'T',
-            fields: { headline: 'H' },
+            data: { title: 'T', fields: { headline: 'H' } },
         });
 
         await expect(
@@ -249,8 +247,7 @@ describe('update — validation sees the merged document', () => {
     it('a cross-field rule reads merged siblings, not just the patch', async () => {
         const approved = await api.create({
             type: 'post',
-            title: 'A',
-            fields: { headline: 'Approved' },
+            data: { title: 'A', fields: { headline: 'Approved' } },
         });
         const updated = one(
             await api.update({
@@ -263,8 +260,7 @@ describe('update — validation sees the merged document', () => {
 
         const pending = await api.create({
             type: 'post',
-            title: 'B',
-            fields: { headline: 'Draft' },
+            data: { title: 'B', fields: { headline: 'Draft' } },
         });
         await expect(
             api.update({
@@ -283,8 +279,7 @@ describe('update — projection to the schema', () => {
     it('drops a key no field definition claims', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'T',
-            fields: { headline: 'H', legacy: 'left over' },
+            data: { title: 'T', fields: { headline: 'H', legacy: 'left over' } },
         });
         // The create write drops it too — the pipeline projects to the schema.
         expect(entry.fields).not.toHaveProperty('legacy');
@@ -304,8 +299,7 @@ describe('update — projection to the schema', () => {
     it('drops nothing when the type declares no fields', async () => {
         const entry = await api.create({
             type: 'blank',
-            title: 'T',
-            fields: { anything: 'kept' },
+            data: { title: 'T', fields: { anything: 'kept' } },
         });
 
         const updated = one(
@@ -324,8 +318,7 @@ describe('update — version snapshots', () => {
     it('creates no version when the patch changes nothing', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'T',
-            fields: { headline: 'H', body: 'B' },
+            data: { title: 'T', fields: { headline: 'H', body: 'B' } },
         });
 
         await api.update({ type: 'post', id: entry.id, data: { fields: { body: 'B' } } });
@@ -336,8 +329,7 @@ describe('update — version snapshots', () => {
     it('creates exactly one version when the patch changes a field', async () => {
         const entry = await api.create({
             type: 'post',
-            title: 'T',
-            fields: { headline: 'H', body: 'B' },
+            data: { title: 'T', fields: { headline: 'H', body: 'B' } },
         });
 
         await api.update({

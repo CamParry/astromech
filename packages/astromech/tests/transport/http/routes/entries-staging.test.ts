@@ -76,10 +76,12 @@ describe('staged-entry routes — round-trip', () => {
         const app = mountedApp(roleWith(['*']));
         const canonical = await api.create({
             type: 'post',
-            title: 'Live',
-            slug: 'live',
-            fields: { body: 'v1' },
-            status: 'published',
+            data: {
+                title: 'Live',
+                slug: 'live',
+                fields: { body: 'v1' },
+                status: 'published',
+            },
         });
 
         // create
@@ -127,7 +129,10 @@ describe('staged-entry routes — round-trip', () => {
 
     it('409 staged_entry_exists (carrying stagedId) on a duplicate stage', async () => {
         const app = mountedApp(roleWith(['*']));
-        const canonical = await api.create({ type: 'post', title: 'X', slug: 'x' });
+        const canonical = await api.create({
+            type: 'post',
+            data: { title: 'X', slug: 'x' },
+        });
 
         const first = await app.request(`/entries/post/${canonical.id}/staged`, {
             method: 'POST',
@@ -147,7 +152,10 @@ describe('staged-entry routes — round-trip', () => {
 
     it('discards a staged change via DELETE', async () => {
         const app = mountedApp(roleWith(['*']));
-        const canonical = await api.create({ type: 'post', title: 'D', slug: 'd' });
+        const canonical = await api.create({
+            type: 'post',
+            data: { title: 'D', slug: 'd' },
+        });
         await app.request(`/entries/post/${canonical.id}/staged`, { method: 'POST' });
 
         const del = await app.request(`/entries/post/${canonical.id}/staged`, {
@@ -161,7 +169,10 @@ describe('staged-entry routes — round-trip', () => {
 
     it('issues then revokes a preview token', async () => {
         const app = mountedApp(roleWith(['*']));
-        const canonical = await api.create({ type: 'post', title: 'P', slug: 'p' });
+        const canonical = await api.create({
+            type: 'post',
+            data: { title: 'P', slug: 'p' },
+        });
 
         const issued = await app.request(`/entries/post/${canonical.id}/preview-token`, {
             method: 'POST',
@@ -193,7 +204,10 @@ describe('staged-entry routes — capability + permissions', () => {
     });
 
     it('403 creating a staged change without entry update permission', async () => {
-        const canonical = await api.create({ type: 'post', title: 'R', slug: 'r' });
+        const canonical = await api.create({
+            type: 'post',
+            data: { title: 'R', slug: 'r' },
+        });
         const app = mountedApp(roleWith(['entry:post:read']));
         const res = await app.request(`/entries/post/${canonical.id}/staged`, {
             method: 'POST',
@@ -202,7 +216,10 @@ describe('staged-entry routes — capability + permissions', () => {
     });
 
     it('403 merging with only update permission (merge requires publish)', async () => {
-        const canonical = await api.create({ type: 'post', title: 'M', slug: 'm' });
+        const canonical = await api.create({
+            type: 'post',
+            data: { title: 'M', slug: 'm' },
+        });
         await api.createStaged({ type: 'post', id: canonical.id });
         const app = mountedApp(roleWith(['entry:post:update', 'entry:post:read']));
         const res = await app.request(`/entries/post/${canonical.id}/staged/merge`, {

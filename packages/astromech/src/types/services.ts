@@ -68,22 +68,29 @@ export type MediaUsage = {
     sourceStaged: boolean;
 };
 
-/** Caller input for `create`, validated by the per-type schema at runtime. */
+/**
+ * The row `create` writes: the update patch plus the write-once locale columns.
+ *
+ * `title` is required for titled types, runtime-enforced by the per-type schema
+ * with an identical 422. It stays optional here because `titleField: false`
+ * types omit it; Phase 3 typegen restores per-type static strictness. `locale`
+ * and `localeGroup` are set once at create; omit `localeGroup` for a fresh
+ * group (a ULID is generated).
+ */
+export type EntryCreateData = Partial<{
+    title: string;
+    slug: string;
+    locale: string;
+    localeGroup: string;
+    fields: JsonObject;
+    status: EntryStatus;
+    publishedAt: Date | null;
+}>;
+
+/** Caller input for `create`: the type, and the row to write. */
 export type EntryCreateParams = {
     type: string;
-    /**
-     * Required for titled types (runtime-enforced by the per-type schema,
-     * identical 422). Optional for `titleField: false` types; Phase 3 typegen
-     * restores per-type static strictness.
-     */
-    title?: string;
-    slug?: string;
-    locale?: string;
-    /** Existing localeGroup to join. Omit for a fresh group (ULID generated). */
-    localeGroup?: string;
-    fields?: JsonObject;
-    status?: EntryStatus;
-    publishedAt?: Date | null;
+    data: EntryCreateData;
 };
 
 /** Update payload fragment — fields that can be modified after creation. */

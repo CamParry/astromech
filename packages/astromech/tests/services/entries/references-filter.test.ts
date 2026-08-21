@@ -120,20 +120,18 @@ async function createMedia(filename: string): Promise<string> {
 
 describe('where.references', () => {
     it('returns only the entries referencing the target at that path', async () => {
-        const target = await api.create({ type: 'post', title: 'Target' });
-        const other = await api.create({ type: 'post', title: 'Other' });
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
+        const other = await api.create({ type: 'post', data: { title: 'Other' } });
 
         const hit = await api.create({
             type: 'article',
-            title: 'Hit',
-            fields: { author: target.id },
+            data: { title: 'Hit', fields: { author: target.id } },
         });
         await api.create({
             type: 'article',
-            title: 'Miss',
-            fields: { author: other.id },
+            data: { title: 'Miss', fields: { author: other.id } },
         });
-        await api.create({ type: 'article', title: 'No relation' });
+        await api.create({ type: 'article', data: { title: 'No relation' } });
 
         const result = await api.query({
             type: 'article',
@@ -145,16 +143,14 @@ describe('where.references', () => {
     });
 
     it('matches a nested schema path', async () => {
-        const target = await api.create({ type: 'post', title: 'Target' });
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
         const hit = await api.create({
             type: 'article',
-            title: 'Hit',
-            fields: { sections: [{ related: target.id }] },
+            data: { title: 'Hit', fields: { sections: [{ related: target.id }] } },
         });
         await api.create({
             type: 'article',
-            title: 'Top-level only',
-            fields: { author: target.id },
+            data: { title: 'Top-level only', fields: { author: target.id } },
         });
 
         const result = await api.query({
@@ -172,8 +168,7 @@ describe('where.references', () => {
         const two = await createMedia('two.png');
         const hit = await api.create({
             type: 'article',
-            title: 'Gallery',
-            fields: { sections: [{ gallery: [one, two] }] },
+            data: { title: 'Gallery', fields: { sections: [{ gallery: [one, two] }] } },
         });
 
         const result = await api.query({
@@ -186,12 +181,11 @@ describe('where.references', () => {
     });
 
     it('does not match an entry referencing a different target', async () => {
-        const target = await api.create({ type: 'post', title: 'Target' });
-        const other = await api.create({ type: 'post', title: 'Other' });
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
+        const other = await api.create({ type: 'post', data: { title: 'Other' } });
         await api.create({
             type: 'article',
-            title: 'Other-referencing',
-            fields: { author: other.id },
+            data: { title: 'Other-referencing', fields: { author: other.id } },
         });
 
         const result = await api.query({
@@ -204,11 +198,10 @@ describe('where.references', () => {
     });
 
     it('does not return a staged source', async () => {
-        const target = await api.create({ type: 'post', title: 'Target' });
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
         const canonical = await api.create({
             type: 'article',
-            title: 'Canonical',
-            fields: { author: target.id },
+            data: { title: 'Canonical', fields: { author: target.id } },
         });
         const staged = await api.createStaged({ type: 'article', id: canonical.id });
 
@@ -225,15 +218,14 @@ describe('where.references', () => {
     });
 
     it('reports a pagination total that reflects the filter', async () => {
-        const target = await api.create({ type: 'post', title: 'Target' });
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
         for (const title of ['a', 'b', 'c']) {
             await api.create({
                 type: 'article',
-                title,
-                fields: { author: target.id },
+                data: { title, fields: { author: target.id } },
             });
         }
-        await api.create({ type: 'article', title: 'unrelated' });
+        await api.create({ type: 'article', data: { title: 'unrelated' } });
 
         const result = await api.query({
             type: 'article',
@@ -250,7 +242,7 @@ describe('where.references', () => {
 
 describe('where.references validation', () => {
     it('throws for a path no queried type declares, naming the path', async () => {
-        const target = await api.create({ type: 'post', title: 'Target' });
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
 
         await expect(
             api.query({
@@ -290,11 +282,10 @@ describe('where.references validation', () => {
     });
 
     it('accepts a cross-type query where only one type declares the path', async () => {
-        const target = await api.create({ type: 'post', title: 'Target' });
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
         const hit = await api.create({
             type: 'article',
-            title: 'Hit',
-            fields: { author: target.id },
+            data: { title: 'Hit', fields: { author: target.id } },
         });
 
         const result = await api.query({
@@ -319,10 +310,10 @@ describe('where.references validation', () => {
 
 describe('where.references on a table-backed type', () => {
     it('throws rather than returning unfiltered rows', async () => {
-        const target = await api.create({ type: 'post', title: 'Target' });
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
         await api.create({
             type: 'links/link',
-            fields: { label: 'One', post: target.id },
+            data: { fields: { label: 'One', post: target.id } },
         });
 
         await expect(
@@ -347,7 +338,7 @@ describe('where.references on a table-backed type', () => {
 
 describe('where with an unrecognized key', () => {
     it('throws rather than silently returning every row', async () => {
-        await api.create({ type: 'post', title: 'Target' });
+        await api.create({ type: 'post', data: { title: 'Target' } });
 
         await expect(
             api.query({
@@ -369,7 +360,7 @@ describe('where with an unrecognized key', () => {
 
 describe('sort naming a field outside the allowlist', () => {
     it('throws rather than silently answering the default order', async () => {
-        await api.create({ type: 'post', title: 'Target' });
+        await api.create({ type: 'post', data: { title: 'Target' } });
 
         await expect(
             api.query({ type: 'post', full: true, sort: { id: 'asc' } })

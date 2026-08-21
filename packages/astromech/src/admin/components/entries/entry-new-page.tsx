@@ -256,16 +256,20 @@ export function EntryNewPage({
         saveFn: (payload) =>
             api.create({
                 type,
-                ...payload,
-                ...(hasI18n ? { locale: requestedLocale } : {}),
-                ...(chosenLocaleGroup ? { localeGroup: chosenLocaleGroup } : {}),
+                data: {
+                    ...payload,
+                    ...(hasI18n ? { locale: requestedLocale } : {}),
+                    ...(chosenLocaleGroup ? { localeGroup: chosenLocaleGroup } : {}),
+                },
             }) as Promise<Entry>,
         publishFn: (payload) =>
             api.create({
                 type,
-                ...payload,
-                ...(hasI18n ? { locale: requestedLocale } : {}),
-                ...(chosenLocaleGroup ? { localeGroup: chosenLocaleGroup } : {}),
+                data: {
+                    ...payload,
+                    ...(hasI18n ? { locale: requestedLocale } : {}),
+                    ...(chosenLocaleGroup ? { localeGroup: chosenLocaleGroup } : {}),
+                },
             }) as Promise<Entry>,
         onSuccess: (entry) => {
             toast({

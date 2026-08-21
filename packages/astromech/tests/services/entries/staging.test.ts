@@ -71,15 +71,16 @@ describe('createStaged', () => {
     it('copies content + relations into a fresh, unpublished, linked row', async () => {
         const target = await api.create({
             type: 'post',
-            title: 'Target',
-            slug: 'target',
+            data: { title: 'Target', slug: 'target' },
         });
         const canonical = await api.create({
             type: 'post',
-            title: 'Live',
-            slug: 'live',
-            fields: { body: 'orig', related: [target.id] },
-            status: 'published',
+            data: {
+                title: 'Live',
+                slug: 'live',
+                fields: { body: 'orig', related: [target.id] },
+                status: 'published',
+            },
         });
 
         const staged = await api.createStaged({ type: 'post', id: canonical.id });
@@ -100,7 +101,10 @@ describe('createStaged', () => {
     });
 
     it('throws StagedEntryExistsError (carrying the existing id) when one exists', async () => {
-        const canonical = await api.create({ type: 'post', title: 'X', slug: 'x' });
+        const canonical = await api.create({
+            type: 'post',
+            data: { title: 'X', slug: 'x' },
+        });
         const first = await api.createStaged({ type: 'post', id: canonical.id });
 
         await expect(
@@ -117,7 +121,7 @@ describe('createStaged', () => {
     });
 
     it('throws CapabilityError when the type does not support staging', async () => {
-        const card = await api.create({ type: 'card', fields: { label: 'c' } });
+        const card = await api.create({ type: 'card', data: { fields: { label: 'c' } } });
         await expect(
             api.createStaged({ type: 'card', id: card.id })
         ).rejects.toBeInstanceOf(CapabilityError);
@@ -126,12 +130,18 @@ describe('createStaged', () => {
 
 describe('getStaged', () => {
     it('returns null when the canonical has no staged change', async () => {
-        const canonical = await api.create({ type: 'post', title: 'X', slug: 'x' });
+        const canonical = await api.create({
+            type: 'post',
+            data: { title: 'X', slug: 'x' },
+        });
         expect(await api.getStaged({ type: 'post', id: canonical.id })).toBeNull();
     });
 
     it('returns the staged change when present', async () => {
-        const canonical = await api.create({ type: 'post', title: 'X', slug: 'x' });
+        const canonical = await api.create({
+            type: 'post',
+            data: { title: 'X', slug: 'x' },
+        });
         const staged = await api.createStaged({ type: 'post', id: canonical.id });
         const got = await api.getStaged({ type: 'post', id: canonical.id });
         expect(got?.id).toBe(staged.id);
@@ -141,13 +151,18 @@ describe('getStaged', () => {
 
 describe('mergeStaged', () => {
     it('merges staged content + relations into the canonical, preserving id/slug/status', async () => {
-        const target = await api.create({ type: 'post', title: 'T', slug: 't' });
+        const target = await api.create({
+            type: 'post',
+            data: { title: 'T', slug: 't' },
+        });
         const canonical = await api.create({
             type: 'post',
-            title: 'Orig',
-            slug: 'orig',
-            fields: { body: 'v1' },
-            status: 'published',
+            data: {
+                title: 'Orig',
+                slug: 'orig',
+                fields: { body: 'v1' },
+                status: 'published',
+            },
         });
         const staged = await api.createStaged({ type: 'post', id: canonical.id });
         await api.update({
@@ -175,9 +190,7 @@ describe('mergeStaged', () => {
     it('leaves an unpublished canonical unpublished (merge is content-only)', async () => {
         const canonical = await api.create({
             type: 'post',
-            title: 'Draft work',
-            slug: 'draft-work',
-            fields: { body: 'v1' },
+            data: { title: 'Draft work', slug: 'draft-work', fields: { body: 'v1' } },
         });
         expect(canonical.status).toBe('unpublished');
         const staged = await api.createStaged({ type: 'post', id: canonical.id });
@@ -197,9 +210,7 @@ describe('mergeStaged', () => {
     it('snapshots a backup version of the canonical when versioning is on', async () => {
         const canonical = await api.create({
             type: 'post',
-            title: 'Orig',
-            slug: 'orig',
-            fields: { body: 'v1' },
+            data: { title: 'Orig', slug: 'orig', fields: { body: 'v1' } },
         });
         const staged = await api.createStaged({ type: 'post', id: canonical.id });
         await api.update({
@@ -218,9 +229,7 @@ describe('mergeStaged', () => {
     it('merges without a backup version when versioning is off (note)', async () => {
         const canonical = await api.create({
             type: 'note',
-            title: 'N',
-            slug: 'n',
-            fields: { body: 'a' },
+            data: { title: 'N', slug: 'n', fields: { body: 'a' } },
         });
         const staged = await api.createStaged({ type: 'note', id: canonical.id });
         await api.update({
@@ -235,7 +244,10 @@ describe('mergeStaged', () => {
     });
 
     it('throws when there is no staged change to merge', async () => {
-        const canonical = await api.create({ type: 'post', title: 'X', slug: 'x' });
+        const canonical = await api.create({
+            type: 'post',
+            data: { title: 'X', slug: 'x' },
+        });
         await expect(api.mergeStaged({ type: 'post', id: canonical.id })).rejects.toThrow(
             /No staged change/
         );
@@ -282,10 +294,12 @@ describe('mergeStaged — field validation', () => {
     it('rejects staged content missing a required field when the canonical is published', async () => {
         const canonical = await api.create({
             type: 'post',
-            title: 'Live',
-            slug: 'live',
-            fields: { headline: 'Hello' },
-            status: 'published',
+            data: {
+                title: 'Live',
+                slug: 'live',
+                fields: { headline: 'Hello' },
+                status: 'published',
+            },
         });
         const staged = await api.createStaged({ type: 'post', id: canonical.id });
         await api.update({
@@ -310,9 +324,7 @@ describe('mergeStaged — field validation', () => {
     it('accepts the same incomplete content when the canonical is unpublished', async () => {
         const canonical = await api.create({
             type: 'post',
-            title: 'Draft',
-            slug: 'draft',
-            fields: { headline: 'Hello' },
+            data: { title: 'Draft', slug: 'draft', fields: { headline: 'Hello' } },
         });
         const staged = await api.createStaged({ type: 'post', id: canonical.id });
         await api.update({
@@ -329,10 +341,12 @@ describe('mergeStaged — field validation', () => {
         for (const status of ['published', 'unpublished'] as const) {
             const canonical = await api.create({
                 type: 'post',
-                title: `C-${status}`,
-                slug: `c-${status}`,
-                fields: { headline: 'Hello' },
-                status,
+                data: {
+                    title: `C-${status}`,
+                    slug: `c-${status}`,
+                    fields: { headline: 'Hello' },
+                    status,
+                },
             });
             const staged = await api.createStaged({ type: 'post', id: canonical.id });
             await plantFields(staged.id, { headline: 'Hello', link: 'not a url' });
@@ -349,10 +363,12 @@ describe('mergeStaged — field validation', () => {
     it('merges a unique field whose value is unchanged between canonical and staged', async () => {
         const canonical = await api.create({
             type: 'post',
-            title: 'Live',
-            slug: 'live',
-            fields: { headline: 'Hello', code: 'abc123' },
-            status: 'published',
+            data: {
+                title: 'Live',
+                slug: 'live',
+                fields: { headline: 'Hello', code: 'abc123' },
+                status: 'published',
+            },
         });
         // The staged copy carries the same `code`, so the scan must ignore BOTH
         // rows — otherwise the value collides with its own other copy. (Planted
@@ -369,15 +385,19 @@ describe('mergeStaged — field validation', () => {
     it('still rejects a unique value held by a THIRD entry', async () => {
         await api.create({
             type: 'post',
-            title: 'Other',
-            slug: 'other',
-            fields: { headline: 'O', code: 'taken' },
+            data: {
+                title: 'Other',
+                slug: 'other',
+                fields: { headline: 'O', code: 'taken' },
+            },
         });
         const canonical = await api.create({
             type: 'post',
-            title: 'Live',
-            slug: 'live',
-            fields: { headline: 'Hello', code: 'free' },
+            data: {
+                title: 'Live',
+                slug: 'live',
+                fields: { headline: 'Hello', code: 'free' },
+            },
         });
         const staged = await api.createStaged({ type: 'post', id: canonical.id });
         await plantFields(staged.id, { headline: 'Hello', code: 'taken' });
@@ -393,10 +413,12 @@ describe('mergeStaged — field validation', () => {
     it('writes the COERCED staged values onto the canonical', async () => {
         const canonical = await api.create({
             type: 'post',
-            title: 'Live',
-            slug: 'live',
-            fields: { headline: 'Hello' },
-            status: 'published',
+            data: {
+                title: 'Live',
+                slug: 'live',
+                fields: { headline: 'Hello' },
+                status: 'published',
+            },
         });
         const staged = await api.createStaged({ type: 'post', id: canonical.id });
         await plantFields(staged.id, {
@@ -453,10 +475,12 @@ describe('update — uniqueness across a canonical and its staged copy', () => {
     it('lets the staged row keep the unique value it shares with its canonical', async () => {
         const canonical = await api.create({
             type: 'post',
-            title: 'Live',
-            slug: 'live',
-            fields: { headline: 'Hello', code: 'abc123' },
-            status: 'published',
+            data: {
+                title: 'Live',
+                slug: 'live',
+                fields: { headline: 'Hello', code: 'abc123' },
+                status: 'published',
+            },
         });
         const staged = await api.createStaged({ type: 'post', id: canonical.id });
 
@@ -474,10 +498,12 @@ describe('update — uniqueness across a canonical and its staged copy', () => {
     it('lets the canonical keep its own unique value while a staged copy exists', async () => {
         const canonical = await api.create({
             type: 'post',
-            title: 'Live',
-            slug: 'live',
-            fields: { headline: 'Hello', code: 'abc123' },
-            status: 'published',
+            data: {
+                title: 'Live',
+                slug: 'live',
+                fields: { headline: 'Hello', code: 'abc123' },
+                status: 'published',
+            },
         });
         await api.createStaged({ type: 'post', id: canonical.id });
 
@@ -495,15 +521,19 @@ describe('update — uniqueness across a canonical and its staged copy', () => {
     it('still rejects a unique value held by a THIRD entry, from either row', async () => {
         await api.create({
             type: 'post',
-            title: 'Other',
-            slug: 'other',
-            fields: { headline: 'O', code: 'taken' },
+            data: {
+                title: 'Other',
+                slug: 'other',
+                fields: { headline: 'O', code: 'taken' },
+            },
         });
         const canonical = await api.create({
             type: 'post',
-            title: 'Live',
-            slug: 'live',
-            fields: { headline: 'Hello', code: 'free' },
+            data: {
+                title: 'Live',
+                slug: 'live',
+                fields: { headline: 'Hello', code: 'free' },
+            },
         });
         const staged = await api.createStaged({ type: 'post', id: canonical.id });
 
@@ -533,15 +563,11 @@ describe('update — uniqueness across a canonical and its staged copy', () => {
     it('still rejects a duplicate on a type without the staging capability', async () => {
         await api.create({
             type: 'note',
-            title: 'A',
-            slug: 'a',
-            fields: { code: 'taken' },
+            data: { title: 'A', slug: 'a', fields: { code: 'taken' } },
         });
         const other = await api.create({
             type: 'note',
-            title: 'B',
-            slug: 'b',
-            fields: { code: 'free' },
+            data: { title: 'B', slug: 'b', fields: { code: 'free' } },
         });
 
         await expect(
@@ -561,9 +587,7 @@ describe('deleteStaged', () => {
     it('hard-deletes the staged change and leaves the canonical untouched', async () => {
         const canonical = await api.create({
             type: 'post',
-            title: 'Live',
-            slug: 'live',
-            status: 'published',
+            data: { title: 'Live', slug: 'live', status: 'published' },
         });
         await api.createStaged({ type: 'post', id: canonical.id });
 
@@ -576,7 +600,10 @@ describe('deleteStaged', () => {
     });
 
     it('throws when there is no staged change to delete', async () => {
-        const canonical = await api.create({ type: 'post', title: 'X', slug: 'x' });
+        const canonical = await api.create({
+            type: 'post',
+            data: { title: 'X', slug: 'x' },
+        });
         await expect(
             api.deleteStaged({ type: 'post', id: canonical.id })
         ).rejects.toThrow(/No staged change/);

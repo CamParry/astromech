@@ -32,7 +32,7 @@ beforeEach(async () => {
 
 describe('GET /entries/:type', () => {
     it('returns { data, pagination } straight from the service', async () => {
-        await api.create({ type: 'post', title: 'One', status: 'published' });
+        await api.create({ type: 'post', data: { title: 'One', status: 'published' } });
 
         const res = await app().request('/entries/post');
         expect(res.status).toBe(200);
@@ -63,10 +63,12 @@ describe('GET /entries/:type/:id', () => {
     it('returns { data: entry } with the entry’s own keys', async () => {
         const created = await api.create({
             type: 'post',
-            title: 'Read me',
-            slug: 'read-me',
-            fields: { body: 'hi' },
-            status: 'published',
+            data: {
+                title: 'Read me',
+                slug: 'read-me',
+                fields: { body: 'hi' },
+                status: 'published',
+            },
         });
 
         const res = await app().request(`/entries/post/${created.id}`);
@@ -175,7 +177,10 @@ describe('POST /entries/:type', () => {
 
 describe('PUT /entries/:type/:id', () => {
     it('updates and returns { data: entry }', async () => {
-        const created = await api.create({ type: 'post', title: 'Before', slug: 'b' });
+        const created = await api.create({
+            type: 'post',
+            data: { title: 'Before', slug: 'b' },
+        });
 
         const res = await app().request(`/entries/post/${created.id}`, {
             method: 'PUT',
@@ -190,7 +195,10 @@ describe('PUT /entries/:type/:id', () => {
     });
 
     it('422s an empty title on a titled type', async () => {
-        const created = await api.create({ type: 'post', title: 'Before', slug: 'b2' });
+        const created = await api.create({
+            type: 'post',
+            data: { title: 'Before', slug: 'b2' },
+        });
         const res = await app().request(`/entries/post/${created.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -205,7 +213,10 @@ describe('PUT /entries/:type/:id', () => {
     });
 
     it('409s a status on a type without the statuses capability', async () => {
-        const created = await api.create({ type: 'snippet', fields: { key: 'k' } });
+        const created = await api.create({
+            type: 'snippet',
+            data: { fields: { key: 'k' } },
+        });
         const res = await app().request(`/entries/snippet/${created.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -222,9 +233,7 @@ describe('POST /entries/:type/:id/duplicate', () => {
     it('copies the entry and returns { data: entry } with 201', async () => {
         const created = await api.create({
             type: 'post',
-            title: 'Original',
-            slug: 'original',
-            fields: { body: 'text' },
+            data: { title: 'Original', slug: 'original', fields: { body: 'text' } },
         });
 
         const res = await app().request(`/entries/post/${created.id}/duplicate`, {
@@ -237,7 +246,10 @@ describe('POST /entries/:type/:id/duplicate', () => {
     });
 
     it('applies overrides from the body', async () => {
-        const created = await api.create({ type: 'post', title: 'Original', slug: 'o2' });
+        const created = await api.create({
+            type: 'post',
+            data: { title: 'Original', slug: 'o2' },
+        });
         const res = await app().request(`/entries/post/${created.id}/duplicate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -250,7 +262,10 @@ describe('POST /entries/:type/:id/duplicate', () => {
     });
 
     it('422s an override that fails the schema', async () => {
-        const created = await api.create({ type: 'post', title: 'Original', slug: 'o3' });
+        const created = await api.create({
+            type: 'post',
+            data: { title: 'Original', slug: 'o3' },
+        });
         const res = await app().request(`/entries/post/${created.id}/duplicate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -262,7 +277,10 @@ describe('POST /entries/:type/:id/duplicate', () => {
 
 describe('DELETE /entries/:type/:id', () => {
     it('trashes when the type has the trash capability, returning { success: true }', async () => {
-        const created = await api.create({ type: 'post', title: 'Bin me', slug: 'bin' });
+        const created = await api.create({
+            type: 'post',
+            data: { title: 'Bin me', slug: 'bin' },
+        });
 
         const res = await app().request(`/entries/post/${created.id}`, {
             method: 'DELETE',
@@ -276,7 +294,10 @@ describe('DELETE /entries/:type/:id', () => {
 
     it('hard-deletes when the type has no trash capability', async () => {
         setupTestConfig(configWithoutTrash());
-        const created = await api.create({ type: 'note', title: 'Gone', slug: 'gone' });
+        const created = await api.create({
+            type: 'note',
+            data: { title: 'Gone', slug: 'gone' },
+        });
 
         const res = await app().request(`/entries/note/${created.id}`, {
             method: 'DELETE',
@@ -288,7 +309,10 @@ describe('DELETE /entries/:type/:id', () => {
 
 describe('DELETE /entries/:type/:id/force', () => {
     it('hard-deletes regardless of the trash capability', async () => {
-        const created = await api.create({ type: 'post', title: 'Force', slug: 'force' });
+        const created = await api.create({
+            type: 'post',
+            data: { title: 'Force', slug: 'force' },
+        });
 
         const res = await app().request(`/entries/post/${created.id}/force`, {
             method: 'DELETE',
@@ -301,7 +325,10 @@ describe('DELETE /entries/:type/:id/force', () => {
 
 describe('DELETE /entries/:type/trash', () => {
     it('empties the trash and returns { success: true }', async () => {
-        const created = await api.create({ type: 'post', title: 'Bin', slug: 'bin2' });
+        const created = await api.create({
+            type: 'post',
+            data: { title: 'Bin', slug: 'bin2' },
+        });
         await api.trash({ type: 'post', id: created.id });
 
         const res = await app().request('/entries/post/trash', { method: 'DELETE' });
@@ -324,7 +351,10 @@ describe('DELETE /entries/:type/trash', () => {
 
 describe('POST /entries/:type/:id/restore', () => {
     it('restores a trashed entry and returns { data: entry }', async () => {
-        const created = await api.create({ type: 'post', title: 'Back', slug: 'back' });
+        const created = await api.create({
+            type: 'post',
+            data: { title: 'Back', slug: 'back' },
+        });
         await api.trash({ type: 'post', id: created.id });
 
         const res = await app().request(`/entries/post/${created.id}/restore`, {

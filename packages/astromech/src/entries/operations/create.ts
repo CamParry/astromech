@@ -41,11 +41,12 @@ type FieldContext = {
  * the entry create hooks, and writes the row with its relationship index.
  */
 export async function create(params: EntryCreateParams): Promise<Entry> {
-    if (params.fields !== undefined && isPublicBranded(params.fields)) {
+    const { type, data } = params;
+
+    if (data.fields !== undefined && isPublicBranded(data.fields)) {
         throw new PublicShapeWriteError();
     }
 
-    const type = params.type;
     const entryType = resolveEntryType(getConfig(), type);
     if (!entryType) {
         throw new UnknownEntryTypeError(type);
@@ -56,17 +57,17 @@ export async function create(params: EntryCreateParams): Promise<Entry> {
 
     const titled = entryType.titleField !== false;
     const validated = validate(createEntrySchema({ titled }), {
-        title: params.title,
-        slug: params.slug,
-        fields: params.fields,
-        status: params.status,
-        publishedAt: params.publishedAt,
+        title: data.title,
+        slug: data.slug,
+        fields: data.fields,
+        status: data.status,
+        publishedAt: data.publishedAt,
     });
 
     const title = validated.title ?? '';
     const status = validated.status ?? 'unpublished';
-    const locale = params.locale ?? getDefaultLocale();
-    const localeGroup = params.localeGroup;
+    const locale = data.locale ?? getDefaultLocale();
+    const localeGroup = data.localeGroup;
     const publishedAt =
         status === 'published' ? new Date() : (validated.publishedAt ?? null);
 
@@ -86,7 +87,7 @@ export async function create(params: EntryCreateParams): Promise<Entry> {
         status,
     });
 
-    const data = {
+    const row = {
         title,
         slug,
         locale,
@@ -96,16 +97,16 @@ export async function create(params: EntryCreateParams): Promise<Entry> {
         publishedAt,
     };
 
-    await runHook('entry:beforeCreate', { type, data, user });
+    await runHook('entry:beforeCreate', { type, data: row, user });
 
     // Write the row and its relationship index atomically.
     const entry = await transaction(async () => {
-        const created = asEntry(await repository.create({ type, ...data }));
-        await indexEntryRelationships(created, data.fields, type);
+        const created = asEntry(await repository.create({ type, ...row }));
+        await indexEntryRelationships(created, row.fields, type);
         return created;
     });
 
-    await runHook('entry:afterCreate', { type, data, user, entry });
+    await runHook('entry:afterCreate', { type, data: row, user, entry });
 
     return entry;
 }

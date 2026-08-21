@@ -63,9 +63,7 @@ beforeEach(async () => {
     setupTestConfig(makeTestConfig());
     const created = await api.create({
         type: 'post',
-        title: 'Subject',
-        slug: 'subject',
-        fields: { body: 'v1' },
+        data: { title: 'Subject', slug: 'subject', fields: { body: 'v1' } },
     });
     id = created.id;
     await api.update({ type: 'post', id, data: { fields: { body: 'v2' } } });

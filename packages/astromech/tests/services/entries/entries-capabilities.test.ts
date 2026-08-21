@@ -88,7 +88,7 @@ beforeAll(async () => {
 });
 
 async function createEntry(type: string): Promise<string> {
-    const entry = await entriesService.create({ type, title: `Test ${type}` });
+    const entry = await entriesService.create({ type, data: { title: `Test ${type}` } });
     return entry.id;
 }
 

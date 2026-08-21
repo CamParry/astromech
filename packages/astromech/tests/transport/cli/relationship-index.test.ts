@@ -166,22 +166,27 @@ async function createMedia(filename = 'a.png'): Promise<string> {
  * relation, a table-backed entry, a user, and a media record.
  */
 async function seedContent(): Promise<{ article: string; post: string; media: string }> {
-    const post = await api.create({ type: 'post', title: 'Post' });
-    const other = await api.create({ type: 'post', title: 'Other' });
+    const post = await api.create({ type: 'post', data: { title: 'Post' } });
+    const other = await api.create({ type: 'post', data: { title: 'Other' } });
     const mediaId = await createMedia();
 
     const article = await api.create({
         type: 'article',
-        title: 'Article',
-        fields: {
-            author: post.id,
-            sections: [
-                { related: [post.id, other.id], gallery: [mediaId] },
-                { related: [other.id] },
-            ],
+        data: {
+            title: 'Article',
+            fields: {
+                author: post.id,
+                sections: [
+                    { related: [post.id, other.id], gallery: [mediaId] },
+                    { related: [other.id] },
+                ],
+            },
         },
     });
-    await api.create({ type: 'links/link', fields: { label: 'One', post: post.id } });
+    await api.create({
+        type: 'links/link',
+        data: { fields: { label: 'One', post: post.id } },
+    });
     await usersService.create({
         email: 'owner@test.dev',
         name: 'Owner',

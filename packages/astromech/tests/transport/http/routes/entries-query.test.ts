@@ -42,7 +42,10 @@ function mountedApp(role: Role): OpenAPIHono<{ Variables: AuthVariables }> {
 const app = (): OpenAPIHono<{ Variables: AuthVariables }> => mountedApp(roleWith(['*']));
 
 async function trashedPost(): Promise<Entry> {
-    const entry = await api.create({ type: 'post', title: 'Gone', status: 'published' });
+    const entry = await api.create({
+        type: 'post',
+        data: { title: 'Gone', status: 'published' },
+    });
     await api.trash({ type: 'post', id: entry.id });
     return entry;
 }

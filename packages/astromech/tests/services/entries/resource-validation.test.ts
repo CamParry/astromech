@@ -62,8 +62,10 @@ describe('a resource validator returning a field map', () => {
         await expect(
             api.create({
                 type: 'event',
-                title: 'E1',
-                fields: { starts: '2026-02-01', ends: '2026-01-01' },
+                data: {
+                    title: 'E1',
+                    fields: { starts: '2026-02-01', ends: '2026-01-01' },
+                },
             })
         ).rejects.toMatchObject({
             name: 'ValidationError',
@@ -74,8 +76,7 @@ describe('a resource validator returning a field map', () => {
     it('lets a valid resource through', async () => {
         const entry = await api.create({
             type: 'event',
-            title: 'E2',
-            fields: { starts: '2026-01-01', ends: '2026-02-01' },
+            data: { title: 'E2', fields: { starts: '2026-01-01', ends: '2026-02-01' } },
         });
         expect(entry.fields.ends).toBe('2026-02-01');
     });
@@ -83,8 +84,7 @@ describe('a resource validator returning a field map', () => {
     it('rejects an update the same way', async () => {
         const entry = await api.create({
             type: 'event',
-            title: 'E3',
-            fields: { starts: '2026-01-01', ends: '2026-02-01' },
+            data: { title: 'E3', fields: { starts: '2026-01-01', ends: '2026-02-01' } },
         });
         await expect(
             api.update({
@@ -106,7 +106,7 @@ describe('a resource validator returning a string', () => {
 
     it('rejects with a form-level message and no field errors', async () => {
         await expect(
-            api.create({ type: 'event', title: 'E4', fields: {} })
+            api.create({ type: 'event', data: { title: 'E4', fields: {} } })
         ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: {},
@@ -122,7 +122,7 @@ describe('a field error and a resource error on the same key', () => {
 
     it("keeps the field's own error, as the more specific one", async () => {
         await expect(
-            api.create({ type: 'event', title: 'E5', fields: { code: 'ab' } })
+            api.create({ type: 'event', data: { title: 'E5', fields: { code: 'ab' } } })
         ).rejects.toMatchObject({
             name: 'ValidationError',
             fields: { code: ['Must be at least 3 characters'] },

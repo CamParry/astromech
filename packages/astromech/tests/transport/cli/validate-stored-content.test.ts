@@ -130,8 +130,7 @@ describe('validateStoredContent', () => {
     it('reports nothing for rows the write paths accepted', async () => {
         await api.create({
             type: 'article',
-            title: 'Fine',
-            fields: { rating: 3, code: 'a' },
+            data: { title: 'Fine', fields: { rating: 3, code: 'a' } },
         });
         await usersService.create({
             email: 'owner@test.dev',
@@ -150,8 +149,13 @@ describe('validateStoredContent', () => {
     it('leaves every stored row untouched', async () => {
         await api.create({
             type: 'article',
-            title: 'Sections',
-            fields: { summary: 'S', sections: [{ heading: 'One' }, { heading: 'Two' }] },
+            data: {
+                title: 'Sections',
+                fields: {
+                    summary: 'S',
+                    sections: [{ heading: 'One' }, { heading: 'Two' }],
+                },
+            },
         });
         await usersService.create({
             email: 'owner@test.dev',
@@ -169,8 +173,7 @@ describe('validateStoredContent', () => {
     it('reports an out-of-range value with its path and message', async () => {
         const article = await api.create({
             type: 'article',
-            title: 'Too high',
-            fields: { rating: 3 },
+            data: { title: 'Too high', fields: { rating: 3 } },
         });
         await storeFields(article.id, { rating: 9 });
 
@@ -189,7 +192,10 @@ describe('validateStoredContent', () => {
     });
 
     it('reports a wrong-shape value', async () => {
-        const article = await api.create({ type: 'article', title: 'Wrong shape' });
+        const article = await api.create({
+            type: 'article',
+            data: { title: 'Wrong shape' },
+        });
         await storeFields(article.id, { rating: 'three' });
 
         const report = await validateStoredContent();
@@ -201,7 +207,7 @@ describe('validateStoredContent', () => {
     // `required` is a completeness check: a draft may be unfinished, the same
     // row published may not.
     it('validates each row at the stage its own status implies', async () => {
-        const article = await api.create({ type: 'article', title: 'Draft' });
+        const article = await api.create({ type: 'article', data: { title: 'Draft' } });
 
         expect((await validateStoredContent()).findings).toEqual([]);
 
@@ -223,8 +229,7 @@ describe('validateStoredContent', () => {
     it('does not report a unique value as colliding with itself', async () => {
         await api.create({
             type: 'article',
-            title: 'One',
-            fields: { rating: 1, code: 'only' },
+            data: { title: 'One', fields: { rating: 1, code: 'only' } },
         });
 
         expect((await validateStoredContent()).findings).toEqual([]);
@@ -233,10 +238,9 @@ describe('validateStoredContent', () => {
     it('reports two rows that share a unique value', async () => {
         const first = await api.create({
             type: 'article',
-            title: 'One',
-            fields: { code: 'dup' },
+            data: { title: 'One', fields: { code: 'dup' } },
         });
-        const second = await api.create({ type: 'article', title: 'Two' });
+        const second = await api.create({ type: 'article', data: { title: 'Two' } });
         await storeFields(second.id, { code: 'dup' });
 
         const report = await validateStoredContent();
@@ -248,7 +252,7 @@ describe('validateStoredContent', () => {
     });
 
     it('skips trashed rows', async () => {
-        const article = await api.create({ type: 'article', title: 'Gone' });
+        const article = await api.create({ type: 'article', data: { title: 'Gone' } });
         await storeFields(article.id, { rating: 9 });
         await api.trash({ type: 'article', id: article.id });
 
@@ -311,8 +315,8 @@ describe('validateStoredContent', () => {
 
 describe('validateStoredContent({ type })', () => {
     it('checks only the named entry type', async () => {
-        const article = await api.create({ type: 'article', title: 'Bad' });
-        const other = await api.create({ type: 'report', title: 'Also bad' });
+        const article = await api.create({ type: 'article', data: { title: 'Bad' } });
+        const other = await api.create({ type: 'report', data: { title: 'Also bad' } });
         await storeFields(article.id, { rating: 9 });
         await storeFields(other.id, { rating: 9 });
 

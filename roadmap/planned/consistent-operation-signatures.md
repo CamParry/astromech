@@ -83,23 +83,30 @@ safety net; nothing here changes behaviour.
 
 **Stage 1 — `entries.create` takes `data`**
 
-- [ ] `types/services.ts`: add `EntryCreateData`; `EntryCreateParams` becomes
-      `{ type: string; data: EntryCreateData }`.
-- [ ] `entries/schema.ts` / `entries/methods.ts`: the `create` contract becomes
+- [x] `types/services.ts`: add `EntryCreateData`; `EntryCreateParams` becomes
+      `{ type: string; data: EntryCreateData }`. `types/typed-entries.ts` carries
+      its own pair of `create` overloads and moves with it; the wide overload
+      keeps `fields?: Record<string, unknown>`, because `EntryCreateData`'s
+      `JsonObject` rejects what the forms plugin writes.
+- [x] `entries/schema.ts` / `entries/methods.ts`: the `create` contract becomes
       `z.object({ type, data: createEntrySchema({ titled }) })`.
-- [ ] `operations/create.ts` reads `params.data`. The `isPublicBranded` guard
+- [x] `operations/create.ts` reads `params.data`. The `isPublicBranded` guard
       reads `params.data.fields`.
-- [ ] `http-routes.shared.ts`: `bodyKey: 'data'` on `entries.create`; the bespoke
+- [x] `http-routes.shared.ts`: `bodyKey: 'data'` on `entries.create`; the bespoke
       handler in `routes/entries.ts` passes `{ type, data: parsed.data }`.
-- [ ] Callers: `transport/cli/commands/entries-create.ts`,
+- [x] Callers: `transport/cli/commands/entries-create.ts`,
       `admin/components/entries/entry-new-page.tsx` (two calls),
       `admin/hooks/entries.ts` (`useCreateEntry`, which nothing calls; delete it
       rather than migrate it), `packages/plugins/forms/src/service/forms.ts`,
       `packages/plugins/redirects/src/hooks/slug-change.ts`, and the example in
       `packages/plugins/redirects/README.md`.
-- [ ] Tests: the fifteen `entries.create` calls across seven files; the wire
-      assertion in `tests/transport/http/client/methods.test.ts` keeps
-      `body: { title: 'One' }` because the wire is unchanged.
+- [x] Tests: 254 `entries.create` calls across 38 files, not the fifteen the
+      inventory counted; most tests alias the service (`entriesService as api`),
+      which a naive grep misses. The wire assertion in
+      `tests/transport/http/client/methods.test.ts` keeps `body: { title: 'One' }`
+      because the wire is unchanged. `openapi-document.test.ts` follows a `$ref`:
+      the body now emits as the registered `CreateEntry` component rather than an
+      inlined clone, with identical properties.
 
 **Stage 2 — `users.create` takes `data`**
 

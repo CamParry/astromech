@@ -4,13 +4,7 @@
  * accepted via optional onSuccess. Options-object client surface, type required.
  */
 
-import type {
-    EntriesService,
-    Entry,
-    EntryQueryParams,
-    EntryStatus,
-    JsonObject,
-} from '@/types/index';
+import type { EntriesService, Entry, EntryQueryParams } from '@/types/index';
 import {
     queryOptions,
     useMutation,
@@ -122,33 +116,6 @@ export function useEntriesByIds(type: string, ids: string[], enabled = true) {
                 limit: 'all',
             }),
         enabled: enabled && ids.length > 0,
-    });
-}
-
-export function useCreateEntry() {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-
-    return useMutation({
-        mutationFn: (payload: {
-            type: string;
-            title: string;
-            fields: JsonObject;
-            status?: EntryStatus;
-        }) => astromechClient.entries.create(payload),
-        onSuccess: (entry) => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(entry.type),
-            });
-            toast({ message: t('entries.created'), variant: 'success' });
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('entries.createFailed'),
-                variant: 'error',
-            });
-        },
     });
 }
 

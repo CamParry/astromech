@@ -72,7 +72,7 @@ afterEach(() => {
 
 describe('duplicate atomicity', () => {
     it('rolls back the new row when relationship persistence throws', async () => {
-        const source = await api.create({ type: 'post', title: 'Source' });
+        const source = await api.create({ type: 'post', data: { title: 'Source' } });
 
         state.failing = true;
         await expect(api.duplicate({ type: 'post', id: source.id })).rejects.toThrow(

@@ -51,12 +51,14 @@ async function setup(options?: FormsOptions): Promise<void> {
     setupTestConfig({ ...makeTestConfig(), plugins: [forms(options)] });
     await (localEntries as unknown as EntriesService).create({
         type: FORM,
-        title: 'Contact',
-        slug: 'contact',
-        status: 'published',
-        fields: {
-            enabled: true,
-            fields: [{ _type: 'text', _id: 'b1', name: 'name', label: 'Name' }],
+        data: {
+            title: 'Contact',
+            slug: 'contact',
+            status: 'published',
+            fields: {
+                enabled: true,
+                fields: [{ _type: 'text', _id: 'b1', name: 'name', label: 'Name' }],
+            },
         },
     });
 }

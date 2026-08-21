@@ -138,7 +138,7 @@ A plugin entry type is addressed by its qualified id, `<namespace>/<type>`:
 ```ts
 await app.entries.create({
     type: 'redirects/redirect',
-    fields: { from: '/old', to: '/new', status: '301', enabled: true },
+    data: { fields: { from: '/old', to: '/new', status: '301', enabled: true } },
 });
 ```
 

@@ -48,7 +48,7 @@ describe('createEntriesService — type path segment', () => {
     });
 
     it('encodes on create', async () => {
-        await api().create({ type: 'redirects/redirect', title: 'x' });
+        await api().create({ type: 'redirects/redirect', data: { title: 'x' } });
         expect(calls[0]).toBe('/cms/api/entries/redirects%2Fredirect');
     });
 

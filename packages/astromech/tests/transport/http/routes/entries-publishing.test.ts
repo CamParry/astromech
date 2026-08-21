@@ -26,9 +26,7 @@ beforeEach(async () => {
     setupTestConfig(makeTestConfig());
     const created = await api.create({
         type: 'post',
-        title: 'Subject',
-        slug: 'subject',
-        fields: { body: 'v1' },
+        data: { title: 'Subject', slug: 'subject', fields: { body: 'v1' } },
     });
     id = created.id;
 });
@@ -47,7 +45,10 @@ describe('POST /entries/:type/:id/publish', () => {
     });
 
     it('409s a type without the statuses capability', async () => {
-        const snippet = await api.create({ type: 'snippet', fields: { key: 'k' } });
+        const snippet = await api.create({
+            type: 'snippet',
+            data: { fields: { key: 'k' } },
+        });
         const res = await app().request(`/entries/snippet/${snippet.id}/publish`, {
             method: 'POST',
         });
@@ -70,7 +71,10 @@ describe('POST /entries/:type/:id/unpublish', () => {
     });
 
     it('409s a type without the statuses capability', async () => {
-        const snippet = await api.create({ type: 'snippet', fields: { key: 'k' } });
+        const snippet = await api.create({
+            type: 'snippet',
+            data: { fields: { key: 'k' } },
+        });
         const res = await app().request(`/entries/snippet/${snippet.id}/unpublish`, {
             method: 'POST',
         });
@@ -103,7 +107,10 @@ describe('POST /entries/:type/:id/schedule', () => {
     });
 
     it('409s a type without the statuses capability', async () => {
-        const snippet = await api.create({ type: 'snippet', fields: { key: 'k' } });
+        const snippet = await api.create({
+            type: 'snippet',
+            data: { fields: { key: 'k' } },
+        });
         const res = await app().request(`/entries/snippet/${snippet.id}/schedule`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -136,7 +143,7 @@ describe('GET /entries/:type/:id/versions', () => {
     });
 
     it('409s an unversioned type on the capability its contract requires', async () => {
-        const note = await api.create({ type: 'note', title: 'N', slug: 'n' });
+        const note = await api.create({ type: 'note', data: { title: 'N', slug: 'n' } });
         const res = await app().request(`/entries/note/${note.id}/versions`);
         expect(res.status).toBe(409);
         const body = (await res.json()) as { error: { code: string } };
@@ -160,7 +167,10 @@ describe('POST /entries/:type/:id/versions/:versionId/restore', () => {
     });
 
     it('409s an unversioned type on the capability its contract requires', async () => {
-        const note = await api.create({ type: 'note', title: 'N2', slug: 'n2' });
+        const note = await api.create({
+            type: 'note',
+            data: { title: 'N2', slug: 'n2' },
+        });
         const res = await app().request(`/entries/note/${note.id}/versions/v1/restore`, {
             method: 'POST',
         });
@@ -181,9 +191,7 @@ describe('GET /entries/:type/:id/incoming-relationships', () => {
     it('returns { data: relationships } naming the source entry and field path', async () => {
         const source = await api.create({
             type: 'post',
-            title: 'Source',
-            slug: 'source',
-            fields: { related: [id] },
+            data: { title: 'Source', slug: 'source', fields: { related: [id] } },
         });
 
         const res = await app().request(`/entries/post/${id}/incoming-relationships`);

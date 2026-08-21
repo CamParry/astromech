@@ -61,8 +61,10 @@ describe('create atomicity', () => {
         await expect(
             api.create({
                 type: 'post',
-                title: 'Orphan candidate',
-                fields: { related: [crypto.randomUUID()] },
+                data: {
+                    title: 'Orphan candidate',
+                    fields: { related: [crypto.randomUUID()] },
+                },
             })
         ).rejects.toThrow('boom');
 

@@ -18,7 +18,6 @@ export {
     useEntryVersions,
     useEntriesByIds,
     useIncomingRelationships,
-    useCreateEntry,
     useTrashEntry,
     useDeleteEntry,
     useDuplicateEntry,
