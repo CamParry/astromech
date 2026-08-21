@@ -1,4 +1,5 @@
 import type { Entry, JsonObject } from '@/types/index';
+import { transaction } from '@/database/transaction';
 import { asEntry, loadAndAssertType } from '../../internal/records';
 import { indexEntryRelationships } from '../../internal/relationships';
 import { uniqueSlugIfChanged } from '../../internal/slug';
@@ -19,28 +20,31 @@ export async function restoreVersion(params: {
 
     const repository = getEntryRepository(type);
     if (!repository.versions) throw new Error('Version not found');
+    // The guard's narrowing does not survive into the transaction closure below.
+    const versions = repository.versions;
 
-    const version = await repository.versions.get(versionId);
+    const version = await versions.get(versionId);
     if (!version || version.entryId !== id) {
         throw new Error('Version not found');
     }
 
     const currentEntry = await loadAndAssertType(repository, type, id);
-
-    // Snapshot the current state before it is overwritten, so a restore is
-    // itself reversible.
-    await snapshotVersion(repository.versions, currentEntry);
-
     const slug = await uniqueSlugIfChanged(repository, type, currentEntry, version.slug);
-
     const restoredFields = (version.fields as JsonObject) ?? currentEntry.fields;
-    const updated = await repository.update(id, {
-        title: version.title,
-        slug: slug ?? currentEntry.slug,
-        fields: restoredFields,
-    });
 
-    await indexEntryRelationships(updated, restoredFields, type);
+    // Snapshot the state being overwritten, update the row, and reindex it
+    // atomically, so a restore is itself reversible and never leaves the row
+    // and its relationship index out of step.
+    const updated = await transaction(async () => {
+        await snapshotVersion(versions, currentEntry);
+        const row = await repository.update(id, {
+            title: version.title,
+            slug: slug ?? currentEntry.slug,
+            fields: restoredFields,
+        });
+        await indexEntryRelationships(row, restoredFields, type);
+        return row;
+    });
 
     return asEntry(updated);
 }

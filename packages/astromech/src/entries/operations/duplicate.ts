@@ -1,4 +1,5 @@
 import type { Entry, EntryDuplicateOverrides, JsonObject } from '@/types/index';
+import { transaction } from '@/database/transaction';
 import { asEntry, loadAndAssertType } from '../internal/records';
 import { indexEntryRelationships } from '../internal/relationships';
 import { getEntryRepository } from '../repository/registry';
@@ -29,20 +30,23 @@ export async function duplicate(params: {
     const baseSlug = overrides?.slug ?? source.slug;
     const slug = baseSlug ? await repository.uniqueSlug(type, locale, baseSlug) : null;
 
-    const created = await repository.create({
-        type,
-        title,
-        slug,
-        locale,
-        // No override means the copy starts its own translation group; the
-        // repository's table mints the ULID.
-        localeGroup: overrides?.localeGroup,
-        fields: mergedFields,
-        status,
-        publishedAt: status === 'published' ? new Date() : null,
+    // Write the row and its relationship index atomically.
+    const created = await transaction(async () => {
+        const row = await repository.create({
+            type,
+            title,
+            slug,
+            locale,
+            // No override means the copy starts its own translation group; the
+            // repository's table mints the ULID.
+            localeGroup: overrides?.localeGroup,
+            fields: mergedFields,
+            status,
+            publishedAt: status === 'published' ? new Date() : null,
+        });
+        await indexEntryRelationships(row, mergedFields, type);
+        return row;
     });
-
-    await indexEntryRelationships(created, mergedFields, type);
 
     return asEntry(created);
 }

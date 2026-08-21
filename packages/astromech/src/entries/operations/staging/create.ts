@@ -1,4 +1,5 @@
 import type { Entry, JsonObject } from '@/types/index';
+import { transaction } from '@/database/transaction';
 import { StagedEntryExistsError } from '../../errors';
 import { asEntry, loadAndAssertType } from '../../internal/records';
 import { indexEntryRelationships } from '../../internal/relationships';
@@ -28,18 +29,21 @@ export async function createStaged(params: { type: string; id: string }): Promis
     // localeGroup (it does not join the canonical's translation group) and is
     // always unpublished. The slug is shared with the canonical (kept as-is).
     // Passing no localeGroup is what asks the repository's table to mint a fresh one.
-    const created = await repository.create({
-        type,
-        title: canonical.title,
-        slug: canonical.slug,
-        locale: canonical.locale,
-        fields: canonical.fields,
-        status: 'unpublished',
-        stagedFor: id,
-        publishedAt: null,
+    // Write the row and its relationship index atomically.
+    const created = await transaction(async () => {
+        const row = await repository.create({
+            type,
+            title: canonical.title,
+            slug: canonical.slug,
+            locale: canonical.locale,
+            fields: canonical.fields,
+            status: 'unpublished',
+            stagedFor: id,
+            publishedAt: null,
+        });
+        await indexEntryRelationships(row, canonical.fields as JsonObject, type);
+        return row;
     });
-
-    await indexEntryRelationships(created, canonical.fields as JsonObject, type);
 
     return asEntry(created);
 }

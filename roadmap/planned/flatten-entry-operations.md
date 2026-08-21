@@ -208,12 +208,12 @@ thread reviews the diff and runs the gate itself.
 
 **Stage 5 — the single-row writes that skipped transactions**
 
-- [ ] `duplicate`, `staging/create`, `versions/restore`: wrap the row write and
+- [x] `duplicate`, `staging/create`, `versions/restore`: wrap the row write and
       `indexEntryRelationships` in `transaction()`. This is the atomicity defect
       0080 names; it is a behaviour change and the commit message says so.
-- [ ] `staging/merge`: drop the `(txRepository, txDb)` callback shape for a
-      zero-arg body. Already linear otherwise.
-- [ ] `create`: same, the transaction body becomes zero-arg.
+- [x] `staging/merge`: drop the `(txRepository, txDb)` callback shape for a
+      zero-arg body. Already linear otherwise. (Done in Stage 0.)
+- [x] `create`: same, the transaction body becomes zero-arg. (Done in Stage 0.)
 
 **Stage 6 — close out**
 
