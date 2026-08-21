@@ -48,8 +48,9 @@ This is a living reference; it grows as the project does.
   provider, stored request metadata, and the submission rate limit — what it
   keys on, who it does not limit, and what a refused submission returns.
 - [plugins/authoring.md](plugins/authoring.md) — write a plugin: the file-layout
-  convention, identity, and every surface (custom fields, admin pages, admin
-  slots, permissions, service methods, hooks, entry types, database tables, and i18n).
+  convention, identity, and every surface (custom fields, running the field
+  pipeline, admin pages, admin slots, permissions, service methods, hooks, entry
+  types, database tables, and i18n).
 - [cli.md](cli.md) — the `astromech` CLI: entry CRUD + publish, JSON output,
   method-manifest discovery, rebuilding the relationships index, and reporting
   stored rows that fail the current validation.

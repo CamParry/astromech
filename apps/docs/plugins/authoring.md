@@ -238,6 +238,37 @@ from `typeGen` so it's omitted from generated entry `Fields` types entirely.
 
 Then reference it anywhere a field is declared: `{ name: 'quality', type: 'rating' }`.
 
+### Running the field pipeline yourself
+
+A plugin that accepts values against field definitions it holds — a public form
+submission, an import, anything not going through `ctx.entries` — runs the same
+pipeline the core write paths run, from `astromech/fields`:
+
+```ts
+import { safeParseFields } from 'astromech/fields';
+
+const { values, errors } = await safeParseFields(input, definitions, {
+    operation: 'create',
+    resource: { kind: 'entry', record: null },
+    user: ctx.user,
+    lookups: noReads,
+});
+if (Object.keys(errors).length > 0) return { ok: false, errors };
+```
+
+Two shapes, named on Zod's convention. **`parseFields`** returns the coerced
+values and throws a 422 when anything reported: use it when a failure should
+abort the write. **`safeParseFields`** returns `{ values, errors, warnings, form }`
+instead: use it when you want to hand the messages back to a caller, as a form
+submission does. Both coerce values and apply defaults as well as check them,
+so the `values` they return are what you store — not the input you passed in.
+
+`lookups` is how the data-backed rules read: `unique` needs to scan existing
+rows, and a relationship's target-type check needs to resolve ids. Supply a
+`lookups` that performs no reads and those checks pass silently, which is the
+right trade for an unauthenticated submission and the wrong one for an import.
+`apps/docs/content/field-validation.md` covers what each rule checks and when.
+
 ### Admin pages
 
 A page appears in the sidebar (unless it sets `nav: false`) and is **either** a
