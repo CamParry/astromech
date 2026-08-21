@@ -8,7 +8,7 @@ import type { EntryRepository, EntryRow } from '../repository/types';
 import type { Capability } from '@/entries/capabilities';
 import type { Field } from '@/types/index';
 import { getConfig } from '@/config/registry';
-import { resolveEntryType } from '@/entries/type-ids.shared';
+import { resolveEntryType } from '@/entries/entry-types.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { resolveContentLocale } from '@/utilities/locale';
 import { CapabilityError } from '../errors';
@@ -26,22 +26,22 @@ export function getDefaultLocale(): string {
 }
 
 /** Whether the type carries a title. Unknown types are titled, like the default. */
-export function isTitled(typeName: string): boolean {
-    return resolveEntryType(getConfig(), typeName)?.titleField !== false;
+export function isTitled(type: string): boolean {
+    return resolveEntryType(getConfig(), type)?.titleField !== false;
 }
 
-export function isVersioningEnabled(typeName: string): boolean {
+export function isVersioningEnabled(type: string): boolean {
     return (
-        getEntryRepository(typeName).versions !== undefined &&
-        !!resolveEntryType(getConfig(), typeName)?.versioning
+        getEntryRepository(type).versions !== undefined &&
+        !!resolveEntryType(getConfig(), type)?.versioning
     );
 }
 
 export function getNonTranslatableFieldNames(
-    typeName: string,
+    type: string,
     fieldNames: string[]
 ): string[] {
-    const entryType = resolveEntryType(getConfig(), typeName);
+    const entryType = resolveEntryType(getConfig(), type);
     if (!entryType?.translatable) return [];
     const nonTranslatable: string[] = [];
     for (const field of flattenEntryFields(entryType.fields)) {
@@ -53,16 +53,16 @@ export function getNonTranslatableFieldNames(
 }
 
 /** Flattened field definitions for an entry type (`[]` if the type is unknown). */
-export function resolveTypeFields(typeName: string): Field[] {
-    const entryType = resolveEntryType(getConfig(), typeName);
+export function resolveTypeFields(type: string): Field[] {
+    const entryType = resolveEntryType(getConfig(), type);
     return entryType ? flattenEntryFields(entryType.fields) : [];
 }
 
 /** Enforce a type's configured capability set. */
-export function assertCapability(typeName: string, capability: Capability): void {
-    const caps = resolveEntryType(getConfig(), typeName)?.capabilities;
+export function assertCapability(type: string, capability: Capability): void {
+    const caps = resolveEntryType(getConfig(), type)?.capabilities;
     if (caps && !caps[capability]) {
-        throw new CapabilityError(typeName, capability);
+        throw new CapabilityError(type, capability);
     }
 }
 
@@ -87,16 +87,16 @@ export function requireTrash<R extends EntryRow>(
  * backend that carries `stagedFor` in v1) and return both the storage and its
  * (now-narrowed) staging sub-surface.
  */
-export function getStagingRepository(typeName: string): {
+export function requireStaging(type: string): {
     repository: EntryRepository;
     staging: NonNullable<EntryRepository['staging']>;
 } {
-    assertCapability(typeName, 'staging');
-    const repository = getEntryRepository(typeName);
+    assertCapability(type, 'staging');
+    const repository = getEntryRepository(type);
     const staging = repository.staging;
     if (!staging) {
         throw new Error(
-            `Entry type "${typeName}" does not support staging (built-in storage required).`
+            `Entry type "${type}" does not support staging (built-in storage required).`
         );
     }
     return { repository, staging };

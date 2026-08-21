@@ -2,11 +2,11 @@ import type { Entry } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { transaction } from '@/database/transaction';
-import { resolveEntryType } from '@/entries/type-ids.shared';
+import { resolveEntryType } from '@/entries/entry-types.shared';
+import { isVersioningEnabled, requireStaging } from '../../internal/entry-type';
 import { asEntry, loadAndAssertType } from '../../internal/records';
 import { indexEntryRelationships } from '../../internal/relationships';
 import { toStoredFields } from '../../internal/stored-fields';
-import { getStagingRepository, isVersioningEnabled } from '../../internal/type-config';
 
 /**
  * Merges the staged change into its canonical entry: validates the staged
@@ -19,7 +19,7 @@ export async function mergeStagedEntry(params: {
 }): Promise<Entry> {
     const { type, id } = params;
 
-    const { repository, staging } = getStagingRepository(type);
+    const { repository, staging } = requireStaging(type);
     const canonical = await loadAndAssertType(repository, type, id);
     const staged = await staging.getByCanonical(id);
     if (!staged) throw new Error(`No staged change for entry '${id}'`);

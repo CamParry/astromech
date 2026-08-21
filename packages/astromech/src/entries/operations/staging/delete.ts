@@ -1,6 +1,6 @@
 import { createRelationshipRepository } from '@/database/repository/relationships';
+import { requireStaging } from '../../internal/entry-type';
 import { loadAndAssertType } from '../../internal/records';
-import { getStagingRepository } from '../../internal/type-config';
 
 /**
  * Discards the staged copy of an entry, dropping its relationship index rows.
@@ -11,7 +11,7 @@ export async function deleteStagedEntry(params: {
     id: string;
 }): Promise<void> {
     const { type, id } = params;
-    const { repository, staging } = getStagingRepository(type);
+    const { repository, staging } = requireStaging(type);
     await loadAndAssertType(repository, type, id);
     const staged = await staging.getByCanonical(id);
     if (!staged) throw new Error(`No staged change for entry '${id}'`);

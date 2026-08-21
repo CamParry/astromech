@@ -11,7 +11,7 @@ import adminConfig from 'virtual:astromech/admin-config';
 import { useMediaUsage } from '@/admin/hooks/media';
 import { Link } from '@/admin/rendering/cells/link';
 import { entryAdminPath } from '@/admin/utilities/entry-admin-path';
-import { parseEntryTypeId } from '@/entries/type-ids.shared';
+import { parseEntryTypeId } from '@/entries/entry-types.shared';
 import { Spinner } from '../ui/index';
 
 export type MediaUsagePanelProps = {

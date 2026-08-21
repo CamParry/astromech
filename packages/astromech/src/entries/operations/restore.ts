@@ -1,8 +1,8 @@
 import type { Entry } from '@/types/index';
 import { transaction } from '@/database/transaction';
 import { BulkOperationError } from '../errors';
+import { requireTrash } from '../internal/entry-type';
 import { asEntry, loadEntries } from '../internal/records';
-import { requireTrash } from '../internal/type-config';
 import { getEntryRepository } from '../repository/registry';
 
 /**

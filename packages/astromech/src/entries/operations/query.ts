@@ -6,13 +6,13 @@ import type {
     ReferencesFilter,
 } from '@/types/index';
 import { getConfig } from '@/config/registry';
-import { resolveEntryType } from '@/entries/type-ids.shared';
+import { resolveEntryType } from '@/entries/entry-types.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { collectRelationshipSchemaPaths } from '@/fields/relationship-edges';
 import { getCurrentUser } from '@/request-context/index';
 import { InvalidReferencesFilterError, PublicTrashedReadError } from '../errors';
+import { getDefaultLocale } from '../internal/entry-type';
 import { asEntry } from '../internal/records';
-import { getDefaultLocale } from '../internal/type-config';
 import { getEntryRepository } from '../repository/registry';
 import { applyVisibility, markPublic } from '../visibility';
 import { runPreviewQuery } from './preview/read';

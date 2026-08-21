@@ -1,8 +1,8 @@
 import { parseInput } from '@/errors/index';
 import { getCurrentUser } from '@/request-context/index';
+import { assertCapability } from '../../internal/entry-type';
 import { generatePreviewSecret } from '../../internal/preview';
 import { loadAndAssertType } from '../../internal/records';
-import { assertCapability } from '../../internal/type-config';
 import {
     createPreviewTokenRepository,
     hashPreviewToken,

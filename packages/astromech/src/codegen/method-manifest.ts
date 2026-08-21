@@ -21,8 +21,8 @@ import type {
     ServiceMethodContract,
 } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { qualifyEntryType } from '@/entries/entry-types.shared';
 import { entryMethodContracts } from '@/entries/methods';
-import { qualifyEntryType } from '@/entries/type-ids.shared';
 import { mediaContract } from '@/media/contract';
 import { notificationsContract } from '@/notifications/contract';
 import {

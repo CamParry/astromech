@@ -5,7 +5,7 @@
  */
 
 import type { AdminConfig, EntriesService } from '@/types/index';
-import { qualifyEntryType } from '@/entries/type-ids.shared';
+import { qualifyEntryType } from '@/entries/entry-types.shared';
 
 export type EntryAction = 'read' | 'create' | 'update' | 'delete' | 'publish';
 

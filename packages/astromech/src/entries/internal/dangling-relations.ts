@@ -13,7 +13,7 @@ import type { JsonObject } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { existingResourceIds } from '@/database/repository/resource-existence';
 import { getTransactionScope } from '@/database/transaction';
-import { resolveEntryType } from '@/entries/type-ids.shared';
+import { resolveEntryType } from '@/entries/entry-types.shared';
 import { parseInstancePath } from '@/fields/field-path';
 import {
     collectRelationshipDeclarations,

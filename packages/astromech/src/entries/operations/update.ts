@@ -2,7 +2,7 @@ import type { EntryRepository } from '../repository/types';
 import type { Entry, EntryUpdateData, ResolvedEntryType } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { transaction } from '@/database/transaction';
-import { resolveEntryType } from '@/entries/type-ids.shared';
+import { resolveEntryType } from '@/entries/entry-types.shared';
 import { parseInput } from '@/errors/index';
 import { runHook } from '@/hooks/index';
 import { getCurrentUser } from '@/request-context/index';

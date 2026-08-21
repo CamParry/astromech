@@ -4,7 +4,7 @@
  * HTTP route mounts and the method manifest so the two can never drift.
  */
 
-import { QUALIFIED_SEPARATOR } from '@/entries/type-ids.shared';
+import { QUALIFIED_SEPARATOR } from '@/entries/entry-types.shared';
 
 /** The CRUD+publish actions an entry permission gates. */
 export type EntryAction = 'read' | 'create' | 'update' | 'delete' | 'publish';

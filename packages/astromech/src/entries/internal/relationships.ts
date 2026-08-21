@@ -10,7 +10,7 @@ import type { JsonObject } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
-import { qualifyEntryType, resolveEntryType } from '@/entries/type-ids.shared';
+import { qualifyEntryType, resolveEntryType } from '@/entries/entry-types.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { collectRelationshipEdges } from '@/fields/relationship-edges';
 import { getEntryRepository, hasEntryRepositoryOverride } from '../repository/registry';
@@ -23,16 +23,16 @@ import { entriesTable } from '../tables';
 export async function indexEntryRelationships(
     entry: { id: string; stagedFor?: string | null },
     fields: JsonObject,
-    typeName: string
+    type: string
 ): Promise<void> {
-    const edges = entryEdges(typeName, fields);
+    const edges = entryEdges(type, fields);
     if (edges === null) return;
 
     await createRelationshipRepository().replaceForSource(
         {
             id: entry.id,
             kind: 'entry',
-            type: typeName,
+            type,
             staged: entry.stagedFor != null,
         },
         edges
@@ -58,12 +58,12 @@ export async function collectEntryRelationshipSources(opts?: {
 }
 
 /**
- * The edges declared by `typeName`'s schema and held in `fields`, or null when
+ * The edges declared by `type`'s schema and held in `fields`, or null when
  * no such type is configured — the write seam skips those, the rebuild reports
  * them as a source holding nothing so their stale rows read as drift.
  */
-function entryEdges(typeName: string, fields: JsonObject): RelationshipEdge[] | null {
-    const entryType = resolveEntryType(getConfig(), typeName);
+function entryEdges(type: string, fields: JsonObject): RelationshipEdge[] | null {
+    const entryType = resolveEntryType(getConfig(), type);
     if (!entryType) return null;
     return collectRelationshipEdges(flattenEntryFields(entryType.fields), fields);
 }
@@ -101,9 +101,9 @@ async function tableBackedEntrySources(
         .filter((candidate) => type === undefined || candidate === type);
 
     const collected: RelationshipIndexSource[] = [];
-    for (const typeName of types) {
-        const { data } = await getEntryRepository(typeName).list({
-            type: typeName,
+    for (const typeId of types) {
+        const { data } = await getEntryRepository(typeId).list({
+            type: typeId,
             limit: 'all',
             locale: 'all',
         });
@@ -112,10 +112,10 @@ async function tableBackedEntrySources(
                 source: {
                     id: record.id,
                     kind: 'entry',
-                    type: typeName,
+                    type: typeId,
                     staged: record.stagedFor != null,
                 },
-                edges: entryEdges(typeName, record.fields) ?? [],
+                edges: entryEdges(typeId, record.fields) ?? [],
             });
         }
     }

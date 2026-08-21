@@ -11,13 +11,13 @@ import type { EntryStatus, JsonObject, ResourceType } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
+import { qualifyEntryType, resolveEntryType } from '@/entries/entry-types.shared';
 import { createEntryLookups } from '@/entries/lookups';
 import {
     getEntryRepository,
     hasEntryRepositoryOverride,
 } from '@/entries/repository/registry';
 import { entriesTable } from '@/entries/tables';
-import { qualifyEntryType, resolveEntryType } from '@/entries/type-ids.shared';
 import { entryValidationMode } from '@/entries/validation-mode.shared';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenEntryFields, flattenFieldNodes } from '@/fields/flatten';

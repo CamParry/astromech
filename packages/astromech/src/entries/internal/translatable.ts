@@ -6,8 +6,8 @@
 
 import type { EntryRepository } from '../repository/types';
 import type { Entry, JsonObject, ResolvedEntryType } from '@/types/index';
+import { getNonTranslatableFieldNames } from './entry-type';
 import { asEntry } from './records';
-import { getNonTranslatableFieldNames } from './type-config';
 
 /**
  * Merges in the locale group's shared fields from an existing sibling. A field

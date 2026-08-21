@@ -23,7 +23,7 @@ import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { entryLabel } from '@/admin/components/entries/entry-label';
 import { entryAdminPath } from '@/admin/utilities/entry-admin-path';
-import { parseEntryTypeId } from '@/entries/type-ids.shared';
+import { parseEntryTypeId } from '@/entries/entry-types.shared';
 import { astromechClient } from '@/transport/http/client/index';
 import { usePermissions } from '../../hooks/index';
 import { useDebounce } from '../../hooks/use-debounce';

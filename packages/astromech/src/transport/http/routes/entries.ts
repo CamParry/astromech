@@ -18,6 +18,7 @@ import type {
 import type { Context } from 'hono';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { getConfig } from '@/config/registry';
+import { resolveEntryType } from '@/entries/entry-types.shared';
 import { PublicTrashedReadError, StagedEntryExistsError } from '@/entries/errors';
 import { entriesService } from '@/entries/index';
 import { ENTRY_METHOD_ACTIONS, entryMethodContracts } from '@/entries/methods';
@@ -27,7 +28,6 @@ import {
     titledUpdateEntrySchema,
     updateEntrySchema,
 } from '@/entries/schema';
-import { resolveEntryType } from '@/entries/type-ids.shared';
 import { entryPermission, PERMISSION_ENTRY_READ_FULL } from '@/permissions/index';
 import { permissionsFor } from '@/permissions/permissions-for';
 import {

@@ -3,9 +3,9 @@ import { transaction } from '@/database/transaction';
 import { runHook } from '@/hooks/index';
 import { getCurrentUser } from '@/request-context/index';
 import { BulkOperationError } from '../errors';
+import { requireTrash } from '../internal/entry-type';
 import { loadEntries } from '../internal/records';
 import { withLocaleSiblings } from '../internal/translatable';
-import { requireTrash } from '../internal/type-config';
 import { getEntryRepository } from '../repository/registry';
 
 /**

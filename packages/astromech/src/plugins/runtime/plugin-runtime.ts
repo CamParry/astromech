@@ -36,12 +36,12 @@ import { getDatabaseDriver } from '@/database/driver-registry';
 import { getDb } from '@/database/registry';
 import { getEmailDriver } from '@/email/registry';
 import { renderEmail } from '@/email/render';
+import { qualifyEntryType } from '@/entries/entry-types.shared';
 import { typedEntriesService } from '@/entries/index';
 import {
     resetEntryRepositoryOverrides,
     setEntryRepository,
 } from '@/entries/repository/registry';
-import { qualifyEntryType } from '@/entries/type-ids.shared';
 import { AstromechError } from '@/errors/index';
 import { flattenEntryFields } from '@/fields/flatten';
 import { addHook, clearHooks, runHook } from '@/hooks/index';
