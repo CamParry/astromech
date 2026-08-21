@@ -62,18 +62,18 @@ sub-agent per stage, the gate run by the main thread.
 
 **Stage 1 — `update` and the status wrappers**
 
-- [ ] `operations/update.ts`: `updateEntries({ type, ids, data }): Promise<Entry[]>`.
+- [x] `operations/update.ts`: `updateEntries({ type, ids, data }): Promise<Entry[]>`.
       The slug guard becomes `ids.length > 1 && data.slug !== undefined`, a rule
       about batch size, not a mode. Delete `isBulk`, the rethrow at line 99 and
       the return-shape branch. Always wrap in `BulkOperationError`.
-- [ ] `operations/status.ts`: `publishEntries`, `unpublishEntries`,
+- [x] `operations/status.ts`: `publishEntries`, `unpublishEntries`,
       `scheduleEntries`, each `({ type, ids, … }): Promise<Entry[]>`, delegating
       to `updateEntries`.
-- [ ] `service.ts`: the adapters for `update`, `publish`, `unpublish`, `schedule`,
+- [x] `service.ts`: the adapters for `update`, `publish`, `unpublish`, `schedule`,
       `restore`, `trash` and `delete`, one shape each, `unwrapBatchOfOne` beside
       them. The `as EntriesService[…]` casts stay; they are the TypeScript
       overload limitation, not a design choice.
-- [ ] Tests: the single-id update tests that assert a `ValidationError` keep
+- [x] Tests: the single-id update tests that assert a `ValidationError` keep
       passing unchanged, which is the check that the unwrap works.
 
 **Stage 2 — the 422 for a multi-id validation failure**

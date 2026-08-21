@@ -1,60 +1,60 @@
 /**
- * Status transitions — bulk-capable convenience wrappers that delegate to
- * `update`, which owns the bulk dispatch.
+ * Status transitions — convenience wrappers over `updateEntries` that move a
+ * batch of entries between statuses.
  */
 
 import type { Entry } from '@/types/index';
 import { assertCapability } from '../internal/type-config';
 import { validate } from '../internal/validate';
 import { scheduleEntrySchema } from '../schema';
-import { update } from './update';
+import { updateEntries } from './update';
 
 /**
- * Publishes one entry or many by moving them to `published`. Throws if the
+ * Publishes a batch of entries by moving them to `published`. Throws if the
  * type does not support statuses.
  */
-export async function publish(params: {
+export async function publishEntries(params: {
     type: string;
-    id: string | readonly string[];
-}): Promise<Entry | Entry[]> {
+    ids: readonly string[];
+}): Promise<Entry[]> {
     assertCapability(params.type, 'statuses');
-    return update({
+    return updateEntries({
         type: params.type,
-        id: params.id,
+        ids: params.ids,
         data: { status: 'published', publishedAt: null },
     });
 }
 
 /**
- * Unpublishes one entry or many by moving them to `unpublished`. Throws if the
+ * Unpublishes a batch of entries by moving them to `unpublished`. Throws if the
  * type does not support statuses.
  */
-export async function unpublish(params: {
+export async function unpublishEntries(params: {
     type: string;
-    id: string | readonly string[];
-}): Promise<Entry | Entry[]> {
+    ids: readonly string[];
+}): Promise<Entry[]> {
     assertCapability(params.type, 'statuses');
-    return update({
+    return updateEntries({
         type: params.type,
-        id: params.id,
+        ids: params.ids,
         data: { status: 'unpublished', publishedAt: null },
     });
 }
 
 /**
- * Schedules one entry or many to publish at `publishedAt`. Throws if the type
+ * Schedules a batch of entries to publish at `publishedAt`. Throws if the type
  * does not support statuses, or a 422 when the date fails validation.
  */
-export async function schedule(params: {
+export async function scheduleEntries(params: {
     type: string;
-    id: string | readonly string[];
+    ids: readonly string[];
     publishedAt: Date;
-}): Promise<Entry | Entry[]> {
+}): Promise<Entry[]> {
     assertCapability(params.type, 'statuses');
     const validated = validate(scheduleEntrySchema, { publishedAt: params.publishedAt });
-    return update({
+    return updateEntries({
         type: params.type,
-        id: params.id,
+        ids: params.ids,
         data: { status: 'scheduled', publishedAt: validated.publishedAt },
     });
 }

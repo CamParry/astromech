@@ -4,7 +4,6 @@ import type {
     Entry,
     EntryStatus,
     EntryUpdateData,
-    EntryUpdateParams,
     JsonObject,
     ResolvedEntryType,
 } from '@/types/index';
@@ -39,11 +38,15 @@ type FieldContext = {
 };
 
 /**
- * Updates one entry or many, atomically per batch, firing the entry update
- * hooks around the write. Throws if an id is missing or of another type
- * before any hook fires or any row is touched.
+ * Updates a batch of entries, atomically, firing the entry update hooks around
+ * the write. A single id is a batch of one (decisions/0077). Throws if an id is
+ * missing or of another type before any hook fires or any row is touched.
  */
-export async function update(params: EntryUpdateParams): Promise<Entry | Entry[]> {
+export async function updateEntries(params: {
+    type: string;
+    ids: readonly string[];
+    data: EntryUpdateData;
+}): Promise<Entry[]> {
     if (params.data.fields !== undefined && isPublicBranded(params.data.fields)) {
         throw new PublicShapeWriteError();
     }
@@ -53,21 +56,19 @@ export async function update(params: EntryUpdateParams): Promise<Entry | Entry[]
     }
 
     // A single slug across many ids would violate (type, locale) uniqueness.
-    if (Array.isArray(params.id) && params.data.slug !== undefined) {
+    if (params.ids.length > 1 && params.data.slug !== undefined) {
         throw new Error(
             'Bulk update cannot set `slug`: a single value across multiple ids ' +
                 'would violate (type, locale) slug uniqueness. Update slugs individually.'
         );
     }
 
-    const isBulk = Array.isArray(params.id);
-    const ids = Array.isArray(params.id) ? params.id : [params.id];
     const repository = getEntryRepository(entryType.id);
     const user = await getCurrentUser();
 
     // Fetch each row once, at the top: this record feeds both the before-hook
     // context and updateOne (point 3 — no second load per id).
-    const entries = await loadEntries(repository, entryType.id, ids);
+    const entries = await loadEntries(repository, entryType.id, params.ids);
 
     for (const entry of entries) {
         await runHook('entry:beforeUpdate', {
@@ -93,10 +94,6 @@ export async function update(params: EntryUpdateParams): Promise<Entry | Entry[]
                 );
                 succeeded.push(currentEntry.id);
             } catch (err) {
-                // A single id has no siblings to name, so it surfaces the raw
-                // error (the caller's ValidationError, unwrapped) rather than
-                // a BulkOperationError only a multi-id caller can make sense of.
-                if (!isBulk) throw err;
                 throw new BulkOperationError({
                     failedId: currentEntry.id,
                     reason: err instanceof Error ? err.message : String(err),
@@ -118,7 +115,7 @@ export async function update(params: EntryUpdateParams): Promise<Entry | Entry[]
         });
     }
 
-    return isBulk ? results : (results[0] as Entry);
+    return results;
 }
 
 /**
