@@ -9,7 +9,7 @@
 import type { ResourceType } from '@/types/domain';
 import type { Field, ValidationMode } from '@/types/fields';
 import { describe, expect, it, vi } from 'vitest';
-import { parseFields } from '@/fields/parse-fields';
+import { safeParseFields } from '@/fields/parse-fields';
 
 type CtxOverrides = Partial<{
     operation: 'create' | 'update';
@@ -42,7 +42,7 @@ describe('warning severity', () => {
     });
 
     it('collectWarnings → the failure lands in warnings, not errors', async () => {
-        const { errors, warnings } = await parseFields(
+        const { errors, warnings } = await safeParseFields(
             { slug: 'toolongslug' },
             [slug],
             fakeCtx({ collectWarnings: true })
@@ -52,7 +52,7 @@ describe('warning severity', () => {
     });
 
     it('collectWarnings omitted → nothing is reported at all', async () => {
-        const { errors, warnings } = await parseFields(
+        const { errors, warnings } = await safeParseFields(
             { slug: 'toolongslug' },
             [slug],
             fakeCtx()
@@ -63,7 +63,7 @@ describe('warning severity', () => {
 
     it('collectWarnings false → the warning rule is never evaluated', async () => {
         const ran = vi.fn(async () => 'Advisory');
-        const { warnings } = await parseFields(
+        const { warnings } = await safeParseFields(
             { slug: 'anything' },
             [
                 field({
@@ -81,7 +81,7 @@ describe('warning severity', () => {
 
 describe('one message per severity', () => {
     it('an error rule and a warning rule both report, one message each', async () => {
-        const { errors, warnings } = await parseFields(
+        const { errors, warnings } = await safeParseFields(
             { code: 'ab' },
             [
                 field({
@@ -105,7 +105,7 @@ describe('one message per severity', () => {
 
     it('two failing warning rules → only the first is reported', async () => {
         const second = vi.fn(async () => 'Second');
-        const { warnings } = await parseFields(
+        const { warnings } = await safeParseFields(
             { code: 'ab' },
             [
                 field({
@@ -127,7 +127,7 @@ describe('one message per severity', () => {
 describe('error-only checks suppress warnings', () => {
     it('required + empty → the error, and no warning', async () => {
         const advisory = vi.fn(async () => 'Advisory');
-        const { errors, warnings } = await parseFields(
+        const { errors, warnings } = await safeParseFields(
             { title: '' },
             [
                 field({
@@ -145,7 +145,7 @@ describe('error-only checks suppress warnings', () => {
     });
 
     it("the type's own validator suppresses a later author warning", async () => {
-        const { errors, warnings } = await parseFields(
+        const { errors, warnings } = await safeParseFields(
             { website: 'not-a-url' },
             [
                 field({
@@ -169,7 +169,7 @@ describe('error-only checks suppress warnings', () => {
 
 describe('nested warnings', () => {
     it('a warning inside a repeater keys by the item path', async () => {
-        const { errors, warnings } = await parseFields(
+        const { errors, warnings } = await safeParseFields(
             { sections: [{ _id: 'a1', title: 'toolongtitle' }] },
             [
                 field({

@@ -1,16 +1,12 @@
-import type { Entry, JsonObject } from '@/types/index';
+import type { Entry } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/type-ids.shared';
-import { flattenEntryFields } from '@/fields/flatten';
-import { assertNoFieldErrors, parseFields } from '@/fields/parse-fields';
-import { getCurrentUser } from '@/request-context/index';
 import { asEntry, loadAndAssertType } from '../../internal/records';
 import { indexEntryRelationships } from '../../internal/relationships';
+import { toStoredFields } from '../../internal/stored-fields';
 import { getStagingRepository, isVersioningEnabled } from '../../internal/type-config';
-import { createEntryLookups } from '../../lookups';
-import { entryValidationMode } from '../../validation-mode.shared';
 
 /**
  * Merges the staged change into its canonical entry: validates the staged
@@ -28,39 +24,21 @@ export async function mergeStagedEntry(params: {
     const staged = await staging.getByCanonical(id);
     if (!staged) throw new Error(`No staged change for entry '${id}'`);
 
+    // The canonical's type governs: the staged row is a copy of it.
+    const entryType = resolveEntryType(getConfig(), type);
+
     // Merging is the promotion moment: editing the staged row validates at the
     // draft stage (it is unpublished), so this is the first write where the
     // canonical's own status decides whether completeness is enforced. Run it
     // BEFORE the transaction opens so a rejection costs no backup version.
-    const entryType = resolveEntryType(getConfig(), type);
-    const fieldDefs = entryType ? flattenEntryFields(entryType.fields) : [];
-    // The canonical's type governs: the staged row is a copy of it.
-    const resourceValidate = entryType?.validate;
-    const processed = await parseFields(
-        (staged.fields ?? {}) as Record<string, unknown>,
-        fieldDefs,
-        {
-            operation: 'update',
-            validation: entryValidationMode({
-                status: canonical.status,
-                hasStatuses: entryType ? entryType.capabilities.statuses !== false : true,
-            }),
-            resource: { kind: 'entry', record: canonical },
-            user: await getCurrentUser(),
-            // Two rows hold this content right now and both must be invisible to
-            // the uniqueness scan: the canonical (about to be overwritten with
-            // it) and the staged row (about to be deleted). Excluding only one
-            // makes every `unique` field collide with its own other copy.
-            lookups: createEntryLookups(repository, {
-                type,
-                locale: canonical.locale,
-                excludeId: [id, staged.id],
-            }),
-            ...(resourceValidate ? { resourceValidate } : {}),
-        }
-    );
-    assertNoFieldErrors(processed);
-    const mergedFields = processed.values as JsonObject;
+    const mergedFields = await toStoredFields({
+        kind: 'merge',
+        repository,
+        entryType,
+        type,
+        canonical,
+        staged,
+    });
 
     const versioningOn = isVersioningEnabled(type);
 

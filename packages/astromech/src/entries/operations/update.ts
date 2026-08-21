@@ -1,41 +1,21 @@
 import type { EntryRepository } from '../repository/types';
-import type { Field } from '@/types/fields';
-import type {
-    Entry,
-    EntryStatus,
-    EntryUpdateData,
-    JsonObject,
-    ResolvedEntryType,
-} from '@/types/index';
+import type { Entry, EntryUpdateData, ResolvedEntryType } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/type-ids.shared';
-import { flattenEntryFields } from '@/fields/flatten';
-import { assertNoFieldErrors, parseFields } from '@/fields/parse-fields';
-import { mergePatch, projectToSchema } from '@/fields/values';
+import { parseInput } from '@/errors/index';
 import { runHook } from '@/hooks/index';
 import { getCurrentUser } from '@/request-context/index';
 import { BulkOperationError, UnknownEntryTypeError } from '../errors';
-import { pruneDanglingRelations } from '../internal/dangling-relations';
 import { asEntry, loadEntries } from '../internal/records';
 import { indexEntryRelationships } from '../internal/relationships';
 import { uniqueSlugIfChanged } from '../internal/slug';
+import { toStoredFields } from '../internal/stored-fields';
 import { propagateSharedFields } from '../internal/translatable';
-import { validate } from '../internal/validate';
 import { changesVersionedContent, snapshotVersion } from '../internal/versions';
-import { createEntryLookups } from '../lookups';
 import { getEntryRepository } from '../repository/registry';
 import { updateEntrySchema } from '../schema';
-import { entryValidationMode } from '../validation-mode.shared';
 import { isPublicBranded, PublicShapeWriteError } from '../visibility';
-
-/** What the field helpers below need to know about the update in progress. */
-type FieldContext = {
-    repository: EntryRepository;
-    entryType: ResolvedEntryType;
-    currentEntry: Entry;
-    status: EntryStatus | undefined;
-};
 
 /**
  * Updates a batch of entries, atomically, firing the entry update hooks around
@@ -131,15 +111,18 @@ async function updateOne(params: {
     const { repository, entryType, currentEntry, data } = params;
 
     const titled = entryType.titleField !== false;
-    const validated = validate(updateEntrySchema({ titled }), data);
+    const validated = parseInput(updateEntrySchema({ titled }), data);
 
     const patch = validated.fields;
     const patchedFieldNames = patch ? getPatchedFieldNames(patch) : [];
     const fields = patch
-        ? await toStoredFields(patch, patchedFieldNames, {
+        ? await toStoredFields({
+              kind: 'update',
               repository,
               entryType,
               currentEntry,
+              patch,
+              patchedFieldNames,
               status: validated.status,
           })
         : undefined;
@@ -190,88 +173,7 @@ async function updateOne(params: {
     return entry;
 }
 
-/**
- * Converts a field patch into the values to store: merges it over the entry's
- * current fields, coerces and validates the merged document, and drops dead
- * relation ids. Throws a 422 when a field or the type's own validator reports.
- */
-async function toStoredFields(
-    patch: Record<string, unknown>,
-    patchedFieldNames: string[],
-    context: FieldContext
-): Promise<JsonObject> {
-    const { repository, entryType, currentEntry, status } = context;
-    const definitions = flattenEntryFields(entryType.fields);
-    const excludeIds = await getUniquenessExcludeIds({
-        repository,
-        entryType,
-        currentEntry,
-        definitions,
-    });
-
-    // A patch, not a replacement: an omitted field keeps its stored value, an
-    // explicit `null` stores null, and an array or container value replaces
-    // wholesale. Only patched fields are coerced; validation sees the merge.
-    const merged = mergePatch(currentEntry.fields, patch);
-
-    const resourceValidate = entryType.validate;
-    const parsed = await parseFields(merged, definitions, {
-        operation: 'update',
-        // An update that omits `status` keeps the row's current one, so
-        // editing an already-published entry still enforces completeness.
-        validation: entryValidationMode({
-            status: status ?? currentEntry.status,
-            hasStatuses: entryType.capabilities.statuses !== false,
-        }),
-        resource: { kind: 'entry', record: currentEntry },
-        user: await getCurrentUser(),
-        lookups: createEntryLookups(repository, {
-            type: entryType.id,
-            locale: currentEntry.locale,
-            excludeId: excludeIds,
-        }),
-        coerceOnly: new Set(patchedFieldNames),
-        ...(resourceValidate ? { resourceValidate } : {}),
-    });
-    assertNoFieldErrors(parsed);
-
-    // After `parseFields` (its minted item ids are what the traversal needs)
-    // and before the write, so the index derives from pruned values.
-    const pruned = await pruneDanglingRelations(
-        definitions,
-        projectToSchema(parsed.values, definitions) as JsonObject
-    );
-    return pruned.values;
-}
-
 /** Root field names the caller actually sent; an `undefined` value is absent. */
 function getPatchedFieldNames(patch: Record<string, unknown>): string[] {
     return Object.keys(patch).filter((name) => patch[name] !== undefined);
-}
-
-/**
- * Ids a unique-field scan must ignore: the entry itself, plus its staged copy
- * or canonical, which are one logical entry as far as uniqueness goes. Only
- * looked up when the type can stage and some field is actually unique.
- */
-async function getUniquenessExcludeIds(params: {
-    repository: EntryRepository;
-    entryType: ResolvedEntryType;
-    currentEntry: Entry;
-    definitions: Field[];
-}): Promise<string[]> {
-    const { repository, entryType, currentEntry, definitions } = params;
-    const excludeIds = [currentEntry.id];
-
-    const canStage = entryType.capabilities.staging === true;
-    const hasUniqueField = definitions.some((field) =>
-        field.validation?.some((rule) => 'unique' in rule)
-    );
-    if (!canStage || !hasUniqueField) return excludeIds;
-
-    const paired =
-        currentEntry.stagedFor ??
-        (await repository.staging?.getByCanonical(currentEntry.id))?.id;
-    if (paired) excludeIds.push(paired);
-    return excludeIds;
 }

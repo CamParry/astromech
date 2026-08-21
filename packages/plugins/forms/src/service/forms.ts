@@ -8,7 +8,7 @@ import type { SpamProvider } from '../spam/types';
 import type { FormsOptions, SubmissionMeta } from '../types';
 import type { Field, FieldErrors, FieldLookups } from 'astromech';
 import { defineServiceMethod, z } from 'astromech';
-import { parseFields } from 'astromech/fields';
+import { safeParseFields } from 'astromech/fields';
 import { compileFormFields } from '../fields/compile';
 import { AFTER_SUBMIT, BEFORE_SUBMIT } from '../hooks/events';
 import { sendNotifications } from '../notifications/dispatch';
@@ -94,7 +94,7 @@ export function buildFormsService(
                 if (form === null) return formError(NOT_ACCEPTING);
 
                 const definitions = compileFormFields(entryFields(form)['fields']);
-                const { values, errors } = await parseFields(
+                const { values, errors } = await safeParseFields(
                     isRecord(input?.data) ? input.data : {},
                     definitions,
                     {
@@ -195,7 +195,7 @@ const NOT_ACCEPTING = 'This form is not accepting submissions';
 const TOO_MANY = 'Too many submissions — please try again shortly';
 
 /**
- * `parseFields` only reaches this port for DB-backed rules, which the form
+ * `safeParseFields` only reaches this port for DB-backed rules, which the form
  * compiler never emits. It throws rather than answering `true` so a compiler
  * change that does emit one fails loudly.
  */

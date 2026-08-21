@@ -2,7 +2,7 @@ import type { ResourceType } from '@/types/domain';
 import type { Field, FieldValidationContext, ValidationMode } from '@/types/fields';
 import { describe, expect, it, vi } from 'vitest';
 import { registerFieldType } from '@/fields/field-type-registry';
-import { parseFields } from '@/fields/parse-fields';
+import { safeParseFields } from '@/fields/parse-fields';
 
 type CtxOverrides = Partial<{
     operation: 'create' | 'update';
@@ -28,7 +28,7 @@ function field(def: Partial<Field> & { name: string; type: string }): Field {
 
 describe('required', () => {
     it('empty + required → error keyed by field name', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { title: '' },
             [field({ name: 'title', type: 'text', required: true })],
             fakeCtx()
@@ -37,7 +37,7 @@ describe('required', () => {
     });
 
     it('null + required → error', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { title: null },
             [field({ name: 'title', type: 'text', required: true })],
             fakeCtx()
@@ -46,7 +46,7 @@ describe('required', () => {
     });
 
     it('undefined + required → error', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             {},
             [field({ name: 'title', type: 'text', required: true })],
             fakeCtx()
@@ -55,7 +55,7 @@ describe('required', () => {
     });
 
     it('empty array + required → error', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { tags: [] },
             [field({ name: 'tags', type: 'multiselect', required: true })],
             fakeCtx()
@@ -64,7 +64,7 @@ describe('required', () => {
     });
 
     it('empty + optional → no error', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { title: '' },
             [field({ name: 'title', type: 'text' })],
             fakeCtx()
@@ -73,7 +73,7 @@ describe('required', () => {
     });
 
     it('create + absent value with field.defaultValue → default applied, required passes', async () => {
-        const { values, errors } = await parseFields(
+        const { values, errors } = await safeParseFields(
             {},
             [
                 field({
@@ -107,7 +107,7 @@ describe('stage', () => {
 
     describe("'save' skips completeness", () => {
         it('required + empty → no error', async () => {
-            const { errors } = await parseFields(
+            const { errors } = await safeParseFields(
                 { title: '' },
                 [field({ name: 'title', type: 'text', required: true })],
                 fakeCtx({ validation: 'partial' })
@@ -116,7 +116,7 @@ describe('stage', () => {
         });
 
         it('container below min → no error', async () => {
-            const { errors } = await parseFields(
+            const { errors } = await safeParseFields(
                 { sections: [{ _id: 'a1', title: 'a' }] },
                 [bounded],
                 fakeCtx({ validation: 'partial' })
@@ -127,7 +127,7 @@ describe('stage', () => {
 
     describe("'save' still runs correctness", () => {
         it('container above max → error', async () => {
-            const { errors } = await parseFields(
+            const { errors } = await safeParseFields(
                 {
                     sections: [
                         { _id: 'a1' },
@@ -143,7 +143,7 @@ describe('stage', () => {
         });
 
         it('malformed url → error', async () => {
-            const { errors } = await parseFields(
+            const { errors } = await safeParseFields(
                 { website: 'not-a-url' },
                 [field({ name: 'website', type: 'url' })],
                 fakeCtx({ validation: 'partial' })
@@ -152,7 +152,7 @@ describe('stage', () => {
         });
 
         it('malformed email → error', async () => {
-            const { errors } = await parseFields(
+            const { errors } = await safeParseFields(
                 { email: 'not-an-email' },
                 [field({ name: 'email', type: 'text', validation: [{ email: true }] })],
                 fakeCtx({ validation: 'partial' })
@@ -161,7 +161,7 @@ describe('stage', () => {
         });
 
         it('pattern mismatch → error', async () => {
-            const { errors } = await parseFields(
+            const { errors } = await safeParseFields(
                 { code: 'abc123' },
                 [
                     field({
@@ -176,7 +176,7 @@ describe('stage', () => {
         });
 
         it('maxLength exceeded → error', async () => {
-            const { errors } = await parseFields(
+            const { errors } = await safeParseFields(
                 { slug: 'toolongslug' },
                 [field({ name: 'slug', type: 'text', validation: [{ maxLength: 5 }] })],
                 fakeCtx({ validation: 'partial' })
@@ -187,7 +187,7 @@ describe('stage', () => {
 
     describe("'publish' enforces completeness", () => {
         it('required + empty → error', async () => {
-            const { errors } = await parseFields(
+            const { errors } = await safeParseFields(
                 { title: '' },
                 [field({ name: 'title', type: 'text', required: true })],
                 fakeCtx({ validation: 'complete' })
@@ -196,7 +196,7 @@ describe('stage', () => {
         });
 
         it('container below min → error', async () => {
-            const { errors } = await parseFields(
+            const { errors } = await safeParseFields(
                 { sections: [{ _id: 'a1', title: 'a' }] },
                 [bounded],
                 fakeCtx({ validation: 'complete' })
@@ -209,7 +209,7 @@ describe('stage', () => {
     // exactly as they did before the split existed.
     describe('an omitted stage behaves as publish', () => {
         it('required + empty → error', async () => {
-            const { errors } = await parseFields(
+            const { errors } = await safeParseFields(
                 { title: '' },
                 [field({ name: 'title', type: 'text', required: true })],
                 fakeCtx()
@@ -218,7 +218,7 @@ describe('stage', () => {
         });
 
         it('container below min → error', async () => {
-            const { errors } = await parseFields(
+            const { errors } = await safeParseFields(
                 { sections: [{ _id: 'a1', title: 'a' }] },
                 [bounded],
                 fakeCtx()
@@ -229,7 +229,7 @@ describe('stage', () => {
 
     it('a custom validator sees a concrete mode', async () => {
         const seen: unknown[] = [];
-        await parseFields(
+        await safeParseFields(
             { title: 'x' },
             [
                 field({
@@ -253,7 +253,7 @@ describe('stage', () => {
 
 describe('default', () => {
     it('create + absent → field.defaultValue applied', async () => {
-        const { values } = await parseFields(
+        const { values } = await safeParseFields(
             {},
             [field({ name: 'status', type: 'text', defaultValue: 'draft' })],
             fakeCtx({ operation: 'create' })
@@ -262,7 +262,7 @@ describe('default', () => {
     });
 
     it('type-level fallback: boolean field without field.defaultValue → false', async () => {
-        const { values } = await parseFields(
+        const { values } = await safeParseFields(
             {},
             [field({ name: 'active', type: 'boolean' })],
             fakeCtx({ operation: 'create' })
@@ -272,7 +272,7 @@ describe('default', () => {
 
     it('field.defaultValue wins over the field type defaultValue', async () => {
         // the boolean field type's defaultValue is false; override with true
-        const { values } = await parseFields(
+        const { values } = await safeParseFields(
             {},
             [field({ name: 'active', type: 'boolean', defaultValue: true })],
             fakeCtx({ operation: 'create' })
@@ -281,7 +281,7 @@ describe('default', () => {
     });
 
     it('update + absent → NO default applied', async () => {
-        const { values } = await parseFields(
+        const { values } = await safeParseFields(
             {},
             [field({ name: 'status', type: 'text', defaultValue: 'draft' })],
             fakeCtx({ operation: 'update' })
@@ -290,7 +290,7 @@ describe('default', () => {
     });
 
     it('null + create → treated as absent, default applied', async () => {
-        const { values } = await parseFields(
+        const { values } = await safeParseFields(
             { status: null },
             [field({ name: 'status', type: 'text', defaultValue: 'draft' })],
             fakeCtx({ operation: 'create' })
@@ -311,7 +311,7 @@ describe('coerce', () => {
     });
 
     it('trims value via the field type coerce', async () => {
-        const { values } = await parseFields(
+        const { values } = await safeParseFields(
             { name: '  hello  ' },
             [field({ name: 'name', type: 't-coerce' })],
             fakeCtx()
@@ -320,7 +320,7 @@ describe('coerce', () => {
     });
 
     it('coercion happens before validation', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { name: '  ' },
             [field({ name: 'name', type: 't-coerce', required: true })],
             fakeCtx()
@@ -332,7 +332,7 @@ describe('coerce', () => {
 
 describe('rule: minLength', () => {
     it('pass: string meets min length', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { bio: 'hello' },
             [field({ name: 'bio', type: 'text', validation: [{ minLength: 3 }] })],
             fakeCtx()
@@ -341,7 +341,7 @@ describe('rule: minLength', () => {
     });
 
     it('fail: string below min length', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { bio: 'hi' },
             [field({ name: 'bio', type: 'text', validation: [{ minLength: 3 }] })],
             fakeCtx()
@@ -350,7 +350,7 @@ describe('rule: minLength', () => {
     });
 
     it('pass: array meets min length', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { tags: ['a', 'b', 'c'] },
             [
                 field({
@@ -365,7 +365,7 @@ describe('rule: minLength', () => {
     });
 
     it('fail: array below min length', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { tags: ['a'] },
             [
                 field({
@@ -382,7 +382,7 @@ describe('rule: minLength', () => {
     // A rule that cannot measure the value reports the mismatch. Here the number
     // type's own validator accepts 1 first, so the rule is what reports.
     it('reports a mismatch rather than passing a value it cannot measure', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { count: 1 },
             [field({ name: 'count', type: 'number', validation: [{ minLength: 5 }] })],
             fakeCtx()
@@ -393,7 +393,7 @@ describe('rule: minLength', () => {
 
 describe('rule: maxLength', () => {
     it('pass: string at max length', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { slug: 'hello' },
             [field({ name: 'slug', type: 'text', validation: [{ maxLength: 5 }] })],
             fakeCtx()
@@ -402,7 +402,7 @@ describe('rule: maxLength', () => {
     });
 
     it('fail: string exceeds max length', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { slug: 'toolongslug' },
             [field({ name: 'slug', type: 'text', validation: [{ maxLength: 5 }] })],
             fakeCtx()
@@ -413,7 +413,7 @@ describe('rule: maxLength', () => {
 
 describe('rule: min', () => {
     it('pass: number meets minimum', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { age: 18 },
             [field({ name: 'age', type: 'number', validation: [{ min: 18 }] })],
             fakeCtx()
@@ -422,7 +422,7 @@ describe('rule: min', () => {
     });
 
     it('fail: number below minimum', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { age: 16 },
             [field({ name: 'age', type: 'number', validation: [{ min: 18 }] })],
             fakeCtx()
@@ -431,7 +431,7 @@ describe('rule: min', () => {
     });
 
     it('reports a mismatch rather than passing a value it cannot compare', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { age: 'old' },
             [field({ name: 'age', type: 'text', validation: [{ min: 18 }] })],
             fakeCtx()
@@ -442,7 +442,7 @@ describe('rule: min', () => {
 
 describe('rule: max', () => {
     it('pass: number at maximum', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { score: 100 },
             [field({ name: 'score', type: 'number', validation: [{ max: 100 }] })],
             fakeCtx()
@@ -451,7 +451,7 @@ describe('rule: max', () => {
     });
 
     it('fail: number exceeds maximum', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { score: 101 },
             [field({ name: 'score', type: 'number', validation: [{ max: 100 }] })],
             fakeCtx()
@@ -462,7 +462,7 @@ describe('rule: max', () => {
 
 describe('rule: pattern', () => {
     it('pass: string matches pattern', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { code: 'ABC123' },
             [
                 field({
@@ -477,7 +477,7 @@ describe('rule: pattern', () => {
     });
 
     it('fail: string does not match pattern → default message', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { code: 'abc123' },
             [
                 field({
@@ -492,7 +492,7 @@ describe('rule: pattern', () => {
     });
 
     it('fail: string does not match pattern → custom message', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { code: 'abc123' },
             [
                 field({
@@ -514,7 +514,7 @@ describe('rule: pattern', () => {
 
 describe('rule: email', () => {
     it('pass: valid email', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { email: 'user@example.com' },
             [field({ name: 'email', type: 'text', validation: [{ email: true }] })],
             fakeCtx()
@@ -523,7 +523,7 @@ describe('rule: email', () => {
     });
 
     it('fail: invalid email', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { email: 'not-an-email' },
             [field({ name: 'email', type: 'text', validation: [{ email: true }] })],
             fakeCtx()
@@ -534,7 +534,7 @@ describe('rule: email', () => {
 
 describe('rule: url', () => {
     it('pass: valid URL', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { website: 'https://example.com' },
             [field({ name: 'website', type: 'text', validation: [{ url: true }] })],
             fakeCtx()
@@ -543,7 +543,7 @@ describe('rule: url', () => {
     });
 
     it('fail: invalid URL', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { website: 'not-a-url' },
             [field({ name: 'website', type: 'text', validation: [{ url: true }] })],
             fakeCtx()
@@ -554,7 +554,7 @@ describe('rule: url', () => {
 
 describe('rule: enum', () => {
     it('pass: value in enum', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { status: 'draft' },
             [
                 field({
@@ -569,7 +569,7 @@ describe('rule: enum', () => {
     });
 
     it('fail: value not in enum', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { status: 'archived' },
             [
                 field({
@@ -587,7 +587,7 @@ describe('rule: enum', () => {
     // "every selected value is permitted" — testing the array itself for
     // membership rejects every non-empty selection.
     it('pass: every value of a multi-value field is in enum', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { tags: ['draft', 'published'] },
             [
                 field({
@@ -602,7 +602,7 @@ describe('rule: enum', () => {
     });
 
     it('fail: one value of a multi-value field is not in enum', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { tags: ['draft', 'archived'] },
             [
                 field({
@@ -624,7 +624,7 @@ describe('rule: enum', () => {
 
 describe('one message per field', () => {
     it('two failing rules → only the first-declared one is reported', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { code: 'ab' },
             [
                 field({
@@ -642,7 +642,7 @@ describe('one message per field', () => {
     });
 
     it('declaration order decides which of two failures is reported', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { code: 'ab' },
             [
                 field({
@@ -662,7 +662,7 @@ describe('one message per field', () => {
     // The case that motivated the reorder: an author rule cannot be judged
     // against a value that is not even a URL, so the type's own validator wins.
     it("the type's validator beats an author rule on the same field", async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { website: 'not-a-url' },
             [
                 field({
@@ -682,7 +682,7 @@ describe('one message per field', () => {
     });
 
     it('a well-formed value then falls through to the author rule', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { website: 'https://other.com' },
             [
                 field({
@@ -702,7 +702,7 @@ describe('one message per field', () => {
     });
 
     it('a container count failure suppresses the rules on the same container', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { sections: [{ _id: 'a1' }] },
             [
                 field({
@@ -722,7 +722,7 @@ describe('one message per field', () => {
 describe('rule: unique', () => {
     it('isUnique returns true → no error', async () => {
         const isUnique = vi.fn(async () => true);
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { slug: 'my-slug' },
             [field({ name: 'slug', type: 'text', validation: [{ unique: true }] })],
             fakeCtx({ lookups: { isUnique } })
@@ -736,7 +736,7 @@ describe('rule: unique', () => {
 
     it('isUnique returns false → ["Already in use"]', async () => {
         const isUnique = vi.fn(async () => false);
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { slug: 'taken-slug' },
             [field({ name: 'slug', type: 'text', validation: [{ unique: true }] })],
             fakeCtx({ lookups: { isUnique } })
@@ -751,7 +751,7 @@ describe('rule: unique', () => {
 
 describe('rule: custom', () => {
     it('custom returns true → no error', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { value: 'ok' },
             [
                 field({
@@ -766,7 +766,7 @@ describe('rule: custom', () => {
     });
 
     it('custom returns string → that message', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { value: 'bad' },
             [
                 field({
@@ -781,7 +781,7 @@ describe('rule: custom', () => {
     });
 
     it('custom returns false (non-true non-string) → "Invalid value"', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { value: 'bad' },
             [
                 field({
@@ -798,7 +798,7 @@ describe('rule: custom', () => {
 
     it('custom can read siblings via ctx.values', async () => {
         let capturedValues: Record<string, unknown> | undefined;
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { password: 'secret', confirm: 'secret' },
             [
                 field({ name: 'password', type: 'text' }),
@@ -825,7 +825,7 @@ describe('rule: custom', () => {
     });
 
     it('custom can detect mismatch via ctx.values', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { password: 'secret', confirm: 'wrong' },
             [
                 field({ name: 'password', type: 'text' }),
@@ -849,7 +849,7 @@ describe('rule: custom', () => {
 
 describe('layout flattening', () => {
     it('section wrapping a required field → error keyed by inner field name', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             {},
             [
                 field({
@@ -865,7 +865,7 @@ describe('layout flattening', () => {
     });
 
     it('nested sections are fully unwrapped', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             {},
             [
                 field({
@@ -897,7 +897,7 @@ describe('nested fields', () => {
      * the top-level error keys — a nested error always carries its path.
      */
     it('group child required but absent → error keyed by path, not bare name', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             {},
             [
                 field({
@@ -917,7 +917,7 @@ describe('nested fields', () => {
 
 describe('unknown keys', () => {
     it('a key matching no declared field is dropped', async () => {
-        const { values, errors } = await parseFields(
+        const { values, errors } = await safeParseFields(
             { title: 'hello', _unknownKey: 'dropped' },
             [field({ name: 'title', type: 'text' })],
             fakeCtx()
@@ -927,7 +927,7 @@ describe('unknown keys', () => {
     });
 
     it('a field declared inside a layout field is kept', async () => {
-        const { values } = await parseFields(
+        const { values } = await safeParseFields(
             { title: 'hello', stray: 1 },
             [
                 field({
@@ -943,13 +943,13 @@ describe('unknown keys', () => {
 
     it('empty definitions drop nothing — the schema is unknown, not empty', async () => {
         const input = { title: 'hello' };
-        const { values } = await parseFields(input, [], fakeCtx());
+        const { values } = await safeParseFields(input, [], fakeCtx());
         expect(values).toEqual({ title: 'hello' });
         expect(values).not.toBe(input);
     });
 
     it('a declared field absent from the input stays absent', async () => {
-        const { values } = await parseFields(
+        const { values } = await safeParseFields(
             { title: 'hello' },
             [
                 field({ name: 'title', type: 'text' }),
@@ -963,7 +963,7 @@ describe('unknown keys', () => {
 
 describe('clean state', () => {
     it('all-valid input → errors is {}', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { title: 'hello', count: 5 },
             [
                 field({ name: 'title', type: 'text', validation: [{ minLength: 2 }] }),

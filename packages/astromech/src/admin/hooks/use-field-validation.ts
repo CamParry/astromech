@@ -1,13 +1,13 @@
 /**
- * Client-side field validation for the entry form. Runs the same
- * `parseFields` pipeline the server runs, so a new rule appears here the
- * moment it appears on the server; data-dependent checks are skipped.
+ * Client-side field validation for the entry form. Runs the same field
+ * pipeline the server runs, so a new rule appears here the moment it appears
+ * on the server; data-dependent checks are skipped.
  */
 
 import type { Field, FieldErrors, FieldLookups, ValidationMode } from '@/types/index';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 // Deep import: the `fields/` barrel reaches server code (virtual config / DB).
-import { parseFields } from '@/fields/parse-fields';
+import { safeParseFields } from '@/fields/parse-fields';
 
 /**
  * Data-dependent checks are server-only and skipped in silence: `unique` and
@@ -87,7 +87,7 @@ export function useFieldValidation({
         // way in, but it also writes coerced values and (on 'create') seeded
         // defaults back into what it was handed, and none of that may leak
         // into the live form state. Only the message maps are used.
-        const { errors, warnings } = await parseFields(
+        const { errors, warnings } = await safeParseFields(
             structuredClone(valuesRef.current),
             definitionsRef.current,
             {

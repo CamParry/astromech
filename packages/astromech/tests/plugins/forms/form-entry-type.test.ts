@@ -14,7 +14,7 @@
 
 import type { Field } from '@/types/fields';
 import { describe, expect, it } from 'vitest';
-import { parseFields } from '@/fields/parse-fields';
+import { safeParseFields } from '@/fields/parse-fields';
 import { formEntryType } from '../../../../plugins/forms/src/entries/form';
 
 /** The `form` type declares a plain array; narrow the `EntryFields` union to it. */
@@ -35,7 +35,7 @@ function ctx() {
 
 /** Validate a form whose `fields` holds one text block with the given `name`. */
 async function nameErrors(name: unknown): Promise<string[] | undefined> {
-    const { errors } = await parseFields(
+    const { errors } = await safeParseFields(
         {
             title: 'Contact',
             fields: [{ _id: 'b1', _type: 'text', name, label: 'Label' }],

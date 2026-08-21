@@ -24,7 +24,7 @@ import {
     validateText,
     validateUrl,
 } from '@/fields/built-in-rules';
-import { parseFields } from '@/fields/parse-fields';
+import { safeParseFields } from '@/fields/parse-fields';
 
 function ctx(value: unknown): FieldValidationContext {
     return {
@@ -210,9 +210,9 @@ describe('validateKeyValue', () => {
     });
 });
 
-describe('parseFields integration', () => {
+describe('safeParseFields integration', () => {
     it('email field with invalid value → errors.f', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { f: 'nope' },
             [{ name: 'f', type: 'email' }],
             fakeCtx()
@@ -221,7 +221,7 @@ describe('parseFields integration', () => {
     });
 
     it('slug field with "My Post" → errors.f, and the value is left alone', async () => {
-        const { values, errors } = await parseFields(
+        const { values, errors } = await safeParseFields(
             { f: 'My Post' },
             [{ name: 'f', type: 'slug' }],
             fakeCtx()
@@ -233,7 +233,7 @@ describe('parseFields integration', () => {
     });
 
     it('slug field with an already-normal value → no error', async () => {
-        const { values, errors } = await parseFields(
+        const { values, errors } = await safeParseFields(
             { f: 'my-post' },
             [{ name: 'f', type: 'slug' }],
             fakeCtx()
@@ -243,7 +243,7 @@ describe('parseFields integration', () => {
     });
 
     it('color field with a keyword → errors.f', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { f: 'red' },
             [{ name: 'f', type: 'color' }],
             fakeCtx()
@@ -254,7 +254,7 @@ describe('parseFields integration', () => {
     });
 
     it('link field with a javascript: url → errors.f', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { f: { url: 'javascript:alert(1)', label: 'Go' } },
             [{ name: 'f', type: 'link' }],
             fakeCtx()
@@ -263,7 +263,7 @@ describe('parseFields integration', () => {
     });
 
     it('key-value field with {a:1,"":2} → values.f deep-equals {a:"1"}', async () => {
-        const { values } = await parseFields(
+        const { values } = await safeParseFields(
             { f: { a: 1, '': 2 } },
             [{ name: 'f', type: 'key-value' }],
             fakeCtx()

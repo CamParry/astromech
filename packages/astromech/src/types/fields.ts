@@ -121,10 +121,10 @@ export type FieldPathSegment =
 export type FieldErrors = Record<string, string[]>;
 
 /**
- * Which half of validation applies to a write. `'publish'` runs everything;
- * `'save'` skips the completeness checks (`required`, container `min`) so a
- * draft can be saved half-finished without losing correctness checks on what
- * IS filled in.
+ * Which half of validation applies to a write. `'complete'` runs everything,
+ * `required` and container `min` included; `'partial'` skips only those
+ * completeness checks, so a draft can be saved half-finished while what IS
+ * filled in still gets its correctness checks.
  */
 export type ValidationMode = 'partial' | 'complete';
 
@@ -169,7 +169,7 @@ export type FieldValidationContext = {
     /**
      * Whether this write runs completeness checks. Always concrete here — a
      * `custom` validator never has to guess — even though the pipeline's callers
-     * may leave it out and take the `'publish'` default.
+     * may leave it out and take the `'complete'` default.
      */
     validation: ValidationMode;
     resource: { kind: ResourceType; record: unknown };

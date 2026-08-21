@@ -3,7 +3,7 @@
  *
  * The browser-side validation runner and, more importantly, its REVEAL policy.
  *
- * The runner itself is the server's own `parseFields`, so what is wrong is
+ * The runner itself is the server's own `safeParseFields`, so what is wrong is
  * already covered by the pipeline's own tests. What is only testable here is
  * *when* the author is told: a pristine field stays silent on blur (tabbing
  * through a form to survey it must not turn it red), a dirty one speaks up, and

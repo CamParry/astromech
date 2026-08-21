@@ -104,6 +104,24 @@ A **resource validator** is the whole-resource `validate` an author declares on 
 
 ---
 
+## Validation
+
+Four names, at four layers. Each is met in a different place, and only one of them is called `validate`.
+
+**`parseInput`** (`packages/astromech/src/errors/validation.ts`, exported from `packages/astromech/src/errors/index.ts`) parses request input with a Zod schema and rethrows a Zod failure as the framework's 422. It checks the envelope around the fields (title, slug, status), not the field values themselves.
+
+**`parseFields`** and **`safeParseFields`** (`packages/astromech/src/fields/parse-fields.ts`) are the field pipeline, resource-generic and named on Zod's own convention: `parseFields` returns the coerced values and throws a 422 when anything reported, `safeParseFields` returns `{ values, errors, warnings, form }` instead. Write paths take the first. The admin's client-side runner, the CLI content check and the forms plugin take the second, because they report rather than reject. Both do what a Zod parse does: drop undeclared keys, coerce, apply defaults, normalize container values, then check.
+
+A **resource validator** is the author's whole-resource `validate` (see **Resource** above). It reaches the pipeline as the `validate` option, matching the key the author wrote.
+
+**`FieldType.validate`** is a field type's own intrinsic check. It runs before any author rule, so a rule is never evaluated against a value whose shape the type already rejected.
+
+**`toStoredFields`** (`packages/astromech/src/entries/internal/stored-fields.ts`) is what an entry write calls, and it is not a parse wrapper: a pre-step (inherit the locale group's shared fields, or merge the patch over the current row), then the parse, then a prune of dead relation ids. Its `kind` discriminant names the write path (`create`, `update`, `merge`), not the pipeline's `operation`, because a merge is an `update` to the parse.
+
+**Completeness vs correctness** is what `ValidationMode` splits. **Completeness** is `required` and a container's `min`: has the field been filled in? **Correctness** is the field type's own validator, a container's `max`, and the author's declarative rules: is what it holds valid? `complete` runs both, `partial` runs correctness only, so a draft saves half-finished without being allowed to store a malformed value. `entryValidationMode` (`packages/astromech/src/entries/validation-mode.shared.ts`) derives the mode from an entry's status, and the admin imports that leaf directly so the client picks the same mode the server will. `decisions/0086-one-validate-per-layer.md` records why the split stays, and why `parse` beat `prepare` and `validate`.
+
+---
+
 ## Entry vs Record
 
 **Entry** is the Astromech term for a single content item stored in a collection. Avoid saying "record" — it conflates CMS content with raw database rows.

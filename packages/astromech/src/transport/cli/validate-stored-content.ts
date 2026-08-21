@@ -21,7 +21,7 @@ import { qualifyEntryType, resolveEntryType } from '@/entries/type-ids.shared';
 import { entryValidationMode } from '@/entries/validation-mode.shared';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenEntryFields, flattenFieldNodes } from '@/fields/flatten';
-import { parseFields } from '@/fields/parse-fields';
+import { safeParseFields } from '@/fields/parse-fields';
 import { createMediaRepository } from '@/media/repository';
 import { settingsService } from '@/settings/service';
 import { createUserRepository } from '@/users/repository';
@@ -127,8 +127,8 @@ async function checkEntryRow(
 
     report.rowsChecked += 1;
     const definitions = flattenEntryFields(entryType.fields);
-    const resourceValidate = entryType.validate;
-    const processed = await parseFields(
+    const validate = entryType.validate;
+    const processed = await safeParseFields(
         row.fields as Record<string, unknown>,
         definitions,
         {
@@ -146,7 +146,7 @@ async function checkEntryRow(
             }),
             coerceOnly: new Set(),
             collectWarnings: false,
-            ...(resourceValidate ? { resourceValidate } : {}),
+            ...(validate ? { validate } : {}),
         }
     );
 
@@ -180,7 +180,7 @@ function tableBackedEntryTypes(type: string | undefined): string[] {
 async function checkMedia(report: ValidationReport): Promise<void> {
     const config = getConfig();
     const definitions = flattenFieldNodes(config.media?.fields ?? []);
-    const resourceValidate = config.media?.validate;
+    const validate = config.media?.validate;
     const repository = createMediaRepository();
     // One load for the whole pass: a `unique` rule reads it per row, and the
     // run writes nothing, so the snapshot cannot go stale under it.
@@ -189,7 +189,7 @@ async function checkMedia(report: ValidationReport): Promise<void> {
 
     for (const row of rows) {
         report.rowsChecked += 1;
-        const processed = await parseFields(
+        const processed = await safeParseFields(
             (row.fields ?? {}) as Record<string, unknown>,
             definitions,
             {
@@ -208,7 +208,7 @@ async function checkMedia(report: ValidationReport): Promise<void> {
                 }),
                 coerceOnly: new Set(),
                 collectWarnings: false,
-                ...(resourceValidate ? { resourceValidate } : {}),
+                ...(validate ? { validate } : {}),
             }
         );
         collect(
@@ -223,14 +223,14 @@ async function checkMedia(report: ValidationReport): Promise<void> {
 async function checkUsers(report: ValidationReport): Promise<void> {
     const config = getConfig();
     const definitions = flattenFieldNodes(config.users?.fields ?? []);
-    const resourceValidate = config.users?.validate;
+    const validate = config.users?.validate;
     const repository = createUserRepository();
     const load = memoize(() => repository.list());
     const rows = await load();
 
     for (const row of rows) {
         report.rowsChecked += 1;
-        const processed = await parseFields(
+        const processed = await safeParseFields(
             (row.fields ?? {}) as Record<string, unknown>,
             definitions,
             {
@@ -247,7 +247,7 @@ async function checkUsers(report: ValidationReport): Promise<void> {
                 }),
                 coerceOnly: new Set(),
                 collectWarnings: false,
-                ...(resourceValidate ? { resourceValidate } : {}),
+                ...(validate ? { validate } : {}),
             }
         );
         collect(
@@ -282,10 +282,10 @@ async function checkSettings(report: ValidationReport): Promise<void> {
             Object.prototype.hasOwnProperty.call(value, field.name)
         );
         // `ResolvedAdminPage` drops `validate`, so it comes from the AUTHORED page.
-        const resourceValidate = getConfig().admin?.pages?.find(
+        const validate = getConfig().admin?.pages?.find(
             (candidate) => candidate.path === page.path
         )?.validate;
-        const processed = await parseFields(value, definitions, {
+        const processed = await safeParseFields(value, definitions, {
             operation: 'update',
             resource: { kind: 'setting', record: null },
             user: null,
@@ -306,7 +306,7 @@ async function checkSettings(report: ValidationReport): Promise<void> {
             }),
             coerceOnly: new Set(),
             collectWarnings: false,
-            ...(resourceValidate ? { resourceValidate } : {}),
+            ...(validate ? { validate } : {}),
         });
         collect(
             report,

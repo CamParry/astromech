@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { parseFields } from '@/fields/parse-fields';
+import { safeParseFields } from '@/fields/parse-fields';
 import { compileFormFields } from '../../../../plugins/forms/src/fields/compile';
 
 describe('compileFormFields', () => {
@@ -182,7 +182,7 @@ describe('compileFormFields', () => {
     });
 
     // A form saved before the builder enforced its `name` pattern can still hold
-    // a name the field-path grammar cannot address. `parseFields` throws on one,
+    // a name the field-path grammar cannot address. `safeParseFields` throws on one,
     // so compiling it would turn every submission into a 500 — skip it instead.
     it.each(['user.email', 'answers[0]', 'a]b'])(
         'skips an instance whose name breaks the field-path grammar (%s)',
@@ -201,7 +201,7 @@ describe('compileFormFields', () => {
             { _type: 'email', name: 'user.email', label: 'Email', required: true },
             { _type: 'text', name: 'message', label: 'Message', required: true },
         ]);
-        const { errors } = await parseFields({ message: '' }, definitions, {
+        const { errors } = await safeParseFields({ message: '' }, definitions, {
             operation: 'create',
             resource: { kind: 'entry', record: {} },
             user: null,

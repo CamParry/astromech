@@ -1,8 +1,8 @@
+import { parseInput } from '@/errors/index';
 import { getCurrentUser } from '@/request-context/index';
 import { generatePreviewSecret } from '../../internal/preview';
 import { loadAndAssertType } from '../../internal/records';
 import { assertCapability } from '../../internal/type-config';
-import { validate } from '../../internal/validate';
 import {
     createPreviewTokenRepository,
     hashPreviewToken,
@@ -42,7 +42,7 @@ export async function issuePreviewToken(params: {
     // Coerced, not trusted: a JSON transport (MCP, the AI tool-loop) sends an
     // ISO string, and this column is a date. `schedule` validates `publishedAt`
     // the same way for the same reason.
-    const { expiresAt } = validate(previewTokenSchema, { expiresAt: params.expiresAt });
+    const { expiresAt } = parseInput(previewTokenSchema, { expiresAt: params.expiresAt });
     // `null` is not the same as absent: an omitted `expiresAt` takes the default
     // TTL, an explicit `null` means "never expires". The repository's `isValid`
     // honours null (see `decisions/0079`).

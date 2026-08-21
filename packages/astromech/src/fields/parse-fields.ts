@@ -1,13 +1,14 @@
 /**
- * `parseFields` runs each field through coerce, then default, then validate,
- * recursing into nested containers via `children`. Validation splits along
- * `ctx.validation`: completeness only when `'complete'`; correctness always runs.
+ * The field pipeline runs each field through coerce, then default, then
+ * validate, recursing into nested containers via `children`. Validation splits
+ * along `ctx.validation`: completeness only when `'complete'`; correctness always.
  */
 
 import type {
     Field,
     FieldErrors,
     FieldPathSegment,
+    FieldType,
     FieldValidationContext,
     ResourceValidator,
     ValidationMode,
@@ -149,7 +150,7 @@ async function runRule(
 /**
  * The caller-supplied half of the validation context — everything not per-field.
  * `validation` and `collectWarnings` are optional for callers and concrete inside
- * (see `parseFields`).
+ * (see `safeParseFields`).
  */
 type ParseContext = Omit<
     FieldValidationContext,
@@ -159,7 +160,7 @@ type ParseContext = Omit<
     /** Evaluate warning-severity rules. Default `false`. */
     collectWarnings?: boolean;
     /** Whole-resource validator, run after every field. */
-    resourceValidate?: ResourceValidator;
+    validate?: ResourceValidator;
     /**
      * Root field names whose value is new in this write. Absent ⇒ coerce
      * everything; present ⇒ coerce only these fields and their subtrees.
@@ -172,6 +173,94 @@ type ScopeContext = Omit<
     FieldValidationContext,
     'value' | 'values' | 'field' | 'path'
 > & { collectWarnings: boolean; coerceOnly?: ReadonlySet<string> };
+
+/** At most one message of each severity, which is what a field's checks report. */
+type FieldChecks = { error: string | null; warning: string | null };
+
+/**
+ * Completeness: has the field been filled in? Runs only for a `'complete'`
+ * write, so a `'partial'` one can save a half-finished draft. Returns the
+ * field's error message, or `null`.
+ */
+function checkCompleteness(
+    field: Field,
+    fieldType: FieldType | undefined,
+    value: unknown,
+    ctx: ScopeContext
+): string | null {
+    if (ctx.validation !== 'complete') return null;
+
+    if (field.required === true && isEmpty(value)) return 'This field is required';
+
+    // `min` on a container means an ITEM COUNT, not a numeric bound — checked
+    // outside the `isEmpty` guard so that it still fires on an empty (but not
+    // required) container, which is its whole point.
+    if (
+        fieldType?.children !== undefined &&
+        Array.isArray(value) &&
+        field.min !== undefined &&
+        value.length < field.min
+    ) {
+        return `Must have at least ${field.min} items`;
+    }
+
+    return null;
+}
+
+/**
+ * Correctness: is what the field holds valid? Runs on every write, draft
+ * included. The checks below run in a fixed order and the FIRST failure of each
+ * severity wins.
+ */
+async function checkCorrectness(
+    field: Field,
+    fieldType: FieldType | undefined,
+    fieldCtx: FieldValidationContext,
+    ctx: ScopeContext
+): Promise<FieldChecks> {
+    const value = fieldCtx.value;
+
+    // `max` on a container means an ITEM COUNT, not a numeric bound — checked
+    // outside the `isEmpty` guard, alongside `min`. Correctness rather than
+    // completeness, so no draft save stores more items than the type permits.
+    if (
+        fieldType?.children !== undefined &&
+        Array.isArray(value) &&
+        field.max !== undefined &&
+        value.length > field.max
+    ) {
+        return { error: `Must have at most ${field.max} items`, warning: null };
+    }
+
+    // Optional + empty → no rules (valid).
+    if (isEmpty(value)) return { error: null, warning: null };
+
+    // The type's own validator, BEFORE the author's rules: an author rule ("must
+    // be on example.com") cannot be evaluated against a value that is not even a
+    // URL, so reporting it first sends the author chasing the wrong problem.
+    if (fieldType?.validate) {
+        const r = await fieldType.validate(fieldCtx);
+        if (r !== true) return { error: r, warning: null };
+    }
+
+    // Author-supplied declarative rules, in declaration order, and only over a
+    // value the type itself accepted — including the warning-severity ones.
+    let error: string | null = null;
+    let warning: string | null = null;
+    for (const rule of field.validation ?? []) {
+        const severity = rule.severity ?? 'error';
+        // Each severity keeps only its FIRST message, so a rule whose slot is
+        // already filled is skipped without being evaluated.
+        if (severity === 'error' ? error !== null : warning !== null) continue;
+        if (severity === 'warning' && !ctx.collectWarnings) continue;
+        const msg = await runRule(rule, fieldCtx);
+        if (msg === null) continue;
+        if (severity === 'error') error = msg;
+        else warning = msg;
+    }
+
+    return { error, warning };
+}
 
 /**
  * Run one value scope: the root record, or one container item / group object.
@@ -246,80 +335,32 @@ async function processScope(
             }
         }
 
-        // Step e: validate. One message per severity — the checks below run in
-        // a fixed order and the FIRST failure of each severity wins.
-        let error: string | null = null;
+        // Step e: validate. Completeness runs first, and its failure skips the
+        // correctness checks and the warnings with them — a field the author has
+        // not filled in should not also be nagged about.
+        let error: string | null = checkCompleteness(field, fieldType, v, ctx);
         let warning: string | null = null;
 
-        if (ctx.validation === 'complete' && field.required === true && isEmpty(v)) {
-            // 1. Required + empty: skips all other rules, warnings included — a
-            // field the author has not filled in should not also be nagged
-            // about. A completeness check, so a `'partial'` write never reaches
-            // this branch.
-            error = 'This field is required';
-        } else {
-            // 2. `min`/`max` on a container mean ITEM COUNTS, not numeric bounds
-            // — checked outside the `isEmpty` guard so that `min` still fires on
-            // an empty (but not required) container, which is its whole point.
-            // `min` is completeness (complete only); `max` is correctness, so it
-            // runs on a draft save too — no write should store more items than
-            // the type permits.
-            if (fieldType?.children !== undefined && Array.isArray(v)) {
-                if (
-                    ctx.validation === 'complete' &&
-                    field.min !== undefined &&
-                    v.length < field.min
-                ) {
-                    error = `Must have at least ${field.min} items`;
-                } else if (field.max !== undefined && v.length > field.max) {
-                    error = `Must have at most ${field.max} items`;
-                }
-            }
-
-            if (error === null && !isEmpty(v)) {
-                const fieldCtx: FieldValidationContext = {
-                    value: v,
-                    // Siblings within THIS scope — a nested field's cross-field
-                    // rules read its own item, not the root record.
-                    values,
-                    field,
-                    path: segments,
-                    operation: ctx.operation,
-                    validation: ctx.validation,
-                    resource: ctx.resource,
-                    user: ctx.user,
-                    lookups: ctx.lookups,
-                };
-
-                // 3. The type's own validator, BEFORE the author's rules: an
-                // author rule ("must be on example.com") cannot be evaluated
-                // against a value that is not even a URL, so reporting it first
-                // sends the author chasing the wrong problem.
-                if (fieldType?.validate) {
-                    const r = await fieldType.validate(fieldCtx);
-                    if (r !== true) error = r;
-                }
-
-                // 4. Author-supplied declarative rules, in declaration order,
-                // and only over a value the type itself accepted — including
-                // the warning-severity ones.
-                if (error === null) {
-                    for (const rule of field.validation ?? []) {
-                        const severity = rule.severity ?? 'error';
-                        // Each severity keeps only its FIRST message, so a rule
-                        // whose slot is already filled is skipped without being
-                        // evaluated.
-                        if (severity === 'error' ? error !== null : warning !== null)
-                            continue;
-                        if (severity === 'warning' && !ctx.collectWarnings) continue;
-                        const msg = await runRule(rule, fieldCtx);
-                        if (msg === null) continue;
-                        if (severity === 'error') error = msg;
-                        else warning = msg;
-                    }
-                }
-            }
-            // else: optional + empty → no rules (valid)
+        if (error === null) {
+            const fieldCtx: FieldValidationContext = {
+                value: v,
+                // Siblings within THIS scope — a nested field's cross-field
+                // rules read its own item, not the root record.
+                values,
+                field,
+                path: segments,
+                operation: ctx.operation,
+                validation: ctx.validation,
+                resource: ctx.resource,
+                user: ctx.user,
+                lookups: ctx.lookups,
+            };
+            ({ error, warning } = await checkCorrectness(
+                field,
+                fieldType,
+                fieldCtx,
+                ctx
+            ));
         }
 
         // `FieldErrors` stays `Record<string, string[]>` on the wire; the array
@@ -333,7 +374,7 @@ async function processScope(
     }
 }
 
-/** What `parseFields` reports: the coerced values and everything that failed. */
+/** What `safeParseFields` reports: the coerced values and everything that failed. */
 export type ParsedFields = {
     values: Record<string, unknown>;
     errors: FieldErrors;
@@ -342,16 +383,31 @@ export type ParsedFields = {
 };
 
 /**
- * Run every field definition over `fields`, then the resource validator.
- * Returns the coerced values plus blocking `errors`, advisory `warnings` and
- * form-level `form` messages.
+ * Run every field definition over `fields`, then the resource validator, and
+ * return the coerced values — throwing a 422 if anything reported. Warnings are
+ * advisory and never block a write, so they are dropped here.
+ */
+export async function parseFields(
+    fields: Record<string, unknown>,
+    definitions: Field[],
+    ctx: ParseContext
+): Promise<Record<string, unknown>> {
+    const parsed = await safeParseFields(fields, definitions, ctx);
+    assertNoFieldErrors(parsed);
+    return parsed.values;
+}
+
+/**
+ * The same parse, returning everything that reported instead of throwing: the
+ * coerced values plus blocking `errors`, advisory `warnings` and form-level
+ * `form` messages.
  *
  * The returned values are projected through the schema first, so a key matching
  * no declared field is dropped rather than written back. Empty `definitions`
  * means the schema is unknown here, not that there are no fields, so nothing is
  * dropped in that case.
  */
-export async function parseFields(
+export async function safeParseFields(
     fields: Record<string, unknown>,
     definitions: Field[],
     ctx: ParseContext
@@ -379,8 +435,8 @@ export async function parseFields(
     // The resource validator runs whether or not the fields reported, so one
     // pass surfaces cross-field and per-field problems together.
     const form: string[] = [];
-    if (ctx.resourceValidate) {
-        const reported = await ctx.resourceValidate({
+    if (ctx.validate) {
+        const reported = await ctx.validate({
             values: result,
             definitions,
             operation: ctx.operation,
@@ -402,11 +458,8 @@ export async function parseFields(
     return { values: result, errors, warnings, form };
 }
 
-/**
- * Throws the parsed result's field and form errors as a 422. Warnings are
- * advisory and never block a write, so they are not considered here.
- */
-export function assertNoFieldErrors(parsed: ParsedFields): void {
+/** Throws the parsed result's field and form errors as a 422. */
+function assertNoFieldErrors(parsed: ParsedFields): void {
     if (Object.keys(parsed.errors).length > 0 || parsed.form.length > 0) {
         throw ValidationError.fromFieldErrors(parsed.errors, parsed.form);
     }

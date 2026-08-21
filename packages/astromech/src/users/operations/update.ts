@@ -2,14 +2,14 @@ import type { JsonObject, User } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
+import { parseInput } from '@/errors/index';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenFieldNodes } from '@/fields/flatten';
-import { assertNoFieldErrors, parseFields } from '@/fields/parse-fields';
+import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { getCurrentUser } from '@/request-context/index';
 import { indexUserRelationships } from '../internal/relationships';
 import { toUser } from '../internal/to-user';
-import { validate } from '../internal/validate';
 import { createUserRepository } from '../repository';
 import { updateUserSchema } from '../schema';
 import { getUser } from './get';
@@ -26,13 +26,13 @@ export async function updateUser(params: {
     }>;
 }): Promise<User> {
     const { id } = params;
-    const validatedData = validate(updateUserSchema, params.data);
+    const validatedData = parseInput(updateUserSchema, params.data);
 
     if (validatedData.fields !== undefined) {
         const current = await getUser({ id });
         const config = getConfig();
         const fieldDefs = flattenFieldNodes(config.users?.fields ?? []);
-        const resourceValidate = config.users?.validate;
+        const validate = config.users?.validate;
         // `fields` is a patch: an omitted field keeps its stored value, an
         // explicit `null` stores null, and a container replaces wholesale.
         const patch = validatedData.fields as Record<string, unknown>;
@@ -41,7 +41,7 @@ export async function updateUser(params: {
             current?.fields as Record<string, unknown> | null | undefined,
             patch
         );
-        const processed = await parseFields(merged, fieldDefs, {
+        const parsed = await parseFields(merged, fieldDefs, {
             operation: 'update',
             resource: { kind: 'user', record: current },
             user: await getCurrentUser(),
@@ -53,13 +53,12 @@ export async function updateUser(params: {
                 entryTypes: (relIds) => existingEntryTypes(relIds),
             }),
             coerceOnly: new Set(patchedNames),
-            ...(resourceValidate ? { resourceValidate } : {}),
+            ...(validate ? { validate } : {}),
         });
-        assertNoFieldErrors(processed);
         // After `parseFields`, before the write — same ordering as create.
         const pruned = await pruneDanglingRelations(
             fieldDefs,
-            projectToSchema(processed.values, fieldDefs) as JsonObject
+            projectToSchema(parsed, fieldDefs) as JsonObject
         );
         validatedData.fields = pruned.values;
     }

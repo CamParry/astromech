@@ -1,6 +1,6 @@
 import type { FieldErrors } from '@/types/fields';
-import type { ZodIssue } from 'zod';
-import { ZodIssueCode } from 'zod';
+import type { ZodIssue, ZodType } from 'zod';
+import { ZodError, ZodIssueCode } from 'zod';
 
 /** Thrown for a failed field/resource validation; the shape the 422 handler reads. */
 export class ValidationError extends Error {
@@ -46,5 +46,20 @@ export class ValidationError extends Error {
             })),
         ] as ZodIssue[];
         return new ValidationError(issues, fields, form);
+    }
+}
+
+/**
+ * Parse request input with a zod `schema`, rethrowing a zod failure as the
+ * framework's 422. The envelope-level counterpart to the field pipeline's
+ * `parseFields`: this one checks what the caller sent around the fields
+ * (title, slug, status), that one checks the field values themselves.
+ */
+export function parseInput<T>(schema: ZodType<T>, data: unknown): T {
+    try {
+        return schema.parse(data);
+    } catch (err) {
+        if (err instanceof ZodError) throw new ValidationError(err.issues);
+        throw err;
     }
 }

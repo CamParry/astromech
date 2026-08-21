@@ -1,6 +1,6 @@
 import type { Field, FieldValidationContext } from '@/types/fields';
 import { describe, expect, it } from 'vitest';
-import { parseFields } from '@/fields/parse-fields';
+import { safeParseFields } from '@/fields/parse-fields';
 import { renderRichText } from '@/fields/rich-text/index';
 import {
     coerceRichText,
@@ -252,23 +252,23 @@ describe('coerceRichText', () => {
 
 // Through the pipeline — the validator has to actually fire on a write
 
-describe('rich text through parseFields', () => {
+describe('rich text through safeParseFields', () => {
     const fields: Field[] = [{ name: 'body', type: 'richtext' }];
 
     it('accepts a valid document', async () => {
-        const result = await parseFields({ body: doc }, fields, fakeCtx());
+        const result = await safeParseFields({ body: doc }, fields, fakeCtx());
         expect(result.errors).toEqual({});
     });
 
     it('rejects an HTML string', async () => {
-        const result = await parseFields({ body: '<p>Hello</p>' }, fields, fakeCtx());
+        const result = await safeParseFields({ body: '<p>Hello</p>' }, fields, fakeCtx());
         expect(result.errors['body']).toEqual([
             'Must be a rich text document, not an HTML string',
         ]);
     });
 
     it('normalises an empty rendered document to null instead of storing a string', async () => {
-        const result = await parseFields({ body: '' }, fields, fakeCtx());
+        const result = await safeParseFields({ body: '' }, fields, fakeCtx());
         expect(result.errors).toEqual({});
         expect(result.values['body']).toBe(null);
     });
@@ -277,7 +277,7 @@ describe('rich text through parseFields', () => {
         const restricted: Field[] = [
             { name: 'body', type: 'richtext', allow: { heading: false } },
         ];
-        const result = await parseFields({ body: heading }, restricted, fakeCtx());
+        const result = await safeParseFields({ body: heading }, restricted, fakeCtx());
         expect(result.errors['body']?.[0]).toMatch(/heading/);
     });
 });
@@ -293,7 +293,7 @@ describe('public-shape write-back', () => {
             string,
             unknown
         >;
-        const result = await parseFields(
+        const result = await safeParseFields(
             overTheWire,
             [{ name: 'body', type: 'richtext' }],
             fakeCtx()
@@ -309,7 +309,7 @@ describe('public-shape write-back', () => {
             string,
             unknown
         >;
-        const result = await parseFields(
+        const result = await safeParseFields(
             overTheWire,
             [{ name: 'body', type: 'richtext' }],
             fakeCtx()

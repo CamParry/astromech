@@ -8,7 +8,6 @@ import type { SettingRow } from './tables';
 import type { JsonValue, Setting, SettingsService } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
-import { ValidationError } from '@/errors/validation';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenEntryFields } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
@@ -95,10 +94,10 @@ export const settingsService: SettingsService = {
             );
             // `ResolvedAdminPage` drops `validate` along with everything else
             // it does not project, so it has to come from the AUTHORED page.
-            const resourceValidate = config.admin?.pages?.find(
+            const validate = config.admin?.pages?.find(
                 (p) => p.path === page.path
             )?.validate;
-            const processed = await parseFields(
+            const parsed = await parseFields(
                 effectiveValue as Record<string, unknown>,
                 presentDefs,
                 {
@@ -116,13 +115,10 @@ export const settingsService: SettingsService = {
                         excludeId: key,
                         entryTypes: (ids) => existingEntryTypes(ids),
                     }),
-                    ...(resourceValidate ? { resourceValidate } : {}),
+                    ...(validate ? { validate } : {}),
                 }
             );
-            if (Object.keys(processed.errors).length > 0 || processed.form.length > 0) {
-                throw ValidationError.fromFieldErrors(processed.errors, processed.form);
-            }
-            effectiveValue = processed.values as JsonValue;
+            effectiveValue = parsed as JsonValue;
         }
 
         return toSetting(await createSettingsRepository().set(key, effectiveValue));

@@ -8,7 +8,7 @@
 import type { Field, ValidationMode } from '@/types/fields';
 import { describe, expect, it } from 'vitest';
 import { registerFieldType } from '@/fields/field-type-registry';
-import { parseFields } from '@/fields/parse-fields';
+import { safeParseFields } from '@/fields/parse-fields';
 
 type CtxOverrides = Partial<{
     operation: 'create' | 'update';
@@ -47,12 +47,12 @@ describe('coerceOnly — root fields', () => {
     ];
 
     it('coerces everything when absent', async () => {
-        const { values } = await parseFields({ a: 'x', b: 'y' }, defs, fakeCtx());
+        const { values } = await safeParseFields({ a: 'x', b: 'y' }, defs, fakeCtx());
         expect(values).toEqual({ a: 'x!', b: 'y!' });
     });
 
     it('coerces only the named fields', async () => {
-        const { values } = await parseFields(
+        const { values } = await safeParseFields(
             { a: 'x', b: 'y' },
             defs,
             fakeCtx({ coerceOnly: new Set(['a']) })
@@ -61,7 +61,7 @@ describe('coerceOnly — root fields', () => {
     });
 
     it('an empty set coerces nothing', async () => {
-        const { values } = await parseFields(
+        const { values } = await safeParseFields(
             { a: 'x', b: 'y' },
             defs,
             fakeCtx({ coerceOnly: new Set<string>() })
@@ -85,7 +85,7 @@ describe('coerceOnly — container subtrees', () => {
     ];
 
     it('a patched container coerces its whole subtree', async () => {
-        const { values } = await parseFields(
+        const { values } = await safeParseFields(
             {
                 sections: [{ _id: 'a1', label: 'one' }],
                 other: [{ _id: 'b1', label: 'two' }],
@@ -102,7 +102,7 @@ describe('coerceOnly — container subtrees', () => {
 
 describe('coerceOnly — validation still covers every field', () => {
     it('an uncoerced field is still validated', async () => {
-        const { errors } = await parseFields(
+        const { errors } = await safeParseFields(
             { title: '' },
             [field({ name: 'title', type: 'text', required: true })],
             fakeCtx({ coerceOnly: new Set<string>() })
@@ -111,7 +111,7 @@ describe('coerceOnly — validation still covers every field', () => {
     });
 
     it('an uncoerced container is still normalized by children()', async () => {
-        const { values } = await parseFields(
+        const { values } = await safeParseFields(
             { sections: [{ label: 'one' }] },
             [
                 field({
