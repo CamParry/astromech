@@ -6,7 +6,7 @@ import { flattenEntryFields } from '@/fields/flatten';
 import { getCurrentUser } from '@/request-context/index';
 import { getEntryRepository } from '../repository/registry';
 import { applyVisibility, markPublic } from '../visibility';
-import { runPreviewGet } from './preview/read';
+import { getPreviewEntry } from './preview/read';
 
 /**
  * Gets one entry by type and id, filtered to the caller's visibility shape.
@@ -24,7 +24,7 @@ export async function getEntry(params: {
     const { type, id } = params;
 
     // Preview (forward versioning): token-authorized, publish-gate-bypassed.
-    if (params.previewToken) return runPreviewGet(type, id, params);
+    if (params.previewToken) return getPreviewEntry(params);
 
     const repository = getEntryRepository(type);
     const record = await repository.get(id);

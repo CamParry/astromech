@@ -18,7 +18,7 @@ import { getEntryRepository } from '../../repository/registry';
  * when the token or type is absent, or when no canonical passes the token
  * check; with `staged`, swaps each match for its staged change or skips it.
  */
-export async function runPreviewQuery(
+export async function queryPreviewEntries(
     params: EntryQueryParams & { type: string | readonly string[] }
 ): Promise<QueryResult<Entry>> {
     const perPage = typeof params.limit === 'number' ? params.limit : 20;
@@ -76,12 +76,14 @@ export async function runPreviewQuery(
     };
 }
 
-/** Preview single read by canonical id (see runPreviewQuery). */
-export async function runPreviewGet(
-    type: string,
-    id: string,
-    params: { previewToken?: string; staged?: boolean }
-): Promise<Entry | null> {
+/** Preview single read by canonical id (see queryPreviewEntries). */
+export async function getPreviewEntry(params: {
+    type: string;
+    id: string;
+    previewToken?: string;
+    staged?: boolean;
+}): Promise<Entry | null> {
+    const { type, id } = params;
     const token = params.previewToken;
     if (!token) return null;
 

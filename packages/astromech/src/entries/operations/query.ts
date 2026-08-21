@@ -15,7 +15,7 @@ import { getDefaultLocale } from '../internal/entry-type';
 import { asEntry } from '../internal/records';
 import { getEntryRepository } from '../repository/registry';
 import { applyVisibility, markPublic } from '../visibility';
-import { runPreviewQuery } from './preview/read';
+import { queryPreviewEntries } from './preview/read';
 
 /**
  * Lists entries of one or more types, paginated and filtered to the caller's
@@ -27,7 +27,7 @@ export async function queryEntries(
 ): Promise<QueryResult<Entry>> {
     // Preview (forward versioning): token-authorized read that bypasses the
     // publish gate. Public shape only; diverges enough to take its own path.
-    if (params.previewToken) return runPreviewQuery(params);
+    if (params.previewToken) return queryPreviewEntries(params);
 
     const typeParam = params.type;
     const types = Array.isArray(typeParam)
