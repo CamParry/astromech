@@ -378,10 +378,15 @@ export function useScheduleEntry(
 
 // Bulk mutation hooks: each is atomic, a single client call per action.
 function bulkErrorMessage(err: unknown, fallback: string): string {
-    if (err instanceof Error) {
-        const failedId = (err as { failedId?: string }).failedId;
-        return failedId ? `${err.message}` : err.message;
+    // The batch rolled back whole, so the id the server names is the row that
+    // stopped it; it rides in `details`, as every wire-carried id does.
+    if (err instanceof AstromechApiError) {
+        const failedId = err.details?.['failedId'];
+        return typeof failedId === 'string'
+            ? `${err.message} (${failedId})`
+            : err.message;
     }
+    if (err instanceof Error) return err.message;
     return fallback;
 }
 

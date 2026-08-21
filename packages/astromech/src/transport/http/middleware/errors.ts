@@ -8,6 +8,7 @@ import type { Context, ErrorHandler, NotFoundHandler } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { ZodError } from 'zod';
 import { HTTPException } from 'hono/http-exception';
+import { BulkOperationError } from '@/entries/errors';
 import { ValidationError } from '@/errors/validation';
 
 export type ApiErrorCode =
@@ -75,14 +76,17 @@ export function badRequest(
 
 /**
  * `form` is omitted from `details` unless it carries messages, so a plain
- * per-field failure keeps the response body it has always had.
+ * per-field failure keeps the response body it has always had. `extra` adds
+ * further keys to `details` (a batch write's `failedId`).
  */
 export function validationFailed(
     c: Context,
     fields: Record<string, string[]>,
-    form?: string[]
+    form?: string[],
+    extra?: ApiErrorDetails
 ): Response {
     return apiError(c, 422, 'VALIDATION_FAILED', 'Validation failed', {
+        ...extra,
         fields,
         ...(form && form.length > 0 ? { form } : {}),
     });
@@ -140,24 +144,41 @@ export function fromZodError(
     return validationFailed(c, fields);
 }
 
-/** Hono's app-level error handler: canonicalises HTTPException, ValidationError and unknown errors alike. */
+/**
+ * The per-field map a ValidationError reports: field-pipeline errors arrive
+ * pre-shaped, envelope (Zod) errors derive theirs from the issues.
+ */
+function fieldErrorsFrom(err: ValidationError): Record<string, string[]> {
+    if (err.fields) return err.fields;
+    const fields: Record<string, string[]> = {};
+    for (const issue of err.issues) {
+        const key = issue.path.join('.') || '_';
+        (fields[key] ??= []).push(issue.message);
+    }
+    return fields;
+}
+
+/**
+ * Hono's app-level error handler: canonicalises HTTPException, ValidationError
+ * — bare, or wrapped by a batch write's BulkOperationError — and unknown errors
+ * alike.
+ */
 export const onError: ErrorHandler = (err, c) => {
     if (err instanceof HTTPException) {
         return apiError(c, err.status, 'INTERNAL_ERROR', err.message);
     }
 
     if (err instanceof ValidationError) {
-        // Field-pipeline errors arrive pre-shaped; envelope (Zod) errors derive
-        // their per-field map from the issues.
-        if (err.fields) {
-            return validationFailed(c, err.fields, err.form);
-        }
-        const fields: Record<string, string[]> = {};
-        for (const issue of err.issues) {
-            const key = issue.path.join('.') || '_';
-            (fields[key] ??= []).push(issue.message);
-        }
-        return validationFailed(c, fields, err.form);
+        return validationFailed(c, fieldErrorsFrom(err), err.form);
+    }
+
+    // A batch write reports its validation failure through the envelope, whose
+    // `failedId` is the only thing naming the row the client must point at.
+    if (err instanceof BulkOperationError && err.cause instanceof ValidationError) {
+        return validationFailed(c, fieldErrorsFrom(err.cause), err.cause.form, {
+            failedId: err.failedId,
+            succeededBefore: err.succeededBefore,
+        });
     }
 
     const isDev = process.env.NODE_ENV !== 'production';

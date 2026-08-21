@@ -78,11 +78,11 @@ sub-agent per stage, the gate run by the main thread.
 
 **Stage 2 — the 422 for a multi-id validation failure**
 
-- [ ] `middleware/errors.ts`: the `BulkOperationError` case described above.
-- [ ] A route test in `packages/astromech/tests/transport/http/routes/entries-bulk.test.ts`:
+- [x] `middleware/errors.ts`: the `BulkOperationError` case described above.
+- [x] A route test in `packages/astromech/tests/transport/http/routes/entries-bulk.test.ts`:
       a `bulk-update` with one invalid row answers 422, names the failed id, and
       leaves every row unchanged.
-- [ ] `packages/astromech/src/admin/hooks/entries.ts` `bulkErrorMessage` already
+- [x] `packages/astromech/src/admin/hooks/entries.ts` `bulkErrorMessage` already
       reads `failedId` off the error; confirm the 422 body still reaches it.
 
 **Stage 3 — close out**

@@ -11,10 +11,15 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { adminRole, mountRouter } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService as api } from '@/entries/service';
+import { onError } from '@/transport/http/middleware/errors';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
 
 function app() {
-    return mountRouter('/entries', createEntriesRouter(), adminRole);
+    const mounted = mountRouter('/entries', createEntriesRouter(), adminRole);
+    // A write that throws is answered by the app-level handler, not the route,
+    // so the status of a failed batch is only visible with it mounted.
+    mounted.onError(onError);
+    return mounted;
 }
 
 function post(path: string, body: unknown): Promise<Response> | Response {
@@ -29,6 +34,24 @@ function post(path: string, body: unknown): Promise<Response> | Response {
 function configWithoutTrash(): AstromechConfig {
     const config = makeTestConfig();
     if (config.entries['note']) config.entries['note'].trash = false;
+    return config;
+}
+
+/** `makeTestConfig` with a `post` field the field pipeline can reject. */
+function configWithValidatedContact(): AstromechConfig {
+    const config = makeTestConfig();
+    const post = config.entries['post'];
+    if (post && Array.isArray(post.fields)) {
+        post.fields = [
+            ...post.fields,
+            {
+                name: 'contact',
+                type: 'text',
+                label: 'Contact',
+                validation: [{ email: true }],
+            },
+        ];
+    }
     return config;
 }
 
@@ -66,6 +89,39 @@ describe('POST /entries/:type/bulk-update', () => {
     it('422s a missing data key', async () => {
         const res = await post('/post/bulk-update', { ids });
         expect(res.status).toBe(422);
+    });
+
+    it('422s data that fails field validation, naming the failed id', async () => {
+        setupTestConfig(configWithValidatedContact());
+
+        const res = await post('/post/bulk-update', {
+            ids,
+            data: { title: 'Renamed', fields: { contact: 'not-an-email' } },
+        });
+
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as {
+            error: {
+                code: string;
+                details: {
+                    failedId: string;
+                    succeededBefore: string[];
+                    fields: Record<string, string[]>;
+                };
+            };
+        };
+        expect(body.error.code).toBe('VALIDATION_FAILED');
+        expect(body.error.details.failedId).toBe(ids[0]);
+        expect(body.error.details.succeededBefore).toEqual([]);
+        expect(body.error.details.fields).toEqual({
+            contact: ['Must be a valid email address'],
+        });
+
+        const after = await api.query({ type: 'post', full: true });
+        expect(after.data.map((entry) => entry.title).sort()).toEqual(['One', 'Two']);
+        expect(after.data.every((entry) => entry.fields?.['contact'] === undefined)).toBe(
+            true
+        );
     });
 
     it('409s a status change on a type without the statuses capability', async () => {
