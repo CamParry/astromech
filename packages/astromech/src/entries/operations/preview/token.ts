@@ -2,7 +2,7 @@ import { parseInput } from '@/errors/index';
 import { getCurrentUser } from '@/request-context/index';
 import { assertCapability } from '../../internal/entry-type';
 import { generatePreviewSecret } from '../../internal/preview';
-import { loadAndAssertType } from '../../internal/records';
+import { getEntryOfType } from '../../internal/records';
 import {
     createPreviewTokenRepository,
     hashPreviewToken,
@@ -30,7 +30,7 @@ export async function issuePreviewToken(params: {
     const { type, id } = params;
     assertCapability(type, 'staging');
     const repository = getEntryRepository(type);
-    const canonical = await loadAndAssertType(repository, type, id);
+    const canonical = await getEntryOfType(repository, type, id);
     if (canonical.stagedFor != null) {
         throw new Error(
             `Entry '${id}' is a staged change; issue the preview token on its canonical entry.`
@@ -65,6 +65,6 @@ export async function revokePreviewToken(params: {
     const { type, id } = params;
     assertCapability(type, 'staging');
     const repository = getEntryRepository(type);
-    await loadAndAssertType(repository, type, id);
+    await getEntryOfType(repository, type, id);
     await createPreviewTokenRepository().revoke(id);
 }

@@ -8,7 +8,7 @@ import type { Entry, EntryQueryParams, QueryResult } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { flattenEntryFields } from '@/fields/flatten';
-import { getDefaultLocale } from '../../internal/entry-type';
+import { getDefaultContentLocale } from '../../internal/entry-type';
 import { projectPreview, verifyPreviewToken } from '../../internal/preview';
 import { asEntry } from '../../internal/records';
 import { getEntryRepository } from '../../repository/registry';
@@ -41,7 +41,7 @@ export async function queryPreviewEntries(
 
     const { data: rows } = await repository.list({
         type,
-        locale: params.locale ?? getDefaultLocale(),
+        locale: params.locale ?? getDefaultContentLocale(),
         where: params.where,
         sort: params.sort,
         limit: params.limit ?? 1,

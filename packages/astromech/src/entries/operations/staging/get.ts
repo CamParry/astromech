@@ -1,6 +1,8 @@
 import type { Entry } from '@/types/index';
-import { requireStaging } from '../../internal/entry-type';
-import { asEntry, loadAndAssertType } from '../../internal/records';
+import { CapabilityError } from '../../errors';
+import { assertCapability } from '../../internal/entry-type';
+import { asEntry, getEntryOfType } from '../../internal/records';
+import { getEntryRepository } from '../../repository/registry';
 
 /**
  * Returns the staged copy of an entry, or null if none exists. Throws if the
@@ -11,8 +13,11 @@ export async function getStagedEntry(params: {
     id: string;
 }): Promise<Entry | null> {
     const { type, id } = params;
-    const { repository, staging } = requireStaging(type);
-    await loadAndAssertType(repository, type, id);
+    const repository = getEntryRepository(type);
+    assertCapability(type, 'staging');
+    const { staging } = repository;
+    if (!staging) throw new CapabilityError(type, 'staging');
+    await getEntryOfType(repository, type, id);
     const staged = await staging.getByCanonical(id);
     return staged ? asEntry(staged) : null;
 }

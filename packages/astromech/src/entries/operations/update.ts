@@ -7,7 +7,7 @@ import { parseInput } from '@/errors/index';
 import { runHook } from '@/hooks/index';
 import { getCurrentUser } from '@/request-context/index';
 import { BulkOperationError, UnknownEntryTypeError } from '../errors';
-import { asEntry, loadEntries } from '../internal/records';
+import { asEntry, getEntriesOfType } from '../internal/records';
 import { indexEntryRelationships } from '../internal/relationships';
 import { uniqueSlugIfChanged } from '../internal/slug';
 import { toStoredFields } from '../internal/stored-fields';
@@ -48,7 +48,7 @@ export async function updateEntries(params: {
 
     // Fetch each row once, at the top: this record feeds both the before-hook
     // context and updateOne (point 3 — no second load per id).
-    const entries = await loadEntries(repository, entryType.id, params.ids);
+    const entries = await getEntriesOfType(repository, entryType.id, params.ids);
 
     for (const entry of entries) {
         await runHook('entry:beforeUpdate', {
@@ -144,12 +144,12 @@ async function updateOne(params: {
         validated.status === 'published' && !currentEntry.publishedAt
             ? new Date()
             : validated.publishedAt;
-    const slug = await uniqueSlugIfChanged(
+    const slug = await uniqueSlugIfChanged({
         repository,
-        entryType.id,
-        currentEntry,
-        validated.slug
-    );
+        type: entryType.id,
+        entry: currentEntry,
+        slug: validated.slug,
+    });
 
     const entry = asEntry(
         await repository.update(currentEntry.id, {

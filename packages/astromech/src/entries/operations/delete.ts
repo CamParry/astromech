@@ -3,7 +3,7 @@ import { transaction } from '@/database/transaction';
 import { runHook } from '@/hooks/index';
 import { getCurrentUser } from '@/request-context/index';
 import { BulkOperationError } from '../errors';
-import { loadEntries } from '../internal/records';
+import { getEntriesOfType } from '../internal/records';
 import { withLocaleSiblings } from '../internal/translatable';
 import { getEntryRepository } from '../repository/registry';
 
@@ -19,7 +19,7 @@ export async function deleteEntries(params: {
 }): Promise<void> {
     const { type, ids } = params;
     const repository = getEntryRepository(type);
-    const entries = await loadEntries(repository, type, ids);
+    const entries = await getEntriesOfType(repository, type, ids);
     const targets = params.cascadeLocales
         ? await withLocaleSiblings(repository, entries)
         : entries;

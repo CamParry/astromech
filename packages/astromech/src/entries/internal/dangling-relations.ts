@@ -1,10 +1,7 @@
 /**
- * Opportunistic dangling-relation cleanup: a reference to a resource that no
- * longer exists is dropped the next time its holder is written. Shared by the
- * entry, user and media write paths; it lives in `entries/` because deciding
- * whether a target type even has rows in the `entries` table needs the entry
- * storage registry. This operates on relation FIELD values, not on the derived
- * `relationships` index (that is `internal/relationships.ts`).
+ * Drops a reference to a resource that no longer exists on the next write of its
+ * holder. Shared by the entry, user and media write paths. Operates on relation
+ * FIELD values, not the derived `relationships` index (`internal/relationships.ts`).
  */
 
 import type { RelationshipDeclaration, TargetKind } from '@/fields/relationship-edges';
@@ -24,14 +21,13 @@ import { getEntryRepository, hasEntryRepositoryOverride } from '../repository/re
 
 const TARGET_KINDS = ['entry', 'user', 'media'] as const satisfies readonly TargetKind[];
 
-/** One storage's answer to "which of these ids do you hold". */
+/** One repository's answer to "which of these ids do you hold". */
 type ExistingIds = (ids: string[]) => Promise<Set<string>>;
 
 /**
- * Field values with dead relation ids removed, plus what was dropped. `values`
- * MUST be post-`parseFields`: the traversal mints a missing item `_id`, so on
- * raw input it invents ids and addresses nothing. Never logs — the count is the
- * caller's to report.
+ * Field values with dead relation ids removed, plus the drop count. `values` MUST
+ * be post-`parseFields`: the traversal mints a missing item `_id`, so on raw input
+ * it invents ids and addresses nothing. Never logs; the caller reports the count.
  */
 export async function pruneDanglingRelations(
     definitions: Field[],
@@ -57,11 +53,11 @@ export async function pruneDanglingRelations(
         );
     }
 
-    // Targets with a storage of their own keep no rows in `entries`, so each
+    // Targets with a repository of their own keep no rows in `entries`, so each
     // answers for its own ids through the hook the declaration was cleared on.
-    const readsByPath = storageReadsByPath(definitions);
+    const readsByPath = repositoryReadsByPath(definitions);
 
-    // Inside an open `transaction()` scope, a registered storage's own reads may
+    // Inside an open `transaction()` scope, a registered repository's own reads may
     // still be bound to a handle outside it — so reading one here can answer
     // from a different snapshot, where a row written earlier in this
     // transaction looks missing and its live reference gets pruned. Those
@@ -122,16 +118,9 @@ function prunableSchemaPaths(definitions: Field[]): Set<string> {
 }
 
 /**
- * Whether a missing target at this declaration means the id is really dead.
- * Every `false` here is a false-negative guard, and dropping any of them would
- * delete live author data:
- *
- *   - a field naming no target gives nothing to check the id against;
- *   - a target naming no configured entry type cannot be located at all — a
- *     plugin dropped from the config takes its types with it, and its rows may
- *     be in a table this check never reads;
- *   - a type with a storage of its own keeps its rows out of the `entries`
- *     table, so it is only checkable through that storage's `existingIds`.
+ * Whether a missing target at this declaration means the id is really dead, which
+ * it does only where the declaration is checkable at all. Every `false` here is a
+ * guard against deleting live author data.
  */
 function isPrunable(declaration: RelationshipDeclaration): boolean {
     if (declaration.targetKind !== 'entry') return true;
@@ -142,8 +131,10 @@ function isPrunable(declaration: RelationshipDeclaration): boolean {
     return getEntryRepository(target).existingIds !== undefined;
 }
 
-/** The `existingIds` read of every override-backed target, per schema path. */
-function storageReadsByPath(definitions: Field[]): Map<string, Map<string, ExistingIds>> {
+/** The `existingIds` read of every target with a repository override, per schema path. */
+function repositoryReadsByPath(
+    definitions: Field[]
+): Map<string, Map<string, ExistingIds>> {
     const byPath = new Map<string, Map<string, ExistingIds>>();
     for (const declaration of collectRelationshipDeclarations(definitions)) {
         const target = declaration.target;
@@ -202,7 +193,7 @@ function findItem(container: unknown, id: string): Record<string, unknown> | und
 
 /** A relation value with `targetId` gone: filtered from a list, else nulled. */
 function withoutId(value: unknown, targetId: string): unknown {
-    if (Array.isArray(value)) return value.filter((entry) => entry !== targetId);
+    if (Array.isArray(value)) return value.filter((id) => id !== targetId);
     return value === targetId ? null : value;
 }
 

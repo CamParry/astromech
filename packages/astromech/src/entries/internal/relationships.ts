@@ -40,20 +40,16 @@ export async function indexEntryRelationships(
 }
 
 /**
- * Every entry that could hold a relationship, with the edges its STORED field
- * data holds. Covers all types, all locales, and both trashed and staged rows —
- * a staged row is a real row with its own edges.
- *
- * Never re-derive this from raw input: the traversal mints missing item ids, so
- * it is only deterministic over data that has already been through
- * `parseFields`, which stored data has by definition.
+ * Every entry that could hold a relationship, with the edges its stored field
+ * data holds: all types, all locales, trashed and staged rows included. Never
+ * re-derive from raw input — item ids are minted by `parseFields`.
  */
-export async function collectEntryRelationshipSources(opts?: {
+export async function collectEntryRelationshipSources(options?: {
     type?: string;
 }): Promise<RelationshipIndexSource[]> {
     return [
-        ...(await builtInEntrySources(opts?.type)),
-        ...(await tableBackedEntrySources(opts?.type)),
+        ...(await builtInEntrySources(options?.type)),
+        ...(await tableBackedEntrySources(options?.type)),
     ];
 }
 
@@ -70,7 +66,7 @@ function entryEdges(type: string, fields: JsonObject): RelationshipEdge[] | null
 
 /**
  * Sources from the `entries` table, read directly rather than through
- * `storage.list()`: the list where-clause excludes staged rows unconditionally
+ * `repository.list()`: the list where-clause excludes staged rows unconditionally
  * and trashed rows by default, and the rebuild needs both.
  */
 async function builtInEntrySources(type?: string): Promise<RelationshipIndexSource[]> {
@@ -89,33 +85,33 @@ async function builtInEntrySources(type?: string): Promise<RelationshipIndexSour
 }
 
 /**
- * Sources for entry types backed by their own storage (`tableRepository`). Their
- * rows are not in the `entries` table but they are indexed on write, so leaving
- * them out would report every one of their edges as drift.
+ * Sources for entry types backed by their own repository (`tableRepository`).
+ * Their rows are not in the `entries` table but they are indexed on write, so
+ * leaving them out would report every one of their edges as drift.
  */
 async function tableBackedEntrySources(
-    type?: string
+    onlyType?: string
 ): Promise<RelationshipIndexSource[]> {
     const types = configuredEntryTypes()
         .filter(hasEntryRepositoryOverride)
-        .filter((candidate) => type === undefined || candidate === type);
+        .filter((type) => onlyType === undefined || type === onlyType);
 
     const collected: RelationshipIndexSource[] = [];
-    for (const typeId of types) {
-        const { data } = await getEntryRepository(typeId).list({
-            type: typeId,
+    for (const type of types) {
+        const { data: rows } = await getEntryRepository(type).list({
+            type,
             limit: 'all',
             locale: 'all',
         });
-        for (const record of data) {
+        for (const row of rows) {
             collected.push({
                 source: {
-                    id: record.id,
+                    id: row.id,
                     kind: 'entry',
-                    type: typeId,
-                    staged: record.stagedFor != null,
+                    type,
+                    staged: row.stagedFor != null,
                 },
-                edges: entryEdges(typeId, record.fields) ?? [],
+                edges: entryEdges(type, row.fields) ?? [],
             });
         }
     }

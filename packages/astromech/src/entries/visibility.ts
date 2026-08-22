@@ -1,11 +1,7 @@
 /**
- * Content visibility — runtime filter and projection.
- *
- * Implements the two-axis model:
- *   - Shape axis (`public` / `full`): which fields you see.
- *   - Audience axis (row filter): which entries you may see at all.
- *
- * Applied at the end of `query()` and `get()`, just before return.
+ * Content visibility — applied at the end of `query()` and `get()`. Two axes: the
+ * shape (`public` / `full`) decides which fields you see, and the row filter
+ * decides which entries you may see at all.
  */
 
 import type { Entry, Field, JsonObject, JsonValue, RichTextAllow } from '@/types/index';
@@ -13,10 +9,7 @@ import type { JSONContent } from '@tiptap/core';
 import { PUBLIC_STRIPPED_KEYS, RESERVED_KEY } from '@/fields/reserved-keys';
 import { renderRichText } from '@/fields/rich-text/index';
 
-// ============================================================================
-// Public types
-// ============================================================================
-
+/** Which fields a read returns: `public` strips private ones, `full` keeps them. */
 export type VisibilityShape = 'public' | 'full';
 
 /**
@@ -39,17 +32,16 @@ export type VisibilityOptions = {
     audience: AudienceContext;
     /**
      * Preview mode (forward versioning): the caller has already authorized this
-     * row via a preview token, so bypass the publish/schedule gate — but keep the
-     * trashed check and apply the full public projection. Only meaningful with
-     * `shape: 'public'`.
+     * row via a preview token, so bypass the publish/schedule gate — the trashed
+     * check still applies. Only meaningful with `shape: 'public'`.
      */
     preview?: boolean;
 };
 
-// ============================================================================
-// Write-back guard
-// ============================================================================
-
+/**
+ * Thrown when a caller tries to save an entry that was read in `public` shape,
+ * where writing it back would drop the private fields the read stripped.
+ */
 export class PublicShapeWriteError extends Error {
     constructor() {
         super(
@@ -79,19 +71,10 @@ export function isPublicBranded(value: unknown): boolean {
     return Object.prototype.hasOwnProperty.call(value, PUBLIC_BRAND);
 }
 
-// ============================================================================
-// Row filter (audience)
-// ============================================================================
-
 /**
- * Returns true if this entry row passes the public audience filter:
- * - status must be 'published' (or absent — entry types with statuses:false
- *   do not have publication workflows; their rows are always audience-visible)
- * - publishedAt must be null/absent (no scheduled gate) OR <= now
- * - deletedAt must be null/absent
- *
- * Note: tableRepository-backed entries omit status/publishedAt/deletedAt entirely;
- * treat absent values the same as null (no restriction).
+ * True when the row passes the public audience filter: status is 'published' or
+ * absent, publishedAt is null/absent or past, and deletedAt is null/absent. An
+ * absent column counts as null — tableRepository-backed entries omit all three.
  */
 function passesPublicRowFilter(entry: Entry, now: Date): boolean {
     const e = entry as {
@@ -115,10 +98,6 @@ function passesPreviewRowFilter(entry: Entry): boolean {
     const e = entry as { deletedAt?: Date | null };
     return e.deletedAt == null;
 }
-
-// ============================================================================
-// Structural strip (schema-free)
-// ============================================================================
 
 /**
  * Recursively strip `_disabled` items from arrays and delete `_disabled`/`_title`
@@ -152,10 +131,6 @@ function structuralStrip(value: JsonValue): JsonValue {
 
     return value;
 }
-
-// ============================================================================
-// Private-field projection strip
-// ============================================================================
 
 /**
  * Build a map from field name → Field for quick lookup.
@@ -292,23 +267,10 @@ function stripTreeItems(value: JsonValue, childFields: Field[]): JsonValue {
     return value;
 }
 
-// ============================================================================
-// Main export: applyVisibility
-// ============================================================================
-
 /**
- * Apply the visibility filter to an entry.
- *
- * - `full` shape: returns the entry unchanged (trusted/admin path).
- * - `public` shape:
- *   1. Row filter: returns null if the entry is not published / is scheduled-future
- *      / is trashed (`preview` bypasses the publish gate, never the trashed check).
- *   2. Projection: strips private fields (using field definitions) and structural
- *      internals (`_disabled` items removed; `_disabled`/`_title` deleted from
- *      survivors; `_type`/`_id`/`_children` kept).
- *
- * A relation value is a raw id, so nothing here recurses into a related record.
- * The returned entry is a shallow clone — stored objects are not mutated.
+ * Apply the visibility filter to an entry. `full` returns it unchanged; `public`
+ * returns null for an unpublished, scheduled-future or trashed row (`preview`
+ * bypasses the publish gate only), else a clone stripped of private fields.
  */
 export function applyVisibility(entry: Entry, opts: VisibilityOptions): Entry | null {
     const { shape, fields, audience } = opts;

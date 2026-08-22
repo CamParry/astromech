@@ -1,6 +1,6 @@
 import type { Entry, JsonObject } from '@/types/index';
 import { transaction } from '@/database/transaction';
-import { asEntry, loadAndAssertType } from '../../internal/records';
+import { asEntry, getEntryOfType } from '../../internal/records';
 import { indexEntryRelationships } from '../../internal/relationships';
 import { uniqueSlugIfChanged } from '../../internal/slug';
 import { snapshotVersion } from '../../internal/versions';
@@ -28,8 +28,13 @@ export async function restoreEntryVersion(params: {
         throw new Error('Version not found');
     }
 
-    const currentEntry = await loadAndAssertType(repository, type, id);
-    const slug = await uniqueSlugIfChanged(repository, type, currentEntry, version.slug);
+    const currentEntry = await getEntryOfType(repository, type, id);
+    const slug = await uniqueSlugIfChanged({
+        repository,
+        type,
+        entry: currentEntry,
+        slug: version.slug,
+    });
     const restoredFields = (version.fields as JsonObject) ?? currentEntry.fields;
 
     // Snapshot the state being overwritten, update the row, and reindex it

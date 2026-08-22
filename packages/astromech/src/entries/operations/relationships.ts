@@ -7,7 +7,7 @@
 import type { EntryRepository, EntryRow } from '../repository/types';
 import type { IncomingRelationship } from '@/types/index';
 import { createRelationshipRepository } from '@/database/repository/relationships';
-import { loadAndAssertType } from '../internal/records';
+import { getEntryOfType } from '../internal/records';
 import { getEntryRepository } from '../repository/registry';
 
 /** One row per index edge: a source referencing the target twice is two rows. */
@@ -16,7 +16,7 @@ export async function listIncomingRelationships(params: {
     id: string;
 }): Promise<IncomingRelationship[]> {
     const repository = getEntryRepository(params.type);
-    await loadAndAssertType(repository, params.type, params.id);
+    await getEntryOfType(repository, params.type, params.id);
 
     // Staged sources count: a pending merge that references this entry is a
     // reason not to delete it.

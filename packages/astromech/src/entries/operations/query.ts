@@ -11,7 +11,7 @@ import { flattenEntryFields } from '@/fields/flatten';
 import { collectRelationshipSchemaPaths } from '@/fields/relationship-edges';
 import { getCurrentUser } from '@/request-context/index';
 import { InvalidReferencesFilterError, PublicTrashedReadError } from '../errors';
-import { getDefaultLocale } from '../internal/entry-type';
+import { getDefaultContentLocale } from '../internal/entry-type';
 import { asEntry } from '../internal/records';
 import { getEntryRepository } from '../repository/registry';
 import { applyVisibility, markPublic } from '../visibility';
@@ -72,7 +72,7 @@ export async function queryEntries(
 
     const { data: rows, total } = await repository.list({
         type: singleType ?? types,
-        locale: params.locale ?? getDefaultLocale(),
+        locale: params.locale ?? getDefaultContentLocale(),
         trashed: params.trashed ?? false,
         search: params.search,
         ...(singleTypeCfg?.search ? { searchFields: singleTypeCfg.search } : {}),

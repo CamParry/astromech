@@ -1,33 +1,7 @@
 /**
- * Built-in entry storage — the default persistence backend.
- *
- * Owns row CRUD on `entries`, list filters/search/sort/pagination, slug
- * uniquification, status/publishedAt column writes, the trash/versions/
- * translatable capability groups, and locale-map enrichment. Policy (validation,
- * hooks, relationships, versioning *decisions*, bulk dispatch) stays in the
- * entries service.
- *
- * Row access goes through `createRepository(entriesTable)` — the `Table`-backed CRUD
- * wrapper — which owns encoding, `updatedAt` stamping and result decoding. Four
- * things it cannot express stay on the raw Kysely handle:
- *
- *   - `list`: the search predicate is `title LIKE ? OR slug LIKE ?`, and the flat
- *     `where` DSL has no `or`. The row query and the count share one compiled
- *     predicate, so the count stays raw with it rather than being restated in the
- *     DSL where the two could drift apart.
- *   - `populateLocales`: a `localeGroup IN (…)` sibling lookup projected to three
- *     columns, fanned out over a page of rows.
- *   - `trash.restore`: one statement that is guarded (`deletedAt IS NOT NULL`)
- *     *and* returns the row. The wrapper's `update` is primary-key-only and
- *     `updateMany` returns a count, so splitting it would change both the query
- *     count and what restoring a live entry does.
- *
- * Soft delete is a domain policy, not a wrapper feature: trashing is an ordinary
- * `deletedAt` write and every read filters `deletedAt: null` itself.
- *
- * No `virtual:astromech/config` import — this stays directly testable. Resolves
- * the db per-op like the original data layer, through `getDb()` and the
- * scoped transaction it reads first (`database/transaction.ts`).
+ * Built-in entry repository — the default persistence backend. Owns row CRUD,
+ * list filters, slug uniquification and the capability groups; policy (validation,
+ * hooks, relationships, versioning decisions) stays in the entries service.
  */
 
 import type { EntryRow } from '../tables';
@@ -56,10 +30,6 @@ import { entriesTable } from '@/database/tables';
 import { BUILT_IN_SUPPORTS } from '@/entries/capabilities';
 import { UnknownSortKeyError, UnknownWhereKeyError } from '../errors';
 import { createVersionRepository } from './versions';
-
-// ============================================================================
-// Query helpers
-// ============================================================================
 
 const SORTABLE_FIELDS: readonly string[] = [
     'title',
@@ -171,8 +141,8 @@ function buildListWhere(params: ListParams, defaultLocale: string, types: string
                     }
                 } else if (key === 'references') {
                     // Shape guard only: `entries.query` validates the filter and
-                    // its schema path and throws before storage sees a malformed
-                    // one, so there is nothing to report from here.
+                    // its schema path and throws before the repository sees a
+                    // malformed one, so there is nothing to report from here.
                     if (!isReferencesFilter(value)) continue;
                     conditions.push(referencesExists(eb, value));
                 } else {
@@ -218,14 +188,12 @@ function isReferencesFilter(value: unknown): value is ReferencesFilter {
     return typeof path === 'string' && path !== '' && typeof id === 'string' && id !== '';
 }
 
-// ============================================================================
-// Locale-map enrichment
-// ============================================================================
-
 async function populateLocales(db: Db, rows: EntryRow[]): Promise<Entry[]> {
     if (rows.length === 0) return [];
 
     const groupIds = Array.from(new Set(rows.map((r) => r.localeGroup)));
+    // Raw: a `localeGroup IN (…)` sibling lookup projected to three columns,
+    // fanned out over a page of rows — not a shape the wrapper can express.
     const siblings = await db
         .selectFrom('entries')
         .select(['id', 'locale', 'localeGroup'])
@@ -256,10 +224,10 @@ async function populateLocaleSingle(db: Db, row: EntryRow): Promise<Entry> {
     return populated;
 }
 
-// ============================================================================
-// BuiltInEntryRepository
-// ============================================================================
-
+/**
+ * Build the built-in entry repository, optionally bound to a specific db handle
+ * and default locale. Unbound it resolves the db per operation via `getDb()`.
+ */
 export function createBuiltInEntryRepository(opts?: { db?: Db; defaultLocale?: string }) {
     const dbOverride = opts?.db;
     const defaultLocale = opts?.defaultLocale ?? 'en';
@@ -315,6 +283,8 @@ export function createBuiltInEntryRepository(opts?: { db?: Db; defaultLocale?: s
         const page = params.page ?? 1;
 
         const orderPairs = buildOrderBy(params.sort);
+        // Raw: search is `title LIKE ? OR slug LIKE ?` and the flat `where` DSL has
+        // no `or`. Rows and count share this predicate so the two cannot drift.
         const whereFn = buildListWhere(params, defaultLocale, types);
 
         if (limit === 'all') {

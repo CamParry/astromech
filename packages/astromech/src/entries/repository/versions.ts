@@ -1,6 +1,6 @@
 /**
- * Version storage — CRUD for entry version-history snapshots. Wrapped by the
- * built-in entry storage's `versions` capability group.
+ * Version repository — CRUD for entry version-history snapshots. Wrapped by the
+ * built-in entry repository's `versions` capability group.
  */
 
 import type { EntryVersionRow, NewEntryVersionRow } from '../tables';

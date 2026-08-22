@@ -1,12 +1,7 @@
 /**
- * Maintenance storage — cross-type, whole-table upkeep used by the built-in
- * entry CRON jobs (scheduled-publish, trash-purge). These operate over every
- * entry regardless of type, so they sit outside the per-type storage contract;
- * keeping their queries here preserves the "no raw DB in jobs" boundary.
- *
- * Both stay batch operations on `createRepository`'s `updateMany`/`deleteMany` —
- * the wrapper owns value serialization (a `Date` passed to `where` is compared
- * as ISO-TEXT) and the `updatedAt` stamp.
+ * Maintenance repository — cross-type, whole-table upkeep for the built-in entry
+ * CRON jobs. These run over every entry regardless of type, so they sit outside
+ * the per-type repository contract; keeping them here keeps raw DB out of jobs.
  */
 
 import type { Db } from '@/database/types';
@@ -34,10 +29,8 @@ export function createEntryMaintenanceRepository(db: Db = getDb()) {
 
     /**
      * Hard-delete every trashed entry deleted on or before `cutoff`. Returns the
-     * purged ids so the caller can clean up what has no FK to cascade on.
-     *
-     * No explicit `deletedAt IS NOT NULL` guard is needed — SQL `deletedAt <=
-     * cutoff` is already false for a NULL `deletedAt`.
+     * purged ids so the caller can clean up what has no FK to cascade on. SQL
+     * `deletedAt <= cutoff` is already false for NULL, so no guard is needed.
      */
     async function purgeTrashedBefore(cutoff: Date): Promise<string[]> {
         const where = { deletedAt: { lte: cutoff } };

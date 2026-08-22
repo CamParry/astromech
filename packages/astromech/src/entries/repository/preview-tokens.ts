@@ -1,9 +1,7 @@
 /**
- * Preview-token storage.
- *
- * Persists per-canonical-entry preview secrets for forward versioning. Only the
- * SHA-256 hash of a token is ever stored; the plaintext is shown once at issue.
- * One active token per entry: issuing replaces any existing token.
+ * Preview-token repository — per-canonical-entry preview secrets for forward
+ * versioning. Only the SHA-256 hash of a token is ever stored; the plaintext is
+ * shown once at issue. One active token per entry: issuing replaces any existing.
  */
 
 import type { Db } from '@/database/types';

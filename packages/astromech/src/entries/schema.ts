@@ -1,9 +1,6 @@
 import { z } from '@hono/zod-openapi';
 
-// ============================================================================
-// Zod schemas
-// ============================================================================
-
+/** The three publication states an entry row may carry. */
 export const entryStatusEnum = z.enum(['unpublished', 'published', 'scheduled']);
 
 const slugField = z
@@ -72,11 +69,9 @@ const sortDirection = z.enum(['asc', 'desc']);
 const sortObject = z.record(z.string(), sortDirection);
 
 /**
- * A query's `sort` — one field→direction map, or a list of them.
- *
- * A value that does not parse as this shape is DROPPED rather than rejected,
- * answering the default order. A well-shaped sort naming a field the store
- * cannot order by throws: `entries/repository/built-in.ts` holds the allowlist.
+ * A query's `sort` — one field→direction map, or a list of them. A value that
+ * does not parse as this shape is DROPPED rather than rejected, answering the
+ * default order; a well-shaped sort naming an unorderable field throws.
  */
 export const entrySortSchema = z
     .union([sortObject, z.array(sortObject)])
@@ -102,10 +97,9 @@ export const scheduleEntrySchema = z.object({
 });
 
 /**
- * Overrides accepted by `duplicate`. Authored here, in the domain, rather than
- * inline in the route that first needed it: the method contract publishes the
- * same payload to MCP and the AI tool-loop, and two copies of a schema is how
- * the transport and the manifest end up describing different things.
+ * Overrides accepted by `duplicate`. Authored here rather than inline in a route:
+ * the method contract publishes the same payload to MCP and the AI tool-loop, and
+ * two copies of a schema is how the two end up describing different things.
  */
 export const duplicateOverridesSchema = z
     .object({
@@ -120,7 +114,7 @@ export const duplicateOverridesSchema = z
 
 /**
  * `expiresAt` for a preview token. Coerces an ISO string like every other date
- * the domain accepts, so a JSON caller (MCP, the AI tool-loop) does not write a
+ * entries accepts, so a JSON caller (MCP, the AI tool-loop) does not write a
  * string into a date column.
  */
 export const previewTokenSchema = z.object({ expiresAt: optionalDate });

@@ -1,18 +1,7 @@
 /**
- * Internal EntryRepository contract.
- *
- * This is NOT exported from the package root — it is the seam between the
- * entries service (`src/services/entries/service.ts`: validation, hooks,
- * relationships, versioning policy, bulk) and a persistence backend. The
- * built-in storage (`built-in.ts`) is the only Phase 2 implementation; Phase 3
- * mounts a single-table storage that declares no capabilities and so only needs
- * the five base methods.
- *
- * Shape: five base methods (list/get/create/update/delete) and three optional
- * capability groups (trash/versions/translatable) required iff the
- * corresponding capability is declared in `supports`. `statuses`/`slug` carry
- * no methods — they gate which EntryWrite keys / ListParams the entries
- * service passes.
+ * Internal EntryRepository contract: the seam between the entries service
+ * (`src/entries/service.ts`) and a persistence backend. Not exported from the
+ * package root.
  */
 
 import type { Db } from '@/database/types';
@@ -30,11 +19,9 @@ export type RepositoryDb = Db;
 export type { Capability } from '@/entries/capabilities';
 
 /**
- * Universal entry shape a storage returns. The built-in storage returns full
- * `Entry` rows (which structurally satisfy this). Capability extras are present
- * only when the storage supports them; `type` is present on multi-type storages
- * (the entries service asserts on it). The `locales` map is populated by storages
- * supporting `translatable`.
+ * Universal entry shape a repository returns. Capability extras are present only
+ * when the repository supports them; `type` is present on multi-type
+ * repositories, and `locales` on those supporting `translatable`.
  */
 export type EntryRow = {
     id: string;
@@ -80,8 +67,8 @@ export type ListParams = {
     trashed?: boolean | undefined;
     search?: string | undefined;
     /**
-     * Fields to apply `search` over; honored by storages that map fields to
-     * columns (tableRepository); built-in storage ignores it (title search).
+     * Fields to apply `search` over; honored by repositories that map fields to
+     * columns (tableRepository); the built-in repository ignores it (title search).
      */
     searchFields?: readonly string[] | undefined;
     where?: WhereFilters | undefined;
@@ -92,8 +79,8 @@ export type ListParams = {
 
 /**
  * Snapshot the entries service hands to the versions capability group. Derived from
- * `EntryVersion` minus storage-managed columns (id/createdAt/versionNumber are
- * the storage's concern via `latestNumber`).
+ * `EntryVersion` minus repository-managed columns (id/createdAt/versionNumber are
+ * the repository's concern via `latestNumber`).
  */
 export type NewEntryVersionSnapshot = {
     entryId: string;
@@ -105,34 +92,34 @@ export type NewEntryVersionSnapshot = {
 };
 
 /**
- * Capability gate: the entries service asserts a record's `type` matches the
- * expected type. Stored here as a shared shape so storages can throw the
- * canonical mismatch error if they prefer (the built-in defers to the
- * entries service).
+ * What a persistence backend exposes to the entries service: five base methods
+ * (list/get/create/update/delete) plus one group per capability it declares in
+ * `supports`. `statuses` and `slug` carry no methods of their own.
  */
 export type EntryRepository<R extends EntryRow = EntryRow> = {
     readonly supports: readonly Capability[];
 
     list(params: ListParams): Promise<{ data: R[]; total: number }>;
-    /** Fetch a single record; filters trashed rows unless `includeTrashed`. */
+    /**
+     * Fetch a single row; filters trashed rows unless `includeTrashed`. The
+     * caller asserts the row's `type` matches the type it asked for, though a
+     * repository may throw the canonical mismatch error itself instead.
+     */
     get(id: string, opts?: { includeTrashed?: boolean }): Promise<R | null>;
     create(data: EntryWrite & { type: string }): Promise<R>;
     update(id: string, data: EntryWrite): Promise<R>;
     delete(id: string): Promise<void>;
 
     /**
-     * Which of these ids this storage holds. Ids absent from the result do not
-     * exist. Trashed and staged rows MUST count as existing: the caller drops a
-     * reference on a miss, so a false negative deletes author data.
-     *
-     * Optional. A storage that omits it is never asked, and the dangling-relation
-     * cleanup leaves references to its types alone.
+     * Which of these ids this repository holds. Trashed and staged rows MUST
+     * count as existing: the caller drops a reference on a miss, so a false
+     * negative deletes author data. Optional — one that omits it is never asked.
      */
     existingIds?(ids: string[]): Promise<Set<string>>;
 
     /**
      * Compute the unique slug for a base slug under (type, locale), excluding an
-     * id. Lives on the storage because uniqueness is a persistence concern; the
+     * id. Lives on the repository because uniqueness is a persistence concern; the
      * entries service computes the *base* slug (title-derived or explicit).
      */
     uniqueSlug(

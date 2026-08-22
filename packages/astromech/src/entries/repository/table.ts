@@ -1,38 +1,7 @@
 /**
- * tableRepository — EntryRepository implementation over an arbitrary `Table`.
- *
- * This is an *adapter*, not a query layer: every read and write goes through
- * `createRepository` (`database/repository/create-repository.ts`), which owns the `where`
- * DSL, value serialization and row decoding. That file documents the semantics —
- * bare `null` means `IS NULL`, unknown column keys throw, `like` patterns are
- * raw — and is the only place they are implemented. `list` is the one method on
- * the raw handle, and it still compiles its filters with the wrapper's own
- * `where` (handed out by `query()`) rather than restating them.
- *
- * What this adapter adds on top:
- *
- * Maps any `Table` to the EntryRepository contract by treating every column
- * that is not the id/timestamp/actor-reserved set as a "field". Declares no
- * capabilities (supports: []) — statuses, slug, trash, versioning, and
- * translatable must all be disabled for any entry type using this storage.
- *
- * Column keys are the table's camelCase keys throughout: `fields`, `where`,
- * `sort` and `searchFields` are all keyed by them.
- *
- * When `timestamps: false`, createdAt/updatedAt return new Date(0) and are not
- * written by the adapter. createdBy/updatedBy are written only when those
- * columns are present on the table.
- *
- * search + searchFields: OR-LIKE across the named columns — the one predicate
- * the flat `where` DSL cannot express, so `list` ANDs it onto the compiled DSL
- * filter as a raw clause, in the same statement. If searchFields names a column
- * not on the table, throws at list-time (config bug — crash loud). If search is
- * set but no searchFields, search is a no-op.
- *
- * sort: field names must match column names (id, createdAt, updatedAt, or any
- * field column); an unknown name throws, as it does for built-in storage.
- *
- * uniqueSlug: not supported — throws with an instructional error.
+ * tableRepository — an EntryRepository over an arbitrary `Table`. Every read and
+ * write goes through `createRepository`, which owns the `where` DSL, value
+ * serialization and decoding. Column keys are the table's camelCase keys throughout.
  */
 
 import type { EntryRepository, EntryRow, EntryWrite, ListParams } from './types';
@@ -253,10 +222,8 @@ class TableRepository implements EntryRepository<EntryRow> {
 
     /**
      * `params.where` → the shared `where` DSL. `locale` is dropped because a
-     * table-backed entry type has no locale concept; the shared builder throws
-     * on any key that is not a column, so the knowledge that this key is not
-     * columnar has to live here. `references` is refused outright rather than
-     * dropped — silently ignoring it would return every row.
+     * table-backed entry type has no locale concept. `references` is refused
+     * outright rather than dropped — silently ignoring it would return every row.
      */
     private whereFilters(params: ListParams): Record<string, unknown> {
         const out: Record<string, unknown> = {};
@@ -373,12 +340,9 @@ class TableRepository implements EntryRepository<EntryRow> {
 }
 
 /**
- * Create an EntryRepository backed by an arbitrary `Table`.
- *
- * Every column that is not the id/timestamp/actor-reserved set is treated as a
- * field; `EntryRow.fields` is `{ [columnKey]: value }` for all such columns.
- * Capabilities are all off (supports: []); the entry type config must disable
- * statuses, slug, trash, translatable, and versioning.
+ * Create an EntryRepository backed by an arbitrary `Table`. Every column outside
+ * the id/timestamp/actor-reserved set becomes a key of `EntryRow.fields`.
+ * Capabilities are all off, so the entry type config must disable every one.
  */
 export function tableRepository(
     table: Table,

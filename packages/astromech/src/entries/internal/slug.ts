@@ -1,7 +1,11 @@
+/**
+ * Slug derivation for the entry write paths: turn a title or a caller's slug
+ * into the value an entry stores, made unique per (type, locale).
+ */
+
 import type { EntryRepository } from '../repository/types';
 import type { Entry, ResolvedEntryType } from '@/types/index';
 import { slugify } from '@/utilities/strings';
-import { getEntryRepository } from '../repository/registry';
 
 /**
  * Derives the slug a new entry stores: the caller's, else one slugified from
@@ -27,25 +31,13 @@ export async function deriveSlug(params: {
  * and excluding itself. An absent or unchanged slug is returned untouched, so
  * a no-op update never collides a slug with itself.
  */
-export async function uniqueSlugIfChanged(
-    repository: EntryRepository,
-    type: string,
-    entry: Entry,
-    slug: string | null | undefined
-): Promise<string | null | undefined> {
+export async function uniqueSlugIfChanged(params: {
+    repository: EntryRepository;
+    type: string;
+    entry: Entry;
+    slug: string | null | undefined;
+}): Promise<string | null | undefined> {
+    const { repository, type, entry, slug } = params;
     if (!slug || slug === entry.slug) return slug;
     return repository.uniqueSlug(type, entry.locale, slug, entry.id);
-}
-
-/**
- * @deprecated Slug uniqueness is now a storage concern. Kept for the existing
- * public export; delegates to the storage for the given type.
- */
-export async function generateUniqueSlug(
-    type: string,
-    locale: string,
-    baseSlug: string,
-    excludeId?: string
-): Promise<string> {
-    return getEntryRepository(type).uniqueSlug(type, locale, baseSlug, excludeId);
 }

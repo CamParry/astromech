@@ -1,13 +1,11 @@
+/**
+ * The entries tables — source of truth for row types and the codec. A preview
+ * token is a per-canonical-entry secret authorizing front-end preview of
+ * non-published content; one per entry, and only its hash is stored.
+ */
+
 import type { Table, TableInsert, TableSelect } from '@/database/define-table';
 import { defineTable } from '@/database/define-table';
-
-// ============================================================================
-// Tables (defineTable) — source of truth for types + row codec
-//
-// Preview tokens: per-canonical-entry secret authorizing front-end preview of
-// non-published content (current draft, staged change, or a historical
-// version). One token per canonical entry; only the hash is stored.
-// ============================================================================
 
 export const entriesTable = defineTable(
     'entries',

@@ -1,15 +1,7 @@
 /**
- * Entries service method contracts.
- *
- * Entries is the one domain whose catalogue is PER TYPE rather than a constant:
- * the permission, the create/update schemas (whether a title is required) and
- * the capability gating all vary with the entry type. So this is a factory the
- * method-manifest generator calls once per configured type — the schemas are
- * authored here, in the domain, not in the generator.
- *
- * `input` is the METHOD's argument object: every `EntriesService` method takes
- * `{ type, ... }`, and `type` is fixed per contract because a contract
- * describes one type's methods.
+ * Entries service method contracts. The catalogue is per type, not a constant:
+ * permission, schemas and capability gating all vary with the entry type, so the
+ * manifest generator calls this factory once per configured type.
  */
 import type { Capability } from '@/entries/capabilities';
 import type { EntryAction } from '@/permissions/entry-permission';
@@ -27,22 +19,17 @@ import {
 } from './schema';
 
 /**
- * A per-type entry method contract. Adds the two facts the manifest needs
- * which a plain contract has no field for: which `EntriesService` method it
- * describes, and the capability the entry type must declare for the method to
- * exist at all.
+ * A per-type entry method contract. Adds the two facts the manifest needs that a
+ * plain contract has no field for: which `EntriesService` method it describes,
+ * and the capability the entry type must declare for the method to exist.
  */
 export type EntryMethodContract = ServiceMethodContract & {
     /** Key on `EntriesService` — the manifest name is `entries.<method>`. */
     method: string;
     /**
      * Capability gate — the SAME capability the service asserts, so the manifest
-     * advertises a method exactly when calling it would succeed. `publish` is
-     * gated on `statuses` because that is what `operations/status.ts` asserts;
-     * it was gated on `versioning` until P1, which hid publish/unpublish from
-     * every unversioned type while the service accepted the call. Absent ⇒
-     * always available. The action the method enforces against is separate —
-     * `mergeStaged` enforces `publish` but is gated on `staging`.
+     * advertises a method exactly when calling it would succeed. Absent ⇒ always
+     * available. The action a method enforces against is a separate axis.
      */
     requires?: Capability;
 };
@@ -96,16 +83,9 @@ function entryMethodSummary(method: string, action: EntryAction, type: string): 
 }
 
 /**
- * The permission action each `EntriesService` method enforces.
- *
- * Declared once and read by both consumers: the contracts below (which project
- * it into the manifest's `permission`) and the scoped entries handle (which
- * resolves it at call time). Restating the pairs at the call site would be a
- * second declaration of the same fact, and the enforcement half is exactly the
- * half that must not drift.
- *
- * Covers every key on `EntriesService`; a key missing here has no derivable
- * permission and the scoped handle refuses it.
+ * The permission action each `EntriesService` method enforces. Read by both the
+ * contracts below and the scoped entries handle, so the pairs are declared once.
+ * A key missing here has no derivable permission and the scoped handle refuses it.
  */
 export const ENTRY_METHOD_ACTIONS = {
     query: 'read',

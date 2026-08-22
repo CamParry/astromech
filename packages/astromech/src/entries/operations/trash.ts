@@ -2,9 +2,9 @@ import { createRelationshipRepository } from '@/database/repository/relationship
 import { transaction } from '@/database/transaction';
 import { runHook } from '@/hooks/index';
 import { getCurrentUser } from '@/request-context/index';
-import { BulkOperationError } from '../errors';
-import { requireTrash } from '../internal/entry-type';
-import { loadEntries } from '../internal/records';
+import { BulkOperationError, CapabilityError } from '../errors';
+import { assertCapability } from '../internal/entry-type';
+import { getEntriesOfType } from '../internal/records';
 import { withLocaleSiblings } from '../internal/translatable';
 import { getEntryRepository } from '../repository/registry';
 
@@ -19,8 +19,10 @@ export async function trashEntries(params: {
 }): Promise<void> {
     const { type, ids } = params;
     const repository = getEntryRepository(type);
-    const trash = requireTrash(repository, type);
-    const entries = await loadEntries(repository, type, ids);
+    assertCapability(type, 'trash');
+    const { trash } = repository;
+    if (!trash) throw new CapabilityError(type, 'trash');
+    const entries = await getEntriesOfType(repository, type, ids);
     const targets = params.cascadeLocales
         ? await withLocaleSiblings(repository, entries)
         : entries;
@@ -62,7 +64,9 @@ export async function trashEntries(params: {
 export async function emptyTrash(params: { type: string }): Promise<void> {
     const { type } = params;
     const repository = getEntryRepository(type);
-    const trash = requireTrash(repository, type);
+    assertCapability(type, 'trash');
+    const { trash } = repository;
+    if (!trash) throw new CapabilityError(type, 'trash');
 
     const { data: trashed } = await repository.list({
         type,

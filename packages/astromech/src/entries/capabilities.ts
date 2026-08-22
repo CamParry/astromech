@@ -1,5 +1,5 @@
 /**
- * The capability vocabulary an entry type's storage declares support for.
+ * The capability vocabulary an entry type's repository declares support for.
  */
 
 export type Capability =
@@ -10,7 +10,7 @@ export type Capability =
     | 'trash'
     | 'staging';
 
-/** All capabilities supported by built-in storage. */
+/** All capabilities supported by the built-in repository. */
 export const BUILT_IN_SUPPORTS: readonly Capability[] = [
     'statuses',
     'slug',

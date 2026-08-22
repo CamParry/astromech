@@ -1,8 +1,8 @@
 import type { Entry } from '@/types/index';
 import { transaction } from '@/database/transaction';
-import { BulkOperationError } from '../errors';
-import { requireTrash } from '../internal/entry-type';
-import { asEntry, loadEntries } from '../internal/records';
+import { BulkOperationError, CapabilityError } from '../errors';
+import { assertCapability } from '../internal/entry-type';
+import { asEntry, getEntriesOfType } from '../internal/records';
 import { getEntryRepository } from '../repository/registry';
 
 /**
@@ -16,8 +16,10 @@ export async function restoreEntries(params: {
 }): Promise<Entry[]> {
     const { type, ids } = params;
     const repository = getEntryRepository(type);
-    const trash = requireTrash(repository, type);
-    const entries = await loadEntries(repository, type, ids);
+    assertCapability(type, 'trash');
+    const { trash } = repository;
+    if (!trash) throw new CapabilityError(type, 'trash');
+    const entries = await getEntriesOfType(repository, type, ids);
 
     return transaction(async () => {
         const rows: Entry[] = [];

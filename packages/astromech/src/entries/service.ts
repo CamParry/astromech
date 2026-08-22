@@ -28,9 +28,6 @@ import { updateEntries } from './operations/update';
 import { listEntryVersions } from './operations/versions/list';
 import { restoreEntryVersion } from './operations/versions/restore';
 
-/** @deprecated Slug uniqueness is now a storage concern. */
-export { generateUniqueSlug } from './internal/slug';
-
 export const entriesService: EntriesService = {
     query: queryEntries,
     get: getEntry,

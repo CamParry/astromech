@@ -21,13 +21,9 @@ export class EntryTypeMismatchError extends Error {
 }
 
 /**
- * Thrown when a write addresses an entry type that no root or plugin
- * declaration resolves to.
- *
- * Without this an unregistered type is silently accepted: there are no field
- * definitions to validate against, so the row is written as a ghost stamped
- * with a type nothing can render or query. Reads already return empty for an
- * unresolvable type, so only writes need the guard.
+ * Thrown when a write addresses an entry type that no root or plugin declaration
+ * resolves to. Without it the row is written as a ghost stamped with a type
+ * nothing can render or query. Reads already return empty, so only writes guard.
  */
 export class UnknownEntryTypeError extends Error {
     public readonly entryType: string;
@@ -43,10 +39,9 @@ export class UnknownEntryTypeError extends Error {
 }
 
 /**
- * Thrown when a bulk entry operation fails on a specific id. The DB transaction
- * rolls back the entire batch — `succeededBefore` reports which ids the
- * operation completed against *before* the failure (purely informational; those
- * writes have already been rolled back).
+ * Thrown when a bulk entry operation fails on a specific id. The transaction
+ * rolls the whole batch back; `succeededBefore` reports the ids completed before
+ * the failure, which is informational only — those writes are rolled back too.
  */
 export class BulkOperationError extends Error {
     public readonly failedId: string;
@@ -92,11 +87,9 @@ export class StagedEntryExistsError extends Error {
 }
 
 /**
- * Thrown when a read asks for trashed entries in the public shape.
- *
- * The two are mutually exclusive: public visibility drops every trashed row
- * after the storage call, so the combination returned an empty list that was
- * indistinguishable from "nothing is trashed". Failing names the caller bug.
+ * Thrown when a read asks for trashed entries in the public shape. The two are
+ * mutually exclusive: public visibility drops every trashed row after the
+ * repository call, so the combination answers an empty list either way.
  */
 export class PublicTrashedReadError extends Error {
     constructor() {
@@ -110,12 +103,9 @@ export class PublicTrashedReadError extends Error {
 }
 
 /**
- * Thrown when `where: { references }` is malformed or names a schema path that
- * no queried type declares a relationship field at.
- *
- * A typo'd path would otherwise compile to a predicate matching nothing and
- * return an empty page with a confident total — the same silent-drop class the
- * `where` allow-list has.
+ * Thrown when `where: { references }` is malformed or names a schema path no
+ * queried type declares a relationship field at. A typo'd path would otherwise
+ * compile to a predicate matching nothing and answer an empty page.
  */
 export class InvalidReferencesFilterError extends Error {
     public readonly entryTypes: string[];
@@ -137,7 +127,7 @@ export class InvalidReferencesFilterError extends Error {
 
 /**
  * Thrown when `where: { references }` reaches a `tableRepository`-backed entry
- * type. That storage lists an arbitrary table and cannot compile the index
+ * type. That repository lists an arbitrary table and cannot compile the index
  * subquery, so the filter is refused rather than returning unfiltered rows.
  */
 export class RelationshipFilterUnsupportedError extends Error {
@@ -147,7 +137,7 @@ export class RelationshipFilterUnsupportedError extends Error {
         super(
             `Entry type '${entryType}' is backed by tableRepository, which cannot ` +
                 `filter on the relationships index. \`where: { references }\` ` +
-                `requires the built-in entry storage.`
+                `requires the built-in entry repository.`
         );
         this.name = 'RelationshipFilterUnsupportedError';
         this.entryType = entryType;
@@ -156,8 +146,7 @@ export class RelationshipFilterUnsupportedError extends Error {
 
 /**
  * Thrown when `entries.query`'s `where` carries a key `buildListWhere` doesn't
- * recognize. An unrecognized key was previously discarded rather than
- * filtered on, so the caller got every row back instead of an error.
+ * recognize. Discarding one instead would answer every row rather than an error.
  */
 export class UnknownWhereKeyError extends Error {
     public readonly key: string;
@@ -174,9 +163,9 @@ export class UnknownWhereKeyError extends Error {
 }
 
 /**
- * Thrown when `entries.query`'s `sort` names a field the built-in storage
- * cannot order by. An unrecognized field was previously discarded, so the
- * caller got the default `createdAt desc` order with no signal.
+ * Thrown when `entries.query`'s `sort` names a field the built-in repository
+ * cannot order by. Discarding one instead would silently answer in the default
+ * `createdAt desc` order.
  */
 export class UnknownSortKeyError extends Error {
     public readonly key: string;

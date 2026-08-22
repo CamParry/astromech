@@ -1,6 +1,6 @@
 import type { Entry, EntryDuplicateOverrides, JsonObject } from '@/types/index';
 import { transaction } from '@/database/transaction';
-import { asEntry, loadAndAssertType } from '../internal/records';
+import { asEntry, getEntryOfType } from '../internal/records';
 import { indexEntryRelationships } from '../internal/relationships';
 import { getEntryRepository } from '../repository/registry';
 
@@ -17,7 +17,7 @@ export async function duplicateEntry(params: {
     const { type, id, overrides } = params;
 
     const repository = getEntryRepository(type);
-    const source = await loadAndAssertType(repository, type, id);
+    const source = await getEntryOfType(repository, type, id);
 
     const locale = overrides?.locale ?? source.locale;
     const status = overrides?.status ?? 'unpublished';

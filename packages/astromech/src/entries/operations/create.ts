@@ -6,7 +6,7 @@ import { parseInput } from '@/errors/index';
 import { runHook } from '@/hooks/index';
 import { getCurrentUser } from '@/request-context/index';
 import { UnknownEntryTypeError } from '../errors';
-import { getDefaultLocale } from '../internal/entry-type';
+import { getDefaultContentLocale } from '../internal/entry-type';
 import { asEntry } from '../internal/records';
 import { indexEntryRelationships } from '../internal/relationships';
 import { deriveSlug } from '../internal/slug';
@@ -45,7 +45,7 @@ export async function createEntry(params: EntryCreateParams): Promise<Entry> {
 
     const title = validated.title ?? '';
     const status = validated.status ?? 'unpublished';
-    const locale = data.locale ?? getDefaultLocale();
+    const locale = data.locale ?? getDefaultContentLocale();
     const localeGroup = data.localeGroup;
     const publishedAt =
         status === 'published' ? new Date() : (validated.publishedAt ?? null);

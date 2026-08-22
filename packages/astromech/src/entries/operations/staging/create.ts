@@ -1,9 +1,10 @@
 import type { Entry, JsonObject } from '@/types/index';
 import { transaction } from '@/database/transaction';
-import { StagedEntryExistsError } from '../../errors';
-import { requireStaging } from '../../internal/entry-type';
-import { asEntry, loadAndAssertType } from '../../internal/records';
+import { CapabilityError, StagedEntryExistsError } from '../../errors';
+import { assertCapability } from '../../internal/entry-type';
+import { asEntry, getEntryOfType } from '../../internal/records';
 import { indexEntryRelationships } from '../../internal/relationships';
+import { getEntryRepository } from '../../repository/registry';
 
 /**
  * Creates a staged copy of a canonical entry so edits can be drafted off the
@@ -16,8 +17,12 @@ export async function createStagedEntry(params: {
 }): Promise<Entry> {
     const { type, id } = params;
 
-    const { repository, staging } = requireStaging(type);
-    const canonical = await loadAndAssertType(repository, type, id);
+    const repository = getEntryRepository(type);
+    assertCapability(type, 'staging');
+    const { staging } = repository;
+    if (!staging) throw new CapabilityError(type, 'staging');
+
+    const canonical = await getEntryOfType(repository, type, id);
 
     if (canonical.stagedFor != null) {
         throw new Error(`Entry '${id}' is itself a staged change and cannot be staged.`);
