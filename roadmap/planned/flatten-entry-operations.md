@@ -22,7 +22,7 @@ A single `entriesService.delete({ type, id })` today:
 | 7   | `repository/registry.ts` → `getBuiltIn` → `createBuiltInEntryRepository` | resolves the repository                                        |
 | 8   | `repository/built-in.ts` `transaction`                                   | builds a second repository bound to the tx handle              |
 | 9   | `operations/delete.ts` `deleteOne`                                       | back in the op file                                            |
-| 10  | `internal/records.ts` `loadAndAssertType`                                | `repository.get` again for the same row                        |
+| 10  | `internal/records.ts` `getEntryOfType`                                   | `repository.get` again for the same row                        |
 | 11  | `repository/built-in.ts` `del`                                           | with cascade, `findOne` a third time                           |
 | 12  | `database/repository/create-repository.ts` `delete`                      | Kysely                                                         |
 
@@ -84,7 +84,7 @@ export async function deleteEntries(params: {
 }): Promise<void> {
     const { type, ids } = params;
     const repository = getEntryRepository(type);
-    const entries = await loadEntries(repository, type, ids);        // one fetch, type-asserted
+    const entries = await getEntriesOfType(repository, type, ids);        // one fetch, type-asserted
     const targets = params.cascadeLocales
         ? await withLocaleSiblings(repository, entries)
         : entries;
@@ -121,7 +121,7 @@ Depth from op to SQL: `deleteEntries` → `repository.delete` →
 
 - One exported function per file, written top to bottom. No helper that takes a
   callback. A private helper is fine when it names a real step
-  (`withLocaleSiblings`, `loadEntries`), not when it exists to share a loop.
+  (`withLocaleSiblings`, `getEntriesOfType`), not when it exists to share a loop.
 - Each row is fetched once. The record feeds the hook context, the type check
   and any cascade.
 - `transaction(async () => { ... })` wraps the writes only. Hooks, validation,
