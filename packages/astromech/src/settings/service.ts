@@ -1,5 +1,5 @@
 /**
- * Settings service — the settings capability verbs (all / get / set). Talks
+ * Settings service — the settings verbs (all / get / set). Talks
  * to the repository and applies the public/private key visibility rule.
  * Unaware of delivery shape — the Local API, HTTP API, etc. project it.
  */

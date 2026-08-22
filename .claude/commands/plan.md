@@ -11,7 +11,7 @@ Per `AGENTS.md`, this is a conversation first: for architecture decisions, talk 
 
 ## 1. Frame the problem
 
-- What are we actually deciding or solving? State it plainly. Surface the real constraints (Cloudflare Workers / D1 / R2, SSR-only, the one-way layer model in `ARCHITECTURE.md`).
+- What are we actually deciding or solving? State it plainly. Surface the real constraints (it must work on both Node and Cloudflare Workers, SSR-only, the one-way layer model in `ARCHITECTURE.md`).
 - Read the relevant code, `roadmap/`, `ARCHITECTURE.md`, and `TERMINOLOGY.md`. Recall any relevant project memory.
 - If the goal is ambiguous, ask me before going further.
 

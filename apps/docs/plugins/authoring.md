@@ -558,7 +558,7 @@ Don't query the table from your handlers. Give it a repository module —
 and owns encoding, `where`-value serialization and row decoding, so nothing above
 it spells the table name or touches a codec.
 
-Compose it inside your own `createXRepository(db)` factory, exactly as core's domains
+Compose it inside your own `createXRepository(db)` factory, exactly as core's modules
 do, and give the methods your plugin's vocabulary. The handle is an argument: a
 plugin is _handed_ its database on `ctx.db`.
 
@@ -661,7 +661,7 @@ await ctx.storage.put('exports/latest.json', bytes, { contentType: 'application/
 const object = await ctx.storage.get('exports/latest.json');
 ```
 
-**`ctx.email`** — `send(to, subject, element)`. Pass a React element; the port
+**`ctx.email`** — `send(to, subject, element)`. Pass a React element; `send`
 renders it to html and text. The envelope sender is the one the site configured on
 its email driver. A site with no email driver at all makes this throw, so catch it
 where sending is optional to your plugin:
@@ -687,7 +687,7 @@ try {
 
 ### Reaching the content services
 
-The domains sit directly on the context — `ctx.entries`, `ctx.media`,
+The content services sit directly on the context — `ctx.entries`, `ctx.media`,
 `ctx.settings`, `ctx.users`, `ctx.notifications`, `ctx.plugins` — and each is
 the **global** service, not a per-plugin view. Reads default to the `full`
 shape, because plugin altitude is trusted server code; pass an explicit
@@ -754,7 +754,7 @@ the HTTP RPC route, so there is nothing to scope them with.
 ### Reaching a model
 
 `getModel` and `hasModel` ship from the `astromech` barrel your plugin already
-imports, so reaching a model needs no port and no `ctx` handle:
+imports, so reaching a model needs nothing from `ctx`:
 
 ```ts
 import { generateText } from 'ai';

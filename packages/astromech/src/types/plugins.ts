@@ -177,7 +177,7 @@ export type PluginContext = {
     /** Database maintenance capabilities (feature-detected per driver). Distinct from `db` (the query instance). */
     database: PluginDatabase;
     /**
-     * Capability port onto the method manifest. A plugin cannot import
+     * The method manifest, scoped to the plugin. A plugin cannot import
      * `astromech/methods`, so the dispatch surface arrives here instead.
      */
     methods: PluginMethods;

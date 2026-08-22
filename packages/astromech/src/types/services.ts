@@ -55,7 +55,7 @@ export type MediaUsage = {
     /**
      * entry | user | media — what holds the reference. Duplicated from
      * `fields/relationship-edges.ts`'s `TargetKind` because a pure leaf may not
-     * import a capability.
+     * import `fields/`.
      */
     sourceKind: 'entry' | 'user' | 'media';
     /** The source's entry type, qualified for a plugin type. Null for user and media sources. */

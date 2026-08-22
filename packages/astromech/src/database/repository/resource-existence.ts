@@ -1,6 +1,6 @@
 /**
  * Existence checks for the three targetable resources (entry, user, media).
- * Lives in the database capability so any domain can ask without importing a
+ * Lives in `database/` so any module can ask without importing a
  * peer service. Answers only "does this row exist" — no visibility, no shaping.
  */
 

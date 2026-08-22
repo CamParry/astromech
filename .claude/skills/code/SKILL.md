@@ -17,7 +17,7 @@ Names are not a place to be creative. Before naming anything, find what this exa
 
 ## Operation signatures
 
-The functions under `<domain>/operations/` follow two rules, so any one of them
+The functions under `<module>/operations/` follow two rules, so any one of them
 is guessable from any other. `decisions/0083-operation-signatures.md` has the
 reasoning and the exceptions.
 
@@ -69,12 +69,12 @@ A REST route keeps a flat body under this: the route spec declares
 ## Data access (repository pattern)
 
 - **The DB-access unit is a _repository_.** Name `createXRepository`, type `XRepository`, never `createXStorage`. `storage` means file/blob storage only. (See `decisions/0075`.)
-- **A `defineTable` / `definePluginTable` export is named `<noun>Table`** — `entriesTable`, `cronTable`, `submissionsTable`. The noun matches the SQL table name; the suffix keeps the table distinct from the domain and its service. Row types stay `EntryRow` / `NewEntryRow`.
+- **A `defineTable` / `definePluginTable` export is named `<noun>Table`** — `entriesTable`, `cronTable`, `submissionsTable`. The noun matches the SQL table name; the suffix keeps the table distinct from the module and its service. Row types stay `EntryRow` / `NewEntryRow`.
 - **A repository is the only place `getDb` or a Kysely query appears.** Services, operations, jobs, and helpers call a repository — never raw queries.
 - Repositories are **factory functions** closing over the db handle: `createUserRepository(db) => ({ … })`. The one class is `TableRepository`, the pluggable `EntryRepository` implementation.
-- Domain logic is split **operations-per-file** (`operations/create.ts`, …) wrapping the repository; shared per-domain helpers live in `<domain>/internal/`.
-- Entries-local data → `<domain>/repository/`. Cross-domain subsystems (e.g. relationships, spanning entry/user/media) → `database/repository/`, composed by the services that need them.
-- `<domain>/repository/` (DB access) is a different concept from top-level `storage/` (media binary/blob drivers) — the rename in 0075 exists to keep the two words apart.
+- Business logic is split **operations-per-file** (`operations/create.ts`, …) wrapping the repository; shared per-module helpers live in `<module>/internal/`.
+- Module-local data → `<module>/repository/`. Cross-module subsystems (e.g. relationships, spanning entry/user/media) → `database/repository/`, composed by the services that need them.
+- `<module>/repository/` (DB access) is a different concept from top-level `storage/` (media binary/blob drivers) — the rename in 0075 exists to keep the two words apart.
 
 ## Commits
 

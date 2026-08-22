@@ -14,9 +14,7 @@ SPA, an HTTP API, and a middleware that boots the application on first request.
 Sites read content in templates through the in-process application or the
 typed fetch client.
 
-The infrastructure target is Cloudflare (Workers, D1, R2). Other drivers exist
-(libsql, filesystem, s3) but Cloudflare is the shape decisions are made for.
-SSR only. Node 22 is the floor.
+It runs on Node and on Cloudflare Workers with equal standing: every backend has a driver for each (`libsql` and `d1`, `filesystem`/`s3` and `r2`, `interval` and `cloudflareCron`), and nothing in core assumes one runtime. Further runtimes and frameworks are added the same way. SSR only. Node 22 is the floor.
 
 ## Repository layout
 
@@ -35,22 +33,21 @@ apps/
 
 ## The core package
 
-`packages/astromech/src/` is organised in layers. Imports point down the list;
-peers inside a layer may read one another. Nothing enforces this mechanically.
+`packages/astromech/src/` is one directory per module. Imports point down this list; modules on the same line may read one another. Nothing enforces this mechanically.
 
 ```
 astromech.ts · integrations · admin · codegen        entrypoints and composition root
 transport (http · cli · mcp · tools)                 delivery
 policies                                             who may call what
-entries · media · users · settings · notifications   domains
-plugins/runtime · config · database · storage ·      capabilities
+entries · media · users · settings · notifications   the content modules
+plugins/runtime · config · database · storage ·      the modules those build on
   fields · permissions · hooks · request-context ·
   email · ai · cron · cloudflare
 types · utilities · errors · registry.ts             pure leaves
 ```
 
 - **`astromech.ts`** is the composition root: `createAstromech` resolves the
-  config, wires the drivers, and composes the domain services onto the
+  config, wires the drivers, and composes the content services onto the
   application instance. `exports/` holds the re-export barrels that back every
   published subpath.
 - **`integrations/astro/`** is the Astro integration: the Vite plugin, the
@@ -63,24 +60,14 @@ types · utilities · errors · registry.ts             pure leaves
 - **`codegen/`** generates the site's entry types and the method manifest.
 - **`transport/`** is every way a call arrives: Hono routes and middleware in
   `http/`, the CLI, the dev-only MCP server, and `tools/`, the tool surface the
-  MCP server and the AI tool-loop share. Transports dispatch to domain services
-  through the method manifest; they hold no domain logic.
+  MCP server and the AI tool-loop share. Transports dispatch to the content services through the method manifest; they hold no business logic.
 - **`policies/`** decides what a role may call. `scopedServices(role)` wraps the
   services and refuses a method the role lacks; every untrusted path (HTTP, RPC,
   the AI tool-loop) composes it. Trusted paths (the application instance used in
   SSR and hooks, the CLI, the MCP server) do not.
-- **Domains** own the business verbs. Each has a `service.ts` (its verbs), a
-  `tables.ts` (its `defineTable` tables and row types), a contract catalogue
-  (`contract.ts`, or `methods.ts` in `entries`) that puts it in the method
-  manifest, and a `schema.ts` of Zod request schemas where it validates input.
-  A large domain splits its verbs into `operations/` and helpers into
-  `internal/`, with `service.ts` assembling them. Domains are siblings: one may
-  call another's service, but reaches tables through `database/tables.ts`.
-- **Capabilities** are primitives the domains build on. They never orchestrate
-  domain logic.
-- **Leaves** import only other leaves and third-party packages. A small pure
-  file (a constant, a type, a function over its arguments) may sit inside a
-  domain and still be imported from any layer.
+- **The content modules** (`entries`, `media`, `users`, `settings`, `notifications`) own the business verbs. Each has a `service.ts` (its verbs), a `tables.ts` (its `defineTable` tables and row types), a contract catalogue (`contract.ts`, or `methods.ts` in `entries`) that puts it in the method manifest, and a `schema.ts` of Zod request schemas where it validates input. A large module splits its verbs into `operations/` and helpers into `internal/`, with `service.ts` assembling them. They are siblings: one may call another's service, but reaches tables through `database/tables.ts`.
+- **The modules below them** (`database`, `storage`, `fields`, `config`, `permissions`, `hooks`, `request-context`, `email`, `ai`, `cron`, `cloudflare`, `plugins/runtime`) are what the content modules build on. Each does one thing and holds no business logic.
+- **Leaves** import only other leaves and third-party packages. A small pure file (a constant, a type, a function over its arguments) may sit inside any module and still be imported from any layer.
 
 ## Drivers and registries
 
@@ -91,7 +78,7 @@ and core calls through a fixed interface. Database (`libsql`, `d1`), storage
 pattern. The `DatabaseDriver` interface carries optional capabilities (`dump`,
 `restore`) that callers feature-detect rather than switching on dialect.
 
-Each capability keeps its driver in its own **registry**, built on
+Each module keeps its driver in its own **registry**, built on
 `registry.ts` over the single `globalThis.__astromech` namespace. There is no
 central context object, and no module-scope singletons: the package can be
 loaded more than once in a process (two builds, source and dist resolution,
@@ -109,8 +96,7 @@ preview tokens, trash, statuses, translation and relationships are entries
 features, in `entries/operations/`. The `relationships` table is a derived
 index over field data, rebuildable from it.
 
-**Fields** are a capability, shared by entry types, plugin tables and settings
-pages. `fields/builder.ts` is the authoring API (`fields.text(...)`), and
+**Fields** are shared by entry types, plugin tables and settings pages. `fields/builder.ts` is the authoring API (`fields.text(...)`), and
 `fields/field-type-registry.ts` holds one `FieldType` per type name, carrying
 its `build`, `coerce`, `validate` and `tsType`. The pipeline is
 `coerce → default → validate`, recursing through nested fields (`group`,
@@ -136,12 +122,7 @@ no-op `db:generate` doubles as the CI drift check.
 
 A plugin is a separate npm package that receives a `PluginContext` (`ctx`) and
 registers tables, routes, service methods, hooks, cron jobs and admin pages
-through it. Platform resources reach a plugin only as **ports** on `ctx`:
-`ctx.storage` (keys prefixed `plugin/<alias>/`), `ctx.email`, `ctx.database`
-(`dialect`, plus `dump`/`restore` when the driver has them), and `ctx.config`,
-an explicit allow-list projection of the resolved config. A new platform
-capability is added as a port, or as a pure function exported from the root
-`astromech` barrel, never as a subpath a plugin imports.
+through it. Everything a plugin needs from the platform is on `ctx`: the content services (`ctx.entries`, `ctx.media`, …), plus plugin-scoped handles on the backends, each narrower than the driver behind it: `ctx.storage` (keys prefixed `plugin/<alias>/`), `ctx.email`, `ctx.database` (`dialect`, plus `dump`/`restore` when the driver has them), and `ctx.config`, an explicit allow-list projection of the resolved config. A new platform feature is added to `ctx`, or as a pure function exported from the root `astromech` barrel, never as a subpath a plugin imports.
 
 ### Plugin runtime boundary
 
@@ -160,8 +141,7 @@ hook runner. A hook handler's throw propagates to the caller.
 ## The browser boundary
 
 `admin/` runs in the browser. It may import the leaves, `fields/`, the fetch
-client, and pure domain files that import nothing server-side; a domain
-service or any driver would pull the config and every backend into the client
+client, and pure files from any module that import nothing server-side; a service or a driver would pull the config and every backend into the client
 bundle. `pnpm run check:boot` loads the built admin and is the check.
 
 ## Scheduler
