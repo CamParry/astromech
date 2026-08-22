@@ -104,6 +104,17 @@ its `build`, `coerce`, `validate` and `tsType`. The pipeline is
 `tabs`, `accordion`), which store nothing. The admin renders a form from the
 same field definitions.
 
+`fields/parse-fields.ts` runs that pipeline for all four resources.
+`parseFields` returns the coerced values and throws a 422; `safeParseFields`
+returns what reported instead, for the callers that display errors rather than
+reject. An entry write reaches it through `entries/internal/stored-fields.ts`,
+which merges or inherits first and prunes dead relation ids after. Two
+unrelated checks are both spelled `validate`: a field type's own, on its
+`FieldType`, and the author's whole-resource function, declared on the entry
+type, `media`, `users` or a settings page. The Zod parse over request input
+around the fields is `parseInput`, in `errors/validation.ts`.
+`decisions/0086-one-validate-per-layer.md` maps the four.
+
 `TERMINOLOGY.md` defines the vocabulary (entry vs table-backed type, relation
 vs relationship, staging, preview token).
 
