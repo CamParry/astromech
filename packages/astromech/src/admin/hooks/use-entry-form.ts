@@ -26,8 +26,8 @@ import { resolveLabel } from '@/admin/i18n/labels';
 import { entryValidationMode } from '@/entries/validation-mode.shared';
 import { AstromechApiError } from '../../transport/http/client/index';
 import { useToast } from '../components/ui/index';
-import { useHotkeys } from './index';
 import { useFieldValidation } from './use-field-validation';
+import { useHotkeys } from './use-hotkeys';
 
 export type EntryFormValues = {
     title: string;
