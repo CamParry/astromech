@@ -11,7 +11,7 @@ import {
 } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { astromechClient } from '@/transport/http/client/index';
-import { useToast } from '../components/ui/index';
+import { useToast } from '../components/ui/toast';
 import { queryKeys } from './use-query-keys';
 
 export function useUsersQuery(params?: UserQueryParams) {

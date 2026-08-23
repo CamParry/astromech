@@ -26,29 +26,22 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { DeleteEntryModal } from '@/admin/components/entries/delete-entry-modal';
-import {
-    Badge,
-    Button,
-    Checkbox,
-    Dropdown,
-    EmptyState,
-    Page,
-    PageContent,
-    PageHeader,
-    PageTitle,
-    Pagination,
-    SearchInput,
-    Select,
-    Spinner,
-    Table,
-    ToggleGroup,
-    Toolbar,
-    ToolbarEnd,
-    ToolbarStart,
-    useConfirm,
-    useContextMenu,
-    useToast,
-} from '@/admin/components/ui/index';
+import { Badge } from '@/admin/components/ui/badge';
+import { Button } from '@/admin/components/ui/button';
+import { Checkbox } from '@/admin/components/ui/checkbox';
+import { useConfirm } from '@/admin/components/ui/confirm';
+import { useContextMenu } from '@/admin/components/ui/context-menu';
+import { Dropdown } from '@/admin/components/ui/dropdown';
+import { EmptyState } from '@/admin/components/ui/empty-state';
+import { Page, PageContent, PageHeader, PageTitle } from '@/admin/components/ui/page';
+import { Pagination } from '@/admin/components/ui/pagination';
+import { SearchInput } from '@/admin/components/ui/search-input';
+import { Select } from '@/admin/components/ui/select';
+import { Spinner } from '@/admin/components/ui/spinner';
+import { Table } from '@/admin/components/ui/table';
+import { useToast } from '@/admin/components/ui/toast';
+import { ToggleGroup } from '@/admin/components/ui/toggle-group';
+import { Toolbar, ToolbarEnd, ToolbarStart } from '@/admin/components/ui/toolbar';
 import {
     useBulkDeleteEntries,
     useBulkPublishEntries,
@@ -57,13 +50,13 @@ import {
     useDeleteEntry,
     useDuplicateEntry,
     useEntriesQuery,
-    useIsMobile,
-    usePermissions,
     useRestoreEntry,
-    useSelection,
     useTrashEntry,
-    useViewMode,
-} from '@/admin/hooks/index';
+} from '@/admin/hooks/entries';
+import { useIsMobile } from '@/admin/hooks/use-is-mobile';
+import { usePermissions } from '@/admin/hooks/use-permissions';
+import { useSelection } from '@/admin/hooks/use-selection';
+import { useViewMode } from '@/admin/hooks/use-view-mode';
 import { namespaceForScope } from '@/admin/i18n/entry-namespace';
 import { resolveLabel } from '@/admin/i18n/labels';
 import { defaultCellKind } from '@/admin/rendering/cell-kind-map';

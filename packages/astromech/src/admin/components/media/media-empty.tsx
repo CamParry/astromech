@@ -6,7 +6,8 @@
 import type { MediaBrowserQuery } from '@/admin/types/media';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { EmptyState, UploadZone } from '@/admin/components/ui/index';
+import { EmptyState } from '@/admin/components/ui/empty-state';
+import { UploadZone } from '@/admin/components/ui/upload-zone';
 import { TYPE_FILTER_KEYS } from '@/admin/types/media';
 
 export type MediaEmptyProps = {

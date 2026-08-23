@@ -4,7 +4,7 @@
  * `import.meta.env` and `process.env`.
  */
 
-import { AstromechError } from '@/errors/index';
+import { AstromechError } from '@/errors/astromech-error';
 import { createRegistry } from '@/registry';
 
 /**

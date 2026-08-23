@@ -12,7 +12,8 @@ import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntryNewPage } from '@/admin/components/entries/entry-new-page';
 import { buildPluginEntriesMount } from '@/admin/components/entries/mount';
-import { EmptyState, Page, PageContent } from '@/admin/components/ui/index';
+import { EmptyState } from '@/admin/components/ui/empty-state';
+import { Page, PageContent } from '@/admin/components/ui/page';
 import { astromechClient } from '@/transport/http/client/index';
 
 type SearchParams = {

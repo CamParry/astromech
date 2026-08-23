@@ -4,7 +4,7 @@ import {
     mergeGlobalValues,
     mergeLocaleSetting,
     partitionGlobalValues,
-} from '@/settings/index';
+} from '@/settings/page-values.shared';
 
 function fields(
     main: ResolvedEntryFields['main'],

@@ -8,7 +8,7 @@ import { useNavigate } from '@tanstack/react-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConfirm } from '@/admin/components/ui/confirm';
-import { useToast } from '@/admin/components/ui/index';
+import { useToast } from '@/admin/components/ui/toast';
 import { useAuth } from '@/admin/context/auth';
 import { astromechClient } from '@/transport/http/client/index';
 

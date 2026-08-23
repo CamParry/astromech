@@ -43,11 +43,12 @@ import {
 } from '@/entries/repository/registry';
 import { typedEntriesService } from '@/entries/typed-entries-service';
 import { getEnvRecord } from '@/env/index';
-import { AstromechError } from '@/errors/index';
+import { AstromechError } from '@/errors/astromech-error';
 import { flattenEntryFields } from '@/fields/flatten';
-import { addHook, clearHooks, runHook } from '@/hooks/index';
-import { mediaService } from '@/media/index';
-import { currentUserNotificationsService, notify } from '@/notifications/index';
+import { addHook, clearHooks, runHook } from '@/hooks/hooks';
+import { mediaService } from '@/media/service';
+import { currentUserNotificationsService } from '@/notifications/current-user-service';
+import { notify } from '@/notifications/service';
 import {
     pluginEntryTypes,
     resolvePluginIdentity,
@@ -56,12 +57,12 @@ import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { isTable } from '@/plugins/runtime/plugin-tables';
 import { createPluginTrackingRepository } from '@/plugins/runtime/plugin-tracking-repository';
 import { createRegistry } from '@/registry';
-import { getCurrentRole, getCurrentUser } from '@/request-context/index';
-import { settingsService } from '@/settings/index';
+import { getCurrentRole, getCurrentUser } from '@/request-context/request-context';
+import { settingsService } from '@/settings/service';
 import { listAll } from '@/storage/prefix';
 import { getStorageDriver } from '@/storage/registry';
 import { buildScopedTools } from '@/transport/tools/scoped-tools';
-import { usersService } from '@/users/index';
+import { usersService } from '@/users/service';
 import { log } from '@/utilities/log';
 import {
     withDefaultSettingsShape,

@@ -9,7 +9,7 @@ import { getConfig } from '@/config/registry';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { collectRelationshipSchemaPaths } from '@/fields/relationship-edges';
-import { getCurrentUser } from '@/request-context/index';
+import { getCurrentUser } from '@/request-context/request-context';
 import { InvalidReferencesFilterError, PublicTrashedReadError } from '../errors';
 import { getDefaultContentLocale } from '../internal/entry-type';
 import { asEntry } from '../internal/records';

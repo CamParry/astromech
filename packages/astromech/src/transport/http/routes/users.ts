@@ -15,8 +15,10 @@ import {
     fromZodError,
     notFound,
 } from '@/transport/http/middleware/errors';
-import { updateUserSchema, usersContract, usersService } from '@/users/index';
+import { usersContract } from '@/users/contract';
 import { createUserRepository } from '@/users/repository';
+import { updateUserSchema } from '@/users/schema';
+import { usersService } from '@/users/service';
 import { USERS_ROUTE_SPECS } from './http-routes.shared';
 import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 

@@ -15,7 +15,7 @@ import { PluginSlot } from '@/admin/components/plugins/plugin-slot';
 
 const granted = vi.hoisted(() => ({ permissions: [] as string[] }));
 
-vi.mock('@/admin/hooks/index', () => ({
+vi.mock('@/admin/hooks/use-permissions', () => ({
     usePermissions: () => ({
         hasPermission: (permission: string) => granted.permissions.includes(permission),
     }),

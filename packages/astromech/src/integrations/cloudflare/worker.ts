@@ -6,7 +6,7 @@
 
 import type { AstromechConfig } from '@/types/index';
 import { createAstromech } from '@/astromech';
-import { cloudflareCron } from '@/cron/drivers/index';
+import { cloudflareCron } from '@/cron/drivers/cloudflare';
 import { setDefaultScheduler } from '@/cron/registry';
 import { setEnvSource } from '@/env/index';
 

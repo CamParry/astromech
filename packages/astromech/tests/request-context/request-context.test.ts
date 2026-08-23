@@ -15,7 +15,7 @@ import {
     getRequestContext,
     runWithContext,
     runWithRequest,
-} from '@/request-context/index';
+} from '@/request-context/request-context';
 import { getSession } from '@/users/session';
 
 vi.mock('@/users/session', () => ({ getSession: vi.fn() }));

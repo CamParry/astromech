@@ -13,7 +13,7 @@ import type {
 } from '@/types/index';
 import { AwsClient } from 'aws4fetch';
 import { resolveEnv } from '@/env/index';
-import { AstromechError } from '@/errors/index';
+import { AstromechError } from '@/errors/astromech-error';
 
 export type S3Options = {
     /** Falls back to `S3_ENDPOINT` on Node. Required on Workers. */

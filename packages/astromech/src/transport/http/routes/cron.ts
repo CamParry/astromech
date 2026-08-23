@@ -9,7 +9,7 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { onTick } from '@/cron/runner';
 import { resolveEnv } from '@/env/index';
-import { getCurrentRole } from '@/request-context/index';
+import { getCurrentRole } from '@/request-context/request-context';
 import { unauthorized } from '@/transport/http/middleware/errors';
 
 const router = new OpenAPIHono();

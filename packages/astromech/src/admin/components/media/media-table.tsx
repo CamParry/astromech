@@ -7,7 +7,8 @@ import type { SortDirection } from '@/admin/components/ui/table';
 import type { Media } from '@/types/index';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Checkbox, Table } from '@/admin/components/ui/index';
+import { Checkbox } from '@/admin/components/ui/checkbox';
+import { Table } from '@/admin/components/ui/table';
 import { MediaRow } from './media-row';
 
 export type MediaTableProps = {

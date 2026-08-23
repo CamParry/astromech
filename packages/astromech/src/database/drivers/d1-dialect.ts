@@ -9,7 +9,7 @@ import type {
     QueryResult,
 } from 'kysely';
 import { SqliteAdapter, SqliteQueryCompiler } from 'kysely';
-import { AstromechError } from '@/errors/index';
+import { AstromechError } from '@/errors/astromech-error';
 import { D1Introspector } from './d1-introspector';
 
 /**

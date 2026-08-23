@@ -3,7 +3,7 @@ import type { Entry } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { flattenEntryFields } from '@/fields/flatten';
-import { getCurrentUser } from '@/request-context/index';
+import { getCurrentUser } from '@/request-context/request-context';
 import { getEntryRepository } from '../repository/registry';
 import { applyVisibility, markPublic } from '../visibility';
 import { getPreviewEntry } from './preview/read';

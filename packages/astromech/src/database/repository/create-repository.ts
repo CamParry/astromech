@@ -20,7 +20,7 @@ import {
     kyselyTableKey,
 } from '@/database/codec';
 import { getDb } from '@/database/registry';
-import { AstromechError } from '@/errors/index';
+import { AstromechError } from '@/errors/astromech-error';
 
 /**
  * A `Table` may be any shape, so the wrapper queries through a fully

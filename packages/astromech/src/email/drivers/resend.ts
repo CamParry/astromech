@@ -1,5 +1,5 @@
 import type { EmailDriver } from '@/types/index';
-import { AstromechError } from '@/errors/index';
+import { AstromechError } from '@/errors/astromech-error';
 
 export type ResendOptions = {
     apiKey: string;

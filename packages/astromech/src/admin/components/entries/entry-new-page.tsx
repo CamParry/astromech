@@ -17,24 +17,26 @@ import {
     FieldWarningsProvider,
 } from '@/admin/components/fields/field-errors-context';
 import { FieldValidationProvider } from '@/admin/components/fields/field-validation-context';
+import { Breadcrumb } from '@/admin/components/ui/breadcrumb';
+import { Button } from '@/admin/components/ui/button';
+import { Input } from '@/admin/components/ui/input';
+import { Modal } from '@/admin/components/ui/modal';
 import {
-    Breadcrumb,
-    Button,
     ButtonGroup,
     FormLayout,
     FormLayoutContent,
-    Input,
-    Modal,
     Page,
     PageContent,
     PageHeader,
     PageTitle,
-    Panel,
-    Select,
     Stack,
-    useToast,
-} from '@/admin/components/ui/index';
-import { useEntriesQuery, useEntryForm, usePermissions } from '@/admin/hooks/index';
+} from '@/admin/components/ui/page';
+import { Panel } from '@/admin/components/ui/panel';
+import { Select } from '@/admin/components/ui/select';
+import { useToast } from '@/admin/components/ui/toast';
+import { useEntriesQuery } from '@/admin/hooks/entries';
+import { useEntryForm } from '@/admin/hooks/use-entry-form';
+import { usePermissions } from '@/admin/hooks/use-permissions';
 import { EntryNamespaceProvider, namespaceForScope } from '@/admin/i18n/entry-namespace';
 import { resolveAdminEntryType, resolveForm } from '@/admin/rendering/resolve';
 import { resolveContentLocale } from '@/utilities/locale';

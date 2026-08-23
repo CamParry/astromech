@@ -8,7 +8,9 @@ import type { AstromechConfig } from '@/types/index';
 import type { Kysely, Updateable } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { cloudflareCron, interval, webhook } from '@/cron/drivers/index';
+import { cloudflareCron } from '@/cron/drivers/cloudflare';
+import { interval } from '@/cron/drivers/interval';
+import { webhook } from '@/cron/drivers/webhook';
 import {
     getSchedulerDriver,
     registerCronJob,

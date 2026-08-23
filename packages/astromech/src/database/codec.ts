@@ -7,7 +7,7 @@
 
 import type { KyselyOf, Table, TableSelect } from '@/database/define-table';
 import type { Insertable, Updateable } from 'kysely';
-import { AstromechError } from '@/errors/index';
+import { AstromechError } from '@/errors/astromech-error';
 
 // Plugin tables (registered at boot)
 

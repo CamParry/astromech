@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { loadConfigFile } from '@/config/load';
 import { resolveConfig } from '@/config/resolve';
 import { runMigrations } from '@/database/migrations';
-import { AstromechError } from '@/errors/index';
+import { AstromechError } from '@/errors/astromech-error';
 import { registerRoutes } from '@/integrations/astro/routes';
 import { createViteConfig } from '@/integrations/astro/vite';
 import { collectPluginFieldTypes } from '@/plugins/runtime/plugin-fields';

@@ -1,5 +1,5 @@
-import { parseInput } from '@/errors/index';
-import { getCurrentUser } from '@/request-context/index';
+import { parseInput } from '@/errors/validation';
+import { getCurrentUser } from '@/request-context/request-context';
 import { assertCapability } from '../../internal/entry-type';
 import { generatePreviewSecret } from '../../internal/preview';
 import { getEntryOfType } from '../../internal/records';

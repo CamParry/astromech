@@ -9,7 +9,9 @@ import type { EntryStatus } from '../../../types/index';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatDatetime } from '@/utilities/dates';
-import { Input, Panel, Select } from '../ui/index';
+import { Input } from '../ui/input';
+import { Panel } from '../ui/panel';
+import { Select } from '../ui/select';
 
 export type PublishPanelProps = {
     status: EntryStatus;

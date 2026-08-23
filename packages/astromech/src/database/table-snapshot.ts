@@ -19,7 +19,7 @@ import {
     renderCreateTable,
     renderTableStatements,
 } from '@astromech/schema-engine';
-import { AstromechError } from '@/errors/index';
+import { AstromechError } from '@/errors/astromech-error';
 
 /**
  * `Table` → snapshot conversion. `@astromech/schema-engine` owns the

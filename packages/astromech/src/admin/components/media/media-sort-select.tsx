@@ -6,7 +6,7 @@ import type { SortDirection } from '@/admin/components/ui/table';
 import type { MediaBrowserQuery } from '@/admin/types/media';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Select } from '@/admin/components/ui/index';
+import { Select } from '@/admin/components/ui/select';
 import { isSortKey } from '@/admin/types/media';
 
 const SORT_NONE = 'none';

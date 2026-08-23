@@ -4,7 +4,7 @@
  * can resolve to `src` or `dist`, so one module may be instantiated twice.
  */
 
-import { AstromechError } from '@/errors/index';
+import { AstromechError } from '@/errors/astromech-error';
 
 /**
  * The shared namespace. Registries take arbitrary string keys; the named keys

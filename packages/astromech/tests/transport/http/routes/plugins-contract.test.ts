@@ -75,7 +75,7 @@ async function freshApp(): Promise<OpenAPIHono> {
     setupTestConfig(configWithProbe());
     vi.resetModules();
     const { pluginsRouter } = await import('@/transport/http/routes/plugins');
-    const { runWithRequest } = await import('@/request-context/index');
+    const { runWithRequest } = await import('@/request-context/request-context');
     const app = new OpenAPIHono();
     app.use('*', (c, next) => runWithRequest(c.req.raw, () => next()));
     app.route('/plugins', pluginsRouter);

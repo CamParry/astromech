@@ -11,7 +11,7 @@ import type { Role } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { adminRole, mountRouter, roleWith } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { settingsService } from '@/settings/index';
+import { settingsService } from '@/settings/service';
 import { settingsRouter } from '@/transport/http/routes/settings';
 
 function app(role: Role = adminRole) {

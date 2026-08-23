@@ -9,7 +9,7 @@ import { Dialog } from '@base-ui/react/dialog';
 import { Outlet } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useUi } from '../../context/ui';
-import { useHotkeys } from '../../hooks/index';
+import { useHotkeys } from '../../hooks/use-hotkeys';
 import { AiContextReadout } from '../dev/ai-context-readout';
 import { PluginSlot } from '../plugins/plugin-slot';
 import { CommandPalette, CommandPaletteProvider } from '../ui/command-palette';

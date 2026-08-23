@@ -25,8 +25,8 @@ import { entryLabel } from '@/admin/components/entries/entry-label';
 import { entryAdminPath } from '@/admin/utilities/entry-admin-path';
 import { parseEntryTypeId } from '@/entries/entry-types.shared';
 import { astromechClient } from '@/transport/http/client/index';
-import { usePermissions } from '../../hooks/index';
 import { useDebounce } from '../../hooks/use-debounce';
+import { usePermissions } from '../../hooks/use-permissions';
 import { EntryTypeIcon } from './entry-type-icon';
 
 function lucideIcon(name: string | undefined, Fallback: LucideIcon): LucideIcon {

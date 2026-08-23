@@ -3,7 +3,7 @@
  */
 
 import type { MediaAccess } from '@/types/index';
-import { AstromechError } from '@/errors/index';
+import { AstromechError } from '@/errors/astromech-error';
 import { CLOUDFLARE_IMAGES_DRIVER } from '@/media/image-drivers';
 
 /**

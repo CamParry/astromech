@@ -8,25 +8,20 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-    Avatar,
-    Button,
-    Dropdown,
-    EmptyState,
-    Page,
-    PageContent,
-    PageHeader,
-    PageTitle,
-    Pagination,
-    SearchInput,
-    Spinner,
-    Table,
-    Toolbar,
-    ToolbarStart,
-    useConfirm,
-} from '@/admin/components/ui/index';
+import { Avatar } from '@/admin/components/ui/avatar';
+import { Button } from '@/admin/components/ui/button';
+import { useConfirm } from '@/admin/components/ui/confirm';
+import { Dropdown } from '@/admin/components/ui/dropdown';
+import { EmptyState } from '@/admin/components/ui/empty-state';
+import { Page, PageContent, PageHeader, PageTitle } from '@/admin/components/ui/page';
+import { Pagination } from '@/admin/components/ui/pagination';
+import { SearchInput } from '@/admin/components/ui/search-input';
+import { Spinner } from '@/admin/components/ui/spinner';
+import { Table } from '@/admin/components/ui/table';
+import { Toolbar, ToolbarStart } from '@/admin/components/ui/toolbar';
 import { useAiContext } from '@/admin/context/ai-context';
-import { useDeleteUser, usePermissions, useUsersQuery } from '@/admin/hooks/index';
+import { usePermissions } from '@/admin/hooks/use-permissions';
+import { useDeleteUser, useUsersQuery } from '@/admin/hooks/users';
 import { formatDate } from '@/utilities/dates';
 
 const PER_PAGE = 20;

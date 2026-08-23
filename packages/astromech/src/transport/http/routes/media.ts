@@ -9,7 +9,7 @@ import type { MediaQueryParams, SortDirection } from '@/types/index';
 import type { Context } from 'hono';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { mediaContract } from '@/media/contract';
-import { mediaService } from '@/media/index';
+import { mediaService } from '@/media/service';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { badRequest, forbidden, notFound } from '@/transport/http/middleware/errors';
 import { MEDIA_ROUTE_SPECS } from './http-routes.shared';

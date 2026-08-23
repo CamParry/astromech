@@ -18,7 +18,7 @@ import type { Role, User } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { settingsService } from '@/settings/index';
+import { settingsService } from '@/settings/service';
 import { settingsRouter } from '@/transport/http/routes/settings';
 
 const fakeUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;

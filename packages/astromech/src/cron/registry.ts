@@ -10,7 +10,7 @@ import type { ResolvedConfig, SchedulerDriver } from '@/types/index';
 import type { Kysely } from 'kysely';
 import { interval } from '@/cron/drivers/interval';
 import { isWorkersRuntime } from '@/env/index';
-import { AstromechError } from '@/errors/index';
+import { AstromechError } from '@/errors/astromech-error';
 import { createRegistry } from '@/registry';
 
 export type CronContext = {

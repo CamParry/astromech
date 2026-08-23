@@ -13,7 +13,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { useUi } from '../../context/ui';
-import { usePermissions } from '../../hooks/index';
+import { usePermissions } from '../../hooks/use-permissions';
 import { resolveLabel } from '../../i18n/labels';
 import { Logo } from '../brand/logo';
 import { EntryTypeIcon } from '../ui/entry-type-icon';

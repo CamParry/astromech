@@ -4,7 +4,7 @@
 
 import type { EntryRepository } from '../repository/types';
 import type { Entry, JsonObject } from '@/types/index';
-import { getCurrentUser } from '@/request-context/index';
+import { getCurrentUser } from '@/request-context/request-context';
 import { deepEqual } from './deep-equal';
 
 /**

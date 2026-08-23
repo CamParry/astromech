@@ -2,7 +2,7 @@ import type { Media } from '@/types/index';
 import { Check } from 'lucide-react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Checkbox } from '@/admin/components/ui/index';
+import { Checkbox } from '@/admin/components/ui/checkbox';
 import { MediaThumb } from './media-thumb';
 
 export type MediaCardProps = {

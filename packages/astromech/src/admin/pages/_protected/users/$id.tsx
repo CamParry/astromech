@@ -10,31 +10,31 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
+import { Avatar } from '@/admin/components/ui/avatar';
+import { Breadcrumb } from '@/admin/components/ui/breadcrumb';
+import { Button } from '@/admin/components/ui/button';
+import { useConfirm } from '@/admin/components/ui/confirm';
+import { Input } from '@/admin/components/ui/input';
 import {
-    Avatar,
-    Breadcrumb,
-    Button,
     FormLayout,
-    Input,
     Page,
     PageContent,
     PageHeader,
     PageLoading,
     PageTitle,
-    Panel,
-    Select,
     Stack,
-    useConfirm,
-} from '@/admin/components/ui/index';
+} from '@/admin/components/ui/page';
+import { Panel } from '@/admin/components/ui/panel';
+import { Select } from '@/admin/components/ui/select';
 import { useAiContext } from '@/admin/context/ai-context';
 import { useAuth } from '@/admin/context/auth';
+import { usePermissions } from '@/admin/hooks/use-permissions';
 import {
     useDeleteUser,
-    usePermissions,
+    userQueryOptions,
     useUpdateUser,
     useUser,
-} from '@/admin/hooks/index';
-import { userQueryOptions } from '@/admin/hooks/users';
+} from '@/admin/hooks/users';
 import { formatDatetime } from '@/utilities/dates';
 
 type FormValues = {

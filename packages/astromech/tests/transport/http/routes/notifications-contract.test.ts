@@ -13,7 +13,7 @@ import { mountRouter, roleWith } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { notificationsService, notify } from '@/notifications/service';
 import { notificationsRouter } from '@/transport/http/routes/notifications';
-import { usersService } from '@/users/index';
+import { usersService } from '@/users/service';
 
 /** No permission holds any authority here — the session is the whole of it. */
 const noPermissions = roleWith([]);

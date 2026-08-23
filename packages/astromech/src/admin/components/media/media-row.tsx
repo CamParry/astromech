@@ -1,7 +1,8 @@
 import type { Media } from '@/types/index';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Checkbox, Table } from '@/admin/components/ui/index';
+import { Checkbox } from '@/admin/components/ui/checkbox';
+import { Table } from '@/admin/components/ui/table';
 import { formatBytes } from '@/utilities/bytes';
 import { formatDatetime } from '@/utilities/dates';
 import { MediaThumb } from './media-thumb';

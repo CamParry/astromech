@@ -39,7 +39,7 @@ import { AiContextProvider } from '@/admin/context/ai-context';
 import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
 import '@/admin/rendering/register-fields';
 import type { EntriesMount } from '@/admin/components/entries/mount';
-import type * as AdminHooks from '@/admin/hooks/index';
+import type * as UseEntryForm from '@/admin/hooks/use-entry-form';
 import type { AdminEntryType, EntriesService, Entry, EntryStatus } from '@/types/index';
 
 // The shim declares one locale; the switcher needs two to have anywhere to go.
@@ -51,11 +51,11 @@ vi.mock('virtual:astromech/admin-config', () => ({
 const transitions: unknown[] = [];
 const subscribed = new WeakSet<object>();
 
-vi.mock('@/admin/hooks/index', async (importOriginal) => {
-    const actual = await importOriginal<typeof AdminHooks>();
+vi.mock('@/admin/hooks/use-entry-form', async (importOriginal) => {
+    const actual = await importOriginal<typeof UseEntryForm>();
     return {
         ...actual,
-        useEntryForm: (options: Parameters<typeof AdminHooks.useEntryForm>[0]) => {
+        useEntryForm: (options: Parameters<typeof UseEntryForm.useEntryForm>[0]) => {
             const result = actual.useEntryForm(options);
             const store = result.form.store as unknown as {
                 subscribe: (fn: () => void) => () => void;

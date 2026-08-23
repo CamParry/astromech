@@ -18,15 +18,13 @@ import {
     useReplaceMedia,
     useUpdateMedia,
 } from '../../hooks/media';
-import {
-    Button,
-    EmptyState,
-    Input,
-    Modal,
-    Spinner,
-    UploadButton,
-    useConfirm,
-} from '../ui/index';
+import { Button } from '../ui/button';
+import { useConfirm } from '../ui/confirm';
+import { EmptyState } from '../ui/empty-state';
+import { Input } from '../ui/input';
+import { Modal } from '../ui/modal';
+import { Spinner } from '../ui/spinner';
+import { UploadButton } from '../ui/upload-button';
 import { MediaUsagePanel } from './media-usage-panel';
 
 export type MediaDetailModalProps = {

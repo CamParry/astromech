@@ -7,6 +7,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import adminConfig from 'virtual:astromech/admin-config';
+import { assertSingleUiInstance } from '@/admin/components/ui/instance-guard';
 import { astromechClient } from '@/transport/http/client/index';
 import { setDateLocale } from '../utilities/dates';
 import { resolveContentLocale } from '../utilities/locale';
@@ -17,6 +18,11 @@ import './i18n';
 import './styles/main.css';
 
 declare const __ASTROMECH_BASE_PATH__: string;
+
+// The SPA imports the kit's components file by file, so it is this call rather
+// than the `astromech/ui` barrel that registers the admin's own copy — without
+// it a plugin resolving the kit to a stale `dist` would go unreported.
+assertSingleUiInstance();
 
 astromechClient.configure({ baseUrl: `${__ASTROMECH_BASE_PATH__}/api` });
 

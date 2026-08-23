@@ -5,7 +5,7 @@ import type { OpenAPIHono } from '@hono/zod-openapi';
 import type { Context } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from '@hono/zod-openapi';
-import { PermissionDeniedError } from '@/errors/index';
+import { PermissionDeniedError } from '@/errors/permission';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { scopedServices } from '@/policies/scoped-services';
 import {

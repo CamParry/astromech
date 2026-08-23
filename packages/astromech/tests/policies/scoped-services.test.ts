@@ -18,11 +18,11 @@ import type {
 } from '@/types/index';
 import { setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { PermissionDeniedError } from '@/errors/index';
+import { PermissionDeniedError } from '@/errors/permission';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { annotateManifest } from '@/policies/annotate-manifest';
 import { scopedServices, scopeEntries, scopeMethods } from '@/policies/scoped-services';
-import { runWithContext } from '@/request-context/index';
+import { runWithContext } from '@/request-context/request-context';
 
 beforeEach(() => {
     setupTestConfig();

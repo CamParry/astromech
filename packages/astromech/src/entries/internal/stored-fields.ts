@@ -10,7 +10,7 @@ import type { Entry, EntryStatus, JsonObject, ResolvedEntryType } from '@/types/
 import { flattenEntryFields } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
-import { getCurrentUser } from '@/request-context/index';
+import { getCurrentUser } from '@/request-context/request-context';
 import { createEntryLookups } from '../lookups';
 import { entryValidationMode } from '../validation-mode.shared';
 import { pruneDanglingRelations } from './dangling-relations';

@@ -10,7 +10,7 @@ import {
     getPluginIdentity,
     getPluginServiceMethods,
 } from '@/plugins/runtime/plugin-runtime';
-import { getCurrentRole, getCurrentUser } from '@/request-context/index';
+import { getCurrentRole, getCurrentUser } from '@/request-context/request-context';
 
 type MethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
 

@@ -10,7 +10,7 @@ import type { AstromechConfig } from '@/types/index';
 import type { Kysely, Updateable } from 'kysely';
 import { createTestDb, makeTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { interval } from '@/cron/drivers/index';
+import { interval } from '@/cron/drivers/interval';
 import { registerCronJob } from '@/cron/registry';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/tables';

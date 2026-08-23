@@ -7,7 +7,7 @@
 import type { AdminPage, AdminSlotContribution, AdminSlotName } from '@/types/config';
 import type { PluginDefinition, PluginFieldTypeRegistration } from '@/types/plugins';
 import { fileURLToPath } from 'node:url';
-import { AstromechError } from '@/errors/index';
+import { AstromechError } from '@/errors/astromech-error';
 import {
     resolvePluginIdentity,
     resolvePluginPermission,

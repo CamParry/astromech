@@ -10,31 +10,27 @@ import { MediaFilters } from '@/admin/components/media/media-filters';
 import { MediaGrid } from '@/admin/components/media/media-grid';
 import { MediaSortSelect, sortPatch } from '@/admin/components/media/media-sort-select';
 import { MediaTable } from '@/admin/components/media/media-table';
+import { useConfirm } from '@/admin/components/ui/confirm';
+import { DropZone } from '@/admin/components/ui/drop-zone';
+import { Dropdown } from '@/admin/components/ui/dropdown';
+import { EmptyState } from '@/admin/components/ui/empty-state';
 import {
-    Dropdown,
-    DropZone,
-    EmptyState,
     Page,
     PageContent,
     PageHeader,
     PageLoading,
     PageTitle,
-    Pagination,
-    ToggleGroup,
-    Toolbar,
-    ToolbarEnd,
-    ToolbarStart,
-    UploadButton,
-    useConfirm,
-} from '@/admin/components/ui/index';
+} from '@/admin/components/ui/page';
+import { Pagination } from '@/admin/components/ui/pagination';
+import { ToggleGroup } from '@/admin/components/ui/toggle-group';
+import { Toolbar, ToolbarEnd, ToolbarStart } from '@/admin/components/ui/toolbar';
+import { UploadButton } from '@/admin/components/ui/upload-button';
 import { useAiContext } from '@/admin/context/ai-context';
-import {
-    useBulkDeleteMedia,
-    useMediaBrowser,
-    usePermissions,
-    useUploadMedia,
-} from '@/admin/hooks/index';
+import { useBulkDeleteMedia } from '@/admin/hooks/media';
+import { useMediaBrowser } from '@/admin/hooks/use-media-browser';
+import { usePermissions } from '@/admin/hooks/use-permissions';
 import { useSelection } from '@/admin/hooks/use-selection';
+import { useUploadMedia } from '@/admin/hooks/use-upload-media';
 import { useViewMode } from '@/admin/hooks/use-view-mode';
 import { isSortKey, MEDIA_ACCEPT, TYPE_FILTER_VALUES } from '@/admin/types/media';
 

@@ -37,7 +37,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { entriesService } from '@/entries/service';
 import { ValidationError } from '@/errors/validation';
-import { mediaService } from '@/media/index';
+import { mediaService } from '@/media/service';
 import { setStorageDriver } from '@/storage/registry';
 import { onError } from '@/transport/http/middleware/errors';
 import { createEntriesRouter } from '@/transport/http/routes/entries';

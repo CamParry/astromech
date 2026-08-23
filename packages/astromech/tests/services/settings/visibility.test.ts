@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { isPublicSettingKey } from '@/settings/index';
+import { isPublicSettingKey } from '@/settings/visibility';
 
 describe('isPublicSettingKey', () => {
     it('returns false for a key not in the public list', () => {

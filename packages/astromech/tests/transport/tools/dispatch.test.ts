@@ -14,7 +14,7 @@ import type {
 } from '@/types/index';
 import { setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { PermissionDeniedError } from '@/errors/index';
+import { PermissionDeniedError } from '@/errors/permission';
 import { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch';
 import { usersService } from '@/users/service';
 

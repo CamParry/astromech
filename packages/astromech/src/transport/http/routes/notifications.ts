@@ -9,7 +9,7 @@ import type { RestRoute } from './rest-route';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { notificationsContract } from '@/notifications/contract';
-import { notificationsService } from '@/notifications/index';
+import { notificationsService } from '@/notifications/service';
 import { NOTIFICATIONS_ROUTE_SPECS } from './http-routes.shared';
 import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 

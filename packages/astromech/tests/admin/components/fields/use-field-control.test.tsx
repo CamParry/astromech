@@ -17,9 +17,9 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { describe, expect, it } from 'vitest';
-import { FieldWrapper } from '@/admin/components/fields/field-wrapper';
 // Through the public barrel: the point of the test is that plugins can reach it.
-import { useFieldControl } from '@/admin/components/fields/index';
+import { useFieldControl } from '@/admin/components/fields/field-control-context';
+import { FieldWrapper } from '@/admin/components/fields/field-wrapper';
 
 /** A field type's own control, of the kind a plugin would hand-roll. */
 function CustomControl(): React.ReactElement {

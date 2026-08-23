@@ -6,13 +6,8 @@
 import type { PluginUiIdentity } from '@/admin/context/plugin';
 import React from 'react';
 import { ComponentErrorBoundary } from '@/admin/components/pages/component-error-boundary';
-import {
-    Page,
-    PageContent,
-    PageHeader,
-    PageTitle,
-    Spinner,
-} from '@/admin/components/ui/index';
+import { Page, PageContent, PageHeader, PageTitle } from '@/admin/components/ui/page';
+import { Spinner } from '@/admin/components/ui/spinner';
 import { PluginUiProvider } from '@/admin/context/plugin';
 
 export type ComponentPageViewProps = {

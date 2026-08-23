@@ -25,7 +25,7 @@ import { generateMethodManifest } from '@/codegen/method-manifest';
 import { entriesService } from '@/entries/service';
 import { createHttpApp } from '@/transport/http/index';
 import { buildScopedDispatch } from '@/transport/tools/dispatch';
-import { usersService } from '@/users/index';
+import { usersService } from '@/users/service';
 import { getSession } from '@/users/session';
 
 vi.mock('@/users/session', () => ({ getSession: vi.fn() }));

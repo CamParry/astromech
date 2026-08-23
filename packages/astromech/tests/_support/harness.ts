@@ -55,7 +55,7 @@ import { setDb } from '@/database/registry';
 import { usersTable } from '@/database/tables';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
-import { runWithContext } from '@/request-context/index';
+import { runWithContext } from '@/request-context/request-context';
 
 type Db = Kysely<DB>;
 

@@ -14,7 +14,7 @@ import type {
     ValidationMode,
     ValidationRule,
 } from '@/types/fields';
-import { ValidationError } from '@/errors/index';
+import { ValidationError } from '@/errors/validation';
 import { formatInstancePath, isValidFieldName } from './field-path';
 import { getFieldType } from './field-type-registry';
 import { flattenFieldNodes } from './flatten';

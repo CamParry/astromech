@@ -17,7 +17,7 @@ import { entriesService } from '@/entries/service';
 import { derivePluginNav, derivePluginPages } from '@/plugins/runtime/plugin-admin';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
-import { settingsService } from '@/settings/index';
+import { settingsService } from '@/settings/service';
 
 type MenusService = {
     get(input: { key: string; locale?: string }): Promise<MenuItem[] | null>;

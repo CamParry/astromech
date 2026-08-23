@@ -14,7 +14,8 @@ import {
     buildPluginEntriesMount,
     validateEntriesListSearch,
 } from '@/admin/components/entries/mount';
-import { EmptyState, Page, PageContent } from '@/admin/components/ui/index';
+import { EmptyState } from '@/admin/components/ui/empty-state';
+import { Page, PageContent } from '@/admin/components/ui/page';
 import { useAiContext } from '@/admin/context/ai-context';
 import { astromechClient } from '@/transport/http/client/index';
 

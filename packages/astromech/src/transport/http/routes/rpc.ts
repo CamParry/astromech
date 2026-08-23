@@ -10,7 +10,7 @@ import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { ManifestMethod } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { z } from 'zod';
-import { PermissionDeniedError } from '@/errors/index';
+import { PermissionDeniedError } from '@/errors/permission';
 import {
     badRequest,
     forbidden,

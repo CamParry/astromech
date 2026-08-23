@@ -36,19 +36,19 @@ import { setEmailDriver } from '@/email/registry';
 import { entryJobs } from '@/entries/jobs/entry-jobs';
 import { setEntryRepository } from '@/entries/repository/registry';
 import { typedEntriesService } from '@/entries/typed-entries-service';
-import { AstromechError } from '@/errors/index';
+import { AstromechError } from '@/errors/astromech-error';
 import { defaultImageWidths, normaliseWidths } from '@/media/image-widths.shared';
-import { mediaService } from '@/media/index';
+import { mediaService } from '@/media/service';
 import { setImageConfig } from '@/media/serving/image/registry';
-import { currentUserNotificationsService } from '@/notifications/index';
+import { currentUserNotificationsService } from '@/notifications/current-user-service';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { createRegistry } from '@/registry';
-import { getCurrentRole, getCurrentUser } from '@/request-context/index';
-import { settingsService } from '@/settings/index';
+import { getCurrentRole, getCurrentUser } from '@/request-context/request-context';
+import { settingsService } from '@/settings/service';
 import { setStorageDriver } from '@/storage/registry';
 import { createHttpApp } from '@/transport/http/index';
-import { usersService } from '@/users/index';
+import { usersService } from '@/users/service';
 
 export type Astromech = {
     /** The resolved, read-only config this runtime serves. */

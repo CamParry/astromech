@@ -13,7 +13,7 @@ import type { Context, Hono, Next } from 'hono';
 import type { Kysely } from 'kysely';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestUser } from '@tests/harness';
-import { runWithContext } from '@/request-context/index';
+import { runWithContext } from '@/request-context/request-context';
 
 export type RouteEnv = { Variables: AuthVariables };
 

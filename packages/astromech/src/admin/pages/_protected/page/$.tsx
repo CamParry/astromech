@@ -11,9 +11,10 @@ import adminConfig from 'virtual:astromech/admin-config';
 import { hostPages } from 'virtual:astromech/plugins/components';
 import { ComponentPageView } from '@/admin/components/pages/component-page-view';
 import { SettingsPageForm } from '@/admin/components/pages/settings-page-form';
-import { EmptyState, Page, PageContent } from '@/admin/components/ui/index';
+import { EmptyState } from '@/admin/components/ui/empty-state';
+import { Page, PageContent } from '@/admin/components/ui/page';
 import { useAiContext } from '@/admin/context/ai-context';
-import { usePermissions } from '@/admin/hooks/index';
+import { usePermissions } from '@/admin/hooks/use-permissions';
 import { resolveLabel } from '@/admin/i18n/labels';
 
 function AppPage(): React.ReactElement {

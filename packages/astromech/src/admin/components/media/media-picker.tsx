@@ -7,18 +7,16 @@ import type { MediaBrowserQuery } from '@/admin/types/media';
 import type { Media } from '@/types/index';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-    ContentGrid,
-    DropZone,
-    EmptyState,
-    PageLoading,
-    Pagination,
-    Toolbar,
-    ToolbarEnd,
-    ToolbarStart,
-    UploadButton,
-} from '@/admin/components/ui/index';
-import { useMediaBrowser, usePermissions, useUploadMedia } from '@/admin/hooks/index';
+import { ContentGrid } from '@/admin/components/ui/content-grid';
+import { DropZone } from '@/admin/components/ui/drop-zone';
+import { EmptyState } from '@/admin/components/ui/empty-state';
+import { PageLoading } from '@/admin/components/ui/page';
+import { Pagination } from '@/admin/components/ui/pagination';
+import { Toolbar, ToolbarEnd, ToolbarStart } from '@/admin/components/ui/toolbar';
+import { UploadButton } from '@/admin/components/ui/upload-button';
+import { useMediaBrowser } from '@/admin/hooks/use-media-browser';
+import { usePermissions } from '@/admin/hooks/use-permissions';
+import { useUploadMedia } from '@/admin/hooks/use-upload-media';
 import { MEDIA_ACCEPT } from '@/admin/types/media';
 import { MediaCard } from './media-card';
 import { MediaEmpty } from './media-empty';

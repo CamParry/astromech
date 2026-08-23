@@ -11,7 +11,7 @@ import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenEntryFields } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
-import { getCurrentUser } from '@/request-context/index';
+import { getCurrentUser } from '@/request-context/request-context';
 import { mergeLocaleSetting } from './page-values.shared';
 import { createSettingsRepository } from './repository';
 import { isPublicSettingKey } from './visibility';

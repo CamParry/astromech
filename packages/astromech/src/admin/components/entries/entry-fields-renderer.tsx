@@ -8,7 +8,10 @@ import type { Field } from '@/types/index';
 import React from 'react';
 import { FieldValuesProvider } from '@/admin/components/fields/field-context';
 import { FormField } from '@/admin/components/fields/form-field';
-import { Collapsible, Panel, Stack, Tabs } from '@/admin/components/ui/index';
+import { Collapsible } from '@/admin/components/ui/collapsible';
+import { Stack } from '@/admin/components/ui/page';
+import { Panel } from '@/admin/components/ui/panel';
+import { Tabs } from '@/admin/components/ui/tabs';
 import { useLabel } from '@/admin/i18n/entry-namespace';
 
 const LAYOUT_TYPES = new Set(['section', 'tabs', 'tab', 'accordion']);

@@ -10,20 +10,21 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
+import { Breadcrumb } from '@/admin/components/ui/breadcrumb';
+import { Button } from '@/admin/components/ui/button';
+import { Input } from '@/admin/components/ui/input';
 import {
-    Breadcrumb,
-    Button,
     FormLayout,
-    Input,
     Page,
     PageContent,
     PageHeader,
     PageTitle,
-    Panel,
-    Select,
     Stack,
-} from '@/admin/components/ui/index';
-import { useCreateUser, usePermissions } from '@/admin/hooks/index';
+} from '@/admin/components/ui/page';
+import { Panel } from '@/admin/components/ui/panel';
+import { Select } from '@/admin/components/ui/select';
+import { usePermissions } from '@/admin/hooks/use-permissions';
+import { useCreateUser } from '@/admin/hooks/users';
 
 type FormValues = {
     name: string;

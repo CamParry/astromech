@@ -5,7 +5,7 @@
  */
 
 import type { Notification, NotificationsService } from '@/types/index';
-import { AstromechError } from '@/errors/index';
+import { AstromechError } from '@/errors/astromech-error';
 import { notificationsService } from '@/notifications/service';
 import { getCurrentUser } from '@/request-context/request-context';
 

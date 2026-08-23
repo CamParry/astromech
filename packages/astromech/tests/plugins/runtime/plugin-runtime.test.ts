@@ -12,7 +12,7 @@ import { createElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getCronJobs } from '@/cron/registry';
 import { setEmailDriver } from '@/email/registry';
-import { runHook } from '@/hooks/index';
+import { runHook } from '@/hooks/hooks';
 import { defineHook } from '@/plugins/define-hook';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import {
@@ -24,7 +24,7 @@ import {
     registerPlugins,
 } from '@/plugins/runtime/plugin-runtime';
 import { globals } from '@/registry';
-import { runWithContext } from '@/request-context/index';
+import { runWithContext } from '@/request-context/request-context';
 import { buildScopedTools } from '@/transport/tools/scoped-tools';
 
 vi.mock('@/transport/tools/scoped-tools', () => ({

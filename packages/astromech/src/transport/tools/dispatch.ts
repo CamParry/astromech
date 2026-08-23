@@ -95,7 +95,7 @@ async function invokePluginMethod(
     args: Record<string, unknown>
 ): Promise<unknown> {
     const [{ getCurrentRole, getCurrentUser }, runtime] = await Promise.all([
-        import('@/request-context/index'),
+        import('@/request-context/request-context'),
         import('@/plugins/runtime/plugin-runtime'),
     ]);
 

@@ -9,23 +9,23 @@ import { Link as RouterLink, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Breadcrumb } from '@/admin/components/ui/breadcrumb';
+import { Button } from '@/admin/components/ui/button';
+import { useConfirm } from '@/admin/components/ui/confirm';
 import {
-    Breadcrumb,
-    Button,
     Page,
     PageContent,
     PageHeader,
     PageLoading,
     PageTitle,
-    Panel,
-    useConfirm,
-} from '@/admin/components/ui/index';
+} from '@/admin/components/ui/page';
+import { Panel } from '@/admin/components/ui/panel';
 import {
     useEntry,
     useEntryVersions,
     useRestoreEntryVersion,
-    useUsersQuery,
-} from '@/admin/hooks/index';
+} from '@/admin/hooks/entries';
+import { useUsersQuery } from '@/admin/hooks/users';
 import { formatDatetime } from '@/utilities/dates';
 
 // Mount link bases are runtime strings; address `Link` by string `to`.

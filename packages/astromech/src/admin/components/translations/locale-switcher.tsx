@@ -8,7 +8,7 @@ import { useNavigate } from '@tanstack/react-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCreateTranslation } from '../../hooks/entries';
-import { Select } from '../ui/index';
+import { Select } from '../ui/select';
 
 type LocaleSwitcherProps = {
     /** The entry currently being viewed/edited. */

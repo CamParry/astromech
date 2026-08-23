@@ -33,40 +33,40 @@ import {
 } from '@/admin/components/fields/field-errors-context';
 import { FieldValidationProvider } from '@/admin/components/fields/field-validation-context';
 import { LocaleSwitcher } from '@/admin/components/translations/locale-switcher';
+import { Badge } from '@/admin/components/ui/badge';
+import { Breadcrumb } from '@/admin/components/ui/breadcrumb';
+import { Button } from '@/admin/components/ui/button';
+import { useConfirm } from '@/admin/components/ui/confirm';
+import { Input } from '@/admin/components/ui/input';
 import {
-    Badge,
-    Breadcrumb,
-    Button,
     FormLayout,
     FormLayoutContent,
-    Input,
     Page,
     PageContent,
     PageHeader,
     PageHeaderActions,
     PageLoading,
     PageTitle,
-    Panel,
     Stack,
-    Tooltip,
-    useConfirm,
-    useToast,
-} from '@/admin/components/ui/index';
+} from '@/admin/components/ui/page';
+import { Panel } from '@/admin/components/ui/panel';
+import { useToast } from '@/admin/components/ui/toast';
+import { Tooltip } from '@/admin/components/ui/tooltip';
 import { useAiContext } from '@/admin/context/ai-context';
 import {
     useCreateStaged,
     useDeleteStaged,
     useDuplicateEntry,
     useEntry,
-    useEntryForm,
     useEntryVersions,
     useGetStaged,
     useIssuePreviewToken,
     useMergeStaged,
-    usePermissions,
     useRevokePreviewToken,
     useTrashEntry,
-} from '@/admin/hooks/index';
+} from '@/admin/hooks/entries';
+import { useEntryForm } from '@/admin/hooks/use-entry-form';
+import { usePermissions } from '@/admin/hooks/use-permissions';
 import { scopedEntryKeys } from '@/admin/hooks/use-query-keys';
 import { EntryNamespaceProvider, namespaceForScope } from '@/admin/i18n/entry-namespace';
 import { resolveAdminEntryType, resolveForm } from '@/admin/rendering/resolve';

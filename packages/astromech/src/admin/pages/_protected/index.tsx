@@ -8,18 +8,18 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
+import { Badge } from '@/admin/components/ui/badge';
+import { EmptyState } from '@/admin/components/ui/empty-state';
 import {
-    Badge,
-    EmptyState,
     Page,
     PageContent,
     PageHeader,
     PageLoading,
     PageTitle,
-    Panel,
     SectionTitle,
-    Skeleton,
-} from '@/admin/components/ui/index';
+} from '@/admin/components/ui/page';
+import { Panel } from '@/admin/components/ui/panel';
+import { Skeleton } from '@/admin/components/ui/spinner';
 import { useAiContext } from '@/admin/context/ai-context';
 import { astromechClient } from '@/transport/http/client/index';
 import { formatDate } from '@/utilities/dates';

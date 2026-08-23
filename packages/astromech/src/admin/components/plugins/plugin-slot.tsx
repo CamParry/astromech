@@ -9,7 +9,7 @@ import React from 'react';
 import { slots } from 'virtual:astromech/plugins/components';
 import { ComponentErrorBoundary } from '@/admin/components/pages/component-error-boundary';
 import { PluginUiProvider } from '@/admin/context/plugin';
-import { usePermissions } from '@/admin/hooks/index';
+import { usePermissions } from '@/admin/hooks/use-permissions';
 
 type LazySlot = React.LazyExoticComponent<React.ComponentType>;
 const lazyCache = new Map<string, LazySlot>();

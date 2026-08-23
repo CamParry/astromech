@@ -25,7 +25,7 @@ import { resolveLabel } from '@/admin/i18n/labels';
 // will, and the entries barrel would drag a domain service into the bundle.
 import { entryValidationMode } from '@/entries/validation-mode.shared';
 import { AstromechApiError } from '../../transport/http/client/index';
-import { useToast } from '../components/ui/index';
+import { useToast } from '../components/ui/toast';
 import { useFieldValidation } from './use-field-validation';
 import { useHotkeys } from './use-hotkeys';
 

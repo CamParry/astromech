@@ -7,7 +7,7 @@
 
 import type { Role, User } from '@/types/index';
 import { createMiddleware } from 'hono/factory';
-import { getCurrentRole, getCurrentUser } from '@/request-context/index';
+import { getCurrentRole, getCurrentUser } from '@/request-context/request-context';
 import { unauthorized } from './errors';
 
 export type AuthVariables = {

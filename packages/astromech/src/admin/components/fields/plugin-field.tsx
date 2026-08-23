@@ -9,7 +9,7 @@ import React from 'react';
 import { fieldTypes } from 'virtual:astromech/plugins/components';
 import { useFieldControl } from '@/admin/components/fields/field-control-context';
 import { ComponentErrorBoundary } from '@/admin/components/pages/component-error-boundary';
-import { Spinner } from '@/admin/components/ui/index';
+import { Spinner } from '@/admin/components/ui/spinner';
 import { PluginUiProvider } from '@/admin/context/plugin';
 
 export function hasPluginFieldType(type: string): boolean {

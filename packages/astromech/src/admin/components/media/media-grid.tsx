@@ -6,7 +6,8 @@
 import type { Media } from '@/types/index';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Checkbox, ContentGrid } from '@/admin/components/ui/index';
+import { Checkbox } from '@/admin/components/ui/checkbox';
+import { ContentGrid } from '@/admin/components/ui/content-grid';
 import { MediaCard } from './media-card';
 
 export type MediaGridProps = {

@@ -15,7 +15,7 @@ import { registerCronJob } from '@/cron/registry';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/tables';
 import { globals } from '@/registry';
-import { runWithRequest } from '@/request-context/index';
+import { runWithRequest } from '@/request-context/request-context';
 import { cronRouter } from '@/transport/http/routes/cron';
 import { getSession } from '@/users/session';
 

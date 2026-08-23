@@ -5,7 +5,7 @@
  */
 
 import { isWorkersRuntime, resolveEnvSource } from '@/env/index';
-import { AstromechError } from '@/errors/index';
+import { AstromechError } from '@/errors/astromech-error';
 import { createRegistry } from '@/registry';
 
 type PlatformProxy = {

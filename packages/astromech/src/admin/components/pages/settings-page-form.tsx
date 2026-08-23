@@ -11,16 +11,11 @@ import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { FieldTreeForm } from '@/admin/components/fields/field-tree-form';
 import { saveSettingsPage } from '@/admin/components/pages/settings-page-save';
-import {
-    Button,
-    Page,
-    PageContent,
-    PageHeader,
-    PageTitle,
-    Select,
-    Spinner,
-    useToast,
-} from '@/admin/components/ui/index';
+import { Button } from '@/admin/components/ui/button';
+import { Page, PageContent, PageHeader, PageTitle } from '@/admin/components/ui/page';
+import { Select } from '@/admin/components/ui/select';
+import { Spinner } from '@/admin/components/ui/spinner';
+import { useToast } from '@/admin/components/ui/toast';
 import { resolveLabel } from '@/admin/i18n/labels';
 import { astromechClient } from '@/transport/http/client/index';
 import { resolveContentLocale } from '@/utilities/locale';

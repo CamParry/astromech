@@ -1,5 +1,5 @@
 import type { CellRenderer } from '@/types/index';
-import { Badge } from '@/admin/components/ui/index';
+import { Badge } from '@/admin/components/ui/badge';
 import { statusVariant } from './status-variant';
 
 export const BadgeCell: CellRenderer = ({ value }) => (

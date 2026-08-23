@@ -7,7 +7,7 @@
 import type { ResolvedEntryFields } from '@/types/index';
 import React from 'react';
 import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer';
-import { FormLayout, FormLayoutContent, Stack } from '@/admin/components/ui/index';
+import { FormLayout, FormLayoutContent, Stack } from '@/admin/components/ui/page';
 
 export type FieldTreeFormProps = {
     fields: ResolvedEntryFields;

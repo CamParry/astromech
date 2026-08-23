@@ -4,7 +4,7 @@
  */
 
 import type { Entry } from '@/types/index';
-import { parseInput } from '@/errors/index';
+import { parseInput } from '@/errors/validation';
 import { assertCapability } from '../internal/entry-type';
 import { scheduleEntrySchema } from '../schema';
 import { updateEntries } from './update';

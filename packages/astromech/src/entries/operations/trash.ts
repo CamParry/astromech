@@ -1,7 +1,7 @@
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { transaction } from '@/database/transaction';
-import { runHook } from '@/hooks/index';
-import { getCurrentUser } from '@/request-context/index';
+import { runHook } from '@/hooks/hooks';
+import { getCurrentUser } from '@/request-context/request-context';
 import { BulkOperationError, CapabilityError } from '../errors';
 import { assertCapability } from '../internal/entry-type';
 import { getEntriesOfType } from '../internal/records';

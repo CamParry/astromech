@@ -13,7 +13,7 @@ import {
 } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { AstromechApiError, astromechClient } from '@/transport/http/client/index';
-import { useToast } from '../components/ui/index';
+import { useToast } from '../components/ui/toast';
 import { queryKeys, scopedEntryKeys } from './use-query-keys';
 
 /**
