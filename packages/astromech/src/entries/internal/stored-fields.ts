@@ -77,8 +77,6 @@ export async function toStoredFields(input: StoredFieldsInput): Promise<JsonObje
         ...(validate ? { validate } : {}),
     });
 
-    if (input.kind === 'merge') return values as JsonObject;
-
     // After `parseFields` (its minted item ids are what the traversal needs)
     // and before the write, so the index derives from pruned values.
     const pruned = await pruneDanglingRelations(

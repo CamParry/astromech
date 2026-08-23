@@ -118,7 +118,13 @@ function makeDanglingConfig(): AstromechConfig {
         ...base,
         entries: {
             ...base.entries,
-            doc: { single: 'Doc', plural: 'Docs', trash: true, fields: docFields },
+            doc: {
+                single: 'Doc',
+                plural: 'Docs',
+                trash: true,
+                staging: true,
+                fields: docFields,
+            },
         },
         plugins: [linksPlugin()],
     };
@@ -287,6 +293,28 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
 
         expect(updated.fields.avatar).toBeNull();
         expect(updated.fields.owner).toBeNull();
+    });
+
+    it('drops a dead reference when a staged change is merged', async () => {
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
+        const doc = await api.create({
+            type: 'doc',
+            data: { title: 'Doc', fields: { author: target.id } },
+        });
+        const staged = await api.createStaged({ type: 'doc', id: doc.id });
+        await api.update({
+            type: 'doc',
+            id: staged.id,
+            data: { fields: { plain: 'staged' } },
+        });
+
+        await api.delete({ type: 'post', id: target.id });
+        const merged = await api.mergeStaged({ type: 'doc', id: doc.id });
+
+        expect(merged.fields.author).toBeNull();
+        expect(
+            await createRelationshipRepository().findBySource(doc.id, 'entry')
+        ).toEqual([]);
     });
 
     it('prunes a relation nested in a repeater at its nested path', async () => {
