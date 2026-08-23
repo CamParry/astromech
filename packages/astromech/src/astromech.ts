@@ -16,8 +16,8 @@ import type {
     User,
     UsersService,
 } from '@/types/index';
-import { buildAiConfig } from '@/ai/middleware';
-import { setAiConfig } from '@/ai/registry';
+import { buildAiModels } from '@/ai/models';
+import { setAiModels } from '@/ai/registry';
 import { setMethodManifest } from '@/codegen/manifest-registry';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { setConfig } from '@/config/registry';
@@ -151,7 +151,7 @@ async function build(config: AstromechConfig): Promise<Astromech> {
         });
     }
     if (config.email) setEmailDriver(config.email);
-    if (config.ai) setAiConfig(await buildAiConfig(config.ai));
+    if (config.ai) setAiModels(await buildAiModels(config.ai));
     setSchedulerDriver(resolveSchedulerDriver(config.scheduler));
 
     // Verify the schema before anything boots against it

@@ -1,12 +1,8 @@
 /**
- * The middleware every configured model is wrapped with at boot.
- *
- * Day one is logging only: one line per call carrying the model, the duration
- * and the token usage.
+ * The logging middleware every configured model is wrapped with at boot: one
+ * line per call carrying the model, the duration and the token usage.
  */
 
-import type { WrappedAiConfig } from '@/ai/registry';
-import type { AiConfig } from '@/types/index';
 import type {
     LanguageModelV4,
     LanguageModelV4StreamPart,
@@ -15,31 +11,10 @@ import type {
 import type { LanguageModelMiddleware } from 'ai';
 
 /**
- * Wrap the configured models with core's middleware, keyed by name. `ai` is
- * imported dynamically so a site that configures no model never pulls the
- * package into its module graph.
- */
-export async function buildAiConfig(config: AiConfig): Promise<WrappedAiConfig> {
-    const { wrapLanguageModel } = await import('ai');
-    const model = wrapLanguageModel({
-        model: config.model,
-        middleware: logging('default'),
-    });
-    const models: Record<string, LanguageModelV4> = {};
-    for (const [name, instance] of Object.entries(config.models ?? {})) {
-        models[name] = wrapLanguageModel({
-            model: instance,
-            middleware: logging(name),
-        });
-    }
-    return { model, models };
-}
-
-/**
  * Middleware logging one line per call under the configured model name — the
  * closest thing to a consumer identity available at this seam.
  */
-function logging(name: string): LanguageModelMiddleware {
+export function logging(name: string): LanguageModelMiddleware {
     return {
         wrapGenerate: async ({ doGenerate, model }) => {
             const startedAt = Date.now();

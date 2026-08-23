@@ -7,8 +7,8 @@ import type {
 } from '@ai-sdk/provider';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getModel, hasModel } from '@/ai/index';
-import { buildAiConfig } from '@/ai/middleware';
-import { setAiConfig } from '@/ai/registry';
+import { buildAiModels } from '@/ai/models';
+import { setAiModels } from '@/ai/registry';
 
 beforeEach(() => {
     globalThis.__astromech = undefined;
@@ -23,22 +23,22 @@ describe('getModel / hasModel', () => {
     });
 
     it('hands back the default model once configured', async () => {
-        setAiConfig(await buildAiConfig({ model: fakeModel('test-default') }));
+        setAiModels(await buildAiModels({ model: fakeModel('test-default') }));
 
         expect(getModel()?.modelId).toBe('test-default');
         expect(hasModel()).toBe(true);
     });
 
     it('falls back to the default model for an unconfigured name', async () => {
-        setAiConfig(await buildAiConfig({ model: fakeModel('test-default') }));
+        setAiModels(await buildAiModels({ model: fakeModel('test-default') }));
 
         expect(getModel('missing')?.modelId).toBe('test-default');
         expect(hasModel('missing')).toBe(true);
     });
 
     it('hands back a named model rather than the default', async () => {
-        setAiConfig(
-            await buildAiConfig({
+        setAiModels(
+            await buildAiModels({
                 model: fakeModel('test-default'),
                 models: { cheap: fakeModel('test-cheap') },
             })
@@ -53,8 +53,8 @@ describe('logging middleware', () => {
     it('reaches the underlying model and logs one line per generate', async () => {
         const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
         const underlying = fakeModel('test-cheap');
-        setAiConfig(
-            await buildAiConfig({
+        setAiModels(
+            await buildAiModels({
                 model: fakeModel('test-default'),
                 models: { cheap: underlying },
             })
@@ -71,7 +71,7 @@ describe('logging middleware', () => {
 
     it('passes every stream chunk through unchanged and logs once on flush', async () => {
         const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
-        setAiConfig(await buildAiConfig({ model: fakeModel('test-default') }));
+        setAiModels(await buildAiModels({ model: fakeModel('test-default') }));
 
         const { stream } = await getModel()!.doStream(callOptions());
         const chunks: LanguageModelV4StreamPart[] = [];
