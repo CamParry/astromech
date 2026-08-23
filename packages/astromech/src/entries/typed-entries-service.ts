@@ -1,9 +1,5 @@
-/** `entries` module — entry CRUD service, repository, and scheduled jobs. */
 import type { TypedEntriesService } from '@/types/index';
 import { entriesService } from './service';
-
-export { entriesService } from './service';
-export { entryJobs } from './jobs/index';
 
 /**
  * `entriesService` under its typed facade. `TypedEntriesService` layers

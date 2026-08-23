@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { createFileTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDb } from '@/database/registry';
-import { entriesService } from '@/entries/index';
+import { entriesService } from '@/entries/service';
 
 // `createStaged` persists the staged row and its index rows inside a database
 // transaction. `replaceForSource` only rejects once `state.failing` is set,

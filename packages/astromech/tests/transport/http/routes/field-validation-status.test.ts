@@ -35,7 +35,7 @@ import {
     setupTestConfig,
 } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { entriesService } from '@/entries/index';
+import { entriesService } from '@/entries/service';
 import { ValidationError } from '@/errors/validation';
 import { mediaService } from '@/media/index';
 import { setStorageDriver } from '@/storage/registry';

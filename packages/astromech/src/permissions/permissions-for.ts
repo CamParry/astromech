@@ -5,7 +5,7 @@
  */
 
 import type { Permission, Role, ServiceMethodContract } from '@/types/index';
-import { can } from '@/permissions/index';
+import { can } from '@/permissions/roles';
 
 export type Permissions = {
     /** True if the role holds `permission`. A missing role holds nothing. */

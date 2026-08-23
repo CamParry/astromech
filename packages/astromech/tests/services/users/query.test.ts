@@ -11,7 +11,7 @@ import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
+import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { usersService } from '@/users/service';
 
 let db: Kysely<DB>;

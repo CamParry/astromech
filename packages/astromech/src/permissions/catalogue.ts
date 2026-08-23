@@ -7,11 +7,11 @@
 import type { PermissionDeclarations } from '@/permissions/define';
 import type { EntryAction } from '@/permissions/entry-permission';
 import type { PluginDefinition, ResolvedConfig } from '@/types/index';
+import { CORE_PERMISSIONS } from '@/permissions/core-permissions';
 import {
     pluginEntryPermission,
     rootEntryPermission,
 } from '@/permissions/entry-permission';
-import { CORE_PERMISSIONS } from '@/permissions/index';
 import {
     resolvePluginIdentity,
     resolvePluginPermission,

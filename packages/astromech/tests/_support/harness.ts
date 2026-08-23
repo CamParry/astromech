@@ -53,7 +53,7 @@ import { decodeWith, encodeWith } from '@/database/codec';
 import { setDatabaseDriver } from '@/database/driver-registry';
 import { setDb } from '@/database/registry';
 import { usersTable } from '@/database/tables';
-import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
+import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { runWithContext } from '@/request-context/index';
 

@@ -8,17 +8,17 @@ import type {
 import { describe, expect, it } from 'vitest';
 import { resolveConfig } from '@/config/resolve';
 import { buildPermissionCatalogue } from '@/permissions/catalogue';
+import { CORE_PERMISSIONS } from '@/permissions/core-permissions';
+import { definePermissions } from '@/permissions/define';
+import { entryPermissions } from '@/permissions/entry-permission';
 import {
     BUILT_IN_ROLES,
     can,
-    CORE_PERMISSIONS,
-    definePermissions,
-    entryPermissions,
-    hasPermission,
     permissionsForBuiltInRole,
     resolveRoles,
-} from '@/permissions/index';
+} from '@/permissions/roles';
 import { definePlugin } from '@/plugins/define-plugin';
+import { hasPermission } from '@/utilities/permission-match';
 
 // hasPermission — new grammar (resource[:identifier]:action, action last)
 

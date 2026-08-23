@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { createFileTestDb, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDb } from '@/database/registry';
-import { entriesService } from '@/entries/index';
+import { entriesService } from '@/entries/service';
 
 // `create` persists the row and its index rows inside a database transaction.
 // Fail `replaceForSource` so the transaction rolls back; everything else

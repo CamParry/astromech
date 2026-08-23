@@ -37,11 +37,11 @@ import { getDb } from '@/database/registry';
 import { getEmailDriver } from '@/email/registry';
 import { renderEmail } from '@/email/render';
 import { qualifyEntryType } from '@/entries/entry-types.shared';
-import { typedEntriesService } from '@/entries/index';
 import {
     resetEntryRepositoryOverrides,
     setEntryRepository,
 } from '@/entries/repository/registry';
+import { typedEntriesService } from '@/entries/typed-entries-service';
 import { getEnvRecord } from '@/env/index';
 import { AstromechError } from '@/errors/index';
 import { flattenEntryFields } from '@/fields/flatten';

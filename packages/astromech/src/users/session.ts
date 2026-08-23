@@ -6,7 +6,7 @@
 
 import type { Role, User } from '@/types/index';
 import { getConfig } from '@/config/registry';
-import { resolveRole } from '@/permissions/index';
+import { resolveRole } from '@/permissions/roles';
 import { getAuth } from './auth';
 import { createUserRepository } from './repository';
 

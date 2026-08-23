@@ -13,7 +13,7 @@ import { createTestDb, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { decodeWith } from '@/database/codec';
-import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
+import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { getAuth } from '@/users/auth';
 import { createUserRepository } from '@/users/repository';
 import { usersTable } from '@/users/tables';

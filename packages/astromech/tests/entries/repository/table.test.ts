@@ -16,8 +16,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { defineTable } from '@/database/define-table';
 import { transaction } from '@/database/transaction';
 import { UnknownSortKeyError } from '@/entries/errors';
-import { entriesService } from '@/entries/index';
 import { tableRepository } from '@/entries/repository/table';
+import { entriesService } from '@/entries/service';
 
 /** Crockford base32, the ULID alphabet — ids are 26 uppercase chars. */
 const ULID = /^[0-9A-HJKMNP-TV-Z]{26}$/;

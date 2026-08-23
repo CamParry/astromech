@@ -10,7 +10,7 @@ import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { getConfig } from '@/config/registry';
 import { resolveEntryType } from '@/entries/entry-types.shared';
-import { entryPermission } from '@/permissions/index';
+import { entryPermission } from '@/permissions/entry-permission';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { forbidden, notFound } from '@/transport/http/middleware/errors';
 

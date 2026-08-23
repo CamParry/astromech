@@ -13,7 +13,7 @@ import type { MenuItem } from '@astromech/menus';
 import { menus } from '@astromech/menus';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService } from '@/entries/index';
+import { entriesService } from '@/entries/service';
 import { derivePluginNav, derivePluginPages } from '@/plugins/runtime/plugin-admin';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import { pluginServices } from '@/plugins/runtime/plugin-services';

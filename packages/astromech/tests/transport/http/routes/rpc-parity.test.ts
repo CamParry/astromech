@@ -22,7 +22,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { setMethodManifest } from '@/codegen/manifest-registry';
 import { generateMethodManifest } from '@/codegen/method-manifest';
-import { entriesService } from '@/entries/index';
+import { entriesService } from '@/entries/service';
 import { createHttpApp } from '@/transport/http/index';
 import { buildScopedDispatch } from '@/transport/tools/dispatch';
 import { usersService } from '@/users/index';

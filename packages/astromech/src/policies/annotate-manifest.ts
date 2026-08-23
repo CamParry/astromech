@@ -5,7 +5,7 @@
  */
 
 import type { ManifestMethod, Permission, Role } from '@/types/index';
-import { can } from '@/permissions/index';
+import { can } from '@/permissions/roles';
 
 export type AnnotatedManifestMethod = ManifestMethod & {
     /** true = the role holds it; false = denied; null = input-derived, decidable only at call time. */

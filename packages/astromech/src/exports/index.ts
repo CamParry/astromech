@@ -17,8 +17,8 @@ export type { Astromech } from '@/astromech';
  * own SDK dependency. Absent unless the site configures `ai` — hence `undefined`.
  */
 export { getModel, hasModel } from '@/ai/index';
-export { permissionsForBuiltInRole, BUILT_IN_ROLES } from '@/permissions/index';
-export type { BuiltInRoleSlug } from '@/permissions/index';
+export { permissionsForBuiltInRole, BUILT_IN_ROLES } from '@/permissions/roles';
+export type { BuiltInRoleSlug } from '@/permissions/roles';
 export { definePermissions } from '@/permissions/define';
 export type { PermissionDeclaration, PermissionDeclarations } from '@/permissions/define';
 /**

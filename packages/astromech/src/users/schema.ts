@@ -1,5 +1,5 @@
 import { z } from '@hono/zod-openapi';
-import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
+import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 
 export const createUserSchema = z
     .object({

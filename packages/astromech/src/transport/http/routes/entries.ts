@@ -20,7 +20,6 @@ import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { getConfig } from '@/config/registry';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { PublicTrashedReadError, StagedEntryExistsError } from '@/entries/errors';
-import { entriesService } from '@/entries/index';
 import { ENTRY_METHOD_ACTIONS, entryMethodContracts } from '@/entries/methods';
 import {
     createEntrySchema,
@@ -28,7 +27,9 @@ import {
     titledUpdateEntrySchema,
     updateEntrySchema,
 } from '@/entries/schema';
-import { entryPermission, PERMISSION_ENTRY_READ_FULL } from '@/permissions/index';
+import { entriesService } from '@/entries/service';
+import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/core-permissions';
+import { entryPermission } from '@/permissions/entry-permission';
 import { permissionsFor } from '@/permissions/permissions-for';
 import {
     badRequest,

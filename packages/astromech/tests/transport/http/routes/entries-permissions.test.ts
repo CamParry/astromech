@@ -9,7 +9,7 @@
  * resolved on every route, the cross-type `POST /query` included.
  */
 
-import type { EntryAction } from '@/permissions/index';
+import type { EntryAction } from '@/permissions/entry-permission';
 import type { AstromechConfig } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { mountRouter, roleWith } from '@tests/mount-router';

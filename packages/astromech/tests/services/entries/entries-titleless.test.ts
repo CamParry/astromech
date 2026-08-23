@@ -18,7 +18,7 @@
 
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService } from '@/entries/index';
+import { entriesService } from '@/entries/service';
 import { ValidationError } from '@/errors/validation';
 
 const api = entriesService;

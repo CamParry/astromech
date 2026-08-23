@@ -7,7 +7,7 @@
 import type { AstromechConfig, Entry } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService } from '@/entries/index';
+import { entriesService } from '@/entries/service';
 
 const api = entriesService;
 
