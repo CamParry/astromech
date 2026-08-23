@@ -17,7 +17,7 @@ import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
  * silently answer "may call everything" for a typo — the opposite of the truth
  * this flag is for. So membership is checked here first.
  */
-function requireRole(config: ResolvedConfig, slug: string) {
+function getRole(config: ResolvedConfig, slug: string) {
     const roles = config.resolvedRoles;
     const role = roles[slug];
     if (!role) {
@@ -104,7 +104,7 @@ export default defineCommand({
             if (args.role !== undefined) {
                 methods = annotateManifest(
                     filtered.methods,
-                    requireRole(resolved, args.role)
+                    getRole(resolved, args.role)
                 );
             }
 

@@ -27,7 +27,7 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
 
     let loaded: { config: AstromechConfig; resolved: ResolvedConfig } | undefined;
 
-    function requireLoaded(): { config: AstromechConfig; resolved: ResolvedConfig } {
+    function getLoadedConfig(): { config: AstromechConfig; resolved: ResolvedConfig } {
         if (loaded === undefined) {
             throw new AstromechError(
                 'Config not loaded — the astro:config:setup hook has not run.'
@@ -79,7 +79,7 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
             },
 
             'astro:config:done': async ({ injectTypes, logger, config: astroConfig }) => {
-                const { config, resolved: resolvedConfig } = requireLoaded();
+                const { config, resolved: resolvedConfig } = getLoadedConfig();
                 const plugins = config.plugins ?? [];
 
                 const { generateClientTypes } = await import('@/codegen/type-generator');
@@ -122,7 +122,7 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
             // handle. Nothing here touches the registries: the one booted copy of
             // the config lives in the serving process.
             'astro:server:setup': async ({ logger }) => {
-                const { config } = requireLoaded();
+                const { config } = getLoadedConfig();
                 logger.info('Astromech dev server ready');
                 await runMigrations(
                     config.db.getInstance(),
@@ -132,7 +132,7 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
             },
 
             'astro:build:done': async ({ logger }) => {
-                const { config } = requireLoaded();
+                const { config } = getLoadedConfig();
                 logger.info('Astromech build complete');
                 await runMigrations(
                     config.db.getInstance(),
