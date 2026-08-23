@@ -1,0 +1,195 @@
+import type { Kysely } from 'kysely';
+import { sql } from 'kysely';
+
+export async function up(db: Kysely<unknown>): Promise<void> {
+    await sql`
+        CREATE TABLE \`_astromech_cron\` (
+            \`name\` text PRIMARY KEY NOT NULL,
+            \`schedule\` text NOT NULL,
+            \`enabled\` integer DEFAULT 1 NOT NULL,
+            \`last_run\` text,
+            \`next_run\` text,
+            \`lock\` text
+        )
+    `.execute(db);
+    await sql`
+        CREATE TABLE \`_astromech_plugins\` (
+            \`package\` text PRIMARY KEY NOT NULL,
+            \`namespace\` text NOT NULL,
+            \`version\` text NOT NULL,
+            \`installed_at\` text NOT NULL
+        )
+    `.execute(db);
+    await sql`CREATE UNIQUE INDEX \`_astromech_plugins_namespace_unique\` ON \`_astromech_plugins\` (\`namespace\`)`.execute(
+        db
+    );
+    await sql`
+        CREATE TABLE \`entries\` (
+            \`id\` text PRIMARY KEY NOT NULL,
+            \`type\` text NOT NULL,
+            \`locale\` text NOT NULL,
+            \`locale_group\` text NOT NULL,
+            \`slug\` text,
+            \`title\` text NOT NULL,
+            \`fields\` text,
+            \`status\` text DEFAULT 'unpublished' NOT NULL CHECK (\`status\` IN ('unpublished', 'published', 'scheduled')),
+            \`staged_for\` text,
+            \`published_at\` text,
+            \`deleted_at\` text,
+            \`created_at\` text NOT NULL,
+            \`updated_at\` text NOT NULL,
+            \`created_by\` text,
+            \`updated_by\` text,
+            CONSTRAINT \`entries_staged_for_fkey\` FOREIGN KEY (\`staged_for\`) REFERENCES \`entries\`(\`id\`) ON UPDATE no action ON DELETE no action,
+            CONSTRAINT \`entries_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action,
+            CONSTRAINT \`entries_updated_by_fkey\` FOREIGN KEY (\`updated_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
+        )
+    `.execute(db);
+    await sql`CREATE INDEX \`idx_entries_type\` ON \`entries\` (\`type\`)`.execute(db);
+    await sql`CREATE INDEX \`idx_entries_status\` ON \`entries\` (\`type\`,\`status\`)`.execute(
+        db
+    );
+    await sql`CREATE INDEX \`idx_entries_locale\` ON \`entries\` (\`type\`,\`locale\`,\`status\`)`.execute(
+        db
+    );
+    await sql`CREATE INDEX \`idx_entries_deleted\` ON \`entries\` (\`deleted_at\`)`.execute(
+        db
+    );
+    await sql`CREATE INDEX \`idx_entries_locale_group\` ON \`entries\` (\`locale_group\`)`.execute(
+        db
+    );
+    await sql`CREATE INDEX \`idx_entries_staged_for\` ON \`entries\` (\`staged_for\`)`.execute(
+        db
+    );
+    await sql`CREATE UNIQUE INDEX \`entries_locale_group_locale_unique\` ON \`entries\` (\`locale_group\`,\`locale\`)`.execute(
+        db
+    );
+    await sql`CREATE UNIQUE INDEX \`entries_type_locale_slug_unique\` ON \`entries\` (\`type\`,\`locale\`,\`slug\`) WHERE staged_for IS NULL`.execute(
+        db
+    );
+    await sql`
+        CREATE TABLE \`entry_preview_tokens\` (
+            \`id\` text PRIMARY KEY NOT NULL,
+            \`entry_id\` text NOT NULL,
+            \`token\` text NOT NULL,
+            \`expires_at\` text,
+            \`created_at\` text NOT NULL,
+            \`created_by\` text,
+            CONSTRAINT \`entry_preview_tokens_entry_id_fkey\` FOREIGN KEY (\`entry_id\`) REFERENCES \`entries\`(\`id\`) ON UPDATE no action ON DELETE cascade,
+            CONSTRAINT \`entry_preview_tokens_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
+        )
+    `.execute(db);
+    await sql`CREATE UNIQUE INDEX \`entry_preview_tokens_token_unique\` ON \`entry_preview_tokens\` (\`token\`)`.execute(
+        db
+    );
+    await sql`
+        CREATE TABLE \`entry_versions\` (
+            \`id\` text PRIMARY KEY NOT NULL,
+            \`entry_id\` text NOT NULL,
+            \`version_number\` integer NOT NULL,
+            \`title\` text NOT NULL,
+            \`slug\` text,
+            \`fields\` text,
+            \`status\` text CHECK (\`status\` IN ('unpublished', 'published', 'scheduled')),
+            \`created_at\` text NOT NULL,
+            \`created_by\` text,
+            CONSTRAINT \`entry_versions_entry_id_fkey\` FOREIGN KEY (\`entry_id\`) REFERENCES \`entries\`(\`id\`) ON UPDATE no action ON DELETE cascade,
+            CONSTRAINT \`entry_versions_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
+        )
+    `.execute(db);
+    await sql`CREATE INDEX \`idx_versions_entry\` ON \`entry_versions\` (\`entry_id\`,\`version_number\`)`.execute(
+        db
+    );
+    await sql`
+        CREATE TABLE \`media\` (
+            \`id\` text PRIMARY KEY NOT NULL,
+            \`filename\` text NOT NULL,
+            \`mime_type\` text NOT NULL,
+            \`size\` integer NOT NULL,
+            \`width\` integer,
+            \`height\` integer,
+            \`alt\` text,
+            \`fields\` text,
+            \`metadata\` text,
+            \`created_at\` text NOT NULL,
+            \`updated_at\` text NOT NULL,
+            \`created_by\` text,
+            \`title\` text,
+            \`caption\` text,
+            CONSTRAINT \`media_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
+        )
+    `.execute(db);
+    await sql`CREATE INDEX \`idx_media_mime\` ON \`media\` (\`mime_type\`)`.execute(db);
+    await sql`CREATE INDEX \`idx_media_created\` ON \`media\` (\`created_at\`)`.execute(
+        db
+    );
+    await sql`
+        CREATE TABLE \`notifications\` (
+            \`id\` text PRIMARY KEY NOT NULL,
+            \`user_id\` text NOT NULL,
+            \`type\` text NOT NULL,
+            \`title\` text NOT NULL,
+            \`message\` text NOT NULL,
+            \`href\` text,
+            \`created_at\` text NOT NULL,
+            CONSTRAINT \`notifications_user_id_fkey\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE cascade
+        )
+    `.execute(db);
+    await sql`CREATE INDEX \`notifications_user_created_idx\` ON \`notifications\` (\`user_id\`,\`created_at\`)`.execute(
+        db
+    );
+    await sql`
+        CREATE TABLE \`relationships\` (
+            \`source_id\` text NOT NULL,
+            \`source_kind\` text NOT NULL CHECK (\`source_kind\` IN ('entry', 'user', 'media')),
+            \`source_type\` text,
+            \`schema_path\` text NOT NULL,
+            \`instance_path\` text NOT NULL,
+            \`target_id\` text NOT NULL,
+            \`target_kind\` text NOT NULL CHECK (\`target_kind\` IN ('entry', 'user', 'media')),
+            \`source_staged\` integer DEFAULT 0 NOT NULL,
+            PRIMARY KEY (\`source_id\`, \`source_kind\`, \`instance_path\`, \`target_id\`, \`target_kind\`)
+        )
+    `.execute(db);
+    await sql`CREATE INDEX \`idx_rel_target\` ON \`relationships\` (\`target_id\`,\`target_kind\`)`.execute(
+        db
+    );
+    await sql`CREATE INDEX \`idx_rel_filter\` ON \`relationships\` (\`source_type\`,\`schema_path\`,\`target_id\`)`.execute(
+        db
+    );
+    await sql`
+        CREATE TABLE \`roles\` (
+            \`slug\` text PRIMARY KEY NOT NULL,
+            \`name\` text NOT NULL,
+            \`permissions\` text NOT NULL,
+            \`is_built_in\` integer DEFAULT 0 NOT NULL,
+            \`created_at\` text NOT NULL,
+            \`updated_at\` text NOT NULL
+        )
+    `.execute(db);
+    await sql`
+        CREATE TABLE \`settings\` (
+            \`key\` text PRIMARY KEY NOT NULL,
+            \`value\` text,
+            \`updated_at\` text NOT NULL,
+            \`updated_by\` text,
+            CONSTRAINT \`settings_updated_by_fkey\` FOREIGN KEY (\`updated_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
+        )
+    `.execute(db);
+    await sql`
+        CREATE TABLE \`users\` (
+            \`id\` text PRIMARY KEY NOT NULL,
+            \`email\` text NOT NULL,
+            \`name\` text NOT NULL,
+            \`email_verified\` integer DEFAULT 0 NOT NULL,
+            \`image\` text,
+            \`fields\` text,
+            \`role_slug\` text NOT NULL,
+            \`created_at\` text NOT NULL,
+            \`updated_at\` text NOT NULL
+        )
+    `.execute(db);
+    await sql`CREATE UNIQUE INDEX \`users_email_unique\` ON \`users\` (\`email\`)`.execute(
+        db
+    );
+}

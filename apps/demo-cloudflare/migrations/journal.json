@@ -1,0 +1,11 @@
+{
+    "version": 1,
+    "dialect": "sqlite",
+    "entries": [
+        {
+            "idx": 0,
+            "tag": "0000_migration",
+            "when": 1787522782547
+        }
+    ]
+}

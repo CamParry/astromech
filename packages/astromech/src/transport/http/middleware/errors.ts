@@ -9,6 +9,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { ZodError } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import { BulkOperationError } from '@/entries/errors';
+import { resolveEnv } from '@/env/index';
 import { ValidationError } from '@/errors/validation';
 
 export type ApiErrorCode =
@@ -181,7 +182,10 @@ export const onError: ErrorHandler = (err, c) => {
         });
     }
 
-    const isDev = process.env.NODE_ENV !== 'production';
+    // Anything but an explicit development environment is treated as
+    // production: a Worker sets no NODE_ENV, and the wrong guess leaks
+    // exception messages to clients.
+    const isDev = resolveEnv('NODE_ENV') === 'development';
     const message =
         isDev && err instanceof Error ? err.message : 'An unexpected error occurred';
 

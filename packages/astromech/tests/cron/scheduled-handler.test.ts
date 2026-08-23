@@ -4,9 +4,10 @@
  */
 
 import type { DB } from '@/database/types';
+import type { AstromechConfig } from '@/types/index';
 import type { Kysely, Updateable } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cloudflareCron, interval, webhook } from '@/cron/drivers/index';
 import {
     getSchedulerDriver,
@@ -21,19 +22,6 @@ import { cronTable } from '@/database/tables';
 import { createWorkerEntry } from '@/integrations/cloudflare/index';
 import { globals } from '@/registry';
 
-// The scheduled handler reads the config it creates the application from out of
-// the virtual module, so a test of it has to serve one. `vi.hoisted` so the factory,
-// hoisted above the imports, can close over what `beforeEach` puts here.
-const virtualConfig = vi.hoisted(() => {
-    return {} as { raw?: unknown };
-});
-
-vi.mock('virtual:astromech/config', () => ({
-    get rawConfig() {
-        return virtualConfig.raw;
-    },
-}));
-
 beforeEach(async () => {
     delete globalThis.__astromech?.cronJobs;
     globals().cronTickRunning = false;
@@ -44,9 +32,8 @@ beforeEach(async () => {
     delete globalThis.__astromech?.defaultScheduler;
 
     await createTestDb();
-    const config = makeTestConfig();
+    config = makeTestConfig() as AstromechConfig;
     setupTestConfig(config);
-    virtualConfig.raw = config;
     // `setupTestConfig` mirrors the boot rather than running it, so the slot
     // the scheduled handler reads is filled by hand. The created path is covered in
     // `scheduled-boot.test.ts`.
@@ -66,9 +53,17 @@ afterEach(() => {
     delete globalThis.__astromech?.defaultScheduler;
 });
 
+/** The site config the worker entry is built with, rebuilt per test. */
+let config: AstromechConfig;
+
 /** A stand-in for the Astro adapter's worker entry. */
 function astroEntry(): { fetch: () => Response } {
     return { fetch: () => new Response('astro') };
+}
+
+/** The worker entry under test, built with the config the harness published. */
+function worker() {
+    return createWorkerEntry(astroEntry(), { config });
 }
 
 describe('createWorkerEntry().scheduled', () => {
@@ -106,7 +101,7 @@ describe('createWorkerEntry().scheduled', () => {
 
         // Simulate the Cloudflare Worker `scheduled` event.
         const scheduledTime = seedTime.getTime();
-        await createWorkerEntry(astroEntry()).scheduled({ scheduledTime });
+        await worker().scheduled({ scheduledTime }, {});
 
         expect(ran).toBe(true);
     });
@@ -126,11 +121,11 @@ describe('createWorkerEntry().scheduled', () => {
 
         // First tick seeds the table; nextRun is set to a future minute boundary
         // (after seedTime), so the handler does not run on this tick.
-        const worker = createWorkerEntry(astroEntry());
-        await worker.scheduled({ scheduledTime: seedTime.getTime() });
+        const entry = worker();
+        await entry.scheduled({ scheduledTime: seedTime.getTime() }, {});
 
         // Tick again at the same time — nextRun is still in the future.
-        await worker.scheduled({ scheduledTime: seedTime.getTime() });
+        await entry.scheduled({ scheduledTime: seedTime.getTime() }, {});
 
         expect(ran).toBe(false);
     });
@@ -164,7 +159,7 @@ describe('resolveSchedulerDriver', () => {
     });
 
     it('is nominated by createWorkerEntry', () => {
-        createWorkerEntry(astroEntry());
+        worker();
         expect(resolveSchedulerDriver().name).toBe('cloudflare');
     });
 });

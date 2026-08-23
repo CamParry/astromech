@@ -12,6 +12,7 @@ import type {
     StorageStat,
 } from '@/types/index';
 import { AwsClient } from 'aws4fetch';
+import { resolveEnv } from '@/env/index';
 import { AstromechError } from '@/errors/index';
 
 export type S3Options = {
@@ -29,22 +30,12 @@ export type S3Options = {
 
 type Resolved = { endpoint: string; bucket: string; client: AwsClient };
 
-/**
- * Reads `process.env` without assuming it exists — on Workers `process` is
- * absent and touching it directly would throw at module scope.
- */
-function envVar(name: string): string | undefined {
-    const env = (globalThis as { process?: { env?: Record<string, string | undefined> } })
-        .process?.env;
-    return env?.[name];
-}
-
 function required(value: string | undefined, option: string, envName: string): string {
-    const resolved = value ?? envVar(envName);
+    const resolved = value ?? resolveEnv(envName);
     if (resolved === undefined || resolved === '') {
         throw new AstromechError(
             `s3(): missing '${option}'. Pass it to s3({ ${option}: … }) ` +
-                `or set ${envName} (Node only — on Workers it must be passed explicitly).`
+                `or set ${envName}.`
         );
     }
     return resolved;
@@ -81,11 +72,14 @@ export function s3(options: S3Options): StorageDriver {
     // Safe eagerly: reading the environment cannot throw, and `getPublicUrl` is
     // synchronous so it has nowhere to resolve lazily.
     // Trailing slash stripped so `${publicUrl}/${key}` can never double up.
-    const publicUrl = (options.publicUrl ?? envVar('S3_PUBLIC_URL'))?.replace(/\/+$/, '');
+    const publicUrl = (options.publicUrl ?? resolveEnv('S3_PUBLIC_URL'))?.replace(
+        /\/+$/,
+        ''
+    );
 
-    // Resolution must never happen at construction — the config module is
-    // imported by the CLI in plain Node, and a Workers deployment has no
-    // `process.env` to fall back to. Memoised so one client is shared.
+    // Resolution must never happen at construction: the config module loads
+    // in the CLI before a platform has registered its environment. Memoised so
+    // one client is shared.
     let resolved: Resolved | undefined;
     function resolve(): Resolved {
         if (resolved !== undefined) return resolved;
@@ -94,7 +88,7 @@ export function s3(options: S3Options): StorageDriver {
             ''
         );
         const bucket = required(options.bucket, 'bucket', 'S3_BUCKET');
-        const region = options.region ?? envVar('S3_REGION') ?? 'auto';
+        const region = options.region ?? resolveEnv('S3_REGION') ?? 'auto';
         const accessKeyId = required(
             options.accessKeyId,
             'accessKeyId',

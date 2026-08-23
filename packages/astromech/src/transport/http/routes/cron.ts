@@ -8,6 +8,7 @@
 
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { onTick } from '@/cron/runner';
+import { resolveEnv } from '@/env/index';
 import { getCurrentRole } from '@/request-context/index';
 import { unauthorized } from '@/transport/http/middleware/errors';
 
@@ -15,7 +16,7 @@ const router = new OpenAPIHono();
 
 /** Shared secret for non-session pokes. Undefined (off) until the env var is set. */
 function cronSecret(): string | undefined {
-    return typeof process !== 'undefined' ? process.env.ASTROMECH_CRON_SECRET : undefined;
+    return resolveEnv('ASTROMECH_CRON_SECRET');
 }
 
 // Not in a route table: no service method behind it, and its own auth — a

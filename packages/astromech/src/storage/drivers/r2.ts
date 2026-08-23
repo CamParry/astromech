@@ -11,7 +11,7 @@ import type {
     StorageRange,
     StorageStat,
 } from '@/types/index';
-import { resolveBinding } from '@/cloudflare/bindings';
+import { resolveBinding } from '@/integrations/cloudflare/bindings';
 
 /** Object metadata shared by `head()` and `get()`. Mirrors `R2Object`. */
 type R2ObjectLike = {

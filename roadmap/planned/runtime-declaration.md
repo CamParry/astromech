@@ -17,9 +17,9 @@ Driver selection does **not** imply a runtime, and cannot be used to infer one.
 configuration. Workers with `libsql()` and `s3()` is equally valid and names no
 Cloudflare driver at all. The inference fails in both directions.
 
-No code infers a runtime from drivers today. The claim appears only in the prose
-of `decisions/0089-cloudflare-is-a-runtime-integration-and-the-environment-has-one-reader.md`,
-which is wrong and is corrected on its own branch before it lands.
+No code infers a runtime from drivers today, and
+`decisions/0091-cloudflare-is-a-runtime-integration-and-the-environment-has-one-reader.md`
+says so: it defers the question rather than settling it.
 
 The word is **runtime**, not "platform".
 

@@ -9,6 +9,8 @@ import type { DB } from '@/database/types';
 import type { ResolvedConfig, SchedulerDriver } from '@/types/index';
 import type { Kysely } from 'kysely';
 import { interval } from '@/cron/drivers/interval';
+import { isWorkersRuntime } from '@/env/index';
+import { AstromechError } from '@/errors/index';
 import { createRegistry } from '@/registry';
 
 export type CronContext = {
@@ -57,5 +59,17 @@ export const setDefaultScheduler = defaultScheduler.set;
 
 /** The config's driver, else the integration's default, else the in-process ticker. */
 export function resolveSchedulerDriver(configured?: SchedulerDriver): SchedulerDriver {
-    return configured ?? defaultScheduler.get()?.() ?? interval();
+    const chosen = configured ?? defaultScheduler.get()?.();
+    if (chosen !== undefined) return chosen;
+
+    // A Worker isolate cannot own a timer, so falling through to the ticker
+    // there would hand it a scheduler that never fires.
+    if (isWorkersRuntime()) {
+        throw new AstromechError(
+            'No scheduler is selected and the in-process ticker cannot run in a Worker. ' +
+                'Build the Worker entry with createWorkerEntry() from astromech/cloudflare, ' +
+                'or name cloudflareCron() or webhook() as `scheduler` in your config.'
+        );
+    }
+    return interval();
 }

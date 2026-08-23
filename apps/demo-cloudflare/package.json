@@ -1,0 +1,33 @@
+{
+    "name": "astromech-demo-cloudflare",
+    "type": "module",
+    "version": "0.0.1",
+    "private": true,
+    "scripts": {
+        "dev": "astro dev",
+        "build": "astro build",
+        "preview": "wrangler dev",
+        "typecheck": "astro sync && tsc --noEmit",
+        "check:config": "tsx astromech.config.ts",
+        "db:generate": "tsx --tsconfig ../../packages/astromech/tsconfig.json ../../packages/astromech/src/transport/cli/index.ts db:generate --allow-remote",
+        "db:init": "tsx --tsconfig ../../packages/astromech/tsconfig.json ../../packages/astromech/src/transport/cli/index.ts db:init --allow-remote"
+    },
+    "dependencies": {
+        "@astrojs/cloudflare": "^13.5.0",
+        "@astrojs/react": "^5.0.1",
+        "astro": "^6.0.8",
+        "astromech": "workspace:*",
+        "better-auth": "^1.6.28",
+        "kysely": "^0.28.17",
+        "react": "^19.2.8",
+        "react-dom": "^19.2.8"
+    },
+    "devDependencies": {
+        "@astromech/schema-engine": "workspace:*",
+        "@types/react": "^19.2.18",
+        "@types/react-dom": "^19.2.4",
+        "tsx": "^4.23.12",
+        "typescript": "^5.9.3",
+        "wrangler": "^4.125.0"
+    }
+}

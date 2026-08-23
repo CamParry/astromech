@@ -46,7 +46,9 @@ boots never stack timers.
 `astromech/scheduler/cloudflare`. The driver itself is a no-op declaration:
 the tick comes from the platform, through the Worker's `scheduled()` handler.
 `createWorkerEntry` selects it for you, so naming it in the config is only
-needed if you write the Worker entry by hand. Wire both halves:
+needed if you write the Worker entry by hand. Without either, boot fails inside
+a Worker rather than falling back to a timer the isolate cannot run. Set up both
+halves:
 
 1. Give the Worker a frequent cron trigger in `wrangler.jsonc` — frequent,
    because it is only the poke; real cadence is due-evaluation's:
@@ -57,22 +59,26 @@ needed if you write the Worker entry by hand. Wire both halves:
     }
     ```
 
-2. Build the Worker entry with `createWorkerEntry`. It returns both handlers:
-   `fetch` is the Astro adapter's, unchanged, and `scheduled` creates the
-   Astromech application if the tick is the first thing the isolate runs — a
-   cron trigger fires `scheduled()`, never `fetch()`, so it cannot rely on a
-   request having created anything:
+2. Build the Worker entry with `createWorkerEntry`. It returns both handlers.
+   `fetch` is your framework's, unchanged. `scheduled` creates the Astromech
+   application if the tick is the first thing the isolate runs, because a cron
+   trigger fires `scheduled()` and never `fetch()`, so it cannot rely on a
+   request having created anything. Both register the Worker's `env`, which is
+   where bindings and string vars come from:
 
     ```ts
     // src/worker.ts
     import astro from '@astrojs/cloudflare/entrypoints/server';
     import { createWorkerEntry } from 'astromech/cloudflare';
+    import config from '../astromech.config';
 
-    export default createWorkerEntry(astro);
+    export default createWorkerEntry(astro, { config });
     ```
 
     Point `main` in `wrangler.jsonc` at that file instead of at
-    `@astrojs/cloudflare/entrypoints/server`.
+    `@astrojs/cloudflare/entrypoints/server`. The config is passed in rather
+    than read from an Astro virtual module, so the same entry works under any
+    framework.
 
 ### `webhook()` — an external poke
 

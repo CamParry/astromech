@@ -21,6 +21,11 @@ This is a living reference; it grows as the project does.
   how a frequent tick and database-stored cadence fit together, the three
   scheduler drivers (`interval`, `cloudflareCron`, `webhook`), and wiring a
   Cloudflare Worker's `scheduled()` handler.
+- [deployment/cloudflare.md](deployment/cloudflare.md) — deploying to Cloudflare
+  Workers: the drivers that name bindings, the `createWorkerEntry` entry file
+  that supplies the Worker's environment and its `scheduled()` handler, the
+  wrangler config, migrations against D1, and why Node and Vercel need no
+  equivalent.
 - [configuration/trust-proxy.md](configuration/trust-proxy.md) — where the
   connecting address of a request comes from, the `security.trustProxy` option
   for a site behind a proxy, and why the address is counted from the end of

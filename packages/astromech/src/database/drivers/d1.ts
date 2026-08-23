@@ -6,7 +6,7 @@
 import type { D1DatabaseLike } from './d1-dialect';
 import type { DB } from '@/database/types';
 import { CamelCasePlugin, Kysely } from 'kysely';
-import { resolveBinding } from '@/cloudflare/bindings';
+import { resolveBinding } from '@/integrations/cloudflare/bindings';
 import { D1Dialect } from './d1-dialect';
 
 export type { D1DatabaseLike, D1PreparedStatementLike, D1ResultLike } from './d1-dialect';

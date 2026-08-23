@@ -8,7 +8,7 @@
  * its result and `meta` shapes, and whether a migration chain really applies
  * without a transaction. It is also the only test that exercises the wrangler
  * branch of `resolveBinding()` — `tests/cloudflare/bindings.test.ts` routes
- * every case through `setBindingEnv` and says so at the top.
+ * every case through `setEnvSource` and says so at the top.
  *
  * Bindings come from `packages/astromech/wrangler.jsonc`, discovered from the
  * working directory the way a real Node host would find its own config.
@@ -19,8 +19,13 @@ import type { Kysely, MigrationProvider } from 'kysely';
 import { migrateToLatest } from '@astromech/schema-engine';
 import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { disposeBindings, resetBindingEnv, resolveBinding } from '@/cloudflare/bindings';
 import { d1 } from '@/database/drivers/d1';
+import { clearEnvSource } from '@/env/index';
+import {
+    disposeBindings,
+    resetBindings,
+    resolveBinding,
+} from '@/integrations/cloudflare/bindings';
 
 /** Test-only schema; deliberately unrelated to the app's `DB` type. */
 type TestSchema = {
@@ -45,9 +50,10 @@ const BOOT_TIMEOUT = 60_000;
 let db: Kysely<TestSchema>;
 
 beforeAll(async () => {
-    // No `setBindingEnv`: detection must fall through to wrangler, which is the
+    // No `setEnvSource`: the lookup must fall through to wrangler, which is the
     // whole point of this file.
-    resetBindingEnv();
+    clearEnvSource();
+    resetBindings();
     db = d1({ binding: 'DB' }).getInstance() as unknown as Kysely<TestSchema>;
     for (const table of OWNED_TABLES) {
         await sql.raw(`DROP TABLE IF EXISTS ${table}`).execute(db);

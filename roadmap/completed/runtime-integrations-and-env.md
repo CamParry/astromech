@@ -11,7 +11,7 @@ Branch: `refactor/runtime-integrations-and-env`.
 ## The env module
 
 - [x] `src/env/index.ts` — `resolveEnv`, `getEnv`, `getEnvRecord` and `setEnvSource`, a registry
-      slot so a platform integration can declare where values come from
+      slot so a runtime integration can declare where values come from
 - [x] `database/drivers/libsql.ts` — `DATABASE_URL`, `DATABASE_AUTH_TOKEN`
 - [x] `storage/drivers/s3.ts` — delete the local `envVar()` helper
 - [x] `transport/http/routes/cron.ts` — `ASTROMECH_CRON_SECRET`
@@ -55,9 +55,9 @@ worth doing when a third runtime demo makes the set obvious.
 
 ## Docs
 
-- [x] `decisions/0089` — the two kinds of integration, why no runtime key in the
-      config, and the `NODE_ENV` behaviour change
-- [x] `ARCHITECTURE.md` — framework versus platform integrations, the env module,
+- [x] `decisions/0091` — the two kinds of integration, why no runtime key was
+      added here, and the `NODE_ENV` behaviour change
+- [x] `ARCHITECTURE.md` — framework versus runtime integrations, the env module,
       the top-level Cloudflare directory gone
 - [x] `TERMINOLOGY.md` — the integration entry covers both kinds
 - [x] A Cloudflare deployment guide under the docs app, closing with the Node

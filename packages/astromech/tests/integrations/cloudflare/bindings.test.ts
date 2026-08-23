@@ -1,30 +1,30 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { resetBindingEnv, resolveBinding, setBindingEnv } from '@/cloudflare/bindings';
+import { clearEnvSource, setEnvSource } from '@/env/index';
+import { resetBindings, resolveBinding } from '@/integrations/cloudflare/bindings';
 
-// Every test here goes through `setBindingEnv`, the documented bypass for hosts
-// (and tests) that already hold an `env` object, so nothing in this file starts
-// a runtime. Detection itself is covered elsewhere: the wrangler branch by
-// `d1-local-emulation.test.ts`, which boots workerd; the `cloudflare:workers`
-// branch by nothing, since that specifier only resolves inside a Worker.
+// Every test here registers an environment through `setEnvSource`, the way a
+// Worker entry does, so nothing in this file starts a runtime. The wrangler
+// fallback is covered by `d1-local-emulation.test.ts`, which boots workerd.
 //
-// Leaving the env unset falls through to wrangler and boots workerd,
+// Leaving the source unset falls through to wrangler and boots workerd,
 // because this package depends on it — a real resolution.
 
 describe('resolveBinding()', () => {
     beforeEach(() => {
-        resetBindingEnv();
+        clearEnvSource();
+        resetBindings();
     });
 
-    it('resolves a binding supplied via setBindingEnv', async () => {
+    it('resolves a binding supplied via setEnvSource', async () => {
         const bucket = { name: 'fake-bucket' };
-        setBindingEnv({ MEDIA: bucket });
+        setEnvSource({ MEDIA: bucket });
 
         const resolved = await resolveBinding('MEDIA');
         expect(resolved).toBe(bucket);
     });
 
     it('throws for an unknown binding, listing the available ones', async () => {
-        setBindingEnv({ DB: {}, ASSETS: {} });
+        setEnvSource({ DB: {}, ASSETS: {} });
 
         await expect(resolveBinding('MEDIA')).rejects.toThrow(
             "Cloudflare binding 'MEDIA' not found. Available bindings: DB, ASSETS."
@@ -32,7 +32,7 @@ describe('resolveBinding()', () => {
     });
 
     it('says "(none)" when the env is empty', async () => {
-        setBindingEnv({});
+        setEnvSource({});
 
         await expect(resolveBinding('MEDIA')).rejects.toThrow(
             "Cloudflare binding 'MEDIA' not found. Available bindings: (none)."
@@ -41,7 +41,7 @@ describe('resolveBinding()', () => {
 
     it('hands back the same binding instance across calls', async () => {
         const bucket = { name: 'fake-bucket' };
-        setBindingEnv({ MEDIA: bucket });
+        setEnvSource({ MEDIA: bucket });
 
         const [first, second] = await Promise.all([
             resolveBinding('MEDIA'),
@@ -52,20 +52,21 @@ describe('resolveBinding()', () => {
     });
 
     it('does not memoise a failed lookup', async () => {
-        setBindingEnv({ OTHER: {} });
+        setEnvSource({ OTHER: {} });
         await expect(resolveBinding('MEDIA')).rejects.toThrow(/not found/);
 
         // A recoverable failure: supplying an env afterwards must still work.
-        setBindingEnv({ MEDIA: { name: 'recovered' } });
+        setEnvSource({ MEDIA: { name: 'recovered' } });
         expect(await resolveBinding('MEDIA')).toEqual({ name: 'recovered' });
     });
 
-    it('re-resolves after resetBindingEnv', async () => {
-        setBindingEnv({ MEDIA: { name: 'first' } });
+    it('re-resolves after the source is cleared', async () => {
+        setEnvSource({ MEDIA: { name: 'first' } });
         expect(await resolveBinding('MEDIA')).toEqual({ name: 'first' });
 
-        resetBindingEnv();
-        setBindingEnv({ MEDIA: { name: 'second' } });
+        clearEnvSource();
+        resetBindings();
+        setEnvSource({ MEDIA: { name: 'second' } });
         expect(await resolveBinding('MEDIA')).toEqual({ name: 'second' });
     });
 });

@@ -27,7 +27,8 @@ packages/
 └── plugins/          # first-party plugins, one published package each:
                       # assistant · backups · forms · menus · redirects · seo
 apps/
-├── demo/             # the Astro site to run and browser-verify against
+├── demo/             # the Astro site to run and browser-verify against, on Node
+├── demo-cloudflare/  # the same core on Workers: D1, R2, Cron Triggers
 └── docs/             # user-facing documentation
 ```
 
@@ -42,18 +43,23 @@ policies                                             who may call what
 entries · media · users · settings · notifications   the content modules
 plugins/runtime · config · database · storage ·      the modules those build on
   fields · permissions · hooks · request-context ·
-  email · ai · cron · cloudflare
-types · utilities · errors · registry.ts             pure leaves
+  email · ai · cron
+types · utilities · env · errors · registry.ts       pure leaves
 ```
 
 - **`astromech.ts`** is the composition root: `createAstromech` resolves the
   config, wires the drivers, and composes the content services onto the
   application instance. `exports/` holds the re-export barrels that back every
   published subpath.
-- **`integrations/astro/`** is the Astro integration: the Vite plugin, the
-  virtual modules (`virtual:astromech/config`, `virtual:astromech/admin-config`),
-  the injected routes (admin shell, API, media) and the boot middleware.
-  `integrations/cloudflare/` builds the Worker entry.
+- **`integrations/`** holds two kinds of glue side by side. A **framework
+  integration** answers how a request arrives and where the config lives:
+  `astro/` is the Vite plugin, the virtual modules
+  (`virtual:astromech/config`, `virtual:astromech/admin-config`), the injected
+  routes (admin shell, API, media) and the boot middleware. A **runtime
+  integration** answers where environment values come from and whether the host
+  has an entry point that is not an HTTP request: `cloudflare/` builds the
+  Worker entry and looks up bindings. A runtime only gets a directory when it
+  needs one — Node and Vercel need no code (`decisions/0091`).
 - **`admin/`** is the React SPA (TanStack Router), mounted by `admin/shell.astro`
   under the configured `basePath`. It talks to the server only through the
   fetch client in `transport/http/client/`.
@@ -66,8 +72,18 @@ types · utilities · errors · registry.ts             pure leaves
   the AI tool-loop) composes it. Trusted paths (the application instance used in
   SSR and hooks, the CLI, the MCP server) do not.
 - **The content modules** (`entries`, `media`, `users`, `settings`, `notifications`) own the business verbs. Each has a `service.ts` (its verbs), a `tables.ts` (its `defineTable` tables and row types), a contract catalogue (`contract.ts`, or `methods.ts` in `entries`) that puts it in the method manifest, and a `schema.ts` of Zod request schemas where it validates input. A large module splits its verbs into `operations/` and helpers into `internal/`, with `service.ts` assembling them. They are siblings: one may call another's service, but reaches tables through `database/tables.ts`.
-- **The modules below them** (`database`, `storage`, `fields`, `config`, `permissions`, `hooks`, `request-context`, `email`, `ai`, `cron`, `cloudflare`, `plugins/runtime`) are what the content modules build on. Each does one thing and holds no business logic.
+- **The modules below them** (`database`, `storage`, `fields`, `config`, `permissions`, `hooks`, `request-context`, `email`, `ai`, `cron`, `plugins/runtime`) are what the content modules build on. Each does one thing and holds no business logic.
 - **Leaves** import only other leaves and third-party packages. A small pure file (a constant, a type, a function over its arguments) may sit inside any module and still be imported from any layer.
+
+## The environment
+
+Every environment read goes through `env/`. `resolveEnv(name)` returns the value
+or `undefined`, `getEnv(name)` throws naming the variable, and `getEnvRecord()`
+builds the record the plugin `ctx` exposes. A runtime integration declares its
+own source with `setEnvSource`, which is how a Cloudflare Worker's `env` — string
+vars and object bindings in one object — reaches `resolveEnv` and
+`resolveBinding` alike. `admin/` is exempt: it reads `import.meta.env.DEV`,
+which Vite replaces at build time, and never imports server modules.
 
 ## Drivers and registries
 
