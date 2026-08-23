@@ -2,7 +2,17 @@
     "name": "astromech",
     "version": "0.0.1",
     "type": "module",
-    "sideEffects": false,
+    "sideEffects": [
+        "**/*.css",
+        "./src/admin/main.tsx",
+        "./src/admin/i18n.ts",
+        "./src/admin/rendering/register-fields.ts",
+        "./src/admin/rendering/cells/register-cells.ts",
+        "./src/admin/components/ui/index.ts",
+        "./src/admin/components/ui/app.ts",
+        "./dist/admin/components/ui/*.js",
+        "./dist/chunk-*.js"
+    ],
     "description": "A lightweight, fast headless CMS",
     "author": "Cam",
     "license": "MIT",
