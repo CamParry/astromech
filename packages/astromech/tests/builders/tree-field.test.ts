@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { tree } from '@/fields/index';
+import { tree } from '@/fields/builder';
 
 describe('tree() field factory', () => {
     it('returns a POJO with type "tree"', () => {

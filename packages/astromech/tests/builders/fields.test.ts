@@ -16,7 +16,7 @@ import {
     tabs,
     text,
     textarea,
-} from '@/fields/index';
+} from '@/fields/builder';
 
 // Compile-proof: factory output assignable to EntryType['fields'].
 const _flat: EntryType['fields'] = [
