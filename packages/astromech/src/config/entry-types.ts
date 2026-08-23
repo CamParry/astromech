@@ -17,15 +17,16 @@ import {
 } from '@/config/validate/field-tree';
 
 /**
- * Resolve the capability set for an entry type. When storage supports a
+ * Resolve the capability set for an entry type. When the repository supports a
  * capability, the config default applies; when it doesn't and the user
  * hasn't requested it, the capability defaults to false.
  */
 export function toResolvedEntryCapabilities(
     entryType: EntryType,
-    storageSupports: readonly Capability[]
+    repositorySupports: readonly Capability[]
 ): ResolvedEntryCapabilities {
-    const supports = (cap: Capability): boolean => storageSupports.includes(cap);
+    const supports = (capability: Capability): boolean =>
+        repositorySupports.includes(capability);
 
     return {
         statuses: supports('statuses') ? (entryType.statuses ?? true) : false,
@@ -41,13 +42,13 @@ export function toResolvedEntryCapabilities(
 
 /**
  * Crash-loud validation for an entry type's capabilities and titleField.
- * Rejects any capability requested but unsupported by storage, and any
+ * Rejects any capability requested but unsupported by the repository, and any
  * titleField value other than `'title'` or `false`.
  */
 export function assertEntryTypeValid(
     typeKey: string,
     entryType: EntryType,
-    storageSupports: readonly Capability[]
+    repositorySupports: readonly Capability[]
 ): void {
     const requested: Capability[] = [];
     if (entryType.statuses === true) requested.push('statuses');
@@ -57,14 +58,16 @@ export function assertEntryTypeValid(
     if (entryType.staging) requested.push('staging');
     if (entryType.translatable === true) requested.push('translatable');
 
-    const unsupported = requested.filter((cap) => !storageSupports.includes(cap));
+    const unsupported = requested.filter(
+        (capability) => !repositorySupports.includes(capability)
+    );
 
     if (unsupported.length > 0) {
         const supportedList =
-            storageSupports.length > 0 ? storageSupports.join(', ') : '(none)';
+            repositorySupports.length > 0 ? repositorySupports.join(', ') : '(none)';
         throw new Error(
-            `Astromech entry type "${typeKey}" declares capabilities its storage does not support: ` +
-                `${unsupported.join(', ')}. Storage supports: ${supportedList}.`
+            `Astromech entry type "${typeKey}" declares capabilities its repository does not support: ` +
+                `${unsupported.join(', ')}. Repository supports: ${supportedList}.`
         );
     }
 
@@ -105,16 +108,16 @@ export function collectSearchable(nodes: Field[], out: string[]): void {
 
 /**
  * Resolve a single entry type: validate capabilities and titleField
- * (crash-loud on mismatch) and strip the live `storage` instance. `typeKey`
+ * (crash-loud on mismatch) and strip the live `repository` instance. `typeKey`
  * is stamped onto the result as `id`, used in error messages.
  */
 export function toResolvedEntryType(
     typeKey: string,
     entryType: EntryType,
-    storageSupports: readonly Capability[]
+    repositorySupports: readonly Capability[]
 ): ResolvedEntryType {
-    const capabilities = toResolvedEntryCapabilities(entryType, storageSupports);
-    assertEntryTypeValid(typeKey, entryType, storageSupports);
+    const capabilities = toResolvedEntryCapabilities(entryType, repositorySupports);
+    assertEntryTypeValid(typeKey, entryType, repositorySupports);
 
     const resolvedFields = toResolvedFields(entryType.fields);
     validateFieldTree(typeKey, resolvedFields.main, false);

@@ -53,7 +53,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     // `PluginConfigView`, so it is dropped here rather than only in the type.
     const { image: _image, ...media } = config.media ?? {};
 
-    // The registry-held capabilities and `plugins` are destructured out to match
+    // The registry-held modules and `plugins` are destructured out to match
     // `ResolvedConfig`'s `Omit`, so the strip holds at runtime too.
     const {
         db: _db,
