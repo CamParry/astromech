@@ -1,11 +1,11 @@
 /**
  * `createAstromech`: the application registry's semantics, and the HOST
- * entry-type storage the create sequence mounts.
+ * entry-type repository the create sequence mounts.
  *
  * Runs the real create sequence rather than the harness's `setupTestConfig`,
  * which mirrors the sequence instead of running it — a mirror cannot fail when
- * the host-storage loop is deleted or moved above `registerPlugins`, which opens
- * by clearing every storage override.
+ * the host-repository loop is deleted or moved above `registerPlugins`, which opens
+ * by clearing every repository override.
  */
 
 import type { DB } from '@/database/types';
@@ -42,7 +42,7 @@ const storageDriver: StorageDriver = {
  * is unmistakable in the failure message.
  */
 function throwing(): never {
-    throw new Error('custom widget storage reached');
+    throw new Error('custom widget repository reached');
 }
 
 const throwingRepository: EntryRepository = {
@@ -55,7 +55,7 @@ const throwingRepository: EntryRepository = {
     uniqueSlug: throwing,
 };
 
-/** A config whose `widget` type declares its own storage. */
+/** A config whose `widget` type declares its own repository. */
 function makeConfig(getInstance: () => Kysely<DB>): AstromechConfig {
     return {
         db: {
@@ -84,7 +84,7 @@ function makeConfig(getInstance: () => Kysely<DB>): AstromechConfig {
     };
 }
 
-describe('createAstromech — host entry storage', () => {
+describe('createAstromech — host entry repository', () => {
     beforeEach(async () => {
         const db = await createTestDb();
         const config = makeConfig(() => db);
@@ -93,21 +93,21 @@ describe('createAstromech — host entry storage', () => {
         await createAstromech({ config });
     });
 
-    it('registers the declared storage under the bare type name', () => {
+    it('registers the declared repository under the bare type name', () => {
         expect(getEntryRepository('widget')).toBe(throwingRepository);
     });
 
-    it('leaves a type without declared storage on built-in storage', () => {
+    it('leaves a type without declared repository on the built-in repository', () => {
         expect(getEntryRepository('note')).not.toBe(throwingRepository);
     });
 
-    it('routes a read for the type through its declared storage', async () => {
+    it('routes a read for the type through its declared repository', async () => {
         await expect(entriesService.query({ type: 'widget' })).rejects.toThrow(
-            /custom widget storage reached/
+            /custom widget repository reached/
         );
     });
 
-    it('routes a read for the control type through built-in storage', async () => {
+    it('routes a read for the control type through the built-in repository', async () => {
         await expect(entriesService.query({ type: 'note' })).resolves.toBeDefined();
     });
 });

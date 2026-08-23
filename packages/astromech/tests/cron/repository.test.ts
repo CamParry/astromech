@@ -1,5 +1,5 @@
 /**
- * Cron storage — the three methods that had to drop to `query()` because the
+ * Cron repository — the three methods that had to drop to `query()` because the
  * flat `where` DSL cannot express them.
  *
  * The CAS claim is the one worth pinning directly: `claim` returning `true` is

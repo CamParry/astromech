@@ -13,7 +13,7 @@
  * libsql's `client.transaction()` hands the underlying SQLite connection to the
  * transaction and nulls out the client's stored reference. The client lazily
  * creates a NEW connection on next use: for `:memory:` that new connection is a
- * blank database, so any read after a storage transaction throws "no such
+ * blank database, so any read after a database transaction throws "no such
  * table"; for a file path it reopens the same file and sees the committed data.
  * Entry `create`, `mergeStaged` and the bulk operations all run in transactions,
  * so a `:memory:` default would poison most of the suite. File-backed temp DBs

@@ -1,5 +1,5 @@
 /**
- * Storage-level tests for `createEntryMaintenanceRepository` — the whole-table
+ * Repository-level tests for `createEntryMaintenanceRepository` — the whole-table
  * upkeep used by the scheduled-publish and trash-purge CRON jobs.
  */
 

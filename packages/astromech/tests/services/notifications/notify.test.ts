@@ -1,10 +1,10 @@
 /**
- * `notify` and `notificationsService`, pinned across the move onto notification
- * storage.
+ * `notify` and `notificationsService`, pinned across the move onto the
+ * notification repository.
  *
  * Two things here are worth a test beyond "it still runs". The `users` lookups
- * that resolve a broadcast/per-role target moved to `users` storage, so each
- * target arm needs to be shown to reach the right people. And the fan-out insert
+ * that resolve a broadcast/per-role target moved to the `users` repository, so
+ * each target arm needs to be shown to reach the right people. And the fan-out insert
  * is a hand-written multi-row statement (`createRepository`'s `create` is
  * single-row), so it is the one write in this domain not covered by the wrapper.
  *

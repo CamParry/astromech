@@ -51,7 +51,7 @@ const baseConfig = (plugins: PluginDefinition[]): AstromechConfig => ({
     plugins,
 });
 
-/** A storage that supports nothing (Phase 3 minimal single-table style). */
+/** A repository that supports nothing (Phase 3 minimal single-table style). */
 const emptyRepository = (): EntryRepository => ({
     supports: [],
     list: async () => ({ data: [], total: 0 }),
@@ -102,7 +102,7 @@ describe('resolveConfig pluginEntries', () => {
         expect(resolved.pluginEntries).toEqual({});
     });
 
-    it('strips the live storage instance so the whole config is JSON-serialisable', () => {
+    it('strips the live repository instance so the whole config is JSON-serialisable', () => {
         const resolved = resolveConfig(
             baseConfig([
                 {
@@ -119,11 +119,11 @@ describe('resolveConfig pluginEntries', () => {
         );
 
         const item = resolved.pluginEntries.store?.item as Record<string, unknown>;
-        expect('storage' in item).toBe(false);
+        expect('repository' in item).toBe(false);
         expect(() => JSON.stringify(resolved)).not.toThrow();
     });
 
-    it('crashes with the qualified key when capabilities exceed storage support', () => {
+    it('crashes with the qualified key when capabilities exceed repository support', () => {
         expect(() =>
             resolveConfig(
                 baseConfig([

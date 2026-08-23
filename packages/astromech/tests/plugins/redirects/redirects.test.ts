@@ -96,7 +96,7 @@ beforeEach(async () => {
     setupTestConfig(configWithRedirects());
 });
 
-describe('redirects — own-table storage', () => {
+describe('redirects — own-table repository', () => {
     it('create lands in plugin_redirects_redirects, not entries', async () => {
         await redirectEntriesService().create({
             type: REDIRECT,

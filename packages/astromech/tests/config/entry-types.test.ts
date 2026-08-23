@@ -9,17 +9,17 @@ describe('toResolvedEntryCapabilities — defaults', () => {
         plural: 'Items',
     };
 
-    it('statuses defaults ON with built-in storage', () => {
+    it('statuses defaults ON with the built-in repository', () => {
         const caps = toResolvedEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
         expect(caps.statuses).toBe(true);
     });
 
-    it('slug defaults ON with built-in storage', () => {
+    it('slug defaults ON with the built-in repository', () => {
         const caps = toResolvedEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
         expect(caps.slug).toBe(true);
     });
 
-    it('trash defaults ON with built-in storage', () => {
+    it('trash defaults ON with the built-in repository', () => {
         const caps = toResolvedEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
         expect(caps.trash).toBe(true);
     });
@@ -101,7 +101,7 @@ describe('toResolvedEntryCapabilities — versioning', () => {
 });
 
 describe('toResolvedEntryCapabilities — staging', () => {
-    it('staging:true resolves on with built-in storage', () => {
+    it('staging:true resolves on with the built-in repository', () => {
         const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
@@ -131,7 +131,7 @@ describe('toResolvedEntryCapabilities — staging', () => {
         expect(caps.versioning).toBe(false);
     });
 
-    it('staging resolves off when storage does not support it', () => {
+    it('staging resolves off when the repository does not support it', () => {
         const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
@@ -150,13 +150,13 @@ describe('toResolvedEntryCapabilities — staging', () => {
     });
 });
 
-describe('toResolvedEntryCapabilities — narrower storageSupports', () => {
+describe('toResolvedEntryCapabilities — narrower repositorySupports', () => {
     const emptyCfg: EntryType = {
         single: 'Item',
         plural: 'Items',
     };
 
-    it('unrequested capabilities default off when not in storageSupports', () => {
+    it('unrequested capabilities default off when not in repositorySupports', () => {
         const caps = toResolvedEntryCapabilities(emptyCfg, []);
         expect(caps.statuses).toBe(false);
         expect(caps.slug).toBe(false);
@@ -182,18 +182,18 @@ describe('assertEntryTypeValid — capability mismatch', () => {
             trash: true,
         };
         expect(() => assertEntryTypeValid('widget', cfg, [])).toThrow(
-            'Astromech entry type "widget" declares capabilities its storage does not support: trash, versioning. Storage supports: (none).'
+            'Astromech entry type "widget" declares capabilities its repository does not support: trash, versioning. Repository supports: (none).'
         );
     });
 
-    it('includes the storage support list in the message when non-empty', () => {
+    it('includes the repository support list in the message when non-empty', () => {
         const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             versioning: true,
         };
         expect(() => assertEntryTypeValid('widget', cfg, ['statuses'])).toThrow(
-            'Storage supports: statuses.'
+            'Repository supports: statuses.'
         );
     });
 
@@ -255,7 +255,7 @@ describe('assertEntryTypeValid — titleField', () => {
         );
     });
 
-    it('rejects a custom title field even with custom storage', () => {
+    it('rejects a custom title field even with a custom repository', () => {
         const cfg = {
             single: 'Item',
             plural: 'Items',

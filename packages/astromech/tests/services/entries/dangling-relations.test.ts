@@ -44,7 +44,7 @@ const notesTable = defineTable('test_notes', ({ col }) => ({
 }));
 
 /**
- * The same storage with `existingIds` hidden — a third-party storage predating
+ * The same repository with `existingIds` hidden — a third-party repository predating
  * the hook. A proxy rather than a spread: `tableRepository` is a class instance and
  * its methods live on the prototype.
  */
@@ -150,7 +150,7 @@ async function touch(id: string): Promise<Entry> {
     })) as Entry;
 }
 
-/** A media row, inserted through storage so no driver or real bytes are needed. */
+/** A media row, inserted through the repository so no driver or real bytes are needed. */
 async function createMedia(): Promise<string> {
     const row = await createMediaRepository().create({
         filename: 'a.png',
@@ -209,7 +209,7 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
     });
 
     // `links/link` rows live in `test_links`, so a check against `entries`
-    // reports every one of them absent. Its storage answers for them instead.
+    // reports every one of them absent. Its repository answers for them instead.
     it('keeps a reference to a live tableRepository-backed row', async () => {
         const link = await api.create({
             type: 'links/link',
@@ -245,9 +245,9 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
         expect(updated.fields.link).toBe(link.id);
     });
 
-    // The false-negative guard, now on the hook rather than on the storage
-    // override: a storage that cannot answer is never asked, and its ids stand.
-    it('keeps a reference whose storage implements no existence check', async () => {
+    // The false-negative guard, now on the hook rather than on the repository
+    // override: a repository that cannot answer is never asked, and its ids stand.
+    it('keeps a reference whose repository implements no existence check', async () => {
         const doc = await api.create({
             type: 'doc',
             data: { title: 'Doc', fields: { note: '01JQZZZZZZZZZZZZZZZZZZZZZZ' } },
@@ -328,7 +328,7 @@ describe('pruneDanglingRelations (directly)', () => {
         expect(result.values).toBe(values);
     });
 
-    // Inside a transaction the registered storage reads a different snapshot,
+    // Inside a transaction the registered repository reads a different snapshot,
     // where a row written in this transaction is missing — so it is not read at
     // all and the reference stands.
     it('keeps a table-backed reference when pruning inside a transaction', async () => {

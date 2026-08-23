@@ -1,5 +1,5 @@
 /**
- * Integration tests for the relationships index storage against a real (temp
+ * Integration tests for the relationships index repository against a real (temp
  * file) database. Covers the wholesale replace and its INSERT chunking.
  */
 

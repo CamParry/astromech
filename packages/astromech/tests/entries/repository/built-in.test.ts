@@ -1,5 +1,5 @@
 /**
- * Storage-level tests for the built-in entry storage.
+ * Repository-level tests for the built-in entry repository.
  *
  * These exercise the persistence contract directly (not through the
  * entries service): base CRUD, list machinery, slug uniquification, and the
@@ -58,7 +58,7 @@ describe('base CRUD', () => {
 
     it('mints a ULID localeGroup, not a UUID, when none is supplied', async () => {
         // The `entries` table declares `defaultUlid` on localeGroup, so
-        // storage must leave the key absent rather than minting its own id.
+        // repository must leave the key absent rather than minting its own id.
         const created = await repository.create({ type: 'post', title: 'L', slug: 'l' });
         expect(created.localeGroup).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
     });
@@ -287,7 +287,7 @@ describe('translatable sub-surface', () => {
 });
 
 describe('transaction', () => {
-    // `EntryRepository` no longer carries its own `transaction`; the storage
+    // `EntryRepository` no longer carries its own `transaction`; the repository
     // joins whatever scope `database/transaction.ts`'s `transaction()` opens,
     // since every operation resolves its handle per call through `getDb()`.
 

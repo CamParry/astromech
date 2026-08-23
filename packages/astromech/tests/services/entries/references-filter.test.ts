@@ -108,7 +108,7 @@ beforeEach(async () => {
         )`.execute(db);
 });
 
-/** A media row, inserted through storage so no driver or real bytes are needed. */
+/** A media row, inserted through the repository so no driver or real bytes are needed. */
 async function createMedia(filename: string): Promise<string> {
     const row = await createMediaRepository().create({
         filename,

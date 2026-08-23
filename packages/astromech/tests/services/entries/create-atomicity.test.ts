@@ -14,9 +14,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDb } from '@/database/registry';
 import { entriesService } from '@/entries/index';
 
-// `create` persists the row and its index rows inside a storage transaction.
+// `create` persists the row and its index rows inside a database transaction.
 // Fail `replaceForSource` so the transaction rolls back; everything else
-// delegates to the real storage.
+// delegates to the real repository.
 vi.mock('@/database/repository/relationships', async (importOriginal) => {
     const actual = await importOriginal<typeof RelationshipRepositoryModule>();
     return {

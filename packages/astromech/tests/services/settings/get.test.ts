@@ -1,5 +1,5 @@
 /**
- * `settingsService.get` behaviour, pinned across the move onto settings storage.
+ * `settingsService.get` behaviour, pinned across the move onto the settings repository.
  *
  * `get` used to load EVERY settings row to build a `byKey` map and read one key
  * out of it; it now fetches `[key, '<key>:<locale>']` targetedly. These tests fix

@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDb } from '@/database/registry';
 import { entriesService } from '@/entries/index';
 
-// `duplicate` persists the new row and its index rows inside a storage
+// `duplicate` persists the new row and its index rows inside a database
 // transaction. `replaceForSource` only rejects once `state.failing` is set,
 // so the source entry's own (unrelated) index write still succeeds.
 const state = vi.hoisted(() => ({ failing: false }));

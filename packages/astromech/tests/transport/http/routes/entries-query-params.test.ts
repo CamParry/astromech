@@ -169,7 +169,7 @@ describe('validateSort on the query body', () => {
 
     it('falls back to the default order for a shape the schema drops', async () => {
         // These parse as neither a sort object nor a list of them, so the
-        // schema's `catch` drops them before storage sees a field name. The
+        // schema's `catch` drops them before the repository sees a field name. The
         // default is `createdAt desc` and these three rows share a timestamp,
         // so only the SET is deterministic.
         const all = ['Alpha', 'Beta', 'Gamma'];

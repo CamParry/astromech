@@ -2,7 +2,7 @@
  * `astromech validate` — the report over stored rows.
  *
  * Rows are written through the service write paths and then rewritten behind
- * the pipeline's back (straight through storage), because a rule that a write
+ * the pipeline's back (straight through the repository), because a rule that a write
  * would reject is exactly what the report exists to find.
  */
 

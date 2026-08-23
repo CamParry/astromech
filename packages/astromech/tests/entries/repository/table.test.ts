@@ -1,5 +1,5 @@
 /**
- * Storage-level tests for tableRepository plus entries-service integration.
+ * Repository-level tests for tableRepository plus entries-service integration.
  *
  * Uses a scratch table created via raw DDL — no migration dependency. The
  * scratch table's columns mirror the table below: id (ULID text), from,
@@ -262,7 +262,7 @@ describe('list – sort', () => {
     it('throws on a sort key that is not a column', async () => {
         await repository.create({ type: 'link', fields: { from: '/a', to: '/x' } });
 
-        // Matches built-in storage: a typo must not quietly answer the default
+        // Matches built-in repository: a typo must not quietly answer the default
         // order — see `decisions/0029-an-unknown-where-key-throws.md`.
         await expect(
             repository.list({ type: 'link', limit: 'all', sort: { nope: 'asc' } })
@@ -436,7 +436,7 @@ describe('uniqueSlug', () => {
 });
 
 describe('transaction', () => {
-    // `EntryRepository` no longer carries its own `transaction`; the storage
+    // `EntryRepository` no longer carries its own `transaction`; the repository
     // joins whatever scope `database/transaction.ts`'s `transaction()` opens,
     // since every operation resolves its handle per call through `getDb()`.
 

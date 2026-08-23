@@ -2,9 +2,9 @@
  * `entries.incomingRelationships` — reverse lookup for the delete modal.
  *
  * The interesting case is a source whose entry type is NOT the target's: it
- * lives in that type's own storage, so loading it through the target's storage
- * finds nothing. `links/link` is table-backed, which makes the two storages
- * genuinely different rather than the same built-in singleton.
+ * lives in that type's own repository, so loading it through the target's
+ * repository finds nothing. `links/link` is table-backed, which makes the two
+ * repositories genuinely different rather than the same built-in singleton.
  */
 
 import type { AstromechConfig, PluginDefinition } from '@/types/index';
@@ -115,8 +115,8 @@ describe('incomingRelationships', () => {
         ]);
     });
 
-    // The source lives in its own table, so the target's storage cannot see it.
-    it('returns a source held in a different storage backend', async () => {
+    // The source lives in its own table, so the target's repository cannot see it.
+    it('returns a source held in a different repository', async () => {
         const target = await api.create({ type: 'post', data: { title: 'Target' } });
         const link = await api.create({
             type: 'links/link',

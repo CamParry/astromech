@@ -15,7 +15,7 @@ import { getDb } from '@/database/registry';
 import { entriesService } from '@/entries/index';
 
 // `restoreVersion` snapshots the current state, updates the row, and indexes
-// it inside one storage transaction. `replaceForSource` only rejects once
+// it inside one database transaction. `replaceForSource` only rejects once
 // `state.failing` is set, so the earlier setup writes still succeed.
 const state = vi.hoisted(() => ({ failing: false }));
 

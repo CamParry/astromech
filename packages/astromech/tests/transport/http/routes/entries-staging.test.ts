@@ -10,7 +10,7 @@
  * status codes, the 409 duplicate-stage envelope (carrying `stagedId`), the
  * capability 409, and the permission matrix (merge = publish; the rest = update).
  *
- * Uses a per-test temp FILE db: `mergeStaged` runs in a storage transaction,
+ * Uses a per-test temp FILE db: `mergeStaged` runs in a database transaction,
  * which poisons the harness `:memory:` base connection on later reads.
  */
 

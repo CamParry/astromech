@@ -2,7 +2,7 @@
  * Read-shape wiring on the entries router: `trashed` is only meaningful in the
  * full shape, so a public trashed read must answer 400 rather than the catch-all
  * 500 (or, as it did before, a silently empty list — public visibility drops
- * every trashed row after the storage call).
+ * every trashed row after the repository call).
  *
  * Covers all three routes that funnel into `entries.query`: `GET /:type`,
  * `POST /:type/query` and the cross-type `POST /query`.

@@ -5,8 +5,8 @@
  * Staging is exercised on `post` (versioning ON, relationship field) and `note`
  * (versioning OFF) so the conditional backup branch is covered both ways.
  *
- * Storage-level concerns (partial slug index, list exclusion) are pinned in
- * tests/storage/entries/built-in.test.ts. These tests own the service policy:
+ * Repository-level concerns (partial slug index, list exclusion) are pinned in
+ * tests/entries/repository/built-in.test.ts. These tests own the service policy:
  * content/relation copy, the StagedEntryExistsError gate, merge ordering, and
  * the capability assertions. The staging methods live on the concrete service
  * object (EntriesService & EntriesStagingApi), so we import it directly rather than
@@ -29,7 +29,7 @@ let dbCounter = 0;
 let dbPath = '';
 
 beforeEach(async () => {
-    // `mergeStaged` runs inside a storage transaction. On the harness's plain
+    // `mergeStaged` runs inside a database transaction. On the harness's plain
     // `:memory:` db a transaction poisons the base connection (post-commit reads
     // throw "no such table"), so use a per-test temp FILE db here: transactions
     // commit to disk and the base connection can read the result back.
@@ -260,7 +260,7 @@ describe('mergeStaged', () => {
  * where the canonical's status decides whether completeness applies.
  *
  * Malformed content can't be planted through `api.update` (correctness runs on
- * every write), so these tests write it straight through storage — standing in
+ * every write), so these tests write it straight through the repository — standing in
  * for any path that put content in the row without the pipeline.
  */
 describe('mergeStaged — field validation', () => {
@@ -372,7 +372,7 @@ describe('mergeStaged — field validation', () => {
         });
         // The staged copy carries the same `code`, so the scan must ignore BOTH
         // rows — otherwise the value collides with its own other copy. (Planted
-        // through storage: editing the staged row via `update` excludes only
+        // through the repository: editing the staged row via `update` excludes only
         // itself, so it trips over the canonical's copy — a separate gap.)
         const staged = await api.createStaged({ type: 'post', id: canonical.id });
         await plantFields(staged.id, { headline: 'Hello again', code: 'abc123' });

@@ -1,5 +1,5 @@
 /**
- * `mediaService.query` filters, pinned across the move onto media storage.
+ * `mediaService.query` filters, pinned across the move onto the media repository.
  *
  * The mime-bucket predicate is the one part of the migration whose SQL is
  * genuinely different in kind: it moved from a `DB`-typed expression builder onto
@@ -7,8 +7,8 @@
  * raw `sql` fragment naming snake_case columns (CamelCasePlugin does not
  * transform raw fragments). Nothing else in the suite exercises it.
  *
- * Rows are inserted through storage rather than `mediaService.upload` so no storage
- * driver, image decoding or real bytes are involved.
+ * Rows are inserted through the repository rather than `mediaService.upload` so
+ * no storage driver, image decoding or real bytes are involved.
  */
 
 import type { MediaMimeTypeFilter, StorageDriver } from '@/types/index';

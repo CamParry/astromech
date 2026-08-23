@@ -2,7 +2,7 @@
  * What better-auth's own signup writes into `users`.
  *
  * Signup inserts through better-auth's own Kysely instance, bypassing our codec
- * and storage, so the role it writes comes from `user.additionalFields` in
+ * and repository, so the role it writes comes from `user.additionalFields` in
  * `users/auth.ts` (the column has no SQL default to fall back on) and the
  * timestamp format it writes is what the descriptor has to describe.
  */
@@ -102,7 +102,7 @@ describe('better-auth email signup', () => {
 
     /**
      * Both writers of `users` produce the same cell: better-auth's adapter and
-     * our own storage each write ISO-8601 TEXT. The descriptor declares that
+     * our own repository each write ISO-8601 TEXT. The descriptor declares that
      * format, so this is what would fail first if either side moved.
      */
     it('writes ISO-8601 TEXT timestamps, the same format our own writes store', async () => {

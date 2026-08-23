@@ -1,5 +1,5 @@
 /**
- * Storage-level tests for `createVersionRepository`. The CRUD/list/latestNumber
+ * Repository-level tests for `createVersionRepository`. The CRUD/list/latestNumber
  * surface is already exercised through `createBuiltInEntryRepository.versions` in
  * `built-in.test.ts`; this file covers `deleteExcess`, which the built-in
  * wrapper does not expose.
