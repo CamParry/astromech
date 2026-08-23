@@ -49,8 +49,11 @@ types · utilities · env · errors · registry.ts       pure leaves
 
 - **`astromech.ts`** is the composition root: `createAstromech` resolves the
   config, wires the drivers, and composes the content services onto the
-  application instance. `exports/` holds the re-export barrels that back every
-  published subpath.
+  application instance. `exports/` holds the re-export barrels, one per
+  published subpath except three that name a source file directly:
+  `./admin/shell.astro`, `./media/Image` and `./routes/handler.ts`. Nothing
+  else in `src/` re-exports — inside the package every import names the file
+  that declares the symbol.
 - **`integrations/`** holds two kinds of glue side by side. A **framework
   integration** answers how a request arrives and where the config lives:
   `astro/` is the Vite plugin, the virtual modules
