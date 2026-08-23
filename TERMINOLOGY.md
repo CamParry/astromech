@@ -53,9 +53,12 @@ repeated items by id.
 **Field type.** The behaviour behind a field's type name: how it builds, coerces,
 validates, and types itself in a site.
 
-**Integration.** The glue that lets one host, an Astro site or a Cloudflare
-Worker, serve an application. It carries no business logic. Not "adapter", which
-Astro already uses for its deploy targets.
+**Integration.** The glue that lets one host serve an application, carrying no
+business logic. Two kinds: a **framework integration** (Astro) answers how a
+request arrives and where the config lives; a **platform integration**
+(Cloudflare) answers where environment values come from and whether the host has
+an entry point that is not an HTTP request. Not "adapter", which Astro already
+uses for its deploy targets.
 
 **Layout field.** A field that draws structure and stores nothing: sections,
 tabs, accordions. Its own name never appears in a data path, so data stays flat

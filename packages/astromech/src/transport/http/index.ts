@@ -11,6 +11,7 @@ import { swaggerUI } from '@hono/swagger-ui';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
+import { resolveEnv } from '@/env/index';
 import { handleMediaRequest } from '@/media/serving/handler';
 import { runWithRequest } from '@/request-context/index';
 import { getAuth, usersService } from '@/users/index';
@@ -151,7 +152,7 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
         },
     });
 
-    if (process.env.NODE_ENV !== 'production') {
+    if (resolveEnv('NODE_ENV') === 'development') {
         app.get(`${api}/docs`, swaggerUI({ url: `${api}/openapi.json` }));
     }
 

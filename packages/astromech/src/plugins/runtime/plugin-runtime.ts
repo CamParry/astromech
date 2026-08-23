@@ -42,6 +42,7 @@ import {
     resetEntryRepositoryOverrides,
     setEntryRepository,
 } from '@/entries/repository/registry';
+import { getEnvRecord } from '@/env/index';
 import { AstromechError } from '@/errors/index';
 import { flattenEntryFields } from '@/fields/flatten';
 import { addHook, clearHooks, runHook } from '@/hooks/index';
@@ -162,7 +163,7 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
  * Called once at boot, after `registerPlugins`; failures crash loud, naming the plugin.
  */
 export async function bootPlugins(defs: PluginDefinition[]): Promise<void> {
-    const env = resolveEnv();
+    const env = getEnvRecord();
 
     for (const def of defs) {
         const identity = resolvePluginIdentity(def);
@@ -265,20 +266,6 @@ export function getPluginServiceMethods(): Map<string, Record<string, AnyService
 
 export function getPluginRawRoutes(): RegisteredRawRoute[] {
     return state().rawRoutes;
-}
-
-function resolveEnv(): Record<string, string | undefined> {
-    const fromProcess = typeof process !== 'undefined' ? process.env : {};
-    let fromImportMeta: Record<string, string | undefined>;
-    try {
-        // Populated by Vite in Astro SSR; absent in plain Node — guard for both.
-        fromImportMeta =
-            (import.meta as unknown as { env?: Record<string, string | undefined> })
-                .env ?? {};
-    } catch {
-        fromImportMeta = {};
-    }
-    return { ...fromProcess, ...fromImportMeta };
 }
 
 function makeLogger(name: string): PluginLogger {
@@ -394,7 +381,9 @@ export function createPluginContext(
                 type: `plugin:${identity.namespace}.${input.type}`,
             }),
         logger: makeLogger(identity.namespace),
-        env: resolveEnv(),
+        get env() {
+            return getEnvRecord();
+        },
         runHook: (event, payload) => runHook(event, payload),
         storage: {
             put: (key, body, opts) => getStorageDriver().put(PREFIX + key, body, opts),

@@ -17,6 +17,7 @@ import { pipeline } from 'node:stream/promises';
 import { createClient } from '@libsql/client';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { CamelCasePlugin, Kysely } from 'kysely';
+import { resolveEnv } from '@/env/index';
 import { AstromechError } from '@/errors/index';
 
 export type LibsqlOptions = {
@@ -35,8 +36,9 @@ export function libsql(options?: LibsqlOptions) {
 
     function getClient(): Client {
         if (!client) {
-            const url = options?.url ?? process.env.DATABASE_URL ?? 'file:./database.db';
-            const authToken = options?.authToken ?? process.env.DATABASE_AUTH_TOKEN;
+            const url =
+                options?.url ?? resolveEnv('DATABASE_URL') ?? 'file:./database.db';
+            const authToken = options?.authToken ?? resolveEnv('DATABASE_AUTH_TOKEN');
             client = createClient({ url, ...(authToken && { authToken }) });
         }
         return client;
@@ -60,7 +62,7 @@ export function libsql(options?: LibsqlOptions) {
     }
 
     function resolveUrl(): string {
-        return options?.url ?? process.env.DATABASE_URL ?? 'file:./database.db';
+        return options?.url ?? resolveEnv('DATABASE_URL') ?? 'file:./database.db';
     }
 
     /**

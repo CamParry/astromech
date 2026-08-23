@@ -21,8 +21,9 @@ import { migrateToLatest } from '@astromech/schema-engine';
 import { createClient } from '@libsql/client';
 import { sql } from 'kysely';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { resetBindingEnv, setBindingEnv } from '@/cloudflare/bindings';
 import { d1 } from '@/database/drivers/d1';
+import { clearEnvSource, setEnvSource } from '@/env/index';
+import { resetBindings } from '@/integrations/cloudflare/bindings';
 
 /** Test-only schema; deliberately unrelated to the app's `DB` type. */
 type TestSchema = {
@@ -94,12 +95,14 @@ afterAll(() => {
 });
 
 afterEach(() => {
-    resetBindingEnv();
+    clearEnvSource();
+    resetBindings();
 });
 
 describe('d1()', () => {
     it('getInstance() is synchronous and does not resolve the binding', () => {
-        resetBindingEnv();
+        clearEnvSource();
+        resetBindings();
         expect(() => d1({ binding: 'NOPE' }).getInstance()).not.toThrow();
     });
 
@@ -188,8 +191,8 @@ describe('d1()', () => {
     });
 
     describe('binding form', () => {
-        it('round-trips through Kysely against a database supplied via setBindingEnv', async () => {
-            setBindingEnv({ DB: fakeDb });
+        it('round-trips through Kysely against a database supplied via setEnvSource', async () => {
+            setEnvSource({ DB: fakeDb });
             const db = d1({
                 binding: 'DB',
             }).getInstance() as unknown as Kysely<TestSchema>;
@@ -219,7 +222,7 @@ describe('d1()', () => {
                     return fakeDb;
                 },
             });
-            setBindingEnv(env);
+            setEnvSource(env);
 
             const db = d1({
                 binding: 'DB',
@@ -232,14 +235,16 @@ describe('d1()', () => {
         });
 
         it('does not memoise a failed lookup, so a later env still resolves', async () => {
-            resetBindingEnv();
-            setBindingEnv({ OTHER: fakeDb });
+            clearEnvSource();
+            resetBindings();
+            setEnvSource({ OTHER: fakeDb });
             const driver = d1({ binding: 'MISSING' });
             const db = driver.getInstance();
             await expect(sql`SELECT 1`.execute(db)).rejects.toThrow(/not found/);
 
-            resetBindingEnv();
-            setBindingEnv({ MISSING: fakeDb });
+            clearEnvSource();
+            resetBindings();
+            setEnvSource({ MISSING: fakeDb });
             await expect(sql`SELECT 1`.execute(db)).resolves.toBeDefined();
         });
     });

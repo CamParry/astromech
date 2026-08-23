@@ -8,6 +8,7 @@ import type { Auth, BetterAuthOptions } from 'better-auth';
 import { betterAuth } from 'better-auth';
 import { getConfig } from '@/config/registry';
 import { getDatabaseDriverOrThrow } from '@/database/driver-registry';
+import { resolveEnv } from '@/env/index';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/index';
 import { createRegistry } from '@/registry';
 import { log } from '@/utilities/log';
@@ -29,7 +30,7 @@ export function getAuth(): Auth<BetterAuthOptions> {
 function buildAuth(): Auth<BetterAuthOptions> {
     const { basePath } = getConfig();
     return betterAuth({
-        baseURL: import.meta.env.BETTER_AUTH_URL,
+        baseURL: resolveEnv('BETTER_AUTH_URL'),
         basePath: `${basePath}/api/auth`,
         database: {
             dialect: getDatabaseDriverOrThrow().createDialect(),
