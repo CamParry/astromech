@@ -6,16 +6,31 @@
  * exercises the router's own permission checks against the real DB.
  */
 
+import type { DB } from '@/database/types';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { Role, User } from '@/types/index';
 import type { Context, Hono, Next } from 'hono';
+import type { Kysely } from 'kysely';
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { createTestUser } from '@tests/harness';
 import { runWithContext } from '@/request-context/index';
 
 export type RouteEnv = { Variables: AuthVariables };
 
-/** The identity every mounted-router test acts as unless it says otherwise. */
+/**
+ * The identity every mounted-router test acts as unless it says otherwise. No
+ * `users` row backs it until {@link seedTestUser} inserts one.
+ */
 export const testUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;
+
+/**
+ * Insert the `users` row for {@link testUser}. A route test whose route writes a
+ * row referencing the acting user (a version snapshot, say) must call this after
+ * `createTestDb()`, or the foreign key fails.
+ */
+export async function seedTestUser(db: Kysely<DB>): Promise<void> {
+    await createTestUser(db, { id: testUser.id, email: testUser.email });
+}
 
 /** A role holding exactly `permissions`. */
 export function roleWith(permissions: string[]): Role {

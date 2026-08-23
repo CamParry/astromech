@@ -8,6 +8,7 @@ import { assertCapability, isVersioningEnabled } from '../../internal/entry-type
 import { asEntry, getEntryOfType } from '../../internal/records';
 import { indexEntryRelationships } from '../../internal/relationships';
 import { toStoredFields } from '../../internal/stored-fields';
+import { snapshotVersion } from '../../internal/versions';
 import { getEntryRepository } from '../../repository/registry';
 
 /**
@@ -55,15 +56,7 @@ export async function mergeStagedEntry(params: {
         // 1. Backup (conditional on versioning): snapshot the canonical first so
         //    a partial failure leaves a recoverable version.
         if (versioningOn && repository.versions) {
-            const latestNumber = await repository.versions.latestNumber(id);
-            await repository.versions.create({
-                entryId: id,
-                versionNumber: latestNumber + 1,
-                title: canonical.title,
-                slug: canonical.slug,
-                fields: canonical.fields,
-                createdBy: null,
-            });
+            await snapshotVersion(repository.versions, canonical);
         }
 
         // 2. Update the canonical row in place (id + slug preserved → external

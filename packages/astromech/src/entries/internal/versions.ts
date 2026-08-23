@@ -4,24 +4,27 @@
 
 import type { EntryRepository } from '../repository/types';
 import type { Entry, JsonObject } from '@/types/index';
+import { getCurrentUser } from '@/request-context/index';
 import { deepEqual } from './deep-equal';
 
 /**
- * Saves the entry's current state as the next version. The caller decides
- * whether a version is warranted; this numbers and writes it.
+ * Saves the entry's current state as the next version, credited to the acting
+ * user. The caller decides whether a version is warranted; this numbers and
+ * writes it. Outside a request (a CLI job, a seed script) there is no author.
  */
 export async function snapshotVersion(
     versions: NonNullable<EntryRepository['versions']>,
     entry: Entry
 ): Promise<void> {
     const latestNumber = await versions.latestNumber(entry.id);
+    const user = await getCurrentUser();
     await versions.create({
         entryId: entry.id,
         versionNumber: latestNumber + 1,
         title: entry.title,
         slug: entry.slug,
         fields: entry.fields,
-        createdBy: null,
+        createdBy: user?.id ?? null,
     });
 }
 

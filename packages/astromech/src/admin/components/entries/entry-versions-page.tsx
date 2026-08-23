@@ -7,7 +7,7 @@ import type { EntriesMount } from './mount';
 import type { EntryVersion } from '@/types/index';
 import { Link as RouterLink, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Breadcrumb,
@@ -20,7 +20,12 @@ import {
     Panel,
     useConfirm,
 } from '@/admin/components/ui/index';
-import { useEntry, useEntryVersions, useRestoreEntryVersion } from '@/admin/hooks/index';
+import {
+    useEntry,
+    useEntryVersions,
+    useRestoreEntryVersion,
+    useUsersQuery,
+} from '@/admin/hooks/index';
 import { formatDatetime } from '@/utilities/dates';
 
 // Mount link bases are runtime strings; address `Link` by string `to`.
@@ -81,17 +86,34 @@ function renderFieldValue(value: unknown): React.ReactElement {
     return <span>{String(value)}</span>;
 }
 
+/**
+ * The name to credit a version to, or undefined when it cannot be resolved —
+ * an unauthored version, or a users query the current user may not read. The
+ * caller renders nothing rather than a raw user id.
+ */
+function resolveAuthor(
+    createdBy: string | null,
+    authorNames: Map<string, string>
+): string | undefined {
+    if (createdBy == null) return undefined;
+    return authorNames.get(createdBy);
+}
+
 type VersionItemProps = {
     version: EntryVersion;
     isSelected: boolean;
+    authorNames: Map<string, string>;
     onClick: () => void;
 };
 
 function VersionItem({
     version,
     isSelected,
+    authorNames,
     onClick,
 }: VersionItemProps): React.ReactElement {
+    const author = resolveAuthor(version.createdBy, authorNames);
+
     return (
         <button
             type="button"
@@ -106,8 +128,8 @@ function VersionItem({
             <div className="am-versions-item-date">
                 {formatDatetime(version.createdAt)}
             </div>
-            {version.createdBy != null && (
-                <div className="am-versions-item-author">{version.createdBy}</div>
+            {author !== undefined && (
+                <div className="am-versions-item-author">{author}</div>
             )}
         </button>
     );
@@ -116,6 +138,7 @@ function VersionItem({
 type DiffViewProps = {
     selected: EntryVersion;
     previous: EntryVersion | null;
+    authorNames: Map<string, string>;
     onRestore: () => void;
     isRestoring: boolean;
     hasTitle: boolean;
@@ -124,12 +147,14 @@ type DiffViewProps = {
 function DiffView({
     selected,
     previous,
+    authorNames,
     onRestore,
     isRestoring,
     hasTitle,
 }: DiffViewProps): React.ReactElement {
     const { t } = useTranslation();
     const diff = computeDiff(previous, selected, hasTitle);
+    const author = resolveAuthor(selected.createdBy, authorNames);
 
     return (
         <div className="am-versions-diff">
@@ -140,7 +165,7 @@ function DiffView({
                     </span>
                     <span className="am-versions-diff-subtitle">
                         {formatDatetime(selected.createdAt)}
-                        {selected.createdBy != null && ` · ${selected.createdBy}`}
+                        {author !== undefined && ` · ${author}`}
                     </span>
                 </div>
                 <Button
@@ -209,6 +234,17 @@ export function EntryVersionsPage({
     const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
 
     const { data: entry } = useEntry(type, id, scope);
+
+    // Versions store the author as a user id. Reading users can fail for an
+    // editor without the permission, so a missing name renders no author at all.
+    const { data: usersResult } = useUsersQuery({ limit: 'all' });
+    const authorNames = useMemo(() => {
+        const names = new Map<string, string>();
+        for (const user of usersResult?.data ?? []) {
+            names.set(user.id, user.name !== '' ? user.name : user.email);
+        }
+        return names;
+    }, [usersResult]);
 
     const { data: rawVersions, isLoading } = useEntryVersions(type, id, true, scope);
     const versions =
@@ -296,6 +332,7 @@ export function EntryVersionsPage({
                                         key={version.id}
                                         version={version}
                                         isSelected={version.id === resolvedSelectedId}
+                                        authorNames={authorNames}
                                         onClick={() => setSelectedVersionId(version.id)}
                                     />
                                 ))}
@@ -315,6 +352,7 @@ export function EntryVersionsPage({
                             <DiffView
                                 selected={selectedVersion}
                                 previous={previousVersion}
+                                authorNames={authorNames}
                                 onRestore={handleRestore}
                                 isRestoring={restoreMutation.isPending}
                                 hasTitle={hasTitle}

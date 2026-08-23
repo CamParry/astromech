@@ -9,7 +9,7 @@
 
 import type { AstromechConfig, Entry } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { adminRole, mountRouter } from '@tests/mount-router';
+import { adminRole, mountRouter, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService as api } from '@/entries/service';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
@@ -26,7 +26,8 @@ function configWithoutTrash(): AstromechConfig {
 }
 
 beforeEach(async () => {
-    await createTestDb();
+    const db = await createTestDb();
+    await seedTestUser(db);
     setupTestConfig(makeTestConfig());
 });
 

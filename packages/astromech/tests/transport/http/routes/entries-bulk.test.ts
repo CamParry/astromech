@@ -8,7 +8,7 @@
 
 import type { AstromechConfig, Entry } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { adminRole, mountRouter } from '@tests/mount-router';
+import { adminRole, mountRouter, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService as api } from '@/entries/service';
 import { onError } from '@/transport/http/middleware/errors';
@@ -58,7 +58,8 @@ function configWithValidatedContact(): AstromechConfig {
 let ids: string[];
 
 beforeEach(async () => {
-    await createTestDb();
+    const db = await createTestDb();
+    await seedTestUser(db);
     setupTestConfig(makeTestConfig());
     const first = await api.create({ type: 'post', data: { title: 'One', slug: 'one' } });
     const second = await api.create({

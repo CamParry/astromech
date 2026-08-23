@@ -24,8 +24,9 @@
  * fully isolated even when tests run in a single worker.
  *
  * FK enforcement: libsql enables `PRAGMA foreign_keys` by default. Entry
- * inserts never set `createdBy`/`updatedBy` (both nullable), so no user row is
- * required for the entry flows — `createTestUser` is provided for completeness.
+ * inserts still leave `createdBy`/`updatedBy` null, but a version snapshot
+ * records the acting user, so a route test acting as `testUser` needs that row
+ * to exist — `mount-router.ts`'s `seedTestUser` inserts it via `createTestUser`.
  */
 import type { UserRow } from '@/database/tables';
 import type { DB } from '@/database/types';
