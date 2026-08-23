@@ -1,7 +1,10 @@
 # Decisions
 
-One file per decision, named `NNNN-kebab-title.md`, never edited once written —
-supersede it with a later record instead. Numbers are unique and never reused.
+One file per decision, named `NNNN-kebab-title.md`. A record is a compact
+description of the decision, a few lines at most; the full rationale as
+originally written lives in this directory's git history. A settled question is
+not re-argued by editing a record — supersede it with a later one. Numbers are
+unique and never reused.
 
 This is where rationale and history live: why a name was chosen, what was
 rejected, what the trade-off was, and what a thing used to be. It is deliberately
