@@ -5,6 +5,7 @@
  */
 
 import type { EntryRepository } from '../repository/types';
+import type { Field } from '@/types/fields';
 import type { Entry, JsonObject, ResolvedEntryType } from '@/types/index';
 import { getNonTranslatableFieldNames } from './entry-type';
 import { asEntry } from './records';
@@ -14,16 +15,14 @@ import { asEntry } from './records';
  * marked `translatable: false` belongs to the group, so a new translation
  * takes the sibling's value over whatever the caller sent.
  */
-export async function inheritSharedFields(
-    values: Record<string, unknown>,
-    definitions: { name: string }[],
-    context: {
-        repository: EntryRepository;
-        entryType: ResolvedEntryType;
-        localeGroup: string | undefined;
-    }
-): Promise<Record<string, unknown>> {
-    const { repository, entryType, localeGroup } = context;
+export async function inheritSharedFields(params: {
+    repository: EntryRepository;
+    entryType: ResolvedEntryType;
+    values: Record<string, unknown>;
+    definitions: Field[];
+    localeGroup: string | undefined;
+}): Promise<Record<string, unknown>> {
+    const { repository, entryType, values, definitions, localeGroup } = params;
     if (localeGroup === undefined || !repository.translatable) return values;
 
     const shared = getNonTranslatableFieldNames(
@@ -71,13 +70,14 @@ export async function propagateSharedFields(params: {
 
 /**
  * Add each entry's live locale siblings to the batch, deduplicated by id
- * (input entries first). A storage without `translatable` has no siblings to
+ * (input entries first). A repository without `translatable` has no siblings to
  * add. Shared by the delete and trash operations for `cascadeLocales`.
  */
-export async function withLocaleSiblings(
-    repository: EntryRepository,
-    entries: readonly Entry[]
-): Promise<Entry[]> {
+export async function withLocaleSiblings(params: {
+    repository: EntryRepository;
+    entries: readonly Entry[];
+}): Promise<Entry[]> {
+    const { repository, entries } = params;
     if (!repository.translatable) return entries as Entry[];
 
     const byId = new Map(entries.map((entry) => [entry.id, entry]));

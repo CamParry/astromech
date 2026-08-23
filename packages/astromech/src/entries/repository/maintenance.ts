@@ -21,6 +21,8 @@ export function createEntryMaintenanceRepository(db: Db = getDb()) {
      * published. Returns the number of entries transitioned.
      */
     async function publishDueScheduled(now: Date): Promise<number> {
+        // `createRepository` serializes every `where` value through the column
+        // codec, so a `Date` on a timestamp column compares as ISO text.
         return repository.updateMany(
             { status: 'scheduled', publishedAt: { lte: now }, deletedAt: null },
             { status: 'published' }

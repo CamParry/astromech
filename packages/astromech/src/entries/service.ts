@@ -1,11 +1,7 @@
 /**
- * Entries service — the entry CRUD verbs.
- *
- * Thin assembler: wires the per-operation functions in `operations/**` into the
- * public `EntriesService` object. All policy (validation, hooks, relationships,
- * versioning/staging, slug, capability gating) lives in `operations/**` +
- * `internal/**`; persistence flows through the storage seam. Consumers reach it
- * as `app.entries`.
+ * Entries service — the entry CRUD verbs, reached as `app.entries`. A thin
+ * assembler: it wires `operations/**` into the public `EntriesService` object,
+ * and every policy lives there or in `internal/**`.
  */
 
 import type { EntriesService, EntryUpdateParams } from '@/types/index';

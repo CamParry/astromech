@@ -21,7 +21,7 @@ export async function deleteEntries(params: {
     const repository = getEntryRepository(type);
     const entries = await getEntriesOfType(repository, type, ids);
     const targets = params.cascadeLocales
-        ? await withLocaleSiblings(repository, entries)
+        ? await withLocaleSiblings({ repository, entries })
         : entries;
     const user = await getCurrentUser();
     const relationships = createRelationshipRepository();

@@ -2,6 +2,7 @@
  * Preview (forward versioning) helpers: token secret generation + verification
  * and the preview projection (public shape with the publish gate bypassed).
  */
+
 import type { AudienceContext } from '../visibility';
 import type { Entry, Field } from '@/types/index';
 import {
@@ -14,7 +15,7 @@ import { applyVisibility, markPublic } from '../visibility';
 export function generatePreviewSecret(): string {
     const bytes = crypto.getRandomValues(new Uint8Array(32));
     return Array.from(bytes)
-        .map((b) => b.toString(16).padStart(2, '0'))
+        .map((byte) => byte.toString(16).padStart(2, '0'))
         .join('');
 }
 
@@ -27,10 +28,10 @@ export async function verifyPreviewToken(
     return createPreviewTokenRepository().isValid(entryId, hash, new Date());
 }
 
-export const previewAudience = (): AudienceContext => ({
-    roleSlug: null,
-    now: new Date(),
-});
+/** The audience a preview is filtered for: anonymous, as of now. */
+export function previewAudience(): AudienceContext {
+    return { roleSlug: null, now: new Date() };
+}
 
 /** Apply the preview projection (public shape, publish-gate bypassed). */
 export function projectPreview(entry: Entry, fields: Field[]): Entry | null {

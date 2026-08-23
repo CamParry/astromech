@@ -108,9 +108,11 @@ async function prepareWrite(
     if (input.kind === 'create') {
         const { repository, entryType, localeGroup } = input;
         return {
-            values: await inheritSharedFields(input.values, definitions, {
+            values: await inheritSharedFields({
                 repository,
                 entryType,
+                values: input.values,
+                definitions,
                 localeGroup,
             }),
             type: entryType.id,

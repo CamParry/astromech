@@ -24,7 +24,7 @@ export async function trashEntries(params: {
     if (!trash) throw new CapabilityError(type, 'trash');
     const entries = await getEntriesOfType(repository, type, ids);
     const targets = params.cascadeLocales
-        ? await withLocaleSiblings(repository, entries)
+        ? await withLocaleSiblings({ repository, entries })
         : entries;
     const user = await getCurrentUser();
 
