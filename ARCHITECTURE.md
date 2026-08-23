@@ -27,7 +27,8 @@ packages/
 └── plugins/          # first-party plugins, one published package each:
                       # assistant · backups · forms · menus · redirects · seo
 apps/
-├── demo/             # the Astro site to run and browser-verify against
+├── demo/             # the Astro site to run and browser-verify against, on Node
+├── demo-cloudflare/  # the same core on Workers: D1, R2, Cron Triggers
 └── docs/             # user-facing documentation
 ```
 
