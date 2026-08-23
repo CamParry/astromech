@@ -27,7 +27,7 @@ import {
     RouterProvider,
     useParams,
 } from '@tanstack/react-router';
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -233,6 +233,11 @@ function control(selector: string): HTMLInputElement {
     return el;
 }
 
+/** `control`, retried until it exists — the page loads its row asynchronously. */
+async function findControl(selector: string): Promise<HTMLInputElement> {
+    return waitFor(() => control(selector));
+}
+
 function makeClient(): QueryClient {
     // The admin app's real staleTime (admin/main.tsx).
     const queryClient = new QueryClient({
@@ -264,7 +269,7 @@ function assertNoPartialGroup(): void {
 
 describe('the entry edit page across a locale switch', () => {
     it('keeps the whole group when one sub-key is edited either side of the switch', async () => {
-        const user = userEvent.setup();
+        const user = userEvent.setup({ delay: null });
         const queryClient = makeClient();
         const { api, update } = makeApi();
         const router = mountApp(queryClient, api);
@@ -272,7 +277,7 @@ describe('the entry edit page across a locale switch', () => {
         await settle();
 
         // Edit the meta title alone, leaving the sibling untouched.
-        const title = control('input[name="seo.title"]');
+        const title = await findControl('input[name="seo.title"]');
         await user.clear(title);
         await user.type(title, 'EN edited');
 
@@ -286,7 +291,7 @@ describe('the entry edit page across a locale switch', () => {
         assertNoPartialGroup();
 
         // Edit on the other locale, then come back.
-        const other = control('input[name="seo.title"]');
+        const other = await findControl('input[name="seo.title"]');
         await user.clear(other);
         await user.type(other, 'FR edited');
         await act(async () => {
@@ -296,7 +301,7 @@ describe('the entry edit page across a locale switch', () => {
         await settle();
         assertNoPartialGroup();
 
-        const back = control('input[name="seo.title"]');
+        const back = await findControl('input[name="seo.title"]');
         await user.clear(back);
         await user.type(back, 'EN edited again');
         await user.click(await screen.findByRole('button', { name: 'common.update' }));
@@ -326,7 +331,9 @@ describe('the entry edit page across a locale switch', () => {
         await settle();
         await settle();
 
-        expect(control('input[name="seo.title"]').value).toBe('EN title');
+        await waitFor(() => {
+            expect(control('input[name="seo.title"]').value).toBe('EN title');
+        });
 
         await act(async () => {
             await router.navigate({ to: `/entries/${TYPE}/${FR}` });
@@ -336,12 +343,14 @@ describe('the entry edit page across a locale switch', () => {
 
         // The route component is not remounted, so this is TanStack's
         // `defaultValues` copy landing — it only runs while `isTouched` is false.
-        expect(control('input[name="seo.title"]').value).toBe('FR title');
+        await waitFor(() => {
+            expect(control('input[name="seo.title"]').value).toBe('FR title');
+        });
         assertNoPartialGroup();
     });
 
     it('loads the sibling locale’s own values when the form has been edited', async () => {
-        const user = userEvent.setup();
+        const user = userEvent.setup({ delay: null });
         const queryClient = makeClient();
         const { api, update } = makeApi();
         const router = mountApp(queryClient, api);
@@ -350,10 +359,12 @@ describe('the entry edit page across a locale switch', () => {
 
         // Touch the form. From here TanStack Form stops copying `defaultValues`
         // in, so only the remount can show the sibling row.
-        const title = control('input[name="seo.title"]');
+        const title = await findControl('input[name="seo.title"]');
         await user.clear(title);
         await user.type(title, 'EN edited');
-        expect(control('input[name="seo.title"]').value).toBe('EN edited');
+        await waitFor(() => {
+            expect(control('input[name="seo.title"]').value).toBe('EN edited');
+        });
 
         await act(async () => {
             await router.navigate({ to: `/entries/${TYPE}/${FR}` });
@@ -361,9 +372,11 @@ describe('the entry edit page across a locale switch', () => {
         await settle();
         await settle();
 
-        expect(control('input[name="seo.title"]').value).toBe('FR title');
-        expect(control('textarea[name="excerpt"]').value).toBe('Un extrait');
-        expect(control('#entry-title').value).toBe('Une étude de cas');
+        await waitFor(() => {
+            expect(control('input[name="seo.title"]').value).toBe('FR title');
+            expect(control('textarea[name="excerpt"]').value).toBe('Un extrait');
+            expect(control('#entry-title').value).toBe('Une étude de cas');
+        });
 
         // Back to the first locale: its stored values, not the unsaved edit.
         await act(async () => {
@@ -372,8 +385,10 @@ describe('the entry edit page across a locale switch', () => {
         await settle();
         await settle();
 
-        expect(control('input[name="seo.title"]').value).toBe('EN title');
-        expect(control('textarea[name="excerpt"]').value).toBe('An excerpt');
+        await waitFor(() => {
+            expect(control('input[name="seo.title"]').value).toBe('EN title');
+            expect(control('textarea[name="excerpt"]').value).toBe('An excerpt');
+        });
         expect(update).not.toHaveBeenCalled();
         assertNoPartialGroup();
     });
