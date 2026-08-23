@@ -26,7 +26,7 @@ const KIND_META: Record<ColumnKind, { cellKind: CellKind; fieldType: FieldTypeNa
     integer: { cellKind: 'number', fieldType: 'number' },
     real: { cellKind: 'number', fieldType: 'number' },
     boolean: { cellKind: 'boolean', fieldType: 'boolean' },
-    // Both storage formats (ISO TEXT, unix-seconds INTEGER) carry time-of-day,
+    // Both encoded formats (ISO TEXT, unix-seconds INTEGER) carry time-of-day,
     // so 'datetime' fits the stored precision better than the date-only field
     // type for either.
     timestamp: { cellKind: 'date', fieldType: 'datetime' },

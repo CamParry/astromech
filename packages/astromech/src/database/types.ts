@@ -1,5 +1,5 @@
 /**
- * The Kysely `DB` interface — the storage-shaped type surface for the query
+ * The Kysely `DB` interface — the encoded-shaped type surface for the query
  * layer. Core tables are derived from their `defineTable` objects via
  * `KyselyOf<>`; `sessions`/`accounts`/`verifications` stay hand-typed.
  */

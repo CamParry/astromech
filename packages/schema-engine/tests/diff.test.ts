@@ -79,13 +79,13 @@ describe('diffSnapshots', () => {
         expect(result.errors[0]).toMatch(/NOT NULL/);
     });
 
-    it('a changed column storage type → rebuildTable + warning', () => {
+    it('a changed column type → rebuildTable + warning', () => {
         const prev = table('widgets', [col.id(), col.text('count')]);
         const next = table('widgets', [col.id(), col.integer('count')]);
         const result = diffSnapshots(snap(prev), snap(next));
         expect(result.ops).toHaveLength(1);
         expect(result.ops[0]?.kind).toBe('rebuildTable');
-        expect(result.warnings.some((w) => /storage type changed/.test(w))).toBe(true);
+        expect(result.warnings.some((w) => /changed type/.test(w))).toBe(true);
     });
 
     it('nullable → NOT NULL with a default → rebuildTable with coalesceDefault', () => {

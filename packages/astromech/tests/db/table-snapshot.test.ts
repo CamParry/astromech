@@ -48,7 +48,7 @@ const kinds = defineTable('kinds', ({ col }) => ({
 }));
 
 describe('columnType', () => {
-    it('maps every column kind to its sqlite storage type', () => {
+    it('maps every column kind to its sqlite column type', () => {
         expect(columnType(kinds.columns.id, 'sqlite')).toBe('text');
         expect(columnType(kinds.columns.text, 'sqlite')).toBe('text');
         expect(columnType(kinds.columns.integer, 'sqlite')).toBe('integer');

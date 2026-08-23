@@ -319,7 +319,7 @@ export function createRepository<D extends Table>(table: D, db?: Db): Repository
     // writes
 
     /**
-     * Patch → storage cells. `encodePatchWith` never injects defaults, so the
+     * Patch → encoded cells. `encodePatchWith` never injects defaults, so the
      * `onUpdate` stamp is the wrapper's job — every `col.timestamp({ onUpdate })`
      * column the caller did not supply is stamped `now`.
      */

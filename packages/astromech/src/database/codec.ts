@@ -1,5 +1,5 @@
 /**
- * Row codec — bridges domain values (Date, parsed object, boolean) and storage
+ * Row codec — bridges domain values (Date, parsed object, boolean) and encoded
  * values for Kysely, reproducing the conversions Drizzle did silently.
  * Table-keyed (`*With`) functions are the primary path; name-keyed ones cover
  * better-auth's tables and plugin tables reached by name.
@@ -78,7 +78,7 @@ const LEGACY_CODECS: Record<string, LegacyCodec> = {
 // plugin table reached by name. A name matching neither passes through
 // untouched; if it's one of ours, the caller wants `*With` below.
 
-/** Storage → JS for one row of a better-auth or plugin table, keyed by name. */
+/** Encoded → JS for one row of a better-auth or plugin table, keyed by name. */
 export function decode<T extends Record<string, unknown>>(tableName: string, row: T): T {
     if (!row) return row;
     const table = PLUGIN_TABLES.get(tableName);
@@ -99,7 +99,7 @@ export function decode<T extends Record<string, unknown>>(tableName: string, row
 }
 
 /**
- * JS → storage for INSERTs, keyed by name. The tables reached this way have no
+ * JS → encoded for INSERTs, keyed by name. The tables reached this way have no
  * app-side defaults — better-auth supplies every column it writes — so this is
  * serialization only.
  */
@@ -115,7 +115,7 @@ export function encode(
 }
 
 /**
- * JS → storage for UPDATEs, keyed by name. Serializes provided columns and drops
+ * JS → encoded for UPDATEs, keyed by name. Serializes provided columns and drops
  * `undefined` keys (Drizzle `.set()` skips them). Never injects app defaults —
  * `updatedAt` is stamped explicitly by callers, exactly as before.
  */
@@ -135,7 +135,7 @@ export function encodePatch(
 // `DB` interface; plugin code converts its own rows without knowing the key.
 
 /**
- * Storage → JS for one table's row. Call on every row a query returns
+ * Encoded → JS for one table's row. Call on every row a query returns
  * (selects AND `returningAll`). Typed as the table's domain row shape, so the
  * result needs no cast.
  *
@@ -166,7 +166,7 @@ export function decodeWith<D extends Table>(
 }
 
 /**
- * JS → storage for an INSERT: inject app defaults (id/now), then serialize.
+ * JS → encoded for an INSERT: inject app defaults (id/now), then serialize.
  * Typed as the table's Kysely insert shape so the result goes straight into
  * `.values()` without a cast.
  */
@@ -184,7 +184,7 @@ export function encodeWith<D extends Table>(
 }
 
 /**
- * JS → storage for an UPDATE: serialize what was provided, never default. Typed
+ * JS → encoded for an UPDATE: serialize what was provided, never default. Typed
  * as the table's Kysely update shape so the result goes straight into `.set()`.
  */
 export function encodePatchWith<D extends Table>(
@@ -223,7 +223,7 @@ function serializeLegacy(
     return stripUndefined(out);
 }
 
-/** Storage → `Date` for a better-auth timestamp: ISO text, or a unix-seconds
+/** Encoded → `Date` for a better-auth timestamp: ISO text, or a unix-seconds
  *  number left by a writer that assumed seconds. */
 function parseTimestamp(value: unknown): Date {
     return typeof value === 'number' ? new Date(value * 1000) : new Date(String(value));

@@ -140,7 +140,7 @@ function diffTable(
             }
             if (prevCol.type !== nextCol.type) {
                 acc.warnings.push(
-                    `column "${colName}" on table "${nextTable.name}" storage type changed ` +
+                    `column "${colName}" on table "${nextTable.name}" changed type ` +
                         `(${prevCol.type} → ${nextCol.type}); SQLite copies existing values as-is`
                 );
             }

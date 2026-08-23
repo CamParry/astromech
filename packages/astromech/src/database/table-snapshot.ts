@@ -41,7 +41,7 @@ export function toSnakeCase(key: string): string {
     return key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
 }
 
-const SQLITE_STORAGE_TYPE: Record<ColumnKind, 'text' | 'integer' | 'real'> = {
+const SQLITE_COLUMN_TYPE: Record<ColumnKind, 'text' | 'integer' | 'real'> = {
     id: 'text',
     text: 'text',
     integer: 'integer',
@@ -53,14 +53,14 @@ const SQLITE_STORAGE_TYPE: Record<ColumnKind, 'text' | 'integer' | 'real'> = {
     reference: 'text',
 };
 
-/** The storage column type a column renders to, per dialect. */
+/** The SQL column type a column renders to, per dialect. */
 export function columnType(
     column: ColumnRuntime,
     dialect: SqlDialect
 ): 'text' | 'integer' | 'real' {
     switch (dialect) {
         case 'sqlite':
-            return SQLITE_STORAGE_TYPE[column.kind];
+            return SQLITE_COLUMN_TYPE[column.kind];
     }
 }
 

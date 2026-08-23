@@ -1,6 +1,6 @@
 /**
  * `defineTable` — the table definition primitive. One `Table` yields domain
- * row types (`TableSelect`/`TableInsert`/`TableUpdate`) and Kysely storage
+ * row types (`TableSelect`/`TableInsert`/`TableUpdate`) and Kysely encoded
  * types (`KyselyOf`), plus the per-column codec `database/codec.ts` drives.
  */
 
@@ -44,9 +44,9 @@ export type ColumnRuntime = {
     onUpdate: boolean;
     enumValues?: readonly string[];
     reference?: ReferenceSpec;
-    /** JS (domain) → storage. */
+    /** JS (domain) → encoded. */
     serialize: (v: unknown) => unknown;
-    /** Storage → JS (domain). */
+    /** Encoded → JS (domain). */
     parse: (v: unknown) => unknown;
     /** Produce an app default (domain value); serialize runs afterwards. */
     default?: () => unknown;
@@ -63,8 +63,8 @@ export type IndexSpec = {
 type ColConfig = {
     /** Domain type (Date, parsed object, boolean, string, number). */
     data: unknown;
-    /** Storage type the Kysely layer sees (ISO string, JSON string, 0/1, …). */
-    storage: unknown;
+    /** Encoded type the Kysely layer sees (ISO string, JSON string, 0/1, …). */
+    encoded: unknown;
     /** NOT NULL (or primary key). */
     notNull: boolean;
     /** App-generated default present → omittable on insert, auto-filled. */
@@ -138,55 +138,55 @@ type RefOpts = {
 // Per-kind config derivations.
 type TextConfig<O extends TextOpts> = {
     data: string;
-    storage: string;
+    encoded: string;
     notNull: Or<FlagTrue<O, 'notNull'>, FlagTrue<O, 'primaryKey'>>;
     generated: FlagTrue<O, 'defaultUlid'>;
     hasDefault: HasKey<O, 'default'>;
 };
 type IntegerConfig<O extends IntegerOpts> = {
     data: number;
-    storage: number;
+    encoded: number;
     notNull: Or<FlagTrue<O, 'notNull'>, FlagTrue<O, 'primaryKey'>>;
     generated: false;
     hasDefault: HasKey<O, 'default'>;
 };
 type RealConfig<O extends RealOpts> = {
     data: number;
-    storage: number;
+    encoded: number;
     notNull: FlagTrue<O, 'notNull'>;
     generated: false;
     hasDefault: HasKey<O, 'default'>;
 };
 type BooleanConfig<O extends BooleanOpts> = {
     data: boolean;
-    storage: number;
+    encoded: number;
     notNull: FlagTrue<O, 'notNull'>;
     generated: false;
     hasDefault: HasKey<O, 'default'>;
 };
 type TimestampConfig<O extends TimestampOpts> = {
     data: Date;
-    storage: string;
+    encoded: string;
     notNull: FlagTrue<O, 'notNull'>;
     generated: FlagTrue<O, 'defaultNow'>;
     hasDefault: false;
 };
 type EnumConfig<V extends readonly string[], O extends EnumOpts<V[number]>> = {
     data: V[number];
-    storage: V[number];
+    encoded: V[number];
     notNull: FlagTrue<O, 'notNull'>;
     generated: false;
     hasDefault: HasKey<O, 'default'>;
 };
 type RefConfig<O extends RefOpts> = {
     data: string;
-    storage: string;
+    encoded: string;
     notNull: FlagTrue<O, 'notNull'>;
     generated: false;
     hasDefault: false;
 };
 
-// Codec primitives — the storage format flip lives here
+// Codec primitives — the encoded format flip lives here
 const passthrough = (v: unknown): unknown => v;
 // Always stringify: a JSON column whose value *is* a string (`settings.set(k,
 // 'a-string')`) must still round-trip, and `jsonParse` unconditionally parses.
@@ -198,13 +198,13 @@ const boolParse = (v: unknown): unknown => Number(v) === 1;
 const isoSerialize = (v: unknown): unknown => (v instanceof Date ? v.toISOString() : v);
 const isoParse = (v: unknown): unknown =>
     // A number here is a unix-seconds value written by an older `users` row,
-    // back when that table declared seconds storage. Tolerated so those rows
-    // still decode; every writer produces ISO now.
+    // back when that table encoded seconds. Tolerated so those rows still
+    // decode; every writer produces ISO now.
     typeof v === 'number' ? new Date(v * 1000) : new Date(v as string);
 
 function id(o?: IdOpts): Column<{
     data: string;
-    storage: string;
+    encoded: string;
     notNull: true;
     generated: true;
     hasDefault: false;
@@ -308,7 +308,7 @@ function json<T = unknown>(o: {
     notNull: true;
 }): Column<{
     data: T;
-    storage: string;
+    encoded: string;
     notNull: true;
     generated: false;
     hasDefault: false;
@@ -317,7 +317,7 @@ function json<T = unknown>(o?: {
     notNull?: false;
 }): Column<{
     data: T;
-    storage: string;
+    encoded: string;
     notNull: false;
     generated: false;
     hasDefault: false;
@@ -453,7 +453,7 @@ export function defineTable<const C extends AnyCols, const N extends string>(
 
 type ConfigOf<T> = T extends Column<infer C> ? C : never;
 type DomainData<T> = ConfigOf<T>['data'];
-type StorageData<T> = ConfigOf<T>['storage'];
+type EncodedData<T> = ConfigOf<T>['encoded'];
 type IsNotNull<T> = ConfigOf<T>['notNull'] extends true ? true : false;
 type IsGenerated<T> = ConfigOf<T>['generated'] extends true ? true : false;
 type HasDefaultCol<T> = ConfigOf<T>['hasDefault'] extends true ? true : false;
@@ -465,15 +465,15 @@ type DomainSelectCell<T> =
 /** Omittable on a domain insert: app/SQL default, or nullable. */
 type DomainOptional<T> = Or<Or<IsGenerated<T>, HasDefaultCol<T>>, Not<IsNotNull<T>>>;
 
-/** Storage select cell: storage type, nullable unless NOT NULL. */
-type StorageCellBase<T> =
-    IsNotNull<T> extends true ? StorageData<T> : StorageData<T> | null;
+/** Encoded select cell: encoded type, nullable unless NOT NULL. */
+type EncodedCellBase<T> =
+    IsNotNull<T> extends true ? EncodedData<T> : EncodedData<T> | null;
 
 /** Kysely cell: `Generated<>` for app/SQL-defaulted columns (omittable on insert). */
 type KyselyCell<T> =
     Or<IsGenerated<T>, HasDefaultCol<T>> extends true
-        ? Generated<StorageCellBase<T>>
-        : StorageCellBase<T>;
+        ? Generated<EncodedCellBase<T>>
+        : EncodedCellBase<T>;
 
 type ColsOf<D> = D extends Table<infer C, string> ? C : never;
 
@@ -497,7 +497,7 @@ export type TableInsert<D> = Prettify<
 
 export type TableUpdate<D> = Partial<TableInsert<D>>;
 
-/** The Kysely table type for the `DB` interface — storage shapes + `Generated<>`. */
+/** The Kysely table type for the `DB` interface — encoded shapes + `Generated<>`. */
 export type KyselyOf<D> = {
     [K in keyof ColsOf<D>]: KyselyCell<ColsOf<D>[K]>;
 };
