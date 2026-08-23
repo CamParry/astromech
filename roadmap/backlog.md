@@ -96,3 +96,8 @@ not be re-derived.
 ### Console logging follow-ups
 
 - [ ] Browser-safe `log`. `utilities/log.ts` writes to stderr via `console.error` (Node/serving side). Two admin browser-side calls still hardcode the `[Astromech]`/`[astromech]` prefix — `admin/i18n.ts` and `admin/support/ui-instance-guard.ts` — because stderr routing is wrong in a browser. Needs a browser log variant before they can move off the hardcoded string. See `decisions/0066-the-astromech-prefix-is-a-log-device.md`
+
+### Runtime integrations follow-ups
+
+- [ ] Rename `apps/demo` to name its runtime, now that a second runtime demo exists. It touches `check:boot`, `check:config`, `AGENTS.md` and several docs paths, so it is worth doing when a third demo makes the set obvious rather than on its own
+- [ ] The D1 driver reports itself remote whether it is reaching the real database or wrangler's local emulation, and cannot tell the two apart. So `db:generate` and `db:init` against a local D1 need `--allow-remote`, which is the flag that exists to make a genuinely remote write deliberate
