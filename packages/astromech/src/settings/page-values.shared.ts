@@ -1,5 +1,5 @@
 /**
- * Pure partition + merge helpers for settings-page per-locale storage. No
+ * Pure partition + merge helpers for settings-page per-locale keys. No
  * DB, no virtual modules — safe to import in tests. `<path>` holds shared
  * fields, `<path>:<locale>` holds per-locale (translatable) fields.
  */

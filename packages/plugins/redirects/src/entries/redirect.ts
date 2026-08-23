@@ -1,8 +1,8 @@
 /**
  * The `redirect` entry type — managed through the standard entry UI, no custom
- * admin surface. Storage is the plugin's own table via `tableRepository` (no core
- * capabilities), so records carry `fields = { from, to, status, enabled }` and
- * `search` is derived from `searchable` fields.
+ * admin surface. Persistence is the plugin's own table via `tableRepository` (no
+ * core capabilities), so records carry `fields = { from, to, status, enabled }`
+ * and `search` is derived from `searchable` fields.
  */
 
 import type { EntryType } from 'astromech';

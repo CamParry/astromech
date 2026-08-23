@@ -85,7 +85,7 @@ export async function* runAssistantLoop(input: {
 
         // No `experimental_transform`: smoothStream drops a reasoning part's
         // signature, and it runs upstream of the recorder, so the loss would
-        // land in storage rather than in one request.
+        // land in the stored transcript rather than in one request.
         const result = streamText({
             model: input.model,
             system,

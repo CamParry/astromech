@@ -2,7 +2,7 @@
  * `mediaService.query` sorting.
  *
  * `sort` was declared on `MediaQueryParams` but dropped by the fetch client, the
- * route and `storage.list` alike, so the media library was always createdAt DESC
+ * route and `repository.list` alike, so the media library was always createdAt DESC
  * while the type advertised otherwise. The allowlist matters as much as the
  * ordering: an unknown column must fall back, never reach the query builder.
  */

@@ -38,9 +38,9 @@ export type D1ResultLike<T = unknown> = {
 
 const NO_TRANSACTIONS_ERROR =
     'Cloudflare D1 has no interactive transactions (batch() is its only ' +
-    'atomicity primitive). The d1() driver declares supportsTransactions: false so entry ' +
-    'storage degrades to sequential writes — reaching this error means something called ' +
-    'db.transaction() directly.';
+    'atomicity primitive). The d1() driver declares supportsTransactions: false so the ' +
+    'entry repository degrades to sequential writes — reaching this error means something ' +
+    'called db.transaction() directly.';
 
 export type D1DialectConfig = {
     /** Resolves the D1 binding lazily — see `acquireConnection`. */

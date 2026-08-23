@@ -1,4 +1,4 @@
-# Settings version history, audit, and storage convergence
+# Settings version history, audit, and persistence convergence
 
 **Not designed.** This file holds the pressures, the direction worth designing
 against, and the open naming question. The settings/config split itself is
@@ -11,13 +11,13 @@ for settings".
 Settings-page values (host globals pages, plugin settings pages) are KV-upsert:
 `packages/astromech/src/settings/schema.ts` is key → JSON blob, and a save
 overwrites the previous value with no record. Entries, meanwhile, have the full
-versioning stack. Three pressures point at the same storage decision:
+versioning stack. Three pressures point at the same persistence decision:
 
 - **Version history.** The first plausible demand is menus — a settings-backed
   tree an editor will eventually want to revert the way entries revert. There
   is no revision to revert to.
 - **Audit.** The settings table has an `updatedBy` column that nothing
-  populates (`settings/storage.ts` writes only `key` and `value`), and
+  populates (`settings/repository.ts` writes only `key` and `value`), and
   `roadmap/planned/audit-trail.md` will eventually ask who changed a setting.
 - **Localisation.** Translatable pages split values across `<key>` and
   `<key>:<locale>` by partitioning top-level fields at save
@@ -50,7 +50,7 @@ Costs to weigh in the design, not resolved here:
   real, not in convention.
 - Plugin settings pages write through `ctx.settings` and the shared
   `SettingsPageForm`; both would need to keep working unchanged through the
-  storage move, or the move isn't behaviour-preserving.
+  persistence move, or the move isn't behaviour-preserving.
 - The naked-key class (`plugin:<ns>:<arbitrary>`, unvalidated, defensively
   parsed at read) stays KV by design — the design must say so explicitly or
   the class will get dragged along.
@@ -67,14 +67,15 @@ the thing, and a stranger doesn't guess it. The candidates in the ecosystem:
 - **globals** — Payload, Craft and Statamic's shared word for editor-owned
   site-wide content; the demo's page is already named `globals`; slightly less
   obvious to a WordPress-shaped user than "settings".
-- **singleton** — precise about the storage constraint, opaque as a user-facing
-  word. Likely the right word _inside_ the storage layer only, if anywhere.
+- **singleton** — precise about the persistence constraint, opaque as a
+  user-facing word. Likely the right word _inside_ the repository only, if
+  anywhere.
 
 Current lean: **globals** for the user-facing word — it is the shared term
 across Payload, Craft and Statamic, the demo's page already carries it, and it
 avoids the collision 0051 creates for "settings" (the word the code-first
 ecosystem reserves for operator config, which we deliberately don't store).
-"Singleton" appears, at most, as the internal storage term. Whatever wins gets
+"Singleton" appears, at most, as the internal persistence term. Whatever wins gets
 a `TERMINOLOGY.md` entry and, since it is contested, a `decisions/` record
 with this comparison — do not resolve it silently in code.
 
@@ -82,4 +83,4 @@ with this comparison — do not resolve it silently in code.
 
 Do nothing until the first real demand for settings revert/history (watch
 menus). Designing the convergence before then buys nothing and risks
-enshrining a storage model the audit-trail work would immediately bend.
+enshrining a persistence model the audit-trail work would immediately bend.

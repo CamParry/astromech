@@ -131,7 +131,7 @@ export type ValidationMode = 'partial' | 'complete';
 /**
  * Lookups handed to a field validator for async checks (uniqueness,
  * references). Exposes the sanctioned reads for the field's resource
- * (built on entry storage for entries; per-domain reads elsewhere). The
+ * (built on the entry repository for entries; per-domain reads elsewhere). The
  * common uniqueness case is the one-line `isUnique` helper.
  */
 export type FieldLookups = {
@@ -258,7 +258,7 @@ export type FieldType = {
     /** TS type emitted by codegen for this field, or `null` to omit. */
     tsType: (field: Field, shape: 'full' | 'public') => string | null;
     defaultValue?: unknown;
-    /** Storage normalization applied before validation. */
+    /** Normalisation applied before validation. */
     coerce?: (value: unknown) => unknown;
     /**
      * Type-intrinsic validation, run before any author rule. Required: the
@@ -347,7 +347,7 @@ export type Field = {
     translatable?: boolean;
 
     /**
-     * Multi-type storage indexes this field for free-text search; collected
+     * The multi-type repository indexes this field for free-text search; collected
      * into the entry type's `search` list at resolve time.
      */
     searchable?: boolean;

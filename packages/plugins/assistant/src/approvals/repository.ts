@@ -1,5 +1,5 @@
 /**
- * Approval storage — the one place the approvals table meets the database.
+ * Approval repository — the one place the approvals table meets the database.
  *
  * A row is the server's record that a mutating call was put to the user, and
  * the only place the arguments it would run with are read back from. The
@@ -18,7 +18,7 @@ import { approvalsTable } from '../tables/approvals';
  */
 export const APPROVAL_TTL_MS = 60 * 60 * 1000;
 
-/** What a caller supplies; storage fills the status and the deadline. */
+/** What a caller supplies; the repository fills the status and the deadline. */
 export type ApprovalDraft = Omit<NewApprovalRow, 'status' | 'expiresAt'>;
 
 /** A row this request won, and the arguments read off it before it was marked. */

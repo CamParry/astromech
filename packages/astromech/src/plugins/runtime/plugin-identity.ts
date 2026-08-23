@@ -42,7 +42,7 @@ export function titleCaseNamespace(namespace: string): string {
 /**
  * Plugin entry types as `[type, config]` pairs. Configs in the `entries` array
  * self-declare their `type`; this validates presence and adapts to the keyed
- * shape the resolver, nav, and storage registry consume.
+ * shape the resolver, nav, and repository registry consume.
  */
 export function pluginEntryTypes(def: PluginDefinition): [string, EntryType][] {
     return (def.entries ?? []).map((entryType) => {

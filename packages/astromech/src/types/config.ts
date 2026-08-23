@@ -39,7 +39,7 @@ export type DatabaseDriver = {
      * Whether the driver supports interactive transactions (`BEGIN`/`COMMIT`
      * across round-trips). Absent or `true` means yes. Cloudflare D1 has no
      * interactive transactions — only `batch()` — so it declares `false`, and
-     * domains that can degrade (entry storage) drop their transaction method
+     * domains that can degrade (the entry repository) drop their transaction method
      * rather than pretending.
      */
     supportsTransactions?: boolean;
@@ -195,29 +195,29 @@ export type EntryType = {
     /**
      * Whether this entry type supports forward versioning (preparing, previewing
      * and merging a future "staged" version of a live entry). Default off, and
-     * independent of `versioning`. Requires built-in storage.
+     * independent of `versioning`. Requires the built-in repository.
      */
     staging?: boolean;
     translatable?: boolean;
     /**
      * Disable slug generation for this entry type by setting `false`.
-     * Defaults are storage-dependent; built-in storage defaults slug ON.
+     * Defaults are repository-dependent; the built-in repository defaults slug ON.
      */
     slug?: SlugConfig | false;
     /**
      * Whether entries have status (unpublished/published/scheduled).
-     * Defaults are storage-dependent; built-in storage defaults statuses ON.
+     * Defaults are repository-dependent; the built-in repository defaults statuses ON.
      */
     statuses?: boolean;
     /**
      * Whether entries can be soft-deleted (trashed).
-     * Defaults are storage-dependent; built-in storage defaults trash ON.
+     * Defaults are repository-dependent; the built-in repository defaults trash ON.
      */
     trash?: boolean;
     /**
-     * Which field to use as the entry title.
-     * Defaults are storage-dependent; built-in storage defaults titleField 'title'.
-     * Set `false` to make the entry titleless.
+     * Which field to use as the entry title. Defaults are repository-dependent;
+     * the built-in repository defaults titleField 'title'. Set `false` to make
+     * the entry titleless.
      */
     titleField?: 'title' | false;
     single: string;
@@ -244,7 +244,7 @@ export type EntryType = {
      * qualified `{plugin}/{type}` id for a plugin's.
      */
     repository?: EntryRepository;
-    /** Field names a multi-type storage should index for free-text search. */
+    /** Field names a multi-type repository should index for free-text search. */
     search?: string[];
     /**
      * Cross-field validator for the whole entry, run after every field has been
@@ -332,7 +332,7 @@ export type UsersConfig = {
  * One shape for host + plugin pages. Exactly one of `fields` / `component`
  * must be provided (validated crash-loud at config resolution).
  *
- * - Host: authored into `admin.pages`; path is the route + storage key.
+ * - Host: authored into `admin.pages`; path is the route + settings key.
  * - Plugin: authored into `PluginDefinition.admin.pages`; path is relative to
  *   `${basePath}/plugin/<name>`.
  */
@@ -395,7 +395,7 @@ export type ResolvedAdminPage = {
     path: string;
     label: Label;
     icon?: string;
-    /** Settings storage base — host: `'<path>'`; plugin: `'plugin:<ns>:<path>'`. */
+    /** Settings key base — host: `'<path>'`; plugin: `'plugin:<ns>:<path>'`. */
     baseKey: string;
     /** Resolved field tree; null in component mode. */
     fields: ResolvedEntryFields | null;
@@ -587,6 +587,6 @@ export type AdminEntryType = {
     url: string | null;
     capabilities: ResolvedEntryCapabilities;
     titleField: 'title' | false;
-    /** Field names a multi-type storage indexes for free-text search. */
+    /** Field names a multi-type repository indexes for free-text search. */
     search?: string[];
 };

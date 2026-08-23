@@ -6,7 +6,7 @@ configured notifications, and pluggable spam protection.
 
 Two entry types are registered: `form` (what an editor builds) and `submission`
 (what gets posted). Submissions are stored in the plugin's **own table**
-(`plugin_forms_submissions`) via `tableStorage`, not in the shared `entries`
+(`plugin_forms_submissions`) via `tableRepository`, not in the shared `entries`
 table, and are still managed through the standard entry admin UI.
 
 ## Install

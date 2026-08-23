@@ -14,7 +14,7 @@ import { backupRunsTable } from '../tables/runs';
 /**
  * The table's **SQL** name, for the restore driver's `preserve` list — that is a
  * list of real table names, not Kysely `DB` keys, so it stays the table's
- * `name` rather than anything the storage wrapper hands out. Row access goes
+ * `name` rather than anything the repository hands out. Row access goes
  * through `createBackupRunsRepository`; this is the one thing it cannot answer.
  */
 const RUNS_TABLE = backupRunsTable.name;

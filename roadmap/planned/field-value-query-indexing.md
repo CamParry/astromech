@@ -27,7 +27,7 @@ outgrows the shared table.
   an indexed field is part of this item.
 - No JSON path handling exists anywhere — a repo-wide grep for `json_extract` /
   `->>` / `jsonb` / `json_each` returns zero hits outside `node_modules`.
-- Table-backed entry types forward `where` into the storage wrapper's full
+- Table-backed entry types forward `where` into the repository's full
   operator DSL and throw on unknown keys (`entries/repository/table.ts:289-302`).
 
 ## The shape
@@ -65,8 +65,8 @@ expressions anywhere.
       `FieldLookups.isUnique`, which today scans candidate rows in memory
       (`entries/lookups.ts`). SQLite supports **unique expression indexes**, so
       uniqueness is the same declaration with a `UNIQUE` qualifier rather than a
-      second bespoke strategy. One deliberate decision to carry over: built-in
-      storage's `list` filters `stagedFor IS NULL`, so staged rows are invisible
+      second bespoke strategy. One deliberate decision to carry over: the
+      built-in repository's `list` filters `stagedFor IS NULL`, so staged rows are invisible
       to today's scan — the indexed replacement must decide whether to keep
       that (a partial index can).
 

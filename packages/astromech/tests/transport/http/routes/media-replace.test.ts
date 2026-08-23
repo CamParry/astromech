@@ -114,7 +114,7 @@ describe('POST /media/:id/replace', () => {
         expect(found?.size).toBe(file.size);
     });
 
-    it('returns the replaced item in the response body, not just in storage', async () => {
+    it('returns the replaced item in the response body, not just in the stored row', async () => {
         const res = await postReplace(id, { file: newFile() });
         const body = (await res.json()) as {
             data: { filename: string; mimeType: string };

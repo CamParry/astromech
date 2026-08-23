@@ -67,7 +67,7 @@ async function resolveSourceTitles(
     }
 
     for (const [type, ids] of entryIdsByType) {
-        // A type dropped from config since its rows were written has no storage.
+        // A type dropped from config since its rows were written has no repository.
         let repository;
         try {
             repository = getEntryRepository(type);

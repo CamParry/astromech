@@ -1,5 +1,5 @@
 /**
- * Session storage — the one place the sessions table meets the database.
+ * Session repository — the one place the sessions table meets the database.
  *
  * One row per user, replaced in place, holding the transcript the drawer posts
  * back. The handle is an argument, not a lookup: a plugin is *handed* its

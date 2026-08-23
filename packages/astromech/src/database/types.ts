@@ -45,7 +45,7 @@ export type DB = {
     verifications: VerificationsTable;
 };
 
-/** The shared DB handle accepted by every storage factory (base or tx-bound). */
+/** The shared DB handle accepted by every repository factory (base or tx-bound). */
 export type Db = Kysely<DB> | Transaction<DB>;
 
 type SessionsTable = {

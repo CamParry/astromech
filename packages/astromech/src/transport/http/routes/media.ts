@@ -19,7 +19,7 @@ type Env = { Variables: AuthVariables };
 
 const router = new OpenAPIHono<Env>();
 
-/** Sort fields accepted off the wire. Mirrors the storage allowlist. */
+/** Sort fields accepted off the wire. Mirrors the repository allowlist. */
 const SORTABLE_FIELDS = new Set(['filename', 'mimeType', 'size', 'createdAt']);
 
 /** The query string the list route accepts. `dir` is the only one that can fail. */

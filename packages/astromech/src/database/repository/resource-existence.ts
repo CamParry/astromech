@@ -37,7 +37,7 @@ export async function existingResourceIds(
 
 /**
  * The entry type each of these ids resolves to, keyed by id. Ids absent from the
- * result have no row in the `entries` table — dangling, or held by a storage
+ * result have no row in the `entries` table — dangling, or held by a repository
  * override — and the caller decides what that means.
  */
 export async function existingEntryTypes(

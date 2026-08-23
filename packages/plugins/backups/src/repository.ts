@@ -1,5 +1,5 @@
 /**
- * Backup-run storage — the one place this plugin's table meets the database.
+ * Backup-run repository — the one place this plugin's table meets the database.
  * `createRepository` owns encoding, `where`-value serialization and row
  * decoding, so nothing above this file spells the table name or a codec.
  */
@@ -50,7 +50,7 @@ export function createBackupRunsRepository(db: PluginContext['db']) {
 
     /**
      * Apply a status transition, returning the updated row — or `null` when
-     * the row has vanished underneath us. Deliberately not `storage.update`,
+     * the row has vanished underneath us. Deliberately not `repository.update`,
      * which throws on a missing row.
      */
     async function patch(

@@ -21,11 +21,10 @@ as `getEntryOfType`, which fetches through `repository.get`, throws
 `EntryTypeMismatchError` on a mismatch, and is called by fourteen operations.
 Five of those fourteen discard the row entirely and call it only for the throw.
 
-The contract already contemplates the other arrangement. The doc block above
-`EntryRepository` says the shared error shape is stored there "so storages can
-throw the canonical mismatch error if they prefer (the built-in defers to the
-entries service)". Nothing takes that option, because `get` is given no type to
-compare against.
+The contract already contemplates the other arrangement. The doc block on `get`
+says "the caller asserts the row's `type` matches the type it asked for, though
+a repository may throw the canonical mismatch error itself instead". Nothing
+takes that option, because `get` is given no type to compare against.
 
 The check is security-relevant: without it, an operation addressed at one type
 can read and mutate a row of another. That is the reason it must not be

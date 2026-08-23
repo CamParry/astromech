@@ -183,7 +183,7 @@ export const validateReference: FieldValidator = async (ctx) => {
 /**
  * Reject an id that resolves to an entry of the wrong type. An id with no entry
  * row is left alone: it is either dangling (the pipeline prunes it later) or
- * held by a storage override this read cannot see, and neither is an error.
+ * held by a repository override this read cannot see, and neither is an error.
  */
 async function validateTargetType(
     ctx: FieldValidationContext,

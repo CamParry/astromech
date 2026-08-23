@@ -1,5 +1,5 @@
 /**
- * Plugin-tracking storage — the only place Kysely touches `_astromech_plugins`.
+ * Plugin-tracking repository — the only place Kysely touches `_astromech_plugins`.
  * Thin domain vocabulary over `createRepository(pluginsTable)`. Both callers
  * are best-effort: the try/catch stays at the call site in `plugin-runtime.ts`.
  */

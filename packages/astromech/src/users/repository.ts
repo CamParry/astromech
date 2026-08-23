@@ -1,5 +1,5 @@
 /**
- * User storage — the only place Kysely touches the `users` table. Row CRUD
+ * User repository — the only place Kysely touches the `users` table. Row CRUD
  * goes through `createRepository(usersTable)`; `list`/`count` stay on the
  * raw handle since name/email search is an OR the flat `where` DSL can't express.
  */

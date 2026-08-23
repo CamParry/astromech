@@ -5,9 +5,9 @@ file shipped. It is the one part with **no consumer to serve**, which is exactly
 why it keeps being deferred.
 
 Ten `col.reference` columns exist and **nothing resolves any of them**, so a
-resolver today would be a feature with no reader. It was cut from the storage API
-workstream for that reason, and left unbuilt by the follow-ups workstream for the
-same one.
+resolver today would be a feature with no reader. It was cut from the
+`completed/data-layer-storage-api.md` workstream for that reason, and left
+unbuilt by the follow-ups workstream for the same one.
 
 ## Two constraints for whoever picks this up
 

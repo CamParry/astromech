@@ -4,7 +4,7 @@ Manage URL redirects, look them up from anywhere via Astromech, and (optionally)
 auto-create a redirect whenever an entry's front-end URL changes.
 
 Redirects are stored in the plugin's **own table** (`plugin_redirects_redirects`)
-via `tableStorage`, not in the shared `entries` table. They are still managed
+via `tableRepository`, not in the shared `entries` table. They are still managed
 through the standard entry admin UI as a titleless entry type.
 
 ## Layout

@@ -46,14 +46,14 @@ not be re-derived.
 - [ ] **A declared reverse field** — deferred, not refused (`decisions/0004`). Reverse lookup needs no
       declaration: it is an indexed read, and `where: { references }` already covers the delete modal,
       media "used by" and filter-by-relation. A declared virtual field would be sugar compiling to
-      that same query and can be added without touching storage. **If it comes back it must be keyed
+      that same query and can be added without touching the repository. **If it comes back it must be keyed
       on the forward field PATH, never on a relation name** — Payload, Keystone and Directus all key
       on path and cannot desync; Strapi requires two independently-written names and that produced
       duplicate join tables and silent relation-data loss.
 - [ ] **`WITHOUT ROWID` on the relationships table.** On a rowid table a composite primary key is a
-      unique index plus a hidden rowid, so the storage win only arrives with `WITHOUT ROWID`, and the
+      unique index plus a hidden rowid, so the space win only arrives with `WITHOUT ROWID`, and the
       row sits right at SQLite's recommended size boundary once an instance path carries nested ids.
-      A pure storage decision, takeable later without touching the logical schema.
+      A pure physical-layout decision, takeable later without touching the logical schema.
 
 ### Storage-layer follow-ups (from `completed/storage-layer-follow-ups.md`)
 
@@ -62,7 +62,7 @@ not be re-derived.
       statements in the same command ever move too. Left raw because converting
       one of a cluster reads worse than leaving all of them.
 - [ ] `performBackup`'s status transitions are `updateMany` + `findOne` (two
-      round-trips) rather than one `UPDATE … RETURNING`, because `storage.update`
+      round-trips) rather than one `UPDATE … RETURNING`, because `repository.update`
       throws on a missing row and that would have turned the catch block's
       failure-recording into a thrown backup. Collapsible via `query()` if the
       extra round-trip ever matters.

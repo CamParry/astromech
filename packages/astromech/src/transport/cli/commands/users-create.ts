@@ -52,7 +52,7 @@ export default defineCommand({
             updatedAt: now,
         });
 
-        // `accounts` is a better-auth table with no storage layer of its own, and
+        // `accounts` is a better-auth table with no repository of its own, and
         // it is not the `users` domain's to own — so this one insert stays raw.
         await db
             .insertInto('accounts')

@@ -108,7 +108,7 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
     s.identities = [];
     s.service = new Map();
     s.rawRoutes = [];
-    // Drop stale plugin storages and hooks before re-registering (test setups re-run this).
+    // Drop stale plugin repositories and hooks before re-registering (test setups re-run this).
     resetEntryRepositoryOverrides();
     clearHooks();
 
@@ -144,7 +144,7 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
             s.rawRoutes.push({ identity, route });
         }
 
-        // Register per-type custom storages under the qualified id.
+        // Register per-type custom repositories under the qualified id.
         for (const [type, entryType] of pluginEntryTypes(def)) {
             if (entryType.repository) {
                 setEntryRepository(

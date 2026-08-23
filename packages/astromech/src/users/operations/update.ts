@@ -63,8 +63,8 @@ export async function updateUser(params: {
         validatedData.fields = pruned.values;
     }
 
-    // An explicitly-`undefined` key means "leave this column alone"; storage
-    // stamps `updatedAt`.
+    // An explicitly-`undefined` key means "leave this column alone"; the
+    // repository stamps `updatedAt`.
     const updated = await createUserRepository().update(id, {
         name: validatedData.name,
         email: validatedData.email,

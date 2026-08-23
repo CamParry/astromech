@@ -1,7 +1,7 @@
 /**
- * The `form` entry type — core entry storage, standard entry UI, addressed by
- * slug. Its `fields` is one `blocks` field with a block per `FormFieldKind`;
- * `../fields/compile.ts` reads the stored instances back.
+ * The `form` entry type — the core entry repository, standard entry UI,
+ * addressed by slug. Its `fields` is one `blocks` field with a block per
+ * `FormFieldKind`; `../fields/compile.ts` reads the stored instances back.
  */
 
 import type { Block, EntryType, Field } from 'astromech';
@@ -30,7 +30,7 @@ export const formEntryType: EntryType = {
     type: FORM_TYPE,
     single: 'Form',
     plural: 'Forms',
-    // Built-in storage defaults slug on, which is how a form is addressed.
+    // The built-in repository defaults slug on, which is how a form is addressed.
     adminColumns: [
         columns.text('title', { label: 'Title' }),
         columns.slug('slug', { label: 'Slug' }),

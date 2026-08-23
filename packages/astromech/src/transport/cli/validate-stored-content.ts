@@ -64,7 +64,7 @@ export async function validateStoredContent(
 
 /**
  * Every live entry row, from the `entries` table and from the types backed by
- * their own storage. Trashed rows are skipped — a row in the trash is on its
+ * their own repository. Trashed rows are skipped — a row in the trash is on its
  * way out and no write is pending against it. Drafts are reported at the stage
  * their own status implies, so an incomplete draft is not a failure.
  */
@@ -98,8 +98,8 @@ async function checkEntries(
             await checkEntryRow(report, {
                 id: record.id,
                 type: typeName,
-                // A table-backed storage need not be locale-aware; the fallback
-                // matches the built-in storage's own.
+                // A table-backed repository need not be locale-aware; the fallback
+                // matches the built-in repository's own.
                 locale: record.locale ?? getConfig().defaultLocale ?? 'en',
                 status: record.status,
                 fields: record.fields,
@@ -172,10 +172,10 @@ function tableBackedEntryTypes(type: string | undefined): string[] {
 }
 
 /**
- * Media rows, with `media/operations/update.ts`'s context. Rows come straight
- * from storage rather than through `query`, which resolves a delivery URL and
- * so needs a storage driver the report has no use for; `isUnique` reads only
- * `fields`, which both carry identically.
+ * Media rows, with `media/operations/update.ts`'s context. Rows come straight from
+ * the repository rather than through `query`, which resolves a delivery URL and so
+ * needs a storage driver the report has no use for; `isUnique` reads only `fields`,
+ * which both carry identically.
  */
 async function checkMedia(report: ValidationReport): Promise<void> {
     const config = getConfig();

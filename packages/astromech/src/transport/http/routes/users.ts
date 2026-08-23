@@ -79,7 +79,7 @@ router.get('/:id', async (c) => {
 
 // PUT /users/:id — bespoke
 // Not in the table: self-access, a `roleSlug` change that still demands
-// `users:update`, and the last-admin guard — which is a second storage call.
+// `users:update`, and the last-admin guard — which is a second repository call.
 router.put('/:id', async (c) => {
     const { id } = c.req.param();
     const permissions = permissionsFor(c.var.role);
@@ -122,7 +122,7 @@ router.put('/:id', async (c) => {
 });
 
 // DELETE /users/:id — bespoke
-// Not in the table: the last-admin guard, a second storage call no contract
+// Not in the table: the last-admin guard, a second repository call no contract
 // can state.
 router.delete('/:id', async (c) => {
     const { id } = c.req.param();

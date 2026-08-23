@@ -65,7 +65,7 @@ export async function updateMedia(params: {
         validatedData.fields = pruned.values;
     }
 
-    // `updatedAt` is stamped by the storage wrapper (the column declares
+    // `updatedAt` is stamped by the repository (the column declares
     // `onUpdate`); an explicitly-`undefined` key means "leave this column alone".
     const updated = await createMediaRepository().update(id, {
         alt: validatedData.alt,

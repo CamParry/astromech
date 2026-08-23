@@ -8,7 +8,7 @@
  * while `defaultValues` swaps to a different row underneath it. That is the one
  * page-level path the render-level tests and the browser check could not vary,
  * and a group's object value is atomic — a sub-key dropped anywhere along the
- * way is a sub-key dropped in storage.
+ * way is a sub-key dropped in the saved entry.
  *
  * This mounts the REAL `EntryEditPage` behind a memory router (the shape
  * `entry-edit-cache-invalidation.test.tsx` established) and subscribes to the

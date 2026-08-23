@@ -1,5 +1,5 @@
 /**
- * Relationship index storage — the only place Kysely touches the
+ * Relationship index repository — the only place Kysely touches the
  * relationships table. Every write is a wholesale replace of one source's
  * edge set (DELETE then chunked INSERT), never a set-diff.
  */

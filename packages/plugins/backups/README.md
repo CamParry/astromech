@@ -20,7 +20,7 @@ backups/
   src/tables/runs.ts             definePluginTable — the `runs` table
   src/tables/index.ts            the ./tables subpath entry (tables only)
   migrations/                   generated — never hand-edited
-  src/storage.ts                createStorage over the table — the only DB access
+  src/repository.ts             createRepository over the table — the only DB access
   src/backup.ts                 performBackup / rotate / resolveKeep — the core work
   src/service/backups.ts        listRuns, triggerRun, deleteRun (JSON, over RPC)
   src/routes/backups.ts         download + restore (raw routes — they stream)

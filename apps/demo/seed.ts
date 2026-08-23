@@ -1259,7 +1259,7 @@ async function seed(): Promise<void> {
                             para(
                                 text('Entry types', 'bold'),
                                 text(
-                                    ': register custom entry types with their own storage (including custom SQLite tables).'
+                                    ': register custom entry types with their own repository (including custom SQLite tables).'
                                 )
                             )
                         ),
@@ -1862,7 +1862,7 @@ async function seed(): Promise<void> {
 
     /**
      * One published contact form. `forms/form` uses core (default) entry
-     * storage, so it's seeded like any other entry — see
+     * repository, so it's seeded like any other entry — see
      * packages/plugins/forms/src/entries/form.ts for the block config keys.
      */
     const formContactId = crypto.randomUUID();

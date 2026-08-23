@@ -162,7 +162,7 @@ async function build(config: AstromechConfig): Promise<Astromech> {
 
     // Plugin runtime
     registerPlugins(plugins, resolved);
-    // Host entry types declaring their own storage, mounted after
+    // Host entry types declaring their own repository, mounted after
     // `registerPlugins` because that opens by clearing every override. Keyed by
     // the bare type name; plugin types are qualified instead.
     for (const [type, entryType] of Object.entries(config.entries)) {

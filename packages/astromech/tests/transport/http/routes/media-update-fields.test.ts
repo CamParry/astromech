@@ -105,7 +105,7 @@ describe('PUT /media/:id — editable columns', () => {
         expect([found?.alt, found?.title, found?.caption]).toEqual(['A', 'T', 'C']);
     });
 
-    it('returns the updated values in the response body, not just in storage', async () => {
+    it('returns the updated values in the response body, not just in the stored row', async () => {
         const res = await put({ title: 'T', caption: 'C' });
         const body = (await res.json()) as { data: { title: string; caption: string } };
         expect(body.data.title).toBe('T');

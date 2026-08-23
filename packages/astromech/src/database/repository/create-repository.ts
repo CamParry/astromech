@@ -114,13 +114,13 @@ export type UpsertOptions<D> = {
  * one statement:
  *
  * ```ts
- * const { db, table, where } = storage.query();
+ * const { db, table, where } = repository.query();
  * db.selectFrom(table)
  *     .selectAll()
  *     .where((eb) => eb.and([where(dslFilter)(eb), eb.or(searchClauses)]));
  * ```
  *
- * The caller still owns decoding (`decodeWith(storage.table, row)`).
+ * The caller still owns decoding (`decodeWith(repository.table, row)`).
  */
 export type QueryHandle<D> = {
     db: GenericDb;
@@ -129,7 +129,7 @@ export type QueryHandle<D> = {
 };
 
 export type Repository<D extends Table> = {
-    /** The `Table` this storage is bound to. */
+    /** The `Table` this repository is bound to. */
     table: D;
     findOne(where: Where<D>): Promise<TableSelect<D> | null>;
     findMany(params?: FindManyParams<D>): Promise<TableSelect<D>[]>;
@@ -165,7 +165,7 @@ export function createRepository<D extends Table>(table: D, db?: Db): Repository
         table.primaryKey ??
         Object.keys(columns).filter((key) => columns[key]?.primaryKey);
 
-    /** Resolved per call so an unbound storage follows `setDb` across a reload. */
+    /** Resolved per call so an unbound repository follows `setDb` across a reload. */
     function handle(): GenericDb {
         return (db ?? getDb()) as unknown as GenericDb;
     }
