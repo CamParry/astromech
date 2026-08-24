@@ -24,7 +24,7 @@ The cost is structural, not in any one check:
   inside each demo's `astro build`, and vitest's transform. The build phase is
   69% of `check:boot` and 79% of `check:boot:cloudflare`. Core's DTS pass alone
   is 11.5s, and only `typecheck` consumers need `.d.ts` at all.
-- **Every typecheck is cold.** No `incremental`, no `tsBuildInfoFile` anywhere.
+- **Every typecheck was cold.** No `incremental`, no `tsBuildInfoFile` anywhere.
 - **Test time is import cost, not assertions.** The core suite spends 369s of
   worker CPU importing modules against 117s running test bodies, because each
   of 222 files pays a cold import under vitest's default per-file-isolated
@@ -62,7 +62,13 @@ developer and CI call, so the two descriptions cannot drift again.
       job list, and fix the `AGENTS.md` gate table where it is stale (the two
       undocumented build dependencies, the missing chromium step in the
       `check:boot` row, the false "CI runs them").
-- [ ] Enable `incremental` typechecking across the packages and demos.
+- [x] Enable `incremental` typechecking across the packages and demos. Each
+      project writes its `tsBuildInfoFile` into its own `node_modules`, chosen over
+      the default spot beside `outDir` because `tsup` cleans `dist/` and would wipe
+      it every build.
+      Cold 49s, warm 24s, and the warm run still catches a freshly introduced
+      error. What is left is `astro sync` in the two demos and `tsr generate` in
+      core's `pretypecheck`, both of which run unconditionally.
 - [ ] Split DTS out of `build` (a `build:js` that skips the DTS worker) so the
       boot checks, `check:node-imports` and the assistant suite stop paying for
       declaration emit they never read.

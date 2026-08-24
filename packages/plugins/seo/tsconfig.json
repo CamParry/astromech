@@ -4,7 +4,9 @@
     "compilerOptions": {
         "rootDir": "src",
         "noEmit": true,
-        "paths": {}
+        "paths": {},
+        "incremental": true,
+        "tsBuildInfoFile": "./node_modules/.cache/tsc/tsconfig.tsbuildinfo"
     },
     "include": ["src/**/*"]
 }
