@@ -49,15 +49,18 @@ The cost is structural, not in any one check:
 The target shape is three tiers with one build, encoded in a script that both a
 developer and CI call, so the two descriptions cannot drift again.
 
-- [ ] Add a `verify` script encoding the tiers:
-    - **pre-commit** (seconds): the existing hook, plus `check:exports` and
-      `check:docs`, both effectively free. Widen the lint-staged globs to cover
-      `.mjs` and add `.yml`/`.yaml`/`.jsonc` to the prettier glob.
-    - **fast loop** (target under a minute): the build-free halves of the gate,
-      `typecheck` and `test:run` for schema-engine and core only, plus `lint`.
-    - **full**: one `build`, then everything that consumes `dist` in parallel
-      (plugin and demo typechecks, assistant tests, `check:node-imports`, both
-      boot checks).
+- [x] Add a `verify` script encoding the tiers. `scripts/verify.mjs` runs
+      stages in order and everything inside a stage at once: `pnpm run verify` is
+      build, then the eight build-free checks together, then `typecheck`, then
+      each boot check. `pnpm run verify:fast` is the packages' typechecks, their
+      tests and lint, and came in at 55s on a loaded machine. Full run: 194s
+      against 243-300s serial, with `check:boot` and `check:boot:cloudflare`
+      making up 54s of the tail because they cannot yet overlap.
+- [ ] Widen the pre-commit tier: add `check:exports` and `check:docs` to the
+      hook, both effectively free, and widen the lint-staged globs to cover
+      `.mjs`, `.yml`, `.yaml` and `.jsonc`. Worth doing together with retiring
+      `format:check` from the full run, below, since that is what the wider globs
+      are for.
 - [ ] Point `ci.yml` at the same tier scripts instead of its own hand-written
       job list, and fix the `AGENTS.md` gate table where it is stale (the two
       undocumented build dependencies, the missing chromium step in the

@@ -16,7 +16,7 @@ Nested `AGENTS.md` files cover `packages/astromech`, `packages/plugins`, `apps/d
 
 ## Commands and the gate
 
-Before a change lands, all of these pass. The husky pre-commit hook runs lint-staged (eslint --fix + prettier) on touched files. **Never `--no-verify`.** If the hook fails, fix the cause.
+Before a change lands, all of these pass. `pnpm run verify` runs the lot in stages, overlapping everything that can overlap; `pnpm run verify:fast` runs just the build-free part (the packages' typechecks, their tests, and lint) and is the loop to run while working. Both report a time per check and print the output of only what failed. The husky pre-commit hook runs lint-staged (eslint --fix + prettier) on touched files. **Never `--no-verify`.** If the hook fails, fix the cause.
 
 | Command                          | Checks                                                                                                                                                                                                                                                                                                                                                |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -37,6 +37,7 @@ Before a change lands, all of these pass. The husky pre-commit hook runs lint-st
 - For refactors that move tables, `pnpm run db:generate` must also report "No schema changes".
 - **pnpm is the package manager**, pinned by `packageManager` in the root `package.json`. `npm install` here builds a flat tree that hides undeclared dependencies, which is the failure mode pnpm exists to catch — so every package declares what it imports.
 - **`pnpm-workspace.yaml` holds the workspace globs and the hoist list.** `publicHoistPattern` is not a convenience: the admin ships as source and the host app's Vite has to resolve its client dependencies from the app root, so that list must stay in step with `optimizeDeps.include` in `packages/astromech/src/integrations/astro/vite.ts`. A server dependency Vite cannot resolve gets inlined into the build instead of externalised, and anything loading a native binding by dynamic `require` breaks at request time when that happens.
+- **`scripts/verify.mjs` decides the stage boundaries, and neither reason is arbitrary**: anything reading `dist` waits for `build`, and `typecheck` and the two boot checks each get a stage of their own because `tsr generate` and the TanStack Router Vite plugin in each app build all write the same `routeTree.gen.ts`.
 - Other commands: `format`, `db:generate`, `db:init`.
 
 ## Documentation
