@@ -14,7 +14,7 @@ import { EntryNewPage } from '@/admin/components/entries/entry-new-page';
 import { buildPluginEntriesMount } from '@/admin/components/entries/mount';
 import { EmptyState } from '@/admin/components/ui/empty-state';
 import { Page, PageContent } from '@/admin/components/ui/page';
-import { astromechClient } from '@/transport/http/client/index';
+import { astromechClient } from '@/transport/http/client';
 
 type SearchParams = {
     locale?: string;

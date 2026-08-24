@@ -21,7 +21,7 @@ import {
 import { onTick, runDue } from '@/cron/runner';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/tables';
-import { createWorkerEntry } from '@/integrations/cloudflare/index';
+import { createWorkerEntry } from '@/integrations/cloudflare/worker';
 import { globals } from '@/registry';
 
 beforeEach(async () => {

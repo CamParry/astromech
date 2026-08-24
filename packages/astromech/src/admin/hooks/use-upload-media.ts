@@ -1,7 +1,7 @@
 import type { Media } from '../../types/index';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
-import { astromechClient } from '@/transport/http/client/index';
+import { astromechClient } from '@/transport/http/client';
 import { useToast } from '../components/ui/toast';
 import { queryKeys } from './use-query-keys';
 

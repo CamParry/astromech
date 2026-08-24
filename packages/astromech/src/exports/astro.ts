@@ -1,3 +1,3 @@
 /** `astromech/astro` — the Astro integration. */
 
-export * from '@/integrations/astro/index';
+export * from '@/integrations/astro/integration';

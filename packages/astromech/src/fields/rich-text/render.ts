@@ -73,5 +73,3 @@ export function renderRichText(
 
     return sanitize(html);
 }
-
-export { parseRichText } from './parse';

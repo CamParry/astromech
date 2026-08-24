@@ -11,7 +11,7 @@ import React from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntryNewPage } from '@/admin/components/entries/entry-new-page';
 import { pluginEntryRouteParams } from '@/admin/utilities/entry-admin-path';
-import { astromechClient } from '@/transport/http/client/index';
+import { astromechClient } from '@/transport/http/client';
 
 type SearchParams = {
     locale?: string;

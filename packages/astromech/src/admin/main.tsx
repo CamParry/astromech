@@ -8,7 +8,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import adminConfig from 'virtual:astromech/admin-config';
 import { assertSingleUiInstance } from '@/admin/components/ui/instance-guard';
-import { astromechClient } from '@/transport/http/client/index';
+import { astromechClient } from '@/transport/http/client';
 import { setDateLocale } from '../utilities/dates';
 import { resolveContentLocale } from '../utilities/locale';
 import { createAppRouter } from './router';

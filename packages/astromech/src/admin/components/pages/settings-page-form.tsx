@@ -17,7 +17,7 @@ import { Select } from '@/admin/components/ui/select';
 import { Spinner } from '@/admin/components/ui/spinner';
 import { useToast } from '@/admin/components/ui/toast';
 import { resolveLabel } from '@/admin/i18n/labels';
-import { astromechClient } from '@/transport/http/client/index';
+import { astromechClient } from '@/transport/http/client';
 import { resolveContentLocale } from '@/utilities/locale';
 
 function settingsPageKey(baseKey: string, locale: string | undefined) {

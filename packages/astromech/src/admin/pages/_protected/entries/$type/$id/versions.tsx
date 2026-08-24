@@ -12,7 +12,7 @@ import adminConfig from 'virtual:astromech/admin-config';
 import { EntryVersionsPage } from '@/admin/components/entries/entry-versions-page';
 import { entryQueryOptions, entryVersionsQueryOptions } from '@/admin/hooks/entries';
 import { pluginEntryRouteParams } from '@/admin/utilities/entry-admin-path';
-import { astromechClient } from '@/transport/http/client/index';
+import { astromechClient } from '@/transport/http/client';
 
 function EntryVersionsRoutePage(): React.ReactElement {
     const { type, id } = Route.useParams();

@@ -11,7 +11,7 @@ import type { Role, User } from '@/types/index';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createHttpApp } from '@/transport/http/index';
+import { createHttpApp } from '@/transport/http/app';
 import { usersService } from '@/users/service';
 import { getSession } from '@/users/session';
 

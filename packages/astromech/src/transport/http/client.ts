@@ -1,3 +1,9 @@
+/**
+ * `astromechClient` — the fetch-based client for client-side JavaScript,
+ * exported from `astromech/fetch`. It holds no URLs of its own: every method
+ * resolves its route from `routes/http-routes.shared.ts` and unwraps the envelope.
+ */
+
 import type {
     MountedRoute,
     ResponseEnvelope,
@@ -18,12 +24,7 @@ import type {
 } from '@/types/index';
 import { HTTP_ROUTES } from '@/transport/http/routes/http-routes.shared';
 
-/**
- * `astromechClient` — the fetch-based client for client-side JavaScript,
- * exported from `astromech/fetch`. It holds no URLs of its own: every method
- * resolves its route from `routes/http-routes.shared.ts` and unwraps the envelope.
- */
-
+/** A non-2xx response, carrying the error envelope's id, code and status. */
 export class AstromechApiError extends Error {
     readonly id: string;
     readonly code: string;

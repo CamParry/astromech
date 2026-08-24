@@ -1,6 +1,6 @@
 import type { R2BucketLike } from '@/storage/drivers/r2';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { clearEnvSource, setEnvSource } from '@/env/index';
+import { clearEnvSource, setEnvSource } from '@/env';
 import { resetBindings } from '@/integrations/cloudflare/bindings';
 import { r2 } from '@/storage/drivers/r2';
 

@@ -65,7 +65,7 @@ types · utilities · env · errors · registry.ts       pure leaves
   needs one — Node and Vercel need no code.
 - **`admin/`** is the React SPA (TanStack Router), mounted by `admin/shell.astro`
   under the configured `basePath`. It talks to the server only through the
-  fetch client in `transport/http/client/`.
+  fetch client in `transport/http/client.ts`.
 - **`codegen/`** generates the site's entry types and the method manifest.
 - **`transport/`** is every way a call arrives: Hono routes and middleware in
   `http/`, the CLI, the dev-only MCP server, and `tools/`, the tool surface the

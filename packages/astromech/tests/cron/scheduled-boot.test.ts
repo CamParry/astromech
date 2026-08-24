@@ -14,7 +14,7 @@ import { interval } from '@/cron/drivers/interval';
 import { registerCronJob } from '@/cron/registry';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/tables';
-import { createWorkerEntry } from '@/integrations/cloudflare/index';
+import { createWorkerEntry } from '@/integrations/cloudflare/worker';
 import { globals } from '@/registry';
 
 let db: Kysely<DB>;

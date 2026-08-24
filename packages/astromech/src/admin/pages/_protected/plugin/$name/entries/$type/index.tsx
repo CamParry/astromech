@@ -17,7 +17,7 @@ import {
 import { EmptyState } from '@/admin/components/ui/empty-state';
 import { Page, PageContent } from '@/admin/components/ui/page';
 import { useAiContext } from '@/admin/context/ai-context';
-import { astromechClient } from '@/transport/http/client/index';
+import { astromechClient } from '@/transport/http/client';
 
 function PluginEntryListPage(): React.ReactElement {
     const { name, type } = Route.useParams();

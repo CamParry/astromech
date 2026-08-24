@@ -4,7 +4,7 @@
  * processes that have no Worker environment to hold one.
  */
 
-import { isWorkersRuntime, resolveEnvSource } from '@/env/index';
+import { isWorkersRuntime, resolveEnvSource } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
 import { createRegistry } from '@/registry';
 

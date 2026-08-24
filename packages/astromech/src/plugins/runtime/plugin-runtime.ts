@@ -42,7 +42,7 @@ import {
     setEntryRepository,
 } from '@/entries/repository/registry';
 import { typedEntriesService } from '@/entries/typed-entries-service';
-import { getEnvRecord } from '@/env/index';
+import { getEnvRecord } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
 import { flattenEntryFields } from '@/fields/flatten';
 import { addHook, clearHooks, runHook } from '@/hooks/hooks';

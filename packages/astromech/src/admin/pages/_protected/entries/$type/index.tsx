@@ -12,7 +12,7 @@ import { EntriesListPage } from '@/admin/components/entries/entries-list-page';
 import { validateEntriesListSearch } from '@/admin/components/entries/mount';
 import { useAiContext } from '@/admin/context/ai-context';
 import { pluginEntryRouteParams } from '@/admin/utilities/entry-admin-path';
-import { astromechClient } from '@/transport/http/client/index';
+import { astromechClient } from '@/transport/http/client';
 
 function EntryIndexPage(): React.ReactElement {
     const { type } = Route.useParams();

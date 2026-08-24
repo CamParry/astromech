@@ -8,7 +8,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createEntriesService } from '@/transport/http/client/index';
+import { createEntriesService } from '@/transport/http/client';
 
 let calls: string[] = [];
 

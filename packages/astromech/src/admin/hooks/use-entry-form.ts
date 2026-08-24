@@ -24,7 +24,7 @@ import { resolveLabel } from '@/admin/i18n/labels';
 // Deep import of a pure leaf: the browser must pick the same stage the server
 // will, and the entries barrel would drag a domain service into the bundle.
 import { entryValidationMode } from '@/entries/validation-mode.shared';
-import { AstromechApiError } from '../../transport/http/client/index';
+import { AstromechApiError } from '@/transport/http/client';
 import { useToast } from '../components/ui/toast';
 import { useFieldValidation } from './use-field-validation';
 import { useHotkeys } from './use-hotkeys';

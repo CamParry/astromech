@@ -16,7 +16,7 @@ import { useFieldControl } from '@/admin/components/fields/field-control-context
 import { MediaPicker } from '@/admin/components/media/media-picker';
 import { Modal } from '@/admin/components/ui/modal';
 import { Spinner } from '@/admin/components/ui/spinner';
-import { astromechClient } from '@/transport/http/client/index';
+import { astromechClient } from '@/transport/http/client';
 import './media-field.css';
 
 type MediaItem = {

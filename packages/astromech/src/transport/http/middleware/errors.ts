@@ -9,7 +9,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { ZodError } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import { BulkOperationError } from '@/entries/errors';
-import { resolveEnv } from '@/env/index';
+import { resolveEnv } from '@/env';
 import { ValidationError } from '@/errors/validation';
 
 export type ApiErrorCode =

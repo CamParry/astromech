@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { useConfirm } from '@/admin/components/ui/confirm';
 import { useToast } from '@/admin/components/ui/toast';
 import { useAuth } from '@/admin/context/auth';
-import { astromechClient } from '@/transport/http/client/index';
+import { astromechClient } from '@/transport/http/client';
 
 export type PluginUiIdentity = {
     /** The plugin's derived namespace, e.g. `seo` — also its admin route segment. */

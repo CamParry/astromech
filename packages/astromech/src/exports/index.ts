@@ -16,7 +16,7 @@ export type { Astromech } from '@/astromech';
  * Model access, so a plugin can reach a configured model without taking its
  * own SDK dependency. Absent unless the site configures `ai` — hence `undefined`.
  */
-export { getModel, hasModel } from '@/ai/index';
+export { getModel, hasModel } from '@/ai/models';
 export { permissionsForBuiltInRole, BUILT_IN_ROLES } from '@/permissions/roles';
 export type { BuiltInRoleSlug } from '@/permissions/roles';
 export { definePermissions } from '@/permissions/define';
@@ -92,7 +92,8 @@ export { t } from '@/utilities/labels';
  * public reads. Exported so a plugin with a `private` richtext field can
  * render it without reimplementing the sanitizer; `parseRichText` is the inverse.
  */
-export { parseRichText, renderRichText } from '@/fields/rich-text/index';
+export { renderRichText } from '@/fields/rich-text/render';
+export { parseRichText } from '@/fields/rich-text/parse';
 /**
  * The relationships index is derived from field data, so anything writing
  * entries outside the normal operations (a seed, a rebuild) needs the same

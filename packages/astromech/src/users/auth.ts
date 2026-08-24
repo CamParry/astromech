@@ -8,7 +8,7 @@ import type { Auth, BetterAuthOptions } from 'better-auth';
 import { betterAuth } from 'better-auth';
 import { getConfig } from '@/config/registry';
 import { getDatabaseDriverOrThrow } from '@/database/driver-registry';
-import { resolveEnv } from '@/env/index';
+import { resolveEnv } from '@/env';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { createRegistry } from '@/registry';
 import { log } from '@/utilities/log';

@@ -4,7 +4,7 @@
  * left to individual mutation onError handlers.
  */
 
-import type { AstromechApiError } from '@/transport/http/client/index';
+import type { AstromechApiError } from '@/transport/http/client';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from './badge';

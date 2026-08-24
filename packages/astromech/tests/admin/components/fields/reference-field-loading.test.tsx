@@ -28,7 +28,7 @@ const { mediaGet, entriesQuery } = vi.hoisted(() => ({
     entriesQuery: vi.fn(),
 }));
 
-vi.mock('@/transport/http/client/index', () => ({
+vi.mock('@/transport/http/client', () => ({
     astromechClient: {
         media: { get: mediaGet, query: vi.fn() },
         entries: { query: entriesQuery },

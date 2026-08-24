@@ -17,7 +17,7 @@ import { pipeline } from 'node:stream/promises';
 import { createClient } from '@libsql/client';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { CamelCasePlugin, Kysely } from 'kysely';
-import { resolveEnv } from '@/env/index';
+import { resolveEnv } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
 
 export type LibsqlOptions = {

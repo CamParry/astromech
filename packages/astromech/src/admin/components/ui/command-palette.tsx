@@ -24,7 +24,7 @@ import adminConfig from 'virtual:astromech/admin-config';
 import { entryLabel } from '@/admin/components/entries/entry-label';
 import { entryAdminPath } from '@/admin/utilities/entry-admin-path';
 import { parseEntryTypeId } from '@/entries/entry-types.shared';
-import { astromechClient } from '@/transport/http/client/index';
+import { astromechClient } from '@/transport/http/client';
 import { useDebounce } from '../../hooks/use-debounce';
 import { usePermissions } from '../../hooks/use-permissions';
 import { EntryTypeIcon } from './entry-type-icon';

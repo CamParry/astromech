@@ -20,7 +20,7 @@ import { migrateToLatest } from '@astromech/schema-engine';
 import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { d1 } from '@/database/drivers/d1';
-import { clearEnvSource } from '@/env/index';
+import { clearEnvSource } from '@/env';
 import {
     disposeBindings,
     resetBindings,

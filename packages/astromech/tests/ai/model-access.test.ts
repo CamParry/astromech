@@ -6,8 +6,7 @@ import type {
     LanguageModelV4Usage,
 } from '@ai-sdk/provider';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getModel, hasModel } from '@/ai/index';
-import { buildAiModels } from '@/ai/models';
+import { buildAiModels, getModel, hasModel } from '@/ai/models';
 import { setAiModels } from '@/ai/registry';
 
 beforeEach(() => {

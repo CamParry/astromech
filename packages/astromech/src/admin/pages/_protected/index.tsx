@@ -21,7 +21,7 @@ import {
 import { Panel } from '@/admin/components/ui/panel';
 import { Skeleton } from '@/admin/components/ui/spinner';
 import { useAiContext } from '@/admin/context/ai-context';
-import { astromechClient } from '@/transport/http/client/index';
+import { astromechClient } from '@/transport/http/client';
 import { formatDate } from '@/utilities/dates';
 
 function statusVariant(

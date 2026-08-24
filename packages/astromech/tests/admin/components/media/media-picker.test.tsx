@@ -22,7 +22,7 @@ const { mediaQuery, uploadMedia, canUploadMedia } = vi.hoisted(() => ({
     canUploadMedia: vi.fn(),
 }));
 
-vi.mock('@/transport/http/client/index', () => ({
+vi.mock('@/transport/http/client', () => ({
     astromechClient: { media: { query: mediaQuery, upload: uploadMedia } },
 }));
 

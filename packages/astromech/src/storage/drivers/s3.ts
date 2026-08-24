@@ -12,7 +12,7 @@ import type {
     StorageStat,
 } from '@/types/index';
 import { AwsClient } from 'aws4fetch';
-import { resolveEnv } from '@/env/index';
+import { resolveEnv } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
 
 export type S3Options = {

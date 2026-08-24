@@ -11,7 +11,7 @@ import { swaggerUI } from '@hono/swagger-ui';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
-import { resolveEnv } from '@/env/index';
+import { resolveEnv } from '@/env';
 import { handleMediaRequest } from '@/media/serving/handler';
 import { runWithRequest } from '@/request-context/request-context';
 import { getAuth } from '@/users/auth';

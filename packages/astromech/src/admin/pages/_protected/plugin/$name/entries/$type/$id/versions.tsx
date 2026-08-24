@@ -13,7 +13,7 @@ import { EntryVersionsPage } from '@/admin/components/entries/entry-versions-pag
 import { buildPluginEntriesMount } from '@/admin/components/entries/mount';
 import { EmptyState } from '@/admin/components/ui/empty-state';
 import { Page, PageContent } from '@/admin/components/ui/page';
-import { astromechClient } from '@/transport/http/client/index';
+import { astromechClient } from '@/transport/http/client';
 
 function PluginEntryVersionsPage(): React.ReactElement {
     const { name, type, id } = Route.useParams();

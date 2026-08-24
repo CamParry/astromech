@@ -12,7 +12,7 @@
 
 import type { Entry, Media, Notification, Setting, User } from '@/types/index';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { astromechClient as client } from '@/transport/http/client/index';
+import { astromechClient as client } from '@/transport/http/client';
 
 type Request = { url: string; method: string; body: unknown };
 

@@ -22,7 +22,7 @@ import { createClient } from '@libsql/client';
 import { sql } from 'kysely';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { d1 } from '@/database/drivers/d1';
-import { clearEnvSource, setEnvSource } from '@/env/index';
+import { clearEnvSource, setEnvSource } from '@/env';
 import { resetBindings } from '@/integrations/cloudflare/bindings';
 
 /** Test-only schema; deliberately unrelated to the app's `DB` type. */

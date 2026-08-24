@@ -8,7 +8,7 @@ import type { AstromechConfig } from '@/types/index';
 import { createAstromech } from '@/astromech';
 import { cloudflareCron } from '@/cron/drivers/cloudflare';
 import { setDefaultScheduler } from '@/cron/registry';
-import { setEnvSource } from '@/env/index';
+import { setEnvSource } from '@/env';
 
 /** The Cron Trigger event, narrowed to the field the tick reads. */
 export type ScheduledEvent = { scheduledTime: number };

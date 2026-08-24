@@ -171,14 +171,19 @@ where something outside reads them: `src/exports/`, one file per published
 subpath, plus the two under `src/admin/components/` that the Astro integration
 aliases. Every other import names the file that declares the symbol.
 `src/types/index.ts` is the exception, kept because it is type-only — 359 imports
-that erase at compile time, so there is no runtime graph to shrink. An
-`index.ts` holding real code is a module, not a barrel, and stays. An eslint
-selector enforces this, and `sideEffects` is an array rather than `false`,
-because the UI barrels' instance guard, the admin entry's field and cell
-registrations, and every admin component's stylesheet do have effects. Rejected:
-barrels as intra-package boundaries — 93% of imports already went around them,
-nothing enforced barrel-only entry, and the browser boundary needed the
-opposite. The import-time argument that Vite's performance guide, TkDodo and
+that erase at compile time, so there is no runtime graph to shrink. The name
+`index` is reserved for a file something resolves by path — a tsup entry, a Vite
+alias target, a router route page — so a file holding real code takes the name of
+what it holds instead: `src/env.ts` and `src/transport/http/client.ts`, not an
+`index.ts` a directory down. An eslint selector enforces this, and `sideEffects`
+is an array rather than `false`, because the UI barrels' instance guard, the
+admin entry's field and cell registrations, and every admin component's
+stylesheet do have effects. Rejected: barrels as intra-package boundaries — 93%
+of imports already went around them, nothing enforced barrel-only entry, and the
+browser boundary needed the opposite. Also rejected: letting a real-code
+`index.ts` keep its name and carrying it as a lint exception, which grew the
+exception list to thirteen paths and taught readers that `index` means nothing in
+particular. The import-time argument that Vite's performance guide, TkDodo and
 Atlassian make did not reproduce here: vitest's aggregate module-import time
 stayed inside its run-to-run variance on both sides, so the reasons above carry
 the change alone.

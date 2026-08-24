@@ -1,7 +1,7 @@
 import type { Field, FieldValidationContext } from '@/types/fields';
 import { describe, expect, it } from 'vitest';
 import { safeParseFields } from '@/fields/parse-fields';
-import { renderRichText } from '@/fields/rich-text/index';
+import { renderRichText } from '@/fields/rich-text/render';
 import {
     coerceRichText,
     validateRichText,

@@ -12,7 +12,7 @@ import adminConfig from 'virtual:astromech/admin-config';
 import { EntryEditPage } from '@/admin/components/entries/entry-edit-page';
 import { entryQueryOptions } from '@/admin/hooks/entries';
 import { pluginEntryRouteParams } from '@/admin/utilities/entry-admin-path';
-import { astromechClient } from '@/transport/http/client/index';
+import { astromechClient } from '@/transport/http/client';
 
 function EntryEditRoutePage(): React.ReactElement {
     const { type, id } = Route.useParams();

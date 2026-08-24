@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { clearEnvSource, setEnvSource } from '@/env/index';
+import { clearEnvSource, setEnvSource } from '@/env';
 import { resetBindings, resolveBinding } from '@/integrations/cloudflare/bindings';
 
 // Every test here registers an environment through `setEnvSource`, the way a

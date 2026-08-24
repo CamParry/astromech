@@ -7,7 +7,7 @@
 import type { Entry, Field, JsonObject, JsonValue, RichTextAllow } from '@/types/index';
 import type { JSONContent } from '@tiptap/core';
 import { PUBLIC_STRIPPED_KEYS, RESERVED_KEY } from '@/fields/reserved-keys';
-import { renderRichText } from '@/fields/rich-text/index';
+import { renderRichText } from '@/fields/rich-text/render';
 
 /** Which fields a read returns: `public` strips private ones, `full` keeps them. */
 export type VisibilityShape = 'public' | 'full';

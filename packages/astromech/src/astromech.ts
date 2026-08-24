@@ -47,7 +47,7 @@ import { createRegistry } from '@/registry';
 import { getCurrentRole, getCurrentUser } from '@/request-context/request-context';
 import { settingsService } from '@/settings/service';
 import { setStorageDriver } from '@/storage/registry';
-import { createHttpApp } from '@/transport/http/index';
+import { createHttpApp } from '@/transport/http/app';
 import { usersService } from '@/users/service';
 
 export type Astromech = {

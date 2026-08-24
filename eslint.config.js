@@ -12,21 +12,15 @@ const noJsExtension = [
         'Drop the .js extension from relative and alias imports — moduleResolution is "bundler".',
 }));
 
-// The modules named `index` that a file may still import: the ones holding
-// real code, the two `astromech/ui` alias targets, and the router's route
-// pages, where `index` is the URL segment. Matched on the tail so a relative
-// specifier resolves the same as an aliased one.
+// The modules named `index` that a file may still import: the type-only
+// surface, the two tsup entry points (the CLI bin and the MCP server), the two
+// `astromech/ui` alias targets, and the router's route pages, where `index` is
+// the URL segment. Matched on the tail so a relative specifier resolves the
+// same as an aliased one.
 const nonBarrelIndexModules = [
     'types/index',
-    'env/index',
-    'ai/index',
-    'fields/rich-text/index',
-    'transport/http/index',
-    'transport/http/client/index',
     'transport/cli/index',
     'transport/mcp/index',
-    'integrations/astro/index',
-    'integrations/cloudflare/index',
     'admin/components/ui/index',
     'admin/components/fields/index',
     'pages/.*index',

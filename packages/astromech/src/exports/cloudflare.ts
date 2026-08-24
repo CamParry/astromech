@@ -2,14 +2,11 @@
  * `astromech/cloudflare` — the Cloudflare Workers entry and binding lookup.
  */
 
-export {
-    createWorkerEntry,
-    disposeBindings,
-    isWorkersRuntime,
-    resolveBinding,
-} from '@/integrations/cloudflare/index';
+export { isWorkersRuntime } from '@/env';
+export { disposeBindings, resolveBinding } from '@/integrations/cloudflare/bindings';
+export { createWorkerEntry } from '@/integrations/cloudflare/worker';
 export type {
     ScheduledEvent,
     WorkerEntry,
     WorkerEnv,
-} from '@/integrations/cloudflare/index';
+} from '@/integrations/cloudflare/worker';

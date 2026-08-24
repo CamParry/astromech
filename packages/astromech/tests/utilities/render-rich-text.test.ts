@@ -4,7 +4,7 @@
 
 import type { JSONContent } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
-import { renderRichText } from '@/fields/rich-text/index';
+import { renderRichText } from '@/fields/rich-text/render';
 
 function doc(...content: JSONContent[]): JSONContent {
     return { type: 'doc', content };

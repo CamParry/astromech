@@ -1,6 +1,7 @@
 import type { JSONContent } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
-import { parseRichText, renderRichText } from '@/fields/rich-text/index';
+import { parseRichText } from '@/fields/rich-text/parse';
+import { renderRichText } from '@/fields/rich-text/render';
 
 /** A paragraph carrying the attribute defaults the schema fills in. */
 function paragraph(...content: JSONContent[]): JSONContent {
