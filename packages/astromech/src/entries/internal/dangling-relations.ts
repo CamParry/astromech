@@ -62,7 +62,7 @@ export async function pruneDanglingRelations(
     // from a different snapshot, where a row written earlier in this
     // transaction looks missing and its live reference gets pruned. Those
     // targets go UNCHECKED instead: a kept dangling id is dropped by the next
-    // write (decisions/0004), a deleted live one is gone.
+    // write (`DECISIONS.md`), a deleted live one is gone.
     const insideTransaction = getTransactionScope() !== undefined;
 
     const readByTarget = new Map<string, ExistingIds>();

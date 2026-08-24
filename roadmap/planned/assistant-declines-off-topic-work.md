@@ -19,7 +19,7 @@ owner's API key, and it is not what the drawer is for.
 **A system prompt shapes the default, it is not a boundary.** The enforcing
 limits are the tool surface, `readOnly` and the permission scope, and all three
 are built. A spend or rate cap is not one of them and is not coming —
-`decisions/0022-core-hands-out-a-model.md` records why that belongs in the
+`DECISIONS.md` records why that belongs in the
 provider's dashboard.
 
 So whatever ships here changes what the model does by default, not what it is

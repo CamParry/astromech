@@ -145,7 +145,7 @@ which rebases the path back to the flat body the caller sent.
 - [x] A decision record for the two rules, naming `overrides` and `value` as
       the deliberate exceptions and why, and recording that a nested `data`
       moves the RPC transport's validation field paths under `data.` while
-      leaving REST's alone. `decisions/0083-operation-signatures.md`.
+      leaving REST's alone. `DECISIONS.md`.
 
 ## Not changing
 

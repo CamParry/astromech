@@ -35,15 +35,15 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 
 ### Tooling
 
-- [ ] Re-evaluate a dependency lint (dependency-cruiser or similar) as a QA hardening layer once development shifts from building to hardening — dropped while building, `decisions/0070-drop-dependency-cruiser.md`
+- [ ] Re-evaluate a dependency lint (dependency-cruiser or similar) as a QA hardening layer once development shifts from building to hardening — dropped while building, `DECISIONS.md`
 
 ### Relationships follow-ups (from `completed/relationships-model.md`)
 
 The model shipped whole; these are the deliberate deferrals and the sharp edges found building it.
-The rationale for the first two is in `decisions/0004-relationships-as-a-derived-index.md` and should
+The rationale for the first two is in `DECISIONS.md` and should
 not be re-derived.
 
-- [ ] **A declared reverse field** — deferred, not refused (`decisions/0004`). Reverse lookup needs no
+- [ ] **A declared reverse field** — deferred, not refused (`DECISIONS.md`). Reverse lookup needs no
       declaration: it is an indexed read, and `where: { references }` already covers the delete modal,
       media "used by" and filter-by-relation. A declared virtual field would be sugar compiling to
       that same query and can be added without touching the repository. **If it comes back it must be keyed
@@ -75,7 +75,7 @@ not be re-derived.
 - [ ] A frontend form component/helper. v1 deliberately exposes data only (`forms.get`) and lets the site author own the markup, following the redirects precedent — revisit if hand-rendering proves tedious in practice
 - [ ] Per-form success redirect, once there is a frontend story to redirect within
 - [ ] A read-only entry flag in core, so `forms/submission` can express "written by the API, never hand-authored" directly instead of relying on a site granting read+delete and withholding create+update
-- [ ] More notification providers now the seam exists (`decisions/0002`) — Slack, Mailchimp, a generic webhook. Each is one file in `notifications/providers/` plus a `registry.ts` entry; the editor block and the delivery come as a pair
+- [ ] More notification providers now the seam exists (`DECISIONS.md`) — Slack, Mailchimp, a generic webhook. Each is one file in `notifications/providers/` plus a `registry.ts` entry; the editor block and the delivery come as a pair
 - [ ] Notification providers are a closed built-in list. A site can write a `SpamProvider` and pass it through config, but there is no equivalent option for a `NotificationProvider` — the registry is compiled in. Open it up if a site needs a kind we don't ship
 
 ### `@astromech/backups` follow-ups
@@ -95,7 +95,7 @@ not be re-derived.
 
 ### Console logging follow-ups
 
-- [ ] Browser-safe `log`. `utilities/log.ts` writes to stderr via `console.error` (Node/serving side). Two admin browser-side calls still hardcode the `[Astromech]`/`[astromech]` prefix — `admin/i18n.ts` and `admin/support/ui-instance-guard.ts` — because stderr routing is wrong in a browser. Needs a browser log variant before they can move off the hardcoded string. See `decisions/0066-the-astromech-prefix-is-a-log-device.md`
+- [ ] Browser-safe `log`. `utilities/log.ts` writes to stderr via `console.error` (Node/serving side). Two admin browser-side calls still hardcode the `[Astromech]`/`[astromech]` prefix — `admin/i18n.ts` and `admin/support/ui-instance-guard.ts` — because stderr routing is wrong in a browser. Needs a browser log variant before they can move off the hardcoded string.
 
 ### Runtime integrations follow-ups
 

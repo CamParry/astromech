@@ -13,14 +13,17 @@ Names are not a place to be creative. Before naming anything, find what this exa
 - **A function name says what it does, in a verb.** `resolveContentLocale`, `renderRichText`, `createStagedEntry` — not `handleData`, `processStuff`, `contentHelper`. If the verb is hard to pick, the function is doing more than one thing.
 - **Be consistent across the codebase before being clever in one file.** If neighbouring code says `entry`, don't introduce `record`, `doc`, or `item` for the same concept. One concept, one word, everywhere.
 - **Spell it out.** `config` and `id` are fine because everyone reads them; `cfg`, `mgr`, `svc`, `tmp2` are not. Length costs nothing next to a name a reader has to decode.
-- **The lookup verbs are fixed.** `get*` returns the thing and throws when it is absent (`getConfig`), with no `OrThrow` suffix — that suffix belongs to the `registry.ts` primitive, not to callers built on it. `resolve*` returns the thing or `undefined` (`resolveEntryType`). `assert*` returns `void`, matching TypeScript's own `asserts x is T`. `require*` is reserved for middleware (`requireAuth`). `decisions/0088` has the reasoning; `operations/get.ts` `getEntry` returning `null` is the recorded exception, because a missing entry on the public read path is a 404 rather than a fault.
+- **Acronyms are title-case, whatever their length.** `AiConfig`, `useAiContext`, `UiProvider`, `UrlBuilder`, `HttpClient` — no carve-out for two letters, because `Id` is already title-case in 112 identifiers. Platform globals (`URL`), third-party keys and `SCREAMING_SNAKE` constants are unaffected.
+- **A `defineX` factory returns an `X`.** `Descriptor` and `Definition` are not suffixes: `defineTable` returns a `Table`, `defineFieldType` a `FieldType`. Derived forms take an existing prefix — `ResolvedConfig`, `RegisteredPlugin`.
+- **One `validate` per layer.** A field type's own check and the author's whole-resource function are both `validate`. The Zod wrapper over request input is `parseInput` in `errors/validation.ts`; `parseFields` throws and `safeParseFields` returns reports. `parse` keeps its verb — not `validateFields`, not `prepareFields`.
+- **`[Astromech]` is a log device.** It lives in `utilities/log.ts` and never in an error message. A thrown error identifies itself by `AstromechError.name`, and a wire-mapped error carries a clean message, so the marker cannot leak into an HTTP body.
+- **The lookup verbs are fixed.** `get*` returns the thing and throws when it is absent (`getConfig`), with no `OrThrow` suffix — that suffix belongs to the `registry.ts` primitive, not to callers built on it. `resolve*` returns the thing or `undefined` (`resolveEntryType`). `assert*` returns `void`, matching TypeScript's own `asserts x is T`. `require*` is reserved for middleware (`requireAuth`). `operations/get.ts` `getEntry` returning `null` is the one exception, because a missing entry on the public read path is a 404 rather than a fault.
 - **Watch the generic suffixes, don't ban them.** `handler`, `engine`, `service`, `util`, `helper`, `manager` are real ecosystem words and this codebase already uses several — `handler` for a request handler, `@astromech/schema-engine` for a body of core machinery, `utilities/` and `support/` for genuinely miscellaneous small functions. Use them where they carry their normal meaning. Be wary only of reaching for one because the thing resists a more specific name; when a `Manager` or `Helper` would sit next to a name that actually describes the work, prefer the specific one.
 
 ## Operation signatures
 
 The functions under `<module>/operations/` follow two rules, so any one of them
-is guessable from any other. `decisions/0083-operation-signatures.md` has the
-reasoning and the exceptions.
+is guessable from any other.
 
 - **Verb plus noun, and the noun carries plurality.** `createEntry`, `getUser`,
   `queryMedia`, `updateEntries`, `listEntryVersions`. A function acting on one
@@ -60,22 +63,22 @@ A REST route keeps a flat body under this: the route spec declares
 
 - **A doc block above every exported function, type, and the file itself.** Write it as a JSDoc `/** … */` block, not a run of `//` lines. This is open-source; a reader needs to know what each public thing does. Private local helpers may skip the block when the name already says it.
 - **`//` is for inline notes only.** Don't write a file header, type doc, or function doc as a run of `//` lines.
-- **Three lines of text maximum**, file headers included. This is a hard cap: content that overflows (cross-references, layer models, prior art) belongs in `ARCHITECTURE.md` or `decisions/`, so trim it out rather than relocating it into a longer header.
+- **Three lines of text maximum**, file headers included. This is a hard cap: content that overflows (cross-references, layer models, prior art) belongs in `ARCHITECTURE.md` or `DECISIONS.md`, so trim it out rather than relocating it into a longer header.
 - Say what it does and where it fits. **Why only when the code would otherwise read as wrong.**
 - Inline comments only for non-obvious behaviour. Never restate the code.
 - **No section banners.** No `// ====`, `// ----`, or any ruled divider used to label a region of a file. A file that feels like it needs internal signposts wants splitting, not banners.
 - **No flair, no rhetorical emphasis** ("this is the whole point", "THIS IS THE ONLY…").
-- **No history, no rejected alternatives, no naming justifications.** Established naming needs no defence in a comment; put the record in `decisions/`.
+- **No history, no rejected alternatives, no naming justifications.** Established naming needs no defence in a comment; put the record in `DECISIONS.md`.
 
 ## Data access (repository pattern)
 
-- **The DB-access unit is a _repository_.** Name `createXRepository`, type `XRepository`, never `createXStorage`. `storage` means file/blob storage only. (See `decisions/0075`.)
+- **The DB-access unit is a _repository_.** Name `createXRepository`, type `XRepository`, never `createXStorage`. `storage` means file/blob storage only.
 - **A `defineTable` / `definePluginTable` export is named `<noun>Table`** — `entriesTable`, `cronTable`, `submissionsTable`. The noun matches the SQL table name; the suffix keeps the table distinct from the module and its service. Row types stay `EntryRow` / `NewEntryRow`.
 - **A repository is the only place `getDb` or a Kysely query appears.** Services, operations, jobs, and helpers call a repository — never raw queries.
 - Repositories are **factory functions** closing over the db handle: `createUserRepository(db) => ({ … })`. The one class is `TableRepository`, the pluggable `EntryRepository` implementation.
 - Business logic is split **operations-per-file** (`operations/create.ts`, …) wrapping the repository; shared per-module helpers live in `<module>/internal/`.
 - Module-local data → `<module>/repository/`. Cross-module subsystems (e.g. relationships, spanning entry/user/media) → `database/repository/`, composed by the services that need them.
-- `<module>/repository/` (DB access) is a different concept from top-level `storage/` (media binary/blob drivers) — the rename in 0075 exists to keep the two words apart.
+- `<module>/repository/` (DB access) is a different concept from top-level `storage/` (media binary/blob drivers), and the two words are kept apart deliberately.
 
 ## Commits
 

@@ -6,8 +6,8 @@ assistant plugin stops owning the API key and becomes a consumer. The `content`
 domain, whose provider port nothing ever implemented, is removed.
 
 Built on `feat/ai-capability`. The rationale and the rejected alternatives are
-in `decisions/0021-ai-as-an-optional-core-capability.md` through
-`decisions/0027-the-assistant-loop-on-streamtext.md`; this file holds the work
+in `DECISIONS.md` through
+`DECISIONS.md`; this file holds the work
 and the questions still open.
 
 ## Why now
@@ -63,7 +63,7 @@ operation shape.
       cannot go stale as models ship.
     - Consuming a `LanguageModel` meant the loop had to move off
       `@anthropic-ai/sdk`'s tool runner onto `streamText`. That is the largest
-      piece of this work, and `decisions/0027-the-assistant-loop-on-streamtext.md`
+      piece of this work, and `DECISIONS.md`
       holds it: why AI SDK's own tool approvals were refused, and the `execute`-less
       tool that halts the loop in their place.
 - [x] **Remove `content/`.** The module, its HTTP router, its entry in the tool
@@ -97,12 +97,12 @@ that forward into this work, and the reading was done.
 **The answer was to rewrite the loop onto `streamText` and keep our own approval
 gate.** AI SDK's approvals resolve a call's arguments by re-reading the
 client-posted message history, which is the design
-`decisions/0020-approval-as-a-server-held-row.md` rejected, and
+`DECISIONS.md` rejected, and
 `experimental_toolApprovalSecret` proves issuance rather than first use. What
 replaced them is a mutating tool declared with no `execute`, a documented
 loop-halt: the turn stops with nothing mutating run, rows are minted from the
 unexecuted calls, and the call still executes with the row's arguments.
-`decisions/0027-the-assistant-loop-on-streamtext.md` has the full reasoning, plus
+`DECISIONS.md` has the full reasoning, plus
 the `smoothStream` ban and the deleted model union.
 
 The two things to confirm before migrating both resolved. Tool search with
@@ -153,6 +153,6 @@ plugin_authoring_0000_baseline is missing`. `db:init` is what throws, so it
   consumer exists than after.
 - **What replaces the content operations, and when.** Still unanswered, and
   waiting on a UI design rather than on an implementation.
-  `decisions/0024-removing-the-content-operations.md` holds the two properties
+  `DECISIONS.md` holds the two properties
   that must carry forward and the open permission question, so this is a pointer
   and not a restatement.

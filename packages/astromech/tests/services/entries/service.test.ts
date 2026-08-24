@@ -808,7 +808,7 @@ describe('hooks', () => {
         expect(rows).toHaveLength(0);
     });
 
-    // `decisions/0081-one-hook-runner-a-throw-propagates.md`: a throw now
+    // `DECISIONS.md`: a throw now
     // propagates from an after* handler instead of being swallowed and logged,
     // and the write it followed stays committed.
     it('a throwing afterDelete propagates, but the row is still gone', async () => {

@@ -60,7 +60,7 @@ Do this first; steps 2 and 3 are mechanical and this one is not.
       `buildDispatch` — the raw path the dev-only MCP server and the CLI use —
       answers `ok: false` with a reason naming the missing user, beside the
       `binaryInput` refusal.
-- [x] `decisions/0037-session-scoped-service-methods.md`, with the three
+- [x] `DECISIONS.md`, with the three
       rejected alternatives: naming the argument (`sessionArgument: 'userId'`),
       one declaration also covering `users.get`'s self-access exemption, and
       leaving notifications out of the manifest.

@@ -30,7 +30,7 @@ It passed the gate. Review caught it, not the tests.
       `relationship` were checked for being an id and nothing more. A
       `relationship` id is now checked against its declared `target`. Existence
       is deliberately not checked — see `field-validation-coverage.md` and
-      `decisions/0004-relationships-as-a-derived-index.md`.
+      `DECISIONS.md`.
 - [x] **`@astromech/forms` had no rate limit on `submit`.** The only defence was
       the optional spam-provider gate. Submissions are limited per connecting
       address, which meant giving the HTTP transport a way to hand a service

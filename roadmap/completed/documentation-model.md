@@ -3,7 +3,7 @@
 Give the repo's markdown a stated contract — one question per document, one home
 per fact, no history in the map files — and clean up the drift that not having
 one had produced. Rationale and rejected alternatives:
-`decisions/0011-documentation-structure.md`.
+`DECISIONS.md`.
 
 ## The pattern
 
@@ -17,7 +17,7 @@ one had produced. Rationale and rejected alternatives:
       question, what each may not contain, the decision-record format, and the
       roadmap and backlog rules. Loads when markdown is edited, matching how
       `code`, `ui`, `api` and `css` already work.
-- [x] `decisions/README.md` gained an index and a stated metadata block
+- [x] `DECISIONS.md` gained an index and a stated metadata block
       (`Date` / `Status` / `Supersedes`).
 - [x] `npm run check:docs` — resolves every repo-relative markdown link and every
       backticked path, and fails the gate on a miss. Added to the gate table.
@@ -25,7 +25,7 @@ one had produced. Rationale and rejected alternatives:
 ## The cleanup
 
 - [x] Stripped history from `ARCHITECTURE.md` and `TERMINOLOGY.md`, relocating
-      anything load-bearing to `decisions/`. Two new records came out of it:
+      anything load-bearing to `DECISIONS.md`. Two new records came out of it:
       `0011` for the model itself and `0012` for driver-over-adapter, which had
       been sitting in `TERMINOLOGY.md` as a rationale blockquote.
 - [x] Corrected the stale facts the drift had left: four first-party plugins
@@ -48,7 +48,7 @@ one had produced. Rationale and rejected alternatives:
 
 ## Known limits
 
-`check:docs` does not check backticked paths inside `decisions/` or
+`check:docs` does not check backticked paths inside `DECISIONS.md` or
 `roadmap/completed/` — both are frozen records that quote paths accurate at the
 time of writing, and failing them on an unrelated later rename would tax a
 historical document and invite falsifying it. Markdown links are still checked

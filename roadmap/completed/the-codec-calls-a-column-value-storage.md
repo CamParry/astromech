@@ -15,16 +15,16 @@ one replacement word would have been wrong.
   `packages/schema-engine/src/diff.ts` warning, now
   `column "x" on table "y" changed type (text → integer)`.
 
-`decisions/0092-encoded-is-the-column-form-of-a-value.md` records the comparison,
+`DECISIONS.md` records the comparison,
 including why `column` and Drizzle's `driverParam` lost.
 
 ## The work
 
 - [x] **Decide whether the third meaning is renamed or admitted.** Renamed. A
       glossary entry that says "storage means blobs, and also this other thing"
-      has stopped doing the job `decisions/0075-repository-for-data-access.md`
+      has stopped doing the job `DECISIONS.md`
       gave it.
-- [x] **Pick the word** and record the comparison in `decisions/`, since it is
+- [x] **Pick the word** and record the comparison in `DECISIONS.md`, since it is
       contested.
 - [x] **Rename**, in both senses: `encoded` for the codec, `columnType` for the
       SQL type.
@@ -50,4 +50,4 @@ sense. They are the second sense and take `columnType`.
 
 **The blob sense.** `src/storage/`, `StorageDriver`, `PluginStorage`,
 `ctx.storage` and the `astromech/storage/*` subpaths keep the word. That is what
-`decisions/0075-repository-for-data-access.md` reserved it for.
+`DECISIONS.md` reserved it for.

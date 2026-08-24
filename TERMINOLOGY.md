@@ -1,7 +1,7 @@
 # Astromech — Terminology
 
 What each word means here. Definitions only: no file paths, no signatures, and no
-rationale. Why a term beat its alternatives is in `decisions/`; where the code
+rationale. Why a term beat its alternatives is in `DECISIONS.md`; where the code
 lives is in `ARCHITECTURE.md`.
 
 **Adapter.** Code that reshapes one internal interface into another. Distinct

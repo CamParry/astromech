@@ -5,7 +5,7 @@ shipped first — see `completed/method-manifest.md`; CLI/MCP/confirmation/the
 assistant all read it.
 
 The 2026-07-30 replan that produced P0–P7 has shipped, and its spec is gone with
-it; what survived is recorded per-item below and in `decisions/`. The WS4–6
+it; what survived is recorded per-item below and in `DECISIONS.md`. The WS4–6
 sections of `specs/ai-integration.md` were superseded by it, which that file
 already marks as design history.
 
@@ -369,7 +369,7 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       quality rather than the thing; "UI context" collides with React's
       `useContext` and points the wrong way; "awareness" is a state, not a value;
       "insight" is model output, not model input. Full rationale and the general
-      naming rule it produced: `decisions/0005-ai-context-naming.md`.
+      naming rule it produced: `DECISIONS.md`.
     - The `AI` prefix is load-bearing, not decoration: `src/request-context/` is already
       the server-side `AsyncLocalStorage` request context, and it is on admin's
       forbidden-import list in `.dependency-cruiser.cjs`.
@@ -461,11 +461,11 @@ f(x)`), so re-coercion is only observable when the STORED value is not
           acting role may call, already resolved through `scopedServices`. Core
           owns the whole composition, because three of its four steps look
           optional and are not, and their order is load-bearing.
-          `decisions/0007` holds the mechanism and the rejected alternatives
+          `DECISIONS.md` holds the mechanism and the rejected alternatives
           (`ssr.noExternal` was tried and is inert; Node loader hooks would
           resolve to a _second_ config module; VS Code's inject-at-require needs
           a host that loads the plugin, and Astro's config loads ours before
-          core exists). `decisions/0008` holds the port's shape and name.
+          core exists). `DECISIONS.md` holds the port's shape and name.
         - Three constraints shaped it, none optional: the implementation must be
           a Vite-graph closure, so it is wired at module top level in
           `transport/local` and NOT in `initRuntime` (which runs in plain Node
@@ -614,7 +614,7 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       write-back guard.
 - [x] **P8 — writes, approved out-of-band.** Shipped 2026-08-04 across two
       commits — the loop and the table, then the drawer. `readOnly` now defaults
-      to `false`. `decisions/0015` holds why an approval is a server-held row.
+      to `false`. `DECISIONS.md` holds why an approval is a server-held row.
     - **Approval is a row, not a value in the transcript.** A paused turn writes
       one `plugin_authoring_approvals` row per mutating call, holding the acting
       user, the `tool_use` id, the method and the concrete arguments; the
@@ -737,7 +737,7 @@ f(x)`), so re-coercion is only observable when the STORED value is not
       transcript lived in `useChat`'s React state, so a reload lost the lot.
       `plugin_authoring_sessions` holds one row per user, unique on `userId` and
       replaced in place, written by the loop after every completed turn in the
-      shape the drawer posts back. "New chat" replaces it. `decisions/0018` holds
+      shape the drawer posts back. "New chat" replaces it. `DECISIONS.md` holds
       why there is no session library.
     - **Scoped down before building: no session library in v1.** Two things were
       bundled under "persisted sessions" and only one earns its keep. Reload
@@ -818,7 +818,7 @@ f(x)`), so re-coercion is only observable when the STORED value is not
   `specs/ai-integration.md` §3.13 was first overturned by a split — the loop kept
   the long tail, a set of content operations owned anything writing entry field
   data. Those operations are deleted
-  (`decisions/0024-removing-the-content-operations.md`) and the loop is the only
+  (`DECISIONS.md`) and the loop is the only
   write path there is. Don't re-derive the split when field-level editing comes
   back: what was missing was never an implementation, it was how an author asks
   for one — a per-field button, a rich-text toolbar item, a document-level

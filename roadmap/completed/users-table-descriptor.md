@@ -6,7 +6,7 @@ is what makes the snapshot change legitimate rather than a hand-edit.
 
 Why it beat the alternatives, and why the "do not do this" comment it reverses
 was wrong, is in
-`decisions/0056-better-auth-owns-the-users-format-not-its-ddl.md`.
+`DECISIONS.md`.
 
 - [x] `usersTable`, describing the format better-auth writes, enrolled in
       `CORE_TABLES` so the baseline-parity test covers it.

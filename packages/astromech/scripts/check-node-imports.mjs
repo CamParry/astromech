@@ -17,7 +17,7 @@ const SUBPATHS = [
     'astromech/fields',
     'astromech/columns',
     // The component kit. `astromech/ui` resolves to source in this repo and to
-    // dist for npm (decisions/0033), so Node is pointed at what npm publishes.
+    // dist for npm (`DECISIONS.md`), so Node is pointed at what npm publishes.
     './dist/admin/components/ui/index.js',
 ];
 

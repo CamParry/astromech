@@ -198,7 +198,7 @@ authenticated caller with no permission check at all.
 #### `routes/notifications.ts` — 4 handlers
 
 The roadmap expected all four to be bespoke. Since
-`decisions/0037-session-scoped-service-methods.md` landed, three are not:
+`DECISIONS.md` landed, three are not:
 `scopedServices` fills `userId` from the request context for a `sessionScoped`
 contract, which is exactly what these handlers do by hand.
 
@@ -437,6 +437,6 @@ had the reason in a file header rather than against the handler.
 - No migration, no stored-data change, no public API change if done correctly —
   the URL surface is preserved by the table.
 
-`decisions/0038-a-route-declares-itself.md` records the why: what the audit
+`DECISIONS.md` records the why: what the audit
 refuted, why a proxy beat generating a client file, why REST and the eleven
 hand-written CLI commands stayed, and which enforcement residues are deliberate.

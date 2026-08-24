@@ -41,7 +41,7 @@ writes `user?.id ?? null` into a `col.reference('users')` column of its own.
       agree, or the difference should be stated.
 - [ ] **Decide what happens when the referenced user is deleted.** The column is
       an FK with no `onDelete`, so deleting a user either fails or orphans the
-      reference depending on the driver. `decisions/0004-relationships-as-a-derived-index.md`
+      reference depending on the driver. `DECISIONS.md`
       sets the house rule for the relationship index — dangling ids are tolerated
       and pruned on write — but that covers field data, not a column FK.
 - [ ] **Surface it in the admin.** An entry list column and a detail line are the

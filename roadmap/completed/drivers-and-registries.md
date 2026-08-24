@@ -75,8 +75,8 @@ serve, so the allow-list belongs to core rather than to `sharp()`. Only
 `Omit<AstromechConfig, 'plugins' | 'db' | 'scheduler' | 'ai'>`
 (`packages/astromech/src/types/config.ts`), leaving `storage: StorageDriver`,
 `email.driver` and `image.driver` in place though all seven are the same kind of
-thing. `decisions/0021` justified the `ai` strip by the JSON round trip;
-`decisions/0031-the-plugin-config-view-is-an-allow-list.md` argued `db`,
+thing. `DECISIONS.md` justified the `ai` strip by the JSON round trip;
+`DECISIONS.md` argued `db`,
 `scheduler` and `plugins` case by case; `storage`, `email` and `image` were never
 argued at all, because `JSON.stringify` was silently deleting their methods
 anyway. `ResolvedConfig` is then stashed in the `runtimeConfig` slot and threaded
@@ -211,7 +211,7 @@ dribbling out.
       `packages/plugins/forms/src/notifications/providers/email.ts`, one test
       fixture, the demo config comment, and
       `apps/docs/plugins/authoring.md`.
-- [x] **WS6 — Write the rule down.** A `decisions/` record for the rule and what
+- [x] **WS6 — Write the rule down.** A `DECISIONS.md` record for the rule and what
       it rejected, the `ARCHITECTURE.md` layer notes, and the plugin context
       section of `apps/docs/plugins/authoring.md`. The record has to carry the
       `media.image` comparison as well as the rule, since three flatter shapes
@@ -224,7 +224,7 @@ dribbling out.
       ladder or pushes it into the driver. `TERMINOLOGY.md` gets an entry for
       driver against port, since after WS5 the distinction is load-bearing: a
       driver is what the host configures, a port is what a plugin receives.
-      Landed as `decisions/0032-a-capability-slot-holds-what-the-config-declared.md`.
+      Landed as `DECISIONS.md`.
       The `ARCHITECTURE.md` notes went in with WS1, WS4 and WS5 rather than here,
       each alongside the change it describes. `apps/docs/plugins/authoring.md`
       gained a capability-ports section covering `ctx.storage`, `ctx.email` and

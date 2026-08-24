@@ -8,7 +8,7 @@ is too small to carry a workstream alone. One commit per fix.
       `packages/astromech/src/entries/storage/built-in.ts` is a six-name
       allow-list; anything else is dropped and falls back to `createdAt desc`.
       This is the sort equivalent of what
-      `decisions/0029-an-unknown-where-key-throws.md` fixed for filters, and the
+      `DECISIONS.md` fixed for filters, and the
       fix follows the same shape: throw, naming the key and the remediation.
       Noted in `roadmap/planned/field-value-query-indexing.md` as worth closing
       regardless of when field-value indexing ships.

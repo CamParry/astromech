@@ -80,7 +80,7 @@ advertise a difference that does not exist.
       `'publish'` and `'save'`. They are `'partial'` and `'complete'`.
 - [x] **Record it.** `TERMINOLOGY.md` gained a `Validation` entry for what
       each `validate` means now, and
-      `decisions/0086-one-validate-per-layer.md` records why `parse` beat
+      `DECISIONS.md` records why `parse` beat
       `prepare` and `validate`, why the parse takes no resource noun, and why
       the draft-versus-publish split stays.
 

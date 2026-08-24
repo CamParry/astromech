@@ -166,7 +166,7 @@ export type PluginContext = {
     /**
      * Run `event`'s handlers in registration order, replacing the payload with
      * any non-`undefined` return; a handler throw propagates to the caller
-     * (`decisions/0081-one-hook-runner-a-throw-propagates.md`).
+     * (`DECISIONS.md`).
      */
     runHook: <E extends HookEvent>(
         event: E,

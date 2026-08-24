@@ -9,7 +9,7 @@ assertion passes whether or not it can be.
 **A broken import anywhere in `src/admin/` therefore passes the entire gate.**
 `tsc` accepts a side-effect import that resolves at type level, the tsup library
 build never compiles `admin/` at all (it is consumer-Vite territory —
-`decisions/0033-the-repo-resolves-src-and-npm-gets-dist.md` covers why), the
+`DECISIONS.md` covers why), the
 Vitest suite does not mount the app, and `check:boot` sees a live shell. Only
 opening a browser catches it.
 
@@ -34,7 +34,7 @@ executes the mounted admin fixes it directly, without moving anything.
 - [x] Playwright, headless chromium, launched inside the same server lifecycle.
       puppeteer-core against a system Chrome and a bare CDP probe both avoid the
       browser download and were rejected;
-      `decisions/0052-the-gate-executes-the-admin-in-a-browser.md` records why.
+      `DECISIONS.md` records why.
 - [x] The step is mandatory, not behind a flag. `check:boot` is already on
       demand and in CI only, and a skippable check is the rot this file warns
       about. A missing browser binary fails with the install command in the

@@ -55,7 +55,7 @@ worth doing when a third runtime demo makes the set obvious.
 
 ## Docs
 
-- [x] `decisions/0091` — the two kinds of integration, why no runtime key was
+- [x] `DECISIONS.md` — the two kinds of integration, why no runtime key was
       added here, and the `NODE_ENV` behaviour change
 - [x] `ARCHITECTURE.md` — framework versus runtime integrations, the env module,
       the top-level Cloudflare directory gone

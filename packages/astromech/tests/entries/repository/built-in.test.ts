@@ -315,9 +315,9 @@ describe('transaction', () => {
         expect(after?.title).toBe('After');
     });
 
-    // Nesting joins the outer transaction (decisions/0080, superseding 0055's
-    // throw): a `transaction()` call while a scope is open runs its body on the
-    // same handle, so the inner write is part of the outer commit.
+    // Nesting joins the outer transaction (`DECISIONS.md`): a `transaction()`
+    // call while a scope is open runs its body on the same handle, so the inner
+    // write is part of the outer commit.
     it('joins an already-open scope rather than opening a nested transaction', async () => {
         const created = await transaction(async () => {
             const outer = await repository.create({

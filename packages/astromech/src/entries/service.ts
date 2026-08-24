@@ -30,7 +30,7 @@ export const entriesService: EntriesService = {
     create: createEntry,
     // `update`, `trash`, `restore`, `delete`, `publish`, `unpublish` and
     // `schedule` adapt the `string | readonly string[]` overloads onto the
-    // batch-only operations (decisions/0077).
+    // batch-only operations (`DECISIONS.md`).
     update: ((params: EntryUpdateParams) => {
         const many = Array.isArray(params.id);
         return updateEntries({

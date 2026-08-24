@@ -151,7 +151,7 @@ One branch, a commit per workstream.
 - [x] **WS6 — Delete the workarounds.** The resource-validator registry is gone.
       Every call site was already a registry lookup with the config value as its
       fallback, and that fallback is now simply correct. The `ai` strip stays:
-      `decisions/0021` justifies it by the JSON round trip, which no longer
+      `DECISIONS.md` justifies it by the JSON round trip, which no longer
       applies, but it turns out to be load-bearing for a better reason.
       Consumers must reach the model through `getAIConfig()` to get the copy
       `buildAIConfig` wrapped with logging middleware, and `config.ai.model`
@@ -173,7 +173,7 @@ One branch, a commit per workstream.
       `initRuntime` now runs in the serving process's Vite graph. The
       known-limitation callout in `apps/docs/content/field-validation.md` is
       deleted outright. `apps/docs/configuration/database.md` gains WS5's rule.
-      `decisions/0030-the-server-loads-the-config-as-a-module.md` records the
+      `DECISIONS.md` records the
       why and supersedes 0021's reasoning. One claim was measured rather than
       asserted, because it is load-bearing: a plugin package's module body runs
       **twice** under `astro dev`, with `globalThis` shared and module-level

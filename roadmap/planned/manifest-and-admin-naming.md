@@ -2,8 +2,9 @@
 
 Three identifiers in the method manifest and the entries admin describe
 something other than what they hold. Each is a rename plus its call sites; no
-behaviour changes. `decisions/0087-modules-not-domains-or-capabilities-and-no-ports.md`
-settled the vocabulary these follow and deferred the code work to here.
+behaviour changes. The vocabulary they follow is settled (everything under
+`src/` is a module, and the `PluginContext` members are not ports); only the
+code work was deferred to here.
 
 ## `EntriesManifestMethod.mount` → `namespace`
 

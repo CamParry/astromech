@@ -1,7 +1,7 @@
 # Entries naming consistency
 
 A naming audit of `packages/astromech/src/entries/` — root files, `internal/`
-and `jobs/`. `decisions/0085-entry-type-is-one-word-in-the-entries-domain.md`
+and `jobs/`. `DECISIONS.md`
 holds the vocabulary and what the alternatives were; this file holds the edits.
 
 Mechanical throughout. No behaviour changes.
@@ -56,7 +56,7 @@ before that item decides whether the suffix survives at all.
 
 `internal/dangling-relations.ts` versus `internal/relationships.ts` and
 `internal/deep-equal.ts` versus `utilities/values-equal.ts` are covered in
-`decisions/0085-entry-type-is-one-word-in-the-entries-domain.md`; both are
+`DECISIONS.md`; both are
 correct as they stand. The three identical `internal/validate.ts` files were
-dissolved by `decisions/0086-one-validate-per-layer.md` while this was in
+dissolved by `DECISIONS.md` while this was in
 flight.

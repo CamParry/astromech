@@ -71,4 +71,4 @@ well, so that `no changes` afterwards meant something.
 
 - `roadmap/planned/migration-baseline-regeneration.md` — the `db:rebaseline`
   command that would make this an explicit operation rather than a hand-edit.
-- `decisions/0020-approval-as-a-server-held-row.md` — what the row is for.
+- `DECISIONS.md` — what the row is for.

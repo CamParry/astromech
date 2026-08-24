@@ -1,7 +1,7 @@
 # Browser boundary enforcement
 
 The rule that keeps server code out of the admin bundle is written in filenames
-and enforced by nothing. `decisions/0084-the-browser-boundary-is-declared-not-marked.md`
+and enforced by nothing. `DECISIONS.md`
 holds the reasoning and the shape of the replacement; this file holds the
 measurements and the work.
 
@@ -9,8 +9,8 @@ measurements and the work.
 
 Nothing checks the suffix and nothing documents it either. The rules that
 enforced it — `admin-only-client-and-pure-leaves` and
-`shared-files-stay-browser-safe` — went with dependency-cruiser in
-`decisions/0070-drop-dependency-cruiser.md`, and the `ARCHITECTURE.md` rewrite
+`shared-files-stay-browser-safe` — went with dependency-cruiser, and the
+`ARCHITECTURE.md` rewrite
 in commit `5dd4a8ce` dropped the paragraph that described it. Seven files carry
 a marker that now has no stated meaning anywhere in the repo, which strengthens
 the case below rather than weakening it: whatever replaces it has to be
@@ -67,7 +67,7 @@ are cheap once it lands.
       split, so this is a question about _what_ the alias covers rather than
       whether it exists. Belongs with the admin split.
 - [ ] **Add `exports/shared.ts` and a `"browser"` condition**, following Payload
-      (`decisions/0084-the-browser-boundary-is-declared-not-marked.md` has the
+      (`DECISIONS.md` has the
       shape). One re-export file for the five domain leaves, one `exports` entry
       in `packages/astromech/package.json` and its `publishConfig`. Moves no
       source files.
@@ -91,10 +91,9 @@ are cheap once it lands.
 
 ## Not in scope
 
-**An `@astromech/shared` package.** Rejected in
-`decisions/0084-the-browser-boundary-is-declared-not-marked.md`: it reverses
-`decisions/0074-leaves-are-placed-by-subject.md`, adds a third publishable unit,
-and Directus 26613 is the evidence that it does not enforce itself.
+**An `@astromech/shared` package.** Rejected in `DECISIONS.md`: it reverses the
+rule that a pure leaf is placed by subject, adds a third publishable unit, and
+Directus 26613 is the evidence that it does not enforce itself.
 
 **Moving the five domain leaves.** They stay with their subject. Only the
 specifier the admin reaches them by is in question.

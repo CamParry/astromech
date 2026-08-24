@@ -41,7 +41,7 @@ nothing from `@/` outside `admin/components/ui/`.
 - [x] Decide what each published subpath points at. The kit keeps
       `astromech/ui` and the app surface is `astromech/ui/app`, a fourth
       subpath in both `exports` maps —
-      `decisions/0054-the-kit-keeps-the-ui-name.md`.
+      `DECISIONS.md`.
 - [x] Move `assertSingleUiInstance` off the kit barrel. Kept on both barrels
       instead, because the kit still exports `useFieldValue`: the guard now
       records its own module URL rather than the caller's, so two barrels are

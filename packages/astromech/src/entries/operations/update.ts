@@ -19,7 +19,7 @@ import { isPublicBranded, PublicShapeWriteError } from '../visibility';
 
 /**
  * Updates a batch of entries, atomically, firing the entry update hooks around
- * the write. A single id is a batch of one (decisions/0077). Throws if an id is
+ * the write. A single id is a batch of one (`DECISIONS.md`). Throws if an id is
  * missing or of another type before any hook fires or any row is touched.
  */
 export async function updateEntries(params: {
@@ -86,7 +86,7 @@ export async function updateEntries(params: {
     });
 
     for (const entry of entries) {
-        // A throw here propagates; the write above stays (decisions/0081).
+        // A throw here propagates; the write above stays (`DECISIONS.md`).
         await runHook('entry:afterUpdate', {
             type: entryType.id,
             entry,

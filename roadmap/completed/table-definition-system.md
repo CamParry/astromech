@@ -9,7 +9,7 @@ Two remainders are tracked in their own files, not here:
 `planned/migration-baseline-regeneration.md` (`db:rebaseline`) and
 `completed/data-layer-storage-api.md` (the storage wrapper).
 
-**Design rationale:** `decisions/0003-data-layer-locks-and-rejected-options.md`
+**Design rationale:** `DECISIONS.md`
 (the spec it was built from, `specs/data-layer.md`, was deleted on completion per
 the specs-are-ephemeral convention). This file tracks status only.
 
@@ -40,7 +40,7 @@ at the time, not where it lives now.
 
 Scope = **our 9 tables only** (`roles, entries, entry_versions, entry_preview_tokens, media, settings, notifications, relationships, _astromech_cron`). The **4 better-auth tables** (`users/sessions/accounts/verifications`) stay seconds-INTEGER + hand-typed (better-auth owns their format); **plugin tables** stay Drizzle until step 5.
 
-The seconds-INTEGER belief recorded here was wrong, and `users` has a descriptor now — see `decisions/0056-better-auth-owns-the-users-format-not-its-ddl.md`.
+The seconds-INTEGER belief recorded here was wrong, and `users` has a descriptor now — see `DECISIONS.md`.
 
 - [x] `defineTable(name, ({col}) => cols, ({index}) => idx)` + `col` factory (options-object) + `enum`/`reference`/`id` (+ ULID dep `ulidx`; `reference` accepts string|descriptor|annotated-thunk for self/auth targets) — `database/define-table.ts`
 - [x] Per-column runtime codec (default/serialize/parse) — descriptor-driven; replaces the `CODECS` map for the 9, keeps a legacy seconds map for auth + `plugin_backups_runs`

@@ -113,7 +113,7 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
     });
 
     // A catch-all because Better Auth owns its route surface — see
-    // `decisions/0056-better-auth-owns-the-users-format-not-its-ddl.md`. Built
+    // `DECISIONS.md`. Built
     // per request: at construction it would open a dialect in the CLI and MCP.
     app.on(['GET', 'POST'], `${api}/auth/*`, (c) => getAuth().handler(c.req.raw));
 

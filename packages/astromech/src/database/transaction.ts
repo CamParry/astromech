@@ -35,7 +35,7 @@ export function getTransactionScope(): Db | undefined {
 /**
  * Run `fn` as one transaction; `getDb()` resolves to the open handle for `fn`
  * and everything it awaits. Nesting joins: a call inside an already-open scope
- * just runs `fn` there, on the same handle — no savepoint (decisions/0080,
+ * just runs `fn` there, on the same handle — no savepoint (`DECISIONS.md`,
  * superseding 0055's throw). Runs `fn` once with no transaction when the driver
  * has no interactive transactions (D1), the degrade 0028 and 0076 committed to.
  */

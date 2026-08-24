@@ -2,7 +2,7 @@
 
 **Not designed.** This file holds the pressures, the direction worth designing
 against, and the open naming question. The settings/config split itself is
-decided — `decisions/0051-settings-are-content-config-is-code.md` — and is not
+decided — `DECISIONS.md` — and is not
 reopened here. Absorbed the former backlog line "investigate version history
 for settings".
 
@@ -63,7 +63,7 @@ the thing, and a stranger doesn't guess it. The candidates in the ecosystem:
 
 - **settings** — what the subsystem, table, service and permissions are
   already called here; instantly guessable; but the code-first ecosystem
-  reserves it for operator config, which 0051 says we _don't_ store.
+  reserves it for operator config, which we _don't_ store.
 - **globals** — Payload, Craft and Statamic's shared word for editor-owned
   site-wide content; the demo's page is already named `globals`; slightly less
   obvious to a WordPress-shaped user than "settings".
@@ -73,10 +73,10 @@ the thing, and a stranger doesn't guess it. The candidates in the ecosystem:
 
 Current lean: **globals** for the user-facing word — it is the shared term
 across Payload, Craft and Statamic, the demo's page already carries it, and it
-avoids the collision 0051 creates for "settings" (the word the code-first
+avoids the collision created for "settings" (the word the code-first
 ecosystem reserves for operator config, which we deliberately don't store).
 "Singleton" appears, at most, as the internal persistence term. Whatever wins gets
-a `TERMINOLOGY.md` entry and, since it is contested, a `decisions/` record
+a `TERMINOLOGY.md` entry and, since it is contested, a `DECISIONS.md` record
 with this comparison — do not resolve it silently in code.
 
 ## Trigger

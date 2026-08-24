@@ -12,8 +12,7 @@ import { previewTokenSchema } from '../../schema';
 
 /**
  * How long a preview token lives when the caller names no expiry: 7 days.
- * `decisions/0079` records why this default exists and why there is no config
- * key.
+ * There is no config key for it, because no caller has asked for one.
  */
 export const DEFAULT_PREVIEW_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -45,7 +44,7 @@ export async function issuePreviewToken(params: {
     const { expiresAt } = parseInput(previewTokenSchema, { expiresAt: params.expiresAt });
     // `null` is not the same as absent: an omitted `expiresAt` takes the default
     // TTL, an explicit `null` means "never expires". The repository's `isValid`
-    // honours null (see `decisions/0079`).
+    // honours null.
     const expiry =
         expiresAt === undefined
             ? new Date(Date.now() + DEFAULT_PREVIEW_TOKEN_TTL_MS)

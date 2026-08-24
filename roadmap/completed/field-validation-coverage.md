@@ -37,7 +37,7 @@ never sees).
       a `relationship` id resolves to the declared `target` type — a wrong-type
       reference stored cleanly. Existence is
       deliberately NOT checked: rejecting a dangling id contradicts
-      `decisions/0004-relationships-as-a-derived-index.md` ("a dangling id stays
+      `DECISIONS.md` ("a dangling id stays
       in field data until that entry is next written, then the write pipeline
       drops it") — `pruneDanglingRelations` runs after `processFields`, so an
       existence check would make an entry whose target was deleted unsavable

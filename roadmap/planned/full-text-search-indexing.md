@@ -2,7 +2,7 @@
 
 **Direction is locked:** a derived **FTS5 external-content index** over the
 entries table, kept in sync by triggers — not a `search_index` column queried
-with `LIKE`. `decisions/0044-search-is-a-derived-fts5-index.md` has the
+with `LIKE`. `DECISIONS.md` has the
 reasoning and the rejected alternatives; the short version is that no surveyed
 CMS searches its content tables at scale, FTS5 external-content stores no
 second copy of the text (it reads row content from `entries` on demand), and

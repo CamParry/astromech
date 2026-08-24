@@ -1,7 +1,7 @@
 /**
  * Notifications service method contracts — declared subject + effect per
  * verb. All four are `sessionScoped`: they act on the caller's own rows, so
- * `userId` is filled from context, not passed. See `decisions/0037`.
+ * `userId` is filled from context, not passed. See `DECISIONS.md`.
  */
 
 import type { ServiceMethodContract } from '@/types/index';

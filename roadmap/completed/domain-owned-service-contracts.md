@@ -4,9 +4,9 @@ Step 1 (move `AstromechClient` to `transport/`) landed. Step 2 (move the five
 domain service contracts to their domains) is decided-against. Step 3 (narrow the
 barrel) was decided-against earlier.
 
-`decisions/0039-a-contract-lives-with-the-layer-that-implements-it.md` has the
+`DECISIONS.md` has the
 reasoning for step 1 and the measurement that stopped step 2.
-`decisions/0042-domain-contracts-stay-centralised-in-the-leaf.md` closes step 2:
+`DECISIONS.md` closes step 2:
 the principle does not transfer from `AstromechClient` to the domain contracts,
 and centralised contracts are the correct position for this codebase's
 architecture.

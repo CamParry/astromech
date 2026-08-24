@@ -12,10 +12,10 @@ this work is cheapest before the first npm release.
 
 **All six workstreams have shipped.** WS3 (`storage` → `repository`) was the
 last: it reversed a rule written in `.claude/skills/code/SKILL.md`,
-`decisions/0003` and `decisions/0009`, so it was settled as a data-layer
-question first, in `decisions/0075`. This file is a record of what landed.
+`DECISIONS.md` and `DECISIONS.md`, so it was settled as a data-layer
+question first, in `DECISIONS.md`. This file is a record of what landed.
 
-## Decisions settled in review (each needs a `decisions/` record)
+## Decisions settled in review (each needs a `DECISIONS.md` record)
 
 1. **Acronyms are title-case with no length exception**: `Ai`, `Ui`, `Url`,
    `Api`, `Http`, `Json`. The two-letter carve-out (`AI`, `UI` staying
@@ -26,8 +26,8 @@ question first, in `decisions/0075`. This file is a record of what landed.
    following `Map.prototype.get` (nullable by platform convention) and
    Kysely's `executeTakeFirst` / `executeTakeFirstOrThrow`. TypeScript types
    carry nullability; a throwing wrapper documents the throw in its comment.
-   Supersedes `decisions/0069-the-build-sequence-is-flat-and-the-probe-is-maybeget.md`.
-3. **Shipped as WS3, recorded in `decisions/0075`.** `storage` means file
+   Supersedes `DECISIONS.md`.
+3. **Shipped as WS3, recorded in `DECISIONS.md`.** `storage` means file
    storage; the data-access layer is `repository`.
    The word previously named both the blob/file subsystem and the per-domain
    persistence layer. "Storage" is universally read as file storage, so the
@@ -59,8 +59,8 @@ One branch, one commit per workstream.
       variants, so it takes the suffix: `getDatabaseDriver` becomes the
       nullable read, the throwing read becomes `getDatabaseDriverOrThrow`,
       and `maybeGetDatabaseDriver` is deleted. Update call sites.
-- [x] Write the `decisions/` record superseding 0069 —
-      `decisions/0072-the-registry-probe-is-get.md`. `getModel` does not
+- [x] Write the `DECISIONS.md` record superseding 0069 —
+      `DECISIONS.md`. `getModel` does not
       exist; the nullable wrapper the audit missed is `getImageConfig`.
 
 ### WS2 — acronym casing sweep
@@ -80,15 +80,15 @@ One branch, one commit per workstream.
 - [x] `UI` → `Ui`: `UiProvider`, `UiProviderProps`, `UiContext`,
       `UiContextValue`, `useUi`. Declared in `admin/context/ui.tsx`, consumed
       by the three layout components. Not on the public surface.
-- [x] Write the `decisions/` record (the "no length exception" choice is the
+- [x] Write the `DECISIONS.md` record (the "no length exception" choice is the
       part a future contributor would re-litigate) —
-      `decisions/0073-acronyms-are-title-case.md`.
+      `DECISIONS.md`.
 
 ### WS3 — `storage` → `repository` for the data-access layer
 
 Shipped. The data-layer question it was parked on is settled in
-`decisions/0075` (the DB-access layer is `repository`, `storage` means
-file/blob only), which supersedes `decisions/0003` on the naming point.
+`DECISIONS.md` (the DB-access layer is `repository`, `storage` means
+file/blob only), which supersedes `DECISIONS.md` on the naming point.
 
 The file/blob side is untouched: top-level `storage/`, `StorageDriver`, and
 the `r2`/`s3`/`filesystem` drivers keep their names.
@@ -109,7 +109,7 @@ the `r2`/`s3`/`filesystem` drivers keep their names.
       house suffix for persisted shapes — `RelationshipRow`, `CronRow`,
       `NotificationRow`), keeping the pairing with `EntryWrite` coherent.
 - [x] Add the `TERMINOLOGY.md` entries (`repository`, and sharpen `storage`)
-      and the `decisions/` record with the rejected alternatives.
+      and the `DECISIONS.md` record with the rejected alternatives.
 
 ### WS4 — component filename casing
 
@@ -209,8 +209,8 @@ PascalCase.
 - [x] `tests/` mirrors `src/`, so two test files followed their subject:
       `tests/utilities/registry.test.ts` → `tests/registry.test.ts` and
       `tests/utilities/entry-types.test.ts` → `tests/entries/type-ids.test.ts`.
-- [x] Write the `decisions/` record —
-      `decisions/0074-leaves-are-placed-by-subject.md`. It carries the new
+- [x] Write the `DECISIONS.md` record —
+      `DECISIONS.md`. It carries the new
       invariant: a pure leaf is placed by subject and may be imported from any
       layer, so `config/` and `permissions/` reading the four moved files from
       below is allowed and named in `ARCHITECTURE.md`.
@@ -225,7 +225,7 @@ PascalCase.
   triplication of the helper itself is tracked in
   `roadmap/planned/three-identical-validate-helpers.md`.
 - **Renaming the blob side to `blob/`** — inverted by decision 3 and again by
-  `decisions/0075`; the file side keeps `storage`.
+  `DECISIONS.md`; the file side keeps `storage`.
 - **`types/` break-up** — the shared-contracts barrel stays; co-location is
   a per-contract judgement for later work, not a sweep.
 - **`http-routes.shared.ts` → `http-routes.ts`** — dropped from WS5 on a wrong
@@ -250,7 +250,7 @@ PascalCase.
 | WS5 smaller renames               | shipped, two items dropped |
 | WS6 directory moves               | shipped                    |
 
-Records written: `decisions/0072-the-registry-probe-is-get.md`,
-`decisions/0073-acronyms-are-title-case.md`,
-`decisions/0074-leaves-are-placed-by-subject.md`,
-`decisions/0075-repository-for-data-access.md`.
+Records written: `DECISIONS.md`,
+`DECISIONS.md`,
+`DECISIONS.md`,
+`DECISIONS.md`.

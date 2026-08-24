@@ -9,8 +9,8 @@ panel a developer opens while building a site, not a production monitor.
 This is deliberately separate from two things it is often confused with:
 
 - **Boot timing** is a one-off-per-process concern, not per-request. It is
-  obtained with a profiler when needed, not instrumented in the code — see
-  `decisions/0065-boot-timing-is-not-hand-instrumented.md`.
+  obtained with a profiler when needed (`node --cpu-prof`, `clinic flame`), not
+  instrumented in the code.
 - **Production metrics** (cold-start times, error rates, request latency) come
   from the platform (Cloudflare Workers analytics) and a metrics tool like
   Sentry, not from anything Astromech renders itself.

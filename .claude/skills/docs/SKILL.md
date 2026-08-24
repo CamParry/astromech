@@ -13,7 +13,7 @@ Every document answers one question. A fact lives in exactly one file; everywher
 | `AGENTS.md` (+ nested) | what must I do           | imperative     | edited in place           |
 | `ARCHITECTURE.md`      | where does code live     | present        | edited in place           |
 | `TERMINOLOGY.md`       | what does this word mean | present        | edited in place           |
-| `decisions/`           | why is it this way       | past           | permanent, append-only    |
+| `DECISIONS.md`         | why is it this way       | present        | edited in place           |
 | `roadmap/`             | what are we building     | future/present | moves between directories |
 | `specs/`               | how will we build this   | future         | deleted on ship           |
 | `apps/docs/`           | how do I use Astromech   | present        | edited in place           |
@@ -24,7 +24,7 @@ If you can't say which question a paragraph answers, it doesn't have a home yet.
 
 `ARCHITECTURE.md` and `TERMINOLOGY.md` describe what is true now, and nothing else. No history, no rationale, no plans.
 
-The test is mechanical: **if a sentence needs "was", "used to", "no longer", "renamed from", "were dissolved", "as of", or a date, it is history.** Delete it, or move it to `decisions/` if the reasoning still has value. A reader who needs to know that `core/` used to exist is reading archaeology; a reader who needs to know what exists now is reading the map, and history in the way costs them.
+The test is mechanical: **if a sentence needs "was", "used to", "no longer", "renamed from", "were dissolved", "as of", or a date, it is history.** Delete it; if the reasoning still has value, put it in `DECISIONS.md` in the present tense. A reader who needs to know that `core/` used to exist is reading archaeology; a reader who needs to know what exists now is reading the map, and history in the way costs them.
 
 Two consequences worth stating because they get missed:
 
@@ -33,21 +33,15 @@ Two consequences worth stating because they get missed:
 
 ## Decisions
 
-One file per decision, `NNNN-kebab-title.md`, numbers unique and never reused. Never edited once written — supersede it with a later record and mark the old one.
+`DECISIONS.md` is one file of live choices, grouped by subject. An entry is a bolded claim, then what it beat, in as few words as carry the point.
 
-Open with the metadata block, then the reasoning:
+**An entry has to earn its place.** Write one only when the losing option is invisible in the code and attractive enough that someone would reach for it again. A landed rename, a file that moved, a rule the linter enforces: the code already says it, so it does not go here. A rule you apply while writing code goes in the `code` skill instead; what a word means goes in `TERMINOLOGY.md`.
 
-```markdown
-# 0011 — Short title in the imperative
+**Write what it beat, not just what won.** An entry with no rejected alternative is a description, and descriptions belong in `ARCHITECTURE.md`.
 
-**Date:** 2026-08-04
-**Status:** accepted
-**Supersedes:** 0004 (optional)
-```
+**It is current state, so edit it.** When a choice is reversed, rewrite the entry — never add a second one saying the first is wrong. The history is `git log -p DECISIONS.md`, and the argument as originally written is in the commit that made the change. Say what changed in that commit message.
 
-`Status` is `proposed`, `accepted` or `superseded by NNNN`. Write what was rejected and why, not just what won: the record exists so the choice isn't re-litigated, and that needs the losing options in it. `0004-relationships-as-a-derived-index.md` is the worked example.
-
-Add a line to `decisions/README.md` when you add a record.
+Nothing in it is binding. It is evidence, so a settled question is not re-argued from scratch, never so a better option can be refused.
 
 ## Roadmap
 

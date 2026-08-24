@@ -75,14 +75,14 @@ every editable column through the HTTP layer.
       not the admin UI but the method manifest: it publishes `media.update` with its declared
       permission, so the conflation had become an API that mis-states itself. `users` already split
       read/create/update/delete; media was the odd one out. Rationale and the rejected alternative:
-      `decisions/0006-media-update-permission.md`.
+      `DECISIONS.md`.
 - [x] `mediaService.replace` exposed end to end (2026-08-06). It had been complete since the
       original media work — cross-extension key change, orphaned-original delete, variant-prefix
       cleanup — and reachable from nothing. `MediaService` never declared it, which is why the HTTP
       client compiled without it; there was no descriptor, so it was absent from the manifest, the
       CLI and MCP; no route; no UI. Now `POST /media/:id/replace`, a client method, and a **Replace
       file** button beside Delete in the detail modal. The descriptor takes `media:upload` —
-      assigned in advance by `decisions/0006-media-update-permission.md` — plus `binaryInput` and
+      assigned in advance by `DECISIONS.md` — plus `binaryInput` and
       `destructive`. Two things the build surfaced that the audit had not: the preview and the
       thumbnail `<img>` fallback needed tagging with `updatedAt`, because the URL survives a replace
       and the browser otherwise serves the old bytes; and `tests/policies/scoped-services.test.ts`

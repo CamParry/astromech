@@ -1,9 +1,9 @@
 # Application Instance & Integrations Layer
 
 One reorganization of the entry-point layer, shipped in small staged commits.
-`decisions/0057-one-application-instance-thin-framework-integrations.md` holds
+`DECISIONS.md` holds
 the original rationale and the rejected alternatives;
-`decisions/0063-what-the-application-reorganization-changed.md` records where the
+`DECISIONS.md` records where the
 work landed differently from it. The design spec held the target tree and every
 new file's signatures, and was deleted on ship (stage 14).
 
@@ -244,7 +244,7 @@ a special case.
       nothing enforces today.
 
 **Cautions.** Catch-all mount, not hand-declared routes: Better Auth owns its
-own surface (`decisions/0056-better-auth-owns-the-users-format-not-its-ddl.md`),
+own surface (`DECISIONS.md`),
 and hand-declaring means tracking its route list by hand for OpenAPI coverage
 nobody has asked for.
 
@@ -303,9 +303,9 @@ Depends only on stage 3. Can land any time after it.
 - [x] Nothing to update in `apps/demo`: it deploys on `@astrojs/node` and has no
       worker entry. This stage therefore has no `check:boot` coverage — the boot
       check only proves the Node scheduler path still resolves `interval()`.
-- [x] This supersedes `decisions/0053-scheduled-entrypoints-live-in-boot.md` on
+- [x] This supersedes `DECISIONS.md` on
       placement while keeping its principle —
-      `decisions/0059-the-worker-entry-is-a-cloudflare-integration.md`.
+      `DECISIONS.md`.
 
 **Cautions.** The acceptance test for an integration is four moves: capture the
 input, get the app, hand it over, emit the result. An integration needing a new
@@ -326,7 +326,7 @@ Independent investigation and fix. Nothing else depends on it.
       specifiers across 257 files, and Node subpath imports (the one mechanism
       that resolves for a consumer whose tsconfig clears `paths`) need `.js`
       suffixes, so 1298 specifiers.
-      `decisions/0060-exports-conditions-agree-within-an-entry.md` records all
+      `DECISIONS.md` records all
       three.
 - [x] Instead, conditions within an entry now agree. `./ui`, `./ui/fields`,
       `./ui/layout` and `./ui/app` point both conditions at `dist`, matching
@@ -377,7 +377,7 @@ Depends only on stage 5.
 and `markPublic`; whatever a host page should see by default is decided at that
 seam. It did not come up while this stage landed.
 
-`decisions/0061-identity-resolves-on-demand.md` records the plugin-context
+`DECISIONS.md` records the plugin-context
 decision (an eager `role` parameter over a promised `ctx.role`, which would
 break every plugin) and the `scopeMethods` invariant that survived it.
 
@@ -415,11 +415,11 @@ Depends only on stage 5.
 **Cautions.** Wire parity is enforced by mechanism, not by a shared interface:
 the HTTP surface derives from the same services (method manifest → dispatch),
 and a specific guarantee gets a parity test, as
-`decisions/0056-better-auth-owns-the-users-format-not-its-ddl.md` did. Do not
+`DECISIONS.md` did. Do not
 re-derive the fetch client's types from the service types; the transports
 genuinely differ (local returns full rows, the wire returns public projections).
 
-`decisions/0062-the-app-is-the-surface-not-a-shared-contract.md` records the
+`DECISIONS.md` records the
 result.
 
 ## Stage 13 — Moves, renames and the comment pass
@@ -445,7 +445,7 @@ result.
 - [x] `TERMINOLOGY.md` — an entry for "integration". "Application" is written;
       "local API" never appeared in the file.
 - [x] A decision record for what this work changed against 0057:
-      `decisions/0063-what-the-application-reorganization-changed.md`.
+      `DECISIONS.md`.
 - [x] Reconcile `roadmap/planned/multi-runtime-and-framework-integrations.md` to
       the integration vocabulary (renamed from `-adapters.md`).
 - [x] `apps/docs` — the `basePath` config change went in with stage 4.

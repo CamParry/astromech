@@ -6,7 +6,7 @@ posts where `featured` is true", "products ordered by `price`".
 **Direction is locked:** per-field **declared expression indexes** over
 `json_extract(fields, '$.path')`, with the index DDL and the query SQL emitted
 from one declaration.
-`decisions/0043-field-queries-ride-declared-expression-indexes.md` has the
+`DECISIONS.md` has the
 reasoning, the fourteen-CMS survey behind it, and the rejected alternatives
 (promoted generated columns, a typed lookup table, allowing unindexed JSON
 filtering). Table-backed entry types remain the ceiling for a type that
@@ -17,13 +17,14 @@ outgrows the shared table.
 - `where` on entries is a hardcoded allow-list — `locale`, `_search`, `status`,
   `slug`, `title`, `id`, `references` (`entries/repository/built-in.ts`). Anything
   else throws `UnknownWhereKeyError`
-  (`decisions/0029-an-unknown-where-key-throws.md`), and that stays: querying a
+  (`DECISIONS.md`), and that stays: querying a
   field with no declared index must throw naming the field path and the
   remediation, never silently full-scan. On D1 an unindexed scan is billed per
   row read against a single-threaded database, so a silent slow success is
   materially worse than an error.
 - Sorting is a six-name allow-list, `SORTABLE_FIELDS` (`built-in.ts`); anything
-  else throws `UnknownSortKeyError`, on the same reasoning as 0029. Ordering by
+  else throws `UnknownSortKeyError`, on the same reasoning as the unknown
+  `where` key. Ordering by
   an indexed field is part of this item.
 - No JSON path handling exists anywhere — a repo-wide grep for `json_extract` /
   `->>` / `jsonb` / `json_each` returns zero hits outside `node_modules`.

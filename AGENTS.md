@@ -10,7 +10,7 @@ Nested `AGENTS.md` files cover `packages/astromech`, `packages/plugins`, `apps/d
 
 - **`packages/astromech`** — the published core. **`packages/schema-engine`**, **`packages/plugins/*`** (assistant, backups, forms, menus, redirects, seo) — the rest of the published surface.
 - **`apps/demo`** — the app to run and browser-verify against, on Node. **`apps/demo-cloudflare`** — the same core on Workers, the smallest site that touches D1, R2, edge image transforms and Cron Triggers. **`apps/docs`** — user-facing guides.
-- **`ARCHITECTURE.md`** — where code lives and what it may import. **`TERMINOLOGY.md`** — what a term means today. **`decisions/`** — why it beat the alternatives.
+- **`ARCHITECTURE.md`** — where code lives and what it may import. **`TERMINOLOGY.md`** — what a term means today. **`DECISIONS.md`** — why it beat the alternatives.
 - **`roadmap/`** — one file per feature, status by directory (`planned/` → `in-progress/` → `completed/`).
 - **`specs/`** — in-flight designs only. Delete a spec once its work ships; never link to one from durable docs or code.
 
@@ -43,8 +43,8 @@ Before a change lands, all of these pass. The husky pre-commit hook runs lint-st
 
 Every document answers one question and has one home. A fact lives in exactly one file; everywhere else links to it. The `docs` skill has the full contract and loads when markdown is edited — these are the rules that decide where a paragraph goes:
 
-- **`ARCHITECTURE.md` and `TERMINOLOGY.md` are a map of the present.** Present tense only. If a sentence needs "was", "used to", "no longer", "renamed from" or a date, it is history and belongs in `decisions/`.
-- **`decisions/` holds the why**, permanent and append-only. Rationale, rejected alternatives, and the record of what changed. Never edited once written; superseded by a later record.
+- **`ARCHITECTURE.md` and `TERMINOLOGY.md` are a map of the present.** Present tense only. If a sentence needs "was", "used to", "no longer", "renamed from" or a date, it is history: delete it, or keep the reasoning in `DECISIONS.md` in the present tense.
+- **`DECISIONS.md` holds the why** — one entry per live choice, what it beat, and nothing that the code already says. It is current state, edited when a choice is reversed; the history is `git log -p DECISIONS.md`.
 - **`roadmap/` holds the work.** Status is the directory, never a field in the file.
 - **`specs/` holds in-flight design**, deleted on ship. Nothing durable may link to a spec.
 - **`apps/docs/` is user-facing**, and a page is a how-to, a reference, or an explanation — not two at once.
@@ -105,7 +105,7 @@ The same thinking governs every identifier — functions, variables, files, type
 
 **It governs prose too**, not just things that get named: explanations, commit messages, review comments, docs. Use the word a working developer already recognises, or the one established in the specific niche being worked in. Reach for the plain word over a term of art from one methodology's dialect, and be especially wary of dialect that collides with a meaning the word already has here — say "experiment" or "throwaway test", not "spike", which in this domain reads as a jump in traffic or latency.
 
-Where a name was contested, record the comparison rather than just the winner — `TERMINOLOGY.md` for what a term means today, `decisions/` for why it beat the alternatives. `decisions/0005-ai-context-naming.md` is the worked example.
+Where a name was contested, record the comparison rather than just the winner — `TERMINOLOGY.md` for what a term means today, `DECISIONS.md` for why it beat the alternatives, under "Reserved words" when the point is that the word is taken.
 
 ## Conventions
 

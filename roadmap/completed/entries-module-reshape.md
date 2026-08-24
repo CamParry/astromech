@@ -1,6 +1,6 @@
 # Entries Module Reshape
 
-Reorganise `entries/` as the **template** for all domains: one storage seam, no repository pattern, operations-per-file, entry/table split. Design rationale: `decisions/0003-data-layer-locks-and-rejected-options.md`; the storage pattern itself is in the `code` skill. The in-flight spec was deleted once Layer 1 shipped and Layers 2–3 were re-scoped below.
+Reorganise `entries/` as the **template** for all domains: one storage seam, no repository pattern, operations-per-file, entry/table split. Design rationale: `DECISIONS.md`; the storage pattern itself is in the `code` skill. The in-flight spec was deleted once Layer 1 shipped and Layers 2–3 were re-scoped below.
 
 **Complete 2026-08-06.** Layer 1 shipped as a single reshape; Layer 2 finished as
 two bullets satisfied elsewhere and two closed on their merits without a code
@@ -48,7 +48,7 @@ code change.
       contract, and a `supports: []` declaration that switches the entry chrome
       off. That is a second implementation of one interface, sitting beside
       `storage/built-in.ts`, the first. `TERMINOLOGY.md` already describes it that
-      way, and `decisions/0012-driver-not-adapter.md` is why the word is
+      way, and `DECISIONS.md` is why the word is
       "adapter". Deleting it would mean folding a table-shaped backend into the
       built-in one and reintroducing the branching this layer removed
 - [x] **Hoist the table kit out of `entries/` — WON'T DO 2026-08-06.** The kit

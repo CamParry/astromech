@@ -75,4 +75,4 @@ D1 on real infrastructure** — the last open item.
       for future testing
 - [x] Decided: the sequential fallback is the documented contract and a D1
       deployment does **not** refuse to boot —
-      `decisions/0028-d1-degrades-rather-than-refusing-to-boot.md`
+      `DECISIONS.md`

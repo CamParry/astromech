@@ -20,11 +20,11 @@ of 2460 core / 79 authoring / 86 schema-engine. **The pass is complete** — the
 spec is deleted.
 
 The headline decisions are recorded in
-`decisions/0009-service-method-client-vocabulary.md`,
-`decisions/0015-public-subpaths-mirror-the-source.md`,
-`decisions/0016-the-fields-module-vocabulary.md`,
-`decisions/0017-resource-as-the-superordinate-noun.md` and
-`decisions/0019-a-define-returns-the-thing.md`.
+`DECISIONS.md`,
+`DECISIONS.md`,
+`DECISIONS.md`,
+`DECISIONS.md` and
+`DECISIONS.md`.
 
 ## Shipped
 
@@ -123,7 +123,7 @@ The headline decisions are recorded in
       `valuesEqual` moved to `utilities/values-equal.ts`. `patch.ts` →
       `values.ts` rather than moving `projectToSchema` out of it
 - [x] `columns.ts`'s suggested alias went plural, matching every real consumer
-- [x] `decisions/0016-the-fields-module-vocabulary.md`
+- [x] `DECISIONS.md`
 
 Baseline moved for the first time in this pass, to **2460 core / 179 files**:
 five assertions read the deleted `isContainer` flag and went with it, and the
@@ -158,7 +158,7 @@ and schema-engine (86) unchanged.
       / `users` plural inconsistency is recorded rather than fixed. The
       authored config key stays plain `validate`, and `details.form` stays: a
       wire shape, not vocabulary
-- [x] `decisions/0017-resource-as-the-superordinate-noun.md`, and a
+- [x] `DECISIONS.md`, and a
       `TERMINOLOGY.md` entry
 
 No migration: the `sourceKind`/`targetKind` columns infer their own literal
@@ -173,14 +173,14 @@ authoring at 79 and schema-engine at 86.
       top-level `client/` that does not exist — the fetch client is a leaf
       inside the HTTP transport
 - [x] Project `CLAUDE.md` matched to the global naming rules' 2026-08-04 split
-- [x] `decisions/0009-service-method-client-vocabulary.md`
+- [x] `DECISIONS.md`
 
 ### Definitions are objects (§I) — `0a1bce6`, `c70f573`, `161aa3a`, `56ee7a7`, `044a16c`
 
 `defineX` returns an `X`; `Descriptor` and `Definition` stop being suffixes, and
 the derived form takes the `Resolved*`/`Registered*`/`Collected*` prefix.
 Rationale, rejected names and the exceptions are in
-`decisions/0019-a-define-returns-the-thing.md`.
+`DECISIONS.md`.
 
 - [x] Admin `TableDefinition`/`FormDefinition` → `ResolvedTable`/`ResolvedForm`,
       `types/definitions.ts` → `types/resolved.ts`, `admin/definitions/` →
@@ -228,10 +228,10 @@ descriptor` (asserted in `tests/transport/mcp/tools.test.ts`) and
       an asserted error string. Deliberate: it never holds a `Table`, it
       consumes snapshots, and there the word means the caller's source-of-truth
       definitions generically. Revisit only if the engine grows a `Table` import
-- [x] **`decisions/` had two `0007` files** — fixed by the documentation pass:
-      the media-browser record became `0010`, and `decisions/README.md` now
+- [x] **`DECISIONS.md` had two `0007` files** — fixed by the documentation pass:
+      the media-browser record became `0010`, and `DECISIONS.md` now
       carries an index so a collision is visible when the next entry is written
-- [x] **`decisions/` had two `0015` files** — the index guard above was not
+- [x] **`DECISIONS.md` had two `0015` files** — the index guard above was not
       applied when the approval record landed 50 minutes after
       `0015-public-subpaths-mirror-the-source.md`. The approval record was the
       later of the two and became `0020`. It was not free: by the time it was

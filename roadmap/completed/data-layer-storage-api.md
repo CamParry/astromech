@@ -14,7 +14,7 @@ were migrated onto it. Test baseline 1211 → 1256.
 `storage/`, the gated codec collapse, four pre-existing defects the migration
 surfaced, and `col.reference` resolution.
 
-**Design rationale:** `decisions/0003-data-layer-locks-and-rejected-options.md`,
+**Design rationale:** `DECISIONS.md`,
 which records the `where`-DSL and write-API locks and the two options dropped by
 the 2026-07-29 codebase audit (see "Scope changes" below). The spec they were
 locked in, `specs/data-layer.md` §4–§5, was deleted on completion. This file

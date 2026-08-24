@@ -263,7 +263,7 @@ describe('list – sort', () => {
         await repository.create({ type: 'link', fields: { from: '/a', to: '/x' } });
 
         // Matches built-in repository: a typo must not quietly answer the default
-        // order — see `decisions/0029-an-unknown-where-key-throws.md`.
+        // order — see `DECISIONS.md`.
         await expect(
             repository.list({ type: 'link', limit: 'all', sort: { nope: 'asc' } })
         ).rejects.toThrow(UnknownSortKeyError);

@@ -269,7 +269,7 @@ class TableRepository implements EntryRepository<EntryRow> {
 
     /** An unknown sort column throws, as an unknown searchField does: a typo
      *  must not quietly answer differently-ordered data
-     *  (`decisions/0029-an-unknown-where-key-throws.md`). */
+     *  (`DECISIONS.md`). */
     private buildOrderBy(params: ListParams): OrderPair[] {
         const cols = this.getColumns();
         const pairs: OrderPair[] = [];

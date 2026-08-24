@@ -3,7 +3,7 @@
 Decide, then build, the REST shape for the multi-id entry operations. This file
 holds the open question and the options; it does not change any route. The
 service-layer shape (a single id is a batch of one) is settled in
-`decisions/0077-a-single-mutation-is-a-batch-of-one.md` and is not reopened
+`DECISIONS.md` and is not reopened
 here.
 
 ## What ships today
@@ -17,7 +17,7 @@ routes: `PUT /entries/:type/:id`, `DELETE /entries/:type/:id`,
 
 Two things are out of step:
 
-- 0077 records the multi-id write as `PATCH /entries/:type` with the ids in the
+- `DECISIONS.md` records the multi-id write as `PATCH /entries/:type` with the ids in the
   body. The code ships `POST /entries/:type/bulk-update`. Either the route
   changes or a later decision supersedes that sentence.
 - `cascadeLocales` is in the input contract for `bulk-trash` and `bulk-delete`
@@ -31,21 +31,21 @@ Two things are out of step:
 1. **Collection verbs, ids in the body.** `PATCH /entries/:type` and
    `DELETE /entries/:type` with `{ ids, … }`. Directus does this
    (`PATCH /items/:collection` with `{ keys, data }`, `DELETE /items/:collection`
-   with a key array). It is what 0077 wrote down. Cost: `DELETE` with a body is
+   with a key array). It is what the batch decision wrote down. Cost: `DELETE` with a body is
    legal under RFC 9110 but has no defined semantics, and some proxies drop it.
 2. **Custom methods as `POST`.** `POST /entries/:type:batchUpdate`,
    `:batchDelete`, per Google AIP-234 and AIP-235. Closest to what ships, minus
    the naming, and it never needs a `DELETE` body. Cost: reads as RPC.
 3. **One batch endpoint.** `POST /entries/:type/batch` taking a list of
    `{ op, id, … }` items, per JSON:API atomic operations. Matches the
-   heterogeneous primitive 0077 reserved for the edit grid. Cost: the largest
+   heterogeneous primitive reserved for the edit grid. Cost: the largest
    change, and the per-op capability and permission checks move from the route
    table into the handler.
 
 ## The work
 
 - [ ] Pick one of the three and record it as a decision. If it is not option 1,
-      the record supersedes the one sentence in 0077 that names
+      the record supersedes the one sentence in `DECISIONS.md` that names
       `PATCH /entries/:type`.
 - [ ] Rename or restructure the seven routes to match. The generated client and
       OpenAPI document derive from the route table, so the table is the one edit;
@@ -59,5 +59,5 @@ Two things are out of step:
 ## Not changing
 
 - The service contract in `packages/astromech/src/types/services.ts`: single id
-  returns a row, an id array returns rows, both atomic (0077).
+  returns a row, an id array returns rows, both atomic (`DECISIONS.md`).
 - The single-id routes. They stay whatever the multi-id shape becomes.

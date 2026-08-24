@@ -52,7 +52,7 @@ export async function trashEntries(params: {
     });
 
     for (const entry of entries) {
-        // A throw here propagates; the write above stays (decisions/0081).
+        // A throw here propagates; the write above stays (`DECISIONS.md`).
         await runHook('entry:afterDelete', { type, entry, user, permanent: false });
     }
 }

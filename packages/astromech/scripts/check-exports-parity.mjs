@@ -13,7 +13,7 @@
  * that are whatever the last build emitted, and nothing else in the gate can
  * see that. Conditions are never compared *between* the maps — the repo map
  * resolving `src` where `publishConfig` resolves `dist` is the design
- * (`decisions/0033-the-repo-resolves-src-and-npm-gets-dist.md`).
+ * (`DECISIONS.md`).
  */
 
 import console from 'node:console';

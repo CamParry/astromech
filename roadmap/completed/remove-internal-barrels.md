@@ -3,7 +3,7 @@
 Re-export barrels stay only where a published surface needs one; every other
 `index.ts` re-export file goes, and imports point at the file that holds the
 code. This file holds the rule and the work; the reasoning and the survey
-evidence live in `decisions/0093-barrels-are-entry-points-not-navigation.md`.
+evidence live in `DECISIONS.md`.
 
 ## The rule
 

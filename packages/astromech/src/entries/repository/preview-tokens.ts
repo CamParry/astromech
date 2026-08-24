@@ -22,7 +22,7 @@ export async function hashPreviewToken(plaintext: string): Promise<string> {
 export function createPreviewTokenRepository(db?: Db) {
     // Pass `db` straight through: `createRepository`'s `handle()` resolves
     // `db ?? getDb()` per call, so a repository built before `transaction()`
-    // opens still binds to the open scope (decisions/0080).
+    // opens still binds to the open scope (`DECISIONS.md`).
     const repository = createRepository(entryPreviewTokensTable, db);
 
     /** Replace any existing token for `entryId` with a freshly-hashed one. */

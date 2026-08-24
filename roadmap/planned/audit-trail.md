@@ -13,7 +13,7 @@ drawer leaves every other caller silent.
 
 `@astromech/assistant`'s approval rows survive their decision, so an approved or
 rejected **write in the drawer** is on record with who, when and what method
-(`decisions/0020-approval-as-a-server-held-row.md`). Nothing else is: a read, an
+(`DECISIONS.md`). Nothing else is: a read, an
 ungated call, and every transport other than the drawer are all silent.
 
 That row also sets the precedent for what a record keeps. It drops the arguments
@@ -25,7 +25,7 @@ when it resolves and holds method, target, decision, who and when.
       untrusted caller already shares and the place the acting identity is known.
 - [ ] **Decide what a row holds.** Method id, target ids and outcome are cheap
       and answer most questions. Full payloads make the log a second uncontrolled
-      copy of the content, with `decisions/0018-one-chat-session-not-a-library.md`'s
+      copy of the content, with `DECISIONS.md`'s
       disclosure problem attached — an update carries a field's new value, and
       that field can be `private: true`.
 - [ ] **Decide whether core's log absorbs the approval rows or references them.**

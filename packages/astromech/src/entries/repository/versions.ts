@@ -13,7 +13,7 @@ export type VersionRepository = ReturnType<typeof createVersionRepository>;
 export function createVersionRepository(db?: Db) {
     // Pass `db` straight through: `createRepository`'s `handle()` resolves
     // `db ?? getDb()` per call, so a repository built before `transaction()`
-    // opens still binds to the open scope (decisions/0080).
+    // opens still binds to the open scope (`DECISIONS.md`).
     const repository = createRepository(entryVersionsTable, db);
 
     /** Create a new version snapshot. */

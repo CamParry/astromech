@@ -5,7 +5,7 @@ the media-field picker each own their own layout while still sharing the request
 controls and the empty states.
 
 **Status:** done. Built on `feat/media-browser-split` and merged to `main`; browser-verified against
-the demo. Rationale and the rejected alternatives: `decisions/0010-media-browser-composition.md`.
+the demo. Rationale and the rejected alternatives: `DECISIONS.md`.
 
 Follows on from `roadmap/in-progress/media-admin-ui.md`, which introduced the shared component. The
 merge was right about what to share and wrong about where to draw the line: it shares the layout and
@@ -81,7 +81,7 @@ Plumbing and controls, with no host flags anywhere:
       Baseline moved 2421 → 2456.
 - [x] Browser-verified against the demo: page grid, page list, table-header sorting, and the picker
       in both single and multiple mode
-- [x] `decisions/0010-media-browser-composition.md` recording the seam and what it beat
+- [x] `DECISIONS.md` recording the seam and what it beat
 
 ## Follow-ups
 

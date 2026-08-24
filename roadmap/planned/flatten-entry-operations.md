@@ -3,7 +3,7 @@
 Rewrite each file in `packages/astromech/src/entries/operations/` so that the
 path from an operation to its SQL is three hops, readable top to bottom in one
 function, with no higher-order wrappers and no transaction handle passed by
-hand. `decisions/0080-transactions-are-scoped-not-threaded.md` holds the
+hand. `DECISIONS.md` holds the
 transaction decision this depends on. The same shape is then applied to
 `users/` and `media/`, which are not covered here.
 
@@ -46,14 +46,14 @@ Everything else is wiring.
    `runOnIdsVoid` and `runBulk` exist to return `Entry` or `Entry[]` by input
    shape, and they force the per-id body out into a callback. The
    implementation takes `ids: string[]` always; a single id is a batch of one
-   (`decisions/0077-a-single-mutation-is-a-batch-of-one.md`). The public Local
+   (`DECISIONS.md`). The public Local
    API keeps `id: string | string[]` as a one-line wrapper over that, so the
    `restore as EntriesService['restore']` cast in `service.ts` goes.
 
 3. **Hook placement is correct; the engine and the helper are not.** All
    `before*` hooks fire before any DB work; `after*` hooks fire after commit.
    Keep that. What goes is the swallow-and-log in `dispatchAfter` (a throw
-   propagates from either, `decisions/0081-one-hook-runner-a-throw-propagates.md`)
+   propagates from either, `DECISIONS.md`)
    and the separate snapshot load: fetch each row once at the top of the
    operation and use that record for the hook context, the type assertion and
    the cascade.
@@ -67,7 +67,7 @@ Everything else is wiring.
    index.
 
 5. **The transaction handle is threaded by hand.** Replaced by the scoped
-   `transaction(fn)` in `decisions/0080-transactions-are-scoped-not-threaded.md`.
+   `transaction(fn)` in `DECISIONS.md`.
    This is the one architectural change and it goes first.
 
 6. **Double capability gating.** `assertCapability(type, 'trash')` followed by
@@ -127,11 +127,11 @@ Depth from op to SQL: `deleteEntries` → `repository.delete` →
 - `transaction(async () => { ... })` wraps the writes only. Hooks, validation,
   snapshots and lookups run outside it.
 - No `db` parameter anywhere. If a function needs one, the fix is in
-  `decisions/0080`, not in the call site.
+  `DECISIONS.md`, not in the call site.
 - `BulkOperationError` is thrown from an inline try/catch around the loop body,
   carrying `failedId` and `succeededBefore`, exactly as now.
 - One capability gate, `assertCapability`, at the top.
-- Comment contract per `decisions/0078-the-comment-contract.md`.
+- Comment contract per the `code` skill.
 - Behaviour is unchanged unless this file says otherwise. The service tests in
   `packages/astromech/tests/services/entries/` are the safety net; run them
   before and after every operation.
@@ -143,7 +143,7 @@ worktree at `../Astromech-worktrees/flatten-entry-operations`. Implementation
 goes to a `coder` sub-agent with the target shape and the rules above; the main
 thread reviews the diff and runs the gate itself.
 
-**Stage 0 — scoped transactions** (`decisions/0080`)
+**Stage 0 — scoped transactions** (`DECISIONS.md`)
 
 - [x] Add `database/transaction.ts`: an `AsyncLocalStorage<Db>` in the
       `globalThis` registry (the pattern `request-context` uses), `transaction(fn)`
@@ -161,9 +161,10 @@ thread reviews the diff and runs the gate itself.
 - [x] Remove the `db` parameter from `indexEntryRelationships` and
       `pruneDanglingRelations` and every call site.
 - [x] Gate, plus `pnpm run check:boot`. A test that opens `transaction()` and
-      asserts a nested call joins rather than throws, replacing the 0055 test.
+      asserts a nested call joins rather than throws, replacing the test that
+      expected a throw.
 
-**Stage 1 — one hook runner** (`decisions/0081`)
+**Stage 1 — one hook runner** (`DECISIONS.md`)
 
 - [x] Add `hooks/` as a leaf: `addHook(event, handler)`, `runHook(event, payload)`
       returning the payload after each handler's non-`undefined` return replaces
@@ -210,7 +211,8 @@ thread reviews the diff and runs the gate itself.
 
 - [x] `duplicate`, `staging/create`, `versions/restore`: wrap the row write and
       `indexEntryRelationships` in `transaction()`. This is the atomicity defect
-      0080 names; it is a behaviour change and the commit message says so.
+      the scoped `transaction()` names; it is a behaviour change and the commit
+      message says so.
 - [x] `staging/merge`: drop the `(txRepository, txDb)` callback shape for a
       zero-arg body. Already linear otherwise. (Done in Stage 0.)
 - [x] `create`: same, the transaction body becomes zero-arg. (Done in Stage 0.)
@@ -230,9 +232,9 @@ thread reviews the diff and runs the gate itself.
 
 ## Not changing
 
-- Hook placement: all `before*` before the scope opens, all `after*` after it closes. A throw propagates from either (`decisions/0081`).
+- Hook placement: all `before*` before the scope opens, all `after*` after it closes. A throw propagates from either (`DECISIONS.md`).
 - Batch atomicity, `BulkOperationError` shape, and the public Local API overloads
-  (`decisions/0077`).
+  (`DECISIONS.md`).
 - The repository layer below `EntryRepository`: `createRepository`, the
   per-type registry and the table adapter are the right three hops and stay.
 - D1 behaviour: still sequential, still documented.

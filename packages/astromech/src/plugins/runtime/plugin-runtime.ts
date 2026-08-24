@@ -1,7 +1,7 @@
 /**
  * Plugin runtime: holds the registry of installed plugins, builds the
  * unified PluginContext, and registers each plugin's hooks with the `hooks/`
- * leaf — a caller like any other (`decisions/0081`).
+ * leaf — a caller like any other (`DECISIONS.md`).
  */
 
 import type { DB } from '@/database/types';

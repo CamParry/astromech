@@ -6,10 +6,9 @@ something to resolve those words against. A route states its subject; whatever
 sends a message to a model collects the current set and renders it into the
 request.
 
-`TERMINOLOGY.md` carries the term itself, and
-`decisions/0005-ai-context-naming.md` records why it is not called a "context
-bus" — in web development "bus" means _event bus_, and this has one consumer,
-no events, and is pulled at send time rather than broadcast.
+`TERMINOLOGY.md` carries the term itself. It is not called a "context bus":
+in web development "bus" means _event bus_, and this has one consumer, no
+events, and is pulled at send time rather than broadcast.
 
 ## The reference
 

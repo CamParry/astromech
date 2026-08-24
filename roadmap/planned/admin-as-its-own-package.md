@@ -9,8 +9,8 @@ Sanity a separately packaged studio.
 
 The move is now designed, and the design says **not yet**. Two prerequisites
 have to land first, and of the three costs the move was going to pay down, two
-have already been paid down by other work. `decisions/0041-the-admin-split-is-blocked-and-ui-is-browser-only.md`
-records the reasoning; this file holds the measurements and what is left to do.
+have already been paid down by other work. This file holds the reasoning, the
+measurements and what is left to do.
 
 ## The seam, re-measured
 
@@ -86,8 +86,7 @@ with it, and the fork is:
   tsup entries; three barrels; five plugin source files plus two test mocks; two
   `apps/demo` files; three `apps/docs` pages; `ARCHITECTURE.md`; and
   `packages/plugins/AGENTS.md`. Mechanically small — and it rewrites the
-  one-sentence rule `decisions/0007-plugin-core-boundary.md` exists to make
-  memorable.
+  one-sentence rule that `ctx` is the only bridge from a plugin to core.
 
 Neither option is unavailable; both are worse than they look from the file
 count. `roadmap/completed/config-free-component-kit.md` is the work that makes the
@@ -130,7 +129,7 @@ Of the three costs the move was going to remove, one survives.
 That was the last standing justification, and it was addressed far more cheaply
 than by moving 257 files.
 
-`decisions/0070-drop-dependency-cruiser.md` changed the balance again: the
+Dropping dependency-cruiser changed the balance again: the
 browser boundary is no longer checked at lint time — only `check:boot`'s
 admin-paint assertion catches a server import in the client bundle, at runtime.
 The package boundary this split creates is the durable replacement, which moves
@@ -152,7 +151,7 @@ Both are worth doing on their own terms. Neither commits to the split.
 
 ## What checks the shape of the new package
 
-Since `decisions/0070-drop-dependency-cruiser.md` nothing in the repo checks any
+Since dependency-cruiser went, nothing in the repo checks any
 package's internal shape, core's included. The split therefore creates no new
 blindspot relative to the status quo — it moves `admin/` from one unchecked
 interior to another. What remains is the `exports` boundary at publish time, and
@@ -162,9 +161,9 @@ code it does not declare.
 ## Notes / caveats
 
 - `roadmap/planned/domain-owned-service-contracts.md` would shrink the seam
-  further, but `decisions/0039-a-contract-lives-with-the-layer-that-implements-it.md`
-  records that its step 2 stopped on a measurement. Not a prerequisite either
-  way.
+  further, but its step 2 stopped on a measurement: the domain service contracts
+  stay in the `types/` leaf, because they have cross-layer fan-in. Not a
+  prerequisite either way.
 - The `pkgSrc` alias survives the split. Even with a config-free kit, the app
   and the kit still share context hooks (`useFieldValue`,
   `useAstromechPlugin`), so one module instance is still required and

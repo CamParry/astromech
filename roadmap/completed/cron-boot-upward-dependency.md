@@ -13,10 +13,10 @@ typo'd sort key.
       `cron/` keeps the due-evaluator and the registry. The edges had arrived
       with `roadmap/completed/workers-cron-never-boots.md`, which needed the
       scheduled path to boot itself. An allowlist exemption was rejected —
-      `decisions/0053-scheduled-entrypoints-live-in-boot.md`.
+      `DECISIONS.md`.
 - [x] `packages/astromech/src/entries/storage/table.ts` throws
       `UnknownSortKeyError` on a sort key that is not a column, instead of
       skipping it. It had answered the default order for a typo while built-in
       storage threw, on the reasoning of
-      `decisions/0029-an-unknown-where-key-throws.md`. The error type is shared,
+      `DECISIONS.md`. The error type is shared,
       so the HTTP route needed no change.

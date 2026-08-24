@@ -5,7 +5,7 @@ onto `users`. Split out of `completed/relationships-model.md`, which unblocked i
 contained it.
 
 **Status:** not started. The model is already decided —
-`decisions/0004-relationships-as-a-derived-index.md` §"Editorial identity lives on a profile entry,
+`DECISIONS.md` §"Editorial identity lives on a profile entry,
 not on `users`". This file holds the build shape and the questions still open.
 
 ## Why an entry, not user fields

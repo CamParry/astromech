@@ -1,6 +1,6 @@
 # AI module naming and file split
 
-`decisions/0032-a-capability-slot-holds-what-the-config-declared.md` ruled that
+`DECISIONS.md` ruled that
 a capability slot's accessor must name the thing it holds. It fixed `email` and
 `media.image` and left `ai` behind as an explicit "noted exception, not a fix",
 so `getAiConfig` was the last accessor in core still calling its contents a
@@ -18,7 +18,7 @@ named after one of the steps it performs.
 ordinary for config in this ecosystem (`storage: r2()`, `db: libsql()`).
 
 `getModel` and `hasModel` keep theirs. They are the public surface fixed by
-`decisions/0022-core-hands-out-a-model.md`, and nothing outside the package
+`DECISIONS.md`, and nothing outside the package
 changes.
 
 The two fields inside the registry payload stay `model` and `models`, so it goes
@@ -42,15 +42,15 @@ One branch, one commit.
       `packages/astromech/src/astromech.ts` — updated to the new names.
 - [x] `packages/astromech/tests/ai/model-access.test.ts` — updated to the new
       names, no assertion changed.
-- [x] Write `decisions/0090-the-ai-slot-holds-models.md`, recording why the
+- [x] Write `DECISIONS.md`, recording why the
       registry probe stays a bare `get` against 0088's `get*` throws rule, and
       why `AiConfig` did not move.
-- [x] Add the `0090` line to `decisions/README.md`.
+- [x] Add the `0090` line to `DECISIONS.md`.
 
 ## Not done here
 
-Reconciling `decisions/0072-the-registry-probe-is-get.md` (registry probes are
-nullable `get`) with `decisions/0088-get-throws-resolve-may-not-and-require-is-middleware.md`
+Reconciling `DECISIONS.md` (registry probes are
+nullable `get`) with `DECISIONS.md`
 (`get*` throws, `resolve*` is the nullable one) across all six registry probes
 and the public `getModel`. 0090 records the tension and picks consistency with
 the five siblings for this one module; the sweep is a separate decision.

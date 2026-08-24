@@ -4,7 +4,7 @@ The big-picture map for working on the CMS: what the parts are, where they
 live, and the few rules that hold between them. Detail lives in the code and
 the types (`packages/astromech/src/types/`); when this file and the code
 disagree, the code wins, so fix the file. Why things are this way is in
-`decisions/`. How to use Astromech is in `apps/docs/`.
+`DECISIONS.md`. How to use Astromech is in `apps/docs/`.
 
 ## What it is
 
@@ -62,7 +62,7 @@ types · utilities · env · errors · registry.ts       pure leaves
   integration** answers where environment values come from and whether the host
   has an entry point that is not an HTTP request: `cloudflare/` builds the
   Worker entry and looks up bindings. A runtime only gets a directory when it
-  needs one — Node and Vercel need no code (`decisions/0091`).
+  needs one — Node and Vercel need no code.
 - **`admin/`** is the React SPA (TanStack Router), mounted by `admin/shell.astro`
   under the configured `basePath`. It talks to the server only through the
   fetch client in `transport/http/client/`.
@@ -132,7 +132,6 @@ unrelated checks are both spelled `validate`: a field type's own, on its
 `FieldType`, and the author's whole-resource function, declared on the entry
 type, `media`, `users` or a settings page. The Zod parse over request input
 around the fields is `parseInput`, in `errors/validation.ts`.
-`decisions/0086-one-validate-per-layer.md` maps the four.
 
 `TERMINOLOGY.md` defines the vocabulary (entry vs table-backed type, relation
 vs relationship, staging, preview token).
@@ -198,5 +197,5 @@ manifest and dispatch surface, core-internal in practice), `astromech/fields`,
 
 - `AGENTS.md` — the gate commands and the workflow.
 - `packages/astromech/src/types/` — the precise contracts.
-- `TERMINOLOGY.md` — what a term means. `decisions/` — why.
+- `TERMINOLOGY.md` — what a term means. `DECISIONS.md` — why.
 - `apps/docs/` — user-facing guides.

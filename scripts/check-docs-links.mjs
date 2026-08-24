@@ -152,17 +152,5 @@ function isPathCandidate(file, token) {
 function resolvesFrom(file, target) {
     const clean = target.replace(/\/$/, '');
     const candidates = [resolve(dirname(file), clean), resolve(repoRoot, clean)];
-    return candidates.some(
-        (candidate) => existsSync(candidate) || matchesByPrefix(candidate)
-    );
-}
-
-// `decisions/0003` names a record whose filename carries a title after the
-// number. Resolve it against the numbered prefix rather than demanding the
-// writer paste the whole slug.
-function matchesByPrefix(candidate) {
-    const parent = dirname(candidate);
-    const stem = candidate.slice(parent.length + 1);
-    if (!/^\d{4}$/.test(stem) || !existsSync(parent)) return false;
-    return readdirSync(parent).some((entry) => entry.startsWith(`${stem}-`));
+    return candidates.some((candidate) => existsSync(candidate));
 }

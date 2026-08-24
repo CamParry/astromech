@@ -11,7 +11,7 @@ import { astromech } from 'astromech/astro';
 export default defineConfig({
     // The deployment's own origin: canonical URLs, `og:url` and the sitemap all
     // read it via `Astro.site`. A deployment fact, so it lives in config/env and
-    // never in settings (see decisions/0051).
+    // never in settings (see DECISIONS.md).
     site: process.env.SITE_URL ?? 'https://astromech.dev',
     output: 'server',
     adapter: node({ mode: 'standalone' }),

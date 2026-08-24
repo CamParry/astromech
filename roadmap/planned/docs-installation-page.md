@@ -28,5 +28,5 @@ Whether this is one page or the front of a sequence, and where it sits in
 `apps/docs/README.md`'s ordering. The `docs` skill's contract applies: a page is
 a how-to, a reference, or an explanation, and an installation page is a how-to,
 so the explanation of why the config is a path belongs in
-`decisions/0030-the-server-loads-the-config-as-a-module.md` and stays linked
+`DECISIONS.md` and stays linked
 rather than restated.

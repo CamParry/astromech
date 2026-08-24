@@ -2,7 +2,7 @@
 
 Apply the shape `flatten-entry-operations.md` established for `entries/` to the
 `users/` and `media/` domains: bring their writes onto the scoped `transaction()`
-(`decisions/0080-transactions-are-scoped-not-threaded.md`), drop the
+(`DECISIONS.md`), drop the
 hand-threaded `db` handle, and make each row write atomic with its
 relationship-index write. The entries work (commits under that roadmap) is the
 worked example; read it first.
@@ -41,13 +41,14 @@ from `entries/`:
 Same as `flatten-entry-operations.md`: one exported function per operation,
 written top to bottom; each row fetched once; `transaction()` wraps the writes
 only; no `db` parameter anywhere; the comment contract
-(`decisions/0078-the-comment-contract.md`). Users and media fire no hooks today
-(only `entry:*` events exist, `decisions/0081-one-hook-runner-a-throw-propagates.md`),
+(the `code` skill). Users and media fire no hooks today
+(only `entry:*` events exist, `DECISIONS.md`),
 so these operations are load, then a transaction around the writes — no
 before/after hook loop.
 
 ## Not changing
 
 - The repository layer below each domain's repository, and the relationship
-  index (`decisions/0004-relationships-as-a-derived-index.md`), unchanged.
-- D1 still degrades sequentially, per 0080 and `apps/docs/configuration/database.md`.
+  index (`DECISIONS.md`), unchanged.
+- D1 still degrades sequentially, per `DECISIONS.md` and
+  `apps/docs/configuration/database.md`.

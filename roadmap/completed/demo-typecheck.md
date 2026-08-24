@@ -23,13 +23,13 @@ does, so it is the only place these can surface at all.
       The alias alone left three of the nine: the `blocks` element type carried
       an inline `[key: string]: JsonValue | undefined` index signature, and
       `JsonValue | undefined` is not `JsonValue`. It now intersects `JsonObject`
-      instead. `decisions/0034` has the reasoning.
+      instead. `DECISIONS.md` has the reasoning.
 - [x] **Plugin tables are absent from the `DB` union (4 errors, `seed.ts`).**
       `'plugin_redirects_redirects'` is rejected against a union of the 14 core
       tables. The `PluginDB` augmentation is not reaching a site's own
       `tsconfig`, so a site cannot query a plugin's table through the shared
       builder even though the table exists.
-      The diagnosis above is wrong and the record is in `decisions/0034`: `DB` is
+      The diagnosis above is wrong and the record is in `DECISIONS.md`: `DB` is
       a `type` alias and is not publicly exported, so there is no augmentation
       and never was. `PluginDB` is an explicit cast at the call site, which is
       what `seed.ts` now does. One of the four was unrelated — an optional

@@ -106,4 +106,4 @@ accumulate dangling ids until you run `index:rebuild`.
 
 Why it is built this way — and the alternatives rejected, including declared
 reverse fields, `onDelete` cascades, and filtering into a target's own fields —
-is recorded in `decisions/0004-relationships-as-a-derived-index.md`.
+is recorded in `DECISIONS.md`.

@@ -6,7 +6,7 @@ are recorded below).
 
 **Status:** SHIPPED 2026-08-03. All five workstreams merged to main from
 `feat/relationships-model`; the build spec is deleted and the permanent rationale lives in
-`decisions/0004-relationships-as-a-derived-index.md`.
+`DECISIONS.md`.
 
 Filtering/sorting entries by their own scalar field values (the `meta_query` equivalent) was
 considered alongside this and **split out** to `planned/field-value-query-indexing.md`: it shares
@@ -81,7 +81,7 @@ automatic startup repair: it is expensive, surprising, and hides the drift it pa
 Rationale and the roads not taken — no `populate`, no `onDelete`, no declared reverse field, no
 filtering into a target's own fields, taxonomies as entry types, hierarchy, symmetric relations and
 the profile model — are recorded permanently in
-`decisions/0004-relationships-as-a-derived-index.md`. They are not repeated here.
+`DECISIONS.md`. They are not repeated here.
 
 ## Carried-over storage facts
 
