@@ -3,7 +3,7 @@
 The full gate takes 4 to 5 minutes run serially and has become a bottleneck.
 This file holds the measurements and the mechanical work to make it fast. The
 quality of what the gate checks is a separate problem with its own file:
-[test-suite-trust](test-suite-trust.md).
+[test-suite-trust](../planned/test-suite-trust.md).
 
 ## What is actually true today
 
@@ -39,7 +39,7 @@ The cost is structural, not in any one check:
   core edit followed by `check:boot` alone verifies the previous build. CI is
   safe because it builds first; a local run is not.
 - **Naive parallelisation is blocked by one shared file.**
-  `packages/astromech/src/admin/routeTree.gen.ts` is written by `tsr generate`
+  `routeTree.gen.ts` under `packages/astromech/src/admin/` is written by `tsr generate`
   (core's `pretypecheck`) and by the TanStack Router Vite plugin during each
   app build, so `typecheck` and the boot checks cannot overlap until the
   generator is serialised or the apps get their own output paths.
@@ -66,10 +66,15 @@ developer and CI call, so the two descriptions cannot drift again.
 - [ ] Split DTS out of `build` (a `build:js` that skips the DTS worker) so the
       boot checks, `check:node-imports` and the assistant suite stop paying for
       declaration emit they never read.
-- [ ] Merge the three vitest configs into one workspace invocation and revisit
-      the pool settings; the import overhead is the single largest cost in the
-      gate. The registry-wiping tests (`tests/registry.test.ts` and friends) rely
-      on per-file isolation, so any `isolate: false` move has to account for them.
+- [x] Revisit the pool settings. Core now runs on `pool: 'threads'` with
+      `isolate: false`, taking its suite from 61s to 32s on a quiet machine and
+      holding the same shape under load. The 39 files that mock a module, stub a
+      global or write `globalThis.__astromech` opt back into isolation through a
+      list a test keeps honest (`decisions/0094-core-tests-share-a-module-graph.md`).
+      Merging the three configs into one workspace invocation was built and
+      dropped: it matched three separate invocations to within a second and broke
+      the one test that finds its wrangler config from the working directory.
+      schema-engine and assistant are 1.5s and 0.8s, so their configs stand.
 - [ ] Make `check:boot` and `check:boot:cloudflare` runnable concurrently:
       serialise or relocate the `routeTree.gen.ts` generation first.
 - [ ] Fix the stale-`dist` hole in `check:boot`, either by building the
