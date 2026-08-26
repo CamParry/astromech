@@ -12,7 +12,7 @@
 import type { EntryAction } from '@/permissions/entry-permission';
 import type { AstromechConfig } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { mountRouter, roleWith } from '@tests/mount-router';
+import { mountRouter, roleWith, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService as api } from '@/entries/service';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
@@ -59,8 +59,11 @@ let id: string;
 let versionId: string;
 
 beforeEach(async () => {
-    await createTestDb();
+    const db = await createTestDb();
     setupTestConfig(makeTestConfig());
+    // Every entry write records the acting user, so the row it references has
+    // to exist.
+    await seedTestUser(db);
     const created = await api.create({
         type: 'post',
         data: { title: 'Subject', slug: 'subject', fields: { body: 'v1' } },

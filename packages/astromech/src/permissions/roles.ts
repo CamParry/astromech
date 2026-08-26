@@ -9,6 +9,7 @@
 
 import type { AstromechConfig, ResolvedConfig } from '@/types/config';
 import type { Permission, Role } from '@/types/domain';
+import { ValidationError } from '@/errors/validation';
 import { corePermissions } from '@/permissions/core-permissions';
 import { hasPermission } from '@/utilities/permission-match';
 
@@ -79,21 +80,37 @@ export function resolveRoles(config: ConfigWithRoles): Record<string, Role> {
     return result;
 }
 
-/** Look up a single role by slug. Returns the admin role as fallback. */
+/**
+ * Look up a single role by slug. Null when the config defines no such role.
+ *
+ * There is no fallback on purpose. Answering an unknown slug with a role means
+ * picking one, and every choice is wrong: `admin` grants `*` to a typo, and a
+ * lesser role quietly changes what a user may do without saying so. The caller
+ * knows whether it is reading a stored value or checking one on the way in, so
+ * the caller decides.
+ */
 export function resolveRole(
     config: Pick<ResolvedConfig, 'resolvedRoles'>,
     slug: string
+): Role | null {
+    return config.resolvedRoles[slug] ?? null;
+}
+
+/**
+ * Look up a role, rejecting a slug the config does not define. The write paths
+ * use this so an unknown role is a 422 at the point it is sent, rather than a
+ * stored value that something later has to decide what to do with.
+ */
+export function requireRole(
+    config: Pick<ResolvedConfig, 'resolvedRoles'>,
+    slug: string
 ): Role {
-    const roles = config.resolvedRoles;
-    return (
-        roles[slug] ??
-        roles['admin'] ?? {
-            slug: 'admin',
-            name: 'Administrator',
-            permissions: ['*'],
-            isBuiltIn: true,
-        }
-    );
+    const role = resolveRole(config, slug);
+    if (role) return role;
+    const configured = Object.keys(config.resolvedRoles).join(', ');
+    throw ValidationError.fromFieldErrors({
+        roleSlug: [`Unknown role "${slug}". Configured roles: ${configured}`],
+    });
 }
 
 /** Convenience wrapper: check whether a role grants a permission. */

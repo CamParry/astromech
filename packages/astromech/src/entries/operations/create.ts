@@ -76,6 +76,10 @@ export async function createEntry(params: EntryCreateParams): Promise<Entry> {
         fields,
         status,
         publishedAt,
+        // Null outside a request: a seed script, the CLI and the scheduler all
+        // write entries with no identity to record.
+        createdBy: user?.id ?? null,
+        updatedBy: user?.id ?? null,
     };
 
     await runHook('entry:beforeCreate', { type, data: row, user });

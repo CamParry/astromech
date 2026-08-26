@@ -1,5 +1,6 @@
 import type { Entry, EntryDuplicateOverrides, JsonObject } from '@/types/index';
 import { transaction } from '@/database/transaction';
+import { getCurrentUser } from '@/request-context/request-context';
 import { asEntry, getEntryOfType } from '../internal/records';
 import { indexEntryRelationships } from '../internal/relationships';
 import { getEntryRepository } from '../repository/registry';
@@ -18,6 +19,9 @@ export async function duplicateEntry(params: {
 
     const repository = getEntryRepository(type);
     const source = await getEntryOfType(repository, type, id);
+    // The copy is a new row made by whoever duplicated it, not by the author of
+    // the source.
+    const user = await getCurrentUser();
 
     const locale = overrides?.locale ?? source.locale;
     const status = overrides?.status ?? 'unpublished';
@@ -43,6 +47,8 @@ export async function duplicateEntry(params: {
             fields: mergedFields,
             status,
             publishedAt: status === 'published' ? new Date() : null,
+            createdBy: user?.id ?? null,
+            updatedBy: user?.id ?? null,
         });
         await indexEntryRelationships(row, mergedFields, type);
         return row;

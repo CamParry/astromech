@@ -46,8 +46,14 @@ export type Entry = {
     deletedAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
-    // createdBy: string | null;
-    // updatedBy: string | null;
+    /**
+     * Who made this row and who last wrote to it. Null for a write with no
+     * request identity (a seed script, the CLI, the scheduler), and absent
+     * altogether on a `tableRepository`-backed type, whose table has no such
+     * columns — the same reason `type` and `locales` are conditional.
+     */
+    createdBy?: string | null;
+    updatedBy?: string | null;
 };
 
 export type EntryVersion = {
