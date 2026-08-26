@@ -38,6 +38,7 @@ export const isolatedTests = [
     'tests/services/entries/staging-create-atomicity.test.ts',
     'tests/services/users/auth-base-path.test.ts',
     'tests/services/users/auth-signup.test.ts',
+    'tests/services/users/role-validation.test.ts',
     'tests/storage/drivers/s3.test.ts',
     'tests/transport/http/client-address.test.ts',
     'tests/transport/http/client/entries-service.test.ts',
