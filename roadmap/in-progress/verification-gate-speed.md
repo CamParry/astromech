@@ -3,7 +3,7 @@
 The full gate takes 4 to 5 minutes run serially and has become a bottleneck.
 This file holds the measurements and the mechanical work to make it fast. The
 quality of what the gate checks is a separate problem with its own file:
-[test-suite-trust](test-suite-trust.md).
+[test-suite-trust](../planned/test-suite-trust.md).
 
 ## What is actually true today
 
@@ -24,7 +24,7 @@ The cost is structural, not in any one check:
   inside each demo's `astro build`, and vitest's transform. The build phase is
   69% of `check:boot` and 79% of `check:boot:cloudflare`. Core's DTS pass alone
   is 11.5s, and only `typecheck` consumers need `.d.ts` at all.
-- **Every typecheck is cold.** No `incremental`, no `tsBuildInfoFile` anywhere.
+- **Every typecheck was cold.** No `incremental`, no `tsBuildInfoFile` anywhere.
 - **Test time is import cost, not assertions.** The core suite spends 369s of
   worker CPU importing modules against 117s running test bodies, because each
   of 222 files pays a cold import under vitest's default per-file-isolated
@@ -39,7 +39,7 @@ The cost is structural, not in any one check:
   core edit followed by `check:boot` alone verifies the previous build. CI is
   safe because it builds first; a local run is not.
 - **Naive parallelisation is blocked by one shared file.**
-  `packages/astromech/src/admin/routeTree.gen.ts` is written by `tsr generate`
+  `routeTree.gen.ts` under `packages/astromech/src/admin/` is written by `tsr generate`
   (core's `pretypecheck`) and by the TanStack Router Vite plugin during each
   app build, so `typecheck` and the boot checks cannot overlap until the
   generator is serialised or the apps get their own output paths.
@@ -49,27 +49,41 @@ The cost is structural, not in any one check:
 The target shape is three tiers with one build, encoded in a script that both a
 developer and CI call, so the two descriptions cannot drift again.
 
-- [ ] Add a `verify` script encoding the tiers:
-    - **pre-commit** (seconds): the existing hook, plus `check:exports` and
-      `check:docs`, both effectively free. Widen the lint-staged globs to cover
-      `.mjs` and add `.yml`/`.yaml`/`.jsonc` to the prettier glob.
-    - **fast loop** (target under a minute): the build-free halves of the gate,
-      `typecheck` and `test:run` for schema-engine and core only, plus `lint`.
-    - **full**: one `build`, then everything that consumes `dist` in parallel
-      (plugin and demo typechecks, assistant tests, `check:node-imports`, both
-      boot checks).
+- [x] Add a `verify` script encoding the tiers. `scripts/verify.mjs` runs
+      stages in order and everything inside a stage at once: `pnpm run verify` is
+      build, then the eight build-free checks together, then `typecheck`, then
+      each boot check. `pnpm run verify:fast` is the packages' typechecks, their
+      tests and lint, and came in at 55s on a loaded machine. Full run: 194s
+      against 243-300s serial, with `check:boot` and `check:boot:cloudflare`
+      making up 54s of the tail because they cannot yet overlap.
+- [ ] Widen the pre-commit tier: add `check:exports` and `check:docs` to the
+      hook, both effectively free, and widen the lint-staged globs to cover
+      `.mjs`, `.yml`, `.yaml` and `.jsonc`. Worth doing together with retiring
+      `format:check` from the full run, below, since that is what the wider globs
+      are for.
 - [ ] Point `ci.yml` at the same tier scripts instead of its own hand-written
       job list, and fix the `AGENTS.md` gate table where it is stale (the two
       undocumented build dependencies, the missing chromium step in the
       `check:boot` row, the false "CI runs them").
-- [ ] Enable `incremental` typechecking across the packages and demos.
+- [x] Enable `incremental` typechecking across the packages and demos. Each
+      project writes its `tsBuildInfoFile` into its own `node_modules`, chosen over
+      the default spot beside `outDir` because `tsup` cleans `dist/` and would wipe
+      it every build.
+      Cold 49s, warm 24s, and the warm run still catches a freshly introduced
+      error. What is left is `astro sync` in the two demos and `tsr generate` in
+      core's `pretypecheck`, both of which run unconditionally.
 - [ ] Split DTS out of `build` (a `build:js` that skips the DTS worker) so the
       boot checks, `check:node-imports` and the assistant suite stop paying for
       declaration emit they never read.
-- [ ] Merge the three vitest configs into one workspace invocation and revisit
-      the pool settings; the import overhead is the single largest cost in the
-      gate. The registry-wiping tests (`tests/registry.test.ts` and friends) rely
-      on per-file isolation, so any `isolate: false` move has to account for them.
+- [x] Revisit the pool settings. Core now runs on `pool: 'threads'` with
+      `isolate: false`, taking its suite from 61s to 32s on a quiet machine and
+      holding the same shape under load. The 39 files that mock a module, stub a
+      global or write `globalThis.__astromech` opt back into isolation through a
+      list a test keeps honest (`DECISIONS.md`).
+      Merging the three configs into one workspace invocation was built and
+      dropped: it matched three separate invocations to within a second and broke
+      the one test that finds its wrangler config from the working directory.
+      schema-engine and assistant are 1.5s and 0.8s, so their configs stand.
 - [ ] Make `check:boot` and `check:boot:cloudflare` runnable concurrently:
       serialise or relocate the `routeTree.gen.ts` generation first.
 - [ ] Fix the stale-`dist` hole in `check:boot`, either by building the

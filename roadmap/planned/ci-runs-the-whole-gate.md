@@ -4,7 +4,7 @@
 `.github/workflows/ci.yml` runs seven of them. This file is about which checks
 run at all and on which runtimes. Making the gate fast, and having CI call the
 same scripts a developer calls instead of its own hand-written job list, is
-[verification-gate-speed](verification-gate-speed.md).
+[verification-gate-speed](../in-progress/verification-gate-speed.md).
 
 ## What CI does not run
 
