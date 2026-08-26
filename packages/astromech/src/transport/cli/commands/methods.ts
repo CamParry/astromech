@@ -3,6 +3,7 @@ import type { ExcludedMethod } from '@/policies/method-filter';
 import type { ManifestMethod, ResolvedConfig } from '@/types/index';
 import { defineCommand } from 'citty';
 import { generateMethodManifest } from '@/codegen/method-manifest';
+import { resolveRole } from '@/permissions/roles';
 import { annotateManifest } from '@/policies/annotate-manifest';
 import { filterMethods } from '@/policies/method-filter';
 import { loadConfig, loadRawConfig } from '../config';
@@ -11,19 +12,15 @@ import { printError } from '../output';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 /**
- * Resolve a role slug, rejecting one that is not configured.
- *
- * `resolveRole` falls back to the ADMIN role for an unknown slug, which would
- * silently answer "may call everything" for a typo — the opposite of the truth
- * this flag is for. So membership is checked here first.
+ * Resolve a role slug, rejecting one that is not configured. `requireRole`
+ * raises a 422, which is the wrong shape for a CLI flag, so the message is
+ * built here instead.
  */
 function getRole(config: ResolvedConfig, slug: string) {
-    const roles = config.resolvedRoles;
-    const role = roles[slug];
+    const role = resolveRole(config, slug);
     if (!role) {
-        throw new Error(
-            `Unknown role "${slug}". Configured roles: ${Object.keys(roles).join(', ')}`
-        );
+        const configured = Object.keys(config.resolvedRoles).join(', ');
+        throw new Error(`Unknown role "${slug}". Configured roles: ${configured}`);
     }
     return role;
 }

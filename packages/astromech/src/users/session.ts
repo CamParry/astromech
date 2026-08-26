@@ -7,6 +7,7 @@
 import type { Role, User } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { resolveRole } from '@/permissions/roles';
+import { log } from '@/utilities/log';
 import { getAuth } from './auth';
 import { createUserRepository } from './repository';
 
@@ -44,9 +45,17 @@ export async function getSession(
         updatedAt: userRow.updatedAt,
     };
 
-    return {
-        user,
-        role: resolveRole(getConfig(), userRow.roleSlug),
-        session: session.session,
-    };
+    // A role the config no longer defines refuses the session rather than
+    // resolving to something. Removing a role from `astromech.config.ts` logs
+    // out everyone who held it, which is visible; the alternative is granting
+    // them a role nobody chose, which is not.
+    const role = resolveRole(getConfig(), userRow.roleSlug);
+    if (!role) {
+        log.warn(
+            `User ${userRow.id} holds role "${userRow.roleSlug}", which is not in the config. Refusing the session. Configured roles are in \`astromech.config.ts\`.`
+        );
+        return null;
+    }
+
+    return { user, role, session: session.session };
 }

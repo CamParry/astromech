@@ -7,6 +7,7 @@ import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
+import { requireRole } from '@/permissions/roles';
 import { getCurrentUser } from '@/request-context/request-context';
 import { indexUserRelationships } from '../internal/relationships';
 import { toUser } from '../internal/to-user';
@@ -27,6 +28,10 @@ export async function updateUser(params: {
 }): Promise<User> {
     const { id } = params;
     const validatedData = parseInput(updateUserSchema, params.data);
+
+    if (validatedData.roleSlug !== undefined) {
+        requireRole(getConfig(), validatedData.roleSlug);
+    }
 
     if (validatedData.fields !== undefined) {
         const current = await getUser({ id });
