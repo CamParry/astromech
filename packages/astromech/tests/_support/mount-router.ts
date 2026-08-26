@@ -25,8 +25,9 @@ export const testUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;
 
 /**
  * Insert the `users` row for {@link testUser}. A route test whose route writes a
- * row referencing the acting user (a version snapshot, say) must call this after
- * `createTestDb()`, or the foreign key fails.
+ * row referencing the acting user must call this after `createTestDb()`, or the
+ * foreign key fails. Every entry create and update does, through `createdBy`
+ * and `updatedBy`, as do version snapshots and preview tokens.
  */
 export async function seedTestUser(db: Kysely<DB>): Promise<void> {
     await createTestUser(db, { id: testUser.id, email: testUser.email });

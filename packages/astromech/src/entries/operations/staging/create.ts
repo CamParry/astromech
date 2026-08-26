@@ -1,5 +1,6 @@
 import type { Entry, JsonObject } from '@/types/index';
 import { transaction } from '@/database/transaction';
+import { getCurrentUser } from '@/request-context/request-context';
 import { CapabilityError, StagedEntryExistsError } from '../../errors';
 import { assertCapability } from '../../internal/entry-type';
 import { asEntry, getEntryOfType } from '../../internal/records';
@@ -23,6 +24,7 @@ export async function createStagedEntry(params: {
     if (!staging) throw new CapabilityError(type, 'staging');
 
     const canonical = await getEntryOfType(repository, type, id);
+    const user = await getCurrentUser();
 
     if (canonical.stagedFor != null) {
         throw new Error(`Entry '${id}' is itself a staged change and cannot be staged.`);
@@ -48,6 +50,8 @@ export async function createStagedEntry(params: {
             status: 'unpublished',
             stagedFor: id,
             publishedAt: null,
+            createdBy: user?.id ?? null,
+            updatedBy: user?.id ?? null,
         });
         await indexEntryRelationships(row, canonical.fields as JsonObject, type);
         return row;

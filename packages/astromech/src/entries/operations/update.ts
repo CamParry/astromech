@@ -70,6 +70,7 @@ export async function updateEntries(params: {
                         entryType,
                         currentEntry,
                         data: params.data,
+                        updatedBy: user?.id ?? null,
                     })
                 );
                 succeeded.push(currentEntry.id);
@@ -107,8 +108,9 @@ async function updateOne(params: {
     entryType: ResolvedEntryType;
     currentEntry: Entry;
     data: EntryUpdateData;
+    updatedBy: string | null;
 }): Promise<Entry> {
-    const { repository, entryType, currentEntry, data } = params;
+    const { repository, entryType, currentEntry, data, updatedBy } = params;
 
     const titled = entryType.titleField !== false;
     const validated = parseInput(updateEntrySchema({ titled }), data);
@@ -158,6 +160,10 @@ async function updateOne(params: {
             fields,
             status: validated.status,
             publishedAt,
+            // Moves with `updatedAt`, not with the version snapshot. A publish
+            // is a write to the row, so it stamps; whether it also takes a
+            // version is `changesVersionedContent`'s separate question.
+            updatedBy,
         })
     );
     if (fields) {
