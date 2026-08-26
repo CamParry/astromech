@@ -15,7 +15,6 @@
         "./admin/*": "./src/admin/*",
         "./locales/*": "./src/locales/*"
     },
-    "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "files": [
         "dist",
