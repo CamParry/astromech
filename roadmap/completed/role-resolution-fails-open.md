@@ -1,7 +1,7 @@
 # Role resolution fails open
 
-An unrecognised `roleSlug` on a user row resolves to the **admin** role, with
-`permissions: ['*']`. The fallback is in `packages/astromech/src/permissions/index.ts`:
+An unrecognised `roleSlug` on a user row resolved to the **admin** role, with
+`permissions: ['*']`. The fallback was in `packages/astromech/src/permissions/roles.ts`:
 
 ```ts
 export function resolveRole(config: ConfigWithRoles, slug: string): Role {
@@ -42,15 +42,22 @@ needs no attacker at all, which is what makes it worth fixing.
 
 ## The fix
 
-- [ ] `resolveRole` returns the least-privileged role, or `null`, when the slug
-      is unknown. Never admin. Callers decide what an absent role means.
-- [ ] Validate `roleSlug` against the configured roles on create and update,
-      rejecting an unknown slug instead of storing it.
-- [ ] Decide what happens to users holding a role that a later config edit
-      removed. Options: refuse to resolve the config (loud, and consistent with
-      the crash-loud validators already in `config/`), or resolve them to the
-      lowest role and warn. It must not be silent either way.
-- [ ] Test coverage for all three, including the config-edit case.
+- [x] `resolveRole` returns `null` for an unknown slug, with no fallback of any
+      kind. Not the least-privileged role either: answering with a role means
+      picking one, and a lesser role changes what a user may do just as quietly
+      as a greater one grants too much.
+- [x] `requireRole` is the write-path form. `usersService.create` and `.update`
+      call it, so an unknown slug is a 422 naming the configured roles and is
+      never stored.
+- [x] A user holding a role a later config edit removed is refused a session,
+      with a warning naming the user and the slug. Refusing the config outright
+      was the louder option and was rejected: config is code and users are data,
+      so boot cannot check one against the other without a query, and one stale
+      row would take the whole site down. Being logged out is visible to exactly
+      the people affected.
+- [x] `tests/permissions/role-resolution.test.ts` covers the lookup and
+      `tests/services/users/role-validation.test.ts` covers all three callers,
+      including a real signup whose role is removed underneath it.
 
 ## Related
 
@@ -58,5 +65,5 @@ needs no attacker at all, which is what makes it worth fixing.
 map on every call. That is why the resolved `Role` is cached in the request
 context rather than derived from `user.roleSlug` at the point of use. Computing
 the map once during config resolution is part of
-`roadmap/in-progress/application-instance-and-integrations.md`, and it removes the
+`roadmap/completed/application-instance-and-integrations.md`, and it removes the
 reason the request context carries a second copy of derived state.

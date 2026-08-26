@@ -1,11 +1,13 @@
 # Entry author columns are never written
 
-The `entries` table declares `createdBy` and `updatedBy`, the repository contract
-accepts both on a write, the built-in repository forwards both into the insert,
-and no service path ever supplies either. Every entry in every install has
-`createdBy: null` and `updatedBy: null`, and the `Entry` domain type has both
-fields commented out — so the columns exist, are writable by a third-party
-repository, and are invisible through the service.
+The columns are written and surfaced. What is left is what happens to the
+reference when the user it names is deleted, and showing either value in the
+admin.
+
+The defect this file opened on: the `entries` table declared `createdBy` and
+`updatedBy`, the repository contract accepted both, the built-in repository
+forwarded both into the insert, and no service path ever supplied either, so
+every entry in every install held null on both.
 
 ## What is actually true today
 
@@ -29,19 +31,22 @@ writes `user?.id ?? null` into a `col.reference('users')` column of its own.
 
 ## The work
 
-- [ ] **Set `createdBy` on create and `updatedBy` on update**, from
-      `getCurrentUser()`, falling back to `null` outside a request context (a CLI
-      job, a seed script, the scheduler).
-- [ ] **Uncomment both fields on `Entry`** and decide whether they are optional.
-      A `tableRepository`-backed type has no such columns, which is the same
-      reason `type` and `locales` are conditional on the row shape.
-- [ ] **Decide whether `updatedBy` moves on a status-only change.** Publishing is
-      a write, and `changesVersionedContent` already draws a line between a
-      content change and a status change for versions. The two answers should
-      agree, or the difference should be stated.
+- [x] **`createdBy` and `updatedBy` are set on every write**, from
+      `getCurrentUser()`, null outside a request context. All three create paths
+      stamp both: `create`, `duplicate` (the copy belongs to whoever duplicated
+      it, not to the source's author) and `createStaged`. `updateEntries`
+      threads the acting id into `updateOne`.
+- [x] **Both are optional on `Entry`**, for the `tableRepository` reason.
+- [x] **`updatedBy` moves on a status-only change**, because `status.ts` is a
+      wrapper over `updateEntries` and the stamp travels with `updatedAt`. The
+      two answers deliberately differ: `changesVersionedContent` decides whether
+      a _snapshot_ is taken, which is a question about content, and this is a
+      question about the row.
 - [ ] **Decide what happens when the referenced user is deleted.** The column is
       an FK with no `onDelete`, so deleting a user either fails or orphans the
-      reference depending on the driver. `DECISIONS.md`
+      reference depending on the driver. Now that every write fills the column
+      this is live rather than theoretical, though `entry_versions.createdBy`
+      and the preview tokens have had the same gap all along. `DECISIONS.md`
       sets the house rule for the relationship index — dangling ids are tolerated
       and pruned on write — but that covers field data, not a column FK.
 - [ ] **Surface it in the admin.** An entry list column and a detail line are the

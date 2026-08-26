@@ -104,7 +104,7 @@ of each other and can land in any order. 13 and 14 come last.
 - [x] Compute the role map once during resolution and hold it on
       `ResolvedConfig`. This is what removes the reason `RequestContext` carries
       a derived `Role`. Do **not** change the fail-open fallback here; that is
-      `roadmap/planned/role-resolution-fails-open.md`.
+      `roadmap/completed/role-resolution-fails-open.md`.
 - [x] Add `config` to `LAYERS` in `.dependency-cruiser.cjs`, in the capabilities
       tier.
 
@@ -455,7 +455,7 @@ result.
 
 ## Follow-ups this work creates
 
-- `roadmap/planned/role-resolution-fails-open.md` — filed, not in scope.
+- `roadmap/completed/role-resolution-fails-open.md` — filed, not in scope.
 - Default visibility shape for host-page queries, if stage 11 does not settle it.
 - `roadmap/planned/media-serving-responses.md` — filed, not in scope. Stage 7
   put media behind the app's middleware and error handling, so the serving route

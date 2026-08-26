@@ -22,7 +22,7 @@ The problems sit at the edges and in the conventions:
   mocked in every test that touches it, so nothing covers the Better Auth
   session to `User` + `Role` translation, and nothing asserts what
   `resolveRole()` does with an unknown slug. That function currently fails
-  open to admin ([role-resolution-fails-open](role-resolution-fails-open.md)),
+  open to admin ([role-resolution-fails-open](../completed/role-resolution-fails-open.md)),
   and the suite is blind to both the bug and any fix.
 - **Everything behind admin login has no coverage of any kind.** Not unit, not
   integration, not boot: `scripts/check-boot.mjs` stops at the login screen by
@@ -65,7 +65,7 @@ being enforced by memory.
       instead of mocking `@/users/session` at its five call sites: valid session
       resolves the right role, deleted user resolves to nothing, and an unknown
       `roleSlug` asserts whichever behaviour
-      [role-resolution-fails-open](role-resolution-fails-open.md) settles on.
+      [role-resolution-fails-open](../completed/role-resolution-fails-open.md) settles on.
 - [ ] Write a `testing` skill: present-tense test names, one React rendering
       approach (`@testing-library/react`), mock leaves not barrels, no wall-clock
       sleeps, where a new test file goes, and the per-file-isolation dependency
