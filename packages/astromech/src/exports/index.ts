@@ -76,11 +76,12 @@ export { decodeWith, encodeWith, encodePatchWith } from '@/database/codec';
  */
 export { createRepository } from '@/database/repository/create-repository';
 export type {
+    CreateManyOptions,
     FindManyParams,
     GenericDb,
+    KyselyHandle,
     OrderBy,
     Patch,
-    QueryHandle,
     Repository,
     UpsertOptions,
     Where,

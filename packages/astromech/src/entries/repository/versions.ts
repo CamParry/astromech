@@ -34,9 +34,13 @@ export function createVersionRepository(db?: Db) {
         return repository.findOne({ id });
     }
 
-    /** Get the highest version number for an entry (0 if no versions exist). */
+    /**
+     * Get the highest version number for an entry (0 if no versions exist).
+     * On the raw handle because `max()` is an aggregate, which the `where`
+     * DSL does not reach.
+     */
     async function getLatestNumber(entryId: string): Promise<number> {
-        const { db: handle, table } = repository.query();
+        const { db: handle, table } = repository.kysely();
         const row = await handle
             .selectFrom(table)
             .select((eb) => eb.fn.max('versionNumber').as('m'))

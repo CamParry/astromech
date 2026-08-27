@@ -52,26 +52,15 @@ export function createPreviewTokenRepository(db?: Db) {
         tokenHash: string,
         now: Date
     ): Promise<boolean> {
-        // The "no expiry OR still in the future" comparison is an OR across two
-        // columns, which the flat `where` DSL cannot express, so this stays on
-        // the raw `query()` escape hatch — which means it also owns its own
-        // serialization. Tier-1 timestamps are ISO-TEXT; ISO strings compare
-        // correctly with `>`.
-        const nowIso = now.toISOString();
-        const { db: handle, table } = repository.query();
-        const rows = await handle
-            .selectFrom(table)
-            .select('id')
-            .where((eb) =>
-                eb.and([
-                    eb('entryId', '=', entryId),
-                    eb('token', '=', tokenHash),
-                    eb.or([eb('expiresAt', 'is', null), eb('expiresAt', '>', nowIso)]),
-                ])
-            )
-            .limit(1)
-            .execute();
-        return rows.length > 0;
+        const matches = await repository.pluck('id', {
+            where: {
+                entryId,
+                token: tokenHash,
+                or: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+            },
+            limit: 1,
+        });
+        return matches.length > 0;
     }
 
     return { issue, revoke, isValid };

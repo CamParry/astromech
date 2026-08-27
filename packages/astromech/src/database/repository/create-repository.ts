@@ -12,7 +12,14 @@ import type {
     TableUpdate,
 } from '@/database/define-table';
 import type { Db } from '@/database/types';
-import type { Expression, ExpressionBuilder, Kysely, SqlBool } from 'kysely';
+import type {
+    Expression,
+    ExpressionBuilder,
+    Kysely,
+    SelectQueryBuilder,
+    SqlBool,
+} from 'kysely';
+import { sql } from 'kysely';
 import {
     decodeWith,
     encodePatchWith,
@@ -29,7 +36,7 @@ import { AstromechError } from '@/errors/astromech-error';
  */
 type Schema = Record<string, Record<string, unknown>>;
 
-/** The generic Kysely handle handed out by `query()`. */
+/** The generic Kysely handle handed out by `kysely()`. */
 export type GenericDb = Kysely<Schema>;
 
 type WhereFn = (eb: ExpressionBuilder<Schema, string>) => Expression<SqlBool>;
@@ -43,12 +50,24 @@ type WhereOps<V> = {
     gte?: V;
     lt?: V;
     lte?: V;
-    /** A raw SQL LIKE pattern — never serialized. Case-sensitive. */
+    /** A raw SQL LIKE pattern, passed through verbatim: `%` and `_` in it are
+     *  wildcards. For plain user-supplied text, use `contains`. */
     like?: string;
+    /** Plain substring match. `%`, `_` and `\` are escaped, so a search for
+     *  `100%` matches that literal text rather than everything after `100`. */
+    contains?: string;
+};
+
+type WhereColumns<D> = {
+    [K in keyof TableSelect<D>]?:
+        | TableSelect<D>[K]
+        | WhereOps<NonNullable<TableSelect<D>[K]>>
+        | undefined;
 };
 
 /**
- * Flat `where`: bare value → `=`, bare `null` → `IS NULL`, all keys AND together.
+ * A `where` clause: bare value → `=`, bare `null` → `IS NULL`, and every key ANDs
+ * with the rest. `or` is the one key that is not a column.
  *
  * `undefined` is in the union (not just implied by `?`) because
  * `exactOptionalPropertyTypes` would otherwise reject the conditional form
@@ -58,11 +77,17 @@ type WhereOps<V> = {
  * The runtime additionally reads a bare array as `in`, for loosely-typed callers
  * migrating off `tableRepository`. Typed callers use `{ in: [...] }`.
  */
-export type Where<D> = {
-    [K in keyof TableSelect<D>]?:
-        | TableSelect<D>[K]
-        | WhereOps<NonNullable<TableSelect<D>[K]>>
-        | undefined;
+export type Where<D> = WhereColumns<D> & {
+    /**
+     * Branches OR-ed together, then ANDed with the sibling keys:
+     * `{ enabled: true, or: [{ nextRun: { lte: now } }, { nextRun: null }] }`.
+     * A branch is an ordinary `Where`, so nesting falls out of the recursion,
+     * and an empty array matches nothing (`1 = 0`).
+     *
+     * There is no `and` — sibling keys already AND. One arrives when a call
+     * site needs `(A OR B) AND (C OR D)`; none does today.
+     */
+    or?: readonly Where<D>[] | undefined;
 };
 
 export type OrderBy<D> = readonly (readonly [
@@ -102,27 +127,38 @@ export type UpsertOptions<D> = {
     set?: Patch<D>;
 };
 
+export type CreateManyOptions = {
+    /**
+     * `'ignore'` emits `ON CONFLICT DO NOTHING`: a row colliding with an
+     * existing one is skipped rather than throwing. Spelled as the SQL it
+     * emits, not as Prisma's `skipDuplicates`.
+     */
+    onConflict?: 'ignore';
+};
+
 /**
- * What `query()` hands out: the generic Kysely handle, the resolved table key,
+ * What `kysely()` hands out: the generic Kysely handle, the resolved table key,
  * and the wrapper's own `where` compiler.
  *
- * `where` is exposed because the escape hatch is otherwise all-or-nothing. The
- * flat DSL cannot express an OR, so a query mixing a normal filter with a search
- * predicate had to abandon the DSL entirely and either restate every branch by
- * hand — two copies of a filter that must agree exactly — or run a second query
- * to materialise matching ids. Handing back the compiler makes the mixed case
- * one statement:
+ * `where` is exposed because the escape hatch is otherwise all-or-nothing. A
+ * query mixing an ordinary filter with something only raw SQL can say would
+ * otherwise have to restate the filter by hand, leaving two copies that must
+ * agree exactly. Handing back the compiler makes the mixed case one statement:
  *
  * ```ts
- * const { db, table, where } = repository.query();
+ * const { db, table, where } = repository.kysely();
  * db.selectFrom(table)
  *     .selectAll()
- *     .where((eb) => eb.and([where(dslFilter)(eb), eb.or(searchClauses)]));
+ *     .where((eb) => eb.and([where(dslFilter)(eb), rawClause(eb)]));
  * ```
  *
  * The caller still owns decoding (`decodeWith(repository.table, row)`).
+ *
+ * The hatch is named for the engine on purpose: it carries no compatibility
+ * promise, and Kysely types cross the public surface only through its return
+ * type.
  */
-export type QueryHandle<D> = {
+export type KyselyHandle<D> = {
     db: GenericDb;
     table: string;
     where: (where?: Where<D>) => WhereFn;
@@ -133,8 +169,27 @@ export type Repository<D extends Table> = {
     table: D;
     findOne(where: Where<D>): Promise<TableSelect<D> | null>;
     findMany(params?: FindManyParams<D>): Promise<TableSelect<D>[]>;
+    /**
+     * One column's decoded values for the matched rows — the same params as
+     * `findMany`, without reading and decoding every other column.
+     */
+    pluck<K extends keyof TableSelect<D> & string>(
+        column: K,
+        params?: FindManyParams<D>
+    ): Promise<TableSelect<D>[K][]>;
     count(where?: Where<D>): Promise<number>;
     create(data: TableInsert<D>): Promise<TableSelect<D>>;
+    /**
+     * Insert many rows, returning how many landed. Rows carrying the same
+     * columns go out as one statement; a row that omits a column another row
+     * sets starts a second one, so the database still applies that column's
+     * default. An empty array is a no-op returning 0 — Kysely rejects an empty
+     * `values()`.
+     */
+    createMany(
+        rows: readonly TableInsert<D>[],
+        opts?: CreateManyOptions
+    ): Promise<number>;
     /** By primary key. Throws when no row matched. */
     update(id: string, patch: Patch<D>): Promise<TableSelect<D>>;
     /** By primary key. Hard delete — soft delete stays a domain policy. */
@@ -144,17 +199,31 @@ export type Repository<D extends Table> = {
     deleteMany(where: Where<D>): Promise<number>;
     upsert(data: TableInsert<D>, opts?: UpsertOptions<D>): Promise<TableSelect<D>>;
     /**
-     * The raw escape hatch, for projections, aggregates, ORs and anything else
-     * the flat DSL cannot express. See {@link QueryHandle}.
+     * The raw escape hatch, for aggregates, expression filters and anything
+     * else the DSL cannot express. See {@link KyselyHandle}.
      */
-    query(): QueryHandle<D>;
+    kysely(): KyselyHandle<D>;
 };
 
-const OPERATORS = ['eq', 'ne', 'in', 'notIn', 'gt', 'gte', 'lt', 'lte', 'like'] as const;
+const OPERATORS = [
+    'eq',
+    'ne',
+    'in',
+    'notIn',
+    'gt',
+    'gte',
+    'lt',
+    'lte',
+    'like',
+    'contains',
+] as const;
 
 const OPERATOR_KEYS = new Set<string>(OPERATORS);
 
 const RANGE_SQL = { gt: '>', gte: '>=', lt: '<', lte: '<=' } as const;
+
+/** The escape character `contains` emits. */
+const LIKE_ESCAPE = '\\';
 
 export function createRepository<D extends Table>(table: D, db?: Db): Repository<D> {
     const tableKey = kyselyTableKey(table.name);
@@ -164,6 +233,16 @@ export function createRepository<D extends Table>(table: D, db?: Db): Repository
     const primaryKey =
         table.primaryKey ??
         Object.keys(columns).filter((key) => columns[key]?.primaryKey);
+
+    // `whereFn` reads every key as a column, so a column named `or` would be
+    // unreachable through the DSL. Fail at construction, not at the query that
+    // silently drops the filter.
+    if ('or' in columns) {
+        throw new AstromechError(
+            `createRepository("${table.name}"): "or" is reserved by the where ` +
+                `DSL and cannot be a column name — rename the column.`
+        );
+    }
 
     /** Resolved per call so an unbound repository follows `setDb` across a reload. */
     function handle(): GenericDb {
@@ -256,6 +335,9 @@ export function createRepository<D extends Table>(table: D, db?: Db): Repository
                     // A LIKE pattern is a SQL literal, never a domain value.
                     out.push(eb(key, 'like', operand));
                     break;
+                case 'contains':
+                    out.push(containsCondition(eb, key, operand));
+                    break;
                 default:
                     throw new AstromechError(
                         `createRepository("${table.name}"): ` +
@@ -281,12 +363,49 @@ export function createRepository<D extends Table>(table: D, db?: Db): Repository
         return (operand as unknown[]).map((item) => serialize(col, item));
     }
 
+    /**
+     * `contains` compiles to a raw fragment because Kysely's `like` operator
+     * emits no ESCAPE clause, and without one a backslash is just a literal
+     * character — the escaping would silently do nothing. `eb.ref` keeps the
+     * column name under `CamelCasePlugin`, which does not transform raw text.
+     */
+    function containsCondition(
+        eb: ExpressionBuilder<Schema, string>,
+        key: string,
+        operand: unknown
+    ): Expression<SqlBool> {
+        if (typeof operand !== 'string') {
+            throw new AstromechError(
+                `createRepository("${table.name}"): "contains" on column ` +
+                    `"${key}" expects a string`
+            );
+        }
+        const pattern = `%${escapeLikeText(operand)}%`;
+        return sql<SqlBool>`${eb.ref(key)} like ${pattern} escape '\\'`;
+    }
+
+    function orBranches(value: unknown): Where<D>[] {
+        if (!Array.isArray(value)) {
+            throw new AstromechError(
+                `createRepository("${table.name}"): "or" expects an array of ` +
+                    `where clauses`
+            );
+        }
+        return value as Where<D>[];
+    }
+
     function whereFn(where?: Where<D>): WhereFn {
         return (eb) => {
             const conditions: Expression<SqlBool>[] = [];
             for (const [key, value] of Object.entries(where ?? {})) {
                 // `undefined` means "no filter"; a deliberate `null` filters.
                 if (value === undefined) continue;
+                if (key === 'or') {
+                    conditions.push(
+                        eb.or(orBranches(value).map((branch) => whereFn(branch)(eb)))
+                    );
+                    continue;
+                }
                 const col = column(key);
 
                 if (value === null) {
@@ -334,6 +453,30 @@ export function createRepository<D extends Table>(table: D, db?: Db): Repository
 
     // surface
 
+    /**
+     * where + orderBy + limit/offset, shared by `findMany` and `pluck`.
+     *
+     * SQLite's grammar only admits OFFSET *inside* a LIMIT clause, so an
+     * offset with no limit is a syntax error at the driver rather than an
+     * unbounded skip — which is exactly what "everything past the first N"
+     * (version trimming, tail pagination) asks for. `LIMIT -1` is SQLite's
+     * documented idiom for no limit. Postgres spells it `LIMIT ALL`, so this
+     * line moves behind the dialect seam when that driver lands.
+     */
+    function shapeSelect<O>(
+        q: SelectQueryBuilder<Schema, string, O>,
+        params?: FindManyParams<D>
+    ): SelectQueryBuilder<Schema, string, O> {
+        let out = q.where(whereFn(params?.where));
+        for (const [key, direction] of params?.orderBy ?? []) {
+            out = out.orderBy(key, direction);
+        }
+        if (params?.limit !== undefined) out = out.limit(params.limit);
+        else if (params?.offset !== undefined) out = out.limit(-1);
+        if (params?.offset !== undefined) out = out.offset(params.offset);
+        return out;
+    }
+
     async function findOne(where: Where<D>): Promise<TableSelect<D> | null> {
         const row = await handle()
             .selectFrom(tableKey)
@@ -345,21 +488,24 @@ export function createRepository<D extends Table>(table: D, db?: Db): Repository
     }
 
     async function findMany(params?: FindManyParams<D>): Promise<TableSelect<D>[]> {
-        let q = handle().selectFrom(tableKey).selectAll().where(whereFn(params?.where));
-        for (const [key, direction] of params?.orderBy ?? []) {
-            q = q.orderBy(key, direction);
-        }
-        // SQLite's grammar only admits OFFSET *inside* a LIMIT clause, so an
-        // offset with no limit is a syntax error at the driver rather than an
-        // unbounded skip — which is exactly what "everything past the first N"
-        // (version trimming, tail pagination) asks for. `LIMIT -1` is SQLite's
-        // documented idiom for no limit. Postgres spells it `LIMIT ALL`, so this
-        // line moves behind the dialect seam when that driver lands.
-        if (params?.limit !== undefined) q = q.limit(params.limit);
-        else if (params?.offset !== undefined) q = q.limit(-1);
-        if (params?.offset !== undefined) q = q.offset(params.offset);
-        const rows = await q.execute();
+        const rows = await shapeSelect(
+            handle().selectFrom(tableKey).selectAll(),
+            params
+        ).execute();
         return rows.map((row) => decodeRow(row));
+    }
+
+    async function pluck<K extends keyof TableSelect<D> & string>(
+        name: K,
+        params?: FindManyParams<D>
+    ): Promise<TableSelect<D>[K][]> {
+        column(name); // an unknown column throws here, as it does in `where`
+        const rows = await shapeSelect(
+            handle().selectFrom(tableKey).select(name),
+            params
+        ).execute();
+        // `decodeWith` skips absent columns, so a one-column row decodes fine.
+        return rows.map((row) => decodeRow(row as Record<string, unknown>)[name]);
     }
 
     async function count(where?: Where<D>): Promise<number> {
@@ -385,6 +531,32 @@ export function createRepository<D extends Table>(table: D, db?: Db): Repository
             );
         }
         return decodeRow(row);
+    }
+
+    async function createMany(
+        rows: readonly TableInsert<D>[],
+        opts?: CreateManyOptions
+    ): Promise<number> {
+        if (rows.length === 0) return 0;
+        const encoded = rows.map((row) => asRecord(encodeWith(table, asRecord(row))));
+        let inserted = 0;
+        // Kysely writes one column list for a multi-row insert and renders a
+        // column absent from a given row as a literal `null`, which overrides
+        // that column's SQL DEFAULT instead of deferring to it: a row omitting
+        // a defaulted column would store null, or trip NOT NULL. Grouping by
+        // column set means each statement names only the columns its rows
+        // carry and the database fills the rest, exactly as it does for
+        // single-row `create`. Rows of one shape stay one statement.
+        for (const group of groupByColumns(encoded)) {
+            const insert = handle().insertInto(tableKey).values(group);
+            const result = await (
+                opts?.onConflict === 'ignore'
+                    ? insert.onConflict((oc) => oc.doNothing())
+                    : insert
+            ).executeTakeFirst();
+            inserted += Number(result.numInsertedOrUpdatedRows ?? 0);
+        }
+        return inserted;
     }
 
     async function update(id: string, patch: Patch<D>): Promise<TableSelect<D>> {
@@ -468,7 +640,7 @@ export function createRepository<D extends Table>(table: D, db?: Db): Repository
         return decodeRow(row);
     }
 
-    function query(): QueryHandle<D> {
+    function kysely(): KyselyHandle<D> {
         return { db: handle(), table: tableKey, where: whereFn };
     }
 
@@ -476,14 +648,16 @@ export function createRepository<D extends Table>(table: D, db?: Db): Repository
         table,
         findOne,
         findMany,
+        pluck,
         count,
         create,
+        createMany,
         update,
         delete: del,
         updateMany,
         deleteMany,
         upsert,
-        query,
+        kysely,
     };
 }
 
@@ -495,6 +669,29 @@ export function createRepository<D extends Table>(table: D, db?: Db): Repository
  */
 function asRecord(value: unknown): Record<string, unknown> {
     return value as Record<string, unknown>;
+}
+
+/**
+ * Encoded rows bucketed by the set of columns they carry, first-seen order
+ * kept. One bucket is one INSERT, which is what lets each statement name only
+ * its own columns — see `createMany`.
+ */
+function groupByColumns(rows: Record<string, unknown>[]): Record<string, unknown>[][] {
+    const groups = new Map<string, Record<string, unknown>[]>();
+    for (const row of rows) {
+        // NUL joins the sorted names so a column containing the separator
+        // cannot make two different shapes hash alike.
+        const shape = Object.keys(row).sort().join('\0');
+        const group = groups.get(shape);
+        if (group) group.push(row);
+        else groups.set(shape, [row]);
+    }
+    return [...groups.values()];
+}
+
+/** `%`, `_` and the escape character itself, so plain text matches literally. */
+function escapeLikeText(text: string): string {
+    return text.replace(/[\\%_]/g, (char) => `${LIKE_ESCAPE}${char}`);
 }
 
 function omit(

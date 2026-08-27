@@ -6,7 +6,7 @@
 
 import type { EntryRepository, EntryRow, EntryWrite, ListParams } from './types';
 import type { Column, Table } from '@/database/define-table';
-import type { QueryHandle, Repository } from '@/database/repository/create-repository';
+import type { Repository, Where } from '@/database/repository/create-repository';
 import type { Db } from '@/database/types';
 import type { JsonObject } from '@/types/index';
 import { decodeWith } from '@/database/codec';
@@ -17,9 +17,6 @@ type OrderPair = [column: string, direction: 'asc' | 'desc'];
 
 /** D1 caps a query at 100 bound parameters, and each id binds one. */
 const ID_CHUNK = 100;
-
-/** The wrapper's compiled `where`, the shape a raw clause has to AND onto. */
-type Predicate = ReturnType<QueryHandle<Table>['where']>;
 
 export type TableRepositoryOptions = {
     /** Primary key column name. Default 'id'. */
@@ -202,13 +199,13 @@ class TableRepository implements EntryRepository<EntryRow> {
 
     /**
      * Ids with a row in this table. Chunked — D1 caps a query at 100 binds.
-     * Selects the id column alone through `query()`: `findMany` reads and
+     * Selects the id column alone through `kysely()`: `findMany` reads and
      * decodes every column of every matched row to answer a yes/no.
      */
     async existingIds(ids: string[]): Promise<Set<string>> {
         const unique = Array.from(new Set(ids));
         const found = new Set<string>();
-        const { db, table, where } = this.repository.query();
+        const { db, table, where } = this.repository.kysely();
         for (let i = 0; i < unique.length; i += ID_CHUNK) {
             const rows = await db
                 .selectFrom(table)
@@ -225,8 +222,8 @@ class TableRepository implements EntryRepository<EntryRow> {
      * table-backed entry type has no locale concept. `references` is refused
      * outright rather than dropped — silently ignoring it would return every row.
      */
-    private whereFilters(params: ListParams): Record<string, unknown> {
-        const out: Record<string, unknown> = {};
+    private whereFilters(params: ListParams): Where<Table> {
+        const out: Where<Table> = {};
         for (const [key, value] of Object.entries(params.where ?? {})) {
             if (key === 'locale') continue; // no locale concept
             if (key === 'references') {
@@ -294,22 +291,21 @@ class TableRepository implements EntryRepository<EntryRow> {
     }
 
     async list(params: ListParams): Promise<{ data: EntryRow[]; total: number }> {
-        const { db, table, where } = this.repository.query();
+        const { db, table, where } = this.repository.kysely();
 
-        // One predicate for both the count and the rows, so the two cannot
-        // drift: the DSL filters compiled by the wrapper, ANDed with the search
-        // OR the DSL cannot express.
-        const dsl = where(this.whereFilters(params));
+        // One predicate compiled once and used for both the count and the rows,
+        // so the two cannot drift.
+        const filters = this.whereFilters(params);
         const searchColumns = this.searchColumns(params);
-        const term = `%${params.search ?? ''}%`;
-        const predicate: Predicate =
+        const search = params.search ?? '';
+        const predicate = where(
             searchColumns.length === 0
-                ? dsl
-                : (eb) =>
-                      eb.and([
-                          dsl(eb),
-                          eb.or(searchColumns.map((col) => eb(col, 'like', term))),
-                      ]);
+                ? filters
+                : {
+                      ...filters,
+                      or: searchColumns.map((col) => ({ [col]: { contains: search } })),
+                  }
+        );
 
         let rowsQuery = db.selectFrom(table).selectAll().where(predicate);
         for (const [column, direction] of this.buildOrderBy(params)) {

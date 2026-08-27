@@ -554,7 +554,7 @@ identifier is the unambiguous one.
 
 Don't query the table from your handlers. Give it a repository module —
 `createRepository` from `astromech` turns a `Table` into typed
-`findOne`/`findMany`/`count`/`create`/`update`/`delete`/`updateMany`/`deleteMany`/`upsert`,
+`findOne`/`findMany`/`pluck`/`count`/`create`/`createMany`/`update`/`delete`/`updateMany`/`deleteMany`/`upsert`,
 and owns encoding, `where`-value serialization and row decoding, so nothing above
 it spells the table name or touches a codec.
 
@@ -589,27 +589,49 @@ export function createWidgetsRepository(db: PluginContext['db']) {
 const widgets = await createWidgetsRepository(ctx.db).live(20);
 ```
 
-`where` is flat and ANDs its keys together: a bare value means `=`, a bare `null`
-means `IS NULL` (omit the key, or pass `undefined`, for "no filter"), and a
-per-column object takes `eq`/`ne`/`in`/`notIn`/`gt`/`gte`/`lt`/`lte`/`like`. An
-unknown column name throws rather than being skipped, because a dropped
-predicate returns too many rows.
+`where` ANDs its keys together: a bare value means `=`, a bare `null` means
+`IS NULL` (omit the key, or pass `undefined`, for "no filter"), and a per-column
+object takes `eq`/`ne`/`in`/`notIn`/`gt`/`gte`/`lt`/`lte`/`like`/`contains`. An
+unknown column name throws rather than being skipped, because a dropped predicate
+returns too many rows.
 
-For anything the flat DSL cannot express — an `OR`, a projection, an aggregate —
-`repository.query()` is the escape hatch. It hands back the Kysely handle, the
-resolved table key, and the wrapper's own `where` compiler, so a mixed query
-ANDs a raw clause onto the DSL filter in one statement instead of restating it:
+`contains` is the one to reach for with user-supplied search text: it escapes
+`%`, `_` and `\`, so a search for `100%` matches that literal text. `like` takes
+a pattern and passes it through untouched.
+
+`or` takes a list of full `where` clauses, OR-ed together and then ANDed with the
+keys beside it. A branch is an ordinary `where`, so branches nest:
 
 ```ts
-const { db, table, where } = repository.query();
+repository.findMany({
+    where: {
+        status: 'live',
+        or: [{ title: { contains: search } }, { slug: { contains: search } }],
+    },
+});
+```
+
+There is no `and` — the keys of one clause already AND.
+
+For what the DSL still cannot express — an aggregate, an expression filter —
+`repository.kysely()` is the escape hatch. It hands back the Kysely handle, the
+resolved table key, and the wrapper's own `where` compiler, so a mixed query ANDs
+a raw clause onto the DSL filter in one statement instead of restating it:
+
+```ts
+const { db, table, where } = repository.kysely();
 const rows = await db
     .selectFrom(table)
     .selectAll()
-    .where((eb) => eb.and([where({ status: 'live' })(eb), eb.or(searchClauses)]))
+    .where((eb) => eb.and([where({ status: 'live' })(eb), rawClause(eb)]))
     .execute();
-// query() hands out raw rows — decode them yourself.
+// kysely() hands out raw rows — decode them yourself.
 const widgets = rows.map((row) => decodeWith(widgetsTable, row));
 ```
+
+The name is literal on purpose. The DSL is the contract this repository keeps;
+`kysely()` is a hole through it to the engine underneath, and carries no
+compatibility promise.
 
 That decoding is also what you want for a read or write that bypasses a repository
 entirely: `decodeWith(widgetsTable, row)`,

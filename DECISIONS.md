@@ -23,7 +23,7 @@ whole tables under `defer_foreign_keys`, not `foreign_keys=OFF`. Generation
 errors on conflict and warns on destruction, but never prompts, and runs under
 Node only; the application migrates through Kysely's `Migrator`. Schema is
 generated, data is hand-authored, and plugins ship self-contained journals.
-Rejected: a `findMany(qb => …)` builder callback (use `query()`), and `populate`
+Rejected: a `findMany(qb => …)` builder callback (use `kysely()`), and `populate`
 on `reference` columns — if one ever ships it must be `resolveRefs`/`withRefs`.
 
 **`relationships` is a derived index, never a forward read.** It rebuilds from
@@ -57,6 +57,31 @@ resolves it and repositories join automatically: no `db` parameter, no
 `txRepository`. Nesting joins the outer scope. Hooks and fire-and-forget work
 stay outside it. Rejected: threading explicit handles, savepoints, and a
 transaction-aware repository.
+
+**The `where` DSL is the repository's stable contract; `kysely()` is not.** Core
+code stays inside `createRepository`'s typed methods, so the DSL grows to meet it
+rather than call sites dropping to raw SQL. `kysely()` hands out the Kysely
+handle, the table key and the DSL's own `where` compiler for what is left over:
+aggregates, and expression filters such as the media mime buckets. It is named
+for the engine on purpose — the coupling is greppable, and Kysely types reach the
+published surface only through its return type — and it carries no compatibility
+promise. Rejected: `query()`, which collided with query-as-operation and hid the
+coupling, and a deprecated alias for it, since nothing is live. Prior art:
+`payload.db.drizzle` and `strapi.db.connection`.
+
+**What the `where` DSL grew, and what each name beat.** `or` takes an array of
+full `Where` clauses, OR-ed together and then ANDed with sibling keys; a branch is
+an ordinary `Where`, so nesting falls out of the recursion. There is no `and`,
+because sibling keys already AND and no call site needs `(A OR B) AND (C OR D)` —
+Payload ships both, we grow on demand. `contains` takes plain text and escapes
+`%`, `_` and `\` into a `LIKE … ESCAPE '\'`, so a search for `100%` matches that
+literal text; `like` stays a verbatim pattern. Rejected: escaping at each call
+site, which cannot work without an ESCAPE clause the caller has no way to emit,
+and which every future caller would have to remember. `pluck(column, params)` is
+Knex's and Rails' name, chosen over a `select` param on `findMany` whose return
+type would turn conditional for one caller. `createMany(rows, { onConflict:
+'ignore' })` takes Prisma's method name but spells the option as the SQL it emits
+rather than Prisma's `skipDuplicates`.
 
 **Every mutating entry operation takes `ids` and returns the batch.** A single id
 is a batch of one, so single writes are atomic; explicit-id batches are atomic,
@@ -331,6 +356,10 @@ plain name would: they arrive with the wrong model and have to unlearn it.
 - **type** — an entry type's identifier inside `entries/`. Rejected: `typeName`
   (inaccurate for a qualified id like `redirects/redirect`), and `typeId`
   (redundant in-domain).
+- **or** — the boolean combinator in a repository `where` clause, so no table may
+  declare a column called `or`. The compiler reads every other key as a column,
+  which would shadow it; `createRepository` throws at construction rather than
+  letting a query silently drop the filter.
 
 A public subpath names its source directory (`astromech/database/*`,
 `astromech/media/image/*`). `astromech/ui` is the one exception, because "ui" is
