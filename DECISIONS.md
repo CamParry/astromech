@@ -36,6 +36,19 @@ declared reverse field is deferred rather than refused; if it returns it keys on
 the forward field path, not the relation name. Editorial identity is a `profile`
 entry linking to `users`.
 
+**Author columns are `ON DELETE set null`, cleared in the app.**
+`entries.createdBy`/`updatedBy`, `entry_versions.createdBy` and
+`entry_preview_tokens.createdBy` reference `users` and go null when that user is
+deleted: content outlives its author, and the column already means "the acting
+user, if known". Rejected: reassigning to another user (WordPress's model, too
+heavy for a "who touched this row" stamp, and Astromech has no ownership concept
+to reassign to), cascade (deletes the content), and restrict (blocks a
+legitimate user removal). libSQL opens with foreign keys off, so the FK action
+is inert there and `deleteUser` nulls the columns itself: the DB clause records
+the intent and enforces it on D1, the app guarantees it on every driver. This is
+a column FK, unlike the `relationships` index above whose dangling ids are field
+data with nothing to act on.
+
 **Filtering entries by field data rides declared expression indexes** over
 `json_extract(fields, '$.path')`, with the index DDL and the query SQL emitted
 from one declaration. Undeclared field filters throw. Rejected: generated columns

@@ -31,8 +31,8 @@ export const entriesTable = defineTable(
         deletedAt: col.timestamp(),
         createdAt: col.timestamp({ notNull: true, defaultNow: true }),
         updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
-        createdBy: col.reference('users'),
-        updatedBy: col.reference('users'),
+        createdBy: col.reference('users', { onDelete: 'set null' }),
+        updatedBy: col.reference('users', { onDelete: 'set null' }),
     }),
     ({ index }) => [
         index('idx_entries_type', ['type']),
@@ -65,7 +65,7 @@ export const entryVersionsTable = defineTable(
         fields: col.json(),
         status: col.enum(['unpublished', 'published', 'scheduled']),
         createdAt: col.timestamp({ notNull: true, defaultNow: true }),
-        createdBy: col.reference('users'),
+        createdBy: col.reference('users', { onDelete: 'set null' }),
     }),
     ({ index }) => [index('idx_versions_entry', ['entryId', 'versionNumber'])]
 );
@@ -76,7 +76,7 @@ export const entryPreviewTokensTable = defineTable('entry_preview_tokens', ({ co
     token: col.text({ notNull: true, unique: true }),
     expiresAt: col.timestamp(),
     createdAt: col.timestamp({ notNull: true, defaultNow: true }),
-    createdBy: col.reference('users'),
+    createdBy: col.reference('users', { onDelete: 'set null' }),
 }));
 
 export type EntryRow = TableSelect<typeof entriesTable>;

@@ -42,13 +42,15 @@ writes `user?.id ?? null` into a `col.reference('users')` column of its own.
       two answers deliberately differ: `changesVersionedContent` decides whether
       a _snapshot_ is taken, which is a question about content, and this is a
       question about the row.
-- [ ] **Decide what happens when the referenced user is deleted.** The column is
-      an FK with no `onDelete`, so deleting a user either fails or orphans the
-      reference depending on the driver. Now that every write fills the column
-      this is live rather than theoretical, though `entry_versions.createdBy`
-      and the preview tokens have had the same gap all along. `DECISIONS.md`
-      sets the house rule for the relationship index — dangling ids are tolerated
-      and pruned on write — but that covers field data, not a column FK.
+- [x] **A deleted user's author references go null.** The columns are now
+      `ON DELETE set null` FKs, and because libSQL opens with foreign keys off,
+      `deleteUser` nulls them itself so behaviour matches across drivers
+      (`DECISIONS.md`, "Author columns are `ON DELETE set null`"). `set null` is a
+      new option on the `OnDelete` type, and the migration rebuild guard now
+      refuses a rebuild of a table a `set null` FK points at, the same way it
+      already refuses one under `cascade`. `media.createdBy` and
+      `settings.updatedBy` reference `users` the same way and still carry the old
+      `no action`; giving them the same treatment is follow-up work.
 - [ ] **Surface it in the admin.** An entry list column and a detail line are the
       obvious places. Both need an id-to-name lookup; the version history page
       has one, and it should not grow a second copy.

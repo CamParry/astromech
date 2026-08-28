@@ -41,8 +41,8 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`created_by\` text,
             \`updated_by\` text,
             CONSTRAINT \`entries_staged_for_fkey\` FOREIGN KEY (\`staged_for\`) REFERENCES \`entries\`(\`id\`) ON UPDATE no action ON DELETE no action,
-            CONSTRAINT \`entries_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action,
-            CONSTRAINT \`entries_updated_by_fkey\` FOREIGN KEY (\`updated_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
+            CONSTRAINT \`entries_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE set null,
+            CONSTRAINT \`entries_updated_by_fkey\` FOREIGN KEY (\`updated_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE set null
         )
     `.execute(db);
     await sql`CREATE INDEX \`idx_entries_type\` ON \`entries\` (\`type\`)`.execute(db);
@@ -76,7 +76,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`created_at\` text NOT NULL,
             \`created_by\` text,
             CONSTRAINT \`entry_preview_tokens_entry_id_fkey\` FOREIGN KEY (\`entry_id\`) REFERENCES \`entries\`(\`id\`) ON UPDATE no action ON DELETE cascade,
-            CONSTRAINT \`entry_preview_tokens_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
+            CONSTRAINT \`entry_preview_tokens_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE set null
         )
     `.execute(db);
     await sql`CREATE UNIQUE INDEX \`entry_preview_tokens_token_unique\` ON \`entry_preview_tokens\` (\`token\`)`.execute(
@@ -94,7 +94,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`created_at\` text NOT NULL,
             \`created_by\` text,
             CONSTRAINT \`entry_versions_entry_id_fkey\` FOREIGN KEY (\`entry_id\`) REFERENCES \`entries\`(\`id\`) ON UPDATE no action ON DELETE cascade,
-            CONSTRAINT \`entry_versions_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
+            CONSTRAINT \`entry_versions_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE set null
         )
     `.execute(db);
     await sql`CREATE INDEX \`idx_versions_entry\` ON \`entry_versions\` (\`entry_id\`,\`version_number\`)`.execute(

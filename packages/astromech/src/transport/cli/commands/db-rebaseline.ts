@@ -10,6 +10,7 @@ import { defineCommand } from 'citty';
 import { rebaselineMigrations } from '@/database/generate';
 import { CORE_TABLES } from '@/database/tables';
 import { loadConfig } from '../config';
+import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
     meta: {
@@ -22,9 +23,10 @@ export default defineCommand({
             type: 'boolean',
             description: 'Fold every migration past the baseline into it',
         },
+        ...allowRemoteArgs,
     },
     async run({ args }) {
-        await loadConfig(args.config);
+        await loadConfig(args.config, toAllowRemoteOption(args));
 
         let result;
         try {

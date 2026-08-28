@@ -283,7 +283,7 @@ describe('createSnapshot', () => {
             column: 'created_by',
             targetTable: 'users',
             targetColumn: 'id',
-            onDelete: 'no action',
+            onDelete: 'set null',
         });
     });
 

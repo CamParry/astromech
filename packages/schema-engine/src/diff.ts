@@ -220,9 +220,10 @@ function diffTable(
 }
 
 /**
- * A rebuild of a table another table references `ON DELETE cascade` is refused:
- * the rebuild's `DROP TABLE` fires those cascades and deletes the children's
- * rows, and nothing at apply time catches it.
+ * A rebuild of a table another table references `ON DELETE cascade` or
+ * `ON DELETE set null` is refused: the rebuild's `DROP TABLE` fires those
+ * triggered actions — cascade deletes the children's rows, set null nulls their
+ * referencing columns — and nothing at apply time catches it.
  */
 function cascadeRebuildErrors(
     rebuildOps: TableOp[],
@@ -231,28 +232,47 @@ function cascadeRebuildErrors(
     const errors: string[] = [];
     for (const op of rebuildOps) {
         if (op.kind !== 'rebuildTable') continue;
-        const children = Object.values(tables)
-            .filter(
-                (t) =>
-                    t.name !== op.table.name &&
-                    t.fks.some(
-                        (fk) =>
-                            fk.targetTable === op.table.name &&
-                            fk.onDelete.toLowerCase() === 'cascade'
-                    )
-            )
-            .map((t) => t.name);
-        if (children.length === 0) continue;
+        const cascade: string[] = [];
+        const setNull: string[] = [];
+        for (const t of Object.values(tables)) {
+            if (t.name === op.table.name) continue;
+            for (const fk of t.fks) {
+                if (fk.targetTable !== op.table.name) continue;
+                const action = fk.onDelete.toLowerCase();
+                if (action === 'cascade' && !cascade.includes(t.name)) {
+                    cascade.push(t.name);
+                } else if (action === 'set null' && !setNull.includes(t.name)) {
+                    setNull.push(t.name);
+                }
+            }
+        }
+        if (cascade.length === 0 && setNull.length === 0) continue;
+        const clauses: string[] = [];
+        if (cascade.length > 0) {
+            clauses.push(
+                `${quoteNames(cascade)} reference${cascade.length === 1 ? 's' : ''} it ` +
+                    `ON DELETE cascade (the DROP deletes their rows)`
+            );
+        }
+        if (setNull.length > 0) {
+            clauses.push(
+                `${quoteNames(setNull)} reference${setNull.length === 1 ? 's' : ''} it ` +
+                    `ON DELETE set null (the DROP nulls their referencing columns)`
+            );
+        }
         errors.push(
-            `table "${op.table.name}" needs a rebuild, and ${children
-                .map((name) => `"${name}"`)
-                .join(', ')} reference${children.length === 1 ? 's' : ''} it ` +
-                `ON DELETE cascade — the rebuild's DROP TABLE fires those cascades and ` +
-                `deletes their rows (defer_foreign_keys defers enforcement, not cascade ` +
-                `actions). Hand-author the ops so the children survive`
+            `table "${op.table.name}" needs a rebuild, and ${clauses.join(', and ')} — ` +
+                `the rebuild's DROP TABLE fires those triggered actions ` +
+                `(defer_foreign_keys defers enforcement, not triggered actions). ` +
+                `Hand-author the ops so the children survive`
         );
     }
     return errors;
+}
+
+/** Comma-joined, double-quoted table names for an error message. */
+function quoteNames(names: string[]): string {
+    return names.map((name) => `"${name}"`).join(', ');
 }
 
 /** Diff two snapshots into the ordered `TableOp`s (+ errors/warnings) that

@@ -240,13 +240,13 @@
                     "column": "created_by",
                     "targetTable": "users",
                     "targetColumn": "id",
-                    "onDelete": "no action"
+                    "onDelete": "set null"
                 },
                 {
                     "column": "updated_by",
                     "targetTable": "users",
                     "targetColumn": "id",
-                    "onDelete": "no action"
+                    "onDelete": "set null"
                 }
             ],
             "indexes": [
@@ -356,7 +356,7 @@
                     "column": "created_by",
                     "targetTable": "users",
                     "targetColumn": "id",
-                    "onDelete": "no action"
+                    "onDelete": "set null"
                 }
             ],
             "indexes": [
@@ -455,7 +455,7 @@
                     "column": "created_by",
                     "targetTable": "users",
                     "targetColumn": "id",
-                    "onDelete": "no action"
+                    "onDelete": "set null"
                 }
             ],
             "indexes": [

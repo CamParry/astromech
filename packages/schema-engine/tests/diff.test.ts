@@ -210,7 +210,20 @@ describe('diffSnapshots', () => {
         expect(result.errors[0]).toMatch(/ON DELETE cascade/);
     });
 
-    it('a rebuild of a table children reference without cascade → no error', () => {
+    it('a rebuild of a table children reference ON DELETE set null → error', () => {
+        const prev = table('users', [col.id(), col.text('name')]);
+        const next = table('users', [col.id(), col.integer('name')]);
+        const entries = table('entries', [col.id(), col.reference('created_by')], {
+            fks: [fk('created_by', 'users', 'set null')],
+        });
+        const result = diffSnapshots(snap(prev, entries), snap(next, entries));
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toMatch(/"users" needs a rebuild/);
+        expect(result.errors[0]).toMatch(/"entries"/);
+        expect(result.errors[0]).toMatch(/ON DELETE set null/);
+    });
+
+    it('a rebuild of a table children reference without cascade or set null → no error', () => {
         const prev = table('users', [col.id(), col.text('name')]);
         const next = table('users', [col.id(), col.integer('name')]);
         const sessions = table('sessions', [col.id(), col.reference('user_id')], {

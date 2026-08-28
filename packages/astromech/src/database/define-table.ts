@@ -18,7 +18,7 @@ export type ColumnKind =
     | 'enum'
     | 'reference';
 
-export type OnDelete = 'cascade' | 'no action';
+export type OnDelete = 'cascade' | 'no action' | 'set null';
 
 /** A reference target: another `Table`, or a string name for a hand-typed
  *  (non-`defineTable`) table such as `users`. Lazy so self/forward references
