@@ -28,7 +28,9 @@ nextRun: null }] }`. Branches are ordinary `Where` objects, so nesting falls
 - **`createMany(rows, { onConflict: 'ignore' })` returns the inserted-row
   count.** Name from Prisma; the option is spelled as the SQL it emits
   (`ON CONFLICT DO NOTHING`), not Prisma's `skipDuplicates`. An empty array is
-  a no-op returning 0 (Kysely errors on empty `values`).
+  a no-op returning 0 (Kysely errors on empty `values`). Rows are grouped by
+  column set before insert: Kysely renders a column absent from one row of a
+  multi-row insert as a literal `null`, overriding that column's SQL DEFAULT.
 - **`pluck(column, params?)` for projections**, typed
   `TableSelect<D>[K][]`, accepting the same `FindManyParams` as `findMany`.
   Established name (Knex `.pluck()`, Rails). Chosen over a `select` param on
@@ -40,23 +42,26 @@ nextRun: null }] }`. Branches are ordinary `Where` objects, so nesting falls
 
 ## The work
 
-- [ ] Top-level `{ or: [...] }` in `Where<D>` per the decisions above, plus
+- [x] Top-level `{ or: [...] }` in `Where<D>` per the decisions above, plus
       the reserved-name guard. Frees `users` `list`/`count`, `media` search,
       `cron` `due`/`claim` (which becomes a plain `updateMany`), and the
       preview-token expiry check.
-- [ ] `createMany` on `Repository`. Frees the `notifications` batch insert and
+- [x] `createMany` on `Repository`. Frees the `notifications` batch insert and
       `cron` register.
-- [ ] `pluck` on `Repository`. Frees `users` `ids`/`idsByRole` and the
+- [x] `pluck` on `Repository`. Frees `users` `ids`/`idsByRole` and the
       preview-token id lookup.
-- [ ] The `query()` → `kysely()` rename across core.
-- [ ] Migrate the freed call sites onto the DSL methods.
-- [ ] While migrating the search sites: escape `%` and `_` in user-supplied
-      search text before building the `%…%` pattern (`users`, `media`).
-      Pre-existing defect — a search for `100%` matches wrongly today.
-- [ ] `DECISIONS.md`: the DSL is the stable repository contract; `kysely()`
+- [x] The `query()` → `kysely()` rename across core.
+- [x] Migrate the freed call sites onto the DSL methods.
+- [x] The search sites take a `contains` operator instead of escaping at each
+      call site. Escaping alone cannot work: Kysely's `like` emits no `ESCAPE`
+      clause, so a backslash is a literal character and the escaping is inert.
+      `contains` takes plain text and compiles to `LIKE '%…%' ESCAPE '\'`,
+      which fixes the pre-existing defect where a search for `100%` matched
+      everything starting "100" (`users`, `media`, `tableRepository`).
+- [x] `DECISIONS.md`: the DSL is the stable repository contract; `kysely()`
       is deliberately engine-coupled with no compatibility promise, and Kysely
       types cross the public surface only through its return type. Plus the
       Reserved-words entry for `or` and what `pluck`/`onConflict: 'ignore'`
       beat.
-- [ ] Gate, plus `pnpm run check:node-imports` (the `Repository` type is
+- [x] Gate, plus `pnpm run check:node-imports` (the `Repository` type is
       plugin-facing).
