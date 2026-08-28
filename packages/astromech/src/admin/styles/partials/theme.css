@@ -113,7 +113,7 @@
     --am-color-primary-subtle: var(--am-color-primary-50);
     --am-color-primary-subtle-hover: var(--am-color-primary-100);
     --am-color-primary-emphasis: var(--am-color-primary-700);
-    /* Interactive chrome */
+    /* Interactive control backgrounds */
     --am-color-interactive-bg: var(--am-color-neutral-200);
     --am-color-interactive-bg-hover: var(--am-color-neutral-300);
     /* Rich-text content link — neutral blue, decoupled from admin accent */
