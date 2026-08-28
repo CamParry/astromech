@@ -259,6 +259,7 @@
     "scripts": {
         "dev": "tsup --watch",
         "build": "tsup",
+        "build:js": "ASTROMECH_NO_DTS=1 tsup",
         "routes:generate": "tsr generate",
         "pretypecheck": "npm run routes:generate",
         "typecheck": "tsc -p tsconfig.test.json",

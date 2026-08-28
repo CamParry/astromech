@@ -10,6 +10,7 @@
         "verify": "node scripts/verify.mjs",
         "verify:fast": "node scripts/verify.mjs --fast",
         "build": "pnpm -r -F \"./packages/**\" build",
+        "build:js": "pnpm -r -F \"./packages/**\" build:js",
         "typecheck": "pnpm -r -F \"./packages/**\" typecheck && pnpm -F astromech-demo typecheck && pnpm -F astromech-demo-cloudflare typecheck",
         "lint": "pnpm -F @astromech/schema-engine lint && pnpm -F astromech lint",
         "check:config": "pnpm -F astromech-demo check:config && pnpm -F astromech-demo-cloudflare check:config",

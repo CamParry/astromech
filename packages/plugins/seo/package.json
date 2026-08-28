@@ -23,6 +23,7 @@
     ],
     "scripts": {
         "build": "tsup",
+        "build:js": "ASTROMECH_NO_DTS=1 tsup",
         "typecheck": "tsc -p tsconfig.json"
     },
     "peerDependencies": {

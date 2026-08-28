@@ -11,7 +11,7 @@ export default defineConfig({
     entry: { index: 'src/index.ts', tables: 'src/tables/index.ts' },
     format: ['esm'],
     target: 'node22',
-    dts: true,
+    dts: !process.env.ASTROMECH_NO_DTS,
     sourcemap: true,
     clean: true,
     external: ['astromech', 'astromech/fields'],

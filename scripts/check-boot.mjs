@@ -28,6 +28,7 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { requireFreshDist } from './require-fresh-dist.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const demoDir = join(repoRoot, 'apps', 'demo');
@@ -61,6 +62,10 @@ let server = null;
 let browser = null;
 
 async function main() {
+    // This check builds only `apps/demo`, so a package `src` edit would
+    // otherwise verify the previous package build.
+    await requireFreshDist();
+
     // `apps/demo/database.db` is a working file, not a fixture. The check gets
     // its own migrated database in a temp directory and never touches that one.
     scratchDir = await mkdtemp(join(tmpdir(), 'astromech-check-boot-'));

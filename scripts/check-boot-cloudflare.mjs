@@ -20,6 +20,7 @@ import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { requireFreshDist } from './require-fresh-dist.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const demoDir = join(repoRoot, 'apps', 'demo-cloudflare');
@@ -32,6 +33,10 @@ const REQUEST_TIMEOUT_MS = 10_000;
 let server = null;
 
 async function main() {
+    // This check builds only `apps/demo-cloudflare`, so a package `src` edit
+    // would otherwise verify the previous package build.
+    await requireFreshDist();
+
     const env = {
         ...process.env,
         // `run` spawns with stdio: 'inherit', so any prompt a child package

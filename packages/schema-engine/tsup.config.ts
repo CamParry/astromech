@@ -8,7 +8,7 @@ export default defineConfig({
     entry: { index: 'src/index.ts', generate: 'src/generate.ts' },
     format: ['esm'],
     target: 'node22',
-    dts: true,
+    dts: !process.env.ASTROMECH_NO_DTS,
     sourcemap: true,
     clean: true,
     external: ['kysely'],

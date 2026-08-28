@@ -41,7 +41,11 @@ export default defineConfig([
         // The floor in engines.node, enforced rather than assumed: esbuild
         // defaults to esnext and would happily emit syntax Node 22 cannot run.
         target: 'node22',
-        dts: true,
+        // Declaration emit is the slowest part of the build, and only
+        // `typecheck` consumers read the `.d.ts`. `ASTROMECH_NO_DTS` lets the
+        // boot checks, check:node-imports and the assistant test build the JS
+        // without paying for it.
+        dts: !process.env.ASTROMECH_NO_DTS,
         sourcemap: true,
         clean: true,
         external: [
