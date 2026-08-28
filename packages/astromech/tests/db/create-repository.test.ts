@@ -15,6 +15,7 @@ import { defineTable } from '@/database/define-table';
 import { createRepository } from '@/database/repository/create-repository';
 import { cronTable } from '@/database/tables';
 import { entriesTable } from '@/entries/tables';
+import { AstromechError } from '@/errors/astromech-error';
 
 const EARLY = new Date('2020-01-01T00:00:00.000Z');
 const MIDDLE = new Date('2022-06-01T12:00:00.000Z');
@@ -83,7 +84,7 @@ describe('createRepository – round trip', () => {
             publishedAt: MIDDLE,
         });
 
-        const { db, table } = repository.query();
+        const { db, table } = repository.kysely();
         expect(table).toBe('entries');
         const raw = await db.selectFrom(table).selectAll().executeTakeFirst();
         expect(raw?.['publishedAt']).toBe('2022-06-01T12:00:00.000Z');
@@ -284,6 +285,215 @@ describe('createRepository – where', () => {
     });
 });
 
+describe('createRepository – where or', () => {
+    it('ANDs the OR-ed branches with the sibling keys', async () => {
+        const repository = entryRepository();
+        await repository.create({ type: 'post', locale: 'en', title: 'A' });
+        await repository.create({ type: 'post', locale: 'en', title: 'B' });
+        await repository.create({ type: 'post', locale: 'en', title: 'C' });
+        await repository.create({ type: 'note', locale: 'en', title: 'A' });
+
+        const rows = await repository.findMany({
+            where: { type: 'post', or: [{ title: 'A' }, { title: 'B' }] },
+            orderBy: [['title', 'asc']],
+        });
+        expect(rows.map((r) => r.title)).toEqual(['A', 'B']);
+        expect(rows.every((r) => r.type === 'post')).toBe(true);
+    });
+
+    it('ANDs the keys inside a single branch', async () => {
+        const repository = entryRepository();
+        await repository.create({ type: 'post', locale: 'en', title: 'en post' });
+        await repository.create({ type: 'post', locale: 'de', title: 'de post' });
+        await repository.create({ type: 'note', locale: 'de', title: 'de note' });
+
+        const rows = await repository.findMany({
+            where: { or: [{ type: 'post', locale: 'de' }, { type: 'note' }] },
+            orderBy: [['title', 'asc']],
+        });
+        expect(rows.map((r) => r.title)).toEqual(['de note', 'de post']);
+    });
+
+    it('nests an or inside a branch', async () => {
+        const repository = entryRepository();
+        await repository.create({ type: 'post', locale: 'en', title: 'A' });
+        await repository.create({ type: 'post', locale: 'en', title: 'B' });
+        await repository.create({ type: 'post', locale: 'en', title: 'C' });
+        await repository.create({ type: 'note', locale: 'en', title: 'D' });
+
+        const rows = await repository.findMany({
+            where: {
+                or: [
+                    { type: 'post', or: [{ title: 'A' }, { title: 'C' }] },
+                    { type: 'note' },
+                ],
+            },
+            orderBy: [['title', 'asc']],
+        });
+        expect(rows.map((r) => r.title)).toEqual(['A', 'C', 'D']);
+    });
+
+    it('serializes branch values through the column codec', async () => {
+        // The load-bearing case: a Date inside a branch must be compared against
+        // the ISO TEXT actually stored, exactly as a top-level key is.
+        const repository = entryRepository();
+        await repository.create({
+            type: 'post',
+            locale: 'en',
+            title: 'early',
+            publishedAt: EARLY,
+        });
+        await repository.create({
+            type: 'post',
+            locale: 'en',
+            title: 'middle',
+            publishedAt: MIDDLE,
+        });
+        await repository.create({
+            type: 'post',
+            locale: 'en',
+            title: 'late',
+            publishedAt: LATE,
+        });
+
+        const rows = await repository.findMany({
+            where: { or: [{ publishedAt: EARLY }, { publishedAt: { gte: LATE } }] },
+            orderBy: [['publishedAt', 'asc']],
+        });
+        expect(rows.map((r) => r.title)).toEqual(['early', 'late']);
+    });
+
+    it('matches nothing for an empty branch list', async () => {
+        const repository = entryRepository();
+        await repository.create({ type: 'post', locale: 'en', title: 'A' });
+        await repository.create({ type: 'post', locale: 'en', title: 'B' });
+
+        expect(await repository.findMany({ where: { or: [] } })).toEqual([]);
+        expect(await repository.count({ or: [] })).toBe(0);
+    });
+
+    it('throws when or is not an array', async () => {
+        const bogus = { or: { title: 'A' } } as unknown as Where<typeof entriesTable>;
+        await expect(entryRepository().findMany({ where: bogus })).rejects.toThrow(
+            AstromechError
+        );
+        await expect(entryRepository().findMany({ where: bogus })).rejects.toThrow(
+            /"or" expects an array of where clauses/
+        );
+    });
+
+    it('selects due and never-computed cron rows, the scheduler shape', async () => {
+        const repository = createRepository(cronTable);
+        await repository.create({ name: 'due', schedule: '* * * * *', nextRun: EARLY });
+        await repository.create({ name: 'never', schedule: '* * * * *' });
+        await repository.create({ name: 'future', schedule: '* * * * *', nextRun: LATE });
+        await repository.create({
+            name: 'disabled',
+            schedule: '* * * * *',
+            enabled: false,
+            nextRun: EARLY,
+        });
+
+        const rows = await repository.findMany({
+            where: {
+                enabled: true,
+                or: [{ nextRun: { lte: new Date() } }, { nextRun: null }],
+            },
+            orderBy: [['name', 'asc']],
+        });
+        expect(rows.map((r) => r.name)).toEqual(['due', 'never']);
+    });
+});
+
+describe('createRepository – where contains', () => {
+    it('matches a substring, case-insensitively', async () => {
+        const repository = entryRepository();
+        await repository.create({ type: 'post', locale: 'en', title: 'Hello World' });
+        await repository.create({ type: 'post', locale: 'en', title: 'Goodbye' });
+
+        const rows = await repository.findMany({
+            where: { title: { contains: 'lo wor' } },
+        });
+        expect(rows.map((r) => r.title)).toEqual(['Hello World']);
+    });
+
+    it('treats % in the search text as a literal percent sign', async () => {
+        // The defect this operator exists to fix: as a raw LIKE pattern,
+        // `%100%%` matched every title starting "100".
+        const repository = entryRepository();
+        await repository.create({ type: 'post', locale: 'en', title: '100% cotton' });
+        await repository.create({ type: 'post', locale: 'en', title: '100 percent' });
+
+        const rows = await repository.findMany({
+            where: { title: { contains: '100%' } },
+        });
+        expect(rows.map((r) => r.title)).toEqual(['100% cotton']);
+    });
+
+    it('treats _ in the search text as a literal underscore', async () => {
+        const repository = entryRepository();
+        await repository.create({ type: 'post', locale: 'en', title: 'a_b' });
+        await repository.create({ type: 'post', locale: 'en', title: 'axb' });
+
+        const rows = await repository.findMany({ where: { title: { contains: 'a_b' } } });
+        expect(rows.map((r) => r.title)).toEqual(['a_b']);
+    });
+
+    it('treats a backslash in the search text as a literal backslash', async () => {
+        const repository = entryRepository();
+        await repository.create({ type: 'post', locale: 'en', title: 'a\\b' });
+        await repository.create({ type: 'post', locale: 'en', title: 'axb' });
+
+        const rows = await repository.findMany({
+            where: { title: { contains: 'a\\b' } },
+        });
+        expect(rows.map((r) => r.title)).toEqual(['a\\b']);
+    });
+
+    it('matches every row with a non-null value for an empty search', async () => {
+        const repository = entryRepository();
+        await repository.create({ type: 'post', locale: 'en', title: 'A', slug: 'a' });
+        await repository.create({ type: 'post', locale: 'en', title: 'B' });
+
+        const titles = await repository.findMany({
+            where: { title: { contains: '' } },
+            orderBy: [['title', 'asc']],
+        });
+        expect(titles.map((r) => r.title)).toEqual(['A', 'B']);
+
+        // `slug` is null on the second row, and NULL LIKE anything is NULL.
+        const slugs = await repository.findMany({ where: { slug: { contains: '' } } });
+        expect(slugs.map((r) => r.title)).toEqual(['A']);
+    });
+
+    it('throws when the contains operand is not a string', async () => {
+        const bogus = { title: { contains: 5 } } as unknown as Where<typeof entriesTable>;
+        await expect(entryRepository().findMany({ where: bogus })).rejects.toThrow(
+            AstromechError
+        );
+        await expect(entryRepository().findMany({ where: bogus })).rejects.toThrow(
+            /"contains" on column "title" expects a string/
+        );
+    });
+
+    it('differs from like, which still reads % as a wildcard', async () => {
+        const repository = entryRepository();
+        await repository.create({ type: 'post', locale: 'en', title: '100% cotton' });
+        await repository.create({ type: 'post', locale: 'en', title: '100 percent' });
+
+        const wildcard = await repository.findMany({
+            where: { title: { like: '100%' } },
+            orderBy: [['title', 'asc']],
+        });
+        expect(wildcard.map((r) => r.title)).toEqual(['100 percent', '100% cotton']);
+
+        const literal = await repository.findMany({
+            where: { title: { contains: '100%' } },
+        });
+        expect(literal.map((r) => r.title)).toEqual(['100% cotton']);
+    });
+});
+
 describe('createRepository – findMany paging + ordering', () => {
     it('orders, limits and offsets', async () => {
         const repository = entryRepository();
@@ -319,6 +529,73 @@ describe('createRepository – findMany paging + ordering', () => {
             offset: 9,
         });
         expect(none).toEqual([]);
+    });
+});
+
+describe('createRepository – pluck', () => {
+    it('returns one column of decoded values', async () => {
+        const repository = entryRepository();
+        await repository.create({ type: 'post', locale: 'en', title: 'A' });
+        await repository.create({ type: 'note', locale: 'en', title: 'B' });
+
+        const titles = await repository.pluck('title', { orderBy: [['title', 'asc']] });
+        expect(titles).toEqual(['A', 'B']);
+    });
+
+    it('decodes a non-text column — a Date stays a Date, a boolean a boolean', async () => {
+        const repository = createRepository(cronTable);
+        await repository.create({
+            name: 'demo-job',
+            schedule: '* * * * *',
+            enabled: false,
+            nextRun: MIDDLE,
+        });
+
+        expect(await repository.pluck('nextRun')).toEqual([MIDDLE]);
+        expect(await repository.pluck('enabled')).toEqual([false]);
+    });
+
+    it('returns null for a null cell', async () => {
+        const repository = entryRepository();
+        await repository.create({ type: 'post', locale: 'en', title: 'A' });
+
+        expect(await repository.pluck('publishedAt')).toEqual([null]);
+    });
+
+    it('honours where, orderBy, limit and offset', async () => {
+        const repository = entryRepository();
+        for (const title of ['A', 'B', 'C', 'D']) {
+            await repository.create({ type: 'post', locale: 'en', title });
+        }
+        await repository.create({ type: 'note', locale: 'en', title: 'E' });
+
+        expect(
+            await repository.pluck('title', {
+                where: { type: 'post' },
+                orderBy: [['title', 'desc']],
+                limit: 2,
+                offset: 1,
+            })
+        ).toEqual(['C', 'B']);
+    });
+
+    it('offsets with no limit', async () => {
+        const repository = entryRepository();
+        for (const title of ['A', 'B', 'C', 'D']) {
+            await repository.create({ type: 'post', locale: 'en', title });
+        }
+
+        expect(
+            await repository.pluck('title', { orderBy: [['title', 'asc']], offset: 2 })
+        ).toEqual(['C', 'D']);
+    });
+
+    it('throws for an unknown column name', async () => {
+        const repository = entryRepository();
+        // Only a loosely-typed caller can reach this; the typed signature can't.
+        const bogus = 'nope' as 'title';
+        await expect(repository.pluck(bogus)).rejects.toThrow(AstromechError);
+        await expect(repository.pluck(bogus)).rejects.toThrow(/unknown column "nope"/);
     });
 });
 
@@ -454,6 +731,105 @@ describe('createRepository – bulk writes', () => {
     });
 });
 
+describe('createRepository – createMany', () => {
+    it('inserts every row, fills app defaults and returns the count', async () => {
+        const repository = entryRepository();
+
+        const inserted = await repository.createMany([
+            { type: 'post', locale: 'en', title: 'A', publishedAt: MIDDLE },
+            { type: 'post', locale: 'en', title: 'B', fields: { body: 'world' } },
+            { type: 'note', locale: 'en', title: 'C' },
+        ]);
+        expect(inserted).toBe(3);
+
+        const rows = await repository.findMany({ orderBy: [['title', 'asc']] });
+        expect(rows.map((r) => r.title)).toEqual(['A', 'B', 'C']);
+        for (const row of rows) {
+            expect(row.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
+            expect(row.createdAt).toBeInstanceOf(Date);
+            expect(row.updatedAt).toBeInstanceOf(Date);
+            expect(row.status).toBe('unpublished');
+        }
+        expect(rows[0]?.publishedAt).toEqual(MIDDLE);
+        expect(rows[1]?.fields).toEqual({ body: 'world' });
+    });
+
+    it('returns 0 and inserts nothing for an empty array', async () => {
+        const repository = entryRepository();
+        expect(await repository.createMany([])).toBe(0);
+        expect(await repository.count()).toBe(0);
+    });
+
+    it('applies a column SQL default to a row that omits it', async () => {
+        // Single-row `create` leaves an omitted column out of the INSERT, so the
+        // table default applies. In a multi-row insert Kysely takes the union of
+        // the rows' keys, and its SQLite compiler emits `null` for the cells a
+        // row does not supply (SQLite has no `DEFAULT` keyword in VALUES). So a
+        // column with a SQL default gets NULL instead, and a NOT NULL one fails.
+        const repository = createRepository(cronTable);
+
+        const single = await repository.create({
+            name: 'single',
+            schedule: '* * * * *',
+        });
+        expect(single.enabled).toBe(true);
+
+        await repository.createMany([
+            { name: 'with-flag', schedule: '* * * * *', enabled: false },
+            { name: 'without-flag', schedule: '*/5 * * * *' },
+        ]);
+
+        const row = await repository.findOne({ name: 'without-flag' });
+        expect(row?.enabled).toBe(true);
+    });
+
+    it('rejects a primary-key collision without onConflict', async () => {
+        const repository = createRepository(cronTable);
+        await repository.create({
+            name: 'demo-job',
+            schedule: '* * * * *',
+            enabled: false,
+        });
+
+        await expect(
+            repository.createMany([
+                { name: 'demo-job', schedule: 'CHANGED' },
+                { name: 'other-job', schedule: '*/5 * * * *' },
+            ])
+        ).rejects.toThrow();
+    });
+
+    it('skips a colliding row under onConflict: ignore and leaves it untouched', async () => {
+        const repository = createRepository(cronTable);
+        await repository.create({
+            name: 'demo-job',
+            schedule: '* * * * *',
+            enabled: false,
+            nextRun: MIDDLE,
+        });
+
+        const inserted = await repository.createMany(
+            [
+                { name: 'demo-job', schedule: 'CHANGED', enabled: true, nextRun: LATE },
+                {
+                    name: 'other-job',
+                    schedule: '*/5 * * * *',
+                    enabled: true,
+                    nextRun: LATE,
+                },
+            ],
+            { onConflict: 'ignore' }
+        );
+        expect(inserted).toBe(1);
+
+        const existing = await repository.findOne({ name: 'demo-job' });
+        expect(existing?.schedule).toBe('* * * * *');
+        expect(existing?.enabled).toBe(false);
+        expect(existing?.nextRun).toEqual(MIDDLE);
+        expect(await repository.count()).toBe(2);
+    });
+});
+
 describe('createRepository – upsert', () => {
     it('inserts when there is no conflict', async () => {
         const repository = createRepository(cronTable);
@@ -504,12 +880,29 @@ describe('createRepository – upsert', () => {
     });
 });
 
-describe('createRepository – query escape hatch', () => {
+describe('createRepository – reserved column names', () => {
+    it('throws at construction when the table declares a column named or', () => {
+        // `or` is the one where-key that is not a column, so such a column would
+        // be unreachable through the DSL. The failure belongs at construction,
+        // not at the query that silently drops the filter.
+        const clashing = defineTable('or_probe', ({ col }) => ({
+            id: col.id(),
+            or: col.text(),
+        }));
+
+        expect(() => createRepository(clashing)).toThrow(AstromechError);
+        expect(() => createRepository(clashing)).toThrow(
+            /"or" is reserved by the where DSL/
+        );
+    });
+});
+
+describe('createRepository – kysely escape hatch', () => {
     it('exposes the generic handle and resolved table key', async () => {
         const repository = entryRepository();
         await repository.create({ type: 'post', locale: 'en', title: 'A' });
 
-        const { db, table } = repository.query();
+        const { db, table } = repository.kysely();
         const row = await db
             .selectFrom(table)
             .select((eb) => eb.fn.countAll<number>().as('total'))
@@ -561,7 +954,7 @@ describe('createRepository – query escape hatch', () => {
             slug: 'unrelated',
         });
 
-        const { db, table, where } = repository.query();
+        const { db, table, where } = repository.kysely();
         const dsl = where({ type: 'post', deletedAt: null });
         const rows = await db
             .selectFrom(table)

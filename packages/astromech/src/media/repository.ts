@@ -1,5 +1,5 @@
 import type { MediaRow, NewMediaRow } from './tables';
-import type { Patch, QueryHandle } from '@/database/repository/create-repository';
+import type { KyselyHandle, Patch } from '@/database/repository/create-repository';
 import type { Db } from '@/database/types';
 import type { MediaMimeTypeFilter, MediaQueryParams, SortOption } from '@/types/index';
 import type { Expression, SqlBool } from 'kysely';
@@ -11,12 +11,13 @@ import { createRelationshipRepository } from '@/database/repository/relationship
 import { mediaTable } from '@/database/tables';
 
 /**
- * Media repository — the only place Kysely touches the `media` table.
- * `list`/`count` stay on the raw handle because the mime-bucket filter isn't
- * expressible in the flat `where` DSL; blob writes stay in the service.
+ * Media repository — the only place Kysely touches the `media` table. The
+ * filename search rides the `where` DSL, but `list`/`count` still compose on
+ * the raw handle: the `other` mime bucket is a `NOT LIKE` chain the DSL has no
+ * operator for. Blob writes stay in the service.
  */
 
-type Predicate = ReturnType<QueryHandle<typeof mediaTable>['where']>;
+type Predicate = ReturnType<KyselyHandle<typeof mediaTable>['where']>;
 type MediaEb = Parameters<Predicate>[0];
 
 /** Page slice for `list`; omit it for an unpaginated read. */
@@ -76,9 +77,9 @@ export function createMediaRepository(db?: Db) {
     const repository = createRepository(mediaTable, db);
 
     function filter(params?: MediaQueryParams): Predicate {
-        const { where } = repository.query();
+        const { where } = repository.kysely();
         const search = params?.search;
-        const dsl = where(search ? { filename: { like: `%${search}%` } } : undefined);
+        const dsl = where(search ? { filename: { contains: search } } : undefined);
         return (eb) => {
             const conditions: Expression<SqlBool>[] = [dsl(eb)];
             const bucket = mimeBucket(eb, params?.where?.mimeType);
@@ -92,7 +93,7 @@ export function createMediaRepository(db?: Db) {
         params?: MediaQueryParams,
         page?: MediaPage
     ): Promise<MediaRow[]> {
-        const { db: handle, table } = repository.query();
+        const { db: handle, table } = repository.kysely();
         let q = handle.selectFrom(table).selectAll().where(filter(params));
         for (const { col, dir } of buildOrderBy(params?.sort)) {
             q = q.orderBy(col, dir);
@@ -103,7 +104,7 @@ export function createMediaRepository(db?: Db) {
     }
 
     async function count(params?: MediaQueryParams): Promise<number> {
-        const { db: handle, table } = repository.query();
+        const { db: handle, table } = repository.kysely();
         const row = await handle
             .selectFrom(table)
             .select((eb) => eb.fn.countAll<number>().as('total'))

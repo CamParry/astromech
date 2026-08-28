@@ -6,7 +6,6 @@
 import type { RelationshipRow } from '@/database/tables';
 import type { Db } from '@/database/types';
 import type { RelationshipEdge, TargetKind } from '@/fields/relationship-edges';
-import { encodeWith } from '@/database/codec';
 import { relationshipsTable } from '@/database/tables';
 import { createRepository } from './create-repository';
 
@@ -56,24 +55,18 @@ export function createRelationshipRepository(db?: Db) {
         await repository.deleteMany({ sourceId: source.id, sourceKind: source.kind });
         if (edges.length === 0) return;
 
-        const { db: handle, table } = repository.query();
-        const rows = edges.map((edge) =>
-            encodeWith(relationshipsTable, {
-                sourceId: source.id,
-                sourceKind: source.kind,
-                sourceType: source.type ?? null,
-                schemaPath: edge.schemaPath,
-                instancePath: edge.instancePath,
-                targetId: edge.targetId,
-                targetKind: edge.targetKind,
-                sourceStaged: source.staged ?? false,
-            })
-        );
+        const rows = edges.map((edge) => ({
+            sourceId: source.id,
+            sourceKind: source.kind,
+            sourceType: source.type ?? null,
+            schemaPath: edge.schemaPath,
+            instancePath: edge.instancePath,
+            targetId: edge.targetId,
+            targetKind: edge.targetKind,
+            sourceStaged: source.staged ?? false,
+        }));
         for (let i = 0; i < rows.length; i += INSERT_CHUNK_ROWS) {
-            await handle
-                .insertInto(table)
-                .values(rows.slice(i, i + INSERT_CHUNK_ROWS))
-                .execute();
+            await repository.createMany(rows.slice(i, i + INSERT_CHUNK_ROWS));
         }
     }
 
@@ -148,6 +141,5 @@ export function createRelationshipRepository(db?: Db) {
         deleteBySource,
         deleteByResource,
         clear,
-        query: repository.query,
     };
 }

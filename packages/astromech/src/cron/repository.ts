@@ -1,11 +1,10 @@
 /**
  * Cron repository — the only place Kysely touches the `_astromech_cron`
- * table. Three of the four methods still drop to `query()`, because the
- * scheduler's due/claim predicates are ORs the flat `where` DSL can't express.
+ * table. Every method goes through `createRepository(cronTable)`: the
+ * scheduler's due/claim predicates are ORs the `where` DSL now expresses.
  */
 import type { CronRow, NewCronRow } from '@/database/tables';
 import type { Db } from '@/database/types';
-import { decodeWith, encodePatchWith, encodeWith } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 import { cronTable } from '@/database/tables';
 
@@ -21,31 +20,14 @@ export function createCronRepository(db?: Db) {
      * authoritative and must never be overwritten by the registry's defaults.
      */
     async function seedJob(row: NewCronRow): Promise<void> {
-        const { db: handle, table } = repository.query();
-        await handle
-            .insertInto(table)
-            .values(encodeWith(cronTable, row))
-            .onConflict((oc) => oc.doNothing())
-            .execute();
+        await repository.createMany([row], { onConflict: 'ignore' });
     }
 
     /** Enabled jobs whose next run has arrived, or was never computed. */
     async function due(now: Date): Promise<CronRow[]> {
-        const { db: handle, table, where } = repository.query();
-        const rows = await handle
-            .selectFrom(table)
-            .selectAll()
-            .where((eb) =>
-                eb.and([
-                    where({ enabled: true })(eb),
-                    eb.or([
-                        where({ nextRun: { lte: now } })(eb),
-                        where({ nextRun: null })(eb),
-                    ]),
-                ])
-            )
-            .execute();
-        return rows.map((row) => decodeWith(cronTable, row));
+        return repository.findMany({
+            where: { enabled: true, or: [{ nextRun: { lte: now } }, { nextRun: null }] },
+        });
     }
 
     /**
@@ -54,21 +36,11 @@ export function createCronRepository(db?: Db) {
      * the run — the cross-instance double-fire guard; a crashed claim auto-expires.
      */
     async function claim(name: string, now: Date, expiry: Date): Promise<boolean> {
-        const { db: handle, table, where } = repository.query();
-        const result = await handle
-            .updateTable(table)
-            .set(encodePatchWith(cronTable, { lock: expiry }))
-            .where((eb) =>
-                eb.and([
-                    where({ name })(eb),
-                    eb.or([where({ lock: null })(eb), where({ lock: { lte: now } })(eb)]),
-                ])
-            )
-            .executeTakeFirst();
-        // Kysely types `numUpdatedRows` as a bigint. Comparing through `Number`
-        // rather than against `1n` so a dialect that hands back a plain number
-        // still elects a winner instead of silently never claiming anything.
-        return Number(result.numUpdatedRows) === 1;
+        const claimed = await repository.updateMany(
+            { name, or: [{ lock: null }, { lock: { lte: now } }] },
+            { lock: expiry }
+        );
+        return claimed === 1;
     }
 
     /**

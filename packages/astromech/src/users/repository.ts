@@ -1,22 +1,18 @@
 /**
- * User repository — the only place Kysely touches the `users` table. Row CRUD
- * goes through `createRepository(usersTable)`; `list`/`count` stay on the
- * raw handle since name/email search is an OR the flat `where` DSL can't express.
+ * User repository — the only place Kysely touches the `users` table. Every
+ * method goes through `createRepository(usersTable)`: the name/email search is
+ * a `contains` pair under `or`, so nothing here reaches for the raw handle.
  */
 
 import type { UserRow } from './tables';
 import type { TableInsert } from '@/database/define-table';
-import type { Patch } from '@/database/repository/create-repository';
+import type { OrderBy, Patch, Where } from '@/database/repository/create-repository';
 import type { Db } from '@/database/types';
 import type { SortOption } from '@/types/index';
-import type { Expression, ExpressionBuilder, SqlBool } from 'kysely';
-import { decodeWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { usersTable } from '@/database/tables';
-
-type UsersEb = ExpressionBuilder<Record<string, Record<string, unknown>>, string>;
 
 export type NewUser = TableInsert<typeof usersTable>;
 
@@ -44,18 +40,23 @@ function isSortableCol(s: string): s is SortableCol {
     return (SORTABLE_COLS as readonly string[]).includes(s);
 }
 
-function buildOrderBy(
-    sort?: SortOption | SortOption[]
-): { col: SortableCol; dir: 'asc' | 'desc' }[] {
-    if (!sort) return [{ col: 'name', dir: 'asc' }];
+function buildOrderBy(sort?: SortOption | SortOption[]): OrderBy<typeof usersTable> {
+    const fallback: OrderBy<typeof usersTable> = [['name', 'asc']];
+    if (!sort) return fallback;
     const sorts = Array.isArray(sort) ? sort : [sort];
     const clauses = sorts.flatMap((s) =>
-        Object.entries(s).flatMap(([field, dir]) => {
+        Object.entries(s).flatMap(([field, dir]): OrderBy<typeof usersTable> => {
             if (!isSortableCol(field)) return [];
-            return [{ col: field, dir: dir as 'asc' | 'desc' }];
+            return [[field, dir as 'asc' | 'desc']];
         })
     );
-    return clauses.length > 0 ? clauses : [{ col: 'name', dir: 'asc' }];
+    return clauses.length > 0 ? clauses : fallback;
+}
+
+/** The name/email search — shared by `list` and `count` so they cannot drift. */
+function searchWhere(search?: string): Where<typeof usersTable> {
+    if (!search) return {};
+    return { or: [{ name: { contains: search } }, { email: { contains: search } }] };
 }
 
 export type UserRepository = ReturnType<typeof createUserRepository>;
@@ -64,42 +65,17 @@ export type UserRepository = ReturnType<typeof createUserRepository>;
 export function createUserRepository(db?: Db) {
     const repository = createRepository(usersTable, db);
 
-    /** The name/email search OR — shared by `list` and `count` so they cannot drift. */
-    function filter(search?: string): (eb: UsersEb) => Expression<SqlBool> {
-        const { where } = repository.query();
-        const dsl = where();
-        return (eb) => {
-            if (!search) return dsl(eb);
-            return eb.and([
-                dsl(eb),
-                eb.or([
-                    eb('name', 'like', `%${search}%`),
-                    eb('email', 'like', `%${search}%`),
-                ]),
-            ]);
-        };
-    }
-
     async function list(params?: UserListParams): Promise<UserRow[]> {
-        const { db: handle, table } = repository.query();
-        let q = handle.selectFrom(table).selectAll().where(filter(params?.search));
-        for (const { col, dir } of buildOrderBy(params?.sort)) {
-            q = q.orderBy(col, dir);
-        }
-        if (params?.limit !== undefined) q = q.limit(params.limit);
-        if (params?.offset !== undefined) q = q.offset(params.offset);
-        const rows = await q.execute();
-        return rows.map((row) => decodeWith(usersTable, row));
+        return repository.findMany({
+            where: searchWhere(params?.search),
+            orderBy: buildOrderBy(params?.sort),
+            ...(params?.limit !== undefined && { limit: params.limit }),
+            ...(params?.offset !== undefined && { offset: params.offset }),
+        });
     }
 
     async function count(params?: { search?: string | undefined }): Promise<number> {
-        const { db: handle, table } = repository.query();
-        const row = await handle
-            .selectFrom(table)
-            .select((eb) => eb.fn.countAll<number>().as('total'))
-            .where(filter(params?.search))
-            .executeTakeFirst();
-        return Number(row?.total ?? 0);
+        return repository.count(searchWhere(params?.search));
     }
 
     async function countByRole(roleSlug: string): Promise<number> {
@@ -108,20 +84,12 @@ export function createUserRepository(db?: Db) {
 
     /** Every user id — the `notify()` broadcast target. */
     async function ids(): Promise<string[]> {
-        const { db: handle, table } = repository.query();
-        const rows = await handle.selectFrom(table).select('id').execute();
-        return rows.map((row) => String(row.id));
+        return repository.pluck('id');
     }
 
     /** User ids holding a role — the `notify()` per-role target. */
     async function idsByRole(roleSlug: string): Promise<string[]> {
-        const { db: handle, table, where } = repository.query();
-        const rows = await handle
-            .selectFrom(table)
-            .select('id')
-            .where(where({ roleSlug }))
-            .execute();
-        return rows.map((row) => String(row.id));
+        return repository.pluck('id', { where: { roleSlug } });
     }
 
     async function get(id: string): Promise<UserRow | null> {
