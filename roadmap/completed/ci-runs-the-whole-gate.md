@@ -4,7 +4,10 @@
 `.github/workflows/ci.yml` runs seven of them. This file is about which checks
 run at all and on which runtimes. Making the gate fast, and having CI call the
 same scripts a developer calls instead of its own hand-written job list, is
-[verification-gate-speed](../in-progress/verification-gate-speed.md).
+[verification-gate-speed](verification-gate-speed.md), which is where this work
+landed: CI now runs `pnpm run verify` on the Active LTS and `verify:runtime` on
+the floor version, so every documented check runs and the two lists cannot
+drift. The rest of this file is the state that led to that.
 
 ## What CI does not run
 
@@ -36,18 +39,19 @@ changes.
 
 ## The work
 
-- [ ] Add `check:boot:cloudflare`. It needs no Cloudflare account and no
-      network, so it is an ordinary job.
-- [ ] Add `check:exports`, `check:docs`, `check:config`, `check:node-imports`
-      and `lint:css`. The first two are fast and buildless; the middle two need
-      the build; `lint:css` belongs with `lint`.
-- [ ] Once every check has a home, the AGENTS.md claim that "CI runs them" is
-      true for the first time. Check the gate table's prose against the workflow
-      and correct whatever else has drifted.
-- [ ] Decide whether the build is shared between jobs (upload and download an
-      artifact) or repeated. Repeating it is defensible if the jobs are meant to
-      be independent; five copies of a thirty-second build is not free either
-      way, so it should be a decision rather than an accident.
+- [x] Add `check:boot:cloudflare`. It runs on both Node versions now, inside
+      `verify` (Active LTS) and `verify:runtime` (floor).
+- [x] Add `check:exports`, `check:docs`, `check:node-imports` and `lint:css`.
+      The first three run in `verify`; `lint:css` moved to CI's `backstop` job
+      with `format:check`. `check:config` was not added: it was retired from the
+      gate entirely, since `astro sync` and the boot checks already force its
+      failure.
+- [x] The AGENTS.md claim that "CI runs them" is now true, and the gate table's
+      prose was corrected against the workflow.
+- [x] Decided: the build is repeated, not shared through an artifact, but far
+      less. `verify` builds once for the gate; the runtime, index and backstop
+      jobs each do a `build:js` (~8s, no declarations) or no build at all, so the
+      old five full builds are gone.
 
 ## Why it was left
 

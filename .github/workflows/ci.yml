@@ -10,28 +10,30 @@ concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
     cancel-in-progress: true
 
+# The gate is one script, scripts/verify.mjs, so CI and a developer run the same
+# checks and the two cannot drift. `pnpm run verify` runs the whole gate on the
+# Active LTS; `verify:runtime` runs only the version-sensitive subset — the test
+# suites and the two boot checks — on the floor Node version, so those run on
+# both while lint, typecheck and the build, whose output no Node version
+# changes, run once. Two jobs sit outside verify: the relationships-index parity
+# check (CI-only, needs a seeded database) and a backstop for the two checks
+# verify leaves to the pre-commit hook.
+#
 # `pnpm/action-setup` takes its version from `packageManager` in the root
 # package.json, so the toolchain is pinned in one place. It runs before
 # `setup-node`, which needs pnpm on PATH already to resolve `cache: pnpm`.
 #
-# Two Node versions, and only where they can differ. 22 is `engines.node`, the
-# floor a consumer may install on; 24 is the Active LTS most of them run. Test
-# and Boot execute the runtime, so both matter there. Lint, Type Check and
-# Build run eslint, tsc and tsup, whose output does not vary across the two, so
-# doubling them would buy nothing — they pin the Active LTS. Relationships
-# Index does run the runtime, but it asks whether the index matches the field
-# data, which no Node version changes; those two already cover the runtime.
-#
-# Node 20 is not here and cannot be: pnpm 11 requires at least v22.13, and
-# `cache: pnpm` makes `setup-node` run `pnpm store path`, so a Node 20 job dies
-# at that step before installing anything. Node 20 reached end of life in April
-# 2026 in any case.
+# 22 is `engines.node`, the floor a consumer may install on; 24 is the Active
+# LTS most of them run. Node 20 cannot be here: pnpm 11 requires at least
+# v22.13, and `cache: pnpm` makes `setup-node` run `pnpm store path`, so a
+# Node 20 job dies at that step before installing anything. Node 20 reached end
+# of life in April 2026 in any case.
 env:
     ACTIVE_LTS: 24
 
 jobs:
-    lint:
-        name: Lint
+    gate:
+        name: Gate (Node 24)
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v7
@@ -41,40 +43,30 @@ jobs:
                   node-version: ${{ env.ACTIVE_LTS }}
                   cache: pnpm
             - run: pnpm install --frozen-lockfile
-            - run: pnpm run lint
-            - run: pnpm run format:check
+            # The boot checks in the gate load /cms in headless chromium. The
+            # browser is not part of the npm install, so it is fetched here.
+            - run: pnpm exec playwright install --with-deps chromium
+            - run: pnpm run verify
 
-    typecheck:
-        name: Type Check
+    runtime:
+        name: Runtime (Node 22)
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v7
             - uses: pnpm/action-setup@v6
             - uses: actions/setup-node@v7
               with:
-                  node-version: ${{ env.ACTIVE_LTS }}
+                  node-version: 22
                   cache: pnpm
             - run: pnpm install --frozen-lockfile
-            # The plugin packages import `astromech` through its published
-            # exports map, so they only typecheck against `dist/`. Build first.
-            - run: pnpm run build
-            - run: pnpm run typecheck
-
-    build:
-        name: Build
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v7
-            - uses: pnpm/action-setup@v6
-            - uses: actions/setup-node@v7
-              with:
-                  node-version: ${{ env.ACTIVE_LTS }}
-                  cache: pnpm
-            - run: pnpm install --frozen-lockfile
-            - run: pnpm run build
+            - run: pnpm exec playwright install --with-deps chromium
+            # The test suites and both boot checks — the only checks whose result
+            # a Node version can change — on the floor version. The gate job
+            # covers them on the Active LTS.
+            - run: pnpm run verify:runtime
 
     index:
-        name: Relationships Index
+        name: Relationships Index (Node 24)
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v7
@@ -85,8 +77,9 @@ jobs:
                   cache: pnpm
             - run: pnpm install --frozen-lockfile
             # `index:rebuild` runs the built CLI rather than tsx, so the bundle
-            # has to exist first.
-            - run: pnpm run build
+            # has to exist first. It loads the runtime and never a declaration,
+            # so the declaration-free build is enough.
+            - run: pnpm run build:js
             # The check compares the index against the field data it is derived
             # from, so it needs content: against an empty database it scans zero
             # sources and passes vacuously. The demo seed is the only fixture
@@ -98,50 +91,19 @@ jobs:
             - run: pnpm run db:seed:demo
             - run: pnpm -F astromech-demo index:rebuild --check
 
-    test:
-        name: Test (Node ${{ matrix.node }})
+    backstop:
+        name: Format and CSS (Node 24)
         runs-on: ubuntu-latest
-        strategy:
-            # Report both versions. Cancelling the sibling on the first failure
-            # would hide whether a break is version-specific, which is the only
-            # question the matrix exists to answer.
-            fail-fast: false
-            matrix:
-                node: [22, 24]
         steps:
             - uses: actions/checkout@v7
             - uses: pnpm/action-setup@v6
             - uses: actions/setup-node@v7
               with:
-                  node-version: ${{ matrix.node }}
+                  node-version: ${{ env.ACTIVE_LTS }}
                   cache: pnpm
             - run: pnpm install --frozen-lockfile
-            # The assistant suite resolves `astromech` through its exports map,
-            # which points at `dist/`. pnpm links the workspace package in to
-            # satisfy the peer dependency, so the import resolves and needs the
-            # build; under npm it did not resolve at all and the mock covered it.
-            - run: pnpm run build
-            - run: pnpm run test:run
-
-    boot:
-        name: Boot (Node ${{ matrix.node }})
-        runs-on: ubuntu-latest
-        strategy:
-            fail-fast: false
-            matrix:
-                node: [22, 24]
-        steps:
-            - uses: actions/checkout@v7
-            - uses: pnpm/action-setup@v6
-            - uses: actions/setup-node@v7
-              with:
-                  node-version: ${{ matrix.node }}
-                  cache: pnpm
-            - run: pnpm install --frozen-lockfile
-            # `apps/demo` reaches core's Node-loaded subpaths through `dist`,
-            # so the packages have to be built before the demo can be.
-            - run: pnpm run build
-            # `check:boot` loads `/admin` in headless chromium. The browser is
-            # not part of the npm install, so it is fetched here.
-            - run: pnpm exec playwright install --with-deps chromium
-            - run: pnpm run check:boot
+            # verify leaves these two to the pre-commit hook for dev-loop speed;
+            # CI enforces them here against a `--no-verify` commit. format:check
+            # covers the whole repo, lint:css the admin styles.
+            - run: pnpm run format:check
+            - run: pnpm run lint:css

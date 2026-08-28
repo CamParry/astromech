@@ -9,6 +9,7 @@
         "dev": "pnpm -F astromech dev",
         "verify": "node scripts/verify.mjs",
         "verify:fast": "node scripts/verify.mjs --fast",
+        "verify:runtime": "node scripts/verify.mjs --runtime",
         "build": "pnpm -r -F \"./packages/**\" build",
         "build:js": "pnpm -r -F \"./packages/**\" build:js",
         "typecheck": "pnpm -r -F \"./packages/**\" typecheck && pnpm -F astromech-demo typecheck && pnpm -F astromech-demo-cloudflare typecheck",

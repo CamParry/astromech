@@ -5,6 +5,12 @@
  * typechecks, their test suites, and lint. That is the loop to run while
  * working. The full run adds the build and everything downstream of it.
  *
+ * `--runtime` runs only the checks whose result can vary with the Node version:
+ * the test suites and the two boot checks, over a `build:js` (no declarations,
+ * which no runtime reads). CI runs the full gate on one Node version and this
+ * subset on the other, so version-invariant work is never doubled while
+ * test and boot still run on both. See `.github/workflows/ci.yml`.
+ *
  * Two things decide the stage boundaries, and neither is arbitrary:
  *
  * - Anything reading `dist` waits for `build`.
@@ -25,38 +31,59 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-const fast = process.argv.includes('--fast');
+const mode = process.argv.includes('--fast')
+    ? 'fast'
+    : process.argv.includes('--runtime')
+      ? 'runtime'
+      : 'full';
 
 /** Each stage runs in parallel; stages run in order. */
-const stages = fast
-    ? [
-          [
-              ['typecheck:packages', 'pnpm -r -F "./packages/**" typecheck'],
-              [
-                  'test:packages',
-                  'pnpm -F @astromech/schema-engine test:run && pnpm -F astromech test:run',
-              ],
-              ['lint', 'pnpm run lint'],
-          ],
-      ]
-    : [
-          [['build', 'pnpm run build']],
-          [
-              ['test:run', 'pnpm run test:run'],
-              ['lint', 'pnpm run lint'],
-              ['check:node-imports', 'pnpm run check:node-imports'],
-              ['check:exports', 'pnpm run check:exports'],
-              ['check:docs', 'pnpm run check:docs'],
-          ],
-          [['typecheck', 'pnpm run typecheck']],
-          // Prime routeTree.gen.ts so the two boot builds below both read it
-          // unchanged and neither writes it. See the header comment.
-          [['routes:generate', 'pnpm -F astromech routes:generate']],
-          [
-              ['check:boot', 'pnpm run check:boot'],
-              ['check:boot:cloudflare', 'pnpm run check:boot:cloudflare'],
-          ],
-      ];
+const stagesByMode = {
+    fast: [
+        [
+            ['typecheck:packages', 'pnpm -r -F "./packages/**" typecheck'],
+            [
+                'test:packages',
+                'pnpm -F @astromech/schema-engine test:run && pnpm -F astromech test:run',
+            ],
+            ['lint', 'pnpm run lint'],
+        ],
+    ],
+    runtime: [
+        // No declarations: nothing this mode runs reads a `.d.ts`.
+        [['build:js', 'pnpm run build:js']],
+        // routes:generate primes routeTree.gen.ts for the concurrent boot
+        // builds below (see the header comment); test:run is independent of it.
+        [
+            ['test:run', 'pnpm run test:run'],
+            ['routes:generate', 'pnpm -F astromech routes:generate'],
+        ],
+        [
+            ['check:boot', 'pnpm run check:boot'],
+            ['check:boot:cloudflare', 'pnpm run check:boot:cloudflare'],
+        ],
+    ],
+    full: [
+        [['build', 'pnpm run build']],
+        [
+            ['test:run', 'pnpm run test:run'],
+            ['lint', 'pnpm run lint'],
+            ['check:node-imports', 'pnpm run check:node-imports'],
+            ['check:exports', 'pnpm run check:exports'],
+            ['check:docs', 'pnpm run check:docs'],
+        ],
+        [['typecheck', 'pnpm run typecheck']],
+        // Prime routeTree.gen.ts so the two boot builds below both read it
+        // unchanged and neither writes it. See the header comment.
+        [['routes:generate', 'pnpm -F astromech routes:generate']],
+        [
+            ['check:boot', 'pnpm run check:boot'],
+            ['check:boot:cloudflare', 'pnpm run check:boot:cloudflare'],
+        ],
+    ],
+};
+
+const stages = stagesByMode[mode];
 
 const run = (name, command) =>
     new Promise((done) => {
@@ -92,4 +119,9 @@ if (failures.length > 0) {
     process.exit(1);
 }
 
-console.log(fast ? '\nFast checks passed.' : '\nGate passed.');
+const passed = {
+    fast: '\nFast checks passed.',
+    runtime: '\nRuntime checks passed.',
+    full: '\nGate passed.',
+};
+console.log(passed[mode]);

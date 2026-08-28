@@ -3,7 +3,7 @@
 A 2026-08-24 review of the suite's quality: what it covers, what it only
 appears to cover, and the conventions work that keeps it honest. Making the
 gate fast is a separate problem with its own file:
-[verification-gate-speed](../in-progress/verification-gate-speed.md).
+[verification-gate-speed](../completed/verification-gate-speed.md).
 
 ## What is actually true today
 

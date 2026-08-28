@@ -56,15 +56,18 @@ developer and CI call, so the two descriptions cannot drift again.
       tests and lint, and came in at 55s on a loaded machine. Full run: 194s
       against 243-300s serial, with `check:boot` and `check:boot:cloudflare`
       making up 54s of the tail because they cannot yet overlap.
-- [ ] Widen the pre-commit tier: add `check:exports` and `check:docs` to the
-      hook, both effectively free, and widen the lint-staged globs to cover
-      `.mjs`, `.yml`, `.yaml` and `.jsonc`. Worth doing together with retiring
-      `format:check` from the full run, below, since that is what the wider globs
-      are for.
-- [ ] Point `ci.yml` at the same tier scripts instead of its own hand-written
-      job list, and fix the `AGENTS.md` gate table where it is stale (the two
-      undocumented build dependencies, the missing chromium step in the
-      `check:boot` row, the false "CI runs them").
+- [x] Widen the pre-commit tier: `check:exports` and `check:docs` now run in the
+      hook (~0.5s each), and the lint-staged prettier glob covers `.mjs`, `.yml`,
+      `.yaml` and `.jsonc`. Done with retiring `format:check` from the full run,
+      below, since that is what the wider globs are for.
+- [x] Point `ci.yml` at the tier scripts. Four jobs: `gate` runs `pnpm run verify`
+      on the Active LTS, `runtime` runs `verify:runtime` on the floor version,
+      `index` keeps the relationships-index parity check, `backstop` runs
+      `format:check` and `lint:css` (the two verify leaves to the hook). CI and a
+      developer now call the same script, so they cannot drift. This also closes
+      [ci-runs-the-whole-gate](ci-runs-the-whole-gate.md): every
+      documented check now runs in CI, including `check:boot:cloudflare`. The
+      `AGENTS.md` gate table is corrected to match.
 - [x] Enable `incremental` typechecking across the packages and demos. Each
       project writes its `tsBuildInfoFile` into its own `node_modules`, chosen over
       the default spot beside `outDir` because `tsup` cleans `dist/` and would wipe
@@ -72,9 +75,11 @@ developer and CI call, so the two descriptions cannot drift again.
       Cold 49s, warm 24s, and the warm run still catches a freshly introduced
       error. What is left is `astro sync` in the two demos and `tsr generate` in
       core's `pretypecheck`, both of which run unconditionally.
-- [ ] Split DTS out of `build` (a `build:js` that skips the DTS worker) so the
-      boot checks, `check:node-imports` and the assistant suite stop paying for
-      declaration emit they never read.
+- [x] Split DTS out of `build`. `ASTROMECH_NO_DTS` gates `dts` in every package's
+      tsup config, and a `build:js` script per package (aggregated by the root)
+      sets it. `build:js` comes in around 8s against ~19s for the full build, so
+      the boot checks, `check:node-imports`, the assistant suite and `verify:runtime`
+      build the JS they run without paying for declarations they never read.
 - [x] Revisit the pool settings. Core now runs on `pool: 'threads'` with
       `isolate: false`, taking its suite from 61s to 32s on a quiet machine and
       holding the same shape under load. The 39 files that mock a module, stub a
@@ -84,14 +89,19 @@ developer and CI call, so the two descriptions cannot drift again.
       dropped: it matched three separate invocations to within a second and broke
       the one test that finds its wrangler config from the working directory.
       schema-engine and assistant are 1.5s and 0.8s, so their configs stand.
-- [ ] Make `check:boot` and `check:boot:cloudflare` runnable concurrently:
-      serialise or relocate the `routeTree.gen.ts` generation first.
-- [ ] Fix the stale-`dist` hole in `check:boot`, either by building the
-      packages first in the script or by failing loudly when `dist` is older than
-      `src`.
-- [ ] Retire `check:config`, `lint:css` and `format:check` from the full run
-      once the hook globs cover their residue. Keep `check:config` as a standalone
-      probe for when the config path itself is being edited.
-- [ ] Replace the manual `db:generate` instruction in `AGENTS.md` with a
-      pointer to the drift test that already covers core tables, and state plainly
-      that plugin tables are not covered by it.
+- [x] Make `check:boot` and `check:boot:cloudflare` runnable concurrently. A
+      `routes:generate` stage now primes `routeTree.gen.ts` before both; the
+      generator skips the write when the content is unchanged, so each app build
+      reads it and neither writes. The pair drops from ~54s serial to ~27s, and
+      the primed file's hash is unchanged across a concurrent run.
+- [x] Fix the stale-`dist` hole in `check:boot` by failing loudly.
+      `scripts/require-fresh-dist.mjs` runs first in both boot checks and throws
+      when any package's `dist` is older than its `src` (excluding generated and
+      test files). Chosen over building in the script, which would have the two
+      concurrent boot checks race on the package `dist`.
+- [x] Retire `check:config`, `lint:css` and `format:check` from the full run.
+      The wider hook globs and CI's `backstop` job cover their residue.
+      `check:config` stays a standalone probe for when the config path is edited.
+- [x] Replace the manual `db:generate` instruction in `AGENTS.md` with a pointer
+      to `packages/astromech/tests/db/drift.test.ts`, stating plainly that it
+      covers `CORE_TABLES` only and says nothing about a plugin's own tables.
