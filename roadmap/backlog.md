@@ -101,3 +101,7 @@ not be re-derived.
 
 - [ ] Rename `apps/demo` to name its runtime, now that a second runtime demo exists. It touches `check:boot`, `check:config`, `AGENTS.md` and several docs paths, so it is worth doing when a third demo makes the set obvious rather than on its own
 - [ ] The D1 driver reports itself remote whether it is reaching the real database or wrangler's local emulation, and cannot tell the two apart. So `db:generate` and `db:init` against a local D1 need `--allow-remote`, which is the flag that exists to make a genuinely remote write deliberate
+
+### Test harness follow-ups
+
+- [ ] The test harness leaks its temp database directory when a run is killed. `tests/_support/harness.ts` removes `TEST_DB_DIR` from a `process.on('exit')` handler, which never fires on SIGKILL — so every interrupted vitest run strands an `astromech-test-<pid>-*` directory under `tmpdir()`. 1112 of them had accumulated by 2026-08-28, taking ~3 GB. Needs a signal handler, or a sweep of stale `astromech-test-*` dirs at harness start.
