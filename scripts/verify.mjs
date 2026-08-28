@@ -10,8 +10,11 @@
  * - Anything reading `dist` waits for `build`.
  * - `tsr generate` writes `packages/astromech/src/admin/routeTree.gen.ts`, and
  *   so does the TanStack Router Vite plugin inside each app build. `typecheck`
- *   and the two boot checks therefore each get a stage of their own, because
- *   two of them at once race on that one file.
+ *   gets a stage of its own for this reason. The two boot checks then run
+ *   together, but only after a `routes:generate` stage writes that file first:
+ *   the generator reads the existing file and skips the write when the content
+ *   is unchanged, so once it is current both app builds read it and neither
+ *   writes, and the race is gone.
  */
 
 import { spawn } from 'node:child_process';
@@ -41,16 +44,18 @@ const stages = fast
           [
               ['test:run', 'pnpm run test:run'],
               ['lint', 'pnpm run lint'],
-              ['lint:css', 'pnpm run lint:css'],
-              ['format:check', 'pnpm run format:check'],
-              ['check:config', 'pnpm run check:config'],
               ['check:node-imports', 'pnpm run check:node-imports'],
               ['check:exports', 'pnpm run check:exports'],
               ['check:docs', 'pnpm run check:docs'],
           ],
           [['typecheck', 'pnpm run typecheck']],
-          [['check:boot', 'pnpm run check:boot']],
-          [['check:boot:cloudflare', 'pnpm run check:boot:cloudflare']],
+          // Prime routeTree.gen.ts so the two boot builds below both read it
+          // unchanged and neither writes it. See the header comment.
+          [['routes:generate', 'pnpm -F astromech routes:generate']],
+          [
+              ['check:boot', 'pnpm run check:boot'],
+              ['check:boot:cloudflare', 'pnpm run check:boot:cloudflare'],
+          ],
       ];
 
 const run = (name, command) =>

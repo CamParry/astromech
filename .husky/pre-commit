@@ -1,1 +1,9 @@
 npx lint-staged
+
+# Two whole-repo checks that cost well under a second each, so the hook runs
+# them on every commit rather than wiring them to lint-staged file globs.
+# `check:exports` asserts the exports and publishConfig.exports maps still name
+# the same subpaths; `check:docs` resolves every repo-relative link and
+# backticked path in markdown. Both are otherwise only run in the full gate.
+pnpm run check:exports
+pnpm run check:docs
