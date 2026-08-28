@@ -48,7 +48,7 @@ forms/
   src/index.ts                       definePlugin() — identity + composing the surfaces below
   src/types.ts                       FormsOptions, FORM_FIELD_KINDS, FORMS_PACKAGE
   src/entries/form.ts                the `form` entry type — fields, notifications and spam tabs
-  src/entries/submission.ts          the `submission` entry type — table-backed, API-written
+  src/entries/submission.ts          the `submission` entry type — custom-table, API-written
   src/tables/submissions.ts          definePluginTable — the `submissions` table
   migrations/                        generated — never hand-edited
   src/fields/compile.ts              stored blocks -> core Field[]

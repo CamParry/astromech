@@ -7,7 +7,7 @@
 import type { ResolvedEntryType } from '@/types/index';
 import type { PluginDefinition } from '@/types/plugins';
 import { toResolvedEntryType } from '@/config/entry-types';
-import { BUILT_IN_SUPPORTS } from '@/entries/capabilities';
+import { ALL_CAPABILITIES } from '@/entries/capabilities';
 import { assertNoFieldTypeCollisions } from '@/plugins/runtime/plugin-fields';
 import {
     assertNoPluginCollisions,
@@ -46,7 +46,7 @@ export function resolvePluginEntries(
             types[type] = toResolvedEntryType(
                 `${name}/${type}`,
                 entryType,
-                entryType.repository?.supports ?? BUILT_IN_SUPPORTS
+                entryType.repository?.supports ?? ALL_CAPABILITIES
             );
         }
         pluginEntries[name] = types;

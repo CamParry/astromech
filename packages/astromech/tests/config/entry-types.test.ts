@@ -1,7 +1,7 @@
 import type { EntryType } from '@/types/index';
 import { describe, expect, it } from 'vitest';
 import { assertEntryTypeValid, toResolvedEntryCapabilities } from '@/config/entry-types';
-import { BUILT_IN_SUPPORTS } from '@/entries/capabilities';
+import { ALL_CAPABILITIES } from '@/entries/capabilities';
 
 describe('toResolvedEntryCapabilities — defaults', () => {
     const emptyCfg: EntryType = {
@@ -9,33 +9,33 @@ describe('toResolvedEntryCapabilities — defaults', () => {
         plural: 'Items',
     };
 
-    it('statuses defaults ON with the built-in repository', () => {
-        const caps = toResolvedEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
+    it('statuses defaults ON with the entries-table repository', () => {
+        const caps = toResolvedEntryCapabilities(emptyCfg, ALL_CAPABILITIES);
         expect(caps.statuses).toBe(true);
     });
 
-    it('slug defaults ON with the built-in repository', () => {
-        const caps = toResolvedEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
+    it('slug defaults ON with the entries-table repository', () => {
+        const caps = toResolvedEntryCapabilities(emptyCfg, ALL_CAPABILITIES);
         expect(caps.slug).toBe(true);
     });
 
-    it('trash defaults ON with the built-in repository', () => {
-        const caps = toResolvedEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
+    it('trash defaults ON with the entries-table repository', () => {
+        const caps = toResolvedEntryCapabilities(emptyCfg, ALL_CAPABILITIES);
         expect(caps.trash).toBe(true);
     });
 
     it('versioning defaults OFF', () => {
-        const caps = toResolvedEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
+        const caps = toResolvedEntryCapabilities(emptyCfg, ALL_CAPABILITIES);
         expect(caps.versioning).toBe(false);
     });
 
     it('translatable defaults OFF', () => {
-        const caps = toResolvedEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
+        const caps = toResolvedEntryCapabilities(emptyCfg, ALL_CAPABILITIES);
         expect(caps.translatable).toBe(false);
     });
 
     it('staging defaults OFF', () => {
-        const caps = toResolvedEntryCapabilities(emptyCfg, BUILT_IN_SUPPORTS);
+        const caps = toResolvedEntryCapabilities(emptyCfg, ALL_CAPABILITIES);
         expect(caps.staging).toBe(false);
     });
 });
@@ -47,7 +47,7 @@ describe('toResolvedEntryCapabilities — explicit opt-outs', () => {
             plural: 'Items',
             statuses: false,
         };
-        expect(toResolvedEntryCapabilities(cfg, BUILT_IN_SUPPORTS).statuses).toBe(false);
+        expect(toResolvedEntryCapabilities(cfg, ALL_CAPABILITIES).statuses).toBe(false);
     });
 
     it('slug:false resolves off', () => {
@@ -56,7 +56,7 @@ describe('toResolvedEntryCapabilities — explicit opt-outs', () => {
             plural: 'Items',
             slug: false,
         };
-        expect(toResolvedEntryCapabilities(cfg, BUILT_IN_SUPPORTS).slug).toBe(false);
+        expect(toResolvedEntryCapabilities(cfg, ALL_CAPABILITIES).slug).toBe(false);
     });
 
     it('trash:false resolves off', () => {
@@ -65,7 +65,7 @@ describe('toResolvedEntryCapabilities — explicit opt-outs', () => {
             plural: 'Items',
             trash: false,
         };
-        expect(toResolvedEntryCapabilities(cfg, BUILT_IN_SUPPORTS).trash).toBe(false);
+        expect(toResolvedEntryCapabilities(cfg, ALL_CAPABILITIES).trash).toBe(false);
     });
 });
 
@@ -76,7 +76,7 @@ describe('toResolvedEntryCapabilities — versioning', () => {
             plural: 'Items',
             versioning: true,
         };
-        expect(toResolvedEntryCapabilities(cfg, BUILT_IN_SUPPORTS).versioning).toBe(true);
+        expect(toResolvedEntryCapabilities(cfg, ALL_CAPABILITIES).versioning).toBe(true);
     });
 
     it('versioning:false resolves off', () => {
@@ -85,9 +85,7 @@ describe('toResolvedEntryCapabilities — versioning', () => {
             plural: 'Items',
             versioning: false,
         };
-        expect(toResolvedEntryCapabilities(cfg, BUILT_IN_SUPPORTS).versioning).toBe(
-            false
-        );
+        expect(toResolvedEntryCapabilities(cfg, ALL_CAPABILITIES).versioning).toBe(false);
     });
 
     it('versioning object resolves on', () => {
@@ -96,18 +94,18 @@ describe('toResolvedEntryCapabilities — versioning', () => {
             plural: 'Items',
             versioning: { maxVersions: 10 },
         };
-        expect(toResolvedEntryCapabilities(cfg, BUILT_IN_SUPPORTS).versioning).toBe(true);
+        expect(toResolvedEntryCapabilities(cfg, ALL_CAPABILITIES).versioning).toBe(true);
     });
 });
 
 describe('toResolvedEntryCapabilities — staging', () => {
-    it('staging:true resolves on with the built-in repository', () => {
+    it('staging:true resolves on with the entries-table repository', () => {
         const cfg: EntryType = {
             single: 'Item',
             plural: 'Items',
             staging: true,
         };
-        expect(toResolvedEntryCapabilities(cfg, BUILT_IN_SUPPORTS).staging).toBe(true);
+        expect(toResolvedEntryCapabilities(cfg, ALL_CAPABILITIES).staging).toBe(true);
     });
 
     it('staging:false resolves off', () => {
@@ -116,7 +114,7 @@ describe('toResolvedEntryCapabilities — staging', () => {
             plural: 'Items',
             staging: false,
         };
-        expect(toResolvedEntryCapabilities(cfg, BUILT_IN_SUPPORTS).staging).toBe(false);
+        expect(toResolvedEntryCapabilities(cfg, ALL_CAPABILITIES).staging).toBe(false);
     });
 
     it('staging is independent of versioning (on without versioning)', () => {
@@ -126,7 +124,7 @@ describe('toResolvedEntryCapabilities — staging', () => {
             staging: true,
             versioning: false,
         };
-        const caps = toResolvedEntryCapabilities(cfg, BUILT_IN_SUPPORTS);
+        const caps = toResolvedEntryCapabilities(cfg, ALL_CAPABILITIES);
         expect(caps.staging).toBe(true);
         expect(caps.versioning).toBe(false);
     });
@@ -204,9 +202,7 @@ describe('assertEntryTypeValid — capability mismatch', () => {
             versioning: true,
             translatable: true,
         };
-        expect(() =>
-            assertEntryTypeValid('widget', cfg, BUILT_IN_SUPPORTS)
-        ).not.toThrow();
+        expect(() => assertEntryTypeValid('widget', cfg, ALL_CAPABILITIES)).not.toThrow();
     });
 });
 
@@ -217,9 +213,7 @@ describe('assertEntryTypeValid — titleField', () => {
             plural: 'Items',
             titleField: 'title',
         };
-        expect(() =>
-            assertEntryTypeValid('widget', cfg, BUILT_IN_SUPPORTS)
-        ).not.toThrow();
+        expect(() => assertEntryTypeValid('widget', cfg, ALL_CAPABILITIES)).not.toThrow();
     });
 
     it('false is valid', () => {
@@ -228,9 +222,7 @@ describe('assertEntryTypeValid — titleField', () => {
             plural: 'Items',
             titleField: false,
         };
-        expect(() =>
-            assertEntryTypeValid('widget', cfg, BUILT_IN_SUPPORTS)
-        ).not.toThrow();
+        expect(() => assertEntryTypeValid('widget', cfg, ALL_CAPABILITIES)).not.toThrow();
     });
 
     it('undefined is valid (defaults to title)', () => {
@@ -238,9 +230,7 @@ describe('assertEntryTypeValid — titleField', () => {
             single: 'Item',
             plural: 'Items',
         };
-        expect(() =>
-            assertEntryTypeValid('widget', cfg, BUILT_IN_SUPPORTS)
-        ).not.toThrow();
+        expect(() => assertEntryTypeValid('widget', cfg, ALL_CAPABILITIES)).not.toThrow();
     });
 
     it("'name' throws with descriptive message", () => {
@@ -250,7 +240,7 @@ describe('assertEntryTypeValid — titleField', () => {
             plural: 'Items',
             titleField: 'name',
         } as unknown as EntryType;
-        expect(() => assertEntryTypeValid('widget', cfg, BUILT_IN_SUPPORTS)).toThrow(
+        expect(() => assertEntryTypeValid('widget', cfg, ALL_CAPABILITIES)).toThrow(
             `Astromech entry type "widget": titleField must be 'title' or false (got "name"). A custom title field name is not supported — a type is either titled on \`title\` or titleless.`
         );
     });

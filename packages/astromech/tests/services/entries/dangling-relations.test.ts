@@ -7,7 +7,7 @@
  * its own table rather than in `entries` — must survive.
  */
 
-import type { EntryRepository } from '@/entries/repository/types';
+import type { CustomTableRepository } from '@/entries/repository/table';
 import type {
     AstromechConfig,
     Entry,
@@ -48,7 +48,7 @@ const notesTable = defineTable('test_notes', ({ col }) => ({
  * the hook. A proxy rather than a spread: `tableRepository` is a class instance and
  * its methods live on the prototype.
  */
-function withoutExistingIds(repository: EntryRepository): EntryRepository {
+function withoutExistingIds(repository: CustomTableRepository): CustomTableRepository {
     return new Proxy(repository, {
         get: (target, prop, receiver) =>
             prop === 'existingIds'
@@ -58,9 +58,9 @@ function withoutExistingIds(repository: EntryRepository): EntryRepository {
     });
 }
 
-/** Table-backed entry types: their rows never appear in the `entries` table. */
+/** Custom-table entry types: their rows never appear in the `entries` table. */
 function linksPlugin(): PluginDefinition {
-    const tableBacked = {
+    const customTable = {
         titleField: false as const,
         statuses: false as const,
         slug: false as const,
@@ -75,14 +75,14 @@ function linksPlugin(): PluginDefinition {
                 single: 'Link',
                 plural: 'Links',
                 repository: tableRepository(linksTable),
-                ...tableBacked,
+                ...customTable,
             },
             {
                 type: 'note',
                 single: 'Note',
                 plural: 'Notes',
                 repository: withoutExistingIds(tableRepository(notesTable)),
-                ...tableBacked,
+                ...customTable,
             },
         ],
     };
@@ -233,7 +233,7 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
     });
 
     // The entry write path is transactional — a single update is a batch of one
-    // (0077) — and a table-backed target cannot be read from another snapshot
+    // (0077) — and a custom-table target cannot be read from another snapshot
     // inside that transaction, so its reference stands even once the row is gone.
     it('keeps a reference to a deleted tableRepository-backed row — the write is transactional', async () => {
         const link = await api.create({
@@ -359,7 +359,7 @@ describe('pruneDanglingRelations (directly)', () => {
     // Inside a transaction the registered repository reads a different snapshot,
     // where a row written in this transaction is missing — so it is not read at
     // all and the reference stands.
-    it('keeps a table-backed reference when pruning inside a transaction', async () => {
+    it('keeps a custom-table reference when pruning inside a transaction', async () => {
         const missing = '01JQZZZZZZZZZZZZZZZZZZZZZZ';
 
         const outside = await pruneDanglingRelations(docFields, { link: missing });

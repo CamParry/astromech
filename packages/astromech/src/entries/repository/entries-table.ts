@@ -1,7 +1,7 @@
 /**
- * Built-in entry repository — the default persistence backend. Owns row CRUD,
- * list filters, slug uniquification and the capability groups; policy (validation,
- * hooks, relationships, versioning decisions) stays in the entries service.
+ * The default entry repository — persistence over the shared `entries` table.
+ * Owns row CRUD, list filters, slug uniquification and the capability groups;
+ * policy (validation, hooks, relationships, versioning) stays in the service.
  */
 
 import type { EntryRow } from '../tables';
@@ -27,7 +27,7 @@ import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { existingResourceIds } from '@/database/repository/resource-existence';
 import { entriesTable } from '@/database/tables';
-import { BUILT_IN_SUPPORTS } from '@/entries/capabilities';
+import { ALL_CAPABILITIES } from '@/entries/capabilities';
 import { UnknownSortKeyError, UnknownWhereKeyError } from '../errors';
 import { createVersionRepository } from './versions';
 
@@ -225,10 +225,10 @@ async function populateLocaleSingle(db: Db, row: EntryRow): Promise<Entry> {
 }
 
 /**
- * Build the built-in entry repository, optionally bound to a specific db handle
+ * Build the entries-table repository, optionally bound to a specific db handle
  * and default locale. Unbound it resolves the db per operation via `getDb()`.
  */
-export function createBuiltInEntryRepository(opts?: { db?: Db; defaultLocale?: string }) {
+export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: string }) {
     const dbOverride = opts?.db;
     const defaultLocale = opts?.defaultLocale ?? 'en';
 
@@ -238,7 +238,7 @@ export function createBuiltInEntryRepository(opts?: { db?: Db; defaultLocale?: s
     // as `handle()` does.
     const repository = createRepository(entriesTable, dbOverride);
 
-    const supports: readonly Capability[] = BUILT_IN_SUPPORTS;
+    const supports: readonly Capability[] = ALL_CAPABILITIES;
 
     /** Ids with a row in `entries` — trashed and staged rows included. */
     async function existingIds(ids: string[]): Promise<Set<string>> {

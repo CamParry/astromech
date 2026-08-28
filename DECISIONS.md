@@ -232,6 +232,26 @@ nothing since dependency-cruiser went, and survives only until
 `integrations/astro/vite.ts` stops aliasing `@/` to all of `src/`. Rejected: a
 `@astromech/shared` package, and re-adding lint rules to police the suffix.
 
+**Every entry type persists through a repository, and the default is named for
+its storage.** The default backend is `createEntriesTableRepository` in
+`entries/repository/entries-table.ts`; a plugin gives a type its own table with
+`tableRepository`. "Custom table" is the WordPress term for plugin data outside
+the shared posts table, so it needs no teaching. Rejected: "table-backed type"
+(implies a second kind of thing, when every entry type is backed by a table);
+"built-in repository" ("built-in" means ships-with-core, and both repositories
+ship with core); `default.ts` / `createDefaultEntryRepository` (greps badly and
+collides with default exports, and only reads as "default" from inside the
+registry).
+
+**No custom-built repositories.** `EntryRepository` is an internal seam between
+the entries service and its persistence, not an extension point; `tableRepository`
+is the only supported way to give a type its own storage. `EntryType['repository']`
+is typed to the branded `CustomTableRepository` (the class `tableRepository`
+returns, nominal through a private member), so a structural implementation no
+longer type-checks. Rejected: publishing `EntryRepository` as a public adapter
+surface — a compatibility promise on an internal contract, for a use case nothing
+needs.
+
 ## AI and the assistant
 
 **AI is an optional core capability that hands out a model.** `src/ai/` sits

@@ -139,7 +139,7 @@ describe('SORTABLE_FIELDS on the query string', () => {
     });
 
     it('errors on a field outside the allowlist rather than answering the default order', async () => {
-        // The route forwards the field as given; `entries/repository/built-in.ts`
+        // The route forwards the field as given; `entries/repository/entries-table.ts`
         // holds the allowlist and throws `UnknownSortKeyError` on a miss.
         const unlisted = await app().request('/entries/post?sort=id&dir=asc');
         expect(unlisted.status).toBe(500);

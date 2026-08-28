@@ -16,7 +16,7 @@ redirects/
   src/tables/redirects.ts     definePluginTable — the `redirects` table
   src/tables/index.ts         the ./tables subpath entry (tables only)
   migrations/                 generated — never hand-edited
-  src/entries/redirect.ts     defineEntryType — the table-backed entry type
+  src/entries/redirect.ts     defineEntryType — the custom-table entry type
   src/service/redirects.ts    the public `lookup` method
   src/hooks/slug-change.ts    defineHook — auto-create a redirect on URL change
 ```

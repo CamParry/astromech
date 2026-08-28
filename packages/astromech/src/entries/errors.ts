@@ -163,7 +163,7 @@ export class UnknownWhereKeyError extends Error {
 }
 
 /**
- * Thrown when `entries.query`'s `sort` names a field the built-in repository
+ * Thrown when `entries.query`'s `sort` names a field the entries-table repository
  * cannot order by. Discarding one instead would silently answer in the default
  * `createdAt desc` order.
  */

@@ -14,7 +14,7 @@ every entry in every install held null on both.
 `packages/astromech/src/entries/tables.ts` declares both as
 `col.reference('users')`. `packages/astromech/src/entries/repository/types.ts`
 admits `createdBy` and `updatedBy` on `EntryRow` and on `EntryWrite`, and
-`packages/astromech/src/entries/repository/built-in.ts` forwards
+`packages/astromech/src/entries/repository/entries-table.ts` forwards
 `data.createdBy ?? null` and `data.updatedBy ?? null` into the insert.
 
 `packages/astromech/src/types/domain.ts` carries both on `Entry` as commented-out

@@ -30,7 +30,7 @@ const linksTable = defineTable('test_links', ({ col }) => ({
     updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
 }));
 
-/** `links/link` is table-backed, so it has no relationships predicate to compile. */
+/** `links/link` is a custom table, so it has no relationships predicate to compile. */
 function linksPlugin(): PluginDefinition {
     return {
         package: '@astromech/links',
@@ -308,7 +308,7 @@ describe('where.references validation', () => {
     });
 });
 
-describe('where.references on a table-backed type', () => {
+describe('where.references on a custom-table type', () => {
     it('throws rather than returning unfiltered rows', async () => {
         const target = await api.create({ type: 'post', data: { title: 'Target' } });
         await api.create({

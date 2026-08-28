@@ -99,7 +99,7 @@ is **kept** when the field names no target, when the target names no configured
 entry type, and when the target type is stored in its own table (its rows are
 not in `entries`, so every one of them would look absent).
 
-That last case has a consequence: relations pointing at a table-backed type
+That last case has a consequence: relations pointing at a custom-table type
 accumulate dangling ids until you run `index:rebuild`.
 
 ## Further reading

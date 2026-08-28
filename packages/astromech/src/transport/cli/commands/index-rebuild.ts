@@ -25,8 +25,8 @@ export default defineCommand({
     },
     async run({ args }) {
         // `loadConfig` guards the database and fills the config shim; the
-        // application registers the plugin runtime. Without it a table-backed
-        // plugin entry type resolves to the built-in repository, its rows go
+        // application registers the plugin runtime. Without it a custom-table
+        // plugin entry type resolves to the entries-table repository, its rows go
         // unread, and a rebuild deletes every edge it has.
         await loadConfig(args.config, toAllowRemoteOption(args));
         await createAstromech({ config: await loadRawConfig(args.config) });

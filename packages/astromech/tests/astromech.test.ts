@@ -9,6 +9,7 @@
  */
 
 import type { DB } from '@/database/types';
+import type { CustomTableRepository } from '@/entries/repository/table';
 import type { EntryRepository } from '@/entries/repository/types';
 import type { AstromechConfig, StorageDriver } from '@/types/index';
 import type { Kysely } from 'kysely';
@@ -73,7 +74,9 @@ function makeConfig(getInstance: () => Kysely<DB>): AstromechConfig {
             widget: {
                 single: 'Widget',
                 plural: 'Widgets',
-                repository: throwingRepository,
+                // A structural stub, cast past the `CustomTableRepository` guard:
+                // this suite exercises the registry, not the public config surface.
+                repository: throwingRepository as unknown as CustomTableRepository,
             },
             note: {
                 single: 'Note',
@@ -97,7 +100,7 @@ describe('createAstromech — host entry repository', () => {
         expect(getEntryRepository('widget')).toBe(throwingRepository);
     });
 
-    it('leaves a type without declared repository on the built-in repository', () => {
+    it('leaves a type without declared repository on the entries-table repository', () => {
         expect(getEntryRepository('note')).not.toBe(throwingRepository);
     });
 
@@ -107,7 +110,7 @@ describe('createAstromech — host entry repository', () => {
         );
     });
 
-    it('routes a read for the control type through the built-in repository', async () => {
+    it('routes a read for the control type through the entries-table repository', async () => {
         await expect(entriesService.query({ type: 'note' })).resolves.toBeDefined();
     });
 });

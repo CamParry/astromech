@@ -13,7 +13,7 @@ import { createRelationshipRepository } from '@/database/repository/relationship
 import { qualifyEntryType, resolveEntryType } from '@/entries/entry-types.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { collectRelationshipEdges } from '@/fields/relationship-edges';
-import { getEntryRepository, hasEntryRepositoryOverride } from '../repository/registry';
+import { getEntryRepository, hasCustomTable } from '../repository/registry';
 import { entriesTable } from '../tables';
 
 /**
@@ -49,7 +49,7 @@ export async function collectEntryRelationshipSources(options?: {
 }): Promise<RelationshipIndexSource[]> {
     return [
         ...(await builtInEntrySources(options?.type)),
-        ...(await tableBackedEntrySources(options?.type)),
+        ...(await customTableEntrySources(options?.type)),
     ];
 }
 
@@ -89,11 +89,11 @@ async function builtInEntrySources(type?: string): Promise<RelationshipIndexSour
  * Their rows are not in the `entries` table but they are indexed on write, so
  * leaving them out would report every one of their edges as drift.
  */
-async function tableBackedEntrySources(
+async function customTableEntrySources(
     onlyType?: string
 ): Promise<RelationshipIndexSource[]> {
     const types = configuredEntryTypes()
-        .filter(hasEntryRepositoryOverride)
+        .filter(hasCustomTable)
         .filter((type) => onlyType === undefined || type === onlyType);
 
     const collected: RelationshipIndexSource[] = [];

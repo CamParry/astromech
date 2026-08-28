@@ -1,5 +1,5 @@
 /**
- * Repository-level tests for the built-in entry repository.
+ * Repository-level tests for the entries-table repository.
  *
  * These exercise the persistence contract directly (not through the
  * entries service): base CRUD, list machinery, slug uniquification, and the
@@ -14,21 +14,21 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { encodeWith } from '@/database/codec';
 import { entriesTable } from '@/database/tables';
 import { transaction } from '@/database/transaction';
-import { BUILT_IN_SUPPORTS } from '@/entries/capabilities';
-import { createBuiltInEntryRepository } from '@/entries/repository/built-in';
+import { ALL_CAPABILITIES } from '@/entries/capabilities';
+import { createEntriesTableRepository } from '@/entries/repository/entries-table';
 
-let repository: ReturnType<typeof createBuiltInEntryRepository>;
+let repository: ReturnType<typeof createEntriesTableRepository>;
 let db: Awaited<ReturnType<typeof createTestDb>>;
 
 beforeEach(async () => {
     db = await createTestDb();
     setupTestConfig();
-    repository = createBuiltInEntryRepository();
+    repository = createEntriesTableRepository();
 });
 
 describe('supports', () => {
-    it('declares all built-in capabilities', () => {
-        expect(repository.supports).toEqual(BUILT_IN_SUPPORTS);
+    it('declares all capabilities', () => {
+        expect(repository.supports).toEqual(ALL_CAPABILITIES);
     });
 });
 

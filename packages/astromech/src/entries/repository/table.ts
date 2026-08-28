@@ -106,7 +106,12 @@ class TableRepository implements EntryRepository<EntryRow> {
         return value instanceof Date ? value : new Date(value as string | number);
     }
 
-    uniqueSlug(): Promise<string> {
+    uniqueSlug(
+        _type: string,
+        _locale: string,
+        _baseSlug: string,
+        _excludeId?: string
+    ): Promise<string> {
         throw new Error(
             'tableRepository does not support slugs; disable the slug capability for this entry type'
         );
@@ -219,7 +224,7 @@ class TableRepository implements EntryRepository<EntryRow> {
 
     /**
      * `params.where` → the shared `where` DSL. `locale` is dropped because a
-     * table-backed entry type has no locale concept. `references` is refused
+     * custom-table entry type has no locale concept. `references` is refused
      * outright rather than dropped — silently ignoring it would return every row.
      */
     private whereFilters(params: ListParams): Where<Table> {
@@ -343,6 +348,8 @@ class TableRepository implements EntryRepository<EntryRow> {
 export function tableRepository(
     table: Table,
     options?: TableRepositoryOptions
-): EntryRepository {
-    return new TableRepository(table, options) as EntryRepository;
+): TableRepository {
+    return new TableRepository(table, options);
 }
+
+export type { TableRepository as CustomTableRepository };

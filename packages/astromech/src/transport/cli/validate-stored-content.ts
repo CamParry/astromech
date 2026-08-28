@@ -13,10 +13,7 @@ import { createRepository } from '@/database/repository/create-repository';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { qualifyEntryType, resolveEntryType } from '@/entries/entry-types.shared';
 import { createEntryLookups } from '@/entries/lookups';
-import {
-    getEntryRepository,
-    hasEntryRepositoryOverride,
-} from '@/entries/repository/registry';
+import { getEntryRepository, hasCustomTable } from '@/entries/repository/registry';
 import { entriesTable } from '@/entries/tables';
 import { entryValidationMode } from '@/entries/validation-mode.shared';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
@@ -87,7 +84,7 @@ async function checkEntries(
         });
     }
 
-    for (const typeName of tableBackedEntryTypes(type)) {
+    for (const typeName of customTableEntryTypes(type)) {
         const { data } = await getEntryRepository(typeName).list({
             type: typeName,
             limit: 'all',
@@ -98,8 +95,8 @@ async function checkEntries(
             await checkEntryRow(report, {
                 id: record.id,
                 type: typeName,
-                // A table-backed repository need not be locale-aware; the fallback
-                // matches the built-in repository's own.
+                // A custom-table repository need not be locale-aware; the fallback
+                // matches the entries-table repository's own.
                 locale: record.locale ?? getConfig().defaultLocale ?? 'en',
                 status: record.status,
                 fields: record.fields,
@@ -158,7 +155,7 @@ async function checkEntryRow(
 }
 
 /** Entry types whose rows live outside the `entries` table, plugin types qualified. */
-function tableBackedEntryTypes(type: string | undefined): string[] {
+function customTableEntryTypes(type: string | undefined): string[] {
     const config = getConfig();
     const configured = [
         ...Object.keys(config.entries),
@@ -167,7 +164,7 @@ function tableBackedEntryTypes(type: string | undefined): string[] {
         ),
     ];
     return configured
-        .filter(hasEntryRepositoryOverride)
+        .filter(hasCustomTable)
         .filter((candidate) => type === undefined || candidate === type);
 }
 

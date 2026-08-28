@@ -6,7 +6,7 @@
  * (versioning OFF) so the conditional backup branch is covered both ways.
  *
  * Repository-level concerns (partial slug index, list exclusion) are pinned in
- * tests/entries/repository/built-in.test.ts. These tests own the service policy:
+ * tests/entries/repository/entries-table.test.ts. These tests own the service policy:
  * content/relation copy, the StagedEntryExistsError gate, merge ordering, and
  * the capability assertions. The staging methods live on the concrete service
  * object (EntriesService & EntriesStagingApi), so we import it directly rather than

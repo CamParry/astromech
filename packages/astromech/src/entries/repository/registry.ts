@@ -1,29 +1,29 @@
 /**
  * Entry repository registry: a type resolves to its own repository when one is
- * mounted via `setEntryRepository`, else the shared built-in singleton. Both
+ * mounted via `setEntryRepository`, else the shared entries-table repository. Both
  * registries live on `globalThis` — module-level state duplicates per bundle chunk.
  */
 
 import type { EntryRepository } from './types';
 import { createKeyedRegistry, createRegistry } from '@/registry';
-import { createBuiltInEntryRepository } from './built-in';
+import { createEntriesTableRepository } from './entries-table';
 
-const builtIn = createRegistry<EntryRepository>('entryRepositoryBuiltIn', {
+const entriesTable = createRegistry<EntryRepository>('entriesTableRepository', {
     required: false,
 });
 const overrides = createKeyedRegistry<EntryRepository>('entryRepositoryOverrides');
 
-/** The shared built-in repository, constructed on first use. */
-function getBuiltIn(): EntryRepository {
-    const existing = builtIn.get();
+/** The shared entries-table repository, constructed on first use. */
+function getEntriesTable(): EntryRepository {
+    const existing = entriesTable.get();
     if (existing) return existing;
-    const created = createBuiltInEntryRepository();
-    builtIn.set(created);
+    const created = createEntriesTableRepository();
+    entriesTable.set(created);
     return created;
 }
 
 export function getEntryRepository(type: string): EntryRepository {
-    return overrides.get(type) ?? getBuiltIn();
+    return overrides.get(type) ?? getEntriesTable();
 }
 
 export function setEntryRepository(type: string, repository: EntryRepository): void {
@@ -31,11 +31,11 @@ export function setEntryRepository(type: string, repository: EntryRepository): v
 }
 
 /**
- * True when a type has a repository of its own rather than the shared built-in one.
- * Callers that read the `entries` table directly (the relationships rebuild) use
- * it to tell which types have rows there at all.
+ * True when a type has rows outside the shared `entries` table — its own custom
+ * table via `tableRepository`. Callers that read the `entries` table directly
+ * (the relationships rebuild) use it to tell which types have rows there at all.
  */
-export function hasEntryRepositoryOverride(type: string): boolean {
+export function hasCustomTable(type: string): boolean {
     return overrides.has(type);
 }
 

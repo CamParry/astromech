@@ -11,18 +11,18 @@ import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { entriesTable } from '@/database/tables';
 import { trashPurgeJob } from '@/entries/jobs/trash-purge';
-import { createBuiltInEntryRepository } from '@/entries/repository/built-in';
+import { createEntriesTableRepository } from '@/entries/repository/entries-table';
 import { createEntryMaintenanceRepository } from '@/entries/repository/maintenance';
 
 let db: Db;
 let config: ResolvedConfig;
-let entryRepository: ReturnType<typeof createBuiltInEntryRepository>;
+let entryRepository: ReturnType<typeof createEntriesTableRepository>;
 let maintenance: ReturnType<typeof createEntryMaintenanceRepository>;
 
 beforeEach(async () => {
     db = await createTestDb();
     config = setupTestConfig();
-    entryRepository = createBuiltInEntryRepository();
+    entryRepository = createEntriesTableRepository();
     maintenance = createEntryMaintenanceRepository(db);
 });
 

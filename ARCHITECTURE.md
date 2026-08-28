@@ -133,7 +133,7 @@ unrelated checks are both spelled `validate`: a field type's own, on its
 type, `media`, `users` or a settings page. The Zod parse over request input
 around the fields is `parseInput`, in `errors/validation.ts`.
 
-`TERMINOLOGY.md` defines the vocabulary (entry vs table-backed type, relation
+`TERMINOLOGY.md` defines the vocabulary (entry vs custom-table type, relation
 vs relationship, staging, preview token).
 
 ## Database and migrations

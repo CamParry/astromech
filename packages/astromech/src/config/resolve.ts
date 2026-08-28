@@ -15,7 +15,7 @@ import { assertPluginsValid, resolvePluginEntries } from '@/config/plugin-entrie
 import { resolvePublicSettingKeys } from '@/config/public-settings';
 import { assertMediaAccessCompatible } from '@/config/validate/media-access';
 import { assertQualifiedRelationshipTargets } from '@/config/validate/relationships';
-import { BUILT_IN_SUPPORTS } from '@/entries/capabilities';
+import { ALL_CAPABILITIES } from '@/entries/capabilities';
 import { resolveRoles } from '@/permissions/roles';
 
 /** Resolve the config with defaults and plugin merging. */
@@ -28,7 +28,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
         entries[typeKey] = toResolvedEntryType(
             typeKey,
             entryType,
-            entryType.repository?.supports ?? BUILT_IN_SUPPORTS
+            entryType.repository?.supports ?? ALL_CAPABILITIES
         );
     }
 

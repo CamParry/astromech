@@ -68,7 +68,7 @@ export type ListParams = {
     search?: string | undefined;
     /**
      * Fields to apply `search` over; honored by repositories that map fields to
-     * columns (tableRepository); the built-in repository ignores it (title search).
+     * columns (tableRepository); the entries-table repository ignores it (title search).
      */
     searchFields?: readonly string[] | undefined;
     where?: WhereFilters | undefined;

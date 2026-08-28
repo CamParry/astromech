@@ -1,3 +1,4 @@
+import type { CustomTableRepository } from '@/entries/repository/table';
 import type { EntryRepository } from '@/entries/repository/types';
 import type {
     AstromechConfig,
@@ -51,7 +52,11 @@ const baseConfig = (plugins: PluginDefinition[]): AstromechConfig => ({
     plugins,
 });
 
-/** A repository that supports nothing (Phase 3 minimal single-table style). */
+/**
+ * A repository that supports nothing (minimal single-table style). Structural,
+ * so the `repository` assignments cast past the `CustomTableRepository` guard —
+ * this suite exercises `resolveConfig`, not the public config surface.
+ */
 const emptyRepository = (): EntryRepository => ({
     supports: [],
     list: async () => ({ data: [], total: 0 }),
@@ -111,7 +116,8 @@ describe('resolveConfig pluginEntries', () => {
                         {
                             ...entryType('Item'),
                             type: 'item',
-                            repository: emptyRepository(),
+                            repository:
+                                emptyRepository() as unknown as CustomTableRepository,
                         },
                     ],
                 },
@@ -134,7 +140,8 @@ describe('resolveConfig pluginEntries', () => {
                                 ...entryType('Item'),
                                 type: 'item',
                                 versioning: true,
-                                repository: emptyRepository(),
+                                repository:
+                                    emptyRepository() as unknown as CustomTableRepository,
                             },
                         ],
                     },

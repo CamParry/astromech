@@ -45,27 +45,28 @@ repositories.
 
 ## The work
 
-- [ ] Rename `packages/astromech/src/entries/repository/built-in.ts` to
-      `entries-table.ts`; `createBuiltInEntryRepository` →
+- [x] Rename the default-repository file to
+      `packages/astromech/src/entries/repository/entries-table.ts`;
+      `createBuiltInEntryRepository` →
       `createEntriesTableRepository`. In `registry.ts`: local `getBuiltIn` →
       `getEntriesTable`, globalThis key `entryRepositoryBuiltIn` →
       `entriesTableRepository` (process-local, nothing persists it), and the
       header comment rewritten in the default/entries-table vocabulary.
-- [ ] `BUILT_IN_SUPPORTS` → `ALL_CAPABILITIES` in
+- [x] `BUILT_IN_SUPPORTS` → `ALL_CAPABILITIES` in
       `entries/capabilities.ts` and its use in `config/resolve.ts`.
-- [ ] `hasEntryRepositoryOverride` → `hasCustomTable` in
+- [x] `hasEntryRepositoryOverride` → `hasCustomTable` in
       `entries/repository/registry.ts` and callers:
       `entries/internal/relationships.ts`,
       `entries/internal/dangling-relations.ts`,
       `transport/cli/validate-stored-content.ts`.
-- [ ] `tableBackedEntrySources` → `customTableEntrySources`
+- [x] `tableBackedEntrySources` → `customTableEntrySources`
       (`entries/internal/relationships.ts`); `tableBackedEntryTypes` →
       `customTableEntryTypes` (`transport/cli/validate-stored-content.ts`).
-- [ ] Narrow the public surface: export the branded type of
+- [x] Narrow the public surface: export the branded type of
       `tableRepository`'s return (a class with a private member is enough for
       nominality), type `EntryType['repository']` with it in
       `types/config.ts`, and keep `EntryRepository` unexported.
-- [ ] Prose sweep for "table-backed" and repository "built-in": comments in
+- [x] Prose sweep for "table-backed" and repository "built-in": comments in
       `entries/repository/table.ts`, `transport/cli/commands/index-rebuild.ts`,
       `transport/cli/commands/validate.ts`, the four test files that mention
       `tableBacked`, `packages/plugins/redirects/README.md`,
@@ -74,14 +75,14 @@ repositories.
       `apps/docs/README.md`, `apps/docs/content/relationships.md`,
       `ARCHITECTURE.md` (the vocabulary line), and the `types/config.ts`
       doc comments that say "built-in repository".
-- [ ] `TERMINOLOGY.md`: replace the "Table-backed type" entry with a "Custom
+- [x] `TERMINOLOGY.md`: replace the "Table-backed type" entry with a "Custom
       table" entry stating the model — every entry type persists through a
       repository; the default is the shared `entries` table; a custom table
       shares the entries interface and none of the internals.
-- [ ] `DECISIONS.md`: one entry for the vocabulary (what "custom table" and
+- [x] `DECISIONS.md`: one entry for the vocabulary (what "custom table" and
       "entries-table repository" beat and why), one for "no custom-built
       repositories".
-- [ ] Gate, plus `pnpm run check:node-imports` (the narrowed
+- [x] Gate, plus `pnpm run check:node-imports` (the narrowed
       `EntryType['repository']` type is plugin-facing).
 
 ## Out of scope, flagged for discussion

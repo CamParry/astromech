@@ -3,8 +3,8 @@
  *
  * The interesting case is a source whose entry type is NOT the target's: it
  * lives in that type's own repository, so loading it through the target's
- * repository finds nothing. `links/link` is table-backed, which makes the two
- * repositories genuinely different rather than the same built-in singleton.
+ * repository finds nothing. `links/link` is a custom table, which makes the two
+ * repositories genuinely different rather than the same entries-table singleton.
  */
 
 import type { AstromechConfig, PluginDefinition } from '@/types/index';

@@ -262,7 +262,7 @@ describe('list – sort', () => {
     it('throws on a sort key that is not a column', async () => {
         await repository.create({ type: 'link', fields: { from: '/a', to: '/x' } });
 
-        // Matches built-in repository: a typo must not quietly answer the default
+        // Matches the entries-table repository: a typo must not quietly answer the default
         // order — see `DECISIONS.md`.
         await expect(
             repository.list({ type: 'link', limit: 'all', sort: { nope: 'asc' } })

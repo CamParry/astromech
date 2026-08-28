@@ -67,7 +67,8 @@ then look at how they're put together:
 
 - `@astromech/redirects` — a plugin with its own database table, an entry
   type, a public service lookup method, and an optional hook.
-- `@astromech/forms` — two entry types (one core-stored, one table-backed),
+- `@astromech/forms` — two entry types (one stored in the shared entries table,
+  one custom-table),
   public service methods an anonymous caller reaches, gating hooks, and two
   provider seams (notification kinds and spam services) a site can extend.
 - `@astromech/seo` — a custom field, a field-section helper you compose

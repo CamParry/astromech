@@ -17,7 +17,7 @@ import {
     collectRelationshipEdges,
 } from '@/fields/relationship-edges';
 import { RESERVED_KEY } from '@/fields/reserved-keys';
-import { getEntryRepository, hasEntryRepositoryOverride } from '../repository/registry';
+import { getEntryRepository, hasCustomTable } from '../repository/registry';
 
 const TARGET_KINDS = ['entry', 'user', 'media'] as const satisfies readonly TargetKind[];
 
@@ -127,7 +127,7 @@ function isPrunable(declaration: RelationshipDeclaration): boolean {
     const target = declaration.target;
     if (target === undefined || target === '') return false;
     if (!resolveEntryType(getConfig(), target)) return false;
-    if (!hasEntryRepositoryOverride(target)) return true;
+    if (!hasCustomTable(target)) return true;
     return getEntryRepository(target).existingIds !== undefined;
 }
 
@@ -140,7 +140,7 @@ function repositoryReadsByPath(
         const target = declaration.target;
         if (declaration.targetKind !== 'entry') continue;
         if (target === undefined || target === '') continue;
-        if (!hasEntryRepositoryOverride(target)) continue;
+        if (!hasCustomTable(target)) continue;
         const repository = getEntryRepository(target);
         if (repository.existingIds === undefined) continue;
         const reads =

@@ -57,7 +57,7 @@ const linksTable = defineTable('test_links', ({ col }) => ({
     updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
 }));
 
-/** A table-backed entry type: its rows live outside the `entries` table. */
+/** A custom-table entry type: its rows live outside the `entries` table. */
 function linksPlugin(): PluginDefinition {
     return {
         package: '@astromech/links',
@@ -163,7 +163,7 @@ async function createMedia(filename = 'a.png'): Promise<string> {
 /**
  * One of every source kind, written through the service write paths: an entry
  * with a flat relation plus a nested multi-relation and a nested media
- * relation, a table-backed entry, a user, and a media record.
+ * relation, a custom-table entry, a user, and a media record.
  */
 async function seedContent(): Promise<{ article: string; post: string; media: string }> {
     const post = await api.create({ type: 'post', data: { title: 'Post' } });
@@ -220,7 +220,7 @@ describe('checkRelationshipIndex', () => {
         const report = await checkRelationshipIndex();
 
         expect(driftCount(report)).toBe(0);
-        // Guard against a vacuous pass: every source kind, the table-backed type
+        // Guard against a vacuous pass: every source kind, the custom-table type
         // included, must actually have contributed rows for the parity to mean
         // anything.
         const rows = await storedRows();

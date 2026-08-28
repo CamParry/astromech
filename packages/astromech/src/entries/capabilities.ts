@@ -10,8 +10,8 @@ export type Capability =
     | 'trash'
     | 'staging';
 
-/** All capabilities supported by the built-in repository. */
-export const BUILT_IN_SUPPORTS: readonly Capability[] = [
+/** Every capability. The entries-table repository supports all of them. */
+export const ALL_CAPABILITIES: readonly Capability[] = [
     'statuses',
     'slug',
     'translatable',

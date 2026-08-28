@@ -191,7 +191,7 @@ export type EntriesService = {
     }): Promise<IncomingRelationship[]>;
 
     // Forward versioning (staged entries) — all take the *canonical* entry id.
-    // Require the `staging` capability (built-in repository) on the type; the
+    // Require the `staging` capability (entries-table repository) on the type; the
     // service throws otherwise.
 
     /** Stage a change: copy the canonical's content into a new linked row.

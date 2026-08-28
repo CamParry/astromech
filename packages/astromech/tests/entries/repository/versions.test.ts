@@ -1,24 +1,24 @@
 /**
  * Repository-level tests for `createVersionRepository`. The CRUD/list/latestNumber
- * surface is already exercised through `createBuiltInEntryRepository.versions` in
- * `built-in.test.ts`; this file covers `deleteExcess`, which the built-in
- * wrapper does not expose.
+ * surface is already exercised through `createEntriesTableRepository.versions` in
+ * `entries-table.test.ts`; this file covers `deleteExcess`, which the
+ * entries-table wrapper does not expose.
  */
 
 import type { Db } from '@/database/types';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createBuiltInEntryRepository } from '@/entries/repository/built-in';
+import { createEntriesTableRepository } from '@/entries/repository/entries-table';
 import { createVersionRepository } from '@/entries/repository/versions';
 
 let db: Db;
-let entryRepository: ReturnType<typeof createBuiltInEntryRepository>;
+let entryRepository: ReturnType<typeof createEntriesTableRepository>;
 let versionRepository: ReturnType<typeof createVersionRepository>;
 
 beforeEach(async () => {
     db = await createTestDb();
     setupTestConfig();
-    entryRepository = createBuiltInEntryRepository();
+    entryRepository = createEntriesTableRepository();
     versionRepository = createVersionRepository(db);
 });
 
