@@ -48,7 +48,7 @@ export async function collectEntryRelationshipSources(options?: {
     type?: string;
 }): Promise<RelationshipIndexSource[]> {
     return [
-        ...(await builtInEntrySources(options?.type)),
+        ...(await entriesTableEntrySources(options?.type)),
         ...(await customTableEntrySources(options?.type)),
     ];
 }
@@ -69,7 +69,9 @@ function entryEdges(type: string, fields: JsonObject): RelationshipEdge[] | null
  * `repository.list()`: the list where-clause excludes staged rows unconditionally
  * and trashed rows by default, and the rebuild needs both.
  */
-async function builtInEntrySources(type?: string): Promise<RelationshipIndexSource[]> {
+async function entriesTableEntrySources(
+    type?: string
+): Promise<RelationshipIndexSource[]> {
     const rows = await createRepository(entriesTable).findMany({
         where: type !== undefined ? { type } : {},
     });

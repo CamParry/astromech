@@ -1,6 +1,6 @@
 /**
  * Version repository — CRUD for entry version-history snapshots. Wrapped by the
- * built-in entry repository's `versions` capability group.
+ * entries-table repository's `versions` capability group.
  */
 
 import type { EntryVersionRow, NewEntryVersionRow } from '../tables';

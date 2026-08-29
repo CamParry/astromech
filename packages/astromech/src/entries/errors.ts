@@ -137,7 +137,7 @@ export class RelationshipFilterUnsupportedError extends Error {
         super(
             `Entry type '${entryType}' is backed by tableRepository, which cannot ` +
                 `filter on the relationships index. \`where: { references }\` ` +
-                `requires the built-in entry repository.`
+                `requires the entries-table repository.`
         );
         this.name = 'RelationshipFilterUnsupportedError';
         this.entryType = entryType;
