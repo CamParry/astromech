@@ -152,10 +152,12 @@ requests because uploads sit outside the content machinery.
 
 ## Interactions
 
-- `custom-table-naming.md` should land first (this file is written in its
-  vocabulary). `custom-table-capabilities.md` is unaffected: plugin custom
-  tables still derive trash/statuses/slug from columns and still don't get
-  translation — plugin data needing it belongs in the entries table.
+- This file is written in the custom-table vocabulary (landed in
+  `roadmap/completed/custom-table-naming.md`). Plugin custom tables carry no
+  entry capabilities: `tableRepository` declares `supports = []`, so trash,
+  statuses, slug and translation are all off, and plugin data needing them
+  belongs in the entries table. The open relations question is tracked in
+  `custom-table-relations.md`.
 - `content-module-symmetry.md` asks which differences between the five
   content modules are design; this file is most of the answer (users and
   media keep services and identity tables, lose their bespoke document
