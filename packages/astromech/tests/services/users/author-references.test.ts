@@ -10,11 +10,7 @@ import type { Db } from '@/database/types';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createRepository } from '@/database/repository/create-repository';
-import {
-    entriesTable,
-    entryPreviewTokensTable,
-    entryVersionsTable,
-} from '@/database/tables';
+import { entriesTable, entryContentTable, entryVersionsTable } from '@/database/tables';
 import { usersService } from '@/users/service';
 
 let db: Db;
@@ -30,10 +26,16 @@ describe('deleteUser author-reference clearing', () => {
         const other = await createTestUser(db, { name: 'Other', email: 'o@test.dev' });
 
         const entries = createRepository(entriesTable, db);
+        const contents = createRepository(entryContentTable, db);
         const versions = createRepository(entryVersionsTable, db);
-        const tokens = createRepository(entryPreviewTokensTable, db);
 
         const entry = await entries.create({
+            type: 'post',
+            createdBy: author.id,
+            updatedBy: author.id,
+        });
+        const content = await contents.create({
+            entryId: entry.id,
             type: 'post',
             locale: 'en',
             title: 'Authored',
@@ -41,18 +43,19 @@ describe('deleteUser author-reference clearing', () => {
             updatedBy: author.id,
         });
         const version = await versions.create({
-            entryId: entry.id,
-            versionNumber: 1,
+            contentId: content.id,
+            version: 1,
             title: 'Authored',
             fields: {},
             createdBy: author.id,
         });
-        const token = await tokens.create({
-            entryId: entry.id,
-            token: 'secret',
-            createdBy: author.id,
-        });
         const otherEntry = await entries.create({
+            type: 'post',
+            createdBy: other.id,
+            updatedBy: other.id,
+        });
+        const otherContent = await contents.create({
+            entryId: otherEntry.id,
             type: 'post',
             locale: 'en',
             title: 'Other',
@@ -66,15 +69,20 @@ describe('deleteUser author-reference clearing', () => {
             createdBy: null,
             updatedBy: null,
         });
-        expect(await versions.findOne({ id: version.id })).toMatchObject({
+        expect(await contents.findOne({ id: content.id })).toMatchObject({
             createdBy: null,
+            updatedBy: null,
         });
-        expect(await tokens.findOne({ id: token.id })).toMatchObject({
+        expect(await versions.findOne({ id: version.id })).toMatchObject({
             createdBy: null,
         });
 
         // A different user's authorship is untouched.
         expect(await entries.findOne({ id: otherEntry.id })).toMatchObject({
+            createdBy: other.id,
+            updatedBy: other.id,
+        });
+        expect(await contents.findOne({ id: otherContent.id })).toMatchObject({
             createdBy: other.id,
             updatedBy: other.id,
         });

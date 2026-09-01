@@ -7,14 +7,15 @@ import { snapshotVersion } from '../../internal/versions';
 import { getEntryRepository } from '../../repository/registry';
 
 /**
- * Restores an entry to one of its saved versions: overwrites the row with the
- * version's title, slug, and fields. Throws if the version does not exist or
- * belongs to another entry.
+ * Restores one locale of an entry to one of its saved versions: overwrites the
+ * content row with the version's title, slug, and fields. Throws if the version
+ * does not exist or belongs to another locale.
  */
 export async function restoreEntryVersion(params: {
     type: string;
     id: string;
     versionId: string;
+    locale?: string;
 }): Promise<Entry> {
     const { type, id, versionId } = params;
 
@@ -23,12 +24,13 @@ export async function restoreEntryVersion(params: {
     // The guard's narrowing does not survive into the transaction closure below.
     const versions = repository.versions;
 
+    const currentEntry = await getEntryOfType(repository, type, id, params.locale);
+
     const version = await versions.get(versionId);
-    if (!version || version.entryId !== id) {
+    if (!version || version.contentId !== currentEntry.contentId) {
         throw new Error('Version not found');
     }
 
-    const currentEntry = await getEntryOfType(repository, type, id);
     const slug = await uniqueSlugIfChanged({
         repository,
         type,
@@ -42,11 +44,14 @@ export async function restoreEntryVersion(params: {
     // and its relationship index out of step.
     const updated = await transaction(async () => {
         await snapshotVersion(versions, currentEntry);
-        const row = await repository.update(id, {
-            title: version.title,
-            slug: slug ?? currentEntry.slug,
-            fields: restoredFields,
-        });
+        const row = await repository.update(
+            { id, locale: currentEntry.locale },
+            {
+                title: version.title,
+                slug: slug ?? currentEntry.slug,
+                fields: restoredFields,
+            }
+        );
         await indexEntryRelationships(row, restoredFields, type);
         return row;
     });

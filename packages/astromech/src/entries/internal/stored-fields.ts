@@ -1,10 +1,11 @@
 /**
- * The values an entry write stores: a pre-step (inherit the locale group's
- * shared fields, or merge the patch over the current row), then the field
- * parse, then a prune of dead relation ids.
+ * The values an entry write stores: a pre-step (inherit the entry's shared
+ * fields, or merge the patch over the current row), then the field parse, then
+ * a prune of dead relation ids.
  */
 
-import type { EntryRepository, EntryRow } from '../repository/types';
+import type { EntryRepository } from '../repository/types';
+import type { EntryRecord } from './records';
 import type { Field } from '@/types/fields';
 import type { Entry, EntryStatus, JsonObject, ResolvedEntryType } from '@/types/index';
 import { flattenEntryFields } from '@/fields/flatten';
@@ -28,14 +29,15 @@ export type StoredFieldsInput =
           entryType: ResolvedEntryType;
           values: Record<string, unknown>;
           locale: string;
-          localeGroup: string | undefined;
+          /** The entry a new translation belongs to; absent on a fresh create. */
+          entryId: string | undefined;
           status: EntryStatus;
       }
     | {
           kind: 'update';
           repository: EntryRepository;
           entryType: ResolvedEntryType;
-          currentEntry: Entry;
+          currentEntry: EntryRecord;
           patch: Record<string, unknown>;
           patchedFieldNames: string[];
           status: EntryStatus | undefined;
@@ -46,8 +48,8 @@ export type StoredFieldsInput =
           /** Absent when the canonical's type is no longer configured. */
           entryType: ResolvedEntryType | undefined;
           type: string;
-          canonical: Entry;
-          staged: EntryRow;
+          canonical: EntryRecord;
+          staged: EntryRecord;
       };
 
 /**
@@ -104,14 +106,15 @@ async function prepareWrite(
     definitions: Field[]
 ): Promise<PreparedWrite> {
     if (input.kind === 'create') {
-        const { repository, entryType, localeGroup } = input;
+        const { repository, entryType } = input;
         return {
             values: await inheritSharedFields({
                 repository,
                 entryType,
                 values: input.values,
                 definitions,
-                localeGroup,
+                entryId: input.entryId,
+                locale: input.locale,
             }),
             type: entryType.id,
             locale: input.locale,
@@ -121,13 +124,7 @@ async function prepareWrite(
     }
 
     if (input.kind === 'update') {
-        const { repository, entryType, currentEntry } = input;
-        const excludeId = await getUniquenessExcludeIds({
-            repository,
-            entryType,
-            currentEntry,
-            definitions,
-        });
+        const { entryType, currentEntry } = input;
         return {
             // A patch, not a replacement: an omitted field keeps its stored value, an
             // explicit `null` stores null, and an array or container value replaces
@@ -139,7 +136,10 @@ async function prepareWrite(
             // editing an already-published entry still enforces completeness.
             status: input.status ?? currentEntry.status,
             record: currentEntry,
-            excludeId,
+            // The entry's own row is the only one the uniqueness scan must
+            // ignore: its staged copy shares its id and `list` excludes staged
+            // rows anyway.
+            excludeId: [currentEntry.id],
             coerceOnly: new Set(input.patchedFieldNames),
         };
     }
@@ -151,37 +151,6 @@ async function prepareWrite(
         locale: canonical.locale,
         status: canonical.status,
         record: canonical,
-        // Two rows hold this content right now and both must be invisible to
-        // the uniqueness scan: the canonical (about to be overwritten with
-        // it) and the staged row (about to be deleted). Excluding only one
-        // makes every `unique` field collide with its own other copy.
-        excludeId: [canonical.id, staged.id],
+        excludeId: [canonical.id],
     };
-}
-
-/**
- * Ids a unique-field scan must ignore: the entry itself, plus its staged copy
- * or canonical, which are one logical entry as far as uniqueness goes. Only
- * looked up when the type can stage and some field is actually unique.
- */
-async function getUniquenessExcludeIds(params: {
-    repository: EntryRepository;
-    entryType: ResolvedEntryType;
-    currentEntry: Entry;
-    definitions: Field[];
-}): Promise<string[]> {
-    const { repository, entryType, currentEntry, definitions } = params;
-    const excludeIds = [currentEntry.id];
-
-    const canStage = entryType.capabilities.staging === true;
-    const hasUniqueField = definitions.some((field) =>
-        field.validation?.some((rule) => 'unique' in rule)
-    );
-    if (!canStage || !hasUniqueField) return excludeIds;
-
-    const paired =
-        currentEntry.stagedFor ??
-        (await repository.staging?.getByCanonical(currentEntry.id))?.id;
-    if (paired) excludeIds.push(paired);
-    return excludeIds;
 }

@@ -1,6 +1,6 @@
 /**
- * Relationship indexing (entries policy): derive an entry's edges from the field
- * data just written and replace its rows in the index, plus the rebuild-side
+ * Relationship indexing (entries policy): derive an entry's edges from the
+ * content it now holds and replace its rows in the index, plus the rebuild-side
  * collector that enumerates every entry as a source.
  */
 
@@ -10,39 +10,39 @@ import type { JsonObject } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
+import { entriesTable, entryContentTable } from '@/database/tables';
 import { qualifyEntryType, resolveEntryType } from '@/entries/entry-types.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { collectRelationshipEdges } from '@/fields/relationship-edges';
 import { getEntryRepository, hasCustomTable } from '../repository/registry';
-import { entriesTable } from '../tables';
 
 /**
- * Re-index one entry. `fields` must be post-`parseFields` values — item ids
- * are minted during that pass, and instance paths address nothing without them.
+ * Re-index one entry. The index is keyed on the entry, so every locale it holds
+ * contributes: a write to one locale re-reads the rest rather than replacing
+ * their edges with its own.
  */
 export async function indexEntryRelationships(
-    entry: { id: string; stagedFor?: string | null },
+    entry: { id: string },
     fields: JsonObject,
     type: string
 ): Promise<void> {
     const edges = entryEdges(type, fields);
     if (edges === null) return;
 
+    // A custom-table type has no `entry_content` rows: its single row is the
+    // whole entry, so the fields just written are all there is to index.
+    const all = hasCustomTable(type) ? edges : await storedEntryEdges(entry.id, type);
+
     await createRelationshipRepository().replaceForSource(
-        {
-            id: entry.id,
-            kind: 'entry',
-            type,
-            staged: entry.stagedFor != null,
-        },
-        edges
+        { id: entry.id, kind: 'entry', type, staged: false },
+        all
     );
 }
 
 /**
- * Every entry that could hold a relationship, with the edges its stored field
- * data holds: all types, all locales, trashed and staged rows included. Never
- * re-derive from raw input — item ids are minted by `parseFields`.
+ * Every entry that could hold a relationship, with the edges its stored content
+ * holds: all types, all locales, trashed rows included. Never re-derive from raw
+ * input — item ids are minted by `parseFields`.
  */
 export async function collectEntryRelationshipSources(options?: {
     type?: string;
@@ -65,6 +65,34 @@ function entryEdges(type: string, fields: JsonObject): RelationshipEdge[] | null
 }
 
 /**
+ * The edges every content row of one entry holds, deduplicated. Staged rows
+ * count: a pending merge that references something is a reason not to delete it.
+ */
+async function storedEntryEdges(
+    entryId: string,
+    type: string
+): Promise<RelationshipEdge[]> {
+    const rows = await createRepository(entryContentTable).findMany({
+        where: { entryId },
+    });
+    return dedupeEdges(
+        rows.flatMap((row) => entryEdges(type, (row.fields ?? {}) as JsonObject) ?? [])
+    );
+}
+
+/**
+ * One edge per (instancePath, target): two locales holding the same reference
+ * are one row, and the index's primary key would reject the second.
+ */
+function dedupeEdges(edges: RelationshipEdge[]): RelationshipEdge[] {
+    const byKey = new Map<string, RelationshipEdge>();
+    for (const edge of edges) {
+        byKey.set(`${edge.instancePath}\0${edge.targetKind}\0${edge.targetId}`, edge);
+    }
+    return Array.from(byKey.values());
+}
+
+/**
  * Sources from the `entries` table, read directly rather than through
  * `repository.list()`: the list where-clause excludes staged rows unconditionally
  * and trashed rows by default, and the rebuild needs both.
@@ -72,17 +100,30 @@ function entryEdges(type: string, fields: JsonObject): RelationshipEdge[] | null
 async function entriesTableEntrySources(
     type?: string
 ): Promise<RelationshipIndexSource[]> {
-    const rows = await createRepository(entriesTable).findMany({
+    const entries = await createRepository(entriesTable).findMany({
         where: type !== undefined ? { type } : {},
     });
-    return rows.map((row) => ({
-        source: {
-            id: row.id,
-            kind: 'entry' as const,
-            type: row.type,
-            staged: row.stagedFor != null,
-        },
-        edges: entryEdges(row.type, (row.fields ?? {}) as JsonObject) ?? [],
+    const contents = await createRepository(entryContentTable).findMany({
+        where: type !== undefined ? { type } : {},
+    });
+
+    const fieldsByEntry = new Map<string, JsonObject[]>();
+    for (const row of contents) {
+        const held = fieldsByEntry.get(row.entryId);
+        const fields = (row.fields ?? {}) as JsonObject;
+        if (held) held.push(fields);
+        else fieldsByEntry.set(row.entryId, [fields]);
+    }
+
+    return entries.map((entry) => ({
+        // An entry with a staged content row is still a live entry, so an entry
+        // source is never itself staged.
+        source: { id: entry.id, kind: 'entry' as const, type: entry.type, staged: false },
+        edges: dedupeEdges(
+            (fieldsByEntry.get(entry.id) ?? []).flatMap(
+                (fields) => entryEdges(entry.type, fields) ?? []
+            )
+        ),
     }));
 }
 
@@ -107,12 +148,7 @@ async function customTableEntrySources(
         });
         for (const row of rows) {
             collected.push({
-                source: {
-                    id: row.id,
-                    kind: 'entry',
-                    type,
-                    staged: row.stagedFor != null,
-                },
+                source: { id: row.id, kind: 'entry', type, staged: row.staged },
                 edges: entryEdges(type, row.fields) ?? [],
             });
         }

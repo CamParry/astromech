@@ -46,7 +46,6 @@ export async function createEntry(params: EntryCreateParams): Promise<Entry> {
     const title = validated.title ?? '';
     const status = validated.status ?? 'unpublished';
     const locale = data.locale ?? getDefaultContentLocale();
-    const localeGroup = data.localeGroup;
     const publishedAt =
         status === 'published' ? new Date() : (validated.publishedAt ?? null);
 
@@ -64,7 +63,7 @@ export async function createEntry(params: EntryCreateParams): Promise<Entry> {
         entryType,
         values: validated.fields ?? {},
         locale,
-        localeGroup,
+        entryId: undefined,
         status,
     });
 
@@ -72,7 +71,6 @@ export async function createEntry(params: EntryCreateParams): Promise<Entry> {
         title,
         slug,
         locale,
-        localeGroup,
         fields,
         status,
         publishedAt,

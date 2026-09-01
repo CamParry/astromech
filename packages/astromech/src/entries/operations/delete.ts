@@ -3,26 +3,22 @@ import { transaction } from '@/database/transaction';
 import { runHook } from '@/hooks/hooks';
 import { getCurrentUser } from '@/request-context/request-context';
 import { BulkOperationError } from '../errors';
-import { getEntriesOfType } from '../internal/records';
-import { withLocaleSiblings } from '../internal/translatable';
+import { getEntryResources } from '../internal/records';
 import { getEntryRepository } from '../repository/registry';
 
 /**
  * Permanently delete one or many entries, atomically per batch, firing the
- * entry delete hooks around the write. Throws if an id is missing or of
- * another type before any hook fires or any row is touched.
+ * entry delete hooks around the write. Deleting is resource-level: every locale
+ * of an entry goes with it. Throws if an id is missing or of another type
+ * before any hook fires or any row is touched.
  */
 export async function deleteEntries(params: {
     type: string;
     ids: readonly string[];
-    cascadeLocales?: boolean;
 }): Promise<void> {
     const { type, ids } = params;
     const repository = getEntryRepository(type);
-    const entries = await getEntriesOfType(repository, type, ids);
-    const targets = params.cascadeLocales
-        ? await withLocaleSiblings({ repository, entries })
-        : entries;
+    const entries = await getEntryResources(repository, type, ids);
     const user = await getCurrentUser();
     const relationships = createRelationshipRepository();
 
@@ -32,10 +28,10 @@ export async function deleteEntries(params: {
 
     await transaction(async () => {
         const succeeded: string[] = [];
-        for (const target of targets) {
+        for (const target of entries) {
             try {
                 await relationships.deleteByResource(target.id, 'entry');
-                // Versions cascade-delete via entry_versions.entry_id ON DELETE CASCADE.
+                // Content rows and versions cascade from the `entries` row.
                 await repository.delete(target.id);
                 succeeded.push(target.id);
             } catch (err) {

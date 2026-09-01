@@ -111,7 +111,6 @@ export type TypedEntriesServiceFor<EntryMap> = {
             title: string;
             slug?: string;
             locale?: string;
-            localeGroup?: string;
             fields?: Partial<FieldsForMap<EntryMap, T>> & { readonly __shape?: 'full' };
             status?: EntryStatus;
             publishedAt?: Date | null;
@@ -124,7 +123,6 @@ export type TypedEntriesServiceFor<EntryMap> = {
             title?: string;
             slug?: string;
             locale?: string;
-            localeGroup?: string;
             fields?: Record<string, unknown>;
             status?: EntryStatus;
             publishedAt?: Date | null;
@@ -134,6 +132,7 @@ export type TypedEntriesServiceFor<EntryMap> = {
     update<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
+        locale?: string;
         data: Partial<{
             title: string;
             slug: string;
@@ -145,6 +144,7 @@ export type TypedEntriesServiceFor<EntryMap> = {
     update<T extends keyof EntryMap>(params: {
         type: T;
         id: readonly string[];
+        locale?: string;
         data: Partial<{
             title: string;
             slug: string;
@@ -153,10 +153,16 @@ export type TypedEntriesServiceFor<EntryMap> = {
             publishedAt: Date | null;
         }>;
     }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>[]>;
-    update(params: { type: string; id: string; data: EntryUpdateData }): Promise<Entry>;
+    update(params: {
+        type: string;
+        id: string;
+        locale?: string;
+        data: EntryUpdateData;
+    }): Promise<Entry>;
     update(params: {
         type: string;
         id: readonly string[];
+        locale?: string;
         data: EntryUpdateData;
     }): Promise<Entry[]>;
 
@@ -167,7 +173,6 @@ export type TypedEntriesServiceFor<EntryMap> = {
             title: string;
             slug: string;
             locale: string;
-            localeGroup: string;
             fields: Partial<FieldsForMap<EntryMap, T>>;
             status: EntryStatus;
         }>;
@@ -181,40 +186,60 @@ export type TypedEntriesServiceFor<EntryMap> = {
     publish<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
+        locale?: string;
     }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>>;
     publish<T extends keyof EntryMap>(params: {
         type: T;
         id: readonly string[];
+        locale?: string;
     }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>[]>;
-    publish(params: { type: string; id: string }): Promise<Entry>;
-    publish(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
+    publish(params: { type: string; id: string; locale?: string }): Promise<Entry>;
+    publish(params: {
+        type: string;
+        id: readonly string[];
+        locale?: string;
+    }): Promise<Entry[]>;
 
     unpublish<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
+        locale?: string;
     }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>>;
     unpublish<T extends keyof EntryMap>(params: {
         type: T;
         id: readonly string[];
+        locale?: string;
     }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>[]>;
-    unpublish(params: { type: string; id: string }): Promise<Entry>;
-    unpublish(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
+    unpublish(params: { type: string; id: string; locale?: string }): Promise<Entry>;
+    unpublish(params: {
+        type: string;
+        id: readonly string[];
+        locale?: string;
+    }): Promise<Entry[]>;
 
     schedule<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
         publishedAt: Date;
+        locale?: string;
     }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>>;
     schedule<T extends keyof EntryMap>(params: {
         type: T;
         id: readonly string[];
         publishedAt: Date;
+        locale?: string;
     }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>[]>;
-    schedule(params: { type: string; id: string; publishedAt: Date }): Promise<Entry>;
+    schedule(params: {
+        type: string;
+        id: string;
+        publishedAt: Date;
+        locale?: string;
+    }): Promise<Entry>;
     schedule(params: {
         type: string;
         id: readonly string[];
         publishedAt: Date;
+        locale?: string;
     }): Promise<Entry[]>;
 
     restore<T extends keyof EntryMap>(params: {
@@ -228,16 +253,22 @@ export type TypedEntriesServiceFor<EntryMap> = {
     restore(params: { type: string; id: string }): Promise<Entry>;
     restore(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
 
-    versions(params: { type: string; id: string }): Promise<EntryVersion[]>;
+    versions(params: {
+        type: string;
+        id: string;
+        locale?: string;
+    }): Promise<EntryVersion[]>;
     restoreVersion<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
         versionId: string;
+        locale?: string;
     }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>>;
     restoreVersion(params: {
         type: string;
         id: string;
         versionId: string;
+        locale?: string;
     }): Promise<Entry>;
 } & Omit<
     EntriesService,

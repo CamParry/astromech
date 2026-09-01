@@ -11,11 +11,9 @@
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { CapabilityError } from '@/entries/errors';
+import { hashPreviewToken } from '@/entries/internal/preview';
 import { DEFAULT_PREVIEW_TOKEN_TTL_MS } from '@/entries/operations/preview/token';
-import {
-    createPreviewTokenRepository,
-    hashPreviewToken,
-} from '@/entries/repository/preview-tokens';
+import { createEntriesTableRepository } from '@/entries/repository/entries-table';
 import { entriesService as api } from '@/entries/service';
 
 beforeEach(async () => {
@@ -24,6 +22,15 @@ beforeEach(async () => {
     if (cfg.entries.post) cfg.entries.post.staging = true;
     setupTestConfig(cfg);
 });
+
+/** Whether the stored token authorizes `entryId` at `at` — `verifyPreviewToken`
+ *  with the clock passed in, so expiry can be asserted without moving it. */
+async function isValid(entryId: string, token: string, at: Date): Promise<boolean> {
+    const previewToken = createEntriesTableRepository().previewToken;
+    const record = await previewToken.findByHash(await hashPreviewToken(token));
+    if (!record || record.id !== entryId) return false;
+    return record.expiresAt === null || record.expiresAt.getTime() > at.getTime();
+}
 
 describe('issuePreviewToken', () => {
     it('returns a plaintext token and requires the staging capability', async () => {
@@ -71,22 +78,20 @@ describe('issuePreviewToken', () => {
         const e = await api.create({ type: 'post', data: { title: 'X', slug: 'x' } });
         const { token } = await api.issuePreviewToken({ type: 'post', id: e.id });
 
-        const repository = createPreviewTokenRepository();
-        const hash = await hashPreviewToken(token);
         const tolerance = 60_000;
 
-        expect(await repository.isValid(e.id, hash, new Date())).toBe(true);
+        expect(await isValid(e.id, token, new Date())).toBe(true);
         expect(
-            await repository.isValid(
+            await isValid(
                 e.id,
-                hash,
+                token,
                 new Date(Date.now() + DEFAULT_PREVIEW_TOKEN_TTL_MS - tolerance)
             )
         ).toBe(true);
         expect(
-            await repository.isValid(
+            await isValid(
                 e.id,
-                hash,
+                token,
                 new Date(Date.now() + DEFAULT_PREVIEW_TOKEN_TTL_MS + tolerance)
             )
         ).toBe(false);
@@ -100,11 +105,8 @@ describe('issuePreviewToken', () => {
             expiresAt: null,
         });
 
-        const hash = await hashPreviewToken(token);
         const farFuture = new Date(Date.now() + 10 * DEFAULT_PREVIEW_TOKEN_TTL_MS);
-        expect(await createPreviewTokenRepository().isValid(e.id, hash, farFuture)).toBe(
-            true
-        );
+        expect(await isValid(e.id, token, farFuture)).toBe(true);
     });
 });
 
@@ -150,10 +152,11 @@ describe('query() with previewToken', () => {
             type: 'post',
             data: { title: 'Live', slug: 'live', status: 'published' },
         });
-        const staged = await api.createStaged({ type: 'post', id: canonical.id });
+        await api.createStaged({ type: 'post', id: canonical.id });
         await api.update({
             type: 'post',
-            id: staged.id,
+            id: canonical.id,
+            staged: true,
             data: { title: 'Staged title', fields: { body: 'staged body' } },
         });
         const { token } = await api.issuePreviewToken({ type: 'post', id: canonical.id });
@@ -176,7 +179,8 @@ describe('query() with previewToken', () => {
             staged: true,
             limit: 1,
         });
-        expect(stagedView.data[0]?.id).toBe(staged.id);
+        expect(stagedView.data[0]?.id).toBe(canonical.id);
+        expect(stagedView.data[0]?.staged).toBe(true);
         expect(stagedView.data[0]?.title).toBe('Staged title');
         expect(stagedView.data[0]?.fields.body).toBe('staged body');
     });
@@ -244,6 +248,30 @@ describe('get() with previewToken', () => {
         expect(await api.get({ type: 'post', id: e.id })).toBeNull(); // public → hidden
         const got = await api.get({ type: 'post', id: e.id, previewToken: token });
         expect(got?.id).toBe(e.id);
+    });
+
+    it('authorizes every locale of the entry with one token', async () => {
+        const e = await api.create({
+            type: 'post',
+            data: { title: 'EN', slug: 'en-hidden' },
+        });
+        await api.update({
+            type: 'post',
+            id: e.id,
+            locale: 'de',
+            data: { title: 'DE' },
+        });
+        const { token } = await api.issuePreviewToken({ type: 'post', id: e.id });
+
+        const en = await api.get({ type: 'post', id: e.id, previewToken: token });
+        const de = await api.get({
+            type: 'post',
+            id: e.id,
+            locale: 'de',
+            previewToken: token,
+        });
+        expect(en?.title).toBe('EN');
+        expect(de?.title).toBe('DE');
     });
 
     it('never previews a trashed entry', async () => {

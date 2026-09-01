@@ -69,19 +69,17 @@ export type MediaUsage = {
 };
 
 /**
- * The row `create` writes: the update patch plus the write-once locale columns.
+ * The row `create` writes: the update patch plus the locale the first content
+ * row is written for.
  *
  * `title` is required for titled types, runtime-enforced by the per-type schema
  * with an identical 422. It stays optional here because `titleField: false`
- * types omit it; Phase 3 typegen restores per-type static strictness. `locale`
- * and `localeGroup` are set once at create; omit `localeGroup` for a fresh
- * group (a ULID is generated).
+ * types omit it; Phase 3 typegen restores per-type static strictness.
  */
 export type EntryCreateData = Partial<{
     title: string;
     slug: string;
     locale: string;
-    localeGroup: string;
     fields: JsonObject;
     status: EntryStatus;
     publishedAt: Date | null;
@@ -102,19 +100,25 @@ export type EntryUpdateData = Partial<{
     publishedAt: Date | null;
 }>;
 
-/** Caller input for `update`: which entries, and the patch to apply to each. */
+/**
+ * Caller input for `update`: which entries, which locale, and the patch to
+ * apply to each. A locale with no content row yet is created, so this is how a
+ * translation is written.
+ */
 export type EntryUpdateParams = {
     type: string;
     id: string | readonly string[];
+    locale?: string;
+    /** Write the entry's staged change for this locale rather than its canonical row. */
+    staged?: boolean;
     data: EntryUpdateData;
 };
 
-/** Overrides accepted by `duplicate` — superset of update plus locale fields. */
+/** Overrides accepted by `duplicate`; `locale` copies that locale alone. */
 export type EntryDuplicateOverrides = Partial<{
     title: string;
     slug: string;
     locale: string;
-    localeGroup: string;
     fields: JsonObject;
     status: EntryStatus;
 }>;
@@ -148,41 +152,52 @@ export type EntriesService = {
         overrides?: EntryDuplicateOverrides;
     }): Promise<Entry>;
 
-    trash(params: {
-        type: string;
-        id: string | readonly string[];
-        cascadeLocales?: boolean;
-    }): Promise<void>;
+    trash(params: { type: string; id: string | readonly string[] }): Promise<void>;
 
     restore(params: { type: string; id: string }): Promise<Entry>;
     restore(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
 
-    delete(params: {
-        type: string;
-        id: string | readonly string[];
-        cascadeLocales?: boolean;
-    }): Promise<void>;
+    delete(params: { type: string; id: string | readonly string[] }): Promise<void>;
 
     emptyTrash(params: { type: string }): Promise<void>;
 
-    versions(params: { type: string; id: string }): Promise<EntryVersion[]>;
+    versions(params: {
+        type: string;
+        id: string;
+        locale?: string;
+    }): Promise<EntryVersion[]>;
     restoreVersion(params: {
         type: string;
         id: string;
         versionId: string;
+        locale?: string;
     }): Promise<Entry>;
 
-    publish(params: { type: string; id: string }): Promise<Entry>;
-    publish(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
+    publish(params: { type: string; id: string; locale?: string }): Promise<Entry>;
+    publish(params: {
+        type: string;
+        id: readonly string[];
+        locale?: string;
+    }): Promise<Entry[]>;
 
-    unpublish(params: { type: string; id: string }): Promise<Entry>;
-    unpublish(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
+    unpublish(params: { type: string; id: string; locale?: string }): Promise<Entry>;
+    unpublish(params: {
+        type: string;
+        id: readonly string[];
+        locale?: string;
+    }): Promise<Entry[]>;
 
-    schedule(params: { type: string; id: string; publishedAt: Date }): Promise<Entry>;
+    schedule(params: {
+        type: string;
+        id: string;
+        publishedAt: Date;
+        locale?: string;
+    }): Promise<Entry>;
     schedule(params: {
         type: string;
         id: readonly string[];
         publishedAt: Date;
+        locale?: string;
     }): Promise<Entry[]>;
 
     incomingRelationships(params: {
@@ -190,30 +205,34 @@ export type EntriesService = {
         id: string;
     }): Promise<IncomingRelationship[]>;
 
-    // Forward versioning (staged entries) — all take the *canonical* entry id.
+    // Forward versioning (staged entries) — all act on one locale of the entry.
     // Require the `staging` capability (entries-table repository) on the type; the
     // service throws otherwise.
 
-    /** Stage a change: copy the canonical's content into a new linked row.
+    /** Stage a change: copy this locale's content into a second, linked row.
      * Throws `StagedEntryExistsError` if one already exists. */
-    createStaged(params: { type: string; id: string }): Promise<Entry>;
-    /** The canonical entry's staged change, or null. */
-    getStaged(params: { type: string; id: string }): Promise<Entry | null>;
-    /** Merge the staged change into the canonical (backup → update → cleanup);
+    createStaged(params: { type: string; id: string; locale?: string }): Promise<Entry>;
+    /** This locale's staged change, or null. */
+    getStaged(params: {
+        type: string;
+        id: string;
+        locale?: string;
+    }): Promise<Entry | null>;
+    /** Merge the staged change into the canonical row (backup → update → cleanup);
      * returns the updated canonical. Content-only — does not change status. */
-    mergeStaged(params: { type: string; id: string }): Promise<Entry>;
-    /** Discard the canonical's staged change (hard delete). */
-    deleteStaged(params: { type: string; id: string }): Promise<void>;
+    mergeStaged(params: { type: string; id: string; locale?: string }): Promise<Entry>;
+    /** Discard this locale's staged change (hard delete). */
+    deleteStaged(params: { type: string; id: string; locale?: string }): Promise<void>;
     /**
-     * Issue a preview token for a canonical entry (replaces any existing one).
-     * The plaintext token is returned once; only its hash is stored.
+     * Issue the entry's preview token (replacing any existing one), authorizing
+     * every locale of it. The plaintext is returned once; only its hash is stored.
      */
     issuePreviewToken(params: {
         type: string;
         id: string;
         expiresAt?: Date | null;
     }): Promise<{ token: string }>;
-    /** Revoke the canonical entry's preview token(s). */
+    /** Revoke the entry's preview token. */
     revokePreviewToken(params: { type: string; id: string }): Promise<void>;
 };
 

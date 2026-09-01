@@ -1,13 +1,14 @@
 /**
  * Reverse lookup for the delete modal: the entries that reference this one.
  * Reads the relationships index, then loads each source through its OWN type's
- * repository.
+ * repository. Both sides of the index are entry ids, so a source referencing
+ * this entry from two of its locales is one edge.
  */
 
 import type { EntryRepository, EntryRow } from '../repository/types';
 import type { IncomingRelationship } from '@/types/index';
 import { createRelationshipRepository } from '@/database/repository/relationships';
-import { getEntryOfType } from '../internal/records';
+import { getEntryResource } from '../internal/records';
 import { getEntryRepository } from '../repository/registry';
 
 /** One row per index edge: a source referencing the target twice is two rows. */
@@ -16,7 +17,7 @@ export async function listIncomingRelationships(params: {
     id: string;
 }): Promise<IncomingRelationship[]> {
     const repository = getEntryRepository(params.type);
-    await getEntryOfType(repository, params.type, params.id);
+    await getEntryResource(repository, params.type, params.id);
 
     // Staged sources count: a pending merge that references this entry is a
     // reason not to delete it.
@@ -49,9 +50,9 @@ export async function listIncomingRelationships(params: {
 }
 
 /**
- * Load the sources grouped by their own entry type. Not batched through
- * `list()`: `buildListWhere` unconditionally excludes staged rows, which are
- * exactly the sources this call exists to surface.
+ * Load the sources grouped by their own entry type, each in the locale it
+ * displays under. Not batched through `list()`: that excludes trashed entries,
+ * which are exactly the sources a delete check has to surface.
  */
 async function loadSources(
     rows: { sourceId: string; sourceType: string }[]
@@ -68,7 +69,13 @@ async function loadSources(
         const repository = repositoryFor(type);
         if (repository === null) continue;
         const records = await Promise.all(
-            Array.from(ids, (id) => repository.get(id, { includeTrashed: true }))
+            Array.from(ids, async (id) => {
+                try {
+                    return await getEntryResource(repository, type, id);
+                } catch {
+                    return null;
+                }
+            })
         );
         for (const record of records) {
             if (record !== null) loaded.set(record.id, record);

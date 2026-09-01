@@ -36,6 +36,8 @@ export const entriesService: EntriesService = {
         return updateEntries({
             type: params.type,
             ids: [params.id].flat(),
+            ...(params.locale !== undefined ? { locale: params.locale } : {}),
+            ...(params.staged !== undefined ? { staged: params.staged } : {}),
             data: params.data,
         })
             .then((rows) => (many ? rows : rows[0]))
@@ -46,15 +48,11 @@ export const entriesService: EntriesService = {
     duplicate: duplicateEntry,
     trash: (params) => {
         const many = Array.isArray(params.id);
-        return trashEntries({
-            type: params.type,
-            ids: [params.id].flat(),
-            ...(params.cascadeLocales !== undefined
-                ? { cascadeLocales: params.cascadeLocales }
-                : {}),
-        }).catch((err: unknown) => {
-            throw many ? err : unwrapBatchOfOne(err);
-        });
+        return trashEntries({ type: params.type, ids: [params.id].flat() }).catch(
+            (err: unknown) => {
+                throw many ? err : unwrapBatchOfOne(err);
+            }
+        );
     },
     restore: ((params: { type: string; id: string | readonly string[] }) => {
         const many = Array.isArray(params.id);
@@ -66,30 +64,42 @@ export const entriesService: EntriesService = {
     }) as EntriesService['restore'],
     delete: (params) => {
         const many = Array.isArray(params.id);
-        return deleteEntries({
-            type: params.type,
-            ids: [params.id].flat(),
-            ...(params.cascadeLocales !== undefined
-                ? { cascadeLocales: params.cascadeLocales }
-                : {}),
-        }).catch((err: unknown) => {
-            throw many ? err : unwrapBatchOfOne(err);
-        });
+        return deleteEntries({ type: params.type, ids: [params.id].flat() }).catch(
+            (err: unknown) => {
+                throw many ? err : unwrapBatchOfOne(err);
+            }
+        );
     },
     emptyTrash,
     versions: listEntryVersions,
     restoreVersion: restoreEntryVersion,
-    publish: ((params: { type: string; id: string | readonly string[] }) => {
+    publish: ((params: {
+        type: string;
+        id: string | readonly string[];
+        locale?: string;
+    }) => {
         const many = Array.isArray(params.id);
-        return publishEntries({ type: params.type, ids: [params.id].flat() })
+        return publishEntries({
+            type: params.type,
+            ids: [params.id].flat(),
+            ...(params.locale !== undefined ? { locale: params.locale } : {}),
+        })
             .then((rows) => (many ? rows : rows[0]))
             .catch((err: unknown) => {
                 throw many ? err : unwrapBatchOfOne(err);
             });
     }) as EntriesService['publish'],
-    unpublish: ((params: { type: string; id: string | readonly string[] }) => {
+    unpublish: ((params: {
+        type: string;
+        id: string | readonly string[];
+        locale?: string;
+    }) => {
         const many = Array.isArray(params.id);
-        return unpublishEntries({ type: params.type, ids: [params.id].flat() })
+        return unpublishEntries({
+            type: params.type,
+            ids: [params.id].flat(),
+            ...(params.locale !== undefined ? { locale: params.locale } : {}),
+        })
             .then((rows) => (many ? rows : rows[0]))
             .catch((err: unknown) => {
                 throw many ? err : unwrapBatchOfOne(err);
@@ -99,12 +109,14 @@ export const entriesService: EntriesService = {
         type: string;
         id: string | readonly string[];
         publishedAt: Date;
+        locale?: string;
     }) => {
         const many = Array.isArray(params.id);
         return scheduleEntries({
             type: params.type,
             ids: [params.id].flat(),
             publishedAt: params.publishedAt,
+            ...(params.locale !== undefined ? { locale: params.locale } : {}),
         })
             .then((rows) => (many ? rows : rows[0]))
             .catch((err: unknown) => {

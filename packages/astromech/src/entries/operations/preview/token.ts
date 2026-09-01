@@ -1,7 +1,7 @@
 import { parseInput } from '@/errors/validation';
 import { assertCapability } from '../../internal/entry-type';
 import { generatePreviewSecret, hashPreviewToken } from '../../internal/preview';
-import { getEntryOfType } from '../../internal/records';
+import { getEntryResource } from '../../internal/records';
 import { getEntryRepository } from '../../repository/registry';
 import { previewTokenSchema } from '../../schema';
 
@@ -12,9 +12,10 @@ import { previewTokenSchema } from '../../schema';
 export const DEFAULT_PREVIEW_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * Issues a preview token for a canonical entry: returns the plaintext once,
- * stores only its hash. Throws when the type can't stage or the id names a
- * staged change. Omitted `expiresAt` takes the default TTL, explicit null never expires.
+ * Issues the entry's preview token, authorizing every locale of it: returns the
+ * plaintext once, stores only its hash. Throws when the type can't stage or the
+ * read is a staged one. Omitted `expiresAt` takes the default TTL, explicit
+ * null never expires.
  */
 export async function issuePreviewToken(params: {
     type: string;
@@ -24,10 +25,10 @@ export async function issuePreviewToken(params: {
     const { type, id } = params;
     assertCapability(type, 'staging');
     const repository = getEntryRepository(type);
-    const canonical = await getEntryOfType(repository, type, id);
-    if (canonical.stagedFor != null) {
+    const canonical = await getEntryResource(repository, type, id);
+    if (canonical.staged) {
         throw new Error(
-            `Entry '${id}' is a staged change; issue the preview token on its canonical entry.`
+            `Entry '${id}' read as a staged change; issue the preview token on its canonical row.`
         );
     }
     const token = generatePreviewSecret();
@@ -48,8 +49,8 @@ export async function issuePreviewToken(params: {
 }
 
 /**
- * Revokes any preview token for the entry. Throws when the type can't stage or
- * no entry of that type matches the id.
+ * Revokes the entry's preview token. Throws when the type can't stage or no
+ * entry of that type matches the id.
  */
 export async function revokePreviewToken(params: {
     type: string;
@@ -58,6 +59,6 @@ export async function revokePreviewToken(params: {
     const { type, id } = params;
     assertCapability(type, 'staging');
     const repository = getEntryRepository(type);
-    await getEntryOfType(repository, type, id);
+    await getEntryResource(repository, type, id);
     await repository.previewToken?.clear(id);
 }

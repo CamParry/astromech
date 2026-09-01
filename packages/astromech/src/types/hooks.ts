@@ -18,7 +18,6 @@ export type EntryCreateContext = {
         title: string;
         slug: string | null;
         locale: string;
-        localeGroup: string | undefined;
         fields: JsonObject;
         status: EntryStatus;
         publishedAt: Date | null;

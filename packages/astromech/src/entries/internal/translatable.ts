@@ -1,29 +1,31 @@
 /**
- * Non-translatable fields belong to the locale group, not to one translation:
- * they are inherited from a sibling on create and propagated to siblings on
- * update.
+ * Non-translatable fields belong to the entry, not to one of its locales: they
+ * are inherited from the default-locale row when a translation is written, and
+ * propagated to the other locales when the default one is updated.
  */
 
 import type { EntryRepository } from '../repository/types';
 import type { Field } from '@/types/fields';
-import type { Entry, JsonObject, ResolvedEntryType } from '@/types/index';
-import { getNonTranslatableFieldNames } from './entry-type';
-import { asEntry } from './records';
+import type { JsonObject, ResolvedEntryType } from '@/types/index';
+import { getDefaultContentLocale, getNonTranslatableFieldNames } from './entry-type';
 
 /**
- * Merges in the locale group's shared fields from an existing sibling. A field
- * marked `translatable: false` belongs to the group, so a new translation
- * takes the sibling's value over whatever the caller sent.
+ * Merges the entry's shared fields in from its default-locale row. A field
+ * marked `translatable: false` belongs to the entry, so a new translation takes
+ * the stored value over whatever the caller sent.
  */
 export async function inheritSharedFields(params: {
     repository: EntryRepository;
     entryType: ResolvedEntryType;
     values: Record<string, unknown>;
     definitions: Field[];
-    localeGroup: string | undefined;
+    /** The entry being translated; absent when the entry is being created. */
+    entryId: string | undefined;
+    locale: string;
 }): Promise<Record<string, unknown>> {
-    const { repository, entryType, values, definitions, localeGroup } = params;
-    if (localeGroup === undefined || !repository.translatable) return values;
+    const { repository, entryType, values, definitions, entryId, locale } = params;
+    const defaultLocale = getDefaultContentLocale();
+    if (entryId === undefined || locale === defaultLocale) return values;
 
     const shared = getNonTranslatableFieldNames(
         entryType.id,
@@ -31,26 +33,28 @@ export async function inheritSharedFields(params: {
     );
     if (shared.length === 0) return values;
 
-    const [sibling] = await repository.translatable.siblings(localeGroup);
-    if (!sibling) return values;
+    const source = await repository.get(
+        { id: entryId, locale: defaultLocale },
+        { includeTrashed: true }
+    );
+    if (!source) return values;
 
     const inherited: Record<string, unknown> = {};
     for (const name of shared) {
-        if (sibling.fields[name] !== undefined) inherited[name] = sibling.fields[name];
+        if (source.fields[name] !== undefined) inherited[name] = source.fields[name];
     }
     return { ...values, ...inherited };
 }
 
 /**
- * Copies the shared fields an update touched out to the entry's sibling
- * locales. Only the names the caller actually patched are sent: the merged
- * document holds every field, and propagating an untouched one would
- * overwrite its siblings.
+ * Copies the shared fields an update touched out to the entry's other locales.
+ * Only the names the caller actually patched are sent: the merged document
+ * holds every field, and propagating an untouched one would overwrite them.
  */
 export async function propagateSharedFields(params: {
     repository: EntryRepository;
     entryType: ResolvedEntryType;
-    entry: Entry;
+    entry: { id: string; locale: string };
     fields: JsonObject;
     patchedFieldNames: string[];
 }): Promise<void> {
@@ -65,30 +69,5 @@ export async function propagateSharedFields(params: {
         const value = fields[name];
         if (value !== undefined) values[name] = value;
     }
-    await repository.translatable.propagateFields(entry.localeGroup, entry.id, values);
-}
-
-/**
- * Add each entry's live locale siblings to the batch, deduplicated by id
- * (input entries first). A repository without `translatable` has no siblings to
- * add. Shared by the delete and trash operations for `cascadeLocales`.
- */
-export async function withLocaleSiblings(params: {
-    repository: EntryRepository;
-    entries: readonly Entry[];
-}): Promise<Entry[]> {
-    const { repository, entries } = params;
-    if (!repository.translatable) return entries as Entry[];
-
-    const byId = new Map(entries.map((entry) => [entry.id, entry]));
-    for (const entry of entries) {
-        const siblings = await repository.translatable.siblings(
-            entry.localeGroup,
-            entry.id
-        );
-        for (const sibling of siblings) {
-            if (!byId.has(sibling.id)) byId.set(sibling.id, asEntry(sibling));
-        }
-    }
-    return Array.from(byId.values());
+    await repository.translatable.propagateFields(entry.id, entry.locale, values);
 }

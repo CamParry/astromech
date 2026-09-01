@@ -154,10 +154,13 @@ export type EntryRepository<R extends EntryRow = EntryRow> = {
         excludeId?: string
     ): Promise<string>;
 
-    /** Present iff `supports` includes 'trash'. Resource-level: every locale. */
+    /**
+     * Present iff `supports` includes 'trash'. Resource-level: every locale.
+     * `actor` is recorded as the entry's `updatedBy`; absent leaves it alone.
+     */
     trash?: {
-        trash(id: string): Promise<void>;
-        restore(id: string): Promise<R>;
+        trash(id: string, actor?: string | null): Promise<void>;
+        restore(id: string, actor?: string | null): Promise<R>;
         emptyTrash(type: string): Promise<void>;
     };
 
@@ -175,6 +178,8 @@ export type EntryRepository<R extends EntryRow = EntryRow> = {
         getByCanonical(id: string, locale?: string): Promise<R | null>;
         /** Add a second content row for that locale, staged for the canonical. */
         create(ref: EntryRef, data: EntryWrite): Promise<R>;
+        /** Write that locale's staged content row; it must already exist. */
+        update(ref: EntryRef, data: EntryWrite): Promise<R>;
         /** Discard the staged content row for that locale. */
         delete(ref: EntryRef): Promise<void>;
     };

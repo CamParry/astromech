@@ -1,24 +1,25 @@
 import type { Entry } from '@/types/index';
 import { getConfig } from '@/config/registry';
-import { createRelationshipRepository } from '@/database/repository/relationships';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { CapabilityError } from '../../errors';
 import { assertCapability, isVersioningEnabled } from '../../internal/entry-type';
-import { asEntry, getEntryOfType } from '../../internal/records';
+import { asEntry, asRecord, getEntryOfType } from '../../internal/records';
 import { indexEntryRelationships } from '../../internal/relationships';
 import { toStoredFields } from '../../internal/stored-fields';
 import { snapshotVersion } from '../../internal/versions';
 import { getEntryRepository } from '../../repository/registry';
 
 /**
- * Merges the staged change into its canonical entry: validates the staged
- * content, overwrites the canonical in place, and deletes the staged row.
- * Throws if there is no staged change, or a 422 when a field validator reports.
+ * Merges a staged change into the canonical content row it was made from:
+ * validates the staged content, overwrites the canonical in place, and deletes
+ * the staged row. Throws if there is no staged change, or a 422 when a field
+ * validator reports.
  */
 export async function mergeStagedEntry(params: {
     type: string;
     id: string;
+    locale?: string;
 }): Promise<Entry> {
     const { type, id } = params;
 
@@ -27,9 +28,10 @@ export async function mergeStagedEntry(params: {
     const { staging } = repository;
     if (!staging) throw new CapabilityError(type, 'staging');
 
-    const canonical = await getEntryOfType(repository, type, id);
-    const staged = await staging.getByCanonical(id);
-    if (!staged) throw new Error(`No staged change for entry '${id}'`);
+    const canonical = await getEntryOfType(repository, type, id, params.locale);
+    const stagedRow = await staging.getByCanonical(id, canonical.locale);
+    if (!stagedRow) throw new Error(`No staged change for entry '${id}'`);
+    const staged = asRecord(stagedRow);
 
     // The canonical's type governs: the staged row is a copy of it.
     const entryType = resolveEntryType(getConfig(), type);
@@ -63,19 +65,15 @@ export async function mergeStagedEntry(params: {
         //    refs stable) with the staged content. Status is intentionally
         //    left untouched: merging is content-only — publishing (or not) is
         //    a separate action, so an unpublished canonical stays unpublished.
-        const updated = await repository.update(id, {
-            title: staged.title,
-            fields: mergedFields,
-        });
+        const updated = await repository.update(
+            { id, locale: canonical.locale },
+            { title: staged.title, fields: mergedFields }
+        );
 
-        // The canonical now holds the staged content, so its index rows derive
-        // from that content — and from a source that is no longer staged.
+        // 3. Cleanup: discard the staged row before re-indexing, so the edges
+        //    it held on its own do not survive the merge.
+        await staging.delete({ id, locale: canonical.locale });
         await indexEntryRelationships(updated, mergedFields, type);
-
-        // 3. Cleanup: hard-delete the staged entry (its versions cascade; its
-        //    index rows are not FK-bound, so drop them explicitly).
-        await createRelationshipRepository().deleteByResource(staged.id, 'entry');
-        await repository.delete(staged.id);
 
         return asEntry(updated);
     });

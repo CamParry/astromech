@@ -197,13 +197,19 @@ describe('where.references', () => {
         expect(result.data).toEqual([]);
     });
 
-    it('does not return a staged source', async () => {
+    it('returns an entry whose staged change holds the reference, once', async () => {
         const target = await api.create({ type: 'post', data: { title: 'Target' } });
         const canonical = await api.create({
             type: 'article',
-            data: { title: 'Canonical', fields: { author: target.id } },
+            data: { title: 'Canonical' },
         });
-        const staged = await api.createStaged({ type: 'article', id: canonical.id });
+        await api.createStaged({ type: 'article', id: canonical.id });
+        await api.update({
+            type: 'article',
+            id: canonical.id,
+            staged: true,
+            data: { fields: { author: target.id } },
+        });
 
         const result = await api.query({
             type: 'article',
@@ -211,10 +217,9 @@ describe('where.references', () => {
             where: { references: { path: 'author', id: target.id } },
         });
 
-        // The staged copy carries its own index rows; the predicate correlates
-        // on the outer row, which is already constrained to `stagedFor IS NULL`.
+        // The index is keyed on the entry, and the staged row is one of its
+        // content rows; the query still returns the canonical row alone.
         expect(result.data.map((e) => e.id)).toEqual([canonical.id]);
-        expect(staged.id).not.toBe(canonical.id);
     });
 
     it('reports a pagination total that reflects the filter', async () => {

@@ -7,6 +7,7 @@ import type { RelationshipRow } from '@/database/tables';
 import type { MediaUsage } from '@/types/index';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 // Peer domains, read only to name a source row. See the `listMediaUsage` docstring.
+import { getEntryResource } from '@/entries/internal/records';
 import { getEntryRepository } from '@/entries/repository/registry';
 import { createUserRepository } from '@/users/repository';
 import { createMediaRepository } from '../repository';
@@ -44,9 +45,10 @@ export async function listMediaUsage(params: { id: string }): Promise<MediaUsage
 }
 
 /**
- * Display name per source, keyed by kind+id. Entry sources load through
- * their own type's repository — the target's would silently miss sources
- * of another type. A source that fails to load keeps an empty title.
+ * Display name per source, keyed by kind+id. Entry sources load through their
+ * own type's repository, in the locale they display under — the target's
+ * repository would silently miss sources of another type. A source that fails
+ * to load keeps an empty title.
  */
 async function resolveSourceTitles(
     rows: readonly RelationshipRow[]
@@ -75,12 +77,16 @@ async function resolveSourceTitles(
             continue;
         }
         const records = await Promise.all(
-            Array.from(ids, (entryId) =>
-                repository.get(entryId, { includeTrashed: true })
-            )
+            Array.from(ids, async (entryId) => {
+                try {
+                    return await getEntryResource(repository, type, entryId);
+                } catch {
+                    return null;
+                }
+            })
         );
         for (const record of records) {
-            if (record !== null) titles.set(`entry ${record.id}`, record.title ?? '');
+            if (record !== null) titles.set(`entry ${record.id}`, record.title);
         }
     }
 

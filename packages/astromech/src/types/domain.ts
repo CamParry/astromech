@@ -15,26 +15,19 @@ export type ResourceType = 'entry' | 'user' | 'media' | 'setting';
 
 export type EntryStatus = 'unpublished' | 'published' | 'scheduled';
 
-/** A content record — the primary object of an entry type. */
+/** A content record — one locale of an entry type's primary object. */
 export type Entry = {
     id: string;
     type: string;
     locale: string;
-    localeGroup: string;
-    /**
-     * Map of locale code to entry id, including this entry itself.
-     * Always populated. For non-translatable collections this is a single-entry map.
-     */
-    locales: Record<string, string>;
+    /** Every locale this entry has a content row for, this one included. Sorted. */
+    locales: string[];
     slug: string | null;
     title: string;
     fields: JsonObject;
     status: EntryStatus;
-    /**
-     * When non-null, this entry is a *staged change* of the referenced canonical
-     * entry (forward versioning). Null/absent = a normal canonical entry.
-     */
-    stagedFor?: string | null;
+    /** True when this read is the staged change rather than the canonical row. */
+    staged: boolean;
     /**
      * The publication gate, not a record of when publication happened. While
      * `status` is `'scheduled'` this holds a time ahead of now, and
@@ -44,22 +37,27 @@ export type Entry = {
      */
     publishedAt: Date | null;
     deletedAt: Date | null;
+    /** When the entry was created; every locale of it reports the same value. */
     createdAt: Date;
+    /** When this locale was last edited. */
     updatedAt: Date;
     /**
-     * Who made this row and who last wrote to it. Null for a write with no
+     * Who made this locale and who last wrote to it. Null for a write with no
      * request identity (a seed script, the CLI, the scheduler), and absent
      * altogether on a `tableRepository`-backed type, whose table has no such
-     * columns — the same reason `type` and `locales` are conditional.
+     * columns.
      */
     createdBy?: string | null;
     updatedBy?: string | null;
 };
 
+/** A saved snapshot of one locale of one entry. */
 export type EntryVersion = {
     id: string;
     entryId: string;
-    versionNumber: number;
+    locale: string;
+    /** Position in the sequence, which runs per entry and locale from 1. */
+    version: number;
     title: string;
     slug: string | null;
     fields: JsonObject | null;

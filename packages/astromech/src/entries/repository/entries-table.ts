@@ -514,17 +514,20 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
     }
 
     const trash = {
-        trash: async (id: string): Promise<void> => {
+        trash: async (id: string, actor?: string | null): Promise<void> => {
             const row = await entries.findOne({ id });
             if (!row) throw new Error(`Entry '${id}' not found`);
 
             // Idempotent: re-trashing an already-trashed entry is a no-op.
             if (row.deletedAt === null) {
-                await entries.update(id, { deletedAt: new Date() });
+                await entries.update(id, {
+                    deletedAt: new Date(),
+                    ...(actor === undefined ? {} : { updatedBy: actor }),
+                });
             }
         },
 
-        restore: async (id: string): Promise<EntryRow> => {
+        restore: async (id: string, actor?: string | null): Promise<EntryRow> => {
             const db = handle();
             // Guarded *and* returning: not expressible through the wrapper's
             // primary-key `update` / count-returning `updateMany`.
@@ -534,6 +537,7 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
                     encodePatchWith(entriesTable, {
                         deletedAt: null,
                         updatedAt: new Date(),
+                        ...(actor === undefined ? {} : { updatedBy: actor }),
                     }) as unknown as Updateable<DB['entries']>
                 )
                 .where((eb) =>
@@ -619,6 +623,25 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
             const staged = await findStaged(ref.id, locale);
             if (!staged) throw new Error(`Staged row '${content.id}' not found`);
             return populateLocaleSingle(handle(), staged);
+        },
+
+        update: async (ref: EntryRef, data: EntryWrite): Promise<EntryRow> => {
+            const locale = ref.locale ?? defaultLocale;
+            const existing = await findStaged(ref.id, locale);
+            if (!existing) throw new Error(`No staged change for entry '${ref.id}'`);
+
+            await contents.update(existing.id, {
+                title: data.title,
+                slug: data.slug,
+                fields: data.fields,
+                status: data.status,
+                publishedAt: data.publishedAt,
+                updatedBy: data.updatedBy,
+            });
+
+            const updated = await findStaged(ref.id, locale);
+            if (!updated) throw new Error(`No staged change for entry '${ref.id}'`);
+            return populateLocaleSingle(handle(), updated);
         },
 
         delete: async (ref: EntryRef): Promise<void> => {

@@ -16,11 +16,13 @@ import { updateEntries } from './update';
 export async function publishEntries(params: {
     type: string;
     ids: readonly string[];
+    locale?: string;
 }): Promise<Entry[]> {
     assertCapability(params.type, 'statuses');
     return updateEntries({
         type: params.type,
         ids: params.ids,
+        ...(params.locale !== undefined ? { locale: params.locale } : {}),
         data: { status: 'published', publishedAt: null },
     });
 }
@@ -32,11 +34,13 @@ export async function publishEntries(params: {
 export async function unpublishEntries(params: {
     type: string;
     ids: readonly string[];
+    locale?: string;
 }): Promise<Entry[]> {
     assertCapability(params.type, 'statuses');
     return updateEntries({
         type: params.type,
         ids: params.ids,
+        ...(params.locale !== undefined ? { locale: params.locale } : {}),
         data: { status: 'unpublished', publishedAt: null },
     });
 }
@@ -49,6 +53,7 @@ export async function scheduleEntries(params: {
     type: string;
     ids: readonly string[];
     publishedAt: Date;
+    locale?: string;
 }): Promise<Entry[]> {
     assertCapability(params.type, 'statuses');
     const validated = parseInput(scheduleEntrySchema, {
@@ -57,6 +62,7 @@ export async function scheduleEntries(params: {
     return updateEntries({
         type: params.type,
         ids: params.ids,
+        ...(params.locale !== undefined ? { locale: params.locale } : {}),
         data: { status: 'scheduled', publishedAt: validated.publishedAt },
     });
 }

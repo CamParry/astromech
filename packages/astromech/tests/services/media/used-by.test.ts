@@ -138,32 +138,28 @@ describe('mediaService.usedBy', () => {
         expect(usage.map((row) => row.schemaPath)).toEqual(['cover', 'sections[].image']);
     });
 
-    // A pending merge that uses the file is a reason not to delete it.
-    it('includes a staged source and flags it', async () => {
+    // A pending merge that uses the file is a reason not to delete it, and it
+    // is the same entry as the canonical, so it is one row rather than two.
+    it('keeps a file a staged change alone references', async () => {
         const mediaId = await createMedia();
         const canonical = await entriesService.create({
             type: 'article',
-            data: { title: 'Canonical', fields: { cover: mediaId } },
+            data: { title: 'Canonical' },
         });
-        const staged = await entriesService.createStaged({
+        await entriesService.createStaged({ type: 'article', id: canonical.id });
+        await entriesService.update({
             type: 'article',
             id: canonical.id,
+            staged: true,
+            data: { fields: { cover: mediaId } },
         });
 
         const usage = await mediaService.usedBy({ id: mediaId });
 
-        expect(usage.map((row) => row.sourceId).sort()).toEqual(
-            [canonical.id, staged.id].sort()
-        );
-        expect(usage.find((row) => row.sourceId === staged.id)?.sourceStaged).toBe(true);
-        expect(usage.find((row) => row.sourceId === canonical.id)?.sourceStaged).toBe(
-            false
-        );
-        // A staged row is excluded from `list()`, so its title only resolves
-        // because sources are loaded by id rather than through a list query.
-        expect(usage.find((row) => row.sourceId === staged.id)?.sourceTitle).toBe(
-            'Canonical'
-        );
+        expect(usage.map((row) => row.sourceId)).toEqual([canonical.id]);
+        expect(usage[0]?.sourceTitle).toBe('Canonical');
+        // The entry is live, whichever of its content rows holds the reference.
+        expect(usage[0]?.sourceStaged).toBe(false);
     });
 
     it('returns a user source with a null sourceType', async () => {

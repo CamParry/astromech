@@ -88,9 +88,9 @@ describe('restoreVersion atomicity', () => {
         ).rejects.toThrow('boom');
 
         const row = await getDb()
-            .selectFrom('entries')
+            .selectFrom('entryContent')
             .selectAll()
-            .where('id', '=', entry.id)
+            .where('entryId', '=', entry.id)
             .executeTakeFirstOrThrow();
         expect(row.title).toBe('Changed');
 

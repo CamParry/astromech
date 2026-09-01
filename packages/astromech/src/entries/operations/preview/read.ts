@@ -1,7 +1,8 @@
 /**
  * Preview reads (forward versioning): resolve canonicals matching the filters
- * without the publish gate, verify the token against each, optionally swap to the
- * staged change, return the preview (public) shape. No/bad token → empty result.
+ * without the publish gate, verify the entry's token against each, optionally
+ * swap to the staged change, return the preview (public) shape. No/bad token →
+ * empty result.
  */
 
 import type { Entry, EntryQueryParams, QueryResult } from '@/types/index';
@@ -55,7 +56,10 @@ export async function queryPreviewEntries(
 
         let target: Entry = canonical;
         if (params.staged) {
-            const staged = await repository.staging?.getByCanonical(canonical.id);
+            const staged = await repository.staging?.getByCanonical(
+                canonical.id,
+                canonical.locale
+            );
             if (!staged) continue;
             target = asEntry(staged);
         }
@@ -80,6 +84,7 @@ export async function queryPreviewEntries(
 export async function getPreviewEntry(params: {
     type: string;
     id: string;
+    locale?: string;
     previewToken?: string;
     staged?: boolean;
 }): Promise<Entry | null> {
@@ -88,7 +93,12 @@ export async function getPreviewEntry(params: {
     if (!token) return null;
 
     const repository = getEntryRepository(type);
-    const record = await repository.get(id); // excludes trashed
+    // Excludes trashed. The token authorizes every locale, so this reads the
+    // one asked for and verifies against the entry.
+    const record = await repository.get({
+        id,
+        locale: params.locale ?? getDefaultContentLocale(),
+    });
     if (!record) return null;
     if (record.type !== undefined && record.type !== type) return null;
 
@@ -97,7 +107,10 @@ export async function getPreviewEntry(params: {
 
     let target: Entry = canonical;
     if (params.staged) {
-        const staged = await repository.staging?.getByCanonical(canonical.id);
+        const staged = await repository.staging?.getByCanonical(
+            canonical.id,
+            canonical.locale
+        );
         if (!staged) return null;
         target = asEntry(staged);
     }

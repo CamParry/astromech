@@ -1,8 +1,6 @@
 /**
- * `createdBy` and `updatedBy` on the entries table.
- *
- * Both columns have existed and been writable since the table was declared, and
- * no service path filled either, so every entry in every install held null.
+ * `createdBy` and `updatedBy` across the two entry tables: content writes stamp
+ * the content row, and the resource-level ones (trash, restore) stamp `entries`.
  * These pin who each write records, and that a write with no request identity
  * (a seed script, the CLI, the scheduler) records nobody rather than failing.
  */
@@ -39,12 +37,30 @@ beforeEach(async () => {
     })) as unknown as User;
 });
 
-/** Read the two columns straight from the table, not through the service. */
+/** The canonical content row's two columns, read straight from the table. */
 async function stamps(id: string) {
+    return db
+        .selectFrom('entryContent')
+        .select(['createdBy', 'updatedBy'])
+        .where((eb) => eb.and([eb('entryId', '=', id), eb('stagedFor', 'is', null)]))
+        .executeTakeFirstOrThrow();
+}
+
+/** The same two columns on the `entries` row, which trash and restore stamp. */
+async function resourceStamps(id: string) {
     return db
         .selectFrom('entries')
         .select(['createdBy', 'updatedBy'])
         .where('id', '=', id)
+        .executeTakeFirstOrThrow();
+}
+
+/** The staged content row's two columns. */
+async function stagedStamps(id: string) {
+    return db
+        .selectFrom('entryContent')
+        .select(['createdBy', 'updatedBy'])
+        .where((eb) => eb.and([eb('entryId', '=', id), eb('stagedFor', 'is not', null)]))
         .executeTakeFirstOrThrow();
 }
 
@@ -139,12 +155,37 @@ describe('createStaged', () => {
         const canonical = await runAsUser(author, () =>
             api.create({ type: 'post', data: { title: 'Live' } })
         );
-        const staged = await runAsUser(other, () =>
+        await runAsUser(other, () =>
             api.createStaged({ type: 'post', id: canonical.id })
         );
-        expect(await stamps(staged.id)).toEqual({
+        expect(await stagedStamps(canonical.id)).toEqual({
             createdBy: other.id,
             updatedBy: other.id,
+        });
+        // The canonical row is untouched by staging a change off it.
+        expect(await stamps(canonical.id)).toEqual({
+            createdBy: author.id,
+            updatedBy: author.id,
+        });
+    });
+});
+
+describe('trash and restore', () => {
+    it('records who trashed and who restored on the entry row', async () => {
+        const entry = await runAsUser(author, () =>
+            api.create({ type: 'post', data: { title: 'Doomed' } })
+        );
+
+        await runAsUser(other, () => api.trash({ type: 'post', id: entry.id }));
+        expect(await resourceStamps(entry.id)).toEqual({
+            createdBy: author.id,
+            updatedBy: other.id,
+        });
+
+        await runAsUser(author, () => api.restore({ type: 'post', id: entry.id }));
+        expect(await resourceStamps(entry.id)).toEqual({
+            createdBy: author.id,
+            updatedBy: author.id,
         });
     });
 });

@@ -36,9 +36,8 @@ describe('create', () => {
         expect(e.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/); // ULID
         expect(e.type).toBe('post');
         expect(e.locale).toBe('en'); // defaultLocale
-        // A ULID like every other generated id — the `entries` table's
-        // `defaultUlid` mints it, so nothing hands out a UUID here.
-        expect(e.localeGroup).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
+        expect(e.locales).toEqual(['en']);
+        expect(e.staged).toBe(false);
         expect(e.status).toBe('unpublished');
         expect(e.title).toBe('Hello World');
         expect(e.slug).toBe('hello-world'); // slugify
@@ -72,34 +71,54 @@ describe('create', () => {
         expect(e.publishedAt).toBeInstanceOf(Date);
     });
 
-    it('joins an existing localeGroup when provided', async () => {
-        const en = await api.create({
-            type: 'post',
-            data: { title: 'EN', locale: 'en' },
-        });
+    it('creates the row in the locale it is given', async () => {
         const de = await api.create({
             type: 'post',
-            data: { title: 'DE', locale: 'de', localeGroup: en.localeGroup },
+            data: { title: 'DE', locale: 'de' },
         });
-        expect(de.localeGroup).toBe(en.localeGroup);
+        expect(de.locale).toBe('de');
+        expect(de.locales).toEqual(['de']);
     });
 });
 
 describe('get', () => {
-    it('returns the entry by id with a populated locales map', async () => {
+    it('returns the entry by id with every locale it holds listed', async () => {
         const en = await api.create({
             type: 'post',
             data: { title: 'EN', locale: 'en' },
         });
-        const de = await api.create({
+        await api.update({
             type: 'post',
-            data: { title: 'DE', locale: 'de', localeGroup: en.localeGroup },
+            id: en.id,
+            locale: 'de',
+            data: { title: 'DE' },
         });
 
         // full: true — admin read; unpublished entries and all fields visible
         const got = await api.get({ type: 'post', id: en.id, full: true });
         expect(got?.id).toBe(en.id);
-        expect(got?.locales).toEqual({ en: en.id, de: de.id });
+        expect(got?.locale).toBe('en');
+        expect(got?.locales).toEqual(['de', 'en']);
+    });
+
+    it('reads the locale it is asked for, and null for one with no row', async () => {
+        const en = await api.create({
+            type: 'post',
+            data: { title: 'EN', locale: 'en' },
+        });
+        expect(
+            await api.get({ type: 'post', id: en.id, locale: 'de', full: true })
+        ).toBeNull();
+
+        await api.update({
+            type: 'post',
+            id: en.id,
+            locale: 'de',
+            data: { title: 'DE' },
+        });
+        const de = await api.get({ type: 'post', id: en.id, locale: 'de', full: true });
+        expect(de?.title).toBe('DE');
+        expect(de?.locale).toBe('de');
     });
 
     it('returns null for a missing id', async () => {
@@ -227,14 +246,11 @@ describe('query', () => {
             type: 'post',
             data: { title: 'EN', locale: 'en', status: 'published' },
         });
-        await api.create({
+        await api.update({
             type: 'post',
-            data: {
-                title: 'DE',
-                locale: 'de',
-                localeGroup: en.localeGroup,
-                status: 'published',
-            },
+            id: en.id,
+            locale: 'de',
+            data: { title: 'DE', status: 'published' },
         });
 
         const enOnly = await api.query({ type: 'post', locale: 'en' });
@@ -319,7 +335,97 @@ describe('versioning (on)', () => {
         expect(versions).toHaveLength(1);
         expect(versions[0]?.title).toBe('V1');
         expect(versions[0]?.fields).toEqual({ body: 'one' });
-        expect(versions[0]?.versionNumber).toBe(1);
+        expect(versions[0]?.version).toBe(1);
+        expect(versions[0]?.entryId).toBe(e.id);
+        expect(versions[0]?.locale).toBe('en');
+    });
+
+    it('keeps a separate version sequence per locale', async () => {
+        const e = await api.create({
+            type: 'post',
+            data: { title: 'EN v1', fields: { body: 'one' } },
+        });
+        await api.update({
+            type: 'post',
+            id: e.id,
+            locale: 'de',
+            data: { title: 'DE v1', fields: { body: 'eins' } },
+        });
+        await api.update({
+            type: 'post',
+            id: e.id,
+            data: { title: 'EN v2', fields: { body: 'two' } },
+        });
+        await api.update({
+            type: 'post',
+            id: e.id,
+            locale: 'de',
+            data: { title: 'DE v2', fields: { body: 'zwei' } },
+        });
+
+        const en = await api.versions({ type: 'post', id: e.id });
+        const de = await api.versions({ type: 'post', id: e.id, locale: 'de' });
+
+        expect(en.map((v) => v.title)).toEqual(['EN v1']);
+        expect(de.map((v) => v.title)).toEqual(['DE v1']);
+        // Both sequences start at 1, and each version names its own locale.
+        expect(en.map((v) => v.version)).toEqual([1]);
+        expect(de.map((v) => v.version)).toEqual([1]);
+        expect(en[0]?.locale).toBe('en');
+        expect(de[0]?.locale).toBe('de');
+        expect(de[0]?.entryId).toBe(e.id);
+    });
+
+    it('restores a version into its own locale, leaving the other alone', async () => {
+        const e = await api.create({ type: 'post', data: { title: 'EN v1' } });
+        await api.update({
+            type: 'post',
+            id: e.id,
+            locale: 'de',
+            data: { title: 'DE v1' },
+        });
+        await api.update({
+            type: 'post',
+            id: e.id,
+            locale: 'de',
+            data: { title: 'DE v2' },
+        });
+
+        const [version] = await api.versions({ type: 'post', id: e.id, locale: 'de' });
+        if (!version) throw new Error('expected a de version');
+        const restored = await api.restoreVersion({
+            type: 'post',
+            id: e.id,
+            versionId: version.id,
+            locale: 'de',
+        });
+
+        expect(restored.title).toBe('DE v1');
+        expect(restored.locale).toBe('de');
+        const en = await api.get({ type: 'post', id: e.id, full: true });
+        expect(en?.title).toBe('EN v1');
+    });
+
+    it('refuses a version that belongs to another locale', async () => {
+        const e = await api.create({ type: 'post', data: { title: 'EN v1' } });
+        await api.update({ type: 'post', id: e.id, data: { title: 'EN v2' } });
+        const [version] = await api.versions({ type: 'post', id: e.id });
+        if (!version) throw new Error('expected an en version');
+        await api.update({
+            type: 'post',
+            id: e.id,
+            locale: 'de',
+            data: { title: 'DE' },
+        });
+
+        await expect(
+            api.restoreVersion({
+                type: 'post',
+                id: e.id,
+                versionId: version.id,
+                locale: 'de',
+            })
+        ).rejects.toThrow(/Version not found/);
     });
 
     it('creates no version when nothing changes', async () => {
@@ -351,7 +457,7 @@ describe('versioning (on)', () => {
             data: { title: 'C', fields: { body: '3' } },
         });
         const versions = await api.versions({ type: 'post', id: e.id });
-        expect(versions.map((v) => v.versionNumber)).toEqual([2, 1]);
+        expect(versions.map((v) => v.version)).toEqual([2, 1]);
         expect(versions[0]?.title).toBe('B'); // pre-update of the C change
     });
 
@@ -407,23 +513,20 @@ describe('translatable', () => {
                 fields: { body: 'enbody', category: 'news' },
             },
         });
-        const de = await api.create({
+        const de = await api.update({
             type: 'post',
-            data: {
-                title: 'DE',
-                locale: 'de',
-                localeGroup: en.localeGroup,
-                fields: { body: 'debody', category: 'news' },
-            },
+            id: en.id,
+            locale: 'de',
+            data: { title: 'DE', fields: { body: 'debody', category: 'news' } },
         });
         return { en, de };
     }
 
-    it('reflects both locales in the locales map', async () => {
-        const { en, de } = await makePair();
+    it('lists both locales on either read', async () => {
+        const { en } = await makePair();
         // full: true — admin read; entries are unpublished
         const got = await api.get({ type: 'post', id: en.id, full: true });
-        expect(got?.locales).toEqual({ en: en.id, de: de.id });
+        expect(got?.locales).toEqual(['de', 'en']);
     });
 
     // CHARACTERIZED: a non-translatable field value updated on one locale is
@@ -436,7 +539,12 @@ describe('translatable', () => {
             id: en.id,
             data: { fields: { body: 'enbody', category: 'updated' } },
         });
-        const deAfter = await api.get({ type: 'post', id: de.id, full: true });
+        const deAfter = await api.get({
+            type: 'post',
+            id: de.id,
+            locale: 'de',
+            full: true,
+        });
         expect(deAfter?.fields).toEqual({ body: 'debody', category: 'updated' });
     });
 
@@ -447,7 +555,12 @@ describe('translatable', () => {
             id: en.id,
             data: { fields: { body: 'enbody2', category: 'news' } },
         });
-        const deAfter = await api.get({ type: 'post', id: de.id, full: true });
+        const deAfter = await api.get({
+            type: 'post',
+            id: de.id,
+            locale: 'de',
+            full: true,
+        });
         expect(deAfter?.fields).toEqual({ body: 'debody', category: 'news' });
     });
 });
@@ -538,85 +651,70 @@ describe('trash / restore / delete / emptyTrash', () => {
     });
 });
 
-describe('cascadeLocales', () => {
-    async function makeLocalePair(): Promise<{ en: Entry; de: Entry }> {
+describe('trash and delete are resource-level', () => {
+    /** One entry with an `en` and a `de` content row. */
+    async function makeLocalePair(): Promise<Entry> {
         const en = await api.create({
             type: 'post',
             data: { title: 'EN', locale: 'en' },
         });
-        const de = await api.create({
+        await api.update({
             type: 'post',
-            data: { title: 'DE', locale: 'de', localeGroup: en.localeGroup },
+            id: en.id,
+            locale: 'de',
+            data: { title: 'DE' },
         });
-        return { en, de };
+        return en;
     }
 
-    it('trash cascades to the live locale group when cascadeLocales is set', async () => {
-        const { en, de } = await makeLocalePair();
-        await api.trash({ type: 'post', id: en.id, cascadeLocales: true });
+    it('trash hides every locale, and restore brings them all back', async () => {
+        const entry = await makeLocalePair();
+        await api.trash({ type: 'post', id: entry.id });
+
+        expect(await api.get({ type: 'post', id: entry.id, full: true })).toBeNull();
+        expect(
+            await api.get({ type: 'post', id: entry.id, locale: 'de', full: true })
+        ).toBeNull();
 
         const trashed = await api.query({
             type: 'post',
             locale: 'all',
             full: true,
             trashed: true,
-            where: { id: de.id },
         });
-        expect(trashed.data[0]?.deletedAt).toBeInstanceOf(Date);
-    });
+        expect(trashed.data.map((e) => e.locale).sort()).toEqual(['de', 'en']);
+        expect(trashed.data.every((e) => e.deletedAt instanceof Date)).toBe(true);
 
-    it('trash does not cascade when cascadeLocales is omitted', async () => {
-        const { en, de } = await makeLocalePair();
-        await api.trash({ type: 'post', id: en.id });
+        await api.restore({ type: 'post', id: entry.id });
 
-        // get() only ever returns live rows, so finding `de` here confirms it
-        // was not swept into the trash.
-        const de2 = await api.get({ type: 'post', id: de.id, full: true });
-        expect(de2?.deletedAt).toBeNull();
-    });
-
-    it('delete cascades to the live locale group when cascadeLocales is set', async () => {
-        const { en, de } = await makeLocalePair();
-        await api.delete({ type: 'post', id: en.id, cascadeLocales: true });
-
-        const enRows = await getDb()
-            .selectFrom('entries')
-            .selectAll()
-            .where('id', '=', en.id)
-            .execute();
-        const deRows = await getDb()
-            .selectFrom('entries')
-            .selectAll()
-            .where('id', '=', de.id)
-            .execute();
-        expect(enRows).toHaveLength(0);
-        expect(deRows).toHaveLength(0);
-    });
-
-    it('delete with cascade leaves an already-trashed sibling intact', async () => {
-        const { en, de } = await makeLocalePair();
-        await api.trash({ type: 'post', id: de.id }); // no cascade — de only
-        await api.delete({ type: 'post', id: en.id, cascadeLocales: true });
-
-        const enRows = await getDb()
-            .selectFrom('entries')
-            .selectAll()
-            .where('id', '=', en.id)
-            .execute();
-        expect(enRows).toHaveLength(0);
-
-        // `de` is trashed, not deleted — a permanent delete's cascade only
-        // reaches the LIVE locale group (`withLocaleSiblings` uses
-        // `repository.translatable.siblings`, which excludes trashed rows).
-        const trashedDe = await api.query({
+        const en = await api.get({ type: 'post', id: entry.id, full: true });
+        const de = await api.get({
             type: 'post',
-            locale: 'all',
+            id: entry.id,
+            locale: 'de',
             full: true,
-            trashed: true,
-            where: { id: de.id },
         });
-        expect(trashedDe.data[0]?.id).toBe(de.id);
-        expect(trashedDe.data[0]?.deletedAt).toBeInstanceOf(Date);
+        expect(en?.title).toBe('EN');
+        expect(de?.title).toBe('DE');
+        expect(en?.deletedAt).toBeNull();
+    });
+
+    it('delete removes the entry and every content row it has', async () => {
+        const entry = await makeLocalePair();
+        await api.delete({ type: 'post', id: entry.id });
+
+        const entries = await getDb()
+            .selectFrom('entries')
+            .selectAll()
+            .where('id', '=', entry.id)
+            .execute();
+        const contents = await getDb()
+            .selectFrom('entryContent')
+            .selectAll()
+            .where('entryId', '=', entry.id)
+            .execute();
+        expect(entries).toHaveLength(0);
+        expect(contents).toHaveLength(0);
     });
 });
 
@@ -637,7 +735,53 @@ describe('duplicate', () => {
         // overrides.fields shallow-merges over the source fields.
         expect(dup.fields).toEqual({ body: 'b', category: 'x' });
         expect(dup.status).toBe('unpublished');
-        expect(dup.localeGroup).not.toBe(src.localeGroup);
+    });
+
+    it('copies every locale under the new id', async () => {
+        const src = await api.create({
+            type: 'post',
+            data: { title: 'EN', locale: 'en', fields: { body: 'a' } },
+        });
+        await api.update({
+            type: 'post',
+            id: src.id,
+            locale: 'de',
+            data: { title: 'DE', fields: { body: 'b' } },
+        });
+
+        const dup = await api.duplicate({ type: 'post', id: src.id });
+
+        expect(dup.id).not.toBe(src.id);
+        expect(dup.locales).toEqual(['de', 'en']);
+        const de = await api.get({ type: 'post', id: dup.id, locale: 'de', full: true });
+        expect(de?.title).toBe('DE');
+        expect(de?.fields['body']).toBe('b');
+        // A translation inherits the default locale's slug, and the copy
+        // re-uniques it within its own locale.
+        expect(de?.slug).toBe('en-2');
+    });
+
+    it('copies one locale alone when overrides name it', async () => {
+        const src = await api.create({
+            type: 'post',
+            data: { title: 'EN', locale: 'en' },
+        });
+        await api.update({
+            type: 'post',
+            id: src.id,
+            locale: 'de',
+            data: { title: 'DE' },
+        });
+
+        const dup = await api.duplicate({
+            type: 'post',
+            id: src.id,
+            overrides: { locale: 'de' },
+        });
+
+        expect(dup.locale).toBe('de');
+        expect(dup.locales).toEqual(['de']);
+        expect(await api.get({ type: 'post', id: dup.id, full: true })).toBeNull();
     });
 
     // CHARACTERIZED: duplicate re-uniquifies the source slug ("original" -> "-2").

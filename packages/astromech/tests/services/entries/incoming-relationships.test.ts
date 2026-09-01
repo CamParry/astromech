@@ -56,6 +56,7 @@ function makeRelationsConfig(): AstromechConfig {
                 single: 'Article',
                 plural: 'Articles',
                 staging: true,
+                translatable: true,
                 fields: [
                     {
                         name: 'author',
@@ -156,19 +157,38 @@ describe('incomingRelationships', () => {
     });
 
     // A pending merge referencing the target is a reason not to delete it.
-    it('includes a staged source', async () => {
+    it('counts a staged source once, under the entry id', async () => {
         const target = await api.create({ type: 'post', data: { title: 'Target' } });
         const canonical = await api.create({
             type: 'article',
             data: { title: 'Canonical', fields: { author: target.id } },
         });
-        const staged = await api.createStaged({ type: 'article', id: canonical.id });
+        await api.createStaged({ type: 'article', id: canonical.id });
 
         const incoming = await api.incomingRelationships({ type: 'post', id: target.id });
 
-        expect(incoming.map((r) => r.sourceId).sort()).toEqual(
-            [canonical.id, staged.id].sort()
-        );
+        // The staged row is the same entry, holding the same reference.
+        expect(incoming.map((r) => r.sourceId)).toEqual([canonical.id]);
+    });
+
+    it('counts a source referencing the target from two locales once', async () => {
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
+        const source = await api.create({
+            type: 'article',
+            data: { title: 'EN', fields: { author: target.id } },
+        });
+        await api.update({
+            type: 'article',
+            id: source.id,
+            locale: 'de',
+            data: { title: 'DE', fields: { author: target.id } },
+        });
+
+        const incoming = await api.incomingRelationships({ type: 'post', id: target.id });
+
+        expect(incoming.map((r) => r.sourceId)).toEqual([source.id]);
+        // Named in the default locale, whichever locale was written last.
+        expect(incoming.map((r) => r.sourceTitle)).toEqual(['EN']);
     });
 
     it('includes a trashed source', async () => {

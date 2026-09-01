@@ -34,7 +34,6 @@ export function createEntrySchema({ titled }: { titled: boolean }) {
             title,
             slug: slugField,
             locale: z.string().min(1).optional(),
-            localeGroup: z.string().min(1).optional(),
             fields: z.record(z.string(), z.unknown()).optional(),
             status: entryStatusEnum.optional(),
             publishedAt: optionalDate,
@@ -97,7 +96,7 @@ export const scheduleEntrySchema = z.object({
 });
 
 /**
- * Overrides accepted by `duplicate`. Authored here rather than inline in a route:
+ * Overrides accepted by `duplicate`; `locale` copies that locale alone. Authored here rather than inline in a route:
  * the method contract publishes the same payload to MCP and the AI tool-loop, and
  * two copies of a schema is how the two end up describing different things.
  */
@@ -106,7 +105,6 @@ export const duplicateOverridesSchema = z
         title: z.string().min(1).optional(),
         slug: slugField,
         locale: z.string().min(1).optional(),
-        localeGroup: z.string().min(1).optional(),
         fields: z.record(z.string(), z.unknown()).optional(),
         status: entryStatusEnum.optional(),
     })
