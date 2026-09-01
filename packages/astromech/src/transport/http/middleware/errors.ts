@@ -8,7 +8,7 @@ import type { Context, ErrorHandler, NotFoundHandler } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { ZodError } from 'zod';
 import { HTTPException } from 'hono/http-exception';
-import { BulkOperationError } from '@/entries/errors';
+import { BulkOperationError, EntryNotFoundError } from '@/entries/errors';
 import { resolveEnv } from '@/env';
 import { ValidationError } from '@/errors/validation';
 
@@ -160,13 +160,17 @@ function fieldErrorsFrom(err: ValidationError): Record<string, string[]> {
 }
 
 /**
- * Hono's app-level error handler: canonicalises HTTPException, ValidationError
- * — bare, or wrapped by a batch write's BulkOperationError — and unknown errors
- * alike.
+ * Hono's app-level error handler: canonicalises HTTPException,
+ * EntryNotFoundError, ValidationError — bare, or wrapped by a batch write's
+ * BulkOperationError — and unknown errors alike.
  */
 export const onError: ErrorHandler = (err, c) => {
     if (err instanceof HTTPException) {
         return apiError(c, err.status, 'INTERNAL_ERROR', err.message);
+    }
+
+    if (err instanceof EntryNotFoundError) {
+        return notFound(c, err.message);
     }
 
     if (err instanceof ValidationError) {

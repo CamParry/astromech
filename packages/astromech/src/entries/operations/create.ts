@@ -2,7 +2,7 @@ import type { Entry, EntryCreateParams } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types.shared';
-import { parseInput } from '@/errors/validation';
+import { parseInput, ValidationError } from '@/errors/validation';
 import { runHook } from '@/hooks/hooks';
 import { getCurrentUser } from '@/request-context/request-context';
 import { UnknownEntryTypeError } from '../errors';
@@ -45,7 +45,14 @@ export async function createEntry(params: EntryCreateParams): Promise<Entry> {
 
     const title = validated.title ?? '';
     const status = validated.status ?? 'unpublished';
-    const locale = data.locale ?? getDefaultContentLocale();
+    const defaultLocale = getDefaultContentLocale();
+    const locale = data.locale ?? defaultLocale;
+    if (locale !== defaultLocale && !entryType.translatable) {
+        throw ValidationError.fromFieldErrors({}, [
+            `Entry type '${entryType.id}' is not translatable, so only the ` +
+                `'${defaultLocale}' locale can be written.`,
+        ]);
+    }
     const publishedAt =
         status === 'published' ? new Date() : (validated.publishedAt ?? null);
 

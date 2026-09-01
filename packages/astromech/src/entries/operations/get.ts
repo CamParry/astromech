@@ -2,6 +2,7 @@ import type { VisibilityShape } from '../visibility';
 import type { Entry } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { resolveEntryType } from '@/entries/entry-types.shared';
+import { ValidationError } from '@/errors/validation';
 import { flattenEntryFields } from '@/fields/flatten';
 import { getCurrentUser } from '@/request-context/request-context';
 import { getDefaultContentLocale } from '../internal/entry-type';
@@ -14,7 +15,8 @@ import { getPreviewEntry } from './preview/read';
  * Gets one locale of one entry, filtered to the caller's visibility shape.
  * Returns null when that locale has no row, its type differs, or visibility
  * hides it — there is no fallback to another locale. A `previewToken` takes the
- * token-authorized preview path that skips the publish gate.
+ * token-authorized preview path that skips the publish gate, and is what
+ * `staged` requires: without one it is a validation error.
  */
 export async function getEntry(params: {
     type: string;
@@ -28,6 +30,15 @@ export async function getEntry(params: {
 
     // Preview (forward versioning): token-authorized, publish-gate-bypassed.
     if (params.previewToken) return getPreviewEntry(params);
+
+    // Without a token there is no staged read here: answering the canonical row
+    // for `staged: true` would silently hand back the wrong content.
+    if (params.staged === true) {
+        throw ValidationError.fromFieldErrors({}, [
+            'entries.get: `staged` requires `previewToken`; use `getStaged` to ' +
+                'read a staged change without one.',
+        ]);
+    }
 
     const repository = getEntryRepository(type);
     const record = await repository.get({

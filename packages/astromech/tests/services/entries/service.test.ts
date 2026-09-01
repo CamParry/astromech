@@ -784,6 +784,35 @@ describe('duplicate', () => {
         expect(await api.get({ type: 'post', id: dup.id, full: true })).toBeNull();
     });
 
+    it('trashes, restores and deletes a copy that has no default-locale row', async () => {
+        const src = await api.create({
+            type: 'post',
+            data: { title: 'EN', locale: 'en' },
+        });
+        await api.update({
+            type: 'post',
+            id: src.id,
+            locale: 'de',
+            data: { title: 'DE' },
+        });
+        const deOnly = await api.duplicate({
+            type: 'post',
+            id: src.id,
+            overrides: { locale: 'de' },
+        });
+
+        await api.trash({ type: 'post', id: deOnly.id });
+        const restored = await api.restore({ type: 'post', id: deOnly.id });
+        expect(restored.id).toBe(deOnly.id);
+        expect(restored.locale).toBe('de');
+        expect(restored.deletedAt).toBeNull();
+
+        await api.delete({ type: 'post', id: deOnly.id });
+        expect(
+            await api.get({ type: 'post', id: deOnly.id, locale: 'de', full: true })
+        ).toBeNull();
+    });
+
     // CHARACTERIZED: duplicate re-uniquifies the source slug ("original" -> "-2").
     it('uniquifies the copied slug', async () => {
         const src = await api.create({ type: 'post', data: { title: 'Original' } });
@@ -931,6 +960,36 @@ describe('hooks', () => {
         expect(seen.before).toBe('Hooked');
         expect(seen.afterId).toBe(e.id);
         expect(seen.afterTitle).toBe('Hooked');
+    });
+
+    it('hands the update hooks the public entry, without the content row id', async () => {
+        const entry = await api.create({ type: 'post', data: { title: 'Before' } });
+        const seen: Record<string, unknown>[] = [];
+        const resolved = setupTestConfig();
+        const probe: PluginDefinition = {
+            package: '@test/probe',
+            hooks: [
+                defineHook('entry:beforeUpdate', (ctx) => {
+                    seen.push(ctx.entry as unknown as Record<string, unknown>);
+                }),
+                defineHook('entry:afterUpdate', (ctx) => {
+                    seen.push(ctx.entry as unknown as Record<string, unknown>);
+                }),
+                defineHook('entry:beforeDelete', (ctx) => {
+                    seen.push(ctx.entry as unknown as Record<string, unknown>);
+                }),
+            ],
+        };
+        registerTestPlugins([probe], resolved);
+
+        await api.update({ type: 'post', id: entry.id, data: { title: 'After' } });
+        await api.trash({ type: 'post', id: entry.id });
+
+        expect(seen).toHaveLength(3);
+        for (const payload of seen) {
+            expect(payload['id']).toBe(entry.id);
+            expect(payload).not.toHaveProperty('contentId');
+        }
     });
 
     it('a throwing beforeCreate aborts the create', async () => {

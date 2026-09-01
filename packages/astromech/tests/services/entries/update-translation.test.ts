@@ -4,7 +4,9 @@
  * The new row is built from the default-locale one: non-translatable
  * ("shared") fields are inherited from it and override whatever the caller
  * supplied, translatable ones come from the patch alone, and `create`'s
- * validation runs over the result. A non-translatable type refuses the write.
+ * validation runs over the result. A non-translatable type refuses the write,
+ * on `create` as on `update`, and a status change refuses a missing locale
+ * outright: only `update` may make a translation.
  */
 
 import type { AstromechConfig, Entry } from '@/types/index';
@@ -132,6 +134,18 @@ describe('update into a locale with no row', () => {
         expect(await api.get({ type: 'note', id: note.id, locale: 'de' })).toBeNull();
     });
 
+    it('refuses a non-default locale on create of a non-translatable type', async () => {
+        await expect(
+            api.create({
+                type: 'note',
+                data: { title: 'First', locale: 'de', fields: { body: 'x' } },
+            })
+        ).rejects.toMatchObject({ name: 'ValidationError' });
+
+        const { data } = await api.query({ type: 'note', locale: 'all', full: true });
+        expect(data).toEqual([]);
+    });
+
     it('throws when the entry itself does not exist', async () => {
         await expect(
             api.update({
@@ -141,6 +155,36 @@ describe('update into a locale with no row', () => {
                 data: { fields: {} },
             })
         ).rejects.toThrow(/not found/);
+    });
+});
+
+describe('a status change never writes a translation', () => {
+    it.each(['publish', 'unpublish'] as const)(
+        '%s throws on a missing locale',
+        async (method) => {
+            const en = await makeSource();
+
+            await expect(
+                api[method]({ type: 'post', id: en.id, locale: 'de' })
+            ).rejects.toMatchObject({ name: 'EntryNotFoundError' });
+
+            expect(await api.get({ type: 'post', id: en.id, locale: 'de' })).toBeNull();
+        }
+    );
+
+    it('schedule throws on a missing locale', async () => {
+        const en = await makeSource();
+
+        await expect(
+            api.schedule({
+                type: 'post',
+                id: en.id,
+                locale: 'de',
+                publishedAt: new Date(Date.now() + 60_000),
+            })
+        ).rejects.toMatchObject({ name: 'EntryNotFoundError' });
+
+        expect(await api.get({ type: 'post', id: en.id, locale: 'de' })).toBeNull();
     });
 });
 

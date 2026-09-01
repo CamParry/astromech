@@ -31,6 +31,8 @@ export function createEntryMaintenanceRepository(db: Db = getDb()) {
                 eb.and([
                     eb('status', '=', 'scheduled'),
                     eb('publishedAt', '<=', now.toISOString()),
+                    // Canonical rows only: a staged change publishes at its merge.
+                    eb('stagedFor', 'is', null),
                     eb(
                         'entryId',
                         'in',

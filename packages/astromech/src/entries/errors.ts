@@ -68,21 +68,42 @@ export class BulkOperationError extends Error {
 }
 
 /**
- * Thrown by `createStaged` when the canonical entry already has a staged change.
- * Carries the existing staged entry's id so the admin can redirect to it instead
- * of creating a second one (the service stays dumb; the UI owns the redirect).
+ * Thrown by an operation addressing an entry, or one locale of it, that has no
+ * row. The HTTP layer maps it to a 404; `get` answers null rather than throwing.
+ */
+export class EntryNotFoundError extends Error {
+    public readonly entryId: string;
+    public readonly locale: string | undefined;
+
+    constructor(args: { entryId: string; locale?: string | undefined }) {
+        super(
+            args.locale === undefined
+                ? `Entry '${args.entryId}' not found`
+                : `Entry '${args.entryId}' not found in locale '${args.locale}'`
+        );
+        this.name = 'EntryNotFoundError';
+        this.entryId = args.entryId;
+        this.locale = args.locale;
+    }
+}
+
+/**
+ * Thrown by `createStaged` when that locale of the entry already has a staged
+ * change. Carries the locale, which with the entry id is the whole address of
+ * the existing staged row — the admin needs no second id to redirect to it.
  */
 export class StagedEntryExistsError extends Error {
     public readonly canonicalId: string;
-    public readonly stagedId: string;
+    public readonly locale: string;
 
-    constructor(args: { canonicalId: string; stagedId: string }) {
+    constructor(args: { canonicalId: string; locale: string }) {
         super(
-            `Entry '${args.canonicalId}' already has a staged change ('${args.stagedId}')`
+            `Entry '${args.canonicalId}' already has a staged change for locale ` +
+                `'${args.locale}'`
         );
         this.name = 'StagedEntryExistsError';
         this.canonicalId = args.canonicalId;
-        this.stagedId = args.stagedId;
+        this.locale = args.locale;
     }
 }
 

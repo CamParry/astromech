@@ -7,7 +7,7 @@
  * Auth sessions are out of scope here) against a config where `post` has the
  * `staging` capability enabled. The service layer's policy is pinned in
  * tests/services/entries/staging.test.ts — these tests own the route wiring:
- * status codes, the 409 duplicate-stage envelope (carrying `stagedId`), the
+ * status codes, the 409 duplicate-stage envelope (carrying `locale`), the
  * capability 409, and the permission matrix (merge = publish; the rest = update).
  *
  * Uses a per-test temp FILE db: `mergeStaged` runs in a database transaction,
@@ -23,6 +23,7 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { createFileTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { entriesService as api } from '@/entries/service';
+import { onError } from '@/transport/http/middleware/errors';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
 
 const fakeUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;
@@ -62,6 +63,7 @@ afterEach(() => {
 /** Mount the root entries router with an injected role. */
 function mountedApp(role: Role): OpenAPIHono<{ Variables: AuthVariables }> {
     const app = new OpenAPIHono<{ Variables: AuthVariables }>();
+    app.onError(onError);
     app.use('/entries/*', async (c, next) => {
         c.set('user', fakeUser);
         c.set('role', role);
@@ -137,7 +139,7 @@ describe('staged-entry routes — round-trip', () => {
         expect(((await after.json()) as { data: unknown }).data).toBeNull();
     });
 
-    it('409 staged_entry_exists (carrying stagedId) on a duplicate stage', async () => {
+    it('409 staged_entry_exists (carrying the locale) on a duplicate stage', async () => {
         const app = mountedApp(roleWith(['*']));
         const canonical = await api.create({
             type: 'post',
@@ -147,17 +149,30 @@ describe('staged-entry routes — round-trip', () => {
         const first = await app.request(`/entries/post/${canonical.id}/staged`, {
             method: 'POST',
         });
-        const firstId = ((await first.json()) as { data: { id: string } }).data.id;
+        expect(first.status).toBe(201);
 
         const dup = await app.request(`/entries/post/${canonical.id}/staged`, {
             method: 'POST',
         });
         expect(dup.status).toBe(409);
         const dupBody = (await dup.json()) as {
-            error: { code: string; details: { stagedId: string } };
+            error: { code: string; details: { locale: string } };
         };
         expect(dupBody.error.code).toBe('staged_entry_exists');
-        expect(dupBody.error.details.stagedId).toBe(firstId);
+        expect(dupBody.error.details).toEqual({ locale: 'en' });
+    });
+
+    it('404s a stage on a locale with no content row', async () => {
+        const app = mountedApp(roleWith(['*']));
+        const canonical = await api.create({
+            type: 'post',
+            data: { title: 'Y', slug: 'y' },
+        });
+
+        const res = await app.request(`/entries/post/${canonical.id}/staged?locale=de`, {
+            method: 'POST',
+        });
+        expect(res.status).toBe(404);
     });
 
     it('discards a staged change via DELETE', async () => {

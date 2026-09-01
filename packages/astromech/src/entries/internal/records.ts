@@ -6,7 +6,7 @@
 
 import type { ContentRowId, EntryRepository, EntryRow } from '../repository/types';
 import type { Entry } from '@/types/index';
-import { EntryTypeMismatchError } from '../errors';
+import { EntryNotFoundError, EntryTypeMismatchError } from '../errors';
 import { getDefaultContentLocale } from './entry-type';
 
 /**
@@ -58,14 +58,20 @@ export async function getEntryOfType(
     locale?: string
 ): Promise<EntryRecord> {
     const record = await findEntryOfType(repository, type, id, locale);
-    if (!record) throw new Error(`Entry '${id}' not found`);
+    if (!record) {
+        throw new EntryNotFoundError({
+            entryId: id,
+            locale: locale ?? getDefaultContentLocale(),
+        });
+    }
     return record;
 }
 
 /**
  * Read an entry for a resource-level operation (trash, delete, preview token),
  * which acts on every locale at once: the default-locale row if there is one,
- * else any other locale's.
+ * else any other locale's. Trashed entries included, so a trashed entry with no
+ * default-locale row can still be restored and deleted.
  */
 export async function getEntryResource(
     repository: EntryRepository,
@@ -75,10 +81,10 @@ export async function getEntryResource(
     const record = await findEntryOfType(repository, type, id);
     if (record) return record;
 
-    const [sibling] = (await repository.translatable?.siblings(id)) ?? [];
-    if (!sibling) throw new Error(`Entry '${id}' not found`);
-    assertType(sibling, type, id);
-    return asRecord(sibling);
+    const row = await repository.anyLocale?.(id, { includeTrashed: true });
+    if (!row) throw new EntryNotFoundError({ entryId: id });
+    assertType(row, type, id);
+    return asRecord(row);
 }
 
 /**

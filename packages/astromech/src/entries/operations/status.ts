@@ -1,6 +1,7 @@
 /**
  * Status transitions — convenience wrappers over `updateEntries` that move a
- * batch of entries between statuses.
+ * batch of entries between statuses. A locale with no content row is a
+ * not-found error here: only `update` may write a translation.
  */
 
 import type { Entry } from '@/types/index';
@@ -23,6 +24,7 @@ export async function publishEntries(params: {
         type: params.type,
         ids: params.ids,
         ...(params.locale !== undefined ? { locale: params.locale } : {}),
+        createMissingLocale: false,
         data: { status: 'published', publishedAt: null },
     });
 }
@@ -41,6 +43,7 @@ export async function unpublishEntries(params: {
         type: params.type,
         ids: params.ids,
         ...(params.locale !== undefined ? { locale: params.locale } : {}),
+        createMissingLocale: false,
         data: { status: 'unpublished', publishedAt: null },
     });
 }
@@ -63,6 +66,7 @@ export async function scheduleEntries(params: {
         type: params.type,
         ids: params.ids,
         ...(params.locale !== undefined ? { locale: params.locale } : {}),
+        createMissingLocale: false,
         data: { status: 'scheduled', publishedAt: validated.publishedAt },
     });
 }

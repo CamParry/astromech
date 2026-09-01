@@ -9,8 +9,9 @@ import { sql } from 'kysely';
  *
  * Each old row keeps its id as its content row's id, so `staged_for` and
  * `entry_versions.entry_id` carry over verbatim. The entry id is the oldest
- * canonical row in the `locale_group`, which is also the id the relationships
- * index is remapped onto.
+ * canonical row in the `locale_group`; every other old row id is then rewritten
+ * to it wherever one is stored — in a `fields` JSON and in both ends of the
+ * relationships index.
  */
 
 /** The group's entry id, for a row aliased `r` with its canonical aliased `c`. */
@@ -24,10 +25,6 @@ const ENTRY_ID = sql`(
 
 export async function up(db: Kysely<unknown>): Promise<void> {
     await sql`PRAGMA defer_foreign_keys = true`.execute(db);
-
-    // A one-to-one satellite whose own created columns nothing reads; the token
-    // is two columns on `entries` now.
-    await sql`DROP TABLE \`entry_preview_tokens\``.execute(db);
 
     // Renamed before `entries`, so its foreign key follows that table's rename.
     await sql`DROP INDEX \`idx_versions_entry\``.execute(db);
@@ -174,19 +171,105 @@ export async function up(db: Kysely<unknown>): Promise<void> {
         FROM entry_versions_old
     `.execute(db);
 
-    // The index is derived, so this only re-points what a rebuild would rewrite
-    // anyway. `OR REPLACE` because two locales of one entry can collapse onto
-    // one edge, which the composite primary key would otherwise reject.
+    // One token per entry now, so the group keeps its newest. `entry_content`
+    // maps the old row the token was issued against onto its entry.
     await sql`
-        UPDATE OR REPLACE \`relationships\`
-        SET \`target_id\` = COALESCE((
-            SELECT ${ENTRY_ID} FROM entries_old r
-            LEFT JOIN entries_old c ON c.id = r.staged_for
-            WHERE r.id = relationships.target_id
-        ), \`target_id\`)
-        WHERE \`target_kind\` = 'entry'
+        UPDATE \`entries\` SET
+            \`preview_token\` = (
+                SELECT t.token FROM entry_preview_tokens t
+                JOIN entry_content ec ON ec.id = t.entry_id
+                WHERE ec.entry_id = entries.id
+                ORDER BY t.created_at DESC, t.id DESC LIMIT 1
+            ),
+            \`preview_token_expires_at\` = (
+                SELECT t.expires_at FROM entry_preview_tokens t
+                JOIN entry_content ec ON ec.id = t.entry_id
+                WHERE ec.entry_id = entries.id
+                ORDER BY t.created_at DESC, t.id DESC LIMIT 1
+            )
     `.execute(db);
+    await sql`DROP TABLE \`entry_preview_tokens\``.execute(db);
+
+    await remapStoredIds(db);
+    await remapRelationships(db);
 
     await sql`DROP TABLE \`entry_versions_old\``.execute(db);
     await sql`DROP TABLE \`entries_old\``.execute(db);
+}
+
+/**
+ * Rewrite every old row id stored inside a `fields` JSON — a relationship field
+ * holds its targets as ids — onto the entry id that row now belongs to. Ids are
+ * ULIDs, so replacing the quoted string is exact.
+ */
+async function remapStoredIds(db: Kysely<unknown>): Promise<void> {
+    const { rows } = await sql<{ oldid: string; newid: string }>`
+        SELECT \`id\` AS oldid, \`entry_id\` AS newid
+        FROM \`entry_content\` WHERE \`id\` <> \`entry_id\`
+    `.execute(db);
+
+    for (const { oldid, newid } of rows) {
+        const from = `"${oldid}"`;
+        const to = `"${newid}"`;
+        const like = `%${oldid}%`;
+        await sql`
+            UPDATE \`entry_content\` SET \`fields\` = replace(\`fields\`, ${from}, ${to})
+            WHERE \`fields\` LIKE ${like}
+        `.execute(db);
+        await sql`
+            UPDATE \`entry_versions\` SET \`fields\` = replace(\`fields\`, ${from}, ${to})
+            WHERE \`fields\` LIKE ${like}
+        `.execute(db);
+    }
+}
+
+/**
+ * Re-point the derived relationships index at entry ids on both ends. Canonical
+ * sources go first so a staged row that carries the same edge collapses into
+ * theirs; `sourceStaged` then marks only the edges no canonical row has.
+ */
+async function remapRelationships(db: Kysely<unknown>): Promise<void> {
+    // `OR REPLACE` because two locales of one entry can collapse onto one edge,
+    // which the composite primary key would otherwise reject.
+    await sql`
+        UPDATE OR REPLACE \`relationships\`
+        SET \`target_id\` = COALESCE(
+            (SELECT ec.entry_id FROM entry_content ec WHERE ec.id = relationships.target_id),
+            \`target_id\`
+        )
+        WHERE \`target_kind\` = 'entry'
+    `.execute(db);
+
+    await sql`
+        UPDATE OR REPLACE \`relationships\`
+        SET \`source_id\` = (
+                SELECT ec.entry_id FROM entry_content ec WHERE ec.id = relationships.source_id
+            ),
+            \`source_staged\` = 0
+        WHERE \`source_kind\` = 'entry' AND EXISTS (
+            SELECT 1 FROM entry_content ec
+            WHERE ec.id = relationships.source_id AND ec.staged_for IS NULL
+        )
+    `.execute(db);
+
+    // `OR IGNORE`: where the canonical row already carries the edge, the staged
+    // row's copy loses and is dropped below with anything else left on a dead id.
+    await sql`
+        UPDATE OR IGNORE \`relationships\`
+        SET \`source_id\` = (
+                SELECT ec.entry_id FROM entry_content ec WHERE ec.id = relationships.source_id
+            ),
+            \`source_staged\` = 1
+        WHERE \`source_kind\` = 'entry' AND EXISTS (
+            SELECT 1 FROM entry_content ec
+            WHERE ec.id = relationships.source_id AND ec.staged_for IS NOT NULL
+        )
+    `.execute(db);
+
+    await sql`
+        DELETE FROM \`relationships\`
+        WHERE \`source_kind\` = 'entry' AND \`source_id\` IN (
+            SELECT \`id\` FROM \`entry_content\` WHERE \`id\` <> \`entry_id\`
+        )
+    `.execute(db);
 }

@@ -4,7 +4,7 @@ import { runHook } from '@/hooks/hooks';
 import { getCurrentUser } from '@/request-context/request-context';
 import { BulkOperationError, CapabilityError } from '../errors';
 import { assertCapability } from '../internal/entry-type';
-import { getEntryResources } from '../internal/records';
+import { asEntry, getEntryResources } from '../internal/records';
 import { getEntryRepository } from '../repository/registry';
 
 /**
@@ -25,7 +25,12 @@ export async function trashEntries(params: {
     const user = await getCurrentUser();
 
     for (const entry of entries) {
-        await runHook('entry:beforeDelete', { type, entry, user, permanent: false });
+        await runHook('entry:beforeDelete', {
+            type,
+            entry: asEntry(entry),
+            user,
+            permanent: false,
+        });
     }
 
     await transaction(async () => {
@@ -49,7 +54,12 @@ export async function trashEntries(params: {
 
     for (const entry of entries) {
         // A throw here propagates; the write above stays (`DECISIONS.md`).
-        await runHook('entry:afterDelete', { type, entry, user, permanent: false });
+        await runHook('entry:afterDelete', {
+            type,
+            entry: asEntry(entry),
+            user,
+            permanent: false,
+        });
     }
 }
 

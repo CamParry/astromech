@@ -60,6 +60,25 @@ describe('POST /entries/:type/:id/publish', () => {
     });
 });
 
+describe('a locale with no content row', () => {
+    it('404s publish, and writes no translation', async () => {
+        const res = await app().request(`/entries/post/${id}/publish?locale=de`, {
+            method: 'POST',
+        });
+        expect(res.status).toBe(404);
+
+        expect(await api.get({ type: 'post', id, locale: 'de', full: true })).toBeNull();
+    });
+
+    it('404s the version list', async () => {
+        const res = await app().request(`/entries/post/${id}/versions?locale=de`);
+        expect(res.status).toBe(404);
+        expect(((await res.json()) as { error: { code: string } }).error.code).toBe(
+            'NOT_FOUND'
+        );
+    });
+});
+
 describe('POST /entries/:type/:id/unpublish', () => {
     it('unpublishes and returns { data: entry }', async () => {
         await api.publish({ type: 'post', id });

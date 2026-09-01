@@ -128,6 +128,13 @@ export type EntryRepository<R extends EntryRow = EntryRow> = {
      * the canonical mismatch error itself instead.
      */
     get(ref: EntryRef, opts?: { includeTrashed?: boolean }): Promise<R | null>;
+    /**
+     * Fetch the entry in any one locale — the default content locale when it has
+     * a row, else whichever comes first. Resource-level operations read through
+     * it, so it must admit trashed entries under `includeTrashed`. Optional: a
+     * repository whose rows are single-locale is never asked.
+     */
+    anyLocale?(id: string, opts?: { includeTrashed?: boolean }): Promise<R | null>;
     /** Create an entry and its first content row. */
     create(data: EntryWrite & { type: string }): Promise<R>;
     /** Write one locale's content row, creating it when it does not exist. */

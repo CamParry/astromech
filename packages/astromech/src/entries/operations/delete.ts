@@ -3,7 +3,7 @@ import { transaction } from '@/database/transaction';
 import { runHook } from '@/hooks/hooks';
 import { getCurrentUser } from '@/request-context/request-context';
 import { BulkOperationError } from '../errors';
-import { getEntryResources } from '../internal/records';
+import { asEntry, getEntryResources } from '../internal/records';
 import { getEntryRepository } from '../repository/registry';
 
 /**
@@ -23,7 +23,12 @@ export async function deleteEntries(params: {
     const relationships = createRelationshipRepository();
 
     for (const entry of entries) {
-        await runHook('entry:beforeDelete', { type, entry, user, permanent: true });
+        await runHook('entry:beforeDelete', {
+            type,
+            entry: asEntry(entry),
+            user,
+            permanent: true,
+        });
     }
 
     await transaction(async () => {
@@ -47,6 +52,11 @@ export async function deleteEntries(params: {
 
     for (const entry of entries) {
         // A throw here propagates; the write above stays (`DECISIONS.md`).
-        await runHook('entry:afterDelete', { type, entry, user, permanent: true });
+        await runHook('entry:afterDelete', {
+            type,
+            entry: asEntry(entry),
+            user,
+            permanent: true,
+        });
     }
 }

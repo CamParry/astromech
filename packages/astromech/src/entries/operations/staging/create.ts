@@ -28,7 +28,7 @@ export async function createStagedEntry(params: {
 
     const existing = await staging.getByCanonical(id, canonical.locale);
     if (existing) {
-        throw new StagedEntryExistsError({ canonicalId: id, stagedId: existing.id });
+        throw new StagedEntryExistsError({ canonicalId: id, locale: canonical.locale });
     }
 
     // The staged row copies the canonical's content — slug included, which the

@@ -35,7 +35,7 @@ import { existingResourceIds } from '@/database/repository/resource-existence';
 import { entriesTable, entryContentTable } from '@/database/tables';
 import { transaction } from '@/database/transaction';
 import { ALL_CAPABILITIES } from '@/entries/capabilities';
-import { UnknownSortKeyError, UnknownWhereKeyError } from '../errors';
+import { EntryNotFoundError, UnknownSortKeyError, UnknownWhereKeyError } from '../errors';
 import { createVersionRepository } from './versions';
 
 const SORTABLE_FIELDS: readonly string[] = [
@@ -336,6 +336,30 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
         return row ? decodeJoined(row) : null;
     }
 
+    /**
+     * Any one canonical row of the entry: the default locale's when it has one,
+     * else the first locale alphabetically.
+     */
+    async function findAnyLocale(
+        id: string,
+        includeTrashed: boolean
+    ): Promise<JoinedRow | null> {
+        const preferred = await findCanonical(id, defaultLocale, includeTrashed);
+        if (preferred) return preferred;
+
+        const row = await joinedQuery(handle())
+            .where((eb) =>
+                eb.and([
+                    eb('entryContent.entryId', '=', id),
+                    eb('entryContent.stagedFor', 'is', null),
+                    ...(includeTrashed ? [] : [eb('entries.deletedAt', 'is', null)]),
+                ])
+            )
+            .orderBy('entryContent.locale', 'asc')
+            .executeTakeFirst();
+        return row ? decodeJoined(row) : null;
+    }
+
     /** Ids with a row in `entries` — trashed entries included. */
     async function existingIds(ids: string[]): Promise<Set<string>> {
         return existingResourceIds('entry', ids, handle());
@@ -435,6 +459,15 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
             ref.locale ?? defaultLocale,
             opts?.includeTrashed === true
         );
+        if (!row) return null;
+        return populateLocaleSingle(handle(), row);
+    }
+
+    async function anyLocale(
+        id: string,
+        opts?: { includeTrashed?: boolean }
+    ): Promise<EntryRow | null> {
+        const row = await findAnyLocale(id, opts?.includeTrashed === true);
         if (!row) return null;
         return populateLocaleSingle(handle(), row);
     }
@@ -545,8 +578,8 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
                 )
                 .executeTakeFirstOrThrow();
 
-            const restored = await findCanonical(id, defaultLocale, false);
-            if (!restored) throw new Error(`Entry '${id}' not found`);
+            const restored = await findAnyLocale(id, false);
+            if (!restored) throw new EntryNotFoundError({ entryId: id });
             return populateLocaleSingle(db, restored);
         },
 
@@ -721,6 +754,7 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
         uniqueSlug,
         list,
         get,
+        anyLocale,
         create,
         update,
         delete: del,

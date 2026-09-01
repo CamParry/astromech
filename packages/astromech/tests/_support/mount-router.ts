@@ -3,7 +3,8 @@
  *
  * The same stub middleware every route test already writes by hand: Better Auth
  * sessions are out of scope, so `user` and `role` are set directly and the test
- * exercises the router's own permission checks against the real DB.
+ * exercises the router's own permission checks, and the app's error handler,
+ * against the real DB.
  */
 
 import type { DB } from '@/database/types';
@@ -14,6 +15,7 @@ import type { Kysely } from 'kysely';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestUser } from '@tests/harness';
 import { runWithContext } from '@/request-context/request-context';
+import { onError } from '@/transport/http/middleware/errors';
 
 export type RouteEnv = { Variables: AuthVariables };
 
@@ -70,6 +72,9 @@ export function mountRouter(
         c.set('role', role);
         return runWithContext({ request: c.req.raw, user, role }, () => next());
     };
+    // The real app's error handler, so a service throw is mapped here exactly as
+    // it is in `transport/http/app.ts`.
+    app.onError(onError);
     app.use(`${basePath}/*`, stub);
     app.use(basePath, stub);
     app.route(basePath, router);

@@ -93,6 +93,26 @@ describe('publishDueScheduled', () => {
         );
     });
 
+    it('leaves a due staged row scheduled: it publishes at its merge', async () => {
+        const past = new Date(Date.now() - 60_000);
+        const entry = await entryRepository.create({
+            type: 'post',
+            title: 'Live',
+            slug: 'live',
+            status: 'unpublished',
+        });
+        await entryRepository.staging.create(
+            { id: entry.id },
+            { title: 'Staged', slug: 'live', status: 'scheduled', publishedAt: past }
+        );
+
+        expect(await maintenance.publishDueScheduled(new Date())).toBe(0);
+
+        const staged = await entryRepository.staging.getByCanonical(entry.id);
+        expect(staged?.status).toBe('scheduled');
+        expect((await entryRepository.get({ id: entry.id }))?.status).toBe('unpublished');
+    });
+
     it('excludes trashed entries even if their publish time has passed', async () => {
         const past = new Date(Date.now() - 60_000);
         const trashed = await entryRepository.create({

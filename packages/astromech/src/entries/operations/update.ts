@@ -12,7 +12,12 @@ import { resolveEntryType } from '@/entries/entry-types.shared';
 import { parseInput, ValidationError } from '@/errors/validation';
 import { runHook } from '@/hooks/hooks';
 import { getCurrentUser } from '@/request-context/request-context';
-import { BulkOperationError, CapabilityError, UnknownEntryTypeError } from '../errors';
+import {
+    BulkOperationError,
+    CapabilityError,
+    EntryNotFoundError,
+    UnknownEntryTypeError,
+} from '../errors';
 import { getDefaultContentLocale } from '../internal/entry-type';
 import { asEntry, asRecord, findEntryOfType, getEntryOfType } from '../internal/records';
 import { indexEntryRelationships } from '../internal/relationships';
@@ -27,8 +32,9 @@ import { isPublicBranded, PublicShapeWriteError } from '../visibility';
 /**
  * Updates one locale of a batch of entries, atomically, firing the entry write
  * hooks around it. A single id is a batch of one (`DECISIONS.md`). A locale with
- * no content row yet is created from the default-locale row, which is how a
- * translation is written; `staged` writes the staged change instead.
+ * no content row yet is created from the default-locale row (unless
+ * `createMissingLocale` is false), which is how a translation is written;
+ * `staged` writes the staged change instead.
  */
 export async function updateEntries(params: {
     type: string;
@@ -36,6 +42,11 @@ export async function updateEntries(params: {
     locale?: string;
     /** Write each entry's staged change for this locale instead of its canonical row. */
     staged?: boolean;
+    /**
+     * Write a locale with no content row yet, creating it. Only `update` sets
+     * it: a status change addresses a row that must already exist.
+     */
+    createMissingLocale?: boolean;
     data: EntryUpdateData;
 }): Promise<Entry[]> {
     if (params.data.fields !== undefined && isPublicBranded(params.data.fields)) {
@@ -79,6 +90,9 @@ export async function updateEntries(params: {
         const record = staging
             ? await getStagedRecord(staging, id, locale)
             : await findEntryOfType(repository, entryType.id, id, locale);
+        if (!record && params.createMissingLocale === false) {
+            throw new EntryNotFoundError({ entryId: id, locale });
+        }
         plans.push(
             record
                 ? { kind: 'update', id, record }
@@ -101,7 +115,7 @@ export async function updateEntries(params: {
         if (plan.kind === 'update') {
             await runHook('entry:beforeUpdate', {
                 type: entryType.id,
-                entry: plan.record,
+                entry: asEntry(plan.record),
                 data: params.data,
                 user,
             });
@@ -155,7 +169,7 @@ export async function updateEntries(params: {
         if (plan.kind === 'update') {
             await runHook('entry:afterUpdate', {
                 type: entryType.id,
-                entry: plan.record,
+                entry: asEntry(plan.record),
                 data: params.data,
                 user,
             });

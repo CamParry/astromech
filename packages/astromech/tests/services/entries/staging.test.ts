@@ -100,12 +100,13 @@ describe('createStaged', () => {
         expect(await relationStagedFlags(canonical.id)).toEqual([false]);
     });
 
-    it('throws StagedEntryExistsError (carrying the existing id) when one exists', async () => {
+    it('throws StagedEntryExistsError (carrying the locale) when one exists', async () => {
         const canonical = await api.create({
             type: 'post',
             data: { title: 'X', slug: 'x' },
         });
         const first = await api.createStaged({ type: 'post', id: canonical.id });
+        expect(first.id).toBe(canonical.id);
 
         await expect(
             api.createStaged({ type: 'post', id: canonical.id })
@@ -116,8 +117,8 @@ describe('createStaged', () => {
             throw new Error('expected throw');
         } catch (err) {
             expect(err).toBeInstanceOf(StagedEntryExistsError);
-            expect((err as StagedEntryExistsError).stagedId).toBe(first.id);
-            expect(first.id).toBe(canonical.id);
+            expect((err as StagedEntryExistsError).locale).toBe('en');
+            expect(err).not.toHaveProperty('stagedId');
         }
     });
 

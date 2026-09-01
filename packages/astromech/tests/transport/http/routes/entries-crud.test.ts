@@ -90,6 +90,18 @@ describe('GET /entries/:type/:id', () => {
         expect(body.error.message).toBe("Entry 'nope' not found");
     });
 
+    it('422s `staged` without a preview token, rather than answering the canonical', async () => {
+        const created = await api.create({
+            type: 'post',
+            data: { title: 'Live', slug: 'live', status: 'published' },
+        });
+
+        const res = await app().request(`/entries/post/${created.id}?staged=true`);
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as { error: { details: { form: string[] } } };
+        expect(body.error.details.form[0]).toContain('previewToken');
+    });
+
     it('404s an unknown type before the id is looked at', async () => {
         const res = await app().request('/entries/nope/anything');
         expect(res.status).toBe(404);

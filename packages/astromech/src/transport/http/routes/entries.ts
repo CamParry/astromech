@@ -569,7 +569,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
 
     // POST /entries/:type/:id/staged
     // Not in the table: `StagedEntryExistsError` answers a 409 carrying
-    // `details.stagedId`. Every other throw is re-raised for `onError`.
+    // `details.locale`. Every other throw is re-raised for `onError`.
     router.post('/:type/:id/staged', async (c) => {
         const denied = entryPrecondition(c, 'createStaged');
         if (denied) return denied;
@@ -579,14 +579,15 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
             return c.json({ data: entry }, 201);
         } catch (error) {
             if (!(error instanceof StagedEntryExistsError)) return raise(error);
-            // The 409 carries the existing staged id so the admin can redirect.
+            // The 409 carries the locale, which with the id addresses the
+            // staged row the admin redirects to.
             return c.json(
                 {
                     error: {
                         code: 'staged_entry_exists',
                         message: error.message,
                         status: 409,
-                        details: { stagedId: error.stagedId },
+                        details: { locale: error.locale },
                     },
                 },
                 409
