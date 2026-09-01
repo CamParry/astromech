@@ -14,7 +14,7 @@ import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { qualifyEntryType, resolveEntryType } from '@/entries/entry-types.shared';
 import { createEntryLookups } from '@/entries/lookups';
 import { getEntryRepository, hasCustomTable } from '@/entries/repository/registry';
-import { entriesTable } from '@/entries/tables';
+import { entriesTable, entryContentTable } from '@/entries/tables';
 import { entryValidationMode } from '@/entries/validation-mode.shared';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenEntryFields, flattenFieldNodes } from '@/fields/flatten';
@@ -60,23 +60,33 @@ export async function validateStoredContent(
 }
 
 /**
- * Every live entry row, from the `entries` table and from the types backed by
- * their own repository. Trashed rows are skipped — a row in the trash is on its
- * way out and no write is pending against it. Drafts are reported at the stage
- * their own status implies, so an incomplete draft is not a failure.
+ * Every live entry row: one per locale of every entry, plus the types backed by
+ * their own repository. Trashed entries are skipped — an entry in the trash is
+ * on its way out and no write is pending against it. Drafts are reported at the
+ * stage their own status implies, so an incomplete draft is not a failure.
+ *
+ * A content row is reported under its entry's id, which is the id every other
+ * surface addresses it by; `locale` is what tells two findings apart.
  */
 async function checkEntries(
     report: ValidationReport,
     type: string | undefined
 ): Promise<void> {
-    const rows = await createRepository(entriesTable).findMany({
-        where: type !== undefined ? { type } : {},
-    });
-    for (const row of rows) {
-        if (row.deletedAt != null) continue;
+    const where = type !== undefined ? { type } : {};
+    const entries = await createRepository(entriesTable).findMany({ where });
+    const live = new Map(
+        entries
+            .filter((entry) => entry.deletedAt == null)
+            .map((entry) => [entry.id, entry])
+    );
+    const contents = await createRepository(entryContentTable).findMany({ where });
+
+    for (const row of contents) {
+        const entry = live.get(row.entryId);
+        if (entry === undefined) continue;
         await checkEntryRow(report, {
-            id: row.id,
-            type: row.type,
+            id: entry.id,
+            type: entry.type,
             locale: row.locale,
             status: row.status,
             fields: (row.fields ?? {}) as JsonObject,

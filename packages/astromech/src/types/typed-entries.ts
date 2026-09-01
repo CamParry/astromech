@@ -133,6 +133,8 @@ export type TypedEntriesServiceFor<EntryMap> = {
         type: T;
         id: string;
         locale?: string;
+        /** Write the entry's staged change for this locale, not its canonical row. */
+        staged?: boolean;
         data: Partial<{
             title: string;
             slug: string;
@@ -145,6 +147,8 @@ export type TypedEntriesServiceFor<EntryMap> = {
         type: T;
         id: readonly string[];
         locale?: string;
+        /** Write the entry's staged change for this locale, not its canonical row. */
+        staged?: boolean;
         data: Partial<{
             title: string;
             slug: string;
@@ -157,12 +161,16 @@ export type TypedEntriesServiceFor<EntryMap> = {
         type: string;
         id: string;
         locale?: string;
+        /** Write the entry's staged change for this locale, not its canonical row. */
+        staged?: boolean;
         data: EntryUpdateData;
     }): Promise<Entry>;
     update(params: {
         type: string;
         id: readonly string[];
         locale?: string;
+        /** Write the entry's staged change for this locale, not its canonical row. */
+        staged?: boolean;
         data: EntryUpdateData;
     }): Promise<Entry[]>;
 

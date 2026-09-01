@@ -90,24 +90,34 @@ describe('staged-entry routes — round-trip', () => {
         });
         expect(created.status).toBe(201);
         const stagedBody = (await created.json()) as {
-            data: { id: string; stagedFor: string; status: string };
+            data: { id: string; staged: boolean; status: string };
         };
-        expect(stagedBody.data.stagedFor).toBe(canonical.id);
+        // A staged change shares its entry's id; `staged` is what tells the two
+        // reads apart.
+        expect(stagedBody.data.id).toBe(canonical.id);
+        expect(stagedBody.data.staged).toBe(true);
         expect(stagedBody.data.status).toBe('unpublished');
-        const stagedId = stagedBody.data.id;
 
         // get
         const got = await app.request(`/entries/post/${canonical.id}/staged`);
         expect(got.status).toBe(200);
-        expect(((await got.json()) as { data: { id: string } }).data.id).toBe(stagedId);
+        expect(((await got.json()) as { data: { staged: boolean } }).data.staged).toBe(
+            true
+        );
 
         // edit the staged row through the normal update route
-        const edited = await app.request(`/entries/post/${stagedId}`, {
+        const edited = await app.request(`/entries/post/${canonical.id}?staged=true`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title: 'Updated', fields: { body: 'v2' } }),
         });
         expect(edited.status).toBe(200);
+
+        // the canonical row is untouched until the merge
+        const beforeMerge = await app.request(`/entries/post/${canonical.id}`);
+        expect(
+            ((await beforeMerge.json()) as { data: { title: string } }).data.title
+        ).toBe('Live');
 
         // merge → canonical updated in place, status preserved (content-only)
         const merged = await app.request(`/entries/post/${canonical.id}/staged/merge`, {

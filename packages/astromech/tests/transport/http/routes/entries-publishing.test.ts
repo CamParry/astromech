@@ -136,10 +136,11 @@ describe('GET /entries/:type/:id/versions', () => {
             'entryId',
             'fields',
             'id',
+            'locale',
             'slug',
             'status',
             'title',
-            'versionNumber',
+            'version',
         ]);
     });
 

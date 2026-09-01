@@ -10,6 +10,10 @@ export default defineCommand({
     args: {
         type: { type: 'positional', required: true, description: 'Entry type slug' },
         id: { type: 'positional', required: true, description: 'Entry ID' },
+        locale: {
+            type: 'string',
+            description: 'Locale to act on (defaults to the site default)',
+        },
         title: { type: 'string', description: 'New title' },
         slug: { type: 'string', description: 'New slug' },
         status: { type: 'string', description: 'New status (draft|published|scheduled)' },
@@ -40,9 +44,12 @@ export default defineCommand({
                 base.fields = (await parseJsonArg(args.fields)) as JsonObject;
             }
 
+            // A locale with no content row yet is created, so this is also
+            // how the CLI writes a translation.
             const entry = await entriesService.update({
                 type: args.type,
                 id: args.id,
+                ...(args.locale ? { locale: args.locale } : {}),
                 data: base,
             });
 

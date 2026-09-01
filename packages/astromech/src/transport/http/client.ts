@@ -190,6 +190,18 @@ function fillPath(
     return { path: filled === '/' ? base : `${base}${filled}`, rest };
 }
 
+/** Split what the path did not take into the route's query params and its body. */
+function splitQueryArgs(route: MountedRoute, rest: Args): { query: Args; body: Args } {
+    const names = new Set(route.queryArgs ?? []);
+    const query: Args = {};
+    const body: Args = {};
+    for (const [key, value] of Object.entries(rest)) {
+        if (names.has(key)) query[key] = value;
+        else body[key] = value;
+    }
+    return { query, body };
+}
+
 /** Read the row's envelope off a response payload. */
 function unwrap(envelope: ResponseEnvelope | undefined, payload: unknown): unknown {
     switch (envelope ?? 'data') {
@@ -214,11 +226,17 @@ async function callRoute(id: string, args: Args = {}, base?: string): Promise<un
 
     const options: FetchOptions = { method: route.verb.toUpperCase() };
     if (route.verb === 'post' || route.verb === 'put') {
+        // `queryArgs` go on the URL whatever the body is — a content-level route
+        // addresses its locale there, next to the id.
+        const { query, body } = splitQueryArgs(route, rest);
+        if (Object.keys(query).length > 0) options.params = query;
         // A `bodyKey` route sends that key ALONE as the body — the rest of the
-        // method's argument object is in the path.
+        // method's argument object is on the URL.
         if (route.bodyKey !== undefined) options.body = args[route.bodyKey] ?? {};
-        else if (Object.keys(rest).length > 0) options.body = rest;
+        else if (Object.keys(body).length > 0) options.body = body;
     } else if (Object.keys(rest).length > 0) {
+        // Every argument a GET or DELETE did not spend on the path is a query
+        // param already, so `queryArgs` has nothing left to say here.
         options.params = rest;
     }
 

@@ -198,21 +198,29 @@ describe('the full flag', () => {
     });
 });
 
-describe('cascadeLocales on the delete routes', () => {
-    it('is read as "true" or "1", and ignored otherwise', async () => {
-        for (const value of ['true', '1', 'yes']) {
-            const created = await api.create({
-                type: 'post',
-                data: { title: `C-${value}`, slug: `c-${value}` },
-            });
-            const res = await app().request(
-                `/entries/post/${created.id}/force?cascadeLocales=${value}`,
-                { method: 'DELETE' }
-            );
-            expect(res.status).toBe(200);
-            expect(
-                await api.get({ type: 'post', id: created.id, full: true })
-            ).toBeNull();
-        }
+describe('the delete routes are resource-level', () => {
+    it('deletes every locale of the entry, taking no locale param', async () => {
+        const created = await api.create({
+            type: 'post',
+            data: { title: 'Both', slug: 'both' },
+        });
+        await api.update({
+            type: 'post',
+            id: created.id,
+            locale: 'de',
+            data: { title: 'Beide', slug: 'beide' },
+        });
+
+        // A `locale` on the URL is not part of the route's arguments, so it
+        // changes nothing: the whole entry goes.
+        const res = await app().request(`/entries/post/${created.id}/force?locale=de`, {
+            method: 'DELETE',
+        });
+        expect(res.status).toBe(200);
+
+        expect(await api.get({ type: 'post', id: created.id, full: true })).toBeNull();
+        expect(
+            await api.get({ type: 'post', id: created.id, locale: 'de', full: true })
+        ).toBeNull();
     });
 });

@@ -98,7 +98,7 @@ type TextOpts = {
     unique?: boolean;
     primaryKey?: boolean;
     default?: string;
-    /** App-generated ULID default for a plain text column (e.g. localeGroup). */
+    /** App-generated ULID default for a plain text column. */
     defaultUlid?: boolean;
 };
 type IntegerOpts = {

@@ -221,6 +221,7 @@ function documentRoute(
 
     const params = pathParams(route.path);
     const body = requestBody(route, contract);
+    const query = documentedQuery(route, contract);
     const status = route.status ?? (route.envelope === 'empty' ? 204 : 200);
 
     router.openAPIRegistry.registerPath({
@@ -229,13 +230,34 @@ function documentRoute(
         ...(contract.summary !== undefined ? { summary: contract.summary } : {}),
         request: {
             ...(params !== undefined ? { params } : {}),
-            ...(route.query !== undefined ? { query: route.query } : {}),
+            ...(query !== undefined ? { query } : {}),
             ...(body !== undefined
                 ? { body: { content: { 'application/json': { schema: body } } } }
                 : {}),
         },
         responses: { [status]: { description: contract.summary ?? 'Success' } },
     });
+}
+
+/**
+ * The query string this route documents: the schema its handler declares, plus
+ * each `queryArgs` name under the schema the method's own input gives it.
+ */
+function documentedQuery(
+    route: HttpRouteSpec & { query?: z.ZodObject },
+    contract: ServiceMethodContract
+): z.ZodObject | undefined {
+    const names = route.queryArgs ?? [];
+    if (names.length === 0) return route.query;
+
+    const input = contract.input;
+    const shape = input instanceof z.ZodObject ? input.shape : {};
+    const declared = Object.fromEntries(
+        names.map((name) => [name, shape[name] ?? z.string().optional()])
+    );
+    return route.query === undefined
+        ? z.object(declared)
+        : z.object({ ...route.query.shape, ...declared });
 }
 
 /** `/:type/:id` → `/{type}/{id}`, the form an OpenAPI path takes. */
@@ -257,8 +279,9 @@ function pathParams(path: string): z.ZodObject | undefined {
 
 /**
  * The request body this route documents: the key it declares as `bodyKey`, or
- * the method's argument object minus whatever the path already carries, under
- * the names the wire gives them. A route left with no fields sends no body.
+ * the method's argument object minus whatever the URL already carries (path
+ * params and `queryArgs`), under the names the wire gives them. A route left
+ * with no fields sends no body.
  */
 function requestBody(
     route: HttpRouteSpec,
@@ -270,8 +293,10 @@ function requestBody(
 
     if (route.bodyKey !== undefined) return input.shape[route.bodyKey];
 
-    const inPath = paramNames(route.path).filter((name) => name in input.shape);
-    const rest = inPath.length > 0 ? input.omit(maskFor(inPath)) : input;
+    const onUrl = [...paramNames(route.path), ...(route.queryArgs ?? [])].filter(
+        (name) => name in input.shape
+    );
+    const rest = onUrl.length > 0 ? input.omit(maskFor(onUrl)) : input;
     if (Object.keys(rest.shape).length === 0) return undefined;
     return renameShape(rest, route.wireNames);
 }

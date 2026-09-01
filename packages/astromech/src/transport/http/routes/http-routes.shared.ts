@@ -40,6 +40,13 @@ export type HttpRouteSpec = {
      * field paths, and by the client when it builds the body.
      */
     wireNames?: Record<string, string>;
+    /**
+     * Argument names this route carries on the query string. `locale` is the
+     * case: a content-level route addresses one locale of an entry, and that
+     * addressing belongs in the URL beside `:id`. Read by the document, and by
+     * the client when it decides what goes in the body of a POST or PUT.
+     */
+    queryArgs?: readonly string[];
     /** Marks a route whose server handler is written by hand, not generated. */
     handler?: 'bespoke';
     /**
@@ -89,6 +96,7 @@ export const ENTRIES_ROUTE_SPECS = [
         path: '/:type/bulk-update',
         id: 'entries.update',
         wireNames: { id: 'ids' },
+        queryArgs: ['locale', 'staged'],
         handler: 'bespoke',
         client: 'list',
     },
@@ -97,6 +105,7 @@ export const ENTRIES_ROUTE_SPECS = [
         path: '/:type/:id',
         id: 'entries.update',
         bodyKey: 'data',
+        queryArgs: ['locale', 'staged'],
         handler: 'bespoke',
     },
     {
@@ -127,6 +136,7 @@ export const ENTRIES_ROUTE_SPECS = [
         path: '/:type/bulk-publish',
         id: 'entries.publish',
         wireNames: { id: 'ids' },
+        queryArgs: ['locale'],
         client: 'list',
     },
     {
@@ -134,6 +144,7 @@ export const ENTRIES_ROUTE_SPECS = [
         path: '/:type/bulk-unpublish',
         id: 'entries.unpublish',
         wireNames: { id: 'ids' },
+        queryArgs: ['locale'],
         client: 'list',
     },
     {
@@ -141,6 +152,7 @@ export const ENTRIES_ROUTE_SPECS = [
         path: '/:type/bulk-schedule',
         id: 'entries.schedule',
         wireNames: { id: 'ids' },
+        queryArgs: ['locale'],
         client: 'list',
     },
     { verb: 'post', path: '/:type/:id/restore', id: 'entries.restore' },
@@ -170,14 +182,35 @@ export const ENTRIES_ROUTE_SPECS = [
         id: 'entries.delete',
         envelope: 'success',
     },
-    { verb: 'post', path: '/:type/:id/publish', id: 'entries.publish' },
-    { verb: 'post', path: '/:type/:id/unpublish', id: 'entries.unpublish' },
-    { verb: 'post', path: '/:type/:id/schedule', id: 'entries.schedule' },
-    { verb: 'get', path: '/:type/:id/versions', id: 'entries.versions' },
+    {
+        verb: 'post',
+        path: '/:type/:id/publish',
+        id: 'entries.publish',
+        queryArgs: ['locale'],
+    },
+    {
+        verb: 'post',
+        path: '/:type/:id/unpublish',
+        id: 'entries.unpublish',
+        queryArgs: ['locale'],
+    },
+    {
+        verb: 'post',
+        path: '/:type/:id/schedule',
+        id: 'entries.schedule',
+        queryArgs: ['locale'],
+    },
+    {
+        verb: 'get',
+        path: '/:type/:id/versions',
+        id: 'entries.versions',
+        queryArgs: ['locale'],
+    },
     {
         verb: 'post',
         path: '/:type/:id/versions/:versionId/restore',
         id: 'entries.restoreVersion',
+        queryArgs: ['locale'],
     },
     {
         verb: 'get',
@@ -189,15 +222,27 @@ export const ENTRIES_ROUTE_SPECS = [
         path: '/:type/:id/staged',
         id: 'entries.createStaged',
         status: 201,
+        queryArgs: ['locale'],
         handler: 'bespoke',
     },
-    { verb: 'get', path: '/:type/:id/staged', id: 'entries.getStaged' },
-    { verb: 'post', path: '/:type/:id/staged/merge', id: 'entries.mergeStaged' },
+    {
+        verb: 'get',
+        path: '/:type/:id/staged',
+        id: 'entries.getStaged',
+        queryArgs: ['locale'],
+    },
+    {
+        verb: 'post',
+        path: '/:type/:id/staged/merge',
+        id: 'entries.mergeStaged',
+        queryArgs: ['locale'],
+    },
     {
         verb: 'delete',
         path: '/:type/:id/staged',
         id: 'entries.deleteStaged',
         envelope: 'success',
+        queryArgs: ['locale'],
     },
     {
         verb: 'post',

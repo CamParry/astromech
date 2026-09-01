@@ -23,6 +23,14 @@ export type RelationshipSource = {
 };
 
 /**
+ * An edge with the one source column a caller may vary row by row. `staged`
+ * overrides `RelationshipSource.staged`: an entry's canonical and staged content
+ * rows are a single source, so only the edges the staged row alone holds are
+ * staged. Absent means "whatever the source says".
+ */
+export type IndexedEdge = RelationshipEdge & { staged?: boolean };
+
+/**
  * One source and the edges its stored field data holds. What a domain's rebuild
  * collector yields; lives here so the domains and boot (which composes them)
  * share one shape. A source with no edges is still a source — it is how the
@@ -30,7 +38,7 @@ export type RelationshipSource = {
  */
 export type RelationshipIndexSource = {
     source: RelationshipSource;
-    edges: RelationshipEdge[];
+    edges: IndexedEdge[];
 };
 
 /**
@@ -50,7 +58,7 @@ export function createRelationshipRepository(db?: Db) {
      */
     async function replaceForSource(
         source: RelationshipSource,
-        edges: RelationshipEdge[]
+        edges: IndexedEdge[]
     ): Promise<void> {
         await repository.deleteMany({ sourceId: source.id, sourceKind: source.kind });
         if (edges.length === 0) return;
@@ -63,7 +71,7 @@ export function createRelationshipRepository(db?: Db) {
             instancePath: edge.instancePath,
             targetId: edge.targetId,
             targetKind: edge.targetKind,
-            sourceStaged: source.staged ?? false,
+            sourceStaged: edge.staged ?? source.staged ?? false,
         }));
         for (let i = 0; i < rows.length; i += INSERT_CHUNK_ROWS) {
             await repository.createMany(rows.slice(i, i + INSERT_CHUNK_ROWS));

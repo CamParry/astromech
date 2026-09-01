@@ -84,7 +84,7 @@ export async function checkRelationshipIndex(
                 instancePath: edge.instancePath,
                 targetId: edge.targetId,
                 targetKind: edge.targetKind,
-                sourceStaged: source.staged ?? false,
+                sourceStaged: edge.staged ?? source.staged ?? false,
             };
             computed.set(rowKey(row), row);
         }

@@ -141,6 +141,34 @@ const CASES: Case[] = [
         result: entry,
     },
     {
+        name: 'entries.update — one locale of one id',
+        call: () =>
+            client.entries.update({
+                type: 'post',
+                id: 'e1',
+                locale: 'fr',
+                data: { title: 'Deux' },
+            }),
+        url: '/cms/api/entries/post/e1?locale=fr',
+        method: 'PUT',
+        body: { title: 'Deux' },
+        result: entry,
+    },
+    {
+        name: 'entries.update — the staged change',
+        call: () =>
+            client.entries.update({
+                type: 'post',
+                id: 'e1',
+                staged: true,
+                data: { title: 'Two' },
+            }),
+        url: '/cms/api/entries/post/e1?staged=true',
+        method: 'PUT',
+        body: { title: 'Two' },
+        result: entry,
+    },
+    {
         name: 'entries.update — a list of ids',
         payload: { data: entries },
         call: () =>
@@ -159,15 +187,6 @@ const CASES: Case[] = [
         payload: { success: true },
         call: () => client.entries.trash({ type: 'post', id: 'e1' }),
         url: '/cms/api/entries/post/e1',
-        method: 'DELETE',
-        result: undefined,
-    },
-    {
-        name: 'entries.trash — one id, cascading locales',
-        payload: { success: true },
-        call: () =>
-            client.entries.trash({ type: 'post', id: 'e1', cascadeLocales: true }),
-        url: '/cms/api/entries/post/e1?cascadeLocales=true',
         method: 'DELETE',
         result: undefined,
     },
@@ -191,15 +210,10 @@ const CASES: Case[] = [
     {
         name: 'entries.delete — a list of ids',
         payload: { success: true },
-        call: () =>
-            client.entries.delete({
-                type: 'post',
-                id: ['e1', 'e2'],
-                cascadeLocales: true,
-            }),
+        call: () => client.entries.delete({ type: 'post', id: ['e1', 'e2'] }),
         url: '/cms/api/entries/post/bulk-delete',
         method: 'POST',
-        body: { ids: ['e1', 'e2'], cascadeLocales: true },
+        body: { ids: ['e1', 'e2'] },
         result: undefined,
     },
     {
@@ -279,6 +293,13 @@ const CASES: Case[] = [
         result: entry,
     },
     {
+        name: 'entries.publish — one locale, on the query string not in the body',
+        call: () => client.entries.publish({ type: 'post', id: 'e1', locale: 'fr' }),
+        url: '/cms/api/entries/post/e1/publish?locale=fr',
+        method: 'POST',
+        result: entry,
+    },
+    {
         name: 'entries.publish — a list of ids',
         payload: { data: entries },
         call: () => client.entries.publish({ type: 'post', id: ['e1', 'e2'] }),
@@ -344,6 +365,14 @@ const CASES: Case[] = [
         url: '/cms/api/entries/post/e1/staged',
         method: 'GET',
         result: null,
+    },
+    {
+        name: 'entries.versions — one locale',
+        payload: { data: [] },
+        call: () => client.entries.versions({ type: 'post', id: 'e1', locale: 'fr' }),
+        url: '/cms/api/entries/post/e1/versions?locale=fr',
+        method: 'GET',
+        result: [],
     },
     {
         name: 'entries.mergeStaged',

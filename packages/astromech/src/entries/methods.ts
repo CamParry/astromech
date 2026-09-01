@@ -142,6 +142,9 @@ export function entryMethodContracts(params: {
     /** Bulk-capable methods take one id or a non-empty list of them. */
     const ids = z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]);
     const canonical = z.object({ type, id });
+    /** A content-level method addresses one locale of the entry. */
+    const locale = z.string().optional();
+    const localised = z.object({ type, id, locale });
 
     /**
      * The facts every entry method derives from its action. The action comes
@@ -196,15 +199,17 @@ export function entryMethodContracts(params: {
             // Re-applying the same update lands the same end-state — matches the
             // core `users.update`/`settings.set` idempotent hint.
             idempotent: true,
-            input: z.object({ type, id: ids, data: updateEntrySchema({ titled }) }),
-        },
-        {
-            ...base('delete'),
             input: z.object({
                 type,
                 id: ids,
-                cascadeLocales: z.boolean().optional(),
+                locale,
+                staged: z.boolean().optional(),
+                data: updateEntrySchema({ titled }),
             }),
+        },
+        {
+            ...base('delete'),
+            input: z.object({ type, id: ids }),
         },
         {
             ...base('duplicate'),
@@ -222,11 +227,7 @@ export function entryMethodContracts(params: {
             // lose data, and both keep the flag `base()` derives.
             destructive: false,
             idempotent: true,
-            input: z.object({
-                type,
-                id: ids,
-                cascadeLocales: z.boolean().optional(),
-            }),
+            input: z.object({ type, id: ids }),
         },
         {
             ...base('restore'),
@@ -243,19 +244,19 @@ export function entryMethodContracts(params: {
         {
             ...base('versions'),
             requires: 'versioning',
-            input: canonical,
+            input: localised,
         },
         {
             ...base('restoreVersion'),
             requires: 'versioning',
             idempotent: true,
-            input: z.object({ type, id, versionId: z.string() }),
+            input: z.object({ type, id, locale, versionId: z.string() }),
         },
         {
             ...base('publish'),
             requires: 'statuses',
             idempotent: true,
-            input: z.object({ type, id: ids }),
+            input: z.object({ type, id: ids, locale }),
         },
         {
             ...base('unpublish'),
@@ -264,19 +265,19 @@ export function entryMethodContracts(params: {
             // being served. `ServiceMethodEffect` names unpublish explicitly.
             destructive: true,
             idempotent: true,
-            input: z.object({ type, id: ids }),
+            input: z.object({ type, id: ids, locale }),
         },
         {
             ...base('schedule'),
             requires: 'statuses',
             idempotent: true,
-            input: z.object({ type, id: ids }).extend(scheduleEntrySchema.shape),
+            input: z.object({ type, id: ids, locale }).extend(scheduleEntrySchema.shape),
         },
         { ...base('incomingRelationships'), input: canonical },
-        { ...base('createStaged'), requires: 'staging', input: canonical },
-        { ...base('getStaged'), requires: 'staging', input: canonical },
-        { ...base('mergeStaged'), requires: 'staging', input: canonical },
-        { ...base('deleteStaged'), requires: 'staging', input: canonical },
+        { ...base('createStaged'), requires: 'staging', input: localised },
+        { ...base('getStaged'), requires: 'staging', input: localised },
+        { ...base('mergeStaged'), requires: 'staging', input: localised },
+        { ...base('deleteStaged'), requires: 'staging', input: localised },
         {
             ...base('issuePreviewToken'),
             requires: 'staging',

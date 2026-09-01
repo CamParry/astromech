@@ -205,6 +205,17 @@ async function storedRows(): Promise<RelationshipRow[]> {
     return rows.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
 }
 
+/** One entry's `author` edges, ordered by target so two runs compare directly. */
+async function authorEdges(
+    entryId: string
+): Promise<{ targetId: string; sourceStaged: boolean }[]> {
+    const rows = await createRelationshipRepository().findBySource(entryId, 'entry');
+    return rows
+        .filter((row) => row.schemaPath === 'author')
+        .map((row) => ({ targetId: row.targetId, sourceStaged: row.sourceStaged }))
+        .sort((a, b) => a.targetId.localeCompare(b.targetId));
+}
+
 function driftCount(report: {
     missing: unknown[];
     unexpected: unknown[];
@@ -233,19 +244,83 @@ describe('checkRelationshipIndex', () => {
         expect(rows.filter((row) => row.targetKind === 'media')).toHaveLength(2);
     });
 
-    it('reports no drift for a staged entry, and derives its rows as staged', async () => {
-        const { article } = await seedContent();
-        const staged = await api.createStaged({ type: 'article', id: article });
+    // A staged row shares its entry's id, so both content rows are one source
+    // and `sourceStaged` is decided edge by edge: canonical when any canonical
+    // row carries it, staged when only the staged row does.
+    it('derives a shared edge as canonical and a staged-only edge as staged', async () => {
+        const { article, post } = await seedContent();
+        const third = await api.create({ type: 'post', data: { title: 'Third' } });
+        await api.createStaged({ type: 'article', id: article });
 
-        expect(driftCount(await checkRelationshipIndex())).toBe(0);
-
-        await rebuildRelationshipIndex();
-        const rows = await createRelationshipRepository().findBySource(
-            staged.id,
+        // The staged copy starts identical, so nothing is staged-only yet.
+        const copied = await createRelationshipRepository().findBySource(
+            article,
             'entry'
         );
-        expect(rows.length).toBeGreaterThan(0);
-        expect(rows.every((row) => row.sourceStaged)).toBe(true);
+        expect(copied.length).toBeGreaterThan(0);
+        expect(copied.some((row) => row.sourceStaged)).toBe(false);
+        expect(driftCount(await checkRelationshipIndex())).toBe(0);
+
+        // Point the staged change at a different author. The canonical row still
+        // holds the original, so one edge is canonical and one is staged-only.
+        await api.update({
+            type: 'article',
+            id: article,
+            staged: true,
+            data: { fields: { author: third.id } },
+        });
+
+        const authors = await authorEdges(article);
+        expect(authors).toEqual([
+            { targetId: post, sourceStaged: false },
+            { targetId: third.id, sourceStaged: true },
+        ]);
+        expect(driftCount(await checkRelationshipIndex())).toBe(0);
+
+        // The point of the flag: a reverse lookup for display skips the staged
+        // edge, a delete check counts it.
+        const repository = createRelationshipRepository();
+        expect(await repository.findByTarget(third.id, 'entry')).toEqual([]);
+        expect(
+            await repository.findByTarget(third.id, 'entry', { includeStaged: true })
+        ).toHaveLength(1);
+    });
+
+    it('drops a staged-only edge again when the staged change is discarded', async () => {
+        const { article, post } = await seedContent();
+        const third = await api.create({ type: 'post', data: { title: 'Third' } });
+        await api.createStaged({ type: 'article', id: article });
+        await api.update({
+            type: 'article',
+            id: article,
+            staged: true,
+            data: { fields: { author: third.id } },
+        });
+
+        await api.deleteStaged({ type: 'article', id: article });
+
+        expect(await authorEdges(article)).toEqual([
+            { targetId: post, sourceStaged: false },
+        ]);
+        expect(driftCount(await checkRelationshipIndex())).toBe(0);
+    });
+
+    it('makes a merged staged-only edge canonical', async () => {
+        const { article } = await seedContent();
+        const third = await api.create({ type: 'post', data: { title: 'Third' } });
+        await api.createStaged({ type: 'article', id: article });
+        await api.update({
+            type: 'article',
+            id: article,
+            staged: true,
+            data: { fields: { author: third.id } },
+        });
+
+        await api.mergeStaged({ type: 'article', id: article });
+
+        expect(await authorEdges(article)).toEqual([
+            { targetId: third.id, sourceStaged: false },
+        ]);
         expect(driftCount(await checkRelationshipIndex())).toBe(0);
     });
 

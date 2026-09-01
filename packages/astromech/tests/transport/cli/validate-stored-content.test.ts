@@ -11,7 +11,7 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createRepository } from '@/database/repository/create-repository';
 import { entriesService as api } from '@/entries/service';
-import { entriesTable } from '@/entries/tables';
+import { entryContentTable } from '@/entries/tables';
 import { createSettingsRepository } from '@/settings/repository';
 import { settingsService } from '@/settings/service';
 import { validateStoredContent } from '@/transport/cli/validate-stored-content';
@@ -109,14 +109,14 @@ beforeEach(async () => {
     setupTestConfig(makeValidateConfig());
 });
 
-/** Overwrite a stored row's field blob without going through the pipeline. */
+/** Overwrite an entry's stored field blob without going through the pipeline. */
 async function storeFields(id: string, fields: JsonObject): Promise<void> {
-    await createRepository(entriesTable).update(id, { fields });
+    await createRepository(entryContentTable).updateMany({ entryId: id }, { fields });
 }
 
 /** Every field blob a run could touch, serialized for a straight comparison. */
 async function snapshot(): Promise<string> {
-    const entries = await createRepository(entriesTable).findMany({ where: {} });
+    const entries = await createRepository(entryContentTable).findMany({ where: {} });
     const users = await createUserRepository().list();
     const settings = await settingsService.all({ full: true });
     return JSON.stringify([
@@ -215,7 +215,10 @@ describe('validateStoredContent', () => {
 
         expect((await validateStoredContent()).findings).toEqual([]);
 
-        await createRepository(entriesTable).update(article.id, { status: 'published' });
+        await createRepository(entryContentTable).updateMany(
+            { entryId: article.id },
+            { status: 'published' }
+        );
 
         expect((await validateStoredContent()).findings).toEqual([
             {

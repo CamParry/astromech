@@ -8,12 +8,20 @@ export default defineCommand({
     args: {
         type: { type: 'positional', required: true, description: 'Entry type slug' },
         id: { type: 'positional', required: true, description: 'Entry ID' },
+        locale: {
+            type: 'string',
+            description: 'Locale to act on (defaults to the site default)',
+        },
         config: { type: 'string', description: 'Path to astromech.config.ts' },
         ...allowRemoteArgs,
     },
     async run({ args }) {
         await loadConfig(args.config, toAllowRemoteOption(args));
-        const entry = await entriesService.get({ type: args.type, id: args.id });
+        const entry = await entriesService.get({
+            type: args.type,
+            id: args.id,
+            ...(args.locale ? { locale: args.locale } : {}),
+        });
         if (!entry) {
             console.error('Entry not found');
             process.exit(1);

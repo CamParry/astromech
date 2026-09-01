@@ -12,6 +12,10 @@ export default defineCommand({
     args: {
         type: { type: 'positional', required: true, description: 'Entry type slug' },
         id: { type: 'positional', required: true, description: 'Entry ID' },
+        locale: {
+            type: 'string',
+            description: 'Locale to act on (defaults to the site default)',
+        },
         json: { type: 'boolean', default: false, description: 'Output as JSON' },
         config: { type: 'string', description: 'Path to astromech.config.ts' },
         ...allowRemoteArgs,
@@ -22,6 +26,7 @@ export default defineCommand({
             const entry = await entriesService.unpublish({
                 type: args.type,
                 id: args.id,
+                ...(args.locale ? { locale: args.locale } : {}),
             });
             printResult(entry, {
                 json: args.json,

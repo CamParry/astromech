@@ -30,6 +30,7 @@ type Schema = { properties?: Record<string, unknown>; $ref?: string };
 
 type Operation = {
     summary?: string;
+    parameters?: { name: string; in: string }[];
     requestBody?: {
         content: { 'application/json': { schema: Schema } };
     };
@@ -67,6 +68,13 @@ function bodyProperties(operation: Operation | undefined, doc: Document): string
             ? schema
             : doc.components?.schemas?.[schema.$ref.replace('#/components/schemas/', '')];
     return Object.keys(resolved?.properties ?? {});
+}
+
+/** The query parameters an operation documents, by name. */
+function queryParameters(operation: Operation | undefined): string[] {
+    return (operation?.parameters ?? [])
+        .filter((parameter) => parameter.in === 'query')
+        .map((parameter) => parameter.name);
 }
 
 /** The document the five domain routers compose to. */
@@ -141,6 +149,32 @@ describe('the emitted document', () => {
         expect(bodyProperties(post, doc)).toContain('title');
         expect(bodyProperties(post, doc)).not.toContain('type');
         expect(bodyProperties(post, doc)).not.toContain('data');
+    });
+
+    it('documents `locale` as a query param on the content-level routes', () => {
+        const doc = document();
+        const paths = doc.paths;
+        expect(queryParameters(paths['/entries/{type}/{id}/publish']?.['post'])).toEqual([
+            'locale',
+        ]);
+        expect(queryParameters(paths['/entries/{type}/{id}/versions']?.['get'])).toEqual([
+            'locale',
+        ]);
+        expect(
+            queryParameters(paths['/entries/{type}/{id}/staged/merge']?.['post'])
+        ).toEqual(['locale']);
+        expect(queryParameters(paths['/entries/{type}/{id}']?.['put']).sort()).toEqual([
+            'locale',
+            'staged',
+        ]);
+    });
+
+    it('keeps a query-param argument out of the request body', () => {
+        const doc = document();
+        // `schedule` takes `publishedAt` in the body and `locale` on the URL.
+        const schedule = doc.paths['/entries/{type}/{id}/schedule']?.['post'];
+        expect(bodyProperties(schedule, doc)).toEqual(['publishedAt']);
+        expect(queryParameters(schedule)).toEqual(['locale']);
     });
 
     it('names the bulk request body `ids`, as the wire does', () => {

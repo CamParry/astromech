@@ -158,8 +158,9 @@ describe('mediaService.usedBy', () => {
 
         expect(usage.map((row) => row.sourceId)).toEqual([canonical.id]);
         expect(usage[0]?.sourceTitle).toBe('Canonical');
-        // The entry is live, whichever of its content rows holds the reference.
-        expect(usage[0]?.sourceStaged).toBe(false);
+        // Only the staged row holds this reference, so the edge is staged — the
+        // flag is per edge, not per entry.
+        expect(usage[0]?.sourceStaged).toBe(true);
     });
 
     it('returns a user source with a null sourceType', async () => {

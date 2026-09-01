@@ -4,7 +4,10 @@
  * collector that enumerates every entry as a source.
  */
 
-import type { RelationshipIndexSource } from '@/database/repository/relationships';
+import type {
+    IndexedEdge,
+    RelationshipIndexSource,
+} from '@/database/repository/relationships';
 import type { RelationshipEdge } from '@/fields/relationship-edges';
 import type { JsonObject } from '@/types/index';
 import { getConfig } from '@/config/registry';
@@ -65,29 +68,38 @@ function entryEdges(type: string, fields: JsonObject): RelationshipEdge[] | null
 }
 
 /**
- * The edges every content row of one entry holds, deduplicated. Staged rows
- * count: a pending merge that references something is a reason not to delete it.
+ * The edges every content row of one entry holds. Staged rows count: a pending
+ * merge that references something is a reason not to delete it.
  */
-async function storedEntryEdges(
-    entryId: string,
-    type: string
-): Promise<RelationshipEdge[]> {
+async function storedEntryEdges(entryId: string, type: string): Promise<IndexedEdge[]> {
     const rows = await createRepository(entryContentTable).findMany({
         where: { entryId },
     });
-    return dedupeEdges(
-        rows.flatMap((row) => entryEdges(type, (row.fields ?? {}) as JsonObject) ?? [])
-    );
+    return entryContentEdges(type, rows);
 }
 
 /**
- * One edge per (instancePath, target): two locales holding the same reference
- * are one row, and the index's primary key would reject the second.
+ * One edge per (instancePath, target) across an entry's content rows: two
+ * locales holding the same reference are one row, and the index's primary key
+ * would reject the second. An edge any canonical row carries is canonical; one
+ * only a staged row carries is staged, so a pending merge's new reference
+ * blocks a delete without appearing in a reverse lookup.
+ *
+ * The one place the rule lives — the write seam and the rebuild both call it.
  */
-function dedupeEdges(edges: RelationshipEdge[]): RelationshipEdge[] {
-    const byKey = new Map<string, RelationshipEdge>();
-    for (const edge of edges) {
-        byKey.set(`${edge.instancePath}\0${edge.targetKind}\0${edge.targetId}`, edge);
+function entryContentEdges(
+    type: string,
+    rows: readonly { fields: unknown; stagedFor: string | null }[]
+): IndexedEdge[] {
+    const byKey = new Map<string, IndexedEdge>();
+    for (const row of rows) {
+        const staged = row.stagedFor !== null;
+        for (const edge of entryEdges(type, (row.fields ?? {}) as JsonObject) ?? []) {
+            const key = `${edge.instancePath}\0${edge.targetKind}\0${edge.targetId}`;
+            const held = byKey.get(key);
+            if (held === undefined) byKey.set(key, { ...edge, staged });
+            else if (!staged) held.staged = false;
+        }
     }
     return Array.from(byKey.values());
 }
@@ -107,23 +119,18 @@ async function entriesTableEntrySources(
         where: type !== undefined ? { type } : {},
     });
 
-    const fieldsByEntry = new Map<string, JsonObject[]>();
+    const rowsByEntry = new Map<string, typeof contents>();
     for (const row of contents) {
-        const held = fieldsByEntry.get(row.entryId);
-        const fields = (row.fields ?? {}) as JsonObject;
-        if (held) held.push(fields);
-        else fieldsByEntry.set(row.entryId, [fields]);
+        const held = rowsByEntry.get(row.entryId);
+        if (held) held.push(row);
+        else rowsByEntry.set(row.entryId, [row]);
     }
 
     return entries.map((entry) => ({
         // An entry with a staged content row is still a live entry, so an entry
-        // source is never itself staged.
+        // source is never itself staged; the per-edge flag carries staging.
         source: { id: entry.id, kind: 'entry' as const, type: entry.type, staged: false },
-        edges: dedupeEdges(
-            (fieldsByEntry.get(entry.id) ?? []).flatMap(
-                (fields) => entryEdges(entry.type, fields) ?? []
-            )
-        ),
+        edges: entryContentEdges(entry.type, rowsByEntry.get(entry.id) ?? []),
     }));
 }
 

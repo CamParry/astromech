@@ -330,12 +330,18 @@ describe('generateMethodManifest — root entries', () => {
         }
     });
 
-    it('should describe the update method as { type, id, data }', () => {
+    it('should describe the update method as { type, id, locale, staged, data }', () => {
         const { methods } = parseManifest([]);
         const input = findMethod(methods, 'entries.update', 'posts')?.['input'] as {
             properties?: Record<string, { properties?: Record<string, unknown> }>;
         };
-        expect(Object.keys(input?.properties ?? {})).toEqual(['type', 'id', 'data']);
+        expect(Object.keys(input?.properties ?? {})).toEqual([
+            'type',
+            'id',
+            'locale',
+            'staged',
+            'data',
+        ]);
         // `data` is the update payload, not a flattened patch.
         expect(Object.keys(input?.properties?.['data']?.properties ?? {})).toContain(
             'title'

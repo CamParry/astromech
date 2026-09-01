@@ -107,9 +107,15 @@ export const ENTRIES_ROUTES: RestRoute[] = attachHandlers(ENTRIES_ROUTE_SPECS, {
     'post /:type/bulk-trash': { args: bulkArgs, precondition: entryAccess() },
     'post /:type/bulk-delete': { args: bulkArgs, precondition: entryAccess() },
     'post /:type/bulk-restore': { args: bulkArgs, precondition: entryAccess() },
-    'post /:type/bulk-publish': { args: bulkArgs, precondition: entryAccess() },
-    'post /:type/bulk-unpublish': { args: bulkArgs, precondition: entryAccess() },
-    'post /:type/bulk-schedule': { args: bulkArgs, precondition: entryAccess() },
+    'post /:type/bulk-publish': { args: localisedBulkArgs, precondition: entryAccess() },
+    'post /:type/bulk-unpublish': {
+        args: localisedBulkArgs,
+        precondition: entryAccess(),
+    },
+    'post /:type/bulk-schedule': {
+        args: localisedBulkArgs,
+        precondition: entryAccess(),
+    },
     'post /:type/:id/restore': { args: canonicalArgs, precondition: entryAccess() },
     'post /:type/:id/duplicate': {
         args: async (c) => ({ ...canonicalArgs(c), overrides: await optionalBody(c) }),
@@ -119,24 +125,21 @@ export const ENTRIES_ROUTES: RestRoute[] = attachHandlers(ENTRIES_ROUTE_SPECS, {
         args: (c) => ({ type: param(c, 'type') }),
         precondition: entryAccess(),
     },
-    'delete /:type/:id/force': {
-        args: (c) => ({ ...canonicalArgs(c), cascadeLocales: cascadeLocales(c) }),
-        precondition: entryAccess(),
-    },
-    'post /:type/:id/publish': { args: canonicalArgs, precondition: entryAccess() },
-    'post /:type/:id/unpublish': { args: canonicalArgs, precondition: entryAccess() },
+    'delete /:type/:id/force': { args: canonicalArgs, precondition: entryAccess() },
+    'post /:type/:id/publish': { args: contentArgs, precondition: entryAccess() },
+    'post /:type/:id/unpublish': { args: contentArgs, precondition: entryAccess() },
     'post /:type/:id/schedule': {
-        args: async (c) => ({ ...(await c.req.json()), ...canonicalArgs(c) }),
+        args: async (c) => ({ ...(await c.req.json()), ...contentArgs(c) }),
         precondition: entryAccess(),
     },
     // Version history. Both declare `requires: 'versioning'`, so an unversioned
     // type answers 409 like every other capability-gated route.
     'get /:type/:id/versions': {
-        args: canonicalArgs,
+        args: contentArgs,
         precondition: entryAccess(),
     },
     'post /:type/:id/versions/:versionId/restore': {
-        args: (c) => ({ ...canonicalArgs(c), versionId: param(c, 'versionId') }),
+        args: (c) => ({ ...contentArgs(c), versionId: param(c, 'versionId') }),
         precondition: entryAccess(),
     },
     'get /:type/:id/incoming-relationships': {
@@ -146,9 +149,9 @@ export const ENTRIES_ROUTES: RestRoute[] = attachHandlers(ENTRIES_ROUTE_SPECS, {
     // Forward versioning (staged entries). Each is gated on the `staging`
     // capability its contract declares, so a misconfigured type answers 409
     // rather than the service's 500.
-    'get /:type/:id/staged': { args: canonicalArgs, precondition: entryAccess() },
-    'post /:type/:id/staged/merge': { args: canonicalArgs, precondition: entryAccess() },
-    'delete /:type/:id/staged': { args: canonicalArgs, precondition: entryAccess() },
+    'get /:type/:id/staged': { args: contentArgs, precondition: entryAccess() },
+    'post /:type/:id/staged/merge': { args: contentArgs, precondition: entryAccess() },
+    'delete /:type/:id/staged': { args: contentArgs, precondition: entryAccess() },
     'post /:type/:id/preview-token': {
         args: async (c) => ({
             ...canonicalArgs(c),
@@ -173,6 +176,21 @@ function param(c: Context<Env>, name: string): string {
 /** The `{ type, id }` every single-entry method takes. */
 function canonicalArgs(c: Context<Env>): { type: string; id: string } {
     return { type: param(c, 'type'), id: param(c, 'id') };
+}
+
+/**
+ * {@link canonicalArgs} plus the locale a content-level route addresses. An
+ * absent one leaves the service to fill in the default content locale.
+ */
+function contentArgs(c: Context<Env>): { type: string; id: string; locale?: string } {
+    const locale = c.req.query('locale');
+    return { ...canonicalArgs(c), ...(locale ? { locale } : {}) };
+}
+
+/** A boolean query flag, in the two spellings the wire has always accepted. */
+function flag(c: Context<Env>, name: string): boolean {
+    const value = c.req.query(name);
+    return value === 'true' || value === '1';
 }
 
 /** `entries.query` arguments, read off the query string. */
@@ -206,7 +224,7 @@ function getArgs(c: Context<Env>): Record<string, unknown> {
         full: q['full'] === 'true',
         ...(q['locale'] ? { locale: q['locale'] } : {}),
         ...(q['previewToken'] ? { previewToken: q['previewToken'] } : {}),
-        ...(q['staged'] === 'true' || q['staged'] === '1' ? { staged: true } : {}),
+        ...(flag(c, 'staged') ? { staged: true } : {}),
     };
 }
 
@@ -222,15 +240,15 @@ async function bulkArgs(c: Context<Env>): Promise<Record<string, unknown>> {
     return { ...body, type: param(c, 'type'), id: body['ids'] };
 }
 
+/** {@link bulkArgs} for the bulk routes that address one locale of each entry. */
+async function localisedBulkArgs(c: Context<Env>): Promise<Record<string, unknown>> {
+    const locale = c.req.query('locale');
+    return { ...(await bulkArgs(c)), ...(locale ? { locale } : {}) };
+}
+
 /** A JSON body that need not be there — an absent one means "no options". */
 async function optionalBody(c: Context<Env>): Promise<Record<string, unknown>> {
     return c.req.json<Record<string, unknown>>().catch(() => ({}));
-}
-
-/** The `cascadeLocales` flag, as the delete routes spell it on the query string. */
-function cascadeLocales(c: Context<Env>): boolean {
-    const value = c.req.query('cascadeLocales');
-    return value === 'true' || value === '1';
 }
 
 /** One entry type's method catalogue, built once per resolved type. */
@@ -435,8 +453,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         const refused = fieldCapabilitiesDenied(c, type, resolved, parsed.data);
         if (refused) return refused;
 
-        const { title, slug, fields, status, publishedAt, locale, localeGroup } =
-            parsed.data;
+        const { title, slug, fields, status, publishedAt, locale } = parsed.data;
 
         const entry = await entriesService.create({
             type,
@@ -444,7 +461,6 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
                 ...(title !== undefined && { title }),
                 ...(slug !== undefined && { slug }),
                 ...(locale !== undefined && { locale }),
-                ...(localeGroup !== undefined && { localeGroup }),
                 ...(fields !== undefined && { fields: fields as JsonObject }),
                 ...(status !== undefined && { status }),
                 ...(publishedAt !== undefined && { publishedAt }),
@@ -476,9 +492,12 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         const escalated = publishEscalation(c, type, data.status);
         if (escalated) return escalated;
 
+        const locale = c.req.query('locale');
         const entries = await entriesService.update({
             type,
             id: ids,
+            ...(locale ? { locale } : {}),
+            ...(flag(c, 'staged') ? { staged: true } : {}),
             data: data as EntryUpdateData,
         });
         return c.json({ data: entries });
@@ -512,9 +531,14 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         if (escalated) return escalated;
 
         const { title, slug, fields, status, publishedAt } = parsed.data;
+        // `locale` addresses which translation is written — a locale with no
+        // content row yet is created — and `staged` writes the staged change.
+        const locale = c.req.query('locale');
         const entry = await entriesService.update({
             type,
             id,
+            ...(locale ? { locale } : {}),
+            ...(flag(c, 'staged') ? { staged: true } : {}),
             data: {
                 ...(title !== undefined && { title }),
                 ...(slug !== undefined && { slug }),
@@ -539,7 +563,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         const call = resolved.capabilities.trash
             ? entriesService.trash
             : entriesService.delete;
-        await call({ type, id, cascadeLocales: cascadeLocales(c) });
+        await call({ type, id });
         return c.json({ success: true });
     });
 
@@ -547,12 +571,11 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
     // Not in the table: `StagedEntryExistsError` answers a 409 carrying
     // `details.stagedId`. Every other throw is re-raised for `onError`.
     router.post('/:type/:id/staged', async (c) => {
-        const { type, id } = c.req.param();
         const denied = entryPrecondition(c, 'createStaged');
         if (denied) return denied;
 
         try {
-            const entry = await entriesService.createStaged({ type, id });
+            const entry = await entriesService.createStaged(contentArgs(c));
             return c.json({ data: entry }, 201);
         } catch (error) {
             if (!(error instanceof StagedEntryExistsError)) return raise(error);
