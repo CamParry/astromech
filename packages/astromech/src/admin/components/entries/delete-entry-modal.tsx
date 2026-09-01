@@ -1,14 +1,13 @@
 /**
- * Confirmation modal for trashing or permanently deleting an entry. Surfaces
- * a cascade-locales toggle and an incoming-relationships list, each shown
- * only when relevant.
+ * Confirmation modal for trashing or permanently deleting an entry. Trash and
+ * delete are resource-level, so every locale of the entry goes with it; the
+ * modal says so when there is more than one, and lists incoming relationships.
  */
 
 import type { Entry, IncomingRelationship } from '@/types/index';
-import React, { useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/admin/components/ui/button';
-import { Checkbox } from '@/admin/components/ui/checkbox';
 import { Modal } from '@/admin/components/ui/modal';
 import { Spinner } from '@/admin/components/ui/spinner';
 import { useIncomingRelationships } from '@/admin/hooks/entries';
@@ -24,7 +23,7 @@ type DeleteEntryModalProps = {
      */
     force: boolean;
     onCancel: () => void;
-    onConfirm: (options: { cascadeLocales: boolean }) => void;
+    onConfirm: () => void;
     loading?: boolean;
 };
 
@@ -38,18 +37,8 @@ export function DeleteEntryModal({
     loading = false,
 }: DeleteEntryModalProps): React.ReactElement | null {
     const { t } = useTranslation();
-    const [cascadeLocales, setCascadeLocales] = useState(false);
 
-    // Reset checkbox each time the modal opens for a different entry.
-    React.useEffect(() => {
-        if (open) setCascadeLocales(false);
-    }, [open, entry?.id]);
-
-    const localeSiblings =
-        entry != null
-            ? Object.entries(entry.locales ?? {}).filter(([, id]) => id !== entry.id)
-            : [];
-    const hasSiblings = localeSiblings.length > 0;
+    const localeCount = entry?.locales.length ?? 0;
 
     const { data: incoming, isLoading: incomingLoading } = useIncomingRelationships(
         entry?.type ?? '',
@@ -74,11 +63,7 @@ export function DeleteEntryModal({
                     <Button variant="secondary" onClick={onCancel} disabled={loading}>
                         {t('common.cancel')}
                     </Button>
-                    <Button
-                        variant="danger"
-                        onClick={() => onConfirm({ cascadeLocales })}
-                        loading={loading}
-                    >
+                    <Button variant="danger" onClick={onConfirm} loading={loading}>
                         {force
                             ? t('entries.confirmForceDeleteLabel')
                             : t('entries.confirmDeleteLabel')}
@@ -106,16 +91,10 @@ export function DeleteEntryModal({
                 )}
             </p>
 
-            {hasSiblings && (
-                <div className="am-field" style={{ marginTop: '1rem' }}>
-                    <Checkbox
-                        checked={cascadeLocales}
-                        onChange={() => setCascadeLocales((v) => !v)}
-                        label={t('entries.cascadeLocalesLabel', {
-                            count: localeSiblings.length,
-                        })}
-                    />
-                </div>
+            {localeCount > 1 && (
+                <p className="am-text-sm am-text-muted">
+                    {t('entries.deletesAllLocales', { count: localeCount })}
+                </p>
             )}
 
             {open && (incomingLoading || incomingCount > 0) && (

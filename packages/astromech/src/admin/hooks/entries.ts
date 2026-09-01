@@ -54,39 +54,51 @@ export function useEntriesQuery(
     });
 }
 
-export function entryQueryOptions(type: string, id: string, scope?: EntryHookScope) {
+export function entryQueryOptions(
+    type: string,
+    id: string,
+    locale: string,
+    scope?: EntryHookScope
+) {
     const api = resolveApi(scope);
     const keys = resolveKeys(scope);
     return queryOptions({
-        queryKey: keys.get(type, id),
-        queryFn: () => api.get({ type, id }),
+        queryKey: keys.get(type, id, locale),
+        queryFn: () => api.get({ type, id, locale }),
     });
 }
 
 export function entryVersionsQueryOptions(
     type: string,
     id: string,
+    locale: string,
     scope?: EntryHookScope
 ) {
     const api = resolveApi(scope);
     const keys = resolveKeys(scope);
     return queryOptions({
-        queryKey: keys.versions(type, id),
-        queryFn: () => api.versions({ type, id }),
+        queryKey: keys.versions(type, id, locale),
+        queryFn: () => api.versions({ type, id, locale }),
     });
 }
 
-export function useEntry(type: string, id: string, scope?: EntryHookScope) {
-    return useQuery(entryQueryOptions(type, id, scope));
+export function useEntry(
+    type: string,
+    id: string,
+    locale: string,
+    scope?: EntryHookScope
+) {
+    return useQuery(entryQueryOptions(type, id, locale, scope));
 }
 
 export function useEntryVersions(
     type: string,
     id: string,
+    locale: string,
     enabled = true,
     scope?: EntryHookScope
 ) {
-    return useQuery({ ...entryVersionsQueryOptions(type, id, scope), enabled });
+    return useQuery({ ...entryVersionsQueryOptions(type, id, locale, scope), enabled });
 }
 
 /**
@@ -101,24 +113,6 @@ export function useIncomingRelationships(type: string, id: string, enabled = tru
     });
 }
 
-/**
- * Batch-fetch entries by id, across all locales. Used to load sibling-title
- * metadata for an entry's `locales` map.
- */
-export function useEntriesByIds(type: string, ids: string[], enabled = true) {
-    return useQuery({
-        queryKey: queryKeys.entries.list(type, { _byIds: ids, locale: 'all' }),
-        queryFn: () =>
-            astromechClient.entries.query({
-                type,
-                locale: 'all',
-                where: { id: { in: ids } },
-                limit: 'all',
-            }),
-        enabled: enabled && ids.length > 0,
-    });
-}
-
 export function useTrashEntry(
     type: string,
     options?: { onSuccess?: () => void } & EntryHookScope
@@ -130,12 +124,7 @@ export function useTrashEntry(
     const keys = resolveKeys(options);
 
     return useMutation({
-        mutationFn: (input: string | { id: string; cascadeLocales?: boolean }) => {
-            const id = typeof input === 'string' ? input : input.id;
-            const cascadeLocales =
-                typeof input === 'string' ? false : !!input.cascadeLocales;
-            return api.trash({ type, id, cascadeLocales });
-        },
+        mutationFn: (id: string) => api.trash({ type, id }),
         onSuccess: () => {
             void queryClient.invalidateQueries({
                 queryKey: keys.all(type),
@@ -166,12 +155,7 @@ export function useDeleteEntry(
     const keys = resolveKeys(options);
 
     return useMutation({
-        mutationFn: (input: string | { id: string; cascadeLocales?: boolean }) => {
-            const id = typeof input === 'string' ? input : input.id;
-            const cascadeLocales =
-                typeof input === 'string' ? false : !!input.cascadeLocales;
-            return api.delete({ type, id, cascadeLocales });
-        },
+        mutationFn: (id: string) => api.delete({ type, id }),
         onSuccess: () => {
             void queryClient.invalidateQueries({
                 queryKey: keys.all(type),
@@ -254,6 +238,7 @@ export function useRestoreEntry(
 export function usePublishEntry(
     type: string,
     id: string,
+    locale: string,
     options?: { onSuccess?: (entry: Entry) => void }
 ) {
     const queryClient = useQueryClient();
@@ -261,10 +246,10 @@ export function usePublishEntry(
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: () => astromechClient.entries.publish({ type, id }),
+        mutationFn: () => astromechClient.entries.publish({ type, id, locale }),
         onSuccess: (entry) => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.get(type, id),
+                queryKey: queryKeys.entries.get(type, id, locale),
             });
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.all(type),
@@ -284,6 +269,7 @@ export function usePublishEntry(
 export function useUnpublishEntry(
     type: string,
     id: string,
+    locale: string,
     options?: { onSuccess?: (entry: Entry) => void }
 ) {
     const queryClient = useQueryClient();
@@ -291,10 +277,10 @@ export function useUnpublishEntry(
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: () => astromechClient.entries.unpublish({ type, id }),
+        mutationFn: () => astromechClient.entries.unpublish({ type, id, locale }),
         onSuccess: (entry) => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.get(type, id),
+                queryKey: queryKeys.entries.get(type, id, locale),
             });
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.all(type),
@@ -315,6 +301,7 @@ export function useUnpublishEntry(
 export function useScheduleEntry(
     type: string,
     id: string,
+    locale: string,
     options?: { onSuccess?: (entry: Entry) => void }
 ) {
     const queryClient = useQueryClient();
@@ -323,10 +310,10 @@ export function useScheduleEntry(
 
     return useMutation({
         mutationFn: (publishedAt: Date) =>
-            astromechClient.entries.schedule({ type, id, publishedAt }),
+            astromechClient.entries.schedule({ type, id, publishedAt, locale }),
         onSuccess: (entry) => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.get(type, id),
+                queryKey: queryKeys.entries.get(type, id, locale),
             });
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.entries.all(type),
@@ -472,6 +459,7 @@ export function useBulkUnpublishEntries(
 export function useRestoreEntryVersion(
     type: string,
     id: string,
+    locale: string,
     options?: { onSuccess?: () => void } & EntryHookScope
 ) {
     const queryClient = useQueryClient();
@@ -481,13 +469,14 @@ export function useRestoreEntryVersion(
     const keys = resolveKeys(options);
 
     return useMutation({
-        mutationFn: (versionId: string) => api.restoreVersion({ type, id, versionId }),
+        mutationFn: (versionId: string) =>
+            api.restoreVersion({ type, id, versionId, locale }),
         onSuccess: () => {
             void queryClient.invalidateQueries({
-                queryKey: keys.get(type, id),
+                queryKey: keys.get(type, id, locale),
             });
             void queryClient.invalidateQueries({
-                queryKey: keys.versions(type, id),
+                queryKey: keys.versions(type, id, locale),
             });
             toast({ message: t('versions.restored'), variant: 'success' });
             options?.onSuccess?.();
@@ -502,34 +491,29 @@ export function useRestoreEntryVersion(
 }
 
 /**
- * Create a new entry that joins an existing locale group as a translation
- * of `sourceId`, inheriting its `localeGroup`. Used by the LocaleSwitcher's
- * "Create translation" action.
+ * Add a locale to an entry. `update` on a locale with no content row creates
+ * it, inheriting the default locale's shared fields, so an empty patch is the
+ * whole request. Used by the LocaleSwitcher's "Create translation" action.
  */
 export function useCreateTranslation(
     type: string,
-    options?: { onSuccess?: (entry: Entry) => void; onError?: (err: Error) => void }
+    options?: {
+        onSuccess?: (entry: Entry) => void;
+        onError?: (err: Error) => void;
+    } & EntryHookScope
 ) {
+    const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
+    const api = resolveApi(options);
+    const keys = resolveKeys(options);
 
     return useMutation({
-        mutationFn: async ({
-            sourceId,
-            locale,
-        }: {
-            sourceId: string;
-            locale: string;
-        }): Promise<Entry> => {
-            const source = await astromechClient.entries.get({ type, id: sourceId });
-            if (!source) throw new Error(`Entry ${sourceId} not found`);
-            return astromechClient.entries.duplicate({
-                type,
-                id: sourceId,
-                overrides: { locale, localeGroup: source.localeGroup },
-            }) as Promise<Entry>;
-        },
-        onSuccess: (entry) => {
+        mutationFn: ({ id, locale }: { id: string; locale: string }): Promise<Entry> =>
+            api.update({ type, id, locale, data: {} }),
+        onSuccess: (entry, { id, locale }) => {
+            queryClient.setQueryData(keys.get(type, id, locale), entry);
+            void queryClient.invalidateQueries({ queryKey: keys.all(type) });
             options?.onSuccess?.(entry);
         },
         onError: (err) => {
@@ -544,32 +528,34 @@ export function useCreateTranslation(
 }
 
 // Forward versioning: hooks for staged entries.
-/** The canonical entry's staged change, or null. */
+/** This locale's staged change, or null. */
 export function useGetStaged(
     type: string,
     id: string,
+    locale: string,
     enabled = true,
     scope?: EntryHookScope
 ) {
     const api = resolveApi(scope);
     const keys = resolveKeys(scope);
     return useQuery({
-        queryKey: keys.staged(type, id),
-        queryFn: () => api.getStaged({ type, id }),
+        queryKey: keys.staged(type, id, locale),
+        queryFn: () => api.getStaged({ type, id, locale }),
         enabled,
     });
 }
 
 /**
- * Stage a change on a canonical entry. On a 409 (a staged change already
- * exists), `onConflict` is called with the existing staged id so the page
- * can redirect to it.
+ * Stage a change on one locale of an entry. On a 409 (a staged change already
+ * exists) `onConflict` fires, so the page can open the existing one instead —
+ * it shares the entry's id, so there is nothing to carry.
  */
 export function useCreateStaged(
     type: string,
+    locale: string,
     options?: {
         onSuccess?: (entry: Entry) => void;
-        onConflict?: (stagedId: string) => void;
+        onConflict?: () => void;
     } & EntryHookScope
 ) {
     const queryClient = useQueryClient();
@@ -579,19 +565,17 @@ export function useCreateStaged(
     const keys = resolveKeys(options);
 
     return useMutation({
-        mutationFn: (id: string) => api.createStaged({ type, id }),
+        mutationFn: (id: string) => api.createStaged({ type, id, locale }),
         onSuccess: (entry, id) => {
-            void queryClient.invalidateQueries({ queryKey: keys.staged(type, id) });
+            void queryClient.invalidateQueries({
+                queryKey: keys.staged(type, id, locale),
+            });
             void queryClient.invalidateQueries({ queryKey: keys.all(type) });
             options?.onSuccess?.(entry);
         },
         onError: (err) => {
-            if (
-                err instanceof AstromechApiError &&
-                err.code === 'staged_entry_exists' &&
-                typeof err.details?.['stagedId'] === 'string'
-            ) {
-                options?.onConflict?.(err.details['stagedId']);
+            if (err instanceof AstromechApiError && err.code === 'staged_entry_exists') {
+                options?.onConflict?.();
                 return;
             }
             toast({
@@ -606,6 +590,7 @@ export function useCreateStaged(
 export function useMergeStaged(
     type: string,
     id: string,
+    locale: string,
     options?: { onSuccess?: (entry: Entry) => void } & EntryHookScope
 ) {
     const queryClient = useQueryClient();
@@ -615,10 +600,12 @@ export function useMergeStaged(
     const keys = resolveKeys(options);
 
     return useMutation({
-        mutationFn: () => api.mergeStaged({ type, id }),
+        mutationFn: () => api.mergeStaged({ type, id, locale }),
         onSuccess: (entry) => {
-            void queryClient.invalidateQueries({ queryKey: keys.get(type, id) });
-            void queryClient.invalidateQueries({ queryKey: keys.staged(type, id) });
+            void queryClient.invalidateQueries({ queryKey: keys.get(type, id, locale) });
+            void queryClient.invalidateQueries({
+                queryKey: keys.staged(type, id, locale),
+            });
             void queryClient.invalidateQueries({ queryKey: keys.all(type) });
             toast({ message: t('staging.merged'), variant: 'success' });
             options?.onSuccess?.(entry);
@@ -636,6 +623,7 @@ export function useMergeStaged(
 export function useDeleteStaged(
     type: string,
     id: string,
+    locale: string,
     options?: { onSuccess?: () => void } & EntryHookScope
 ) {
     const queryClient = useQueryClient();
@@ -645,9 +633,11 @@ export function useDeleteStaged(
     const keys = resolveKeys(options);
 
     return useMutation({
-        mutationFn: () => api.deleteStaged({ type, id }),
+        mutationFn: () => api.deleteStaged({ type, id, locale }),
         onSuccess: () => {
-            void queryClient.invalidateQueries({ queryKey: keys.staged(type, id) });
+            void queryClient.invalidateQueries({
+                queryKey: keys.staged(type, id, locale),
+            });
             void queryClient.invalidateQueries({ queryKey: keys.all(type) });
             toast({ message: t('staging.discarded'), variant: 'success' });
             options?.onSuccess?.();

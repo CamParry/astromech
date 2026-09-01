@@ -5,7 +5,7 @@
  */
 
 import type { EntriesMount } from './mount';
-import type { Entry } from '@/types/index';
+import type { Entry, EntryUpdateData } from '@/types/index';
 import { useNavigate } from '@tanstack/react-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -39,10 +39,11 @@ import { useEntryForm } from '@/admin/hooks/use-entry-form';
 import { usePermissions } from '@/admin/hooks/use-permissions';
 import { EntryNamespaceProvider, namespaceForScope } from '@/admin/i18n/entry-namespace';
 import { resolveAdminEntryType, resolveForm } from '@/admin/rendering/resolve';
-import { resolveContentLocale } from '@/utilities/locale';
+import { defaultContentLocale } from '@/admin/utilities/content-locale';
+import { entryEditPath } from '@/admin/utilities/entry-admin-path';
 import { EntryFormErrors } from './entry-form-errors';
 
-type CreateMode = 'translate' | 'blank-in-group' | 'standalone';
+type CreateMode = 'translate' | 'blank-in-entry' | 'standalone';
 
 type CreateLocaleModalProps = {
     open: boolean;
@@ -51,7 +52,7 @@ type CreateLocaleModalProps = {
     defaultLocale: string;
     onCancel: () => void;
     onChooseStandalone: () => void;
-    onChooseBlankInGroup: (sourceId: string, localeGroup: string) => void;
+    onChooseBlankInEntry: (sourceId: string) => void;
     onChooseTranslate: (sourceEntry: Entry) => void;
 };
 
@@ -62,7 +63,7 @@ function CreateLocaleModal({
     defaultLocale,
     onCancel,
     onChooseStandalone,
-    onChooseBlankInGroup,
+    onChooseBlankInEntry,
     onChooseTranslate,
 }: CreateLocaleModalProps): React.ReactElement {
     const { t } = useTranslation();
@@ -90,11 +91,10 @@ function CreateLocaleModal({
         const source = sourceEntries.find((e) => e.id === selectedId);
         if (!source) return;
         if (mode === 'translate') onChooseTranslate(source);
-        if (mode === 'blank-in-group')
-            onChooseBlankInGroup(source.id, source.localeGroup);
+        if (mode === 'blank-in-entry') onChooseBlankInEntry(source.id);
     }
 
-    const needsPicker = mode === 'translate' || mode === 'blank-in-group';
+    const needsPicker = mode === 'translate' || mode === 'blank-in-entry';
     const proceedEnabled = mode === 'standalone' || (needsPicker && selectedId);
 
     return (
@@ -127,8 +127,8 @@ function CreateLocaleModal({
                 <RadioOption
                     label={t('entries.createBlankInLocale')}
                     description={t('entries.createBlankInLocaleDescription')}
-                    checked={mode === 'blank-in-group'}
-                    onSelect={() => setMode('blank-in-group')}
+                    checked={mode === 'blank-in-entry'}
+                    onSelect={() => setMode('blank-in-entry')}
                 />
                 <RadioOption
                     label={t('entries.createStandalone')}
@@ -211,16 +211,12 @@ export function EntryNewPage({
 
     const capabilities = entryType?.capabilities;
     const hasI18n = capabilities?.translatable === true;
-    const defaultContentLocale =
-        resolveContentLocale(adminConfig.defaultLocale, adminConfig.locales) ??
-        adminConfig.locales[0] ??
-        adminConfig.defaultLocale;
-    const requestedLocale = requestedLocaleProp ?? defaultContentLocale;
-    const isNonDefaultLocale = hasI18n && requestedLocale !== defaultContentLocale;
+    const requestedLocale = requestedLocaleProp ?? defaultContentLocale();
+    const isNonDefaultLocale = hasI18n && requestedLocale !== defaultContentLocale();
 
-    // For non-default-locale creates, hold a chosen localeGroup (when joining
-    // an existing group via "blank in this locale"). null = fresh standalone group.
-    const [chosenLocaleGroup, setChosenLocaleGroup] = useState<string | null>(null);
+    // For non-default-locale creates, hold the entry this locale is being added
+    // to (chosen via "blank in this locale"). null = a new entry of its own.
+    const [chosenEntryId, setChosenEntryId] = useState<string | null>(null);
     const [modalOpen, setModalOpen] = useState<boolean>(isNonDefaultLocale);
 
     const resolvedForm = resolveForm(resolveAdminEntryType(entryType, type));
@@ -255,67 +251,62 @@ export function EntryNewPage({
         namespace: namespaceForScope(cacheScope),
         hasSlug,
         hasStatuses,
-        saveFn: (payload) =>
-            api.create({
-                type,
-                data: {
-                    ...payload,
-                    ...(hasI18n ? { locale: requestedLocale } : {}),
-                    ...(chosenLocaleGroup ? { localeGroup: chosenLocaleGroup } : {}),
-                },
-            }) as Promise<Entry>,
-        publishFn: (payload) =>
-            api.create({
-                type,
-                data: {
-                    ...payload,
-                    ...(hasI18n ? { locale: requestedLocale } : {}),
-                    ...(chosenLocaleGroup ? { localeGroup: chosenLocaleGroup } : {}),
-                },
-            }) as Promise<Entry>,
+        // Adding a locale to an existing entry is an `update` on that locale,
+        // which creates the content row; a new entry is a `create`.
+        saveFn: (payload) => writeEntry(payload),
+        publishFn: (payload) => writeEntry(payload),
         onSuccess: (entry) => {
             toast({
                 message: t('entries.created', { name: single }),
                 variant: 'success',
             });
             void navigate({
-                to: `${basePath}/${entry.id}`,
+                to: entryEditPath(basePath, entry.id, { locale: entry.locale }),
             });
         },
     });
+
+    function writeEntry(payload: EntryUpdateData): Promise<Entry> {
+        if (chosenEntryId !== null) {
+            return api.update({
+                type,
+                id: chosenEntryId,
+                locale: requestedLocale,
+                data: payload,
+            });
+        }
+        return api.create({
+            type,
+            data: { ...payload, ...(hasI18n ? { locale: requestedLocale } : {}) },
+        }) as Promise<Entry>;
+    }
 
     function handleModalCancel(): void {
         void navigate({ to: basePath });
     }
 
     function handleChooseStandalone(): void {
-        setChosenLocaleGroup(null);
+        setChosenEntryId(null);
         setModalOpen(false);
     }
 
-    function handleChooseBlankInGroup(_sourceId: string, localeGroup: string): void {
-        setChosenLocaleGroup(localeGroup);
+    function handleChooseBlankInEntry(sourceId: string): void {
+        setChosenEntryId(sourceId);
         setModalOpen(false);
     }
 
     function handleChooseTranslate(source: Entry): void {
-        // Duplicate the source into the requested locale, joining its group.
+        // Add the requested locale to the source entry. An empty patch is
+        // enough: the missing row inherits the source's own columns.
         void api
-            .duplicate({
-                type,
-                id: source.id,
-                overrides: {
-                    locale: requestedLocale,
-                    localeGroup: source.localeGroup,
-                },
-            })
+            .update({ type, id: source.id, locale: requestedLocale, data: {} })
             .then((entry) => {
                 toast({
                     message: t('entries.created', { name: single }),
                     variant: 'success',
                 });
                 void navigate({
-                    to: `${basePath}/${entry.id}`,
+                    to: entryEditPath(basePath, entry.id, { locale: entry.locale }),
                 });
             })
             .catch((err: unknown) => {
@@ -337,7 +328,7 @@ export function EntryNewPage({
                         defaultLocale={adminConfig.defaultLocale}
                         onCancel={handleModalCancel}
                         onChooseStandalone={handleChooseStandalone}
-                        onChooseBlankInGroup={handleChooseBlankInGroup}
+                        onChooseBlankInEntry={handleChooseBlankInEntry}
                         onChooseTranslate={handleChooseTranslate}
                     />
                 )}

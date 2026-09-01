@@ -1,51 +1,60 @@
 /**
- * Shows available locales for an entry's group; navigates to existing
- * sibling rows or fires a "create translation" mutation that duplicates the
- * entry into the target locale, joining the same group.
+ * Switches which locale of an entry is being edited. An entry has one id
+ * across its locales, so a switch changes the `locale` search param and keeps
+ * the id; a locale the entry has no row for fires a "create translation"
+ * mutation that writes it first.
  */
 
+import type { EntryHookScope } from '../../hooks/entries';
 import { useNavigate } from '@tanstack/react-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { entryEditPath } from '@/admin/utilities/entry-admin-path';
 import { useCreateTranslation } from '../../hooks/entries';
 import { Select } from '../ui/select';
 
 type LocaleSwitcherProps = {
-    /** The entry currently being viewed/edited. */
-    currentEntryId: string;
-    /** Map of locale code → entry id (i.e. Entry.locales). */
-    locales: Record<string, string>;
+    /** The entry being edited. One id serves every locale of it. */
+    entryId: string;
+    /** The locale being edited. */
+    currentLocale: string;
+    /** Locales the entry has a content row for (i.e. `Entry.locales`). */
+    locales: string[];
     /** Locales configured on the entry type's `locales` (or global `locales`). */
     allLocales: string[];
-    /** Configured default locale (used for fallback / label sorting). */
+    /** Configured default locale (used for label sorting). */
     defaultLocale: string;
+    /** Link base: `/entries/post` or `/plugin/forms/entries/form`. */
+    basePath: string;
     type: string;
+    /** Mount binding for the create-translation write (plugin types bind theirs). */
+    scope?: EntryHookScope;
     compact?: boolean;
 };
 
 export function LocaleSwitcher({
-    currentEntryId,
+    entryId,
+    currentLocale,
     locales,
     allLocales,
     defaultLocale,
+    basePath,
     type,
+    scope,
     compact = false,
 }: LocaleSwitcherProps): React.ReactElement {
     const navigate = useNavigate();
     const { t } = useTranslation();
 
-    // Determine which locale this entry is. The locales map always contains
-    // self, so reverse-lookup is reliable.
-    const currentLocale =
-        Object.entries(locales).find(([, id]) => id === currentEntryId)?.[0] ??
-        defaultLocale;
-
     const [isCreating, setIsCreating] = useState(false);
 
     const createMutation = useCreateTranslation(type, {
-        onSuccess: (newEntry) => {
+        ...scope,
+        onSuccess: (entry) => {
             setIsCreating(false);
-            void navigate({ to: `/entries/${type}/${newEntry.id}` });
+            void navigate({
+                to: entryEditPath(basePath, entry.id, { locale: entry.locale }),
+            });
         },
         onError: () => setIsCreating(false),
     });
@@ -53,15 +62,14 @@ export function LocaleSwitcher({
     function handleValueChange(value: string | null): void {
         if (value == null || value === currentLocale) return;
 
-        const existing = locales[value];
-        if (existing != null) {
-            void navigate({ to: `/entries/${type}/${existing}` });
+        if (locales.includes(value)) {
+            void navigate({ to: entryEditPath(basePath, entryId, { locale: value }) });
             return;
         }
 
-        // Missing translation — create one joining this group via duplicate.
+        // Missing translation — write the row, then open it.
         setIsCreating(true);
-        createMutation.mutate({ sourceId: currentEntryId, locale: value });
+        createMutation.mutate({ id: entryId, locale: value });
     }
 
     // Sort options: default locale first, others alphabetical; missing locales
@@ -72,7 +80,7 @@ export function LocaleSwitcher({
     ];
     const options = sortedLocales.map((loc) => ({
         value: loc,
-        label: locales[loc] != null ? loc.toUpperCase() : `Add ${loc.toUpperCase()}`,
+        label: locales.includes(loc) ? loc.toUpperCase() : `Add ${loc.toUpperCase()}`,
     }));
 
     if (compact) {

@@ -13,10 +13,12 @@ import { EntryVersionsPage } from '@/admin/components/entries/entry-versions-pag
 import { buildPluginEntriesMount } from '@/admin/components/entries/mount';
 import { EmptyState } from '@/admin/components/ui/empty-state';
 import { Page, PageContent } from '@/admin/components/ui/page';
+import { validateEntryEditSearch } from '@/admin/utilities/entry-admin-path';
 import { astromechClient } from '@/transport/http/client';
 
 function PluginEntryVersionsPage(): React.ReactElement {
     const { name, type, id } = Route.useParams();
+    const { locale } = Route.useSearch();
     const { t } = useTranslation();
     const api = astromechClient.entries as unknown as EntriesService;
     const mount = buildPluginEntriesMount(adminConfig.plugins, name, type, api);
@@ -32,11 +34,12 @@ function PluginEntryVersionsPage(): React.ReactElement {
             </Page>
         );
     }
-    return <EntryVersionsPage mount={mount} id={id} />;
+    return <EntryVersionsPage mount={mount} id={id} locale={locale} />;
 }
 
 export const Route = createFileRoute(
     '/_protected/plugin/$name/entries/$type/$id/versions'
 )({
+    validateSearch: validateEntryEditSearch,
     component: PluginEntryVersionsPage,
 });

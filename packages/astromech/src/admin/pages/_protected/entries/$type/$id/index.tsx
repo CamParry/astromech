@@ -11,11 +11,16 @@ import React from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntryEditPage } from '@/admin/components/entries/entry-edit-page';
 import { entryQueryOptions } from '@/admin/hooks/entries';
-import { pluginEntryRouteParams } from '@/admin/utilities/entry-admin-path';
+import { defaultContentLocale } from '@/admin/utilities/content-locale';
+import {
+    pluginEntryRouteParams,
+    validateEntryEditSearch,
+} from '@/admin/utilities/entry-admin-path';
 import { astromechClient } from '@/transport/http/client';
 
 function EntryEditRoutePage(): React.ReactElement {
     const { type, id } = Route.useParams();
+    const { locale, staged } = Route.useSearch();
     const mount: EntriesMount = {
         api: astromechClient.entries as unknown as EntriesService,
         type,
@@ -24,20 +29,31 @@ function EntryEditRoutePage(): React.ReactElement {
         basePath: `/entries/${type}`,
         permissionFor: (action) => `entry:${type}:${action}`,
     };
-    return <EntryEditPage mount={mount} id={id} />;
+    return <EntryEditPage mount={mount} id={id} locale={locale} staged={staged} />;
 }
 
 export const Route = createFileRoute('/_protected/entries/$type/$id/')({
-    beforeLoad: ({ params }) => {
+    validateSearch: validateEntryEditSearch,
+    beforeLoad: ({ params, search }) => {
         const plugin = pluginEntryRouteParams(params.type);
         if (plugin !== null) {
             throw redirect({
                 to: '/plugin/$name/entries/$type/$id',
                 params: { ...plugin, id: params.id },
+                search,
             });
         }
     },
-    loader: ({ context, params }) =>
-        context.queryClient.ensureQueryData(entryQueryOptions(params.type, params.id)),
+    // The staged row is not readable through `get`, so only the canonical row
+    // is prefetched; the page's `useGetStaged` fetches the other.
+    loaderDeps: ({ search }) => ({ locale: search.locale }),
+    loader: ({ context, params, deps }) =>
+        context.queryClient.ensureQueryData(
+            entryQueryOptions(
+                params.type,
+                params.id,
+                deps.locale ?? defaultContentLocale()
+            )
+        ),
     component: EntryEditRoutePage,
 });

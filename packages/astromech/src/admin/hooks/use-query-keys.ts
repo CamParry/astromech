@@ -9,16 +9,19 @@ export const queryKeys = {
         all: (collection: string) => ['entries', collection] as const,
         list: (collection: string, filters?: Record<string, unknown>) =>
             ['entries', collection, 'list', filters] as const,
-        get: (collection: string, id: string) =>
-            ['entries', collection, 'detail', id] as const,
+        /**
+         * One locale of one entry. An entry has a single id across its
+         * locales, so the locale is part of the key: switching locale on the
+         * edit page is a different query, not a stale one.
+         */
+        get: (collection: string, id: string, locale: string) =>
+            ['entries', collection, 'detail', id, locale] as const,
         trashed: (collection: string) => ['entries', collection, 'trashed'] as const,
-        versions: (collection: string, id: string) =>
-            ['entries', collection, 'versions', id] as const,
-        translations: (collection: string, id: string) =>
-            ['entries', collection, 'translations', id] as const,
-        /** The staged change of a canonical entry (forward versioning). */
-        staged: (collection: string, id: string) =>
-            ['entries', collection, 'staged', id] as const,
+        versions: (collection: string, id: string, locale: string) =>
+            ['entries', collection, 'versions', id, locale] as const,
+        /** The staged change of one locale of an entry (forward versioning). */
+        staged: (collection: string, id: string, locale: string) =>
+            ['entries', collection, 'staged', id, locale] as const,
     },
 
     // Media
@@ -68,15 +71,13 @@ export function scopedEntryKeys(cacheScope: string) {
         all: (collection: string) => [...prefix, 'entries', collection] as const,
         list: (collection: string, filters?: Record<string, unknown>) =>
             [...prefix, 'entries', collection, 'list', filters] as const,
-        get: (collection: string, id: string) =>
-            [...prefix, 'entries', collection, 'detail', id] as const,
+        get: (collection: string, id: string, locale: string) =>
+            [...prefix, 'entries', collection, 'detail', id, locale] as const,
         trashed: (collection: string) =>
             [...prefix, 'entries', collection, 'trashed'] as const,
-        versions: (collection: string, id: string) =>
-            [...prefix, 'entries', collection, 'versions', id] as const,
-        translations: (collection: string, id: string) =>
-            [...prefix, 'entries', collection, 'translations', id] as const,
-        staged: (collection: string, id: string) =>
-            [...prefix, 'entries', collection, 'staged', id] as const,
+        versions: (collection: string, id: string, locale: string) =>
+            [...prefix, 'entries', collection, 'versions', id, locale] as const,
+        staged: (collection: string, id: string, locale: string) =>
+            [...prefix, 'entries', collection, 'staged', id, locale] as const,
     };
 }

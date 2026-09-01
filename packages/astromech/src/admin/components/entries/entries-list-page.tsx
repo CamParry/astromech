@@ -68,7 +68,8 @@ import {
     resolveAdminEntryType,
     resolveTable,
 } from '@/admin/rendering/resolve';
-import { resolveContentLocale } from '@/utilities/locale';
+import { defaultContentLocale } from '@/admin/utilities/content-locale';
+import { entryEditPath } from '@/admin/utilities/entry-admin-path';
 
 type StatusFilter = 'all' | 'unpublished' | 'published' | 'scheduled' | 'trashed';
 
@@ -177,7 +178,7 @@ function buildRowItems(props: RowActionsProps): DropdownItem[] {
     const items: DropdownItem[] = [
         {
             label: rowLabels.edit,
-            href: `${basePath}/${entry.id}`,
+            href: entryEditPath(basePath, entry.id, { locale: entry.locale }),
             icon: <Pencil size={14} />,
         },
         {
@@ -202,7 +203,7 @@ type EntryTableRowProps = RowActionsProps & {
     selected: boolean;
     onToggleSelect: (id: string) => void;
     columns: TableColumn[];
-    navigate: (opts: { id: string }) => void;
+    navigate: (opts: { id: string; locale: string }) => void;
     configuredLocales: string[];
 };
 
@@ -249,6 +250,7 @@ function EntryTableRow({
                         ? () =>
                               void navigate({
                                   id: entry.id,
+                                  locale: entry.locale,
                               })
                         : undefined
                 }
@@ -292,7 +294,7 @@ function EntryTableRow({
 type EntryCardProps = RowActionsProps & {
     columns: TableColumn[];
     columnLabel: (col: TableColumn) => string;
-    navigate: (opts: { id: string }) => void;
+    navigate: (opts: { id: string; locale: string }) => void;
     hasTitle: boolean;
     configuredLocales: string[];
 };
@@ -334,6 +336,7 @@ function EntryCard({
         if (isTrash) return;
         void navigate({
             id: entry.id,
+            locale: entry.locale,
         });
     }
 
@@ -367,7 +370,7 @@ function EntryCard({
                     </span>
                 ) : (
                     <Link
-                        to={`${basePath}/${entry.id}`}
+                        to={entryEditPath(basePath, entry.id, { locale: entry.locale })}
                         className={
                             hasTitle
                                 ? 'am-collection-card-title'
@@ -483,11 +486,7 @@ export function EntriesListPage({ mount }: { mount: EntriesMount }): React.React
     const search = urlSearch.q ?? '';
     const statusFilter = (urlSearch.status ?? 'all') as StatusFilter;
     const page = urlSearch.page ?? 1;
-    const defaultContentLocale =
-        resolveContentLocale(adminConfig.defaultLocale, adminConfig.locales) ??
-        adminConfig.locales[0] ??
-        adminConfig.defaultLocale;
-    const localeFilter = urlSearch.locale ?? defaultContentLocale;
+    const localeFilter = urlSearch.locale ?? defaultContentLocale();
     const sort = parseSortParam(urlSearch.sort);
 
     const patchSearch = useCallback(
@@ -652,7 +651,7 @@ export function EntriesListPage({ mount }: { mount: EntriesMount }): React.React
         ...scope,
         onSuccess: (entry) => {
             void navigate({
-                to: `${basePath}/${entry.id}`,
+                to: entryEditPath(basePath, entry.id, { locale: entry.locale }),
             });
         },
     });
@@ -731,25 +730,19 @@ export function EntriesListPage({ mount }: { mount: EntriesMount }): React.React
     }
 
     const navigateCompat = useCallback(
-        (opts: { id: string }) => {
+        (opts: { id: string; locale: string }) => {
             void navigate({
-                to: `${basePath}/${opts.id}`,
+                to: entryEditPath(basePath, opts.id, { locale: opts.locale }),
             });
         },
         [navigate, basePath]
     );
 
-    function handleDeleteConfirm(options: { cascadeLocales: boolean }) {
+    function handleDeleteConfirm() {
         if (!deleteTarget) return;
         const { entry, force } = deleteTarget;
-        const input = options.cascadeLocales
-            ? { id: entry.id, cascadeLocales: true }
-            : entry.id;
-        if (force) {
-            deleteMutation.mutate(input, { onSuccess: () => setDeleteTarget(null) });
-        } else {
-            trashMutation.mutate(input, { onSuccess: () => setDeleteTarget(null) });
-        }
+        const mutation = force ? deleteMutation : trashMutation;
+        mutation.mutate(entry.id, { onSuccess: () => setDeleteTarget(null) });
     }
 
     return (
@@ -897,7 +890,7 @@ export function EntriesListPage({ mount }: { mount: EntriesMount }): React.React
                                     onValueChange={(v) => {
                                         patchSearch({
                                             locale:
-                                                v && v !== defaultContentLocale
+                                                v && v !== defaultContentLocale()
                                                     ? v
                                                     : undefined,
                                             page: undefined,

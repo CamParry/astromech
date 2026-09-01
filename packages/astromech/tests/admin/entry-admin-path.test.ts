@@ -6,12 +6,18 @@
  *
  * `pluginEntryRouteParams` is the other half of the rule: the root routes call
  * it in `beforeLoad` to redirect a qualified type param to the plugin route.
+ *
+ * An entry has one id across its locales, so which locale a link opens is a
+ * search param on the same path.
  */
 
 import { describe, expect, it } from 'vitest';
 import {
     entryAdminPath,
+    entryEditPath,
+    entryVersionsPath,
     pluginEntryRouteParams,
+    validateEntryEditSearch,
 } from '@/admin/utilities/entry-admin-path';
 
 describe('entryAdminPath', () => {
@@ -30,6 +36,15 @@ describe('entryAdminPath', () => {
         // renders but 404s on navigation.
         expect(entryAdminPath('forms/form', 'abc123')).not.toContain(
             '/entries/forms/form'
+        );
+    });
+
+    it('carries a locale as a search param on the same path', () => {
+        expect(entryAdminPath('post', 'abc123', { locale: 'fr' })).toBe(
+            '/entries/post/abc123?locale=fr'
+        );
+        expect(entryAdminPath('forms/form', 'abc123', { locale: 'fr' })).toBe(
+            '/plugin/forms/entries/form/abc123?locale=fr'
         );
     });
 
@@ -60,5 +75,50 @@ describe('pluginEntryRouteParams', () => {
             name: 'forms',
             type: 'nested/form',
         });
+    });
+});
+
+describe('entryEditPath', () => {
+    it('addresses the canonical row when nothing narrows it', () => {
+        expect(entryEditPath('/entries/post', 'abc123')).toBe('/entries/post/abc123');
+    });
+
+    it('addresses one locale of the entry, keeping the id', () => {
+        expect(entryEditPath('/entries/post', 'abc123', { locale: 'fr' })).toBe(
+            '/entries/post/abc123?locale=fr'
+        );
+    });
+
+    it('addresses the staged change of that locale', () => {
+        expect(
+            entryEditPath('/entries/post', 'abc123', { locale: 'fr', staged: true })
+        ).toBe('/entries/post/abc123?locale=fr&staged=true');
+    });
+
+    it('omits `staged` when it is false, so the canonical link stays clean', () => {
+        expect(
+            entryEditPath('/entries/post', 'abc123', { locale: 'fr', staged: false })
+        ).toBe('/entries/post/abc123?locale=fr');
+    });
+});
+
+describe('entryVersionsPath', () => {
+    it('lists one locale of the entry', () => {
+        expect(entryVersionsPath('/entries/post', 'abc123', 'fr')).toBe(
+            '/entries/post/abc123/versions?locale=fr'
+        );
+    });
+});
+
+describe('validateEntryEditSearch', () => {
+    it('keeps a locale and drops an empty one', () => {
+        expect(validateEntryEditSearch({ locale: 'fr' })).toEqual({ locale: 'fr' });
+        expect(validateEntryEditSearch({ locale: '' })).toEqual({});
+    });
+
+    it('reads `staged` from the string a URL carries as well as a boolean', () => {
+        expect(validateEntryEditSearch({ staged: 'true' })).toEqual({ staged: true });
+        expect(validateEntryEditSearch({ staged: true })).toEqual({ staged: true });
+        expect(validateEntryEditSearch({ staged: 'false' })).toEqual({});
     });
 });

@@ -3,12 +3,10 @@
  *
  * A locale switch on the entry edit page must not damage a `group()` value.
  *
- * `LocaleSwitcher` navigates to a SIBLING ENTRY ID on the same route, so the
- * route component is not remounted: `useEntryForm` keeps the same `FormApi`
- * while `defaultValues` swaps to a different row underneath it. That is the one
- * page-level path the render-level tests and the browser check could not vary,
- * and a group's object value is atomic — a sub-key dropped anywhere along the
- * way is a sub-key dropped in the saved entry.
+ * `LocaleSwitcher` changes the `locale` SEARCH PARAM and keeps the id, so the
+ * route component stays mounted while `EntryEditPage` swaps the row under it.
+ * A group's object value is atomic — a sub-key dropped anywhere along the way
+ * is a sub-key dropped in the saved entry.
  *
  * This mounts the REAL `EntryEditPage` behind a memory router (the shape
  * `entry-edit-cache-invalidation.test.tsx` established) and subscribes to the
@@ -26,6 +24,7 @@ import {
     Outlet,
     RouterProvider,
     useParams,
+    useSearch,
 } from '@tanstack/react-router';
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -90,15 +89,16 @@ beforeAll(async () => {
 });
 
 const TYPE = 'caseStudy';
-const EN = 'cs-en';
-const FR = 'cs-fr';
-const LOCALES = { en: EN, fr: FR };
+// One entry, two locales: the id is the same on both sides of the switch.
+const ID = 'cs1';
+const LOCALES = ['en', 'fr'];
 
-function makeEntry(id: string, fields: Record<string, unknown>): Entry {
+function makeEntry(locale: string, fields: Record<string, unknown>): Entry {
     return {
-        id,
+        id: ID,
         type: TYPE,
-        title: id === EN ? 'A case study' : 'Une étude de cas',
+        locale,
+        title: locale === 'en' ? 'A case study' : 'Une étude de cas',
         status: 'published' as EntryStatus,
         locales: LOCALES,
         fields,
@@ -140,33 +140,39 @@ const ENTRY_TYPE_CONFIG: AdminEntryType = {
     titleField: 'title',
 };
 
-/** The two sibling rows the switcher moves between. */
+/** The two locale rows of the one entry the switcher moves between. */
 function makeApi() {
     const rows = new Map<string, Entry>([
         [
-            EN,
-            makeEntry(EN, {
+            'en',
+            makeEntry('en', {
                 excerpt: 'An excerpt',
                 seo: { title: 'EN title', description: 'EN description' },
             }),
         ],
         [
-            FR,
-            makeEntry(FR, {
+            'fr',
+            makeEntry('fr', {
                 excerpt: 'Un extrait',
                 seo: { title: 'FR title', description: 'FR description' },
             }),
         ],
     ]);
     const update = vi.fn(
-        async (params: { id: string; data: { fields?: Record<string, unknown> } }) => {
-            const next = makeEntry(params.id, { ...(params.data.fields ?? {}) });
-            rows.set(params.id, next);
+        async (params: {
+            locale?: string;
+            data: { fields?: Record<string, unknown> };
+        }) => {
+            const locale = params.locale ?? 'en';
+            const next = makeEntry(locale, { ...(params.data.fields ?? {}) });
+            rows.set(locale, next);
             return next;
         }
     );
     const api = {
-        get: vi.fn(async (params: { id: string }) => rows.get(params.id) ?? null),
+        get: vi.fn(
+            async (params: { locale?: string }) => rows.get(params.locale ?? 'en') ?? null
+        ),
         update,
     } as unknown as EntriesService;
     return { api, update };
@@ -186,14 +192,20 @@ function mountApp(queryClient: QueryClient, api: EntriesService) {
     const editRoute = createRoute({
         getParentRoute: () => rootRoute,
         path: '/entries/$type/$id',
+        validateSearch: (search: Record<string, unknown>) => ({
+            locale: search['locale'] as string | undefined,
+        }),
         component: function EditRoute() {
             const params = useParams({ strict: false }) as { id: string };
-            return <EntryEditPage mount={mount} id={params.id} />;
+            const search = useSearch({ strict: false }) as { locale?: string };
+            return <EntryEditPage mount={mount} id={params.id} locale={search.locale} />;
         },
     });
     const router = createRouter({
         routeTree: rootRoute.addChildren([editRoute]),
-        history: createMemoryHistory({ initialEntries: [`/entries/${TYPE}/${EN}`] }),
+        history: createMemoryHistory({
+            initialEntries: [`/entries/${TYPE}/${ID}?locale=en`],
+        }),
     });
 
     render(
@@ -281,10 +293,10 @@ describe('the entry edit page across a locale switch', () => {
         await user.clear(title);
         await user.type(title, 'EN edited');
 
-        // Switch locale — what `LocaleSwitcher.handleValueChange` does for an
-        // existing sibling row: navigate to the other id on the same route.
+        // Switch locale — what `LocaleSwitcher.handleValueChange` does for a
+        // locale the entry already has: same id, different `locale` param.
         await act(async () => {
-            await router.navigate({ to: `/entries/${TYPE}/${FR}` });
+            await router.navigate({ to: `/entries/${TYPE}/${ID}?locale=fr` });
         });
         await settle();
         await settle();
@@ -295,7 +307,7 @@ describe('the entry edit page across a locale switch', () => {
         await user.clear(other);
         await user.type(other, 'FR edited');
         await act(async () => {
-            await router.navigate({ to: `/entries/${TYPE}/${EN}` });
+            await router.navigate({ to: `/entries/${TYPE}/${ID}?locale=en` });
         });
         await settle();
         await settle();
@@ -310,7 +322,8 @@ describe('the entry edit page across a locale switch', () => {
         assertNoPartialGroup();
         expect(update).toHaveBeenCalledTimes(1);
         expect(update.mock.calls[0]?.[0]).toMatchObject({
-            id: EN,
+            id: ID,
+            locale: 'en',
             data: {
                 fields: {
                     excerpt: 'An excerpt',
@@ -336,13 +349,13 @@ describe('the entry edit page across a locale switch', () => {
         });
 
         await act(async () => {
-            await router.navigate({ to: `/entries/${TYPE}/${FR}` });
+            await router.navigate({ to: `/entries/${TYPE}/${ID}?locale=fr` });
         });
         await settle();
         await settle();
 
-        // The route component is not remounted, so this is TanStack's
-        // `defaultValues` copy landing — it only runs while `isTouched` is false.
+        // The route component is not remounted; the page keys its body on the
+        // locale, so the new row arrives through a fresh form.
         await waitFor(() => {
             expect(control('input[name="seo.title"]').value).toBe('FR title');
         });
@@ -358,7 +371,7 @@ describe('the entry edit page across a locale switch', () => {
         await settle();
 
         // Touch the form. From here TanStack Form stops copying `defaultValues`
-        // in, so only the remount can show the sibling row.
+        // in, so only the remount can show the other locale's row.
         const title = await findControl('input[name="seo.title"]');
         await user.clear(title);
         await user.type(title, 'EN edited');
@@ -367,7 +380,7 @@ describe('the entry edit page across a locale switch', () => {
         });
 
         await act(async () => {
-            await router.navigate({ to: `/entries/${TYPE}/${FR}` });
+            await router.navigate({ to: `/entries/${TYPE}/${ID}?locale=fr` });
         });
         await settle();
         await settle();
@@ -380,7 +393,7 @@ describe('the entry edit page across a locale switch', () => {
 
         // Back to the first locale: its stored values, not the unsaved edit.
         await act(async () => {
-            await router.navigate({ to: `/entries/${TYPE}/${EN}` });
+            await router.navigate({ to: `/entries/${TYPE}/${ID}?locale=en` });
         });
         await settle();
         await settle();

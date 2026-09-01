@@ -1,12 +1,12 @@
 import type { CellRenderer } from '@/types/index';
+import { entryEditPath } from '@/admin/utilities/entry-admin-path';
 import { Link } from './link';
 
 export const TranslationsCell: CellRenderer = ({ entry, ctx }) => (
     <span style={{ display: 'inline-flex', gap: '0.25rem', flexWrap: 'wrap' }}>
         {ctx.configuredLocales.map((loc) => {
-            const siblingId = entry.locales[loc];
-            const isCurrent = siblingId === entry.id;
-            const present = siblingId != null;
+            const present = entry.locales.includes(loc);
+            const isCurrent = loc === entry.locale;
             if (!present) {
                 return (
                     <span
@@ -33,7 +33,7 @@ export const TranslationsCell: CellRenderer = ({ entry, ctx }) => (
             return (
                 <Link
                     key={loc}
-                    to={`${ctx.basePath}/${siblingId}`}
+                    to={entryEditPath(ctx.basePath, entry.id, { locale: loc })}
                     className="am-link am-text-mono"
                     style={{ fontSize: '0.75rem' }}
                     onClick={(e) => e.stopPropagation()}

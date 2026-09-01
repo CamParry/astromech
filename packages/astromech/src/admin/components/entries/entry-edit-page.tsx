@@ -70,8 +70,9 @@ import { usePermissions } from '@/admin/hooks/use-permissions';
 import { scopedEntryKeys } from '@/admin/hooks/use-query-keys';
 import { EntryNamespaceProvider, namespaceForScope } from '@/admin/i18n/entry-namespace';
 import { resolveAdminEntryType, resolveForm } from '@/admin/rendering/resolve';
+import { defaultContentLocale } from '@/admin/utilities/content-locale';
+import { entryEditPath, entryVersionsPath } from '@/admin/utilities/entry-admin-path';
 import { resolveEntryUrl } from '@/entries/entry-url.shared';
-import { resolveContentLocale } from '@/utilities/locale';
 import { EntryFormErrors } from './entry-form-errors';
 
 // Surface link bases are runtime strings; address `Link` by string `to`.
@@ -98,26 +99,48 @@ function StatusBadge({ status }: StatusBadgeProps): React.ReactElement {
 }
 
 /**
- * Keyed by entry id: staging and duplicate navigate to a different id on the
- * same route, so without the key TanStack Form and the stateful field
- * containers (repeater, blocks, tree) would keep stale state from the last id.
+ * Keyed by the row in view: duplicate navigates to a different id, and the
+ * locale switcher and staging to a different row of the same id, all on the
+ * same route. Without the key TanStack Form and the stateful field containers
+ * (repeater, blocks, tree) would keep the last row's state.
  */
 export function EntryEditPage({
     mount,
     id,
-}: {
+    locale,
+    staged = false,
+}: EntryEditPageProps): React.ReactElement {
+    const resolvedLocale = locale ?? defaultContentLocale();
+    return (
+        <EntryEditPageBody
+            key={`${id}:${resolvedLocale}:${String(staged)}`}
+            mount={mount}
+            id={id}
+            locale={resolvedLocale}
+            staged={staged}
+        />
+    );
+}
+
+type EntryEditPageProps = {
     mount: EntriesMount;
     id: string;
-}): React.ReactElement {
-    return <EntryEditPageBody key={id} mount={mount} id={id} />;
-}
+    /** Locale from the route search params; defaults to the default content locale. */
+    locale: string | undefined;
+    /** Edit the staged change for that locale rather than the canonical row. */
+    staged?: boolean | undefined;
+};
 
 function EntryEditPageBody({
     mount,
     id,
+    locale,
+    staged: isStaged,
 }: {
     mount: EntriesMount;
     id: string;
+    locale: string;
+    staged: boolean;
 }): React.ReactElement {
     const { type, api, cacheScope, config: entryType, basePath } = mount;
     const scope = { api, cacheScope };
@@ -138,7 +161,24 @@ function EntryEditPageBody({
 
     const isReadOnly = !hasPermission(mount.permissionFor('update'));
 
-    const { data: entry, isLoading } = useEntry(type, id, scope);
+    const hasStaging = entryType?.capabilities?.staging === true;
+    const { data: canonicalEntry, isLoading: canonicalLoading } = useEntry(
+        type,
+        id,
+        locale,
+        scope
+    );
+    // The staged change for this locale: what the staged editor shows, and what
+    // tells the canonical view whether to offer "Stage" or "View staged".
+    const { data: stagedChange, isLoading: stagedLoading } = useGetStaged(
+        type,
+        id,
+        locale,
+        hasStaging,
+        scope
+    );
+    const entry = isStaged ? (stagedChange ?? undefined) : canonicalEntry;
+    const isLoading = isStaged ? canonicalLoading || stagedLoading : canonicalLoading;
 
     // Declare the entry in view; `null` until it loads, so no placeholder label
     // is ever published. Serves the root and plugin routes alike.
@@ -153,11 +193,11 @@ function EntryEditPageBody({
     // Save/Merge/Discard/Preview) — skip the fetch so a post-merge stale refetch
     // can't hit the just-deleted staged row.
     const hasVersioning = capabilities?.versioning === true;
-    const entryIsStaged = entry?.stagedFor != null;
     const { data: versions } = useEntryVersions(
         type,
         id,
-        hasVersioning && !entryIsStaged,
+        locale,
+        hasVersioning && !isStaged,
         scope
     );
     const versionCount = versions?.length ?? 0;
@@ -169,7 +209,10 @@ function EntryEditPageBody({
 
     const duplicateEntry = useDuplicateEntry(type, {
         ...scope,
-        onSuccess: (newEntry) => void navigate({ to: `${basePath}/${newEntry.id}` }),
+        onSuccess: (newEntry) =>
+            void navigate({
+                to: entryEditPath(basePath, newEntry.id, { locale: newEntry.locale }),
+            }),
     });
 
     const {
@@ -197,14 +240,17 @@ function EntryEditPageBody({
         hasSlug,
         hasStatuses,
         readOnly: isReadOnly,
-        saveFn: (data) => api.update({ type, id, data }),
-        publishFn: (data) => api.update({ type, id, data }),
+        saveFn: (data) => api.update({ type, id, locale, staged: isStaged, data }),
+        publishFn: (data) => api.update({ type, id, locale, staged: isStaged, data }),
         onSuccess: (updated) => {
             const keys = scopedEntryKeys(cacheScope);
             // Seed the cache with the saved entry before invalidating, so the
             // re-render `form.reset` triggers already sees fresh defaultValues
             // instead of the stale one the invalidated query hasn't refetched yet.
-            queryClient.setQueryData(keys.get(type, id), updated);
+            queryClient.setQueryData(
+                isStaged ? keys.staged(type, id, locale) : keys.get(type, id, locale),
+                updated
+            );
             void queryClient.invalidateQueries({ queryKey: keys.all(type) });
             toast({
                 message: t('entries.updated', { name: single }),
@@ -217,42 +263,29 @@ function EntryEditPageBody({
     // change, so the unsaved-changes indicator would miss most edits.
     const isDirty = useStore(form.store, (state) => state.isDirty);
 
-    // Forward versioning: staged entries.
+    // Forward versioning: staged entries. A staged row shares its entry's id,
+    // so every staging call is `{ id, locale }` and only the search param says
+    // which row is on screen.
     const confirm = useConfirm();
-    const hasStaging = capabilities?.staging === true;
     const canPublish = hasPermission(mount.permissionFor('publish'));
-    // A staged entry links to its canonical via `stagedFor`; a canonical's is null.
-    const isStaged = entry?.stagedFor != null;
-    const canonicalId = entry?.stagedFor ?? null;
-    // Merge/discard/preview-token all key off the CANONICAL id.
-    const stagingTargetId = canonicalId ?? id;
+    const canonicalPath = entryEditPath(basePath, id, { locale });
+    const stagedPath = entryEditPath(basePath, id, { locale, staged: true });
 
-    // Canonical-only: does a staged change already exist? Drives Stage vs View.
-    const { data: stagedChange } = useGetStaged(
-        type,
-        id,
-        hasStaging && !isStaged && entry != null,
-        scope
-    );
-    // Staged-editor: load the canonical for the banner title + clobber check.
-    // (When not staged this resolves to the already-cached self.)
-    const { data: canonicalEntry } = useEntry(type, stagingTargetId, scope);
-
-    const createStaged = useCreateStaged(type, {
+    const createStaged = useCreateStaged(type, locale, {
         ...scope,
-        onSuccess: (st) => void navigate({ to: `${basePath}/${st.id}` }),
-        onConflict: (stagedId) => void navigate({ to: `${basePath}/${stagedId}` }),
+        onSuccess: () => void navigate({ to: stagedPath }),
+        onConflict: () => void navigate({ to: stagedPath }),
     });
-    const mergeStaged = useMergeStaged(type, stagingTargetId, {
+    const mergeStaged = useMergeStaged(type, id, locale, {
         ...scope,
-        onSuccess: () => void navigate({ to: `${basePath}/${stagingTargetId}` }),
+        onSuccess: () => void navigate({ to: canonicalPath }),
     });
-    const deleteStaged = useDeleteStaged(type, stagingTargetId, {
+    const deleteStaged = useDeleteStaged(type, id, locale, {
         ...scope,
-        onSuccess: () => void navigate({ to: `${basePath}/${stagingTargetId}` }),
+        onSuccess: () => void navigate({ to: canonicalPath }),
     });
-    const issueToken = useIssuePreviewToken(type, stagingTargetId, scope);
-    const revokeToken = useRevokePreviewToken(type, stagingTargetId, scope);
+    const issueToken = useIssuePreviewToken(type, id, scope);
+    const revokeToken = useRevokePreviewToken(type, id, scope);
 
     const previewUrl =
         entryType?.url && entry != null ? resolveEntryUrl(entryType.url, entry) : null;
@@ -316,11 +349,7 @@ function EntryEditPageBody({
                     typeLabel={single}
                     force={false}
                     onCancel={() => setDeleteOpen(false)}
-                    onConfirm={(opts) =>
-                        trashEntry.mutate(
-                            opts.cascadeLocales ? { id, cascadeLocales: true } : id
-                        )
-                    }
+                    onConfirm={() => trashEntry.mutate(id)}
                     loading={trashEntry.isPending}
                 />
                 <PageHeader>
@@ -349,16 +378,14 @@ function EntryEditPageBody({
                         )}
                         {!isStaged && capabilities?.translatable && entry != null && (
                             <LocaleSwitcher
-                                currentEntryId={id}
+                                entryId={id}
+                                currentLocale={entry.locale}
                                 type={type}
+                                basePath={basePath}
                                 locales={entry.locales}
                                 allLocales={adminConfig.locales}
-                                defaultLocale={
-                                    resolveContentLocale(
-                                        adminConfig.defaultLocale,
-                                        adminConfig.locales
-                                    ) ?? adminConfig.defaultLocale
-                                }
+                                defaultLocale={defaultContentLocale()}
+                                scope={scope}
                                 compact
                             />
                         )}
@@ -393,7 +420,7 @@ function EntryEditPageBody({
                             !isReadOnly &&
                             (stagedChange != null ? (
                                 <Link
-                                    to={`${basePath}/${stagedChange.id}`}
+                                    to={stagedPath}
                                     className="am-btn am-btn-secondary am-btn-md"
                                 >
                                     <Layers size={16} />
@@ -525,18 +552,10 @@ function EntryEditPageBody({
                                     title: canonicalEntry?.title ?? single,
                                 })}
                             </span>
-                            {canonicalId != null && (
-                                <Link
-                                    to={`${basePath}/${canonicalId}`}
-                                    className="am-link am-text-sm"
-                                >
-                                    <ArrowLeft
-                                        size={14}
-                                        style={{ marginRight: '0.25rem' }}
-                                    />
-                                    {t('staging.backToCurrent')}
-                                </Link>
-                            )}
+                            <Link to={canonicalPath} className="am-link am-text-sm">
+                                <ArrowLeft size={14} style={{ marginRight: '0.25rem' }} />
+                                {t('staging.backToCurrent')}
+                            </Link>
                         </div>
                     )}
                     {isReadOnly && (
@@ -715,7 +734,11 @@ function EntryEditPageBody({
                                                 <Panel>
                                                     {versionCount > 0 ? (
                                                         <Link
-                                                            to={`${basePath}/${id}/versions`}
+                                                            to={entryVersionsPath(
+                                                                basePath,
+                                                                id,
+                                                                locale
+                                                            )}
                                                             className="am-link am-text-sm"
                                                         >
                                                             {t('versions.revisionsLink', {

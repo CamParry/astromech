@@ -1,6 +1,7 @@
 /**
  * Shared entry version history page body, parameterized by an `EntriesMount`.
- * Two-column layout: version list sidebar left, diff view right.
+ * A version snapshots one locale's content row, so the list is the versions of
+ * the locale in view. Two-column layout: version list sidebar left, diff right.
  */
 
 import type { EntriesMount } from './mount';
@@ -26,6 +27,8 @@ import {
     useRestoreEntryVersion,
 } from '@/admin/hooks/entries';
 import { useUsersQuery } from '@/admin/hooks/users';
+import { defaultContentLocale } from '@/admin/utilities/content-locale';
+import { entryEditPath } from '@/admin/utilities/entry-admin-path';
 import { formatDatetime } from '@/utilities/dates';
 
 // Mount link bases are runtime strings; address `Link` by string `to`.
@@ -123,7 +126,7 @@ function VersionItem({
             onClick={onClick}
         >
             <div className="am-versions-item-header">
-                <span className="am-versions-item-number">#{version.versionNumber}</span>
+                <span className="am-versions-item-number">#{version.version}</span>
             </div>
             <div className="am-versions-item-date">
                 {formatDatetime(version.createdAt)}
@@ -161,7 +164,7 @@ function DiffView({
             <div className="am-versions-diff-toolbar">
                 <div>
                     <span className="am-versions-diff-title">
-                        {t('versions.version', { number: selected.versionNumber })}
+                        {t('versions.version', { number: selected.version })}
                     </span>
                     <span className="am-versions-diff-subtitle">
                         {formatDatetime(selected.createdAt)}
@@ -218,11 +221,16 @@ function DiffView({
 export function EntryVersionsPage({
     mount,
     id,
+    locale: localeProp,
 }: {
     mount: EntriesMount;
     id: string;
+    /** Locale from the route search params; defaults to the default content locale. */
+    locale: string | undefined;
 }): React.ReactElement {
     const { type, api, cacheScope, config: entryType, basePath } = mount;
+    const locale = localeProp ?? defaultContentLocale();
+    const editPath = entryEditPath(basePath, id, { locale });
     const scope = { api, cacheScope };
     const confirm = useConfirm();
     const { t } = useTranslation();
@@ -233,7 +241,7 @@ export function EntryVersionsPage({
 
     const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
 
-    const { data: entry } = useEntry(type, id, scope);
+    const { data: entry } = useEntry(type, id, locale, scope);
 
     // Versions store the author as a user id. Reading users can fail for an
     // editor without the permission, so a missing name renders no author at all.
@@ -246,10 +254,16 @@ export function EntryVersionsPage({
         return names;
     }, [usersResult]);
 
-    const { data: rawVersions, isLoading } = useEntryVersions(type, id, true, scope);
+    const { data: rawVersions, isLoading } = useEntryVersions(
+        type,
+        id,
+        locale,
+        true,
+        scope
+    );
     const versions =
         rawVersions !== undefined
-            ? [...rawVersions].sort((a, b) => b.versionNumber - a.versionNumber)
+            ? [...rawVersions].sort((a, b) => b.version - a.version)
             : undefined;
 
     // Auto-select the first (latest) version on load
@@ -264,16 +278,16 @@ export function EntryVersionsPage({
             ? (versions[selectedIndex + 1] ?? null)
             : null;
 
-    const restoreMutation = useRestoreEntryVersion(type, id, {
+    const restoreMutation = useRestoreEntryVersion(type, id, locale, {
         ...scope,
-        onSuccess: () => void navigate({ to: `${basePath}/${id}` }),
+        onSuccess: () => void navigate({ to: editPath }),
     });
 
     function handleRestore(): void {
         if (selectedVersion == null) return;
         confirm({
             title: t('versions.confirmRestoreTitle', {
-                number: selectedVersion.versionNumber,
+                number: selectedVersion.version,
             }),
             description: t('versions.confirmRestoreMessage'),
             confirmLabel: t('versions.confirmRestoreLabel'),
@@ -294,7 +308,7 @@ export function EntryVersionsPage({
                         { label: plural, to: basePath },
                         {
                             label: (hasTitle ? entry?.title : undefined) || id,
-                            to: `${basePath}/${id}`,
+                            to: editPath,
                         },
                         { label: t('versions.pageTitle') },
                     ]}
@@ -309,7 +323,7 @@ export function EntryVersionsPage({
                             <h2 className="am-versions-sidebar-title">
                                 {t('versions.pageTitle')}
                             </h2>
-                            <Link to={`${basePath}/${id}`} className="am-link am-text-sm">
+                            <Link to={editPath} className="am-link am-text-sm">
                                 <ArrowLeft
                                     size={12}
                                     style={{ marginRight: '0.25rem', display: 'inline' }}

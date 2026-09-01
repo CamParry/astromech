@@ -61,12 +61,15 @@ beforeAll(async () => {
 
 const TYPE = 'caseStudy';
 const ID = 'cs1';
+const LOCALE = 'en';
 const CACHE_SCOPE = '';
 
 function makeEntry(customer: string): Entry {
     return {
         id: ID,
         type: TYPE,
+        locale: LOCALE,
+        locales: [LOCALE],
         title: 'A case study',
         status: 'published' as EntryStatus,
         fields: { customer },
@@ -107,8 +110,9 @@ function mountEditPage(queryClient: QueryClient) {
     const api = {
         get: vi.fn(
             async () =>
-                queryClient.getQueryData(scopedEntryKeys(CACHE_SCOPE).get(TYPE, ID)) ??
-                null
+                queryClient.getQueryData(
+                    scopedEntryKeys(CACHE_SCOPE).get(TYPE, ID, LOCALE)
+                ) ?? null
         ),
         update,
     } as unknown as EntriesService;
@@ -126,7 +130,7 @@ function mountEditPage(queryClient: QueryClient) {
     const editRoute = createRoute({
         getParentRoute: () => rootRoute,
         path: '/',
-        component: () => <EntryEditPage mount={mount} id={ID} />,
+        component: () => <EntryEditPage mount={mount} id={ID} locale={LOCALE} />,
     });
     const router = createRouter({
         routeTree: rootRoute.addChildren([editRoute]),
@@ -166,7 +170,7 @@ describe('the entry edit page after a save', () => {
             defaultOptions: { queries: { staleTime: 30_000 } },
         });
         queryClient.setQueryData(
-            scopedEntryKeys(CACHE_SCOPE).get(TYPE, ID),
+            scopedEntryKeys(CACHE_SCOPE).get(TYPE, ID, LOCALE),
             makeEntry('Lumenflow')
         );
         // Session, so `usePermissions()` grants the update action without a
