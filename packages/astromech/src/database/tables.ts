@@ -1,10 +1,6 @@
 import type { Table, TableInsert, TableSelect } from '@/database/define-table';
 import { defineTable } from '@/database/define-table';
-import {
-    entriesTable,
-    entryPreviewTokensTable,
-    entryVersionsTable,
-} from '@/entries/tables';
+import { entriesTable, entryContentTable, entryVersionsTable } from '@/entries/tables';
 import { mediaTable } from '@/media/tables';
 import { notificationsTable } from '@/notifications/tables';
 import { settingsTable } from '@/settings/tables';
@@ -30,14 +26,14 @@ export {
 
 export {
     entriesTable,
+    entryContentTable,
     entryVersionsTable,
-    entryPreviewTokensTable,
     type EntryRow,
     type NewEntryRow,
+    type EntryContentRow,
+    type NewEntryContentRow,
     type EntryVersionRow,
     type NewEntryVersionRow,
-    type EntryPreviewTokenRow,
-    type NewEntryPreviewTokenRow,
 } from '@/entries/tables';
 
 export { mediaTable, type MediaRow, type NewMediaRow } from '@/media/tables';
@@ -123,8 +119,8 @@ export const CORE_TABLES: Table[] = [
     rolesTable,
     usersTable,
     entriesTable,
+    entryContentTable,
     entryVersionsTable,
-    entryPreviewTokensTable,
     mediaTable,
     settingsTable,
     notificationsTable,

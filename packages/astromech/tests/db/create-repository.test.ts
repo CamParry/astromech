@@ -13,20 +13,45 @@ import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { defineTable } from '@/database/define-table';
 import { createRepository } from '@/database/repository/create-repository';
+import { emitTableStatements } from '@/database/table-snapshot';
 import { cronTable } from '@/database/tables';
-import { entriesTable } from '@/entries/tables';
 import { AstromechError } from '@/errors/astromech-error';
 
 const EARLY = new Date('2020-01-01T00:00:00.000Z');
 const MIDDLE = new Date('2022-06-01T12:00:00.000Z');
 const LATE = new Date('2030-01-01T00:00:00.000Z');
 
+/**
+ * A throwaway table covering every column kind the wrapper converts. Local to
+ * this file so the generic wrapper's tests do not move whenever a real table's
+ * shape does.
+ */
+const entriesProbe = defineTable('entries_probe', ({ col }) => ({
+    id: col.id(),
+    type: col.text({ notNull: true }),
+    locale: col.text({ notNull: true }),
+    slug: col.text(),
+    title: col.text({ notNull: true }),
+    fields: col.json(),
+    status: col.enum(['unpublished', 'published', 'scheduled'], {
+        notNull: true,
+        default: 'unpublished',
+    }),
+    publishedAt: col.timestamp(),
+    deletedAt: col.timestamp(),
+    createdAt: col.timestamp({ notNull: true, defaultNow: true }),
+    updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
+}));
+
 function entryRepository() {
-    return createRepository(entriesTable);
+    return createRepository(entriesProbe);
 }
 
 beforeEach(async () => {
-    await createTestDb();
+    const db = await createTestDb();
+    for (const statement of emitTableStatements(entriesProbe, 'sqlite')) {
+        await sql.raw(statement).execute(db);
+    }
 });
 
 describe('createRepository – round trip', () => {
@@ -85,7 +110,7 @@ describe('createRepository – round trip', () => {
         });
 
         const { db, table } = repository.kysely();
-        expect(table).toBe('entries');
+        expect(table).toBe('entriesProbe');
         const raw = await db.selectFrom(table).selectAll().executeTakeFirst();
         expect(raw?.['publishedAt']).toBe('2022-06-01T12:00:00.000Z');
     });
@@ -170,7 +195,7 @@ describe('createRepository – where', () => {
 
         // Bare arrays are a runtime lenience for loosely-typed callers; the
         // typed DSL spells this `{ in: [...] }`.
-        const where = { type: ['post', 'card'] } as unknown as Where<typeof entriesTable>;
+        const where = { type: ['post', 'card'] } as unknown as Where<typeof entriesProbe>;
         const rows = await repository.findMany({
             where,
             orderBy: [['title', 'asc']],
@@ -271,14 +296,14 @@ describe('createRepository – where', () => {
     });
 
     it('throws for an unknown column key', async () => {
-        const bogus = { nope: 'x' } as unknown as Where<typeof entriesTable>;
+        const bogus = { nope: 'x' } as unknown as Where<typeof entriesProbe>;
         await expect(entryRepository().findMany({ where: bogus })).rejects.toThrow(
             /unknown column "nope"/
         );
     });
 
     it('throws when an in operand is not an array', async () => {
-        const bogus = { type: { in: 'post' } } as unknown as Where<typeof entriesTable>;
+        const bogus = { type: { in: 'post' } } as unknown as Where<typeof entriesProbe>;
         await expect(entryRepository().findMany({ where: bogus })).rejects.toThrow(
             /expects an array/
         );
@@ -373,7 +398,7 @@ describe('createRepository – where or', () => {
     });
 
     it('throws when or is not an array', async () => {
-        const bogus = { or: { title: 'A' } } as unknown as Where<typeof entriesTable>;
+        const bogus = { or: { title: 'A' } } as unknown as Where<typeof entriesProbe>;
         await expect(entryRepository().findMany({ where: bogus })).rejects.toThrow(
             AstromechError
         );
@@ -467,7 +492,7 @@ describe('createRepository – where contains', () => {
     });
 
     it('throws when the contains operand is not a string', async () => {
-        const bogus = { title: { contains: 5 } } as unknown as Where<typeof entriesTable>;
+        const bogus = { title: { contains: 5 } } as unknown as Where<typeof entriesProbe>;
         await expect(entryRepository().findMany({ where: bogus })).rejects.toThrow(
             AstromechError
         );
@@ -909,12 +934,12 @@ describe('createRepository – kysely escape hatch', () => {
             .executeTakeFirst();
         expect(Number(row?.total)).toBe(1);
 
-        const { rows } = await sql`SELECT title FROM entries`.execute(db);
+        const { rows } = await sql`SELECT title FROM entries_probe`.execute(db);
         expect(rows).toHaveLength(1);
     });
 
     it('exposes the table', () => {
-        expect(entryRepository().table.name).toBe('entries');
+        expect(entryRepository().table.name).toBe('entries_probe');
     });
 
     it('composes the exposed where compiler with a raw or in one statement', async () => {

@@ -5,11 +5,17 @@
 
 import type { AudienceContext } from '../visibility';
 import type { Entry, Field } from '@/types/index';
-import {
-    createPreviewTokenRepository,
-    hashPreviewToken,
-} from '../repository/preview-tokens';
+import { createEntriesTableRepository } from '../repository/entries-table';
 import { applyVisibility, markPublic } from '../visibility';
+
+/** SHA-256 hex of a token (crypto.subtle — Workers-safe). */
+export async function hashPreviewToken(plaintext: string): Promise<string> {
+    const bytes = new TextEncoder().encode(plaintext);
+    const buffer = await crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(buffer))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+}
 
 /** Generate a high-entropy preview token secret (32 random bytes, hex). */
 export function generatePreviewSecret(): string {
@@ -24,8 +30,10 @@ export async function verifyPreviewToken(
     entryId: string,
     token: string
 ): Promise<boolean> {
-    const hash = await hashPreviewToken(token);
-    return createPreviewTokenRepository().isValid(entryId, hash, new Date());
+    const previewToken = createEntriesTableRepository().previewToken;
+    const record = await previewToken.findByHash(await hashPreviewToken(token));
+    if (!record || record.id !== entryId) return false;
+    return record.expiresAt === null || record.expiresAt.getTime() > Date.now();
 }
 
 /** The audience a preview is filtered for: anonymous, as of now. */

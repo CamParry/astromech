@@ -63,11 +63,33 @@ describe('publishDueScheduled', () => {
         const count = await maintenance.publishDueScheduled(new Date());
         expect(count).toBe(2);
 
-        expect((await entryRepository.get(due1.id))?.status).toBe('published');
-        expect((await entryRepository.get(due2.id))?.status).toBe('published');
-        expect((await entryRepository.get(notDue.id))?.status).toBe('scheduled');
-        expect((await entryRepository.get(alreadyPublished.id))?.status).toBe(
+        expect((await entryRepository.get({ id: due1.id }))?.status).toBe('published');
+        expect((await entryRepository.get({ id: due2.id }))?.status).toBe('published');
+        expect((await entryRepository.get({ id: notDue.id }))?.status).toBe('scheduled');
+        expect((await entryRepository.get({ id: alreadyPublished.id }))?.status).toBe(
             'published'
+        );
+    });
+
+    it('publishes each due locale independently', async () => {
+        const past = new Date(Date.now() - 60_000);
+        const entry = await entryRepository.create({
+            type: 'post',
+            title: 'EN',
+            slug: 'en-due',
+            status: 'scheduled',
+            publishedAt: past,
+        });
+        await entryRepository.update(
+            { id: entry.id, locale: 'de' },
+            { title: 'DE', slug: 'de-not-due', status: 'unpublished' }
+        );
+
+        expect(await maintenance.publishDueScheduled(new Date())).toBe(1);
+
+        expect((await entryRepository.get({ id: entry.id }))?.status).toBe('published');
+        expect((await entryRepository.get({ id: entry.id, locale: 'de' }))?.status).toBe(
+            'unpublished'
         );
     });
 
@@ -111,9 +133,11 @@ describe('purgeTrashedBefore', () => {
         const purged = await maintenance.purgeTrashedBefore(cutoff);
         expect(purged).toEqual([old.id]);
 
-        expect(await entryRepository.get(old.id, { includeTrashed: true })).toBeNull();
         expect(
-            await entryRepository.get(recent.id, { includeTrashed: true })
+            await entryRepository.get({ id: old.id }, { includeTrashed: true })
+        ).toBeNull();
+        expect(
+            await entryRepository.get({ id: recent.id }, { includeTrashed: true })
         ).not.toBeNull();
     });
 
@@ -125,7 +149,7 @@ describe('purgeTrashedBefore', () => {
         });
         const purged = await maintenance.purgeTrashedBefore(new Date());
         expect(purged).toEqual([]);
-        expect(await entryRepository.get(live.id)).not.toBeNull();
+        expect(await entryRepository.get({ id: live.id })).not.toBeNull();
     });
 });
 
@@ -181,7 +205,9 @@ describe('trashPurgeJob', () => {
 
         await trashPurgeJob.handler({ db, config });
 
-        expect(await entryRepository.get(doomed.id, { includeTrashed: true })).toBeNull();
+        expect(
+            await entryRepository.get({ id: doomed.id }, { includeTrashed: true })
+        ).toBeNull();
         expect(await relationships.findBySource(doomed.id, 'entry')).toEqual([]);
         expect(await relationships.findByTarget(doomed.id, 'entry')).toEqual([]);
         // Only edges touching the purged id go: the survivor keeps the rest.

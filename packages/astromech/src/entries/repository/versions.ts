@@ -1,9 +1,11 @@
 /**
- * Version repository — CRUD for entry version-history snapshots. Wrapped by the
- * entries-table repository's `versions` capability group.
+ * Version repository — CRUD for entry version-history snapshots. Keyed on the
+ * content row a version snapshots. Wrapped by the entries-table repository's
+ * `versions` capability group.
  */
 
 import type { EntryVersionRow, NewEntryVersionRow } from '../tables';
+import type { ContentRowId } from './types';
 import type { Db } from '@/database/types';
 import { createRepository } from '@/database/repository/create-repository';
 import { entryVersionsTable } from '@/database/tables';
@@ -21,11 +23,11 @@ export function createVersionRepository(db?: Db) {
         return repository.create(data);
     }
 
-    /** Get all versions for an entry, newest first. */
-    async function list(entryId: string): Promise<EntryVersionRow[]> {
+    /** Get all versions of a content row, newest first. */
+    async function list(contentId: ContentRowId): Promise<EntryVersionRow[]> {
         return repository.findMany({
-            where: { entryId },
-            orderBy: [['versionNumber', 'desc']],
+            where: { contentId },
+            orderBy: [['version', 'desc']],
         });
     }
 
@@ -35,30 +37,19 @@ export function createVersionRepository(db?: Db) {
     }
 
     /**
-     * Get the highest version number for an entry (0 if no versions exist).
+     * Get the highest version number for a content row (0 if none exist).
      * On the raw handle because `max()` is an aggregate, which the `where`
      * DSL does not reach.
      */
-    async function getLatestNumber(entryId: string): Promise<number> {
+    async function getLatestNumber(contentId: ContentRowId): Promise<number> {
         const { db: handle, table } = repository.kysely();
         const row = await handle
             .selectFrom(table)
-            .select((eb) => eb.fn.max('versionNumber').as('m'))
-            .where('entryId', '=', entryId)
+            .select((eb) => eb.fn.max('version').as('m'))
+            .where('contentId', '=', contentId)
             .executeTakeFirst();
         return Number(row?.m ?? 0);
     }
 
-    /** Delete oldest versions beyond a retention limit (for CRON trimming). */
-    async function deleteExcess(entryId: string, keep: number): Promise<void> {
-        const excess = await repository.findMany({
-            where: { entryId },
-            orderBy: [['versionNumber', 'desc']],
-            offset: keep,
-        });
-        if (excess.length === 0) return;
-        await repository.deleteMany({ id: { in: excess.map((v) => v.id) } });
-    }
-
-    return { create, list, get, getLatestNumber, deleteExcess };
+    return { create, list, get, getLatestNumber };
 }

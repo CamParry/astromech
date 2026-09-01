@@ -4,7 +4,14 @@
  * serialization and decoding. Column keys are the table's camelCase keys throughout.
  */
 
-import type { EntryRepository, EntryRow, EntryWrite, ListParams } from './types';
+import type {
+    ContentRowId,
+    EntryRef,
+    EntryRepository,
+    EntryRow,
+    EntryWrite,
+    ListParams,
+} from './types';
 import type { Column, Table } from '@/database/define-table';
 import type { Repository, Where } from '@/database/repository/create-repository';
 import type { Db } from '@/database/types';
@@ -12,6 +19,7 @@ import type { JsonObject } from '@/types/index';
 import { decodeWith } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 import { RelationshipFilterUnsupportedError, UnknownSortKeyError } from '../errors';
+import { getDefaultContentLocale } from '../internal/entry-type';
 
 type OrderPair = [column: string, direction: 'asc' | 'desc'];
 
@@ -81,8 +89,15 @@ class TableRepository implements EntryRepository<EntryRow> {
         const idVal = row[this.idCol];
         const id = typeof idVal === 'string' ? idVal : String(idVal);
 
+        // A custom table's row is its own content: one locale, never staged,
+        // and the public id doubles as the content-row id.
+        const locale = getDefaultContentLocale();
         const record: EntryRow = {
             id,
+            contentId: id as ContentRowId,
+            locale,
+            locales: [locale],
+            staged: false,
             fields: fields as JsonObject,
             createdAt: this.timestampOf(row, this.createdAtCol),
             updatedAt: this.timestampOf(row, this.updatedAtCol),
@@ -147,7 +162,8 @@ class TableRepository implements EntryRepository<EntryRow> {
         return this.toRecord(await this.repository.create(insertValues));
     }
 
-    async update(id: string, data: EntryWrite): Promise<EntryRow> {
+    async update(ref: EntryRef, data: EntryWrite): Promise<EntryRow> {
+        const id = ref.id;
         const cols = this.getColumns();
         const reserved = this.reservedNames();
         const setValues: Record<string, unknown> = {};
@@ -188,13 +204,13 @@ class TableRepository implements EntryRepository<EntryRow> {
         if (affected === 0)
             throw new Error(`tableRepository: no row found for id "${id}"`);
 
-        const row = await this.get(id);
+        const row = await this.get({ id });
         if (!row) throw new Error(`tableRepository: no row found for id "${id}"`);
         return row;
     }
 
-    async get(id: string): Promise<EntryRow | null> {
-        const row = await this.repository.findOne({ [this.idCol]: id });
+    async get(ref: EntryRef): Promise<EntryRow | null> {
+        const row = await this.repository.findOne({ [this.idCol]: ref.id });
         return row ? this.toRecord(row) : null;
     }
 

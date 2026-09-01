@@ -11,7 +11,7 @@ import type { KyselyOf } from '@/database/define-table';
 import type {
     cronTable,
     entriesTable,
-    entryPreviewTokensTable,
+    entryContentTable,
     entryVersionsTable,
     mediaTable,
     notificationsTable,
@@ -28,8 +28,8 @@ export type DB = {
     roles: KyselyOf<typeof rolesTable>;
     users: KyselyOf<typeof usersTable>;
     entries: KyselyOf<typeof entriesTable>;
+    entryContent: KyselyOf<typeof entryContentTable>;
     entryVersions: KyselyOf<typeof entryVersionsTable>;
-    entryPreviewTokens: KyselyOf<typeof entryPreviewTokensTable>;
     media: KyselyOf<typeof mediaTable>;
     settings: KyselyOf<typeof settingsTable>;
     notifications: KyselyOf<typeof notificationsTable>;

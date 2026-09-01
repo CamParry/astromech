@@ -5,41 +5,58 @@
  */
 
 import type { Db } from '@/database/types';
+import { encodePatchWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
-import { entriesTable } from '@/database/tables';
+import { entriesTable, entryContentTable } from '@/database/tables';
 
 export type EntryMaintenanceRepository = ReturnType<
     typeof createEntryMaintenanceRepository
 >;
 
 export function createEntryMaintenanceRepository(db: Db = getDb()) {
-    const repository = createRepository(entriesTable, db);
+    const entries = createRepository(entriesTable, db);
 
     /**
-     * Transition every scheduled entry whose publish time has passed to
-     * published. Returns the number of entries transitioned.
+     * Transition every scheduled content row whose publish time has passed to
+     * published. Returns the number of rows transitioned.
      */
     async function publishDueScheduled(now: Date): Promise<number> {
-        // `createRepository` serializes every `where` value through the column
-        // codec, so a `Date` on a timestamp column compares as ISO text.
-        return repository.updateMany(
-            { status: 'scheduled', publishedAt: { lte: now }, deletedAt: null },
-            { status: 'published' }
-        );
+        // Raw: the trash filter lives on the entry row, which the `where` DSL
+        // cannot reach from `entry_content`.
+        const result = await db
+            .updateTable('entryContent')
+            .set(encodePatchWith(entryContentTable, { status: 'published' }))
+            .where((eb) =>
+                eb.and([
+                    eb('status', '=', 'scheduled'),
+                    eb('publishedAt', '<=', now.toISOString()),
+                    eb(
+                        'entryId',
+                        'in',
+                        eb
+                            .selectFrom('entries')
+                            .select('entries.id')
+                            .where('entries.deletedAt', 'is', null)
+                    ),
+                ])
+            )
+            .executeTakeFirst();
+        return Number(result.numUpdatedRows);
     }
 
     /**
-     * Hard-delete every trashed entry deleted on or before `cutoff`. Returns the
-     * purged ids so the caller can clean up what has no FK to cascade on. SQL
-     * `deletedAt <= cutoff` is already false for NULL, so no guard is needed.
+     * Hard-delete every trashed entry deleted on or before `cutoff`. Content
+     * rows and versions cascade. Returns the purged entry ids so the caller can
+     * clean up what has no FK to cascade on. SQL `deletedAt <= cutoff` is
+     * already false for NULL, so no guard is needed.
      */
     async function purgeTrashedBefore(cutoff: Date): Promise<string[]> {
         const where = { deletedAt: { lte: cutoff } };
-        const doomed = await repository.findMany({ where });
+        const doomed = await entries.pluck('id', { where });
         if (doomed.length === 0) return [];
-        await repository.deleteMany(where);
-        return doomed.map((row) => row.id);
+        await entries.deleteMany(where);
+        return doomed;
     }
 
     return { publishDueScheduled, purgeTrashedBefore };

@@ -2,17 +2,14 @@
  * Repository-level tests for the entries-table repository.
  *
  * These exercise the persistence contract directly (not through the
- * entries service): base CRUD, list machinery, slug uniquification, and the
- * trash/versions/translatable capability groups. The entries service's policy is
- * covered by the characterization suite in src/services/entries/service.test.ts.
+ * entries service): the `entries`/`entry_content` split, base CRUD, list
+ * machinery, slug uniquification, and the trash/versions/staging/translatable
+ * capability groups plus the preview token.
  */
 
-import type { DB } from '@/database/types';
-import type { Insertable } from 'kysely';
+import type { ContentRowId } from '@/entries/repository/types';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { encodeWith } from '@/database/codec';
-import { entriesTable } from '@/database/tables';
 import { transaction } from '@/database/transaction';
 import { ALL_CAPABILITIES } from '@/entries/capabilities';
 import { createEntriesTableRepository } from '@/entries/repository/entries-table';
@@ -44,30 +41,78 @@ describe('base CRUD', () => {
         expect(created.title).toBe('Hello');
         expect(created.status).toBe('unpublished');
         expect(created.fields).toEqual({ body: 'hi' });
-        expect(created.locales).toEqual({ en: created.id });
+        expect(created.locale).toBe('en');
+        expect(created.locales).toEqual(['en']);
+        expect(created.staged).toBe(false);
 
-        const got = await repository.get(created.id);
+        const got = await repository.get({ id: created.id });
         expect(got?.id).toBe(created.id);
 
-        const updated = await repository.update(created.id, { title: 'Changed' });
+        const updated = await repository.update({ id: created.id }, { title: 'Changed' });
         expect(updated.title).toBe('Changed');
 
         await repository.delete(created.id);
-        expect(await repository.get(created.id)).toBeNull();
+        expect(await repository.get({ id: created.id })).toBeNull();
     });
 
-    it('mints a ULID localeGroup, not a UUID, when none is supplied', async () => {
-        // The `entries` table declares `defaultUlid` on localeGroup, so
-        // repository must leave the key absent rather than minting its own id.
-        const created = await repository.create({ type: 'post', title: 'L', slug: 'l' });
-        expect(created.localeGroup).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
+    it('writes an entries row and a content row, with distinct ids', async () => {
+        const created = await repository.create({
+            type: 'post',
+            title: 'Split',
+            slug: 'split',
+        });
+
+        const entry = await db
+            .selectFrom('entries')
+            .selectAll()
+            .where('id', '=', created.id)
+            .executeTakeFirst();
+        expect(entry?.type).toBe('post');
+
+        const content = await db
+            .selectFrom('entryContent')
+            .selectAll()
+            .where('entryId', '=', created.id)
+            .execute();
+        expect(content).toHaveLength(1);
+        expect(content[0]?.locale).toBe('en');
+        expect(content[0]?.title).toBe('Split');
+        // The public id is the entry id; the content row carries its own.
+        expect(created.contentId).toBe(content[0]?.id);
+        expect(created.contentId).not.toBe(created.id);
+    });
+
+    it('returns null for a locale with no content row', async () => {
+        const created = await repository.create({ type: 'post', title: 'EN only' });
+        expect(await repository.get({ id: created.id, locale: 'de' })).toBeNull();
+    });
+
+    it('lists every locale that has a content row, sorted', async () => {
+        const created = await repository.create({
+            type: 'post',
+            title: 'EN',
+            slug: 'en',
+        });
+        await repository.update(
+            { id: created.id, locale: 'de' },
+            { title: 'DE', slug: 'de' }
+        );
+
+        const en = await repository.get({ id: created.id });
+        const de = await repository.get({ id: created.id, locale: 'de' });
+        expect(en?.locales).toEqual(['de', 'en']);
+        expect(de?.locales).toEqual(['de', 'en']);
+        // One entry, one id, whichever locale is read.
+        expect(de?.id).toBe(created.id);
     });
 
     it('get filters trashed rows unless includeTrashed is set', async () => {
         const e = await repository.create({ type: 'post', title: 'T', slug: 't' });
         await repository.trash.trash(e.id);
-        expect(await repository.get(e.id)).toBeNull();
-        expect(await repository.get(e.id, { includeTrashed: true })).not.toBeNull();
+        expect(await repository.get({ id: e.id })).toBeNull();
+        expect(
+            await repository.get({ id: e.id }, { includeTrashed: true })
+        ).not.toBeNull();
     });
 });
 
@@ -76,6 +121,11 @@ describe('uniqueSlug', () => {
         await repository.create({ type: 'post', title: 'A', slug: 'same' });
         expect(await repository.uniqueSlug('post', 'en', 'same')).toBe('same-2');
         expect(await repository.uniqueSlug('post', 'en', 'free')).toBe('free');
+    });
+
+    it('excludes the named entry, whichever locale holds the slug', async () => {
+        const own = await repository.create({ type: 'post', title: 'A', slug: 'mine' });
+        expect(await repository.uniqueSlug('post', 'en', 'mine', own.id)).toBe('mine');
     });
 });
 
@@ -143,6 +193,34 @@ describe('list', () => {
         expect(unfiltered.total).toBe(2);
     });
 
+    it('filters by entry id', async () => {
+        const a = await repository.create({ type: 'post', title: 'A', slug: 'a' });
+        await repository.create({ type: 'post', title: 'B', slug: 'b' });
+
+        const byId = await repository.list({
+            type: 'post',
+            where: { id: { in: [a.id] } },
+            limit: 'all',
+        });
+        expect(byId.data.map((e) => e.title)).toEqual(['A']);
+    });
+
+    it('keeps one locale per entry, or every locale under locale: all', async () => {
+        const e = await repository.create({ type: 'post', title: 'EN', slug: 'en' });
+        await repository.update({ id: e.id, locale: 'de' }, { title: 'DE', slug: 'de' });
+
+        const oneLocale = await repository.list({ type: 'post', limit: 'all' });
+        expect(oneLocale.data.map((row) => row.title)).toEqual(['EN']);
+
+        const everyLocale = await repository.list({
+            type: 'post',
+            locale: 'all',
+            limit: 'all',
+            sort: { title: 'asc' },
+        });
+        expect(everyLocale.data.map((row) => row.title)).toEqual(['DE', 'EN']);
+    });
+
     it('excludes trashed unless requested', async () => {
         const a = await repository.create({ type: 'post', title: 'A', slug: 'a' });
         await repository.create({ type: 'post', title: 'B', slug: 'b' });
@@ -160,50 +238,73 @@ describe('list', () => {
     });
 });
 
-describe('staging (forward versioning) schema', () => {
-    it('a staged row may share the canonical slug and is excluded from list + uniqueSlug', async () => {
+describe('staging (forward versioning)', () => {
+    it('stages a second content row for the same entry and locale', async () => {
         const canonical = await repository.create({
             type: 'post',
             title: 'Live',
             slug: 'live',
         });
 
-        // A staged row sharing the canonical's slug: the partial unique index
-        // (WHERE staged_for IS NULL) must allow this insert to succeed.
-        await db
-            .insertInto('entries')
-            .values(
-                encodeWith(entriesTable, {
-                    type: 'post',
-                    locale: 'en',
-                    slug: 'live',
-                    title: 'Staged change',
-                    stagedFor: canonical.id,
-                }) as unknown as Insertable<DB['entries']>
-            )
-            .execute();
+        const staged = await repository.staging.create(
+            { id: canonical.id },
+            { title: 'Staged change', slug: 'live', fields: { body: 'draft' } }
+        );
 
-        // Staged rows never surface in lists.
+        // Same entry, same locale — a second row inside the partial unique index.
+        expect(staged.id).toBe(canonical.id);
+        expect(staged.locale).toBe('en');
+        expect(staged.staged).toBe(true);
+        expect(staged.contentId).not.toBe(canonical.contentId);
+
+        const rows = await db
+            .selectFrom('entryContent')
+            .select(['id', 'stagedFor'])
+            .where('entryId', '=', canonical.id)
+            .execute();
+        expect(rows).toHaveLength(2);
+        expect(rows.find((row) => row.stagedFor !== null)?.stagedFor).toBe(
+            canonical.contentId
+        );
+
+        const found = await repository.staging.getByCanonical(canonical.id);
+        expect(found?.contentId).toBe(staged.contentId);
+    });
+
+    it('keeps the staged row out of lists, uniqueSlug and the locale list', async () => {
+        const canonical = await repository.create({
+            type: 'post',
+            title: 'Live',
+            slug: 'live',
+        });
+        await repository.staging.create(
+            { id: canonical.id },
+            { title: 'Staged change', slug: 'ghost' }
+        );
+
         const list = await repository.list({ type: 'post', limit: 'all' });
         expect(list.data.map((e) => e.title)).toEqual(['Live']);
 
         // A slug used ONLY by a staged row is still considered free.
-        await db
-            .insertInto('entries')
-            .values(
-                encodeWith(entriesTable, {
-                    type: 'post',
-                    locale: 'en',
-                    slug: 'ghost',
-                    title: 'Staged ghost',
-                    stagedFor: canonical.id,
-                }) as unknown as Insertable<DB['entries']>
-            )
-            .execute();
         expect(await repository.uniqueSlug('post', 'en', 'ghost')).toBe('ghost');
-
         // The canonical still occupies its own slug.
         expect(await repository.uniqueSlug('post', 'en', 'live')).toBe('live-2');
+
+        expect((await repository.get({ id: canonical.id }))?.locales).toEqual(['en']);
+    });
+
+    it('discards the staged row on delete', async () => {
+        const canonical = await repository.create({
+            type: 'post',
+            title: 'Live',
+            slug: 'live',
+        });
+        await repository.staging.create({ id: canonical.id }, { title: 'Staged' });
+
+        await repository.staging.delete({ id: canonical.id });
+
+        expect(await repository.staging.getByCanonical(canonical.id)).toBeNull();
+        expect(await repository.get({ id: canonical.id })).not.toBeNull();
     });
 });
 
@@ -212,7 +313,7 @@ describe('trash sub-surface', () => {
         const e = await repository.create({ type: 'post', title: 'T', slug: 't' });
         await repository.trash.trash(e.id);
         expect(
-            (await repository.get(e.id, { includeTrashed: true }))?.deletedAt
+            (await repository.get({ id: e.id }, { includeTrashed: true }))?.deletedAt
         ).toBeInstanceOf(Date);
 
         const restored = await repository.trash.restore(e.id);
@@ -220,45 +321,84 @@ describe('trash sub-surface', () => {
 
         await repository.trash.trash(e.id);
         await repository.trash.emptyTrash('post');
-        expect(await repository.get(e.id, { includeTrashed: true })).toBeNull();
+        expect(await repository.get({ id: e.id }, { includeTrashed: true })).toBeNull();
+    });
+
+    it('hides every locale of a trashed entry', async () => {
+        const e = await repository.create({ type: 'post', title: 'EN', slug: 'en' });
+        await repository.update({ id: e.id, locale: 'de' }, { title: 'DE', slug: 'de' });
+
+        await repository.trash.trash(e.id);
+
+        expect(await repository.get({ id: e.id })).toBeNull();
+        expect(await repository.get({ id: e.id, locale: 'de' })).toBeNull();
+        const trashedList = await repository.list({
+            type: 'post',
+            trashed: true,
+            locale: 'all',
+            limit: 'all',
+        });
+        expect(trashedList.data).toHaveLength(2);
     });
 });
 
 describe('versions sub-surface', () => {
     it('creates, lists newest-first, gets, and tracks latestNumber', async () => {
         const e = await repository.create({ type: 'post', title: 'V', slug: 'v' });
-        expect(await repository.versions.latestNumber(e.id)).toBe(0);
+        const contentId = e.contentId;
+        expect(await repository.versions.latestNumber(contentId)).toBe(0);
 
         await repository.versions.create({
-            entryId: e.id,
-            versionNumber: 1,
+            contentId,
+            version: 1,
             title: 'V1',
             slug: 'v',
             fields: { body: 'one' },
             createdBy: null,
         });
         await repository.versions.create({
-            entryId: e.id,
-            versionNumber: 2,
+            contentId,
+            version: 2,
             title: 'V2',
             slug: 'v',
             fields: { body: 'two' },
             createdBy: null,
         });
 
-        expect(await repository.versions.latestNumber(e.id)).toBe(2);
-        const list = await repository.versions.list(e.id);
-        expect(list.map((v) => v.versionNumber)).toEqual([2, 1]);
+        expect(await repository.versions.latestNumber(contentId)).toBe(2);
+        const list = await repository.versions.list(contentId);
+        expect(list.map((v) => v.version)).toEqual([2, 1]);
 
-        const one = list.find((v) => v.versionNumber === 1);
+        const one = list.find((v) => v.version === 1);
         if (!one) throw new Error('expected version 1');
         const got = await repository.versions.get(one.id);
         expect(got?.title).toBe('V1');
     });
+
+    it('keeps a separate sequence per locale', async () => {
+        const e = await repository.create({ type: 'post', title: 'EN', slug: 'en' });
+        const de = await repository.update(
+            { id: e.id, locale: 'de' },
+            { title: 'DE', slug: 'de' }
+        );
+
+        await repository.versions.create({
+            contentId: e.contentId,
+            version: 1,
+            title: 'EN v1',
+            slug: 'en',
+            fields: {},
+            createdBy: null,
+        });
+
+        expect(await repository.versions.latestNumber(e.contentId)).toBe(1);
+        expect(await repository.versions.latestNumber(de.contentId)).toBe(0);
+        expect(await repository.versions.list(de.contentId)).toEqual([]);
+    });
 });
 
 describe('translatable sub-surface', () => {
-    it('returns siblings excluding the given id and propagates field values', async () => {
+    it('returns siblings excluding the given locale and propagates field values', async () => {
         const en = await repository.create({
             type: 'post',
             title: 'EN',
@@ -266,23 +406,45 @@ describe('translatable sub-surface', () => {
             locale: 'en',
             fields: { body: 'enbody', category: 'news' },
         });
-        const de = await repository.create({
-            type: 'post',
-            title: 'DE',
-            slug: 'de',
-            locale: 'de',
-            localeGroup: en.localeGroup,
-            fields: { body: 'debody', category: 'news' },
-        });
+        await repository.update(
+            { id: en.id, locale: 'de' },
+            {
+                title: 'DE',
+                slug: 'de',
+                fields: { body: 'debody', category: 'news' },
+            }
+        );
 
-        const siblings = await repository.translatable.siblings(en.localeGroup, en.id);
-        expect(siblings.map((s) => s.id)).toEqual([de.id]);
+        const siblings = await repository.translatable.siblings(en.id, 'en');
+        expect(siblings.map((s) => s.locale)).toEqual(['de']);
 
-        await repository.translatable.propagateFields(en.localeGroup, en.id, {
+        await repository.translatable.propagateFields(en.id, 'en', {
             category: 'updated',
         });
-        const deAfter = await repository.get(de.id);
+        const deAfter = await repository.get({ id: en.id, locale: 'de' });
         expect(deAfter?.fields).toEqual({ body: 'debody', category: 'updated' });
+        // The excluded locale is untouched.
+        const enAfter = await repository.get({ id: en.id });
+        expect(enAfter?.fields).toEqual({ body: 'enbody', category: 'news' });
+    });
+});
+
+describe('previewToken', () => {
+    it('stores a hash, finds the entry by it, and clears it', async () => {
+        const e = await repository.create({ type: 'post', title: 'P', slug: 'p' });
+        const expiresAt = new Date(Date.now() + 60_000);
+
+        await repository.previewToken.set(e.id, 'hash-abc', expiresAt);
+        const found = await repository.previewToken.findByHash('hash-abc');
+        expect(found?.id).toBe(e.id);
+        expect(found?.expiresAt).toEqual(expiresAt);
+
+        await repository.previewToken.clear(e.id);
+        expect(await repository.previewToken.findByHash('hash-abc')).toBeNull();
+    });
+
+    it('returns null for an unknown hash', async () => {
+        expect(await repository.previewToken.findByHash('nope')).toBeNull();
     });
 });
 
@@ -295,23 +457,38 @@ describe('transaction', () => {
         const e = await repository.create({ type: 'post', title: 'Keep', slug: 'keep' });
         await expect(
             transaction(async () => {
-                await repository.update(e.id, { title: 'Changed' });
+                await repository.update({ id: e.id }, { title: 'Changed' });
                 throw new Error('boom');
             })
         ).rejects.toThrow('boom');
 
-        const after = await repository.get(e.id);
+        const after = await repository.get({ id: e.id });
         expect(after?.title).toBe('Keep');
+    });
+
+    it('rolls back both rows of a failed create', async () => {
+        await expect(
+            transaction(async () => {
+                await repository.create({ type: 'post', title: 'Gone', slug: 'gone' });
+                throw new Error('boom');
+            })
+        ).rejects.toThrow('boom');
+
+        expect(await repository.list({ type: 'post', limit: 'all' })).toEqual({
+            data: [],
+            total: 0,
+        });
+        expect(await db.selectFrom('entryContent').selectAll().execute()).toEqual([]);
     });
 
     it('commits writes made inside the callback', async () => {
         const e = await repository.create({ type: 'post', title: 'Before', slug: 'b' });
         const result = await transaction(async () =>
-            repository.update(e.id, { title: 'After' })
+            repository.update({ id: e.id }, { title: 'After' })
         );
         expect(result.title).toBe('After');
 
-        const after = await repository.get(e.id);
+        const after = await repository.get({ id: e.id });
         expect(after?.title).toBe('After');
     });
 
@@ -326,12 +503,34 @@ describe('transaction', () => {
                 slug: 'outer',
             });
             await transaction(async () => {
-                await repository.update(outer.id, { title: 'Inner' });
+                await repository.update({ id: outer.id }, { title: 'Inner' });
             });
             return outer;
         });
 
-        const after = await repository.get(created.id);
+        const after = await repository.get({ id: created.id });
         expect(after?.title).toBe('Inner');
+    });
+});
+
+describe('unique (entryId, locale)', () => {
+    it('refuses a second canonical row for the same locale', async () => {
+        const e = await repository.create({ type: 'post', title: 'EN', slug: 'en' });
+        await expect(
+            db
+                .insertInto('entryContent')
+                .values({
+                    id: 'duplicate-content-row' as ContentRowId,
+                    entryId: e.id,
+                    type: 'post',
+                    locale: 'en',
+                    title: 'Second EN',
+                    slug: 'en-2',
+                    status: 'unpublished',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                })
+                .execute()
+        ).rejects.toThrow();
     });
 });

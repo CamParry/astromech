@@ -78,6 +78,17 @@ describe('create', () => {
         expect(record.fields['enabled']).toBe(true);
     });
 
+    it('reports its row as its own content: default locale, never staged', async () => {
+        const record = await repository.create({
+            type: 'link',
+            fields: { from: '/a', to: '/b' },
+        });
+        expect(record.contentId).toBe(record.id);
+        expect(record.locale).toBe('en');
+        expect(record.locales).toEqual(['en']);
+        expect(record.staged).toBe(false);
+    });
+
     it('drops unknown field keys silently', async () => {
         const record = await repository.create({
             type: 'link',
@@ -113,7 +124,7 @@ describe('create', () => {
 
 describe('get', () => {
     it('returns null for missing id', async () => {
-        const result = await repository.get('no-such-id');
+        const result = await repository.get({ id: 'no-such-id' });
         expect(result).toBeNull();
     });
 
@@ -122,7 +133,7 @@ describe('get', () => {
             type: 'link',
             fields: { from: '/a', to: '/b' },
         });
-        const got = await repository.get(created.id);
+        const got = await repository.get({ id: created.id });
         expect(got?.id).toBe(created.id);
         expect(got?.fields['from']).toBe('/a');
     });
@@ -139,9 +150,12 @@ describe('update', () => {
         // to move.
         await new Promise((r) => setTimeout(r, 5));
 
-        const updated = await repository.update(created.id, {
-            fields: { from: '/a', to: '/new', status: '302' },
-        });
+        const updated = await repository.update(
+            { id: created.id },
+            {
+                fields: { from: '/a', to: '/new', status: '302' },
+            }
+        );
 
         expect(updated.fields['to']).toBe('/new');
         expect(updated.fields['status']).toBe('302');
@@ -152,7 +166,7 @@ describe('update', () => {
 
     it('throws when row is missing', async () => {
         await expect(
-            repository.update('nonexistent', { fields: { from: '/x', to: '/y' } })
+            repository.update({ id: 'nonexistent' }, { fields: { from: '/x', to: '/y' } })
         ).rejects.toThrow();
     });
 });
@@ -164,7 +178,7 @@ describe('delete', () => {
             fields: { from: '/a', to: '/b' },
         });
         await repository.delete(created.id);
-        const gone = await repository.get(created.id);
+        const gone = await repository.get({ id: created.id });
         expect(gone).toBeNull();
     });
 });
@@ -450,7 +464,7 @@ describe('transaction', () => {
                     fields: { from: '/tx1', to: '/ok' },
                 });
                 // Write is visible inside the transaction callback.
-                const found = await repository.get(rec.id);
+                const found = await repository.get({ id: rec.id });
                 expect(found?.id).toBe(rec.id);
                 createdInsideTx = true;
                 throw new Error('simulated failure');

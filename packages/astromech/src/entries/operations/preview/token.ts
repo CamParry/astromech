@@ -1,12 +1,7 @@
 import { parseInput } from '@/errors/validation';
-import { getCurrentUser } from '@/request-context/request-context';
 import { assertCapability } from '../../internal/entry-type';
-import { generatePreviewSecret } from '../../internal/preview';
+import { generatePreviewSecret, hashPreviewToken } from '../../internal/preview';
 import { getEntryOfType } from '../../internal/records';
-import {
-    createPreviewTokenRepository,
-    hashPreviewToken,
-} from '../../repository/preview-tokens';
 import { getEntryRepository } from '../../repository/registry';
 import { previewTokenSchema } from '../../schema';
 
@@ -37,7 +32,6 @@ export async function issuePreviewToken(params: {
     }
     const token = generatePreviewSecret();
     const hash = await hashPreviewToken(token);
-    const user = await getCurrentUser();
     // Coerced, not trusted: a JSON transport (MCP, the AI tool-loop) sends an
     // ISO string, and this column is a date. `schedule` validates `publishedAt`
     // the same way for the same reason.
@@ -49,7 +43,7 @@ export async function issuePreviewToken(params: {
         expiresAt === undefined
             ? new Date(Date.now() + DEFAULT_PREVIEW_TOKEN_TTL_MS)
             : expiresAt;
-    await createPreviewTokenRepository().issue(id, hash, expiry, user?.id ?? null);
+    await repository.previewToken?.set(id, hash, expiry);
     return { token };
 }
 
@@ -65,5 +59,5 @@ export async function revokePreviewToken(params: {
     assertCapability(type, 'staging');
     const repository = getEntryRepository(type);
     await getEntryOfType(repository, type, id);
-    await createPreviewTokenRepository().revoke(id);
+    await repository.previewToken?.clear(id);
 }

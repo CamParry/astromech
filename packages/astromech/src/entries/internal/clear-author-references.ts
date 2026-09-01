@@ -7,11 +7,7 @@
 
 import type { Db } from '@/database/types';
 import { createRepository } from '@/database/repository/create-repository';
-import {
-    entriesTable,
-    entryPreviewTokensTable,
-    entryVersionsTable,
-} from '@/database/tables';
+import { entriesTable, entryContentTable, entryVersionsTable } from '@/database/tables';
 
 export async function clearAuthorReferences(userId: string, db?: Db): Promise<void> {
     const entries = createRepository(entriesTable, db);
@@ -21,8 +17,7 @@ export async function clearAuthorReferences(userId: string, db?: Db): Promise<vo
         { createdBy: userId },
         { createdBy: null }
     );
-    await createRepository(entryPreviewTokensTable, db).updateMany(
-        { createdBy: userId },
-        { createdBy: null }
-    );
+    const contents = createRepository(entryContentTable, db);
+    await contents.updateMany({ createdBy: userId }, { createdBy: null });
+    await contents.updateMany({ updatedBy: userId }, { updatedBy: null });
 }

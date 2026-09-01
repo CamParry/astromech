@@ -1,8 +1,8 @@
 /**
  * Repository-level tests for `createVersionRepository`. The CRUD/list/latestNumber
  * surface is already exercised through `createEntriesTableRepository.versions` in
- * `entries-table.test.ts`; this file covers `deleteExcess`, which the
- * entries-table wrapper does not expose.
+ * `entries-table.test.ts`; this file covers what the wrapper cannot show — that a
+ * version belongs to a content row and dies with it.
  */
 
 import type { Db } from '@/database/types';
@@ -22,40 +22,55 @@ beforeEach(async () => {
     versionRepository = createVersionRepository(db);
 });
 
-describe('deleteExcess', () => {
-    it('keeps exactly `keep` newest versions and deletes the rest', async () => {
-        const e = await entryRepository.create({ type: 'post', title: 'V', slug: 'v' });
-        for (let n = 1; n <= 5; n++) {
+describe('content-row ownership', () => {
+    it('lists only the versions of the content row asked for', async () => {
+        const en = await entryRepository.create({ type: 'post', title: 'EN', slug: 'v' });
+        const de = await entryRepository.update(
+            { id: en.id, locale: 'de' },
+            { title: 'DE', slug: 'v-de' }
+        );
+
+        for (const [contentId, title] of [
+            [en.contentId, 'EN v1'],
+            [de.contentId, 'DE v1'],
+            [de.contentId, 'DE v2'],
+        ] as const) {
             await versionRepository.create({
-                entryId: e.id,
-                versionNumber: n,
-                title: `V${n}`,
+                contentId,
+                version: title.endsWith('v2') ? 2 : 1,
+                title,
                 slug: 'v',
                 fields: {},
                 createdBy: null,
             });
         }
 
-        await versionRepository.deleteExcess(e.id, 2);
-
-        const remaining = await versionRepository.list(e.id);
-        expect(remaining.map((v) => v.versionNumber)).toEqual([5, 4]);
+        expect((await versionRepository.list(en.contentId)).map((v) => v.title)).toEqual([
+            'EN v1',
+        ]);
+        expect((await versionRepository.list(de.contentId)).map((v) => v.title)).toEqual([
+            'DE v2',
+            'DE v1',
+        ]);
     });
 
-    it('is a no-op when there is nothing beyond `keep`', async () => {
-        const e = await entryRepository.create({ type: 'post', title: 'V', slug: 'v' });
+    it('cascades away when the entry is deleted', async () => {
+        const entry = await entryRepository.create({
+            type: 'post',
+            title: 'V',
+            slug: 'v',
+        });
         await versionRepository.create({
-            entryId: e.id,
-            versionNumber: 1,
+            contentId: entry.contentId,
+            version: 1,
             title: 'V1',
             slug: 'v',
             fields: {},
             createdBy: null,
         });
 
-        await versionRepository.deleteExcess(e.id, 5);
+        await entryRepository.delete(entry.id);
 
-        const remaining = await versionRepository.list(e.id);
-        expect(remaining.map((v) => v.versionNumber)).toEqual([1]);
+        expect(await db.selectFrom('entryVersions').selectAll().execute()).toEqual([]);
     });
 });

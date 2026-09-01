@@ -24,7 +24,7 @@ import {
     toSnapshotTable,
 } from '@/database/table-snapshot';
 import { cronTable, relationshipsTable } from '@/database/tables';
-import { entriesTable, entryPreviewTokensTable } from '@/entries/tables';
+import { entriesTable, entryContentTable } from '@/entries/tables';
 import { rolesTable } from '@/users/tables';
 
 describe('toSnakeCase', () => {
@@ -263,23 +263,23 @@ describe('createSnapshot', () => {
     });
 
     it('includes the synthesized column-unique index', () => {
-        const snapshot = createSnapshot([entryPreviewTokensTable], { dialect: 'sqlite' });
-        expect(snapshot.tables.entry_preview_tokens?.indexes).toContainEqual({
-            name: 'entry_preview_tokens_token_unique',
-            columns: ['token'],
+        const snapshot = createSnapshot([entriesTable], { dialect: 'sqlite' });
+        expect(snapshot.tables.entries?.indexes).toContainEqual({
+            name: 'entries_preview_token_unique',
+            columns: ['preview_token'],
             unique: true,
         });
     });
 
     it('resolves foreign keys to their target table + column', () => {
-        const snapshot = createSnapshot([entriesTable], { dialect: 'sqlite' });
-        expect(snapshot.tables.entries?.fks).toContainEqual({
+        const snapshot = createSnapshot([entryContentTable], { dialect: 'sqlite' });
+        expect(snapshot.tables.entry_content?.fks).toContainEqual({
             column: 'staged_for',
-            targetTable: 'entries',
+            targetTable: 'entry_content',
             targetColumn: 'id',
             onDelete: 'no action',
         });
-        expect(snapshot.tables.entries?.fks).toContainEqual({
+        expect(snapshot.tables.entry_content?.fks).toContainEqual({
             column: 'created_by',
             targetTable: 'users',
             targetColumn: 'id',
