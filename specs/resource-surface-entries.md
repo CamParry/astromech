@@ -35,7 +35,9 @@ unique partial `(type, locale, slug) WHERE staged_for IS NULL`.
   `entries/repository/types.ts`. It never crosses the service boundary: no
   method takes or returns one, and `Entry` does not carry one.
 - `stagedFor` on a content row points at the canonical content row's id. The
-  public `Entry.stagedFor` becomes `staged: boolean`.
+  public `Entry.stagedFor` becomes `staged: boolean`. A staged row is
+  addressed as `{ id, locale, staged: true }` on `get` and `update`; there is
+  no other way to reach it, since it shares its entry's id.
 
 ### `Entry`
 
@@ -109,13 +111,16 @@ the default content locale (`getDefaultContentLocale()`), as `create` and
 
 ### Relations
 
-`relationships.targetId` for `targetKind: 'entry'` is an entry id. Resolution
-of a relation value into an `Entry` picks the reader's locale, then the default
-content locale, then nothing. The reverse lookup (`incomingRelationships`) and
-`where: { references }` are unchanged in shape; both now compare entry ids. The
-index is derived, so the migration rebuilds it rather than rewriting rows:
-after the schema move, `entries/internal/relationships.ts` indexes from
-`entry_content` and the CLI `index-rebuild` repopulates.
+`relationships.targetId` for `targetKind: 'entry'` is an entry id, and so is
+`sourceId`. An entry's edges are the union over its content rows, deduplicated
+on the index key; `sourceStaged` is true only when an edge exists in a staged
+row and in no canonical row of the same entry. There is no populate-on-read
+path (a relationship field reads back as ids, per
+`apps/docs/content/relationships.md`), so nothing resolves a locale on read;
+the reverse lookups (`incomingRelationships`, `media.usedBy`) show the source
+in the default locale. `where: { references }` is unchanged in shape and
+compares entry ids. The index is derived: the migration remaps `targetId`, and
+`index-rebuild` regenerates sources from `entry_content`.
 
 ### Preview
 
