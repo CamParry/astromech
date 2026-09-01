@@ -37,23 +37,28 @@ apps/
 `packages/astromech/src/` is one directory per module. Imports point down this list; modules on the same line may read one another. Nothing enforces this mechanically.
 
 ```
-astromech.ts · integrations · admin · codegen        entrypoints and composition root
-transport (http · cli · mcp · tools)                 delivery
+integrations · transport/cli · transport/mcp         process entry points, each boots the application
+astromech.ts · plugins/runtime/plugin-runtime.ts     composition root
+transport (http · tools) · admin                     delivery
+codegen                                              generation
 policies                                             who may call what
 entries · media · users · settings · notifications   the content modules
-plugins/runtime · config · database · storage ·      the modules those build on
-  fields · permissions · hooks · request-context ·
-  email · ai · cron
+plugins · config · database · storage · fields ·     the modules those build on
+  permissions · hooks · request-context · email ·
+  ai · cron
 types · utilities · env · errors · registry.ts       pure leaves
 ```
 
 - **`astromech.ts`** is the composition root: `createAstromech` resolves the
   config, wires the drivers, and composes the content services onto the
-  application instance. `exports/` holds the re-export barrels, one per
-  published subpath except three that name a source file directly:
-  `./admin/shell.astro`, `./media/Image` and `./routes/handler.ts`. Nothing
-  else in `src/` re-exports — inside the package every import names the file
-  that declares the symbol.
+  application instance. `plugins/runtime/plugin-runtime.ts` is the other half of
+  the composition root: `createPluginContext` assembles the plugin `ctx` from
+  the same content services, so it imports them the way `astromech.ts` does.
+  `exports/` holds the re-export barrels, one per published subpath except
+  three that name a source file directly: `./admin/shell.astro`,
+  `./media/Image` and `./routes/handler.ts`. Nothing else in `src/`
+  re-exports — inside the package every import names the file that declares
+  the symbol.
 - **`integrations/`** holds two kinds of glue side by side. A **framework
   integration** answers how a request arrives and where the config lives:
   `astro/` is the Vite plugin, the virtual modules
@@ -69,13 +74,16 @@ types · utilities · env · errors · registry.ts       pure leaves
 - **`codegen/`** generates the site's entry types and the method manifest.
 - **`transport/`** is every way a call arrives: Hono routes and middleware in
   `http/`, the CLI, the dev-only MCP server, and `tools/`, the tool surface the
-  MCP server and the AI tool-loop share. Transports dispatch to the content services through the method manifest; they hold no business logic.
+  MCP server and the AI tool-loop share. `cli/` and `mcp/` are process entry
+  points of their own, each booting the application through `astromech.ts`, so
+  they sit above the composition root; `http/` and `tools/` are what it calls.
+  Transports dispatch to the content services through the method manifest; they hold no business logic.
 - **`policies/`** decides what a role may call. `scopedServices(role)` wraps the
   services and refuses a method the role lacks; every untrusted path (HTTP, RPC,
   the AI tool-loop) composes it. Trusted paths (the application instance used in
   SSR and hooks, the CLI, the MCP server) do not.
 - **The content modules** (`entries`, `media`, `users`, `settings`, `notifications`) own the business verbs. Each has a `service.ts` (its verbs), a `tables.ts` (its `defineTable` tables and row types), a contract catalogue (`contract.ts`, or `methods.ts` in `entries`) that puts it in the method manifest, and a `schema.ts` of Zod request schemas where it validates input. A large module splits its verbs into `operations/` and helpers into `internal/`, with `service.ts` assembling them. They are siblings: one may call another's service, but reaches tables through `database/tables.ts`.
-- **The modules below them** (`database`, `storage`, `fields`, `config`, `permissions`, `hooks`, `request-context`, `email`, `ai`, `cron`, `plugins/runtime`) are what the content modules build on. Each does one thing and holds no business logic.
+- **The modules below them** (`database`, `storage`, `fields`, `config`, `permissions`, `hooks`, `request-context`, `email`, `ai`, `cron`, and `plugins` — the `define*` authoring API and every `runtime/` file except `plugin-runtime.ts`) are what the content modules build on. Each does one thing and holds no business logic.
 - **Leaves** import only other leaves and third-party packages. A small pure file (a constant, a type, a function over its arguments) may sit inside any module and still be imported from any layer.
 
 ## The environment
