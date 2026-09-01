@@ -37,8 +37,8 @@ the forward field path, not the relation name. Editorial identity is a `profile`
 entry linking to `users`.
 
 **Author columns are `ON DELETE set null`, cleared in the app.**
-`entries.createdBy`/`updatedBy`, `entry_versions.createdBy` and
-`entry_preview_tokens.createdBy` reference `users` and go null when that user is
+`entries.createdBy`/`updatedBy`, the same pair on `entry_content`, and
+`entry_versions.createdBy` reference `users` and go null when that user is
 deleted: content outlives its author, and the column already means "the acting
 user, if known". Rejected: reassigning to another user (WordPress's model, too
 heavy for a "who touched this row" stamp, and Astromech has no ownership concept
@@ -49,14 +49,65 @@ the intent and enforces it on D1, the app guarantees it on every driver. This is
 a column FK, unlike the `relationships` index above whose dangling ids are field
 data with nothing to act on.
 
-**Filtering entries by field data rides declared expression indexes** over
-`json_extract(fields, '$.path')`, with the index DDL and the query SQL emitted
-from one declaration. Undeclared field filters throw. Rejected: generated columns
-on the shared `entries` table (no precedent, and it killed Craft 2-4), a typed
-EAV lookup table, and silent unindexed JSON scans.
+**Every resource is its own three tables, not rows in one shared table.** An
+entry is `entries` (what is unique per item and shared across its locales),
+`entry_content` (one row per locale of what editors author) and `entry_versions`
+(snapshots of a content row), so the FK from content to its owner is real and no
+discriminator column is needed. Prior art: Drupal's `node`/`node_field_data` and
+Craft's `elements`/`elements_sites`. Rejected: one shared table holding entries,
+users, media and globals as typed rows, which needs a reserved id prefix,
+suppression in the admin config, the API routes, the permission vocabulary and
+the relation targets, a polymorphic owner column with no FK, and an orphan check
+to cover for it. Also rejected: renaming that table to `documents` or `elements`,
+words already refused below.
 
-**Search is a derived FTS5 external-content table** (`content='entries'`,
-trigger-synced, per-field `searchable`). Rejected: a `search_index` text column
+**`_content`, not `_locales`.** It names what the table holds, `entry_versions`
+reads as versions of `entry_content` where "versions of locales" does not, and
+it reads right on a single-language site. Rejected: Payload's `_locales`, whose
+table holds only the localized fields with the rest on the base row, so the name
+does not transfer.
+
+**One id per entry, with locale as a parameter.** `entries.id` is the id in
+every URL, service call, relation, version list and preview URL; a content row's
+id is branded `ContentRowId` and never crosses the service boundary. Switching
+locale changes an argument, never the id. Rejected: one id per locale row
+grouped by an opaque `localeGroup`, under which a relation names one language's
+row and every translation has to re-point it, which is WPML's failure mode.
+
+**Trash is resource-level.** `deletedAt` sits on `entries`, so trashing takes
+every locale with it and `trash`, `restore`, `delete` and `emptyTrash` take no
+locale. Rejected: `deletedAt` per content row with an opt-in `cascadeLocales`
+flag, which made "trash this entry" and "remove this translation" the same call
+with an argument between them.
+
+**`type` is copied onto `entry_content`.** The slug-unique index
+`(type, locale, slug)` and the list index `(type, locale, status)` cannot reach
+across the join to `entries`. It is the one accepted denormalization. Rejected:
+enforcing slug uniqueness in application code, which is Craft's answer, to keep
+the column single-homed.
+
+**A preview token is two columns on `entries`.** `previewToken` (the hash,
+unique) and `previewTokenExpiresAt`: one token per entry, authorizing every
+locale, with the locale picked by the preview URL. Rejected: an
+`entry_preview_tokens` satellite, a one-to-one table whose own created columns
+nothing read. Wanting a token audit trail is the signal to bring a table back.
+
+**`update` with a locale that has no content row creates it.** That is how a
+translation is made: shared fields are inherited from the default locale and
+`create` validation runs on the merged result. Payload works the same way, where
+`update` with a `locale` writes that locale whether or not it existed. Rejected:
+a dedicated `createTranslation` method, a second write path for the same row, and
+duplicating the entry into a translation group, which `duplicate` no longer does
+(it copies an entry, not a locale).
+
+**Filtering entries by field data rides declared expression indexes** over
+`json_extract(fields, '$.path')` on `entry_content`, with the index DDL and the
+query SQL emitted from one declaration. Undeclared field filters throw. Rejected:
+generated columns on the shared content table (no precedent, and it killed Craft
+2-4), a typed EAV lookup table, and silent unindexed JSON scans.
+
+**Search is a derived FTS5 external-content table** (`content='entry_content'`,
+trigger-synced, per-field `searchable`), so it indexes one locale per row. Rejected: a `search_index` text column
 queried with `LIKE` (the WordPress and Directus anti-pattern), indexing rendered
 output, and an external engine in core.
 

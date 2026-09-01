@@ -117,10 +117,16 @@ every reader calls `getConfig()` at call time, never at module scope.
 
 An **entry type** is declared in the site config with `defineEntryType`: a
 name, its fields, slug rules, admin columns, and which features it enables.
-Every entry of every type lives in the one `entries` table, with field values
-stored as JSON on the row and typed in the site by codegen. Versions, staging,
-preview tokens, trash, statuses, translation and relationships are entries
-features, in `entries/operations/`. The `relationships` table is a derived
+An entry of any type lives in three tables, declared in
+`entries/tables.ts`: `entries` holds what is unique per item and shared across
+its locales (`type`, the preview token, `deletedAt`), `entry_content` holds one
+row per locale of what editors author (title, slug, `fields` as JSON, status),
+and `entry_versions` snapshots a content row. `entries/repository/entries-table.ts`
+reads the first two joined and `entries/repository/versions.ts` owns the third;
+field values are typed in the site by codegen. The entry id is the id every
+caller uses, and locale is a parameter beside it. Versions, staging, preview
+tokens, trash, statuses, translation and relationships are entries features, in
+`entries/operations/`. The `relationships` table is a derived
 index over field data, rebuildable from it.
 
 **Fields** are shared by entry types, plugin tables and settings pages. `fields/builder.ts` is the authoring API (`fields.text(...)`), and

@@ -32,9 +32,14 @@ no migration.
 question to put to a human, and the caller re-issues it carrying the answer. It
 buys one turn against a runaway agent and is not a security boundary.
 
+**Content.** One locale of a resource's authored values: its fields, and the
+content-level identifiers that go with them (an entry's title and slug). A
+content row carries its own internal id, which is never public; a caller
+addresses one by the resource's id plus a locale.
+
 **Custom table.** A plugin's own table backing an entry type, presented through
 the entries admin surface with all entry capabilities switched off. Every entry
-type persists through a repository; the default is the shared `entries` table,
+type persists through a repository; the default is the shared entries tables,
 and a custom table shares the entries interface and none of the internals. The
 term is WordPress's for plugin data kept outside the shared posts table.
 
@@ -46,8 +51,8 @@ factory function, never a class or a shared singleton.
 form: a `Date` as an ISO string, an object as JSON, a boolean as `0`/`1`.
 `database/codec.ts` converts between the two. Not "storage", which is blobs.
 
-**Entry.** One content item. Not "record", which conflates content with database
-rows.
+**Entry.** One content item. It has one id, the same in every locale of it. Not
+"record", which conflates content with database rows.
 
 **Entry type.** A named kind of entry, declared in the site config with its
 fields, slug rules, admin columns and capabilities.
@@ -123,8 +128,10 @@ Chosen over "record" and "document".
 **Schema.** Request validation, or a whole-shape aggregate. Never the table
 declarations themselves, which are tables.
 
-**Staged entry.** A prepared future change to a live entry, edited and previewed
-on its own and merged deliberately. Forward-looking, and separate from a version.
+**Staged entry.** A prepared future change to one locale of a live entry, edited
+and previewed on its own and merged deliberately. It shares its entry's id, so a
+read asks for it rather than naming a different id. Forward-looking, and separate
+from a version.
 
 **Storage.** File and blob storage only. Never database access, and never the
 column form of a value, which is **Encoded**.
@@ -143,5 +150,6 @@ Deleting is permanent and separate; there is no force-delete.
 in) and correctness (is what it holds valid). A draft is checked for correctness
 only, so it can save half-finished without storing something malformed.
 
-**Version.** An append-only snapshot of an entry as it was. Backward-looking, and
-separate from a staged entry.
+**Version.** An append-only snapshot of one content row as it was, so a version
+list is per resource and locale. Backward-looking, and separate from a staged
+entry.

@@ -35,8 +35,9 @@ This is a living reference; it grows as the project does.
   module.
 - [content/relationships.md](content/relationships.md) — linking content to
   content: declaring a relation, why the value is ids rather than expanded
-  records, querying the reverse direction with `where: { references }`, and
-  keeping the derived index in sync with `index:rebuild`.
+  records, what a relation stores on a translated site, querying the reverse
+  direction with `where: { references }`, and keeping the derived index in sync
+  with `index:rebuild`.
 - [content/rich-text.md](content/rich-text.md) — the `richtext` field and its
   `allow` list, why the stored value is ProseMirror JSON while a public read is
   HTML, and the two conversions: `renderRichText` and `parseRichText`.

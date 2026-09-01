@@ -23,9 +23,9 @@ interface Props {
     /** Active locale. */
     locale?: Locale;
     /**
-     * Locale map from the entry (`entry.locales`): { locale: entryId }.
-     * Used to emit hreflang links. The id values are not slugs — caller must
-     * pass in pre-resolved `hreflangUrls` if they want full hreflang support.
+     * Pre-resolved hreflang links: { locale: url }. `entry.locales` names the
+     * locales an entry has, but not their paths, so the caller resolves each
+     * locale's URL and passes the map in.
      */
     hreflangUrls?: Record<string, string>;
     /** Site origin override, e.g. https://astromech.dev. Defaults to `Astro.site`. */

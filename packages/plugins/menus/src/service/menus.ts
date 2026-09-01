@@ -25,21 +25,25 @@ async function resolveEntryRef(
     entryId: string,
     locale: string | undefined
 ): Promise<string | null> {
-    // Query every entry type, since the relationship field stores only the id.
+    // Try every entry type, since the relationship field stores only the id.
     for (const [type, config] of Object.entries(ctx.config.entries)) {
         if (!config.url) continue;
         try {
-            const { data } = await ctx.entries.query({
-                type,
-                limit: 'all',
-                ...(locale ? { locale } : {}),
-            });
-            const entry = (data as Entry[]).find((e) => e.id === entryId);
-            if (entry && config.url) {
-                return resolveEntryUrl(config.url, entry);
-            }
+            // The reader's locale first; an entry with no row for it falls back
+            // to the default locale, so a menu never loses an item to a missing
+            // translation.
+            const entry =
+                ((await ctx.entries.get({
+                    type,
+                    id: entryId,
+                    ...(locale ? { locale } : {}),
+                })) as Entry | null) ??
+                (locale
+                    ? ((await ctx.entries.get({ type, id: entryId })) as Entry | null)
+                    : null);
+            if (entry) return resolveEntryUrl(config.url, entry);
         } catch {
-            // Type may not support locale — skip
+            // Not this type, or the type rejects this locale — try the next.
         }
     }
     return null;

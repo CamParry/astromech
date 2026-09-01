@@ -122,13 +122,57 @@ async function upsertAdmin(): Promise<string> {
 type SeededEntry = { id: string; type: string; fields: Record<string, unknown> };
 
 const seededEntries: SeededEntry[] = [];
+const seededEntryIds = new Set<string>();
 
-/** Insert entry rows, recording them for the relationship-index derivation. */
+/**
+ * Insert entry rows, recording them for the relationship-index derivation.
+ *
+ * A row here is one locale of one entry. `entries` holds the resource (one row
+ * per `id`) and `entry_content` holds the authored content (one row per locale),
+ * so a translation is a second row with the same `id` and a different `locale`.
+ */
 async function insertEntries(rows: Record<string, unknown>[]): Promise<void> {
+    const resourceRows = rows.filter((r) => !seededEntryIds.has(r.id as string));
+    for (const r of resourceRows) seededEntryIds.add(r.id as string);
+
+    if (resourceRows.length > 0) {
+        await db
+            .insertInto('entries')
+            .values(
+                resourceRows.map((r) =>
+                    schema.encodeWith(schema.entriesTable, {
+                        id: r.id,
+                        type: r.type,
+                        createdAt: r.createdAt,
+                        updatedAt: r.updatedAt,
+                        createdBy: r.createdBy,
+                    })
+                )
+            )
+            .execute();
+    }
+
     await db
-        .insertInto('entries')
-        .values(rows.map((r) => schema.encodeWith(schema.entriesTable, r)))
+        .insertInto('entryContent')
+        .values(
+            rows.map((r) =>
+                schema.encodeWith(schema.entryContentTable, {
+                    entryId: r.id,
+                    type: r.type,
+                    locale: r.locale,
+                    title: r.title,
+                    slug: r.slug,
+                    fields: r.fields,
+                    status: r.status,
+                    publishedAt: r.publishedAt,
+                    createdAt: r.createdAt,
+                    updatedAt: r.updatedAt,
+                    createdBy: r.createdBy,
+                })
+            )
+        )
         .execute();
+
     seededEntries.push(
         ...rows.map((r) => ({
             id: r.id as string,
@@ -146,19 +190,30 @@ const INDEX_CHUNK_ROWS = 12;
 
 /** Derive the relationships index from every seeded entry's field data. */
 async function indexRelationships(): Promise<void> {
+    // An entry's edges are the union over its locales, deduplicated on the
+    // index key — every locale of an entry shares its id, so a translation that
+    // keeps a reference would otherwise collide on the primary key.
+    const seen = new Set<string>();
     const rows = seededEntries.flatMap((entry) =>
-        collectRelationshipEdges(entryFields(entry.type), entry.fields).map((edge) =>
-            schema.encodeWith(schema.relationshipsTable, {
-                sourceId: entry.id,
-                sourceKind: 'entry' as const,
-                sourceType: entry.type,
-                schemaPath: edge.schemaPath,
-                instancePath: edge.instancePath,
-                targetId: edge.targetId,
-                targetKind: edge.targetKind,
-                sourceStaged: false,
+        collectRelationshipEdges(entryFields(entry.type), entry.fields)
+            .filter((edge) => {
+                const key = `${entry.id}|${edge.instancePath}|${edge.targetId}|${edge.targetKind}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
             })
-        )
+            .map((edge) =>
+                schema.encodeWith(schema.relationshipsTable, {
+                    sourceId: entry.id,
+                    sourceKind: 'entry' as const,
+                    sourceType: entry.type,
+                    schemaPath: edge.schemaPath,
+                    instancePath: edge.instancePath,
+                    targetId: edge.targetId,
+                    targetKind: edge.targetKind,
+                    sourceStaged: false,
+                })
+            )
     );
 
     for (let i = 0; i < rows.length; i += INDEX_CHUNK_ROWS) {
@@ -216,11 +271,11 @@ async function seed(): Promise<void> {
         await db.deleteFrom('relationships').where('sourceId', 'in', ids).execute();
     }
 
-    // Delete old content entries (any type in the list + legacy types)
-    await db
-        .deleteFrom('entries')
-        .where('type', 'in', [...CONTENT_TYPES, 'showcase', 'forms/form'])
-        .execute();
+    // Delete old content entries (any type in the list + legacy types). Content
+    // rows go first: SQLite only cascades when `foreign_keys` is on.
+    const CLEARED_TYPES = [...CONTENT_TYPES, 'showcase', 'forms/form'];
+    await db.deleteFrom('entryContent').where('type', 'in', CLEARED_TYPES).execute();
+    await db.deleteFrom('entries').where('type', 'in', CLEARED_TYPES).execute();
 
     // Clear settings and redirects
     await db.deleteFrom('settings').execute();
@@ -436,17 +491,12 @@ async function seed(): Promise<void> {
     const catProductId = crypto.randomUUID();
     const catCommunityId = crypto.randomUUID();
     const catTutorialsId = crypto.randomUUID();
-    const catEngineeringGroup = crypto.randomUUID();
-    const catProductGroup = crypto.randomUUID();
-    const catCommunityGroup = crypto.randomUUID();
-    const catTutorialsGroup = crypto.randomUUID();
 
     await insertEntries([
         {
             id: catEngineeringId,
             type: 'category',
             locale: 'en',
-            localeGroup: catEngineeringGroup,
             slug: 'engineering',
             title: 'Engineering',
             fields: {
@@ -463,7 +513,6 @@ async function seed(): Promise<void> {
             id: catProductId,
             type: 'category',
             locale: 'en',
-            localeGroup: catProductGroup,
             slug: 'product',
             title: 'Product',
             fields: {
@@ -479,7 +528,6 @@ async function seed(): Promise<void> {
             id: catCommunityId,
             type: 'category',
             locale: 'en',
-            localeGroup: catCommunityGroup,
             slug: 'community',
             title: 'Community',
             fields: {
@@ -495,7 +543,6 @@ async function seed(): Promise<void> {
             id: catTutorialsId,
             type: 'category',
             locale: 'en',
-            localeGroup: catTutorialsGroup,
             slug: 'tutorials',
             title: 'Tutorials',
             fields: {
@@ -521,7 +568,6 @@ async function seed(): Promise<void> {
             id: tagAstroId,
             type: 'tag',
             locale: 'en',
-            localeGroup: crypto.randomUUID(),
             slug: 'astro',
             title: 'Astro',
             fields: { color: '#6d28d9' },
@@ -535,7 +581,6 @@ async function seed(): Promise<void> {
             id: tagCloudflareId,
             type: 'tag',
             locale: 'en',
-            localeGroup: crypto.randomUUID(),
             slug: 'cloudflare',
             title: 'Cloudflare',
             fields: { color: '#f97316' },
@@ -549,7 +594,6 @@ async function seed(): Promise<void> {
             id: tagTypescriptId,
             type: 'tag',
             locale: 'en',
-            localeGroup: crypto.randomUUID(),
             slug: 'typescript',
             title: 'TypeScript',
             fields: { color: '#3b82f6' },
@@ -563,7 +607,6 @@ async function seed(): Promise<void> {
             id: tagHeadlessCmsId,
             type: 'tag',
             locale: 'en',
-            localeGroup: crypto.randomUUID(),
             slug: 'headless-cms',
             title: 'Headless CMS',
             fields: { color: '#10b981' },
@@ -577,7 +620,6 @@ async function seed(): Promise<void> {
             id: tagEdgeId,
             type: 'tag',
             locale: 'en',
-            localeGroup: crypto.randomUUID(),
             slug: 'edge',
             title: 'Edge',
             fields: { color: '#f59e0b' },
@@ -594,16 +636,12 @@ async function seed(): Promise<void> {
     const authorAlexId = crypto.randomUUID();
     const authorPriyaId = crypto.randomUUID();
     const authorTomId = crypto.randomUUID();
-    const authorAlexGroup = crypto.randomUUID();
-    const authorPriyaGroup = crypto.randomUUID();
-    const authorTomGroup = crypto.randomUUID();
 
     await insertEntries([
         {
             id: authorAlexId,
             type: 'author',
             locale: 'en',
-            localeGroup: authorAlexGroup,
             slug: 'alex-morgan',
             title: 'Alex Morgan',
             fields: {
@@ -636,7 +674,6 @@ async function seed(): Promise<void> {
             id: authorPriyaId,
             type: 'author',
             locale: 'en',
-            localeGroup: authorPriyaGroup,
             slug: 'priya-sharma',
             title: 'Priya Sharma',
             fields: {
@@ -669,7 +706,6 @@ async function seed(): Promise<void> {
             id: authorTomId,
             type: 'author',
             locale: 'en',
-            localeGroup: authorTomGroup,
             slug: 'tom-rivers',
             title: 'Tom Rivers',
             fields: {
@@ -702,10 +738,6 @@ async function seed(): Promise<void> {
     const pageFeaturesId = crypto.randomUUID();
     const pagePricingId = crypto.randomUUID();
     const pageAboutId = crypto.randomUUID();
-    const pageHomeGroup = crypto.randomUUID();
-    const pageFeaturesGroup = crypto.randomUUID();
-    const pagePricingGroup = crypto.randomUUID();
-    const pageAboutGroup = crypto.randomUUID();
 
     // Block _id helper
     const bid = () => crypto.randomUUID();
@@ -715,7 +747,6 @@ async function seed(): Promise<void> {
             id: pageHomeId,
             type: 'page',
             locale: 'en',
-            localeGroup: pageHomeGroup,
             slug: 'home',
             title: 'Home',
             fields: {
@@ -814,7 +845,6 @@ async function seed(): Promise<void> {
             id: pageFeaturesId,
             type: 'page',
             locale: 'en',
-            localeGroup: pageFeaturesGroup,
             slug: 'features',
             title: 'Features',
             fields: {
@@ -921,7 +951,6 @@ async function seed(): Promise<void> {
             id: pagePricingId,
             type: 'page',
             locale: 'en',
-            localeGroup: pagePricingGroup,
             slug: 'pricing',
             title: 'Pricing',
             fields: {
@@ -981,7 +1010,6 @@ async function seed(): Promise<void> {
             id: pageAboutId,
             type: 'page',
             locale: 'en',
-            localeGroup: pageAboutGroup,
             slug: 'about',
             title: 'About',
             fields: {
@@ -1067,15 +1095,11 @@ async function seed(): Promise<void> {
     const post5Id = crypto.randomUUID();
     const post6Id = crypto.randomUUID();
 
-    const post1Group = crypto.randomUUID();
-    const post2Group = crypto.randomUUID();
-
     await insertEntries([
         {
             id: post1Id,
             type: 'post',
             locale: 'en',
-            localeGroup: post1Group,
             slug: 'why-we-chose-cloudflare-workers',
             title: 'Why We Chose Cloudflare Workers for Astromech',
             fields: {
@@ -1121,7 +1145,6 @@ async function seed(): Promise<void> {
             id: post2Id,
             type: 'post',
             locale: 'en',
-            localeGroup: post2Group,
             slug: 'building-a-blocks-system-in-typescript',
             title: 'Building a Type-Safe Blocks System in TypeScript',
             fields: {
@@ -1176,7 +1199,6 @@ async function seed(): Promise<void> {
             id: post3Id,
             type: 'post',
             locale: 'en',
-            localeGroup: crypto.randomUUID(),
             slug: 'symmetric-locale-model-explained',
             title: 'The Symmetric Locale Model: i18n Without the Complexity',
             fields: {
@@ -1188,21 +1210,17 @@ async function seed(): Promise<void> {
                     ),
                     para(
                         text(
-                            'Astromech uses a symmetric locale model: every locale entry is a peer. They are linked by a '
-                        ),
-                        text('localeGroup', 'code'),
-                        text(
-                            ' UUID that identifies the content they represent, but no locale is more canonical than another. You can create a French entry first and add the English one later. You can have Spanish without English.'
+                            'Astromech uses a symmetric locale model: every locale of an entry is a peer. An entry has one id, and each locale is a row of content under it — no locale is more canonical than another. You can write the French first and add the English later. You can have Spanish without English.'
                         )
                     ),
                     heading(2, text('The API')),
                     para(
                         text('When you query entries, you pass a '),
                         text('locale', 'code'),
-                        text(' option and get back only entries for that locale. The '),
+                        text(' option and get back that locale of each entry. The '),
                         text('entry.locales', 'code'),
                         text(
-                            ' field lists all locales that have an entry in the same locale group — useful for rendering '
+                            ' field lists every locale the entry has been written in — useful for rendering '
                         ),
                         text('<hreflang>', 'code'),
                         text(' alternates.')
@@ -1210,11 +1228,11 @@ async function seed(): Promise<void> {
                     para(
                         text('Creating a translation is '),
                         text(
-                            "entries.create({ type, data: { locale: 'fr', localeGroup: enEntry.localeGroup, ... } })",
+                            "entries.update({ type, id, locale: 'fr', data: { ... } })",
                             'code'
                         ),
                         text(
-                            '. One line. No special "translate" method, no source/target semantics.'
+                            '. One line, against the id you already have. No special "translate" method, no source/target semantics.'
                         )
                     )
                 ),
@@ -1235,7 +1253,6 @@ async function seed(): Promise<void> {
             id: post4Id,
             type: 'post',
             locale: 'en',
-            localeGroup: crypto.randomUUID(),
             slug: 'plugin-architecture-deep-dive',
             title: 'Astromech Plugin Architecture: A Deep Dive',
             fields: {
@@ -1321,7 +1338,6 @@ async function seed(): Promise<void> {
             id: post5Id,
             type: 'post',
             locale: 'en',
-            localeGroup: crypto.randomUUID(),
             slug: 'getting-started-with-astromech',
             title: 'Getting Started with Astromech in 5 Minutes',
             fields: {
@@ -1370,7 +1386,6 @@ async function seed(): Promise<void> {
             id: post6Id,
             type: 'post',
             locale: 'en',
-            localeGroup: crypto.randomUUID(),
             slug: 'seo-plugin-walkthrough',
             title: 'The SEO Plugin: Meta Tags, Sitemaps, and hreflang',
             fields: {
@@ -1434,7 +1449,6 @@ async function seed(): Promise<void> {
             id: cs1Id,
             type: 'caseStudy',
             locale: 'en',
-            localeGroup: crypto.randomUUID(),
             slug: 'lumenflow',
             title: 'Lumenflow',
             fields: {
@@ -1494,7 +1508,6 @@ async function seed(): Promise<void> {
             id: cs2Id,
             type: 'caseStudy',
             locale: 'en',
-            localeGroup: crypto.randomUUID(),
             slug: 'pixel-agency',
             title: 'Pixel Agency',
             fields: {
@@ -1548,7 +1561,6 @@ async function seed(): Promise<void> {
             id: cs3Id,
             type: 'caseStudy',
             locale: 'en',
-            localeGroup: crypto.randomUUID(),
             slug: 'nortide-media',
             title: 'Nortide Media',
             fields: {
@@ -1605,15 +1617,13 @@ async function seed(): Promise<void> {
 
     console.log('  Created 3 case studies\n');
 
-    const pageHomeFrId = crypto.randomUUID();
-    const post1FrId = crypto.randomUUID();
-
+    // A translation is another locale of the same entry, so it reuses the
+    // entry's id and only its content row is new.
     await insertEntries([
         {
-            id: pageHomeFrId,
+            id: pageHomeId,
             type: 'page',
             locale: 'fr',
-            localeGroup: pageHomeGroup,
             slug: 'accueil',
             title: 'Accueil',
             fields: {
@@ -1684,10 +1694,9 @@ async function seed(): Promise<void> {
             createdBy: adminId,
         },
         {
-            id: post1FrId,
+            id: post1Id,
             type: 'post',
             locale: 'fr',
-            localeGroup: post1Group,
             slug: 'pourquoi-nous-avons-choisi-cloudflare-workers',
             title: 'Pourquoi nous avons choisi Cloudflare Workers pour Astromech',
             fields: {
@@ -1872,7 +1881,6 @@ async function seed(): Promise<void> {
             id: formContactId,
             type: 'forms/form',
             locale: 'en',
-            localeGroup: crypto.randomUUID(),
             slug: 'contact',
             title: 'Contact',
             fields: {

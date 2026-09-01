@@ -174,19 +174,25 @@ nothing else can sit on the shared repository until it is parameterized over the
 root/content shape. Building globals on the current shape and migrating it
 afterwards would be doing the work twice.
 
-- [ ] **Entries.** Split `entries` into `entries` and `entry_content`; rename
+- [x] **Entries.** Split `entries` into `entries` and `entry_content`; rename
       `entry_versions.entryId` to `contentId` and `versionNumber` to `version`;
       preview tokens and `deletedAt` onto `entries`; `type` on both rows. The
-      repository takes `{ table, contentTable, versionsTable }`. The entry id
+      entries repository reads `entries` joined to `entry_content` and keeps
+      versions on their own repository; parameterizing one repository over
+      `{ table, contentTable, versionsTable }` waits for globals. The entry id
       becomes the public id everywhere: routes, HTTP API, service methods,
-      codegen, the relationships index (`targetId` is an entry id, and
-      resolution picks the reader's locale with default-locale fallback) and
+      codegen, the relationships index (`targetId` is an entry id) and
       preview. Content-row ids are internal and typed so one cannot be passed
       where an entry id is expected. A migration for `apps/demo` and the
       hand-applied one for `apps/demo-cloudflare`, then `db:generate` and the
       drift snapshot. The walkers in `entries/internal/` (`relationships.ts`,
       `clear-author-references.ts`) enumerate content tables. Custom tables are
       unaffected: `tableRepository` keeps its interface and `supports = []`.
+      Two things settled differently from the plan: there is no
+      relation-resolution-on-read path, so a relationship field still reads back
+      as ids and the reader picks the locale on the second `get`; and `update`
+      with a locale that has no content row is how a translation is created,
+      rather than `duplicate` with a locale override.
 - [ ] **Globals.** `globals`, `global_content`, `global_versions`; a globals
       service and admin section (the edit-surface-without-list generalization);
       the site config declares globals, with the config shape settled when the

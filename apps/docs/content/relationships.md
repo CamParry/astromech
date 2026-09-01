@@ -35,6 +35,31 @@ Writing an expanded record back is refused rather than silently accepted:
 populated record` on a `multiple` field. A `public`-shape read is a projection,
 so re-read with `full: true` before saving.
 
+## Relations and locales
+
+A relation stores an entry id, and an entry has one id in every locale. Adding a
+translation changes nothing about the relations pointing at it, and no relation
+has to be re-pointed when one locale is edited.
+
+Because the id names the entry and not one locale of it, reading the related
+content is a second `get` with the locale you want:
+
+```ts
+const page = await Astromech.entries.get({ type: 'page', id, locale: 'fr' });
+const author = await Astromech.entries.get({
+    type: 'author',
+    id: page.fields.author as string,
+    locale: 'fr',
+});
+```
+
+`get` does not fall back: a locale the target has no content for returns `null`,
+and it is yours to decide what to show instead.
+
+`where: { references }` compares entry ids too, so it answers for the entry
+across every locale. `incomingRelationships` returns entry ids in `sourceId`,
+one row per edge, with `sourceTitle` read in the default locale.
+
 ## Querying the reverse direction
 
 To find the content pointing _at_ something, filter on `references`:
