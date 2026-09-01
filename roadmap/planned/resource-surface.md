@@ -1,167 +1,225 @@
 # Resource Surface
 
-Every resource is an identity part plus a document part, and every capability
-(fields, validation, translation, versioning, trash, the list/edit UI) is
-implemented once, against the document part. Entries are the resource that is
-all document. Users and media gain the full document experience — translated
-fields, version history, site-defined fields with no migrations — without
-becoming "entries" to anyone outside core.
+This file holds the storage model that entries, globals and media share, the
+column template every table in it follows, and the work to move each resource
+onto it, in order. It does not hold the user-facing docs for any of it (those
+land in `apps/docs/` as each stage ships), and it does not design per-resource
+permissions, which it only makes possible.
 
-Prior art this follows: Craft 5's element model (one `elements` identity table
-plus `elements_sites` document rows shared by entries, assets, users and
-categories, presented to editors as separate sections) and Drupal's
-`file` (identity) vs `media` (authored entity) split. The cautionary tale is
-Strapi, where media alt text is still not localizable after five years of open
-requests because uploads sit outside the content machinery.
+## The model
+
+Every resource is three tables. The resource's own table (`entries`, `globals`,
+`media`, `users`) holds what is unique per item and shared across locales. Its
+**content** table (`entry_content`, `global_content`, `media_content`,
+`user_content`) holds one row per locale of what editors author, including the
+content-level identifiers (title, slug). Its **versions** table
+(`entry_versions`, `global_versions`, `media_versions`, `user_versions`)
+snapshots content rows.
+
+An item has one id, its own table's id, and that id is used everywhere public:
+URLs, the HTTP API, service methods, relations, preview. Locale is a parameter,
+so switching locale is changing the parameter, never looking up another id. A
+content row has an internal surrogate id that is never public. It exists because
+versions and `stagedFor` need a row to point at, and because a staged change is
+a second content row for the same item and locale.
+
+Translation, versioning and staging are one implementation over one shape,
+`{ table, contentTable, versionsTable }`. Each resource declares which of those
+capabilities it supports, and the shared machinery never touches a resource's
+own columns; the resource module owns those.
+
+|              | entries | globals | media  | users (deferred) |
+| ------------ | ------- | ------- | ------ | ---------------- |
+| translatable | opt-in  | opt-in  | opt-in | opt-in           |
+| versioning   | on      | on      | on     | on               |
+| statuses     | on      | on      | off    | off              |
+| staging      | on      | on      | off    | off              |
+| slug         | on      | off     | off    | off              |
+| trash        | on      | off     | off    | off              |
+
+Prior art: Drupal's `node` and `node_field_data` (a base row and a per-language
+authored row), Craft's `elements` and `elements_sites`, and Payload's base table
+and `_locales` table, which are the same shape. This file takes that shape per
+resource rather than through one shared table, so the FK from content to its
+owner is real and no discriminator column is needed. The cautionary tales are
+Strapi, where media alt text is still not localizable because uploads sit
+outside the content machinery, and WPML, where a relation points at one
+language's row and every translation has to re-point it.
 
 ## Decisions made
 
-- **User and media document rows live in the shared `entries` table**, as
-  internal entry types owned by their identity row. The `users` table keeps
-  identity only (better-auth columns); `media` keeps file identity (path,
-  mime, size, dimensions, storage key). Forced by the two constraints below:
-  one translation mechanism, and that mechanism being sibling rows — a
-  better-auth user is one row by definition, so its translatable document must
-  live where sibling rows exist. Rejected: per-resource side tables
-  (`media_translations`, `user_versions` — N implementations of one thing);
-  field-level localization values inside the row (a second translation
-  mechanism).
-- **One translation mechanism: sibling rows per locale**, unchanged from
-  entries today. Rejected: switching everything to field-level localization
-  (Payload's model) — it loses per-locale drafts, status and publishing,
-  which entries need.
-- **Versions stay in `entry_versions`**, which now covers every document:
-  entries, globals, user documents, media documents. No polymorphic versions
-  table, no per-resource version tables; the FK to `entries` stays real.
-  Identity parts never version — passwords, emails and file records are
-  structurally outside the versioned document.
-- **Versioning defaults on for every document type, opt-out in site config.**
-  Matches entries' current default. Deleting a user or media item cascades to
-  its document rows _and their versions_ — retained profile snapshots after
-  account deletion are a data-protection defect, not a feature.
-- **Translation defaults off, opt-in per resource in site config**
-  (`users: { translatable: true }`, `media: { translatable: true }`), the
-  same shape entry types use. Most sites are single-language and must never
-  have to think about locales.
-- **The internal types are `_user` and `_media`, and the `_` prefix is
-  reserved for core** — config validation rejects site and plugin type ids
-  starting with `_`. The underscore-as-internal convention is already
-  established in this codebase (the `/_media` route, `_astromech_cron` and
-  `_astromech_plugins` tables, reserved field instance keys `_id`/`_title`,
-  the `_search` filter key), and Payload uses it for internal version tables
-  (`_posts_v`). Rejected: bare reserved names (takes `media` and `user` from
-  every site); qualifying with a core namespace (`astromech/media`) — the
-  plugin qualification mechanism exists, but these types are private, and the
-  underscore says so where a namespace does not. `profile` stays untouched — it is
-  earmarked by `profile-entry-type.md` for editorial identity, which is a
-  site-facing entry type related to a user, not this storage mechanism.
-- **The internal types are invisible outside core.** Not listed in the admin
-  entries UI, not routed by the entries HTTP API. The users and media
-  services are the only public surface, and each composes identity + document
-  behind one call: updating a user is one request carrying auth fields and
-  document fields together; same for media. WordPress's REST API is the
-  precedent — attachments are posts, but the route is `/wp/v2/media`, not
-  `/wp/v2/posts`. A site developer never sees the storage arrangement.
-- **`hidden: true` becomes a public entry-type option** (Payload's
-  `admin.hidden`) for site and plugin types that want API access without an
-  admin presence. The internal types go further (no API routes); that extra
-  step is core-only.
-- **Ownership and hierarchy are different relations and get different
-  columns.** The identity link is an `ownerId` column on the document rows —
-  lifecycle-coupled, cascade-deleted, indexed for the one-owner lookup.
-  Hierarchy (`parentId`) is reserved for a future hierarchical-entries
-  feature (nested categories). Craft keeps `canonicalId`, `ownerId` and
-  `parentId` as three columns; WordPress overloads `post_parent` for
-  uploaded-to, revision-of and child-of, and that overload is the mistake to
-  avoid. `ownerId` is also distinct from `profile-entry-type.md`'s
-  `profile.user` relationship field: that link is optional on both sides, so
-  it is an ordinary relation, not ownership. `ownerId` is polymorphic — it
-  resolves into `users` or `media` depending on the row's type, so it
-  carries no FK; the type column disambiguates, the identity delete paths
-  own the cascade (documents and versions), and the CLI validate/rebuild
-  gains an orphan check reporting document rows whose owner no longer
-  resolves, the same way stale relationship rows read as drift today.
-- **Alt text is per-asset**, stored on the media document and translated with
-  it. Per-usage alt is an ordinary extra field on the entry that displays the
-  image. (Sanity documents this exact fork as unresolved; Drupal supports
-  both; we pick a default and keep the override expressible.)
-- **No per-locale files.** A locale-specific image is a different media item,
-  related from the entry's translation. Contentful is the only surveyed
-  platform with per-locale binaries; Craft, Drupal, WPML and Polylang all
-  share one file across translations.
-- **Globals are rows of the internal `_global` type** in the entries table —
-  each site-defined global is one document (one sibling set when translated),
-  validated against its own field schema from the site config. Full document
-  machinery, quantity one per global, surfaced through a globals service and
-  admin section rather than the entries API. This is the persistence
-  direction `settings-version-history.md` is under pressure toward; settings
-  key-values remain for configuration.
-- **Capability matrix for the internal types:**
+- **Per-resource tables, not one shared table.** The operations layer never
+  names a table; only the repository does, so per-resource tables are one
+  implementation parameterized by table, not N implementations. One shared
+  table serving several owners needs a reserved id prefix, suppression at four
+  choke points (admin config, API routes, permission vocabulary, relation
+  targets), a polymorphic owner column with no FK and an orphan check to cover
+  for it, and media rows in the content table. All of that is scaffolding for
+  sharing, and none of it exists per resource. Rejected: the single `entries`
+  table with `_user`, `_media` and `_global` typed rows; renaming that table to
+  `documents` or `elements` (also a word `DECISIONS.md` already refuses).
+- **One translation mechanism, sibling content rows, everywhere.** Rejected:
+  field-level localization (Payload's `localized: true`) for resources without
+  a publishing lifecycle. It rules out staging one locale and rolling back one
+  locale, and two mechanisms is drift the admin's locale switcher would have to
+  paper over.
+- **Every resource has its own row, including those with nothing unique per
+  item.** Entries and globals have no identity columns, and their own row is
+  still where `type`, trash, creation and every cross-locale FK live. It is
+  what lets a relation store the entry's id and resolve to the reader's locale:
+  today a relation stores one locale row's id, resolution has no locale
+  handling, and `apps/docs/content/relationships.md` never mentions locales. It
+  is what gives one id per item. And it means the shared repository has one
+  shape and no "no owner row" branch. Rejected: entries and globals as their own
+  content rows grouped by an opaque key, which is what `localeGroup` is today.
+- **`_content`, not `_locales`.** It names what the table holds, which is the
+  question asked most; `entry_versions` as versions of `entry_content` reads
+  right where "versions of locales" does not; and it reads right on a
+  single-language site. Payload's `_locales` holds only localized fields with
+  the rest on the base row, so its name does not transfer; Drupal's
+  `_field_data` holds everything authored, which is this shape. The satellite
+  convention already exists: plural resource table, singular-prefixed
+  satellites, as in `entries` and `entry_versions`.
+- **Trash is resource-level, and entries-only.** Trashing an entry trashes every
+  locale; removing one translation is a different operation. Today `deletedAt`
+  sits on each locale row, which allows trashing one locale and was never
+  decided. Media has no trash: WordPress ships with media trash off, Payload and
+  Drupal do not trash uploads, a trashed file has no answer to what happens to
+  the file, and the dangerous accident (deleting an image a page uses) is
+  already refused by media's incoming-reference check. Globals cannot be
+  trashed. Users are better-auth's to delete.
+- **`type` lives on the entries row and is copied onto content rows.** The
+  slug-unique index `(type, locale, slug)` and the list index
+  `(type, locale, status)` cannot reach across a join. This is the one accepted
+  denormalization. Rejected: enforcing slug uniqueness in application code
+  (Craft's answer) to keep the column single-homed.
+- **Preview tokens are two columns on `entries`.** One token per entry,
+  cross-locale, with the locale picked by the preview URL: `previewToken` (the
+  hash, unique, nullable) and `previewTokenExpiresAt`. Rejected: keeping
+  `entry_preview_tokens`, a one-to-one satellite whose own created columns
+  nothing reads. If token audit is ever wanted, that is the signal to bring a
+  table back.
+- **Globals replace settings pages as the fifth resource.** A global is one item
+  with content, versions, drafts and per-locale values, which is the
+  convergence `settings-version-history.md` describes and the naming it leans
+  to. A ULID `id` plus a unique `key` (the config identity), so every FK target
+  in the system has the same id shape; "exactly one" is the unique index on
+  `key`. The `settings` key-value table keeps only the naked `plugin:*` class
+  that file carves out. Per-global permissions (a header any editor may edit; a
+  sensitive global only an admin may) are what the globals row is the target
+  for, and are designed later.
+- **Media splits into file and content.** `media` keeps file identity
+  (`filename`, `mimeType`, `size`, `width`, `height`, `metadata`); `title`,
+  `alt`, `caption` and `fields` move to `media_content`, one row per locale, so
+  alt text is translatable. Relations and the `media` field keep storing
+  `media.id`. Media declares no statuses, staging or trash.
+- **Users move last, and only on demand.** Nothing asks for translated or
+  versioned profiles. `users.fields` stays where it is. When it moves,
+  `user_content` and `user_versions` follow the template with nothing to invent.
 
-    |              | `_user`      | `_media`     | `_global`    |
-    | ------------ | ------------ | ------------ | ------------ |
-    | statuses     | off          | off          | on           |
-    | versioning   | on (opt-out) | on (opt-out) | on (opt-out) |
-    | translatable | opt-in       | opt-in       | opt-in       |
-    | slug         | off          | off          | off          |
-    | trash        | off          | off          | off          |
-    | staging      | off          | off          | on           |
+### Column template
 
-    Saving a profile or alt text is publishing — no draft lifecycle; trash
-    belongs to the identity, not the document. Globals get the full editorial
-    lifecycle (draft and staged globals are half the motivation for leaving
-    settings key-values). Draft media metadata was considered and rejected —
-    Craft and Drupal both make media edits immediate; only entries get drafts.
+One template, three table kinds. A column exists wherever the capability it
+serves is declarable for that resource, and resource-specific columns sit
+alongside the template, never instead of it.
 
-- **Relations never target internal types.** Entry fields referencing users
-  and media keep storing identity ids, exactly as the `media` field type and
-  the relationships index do today; the document rows are invisible as
-  relation targets, and config validation rejects a relation field aimed at a
-  `_`-prefixed type. Document rows do join the relationships index as
-  sources (a custom media field can reference an entry), which falls out of
-  every entries-table row being a source. Deleting a user or media item
-  extends the existing incoming-reference protection (`media` already has
-  `used-by`).
-- **Internal types have no entry permissions.** The owning resource's
-  existing vocabulary governs the composed operation — editing a user's
-  document fields is `users:update`, media's is `media:update`.
-  `entryPermission('_media', …)` throws on the reserved prefix, so `entry:*`
-  grants can never reach internal types. Globals get their own vocabulary in
-  the same pattern (per-global grants, shaped at the globals stage), not
-  `entry:*`.
+**Resource row** (`entries`, `globals`, `media`, `users`)
+
+| column                   | rule                                                                                                                                                                               |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                     | ULID via `col.id()`. Exception: `users.id` is UUID, better-auth's choice.                                                                                                          |
+| `createdAt`, `updatedAt` | always                                                                                                                                                                             |
+| `createdBy`, `updatedBy` | always, `set null` on user delete. Exception: `users`, whose table better-auth owns. `updatedBy` records changes to this row itself: trash, restore, file replacement.             |
+| `deletedAt`              | `entries` only                                                                                                                                                                     |
+| specific                 | entries `type`, `previewToken`, `previewTokenExpiresAt`; globals `key`; media `filename`, `mimeType`, `size`, `width`, `height`, `metadata`; users better-auth columns plus `role` |
+
+**Content row** (`entry_content`, `global_content`, `media_content`, `user_content`)
+
+| column                                             | rule                                                                                               |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `id`                                               | ULID, internal, never public                                                                       |
+| `entryId` / `globalId` / `mediaId` / `userId`      | FK to the resource row, not null, cascade                                                          |
+| `locale`                                           | text, not null                                                                                     |
+| `fields`                                           | json                                                                                               |
+| `createdAt`, `updatedAt`, `createdBy`, `updatedBy` | always. Created is when this locale was added; updated is its last edit.                           |
+| `status`, `publishedAt`, `stagedFor`               | `entries` and `globals`. `stagedFor` self-references the content table.                            |
+| specific                                           | entries `title`, `slug`, and the `type` copy; media `title`, `alt`, `caption`                      |
+| unique                                             | `(<resource>Id, locale)`, partial `where staged_for IS NULL` where staging exists, plain otherwise |
+
+**Versions row** (`entry_versions`, `global_versions`, `media_versions`, `user_versions`)
+
+| column                   | rule                                                                                        |
+| ------------------------ | ------------------------------------------------------------------------------------------- |
+| `id`                     | ULID                                                                                        |
+| `contentId`              | FK to the content row, not null, cascade                                                    |
+| `version`                | integer, not null; index `(contentId, version)`                                             |
+| snapshot                 | `fields` plus that resource's content-specific columns                                      |
+| `createdAt`, `createdBy` | only these. A version is immutable, and the absence of `updated*` is the statement of that. |
+
+### Replaced by this version of the file
+
+The previous design put user and media document rows in the `entries` table as
+`_user` and `_media` types behind a reserved `_` prefix, added `hidden: true` as
+a public entry-type option plus an internal no-API flag, kept every resource's
+versions in `entry_versions`, linked documents to owners through a polymorphic
+`ownerId` with a CLI orphan check, and made `_global` an internal entry type.
+Every one of those is replaced by the per-resource shape above. What survives
+unchanged: alt text is per-asset and translated with it; there are no
+per-locale files; relations never target content rows.
 
 ## The work, in order
 
-- [ ] **`hidden` entry-type option** and the internal (no-API) flag for core
-      types. Small, unblocks everything else.
-- [ ] **`ownerId`** on entries: column, index, cascade delete (documents and
-      versions) wired into the users/media delete paths.
-- [ ] **`_global` documents** — first consumer of the document machinery
-      with no identity table to coordinate, and it forces the
-      edit-surface-without-list generalization the other two need. Includes
-      the globals service, admin section, and permission vocabulary.
-- [ ] **User documents**: `astromech/user` type, site config defines the
-      fields, service composes identity + document in one update call, signup
-      creates the document row, versioning on, `translatable` config option.
-      Migrate the existing `users.fields` column data into document rows.
-- [ ] **Media documents**: same shape; alt/caption/custom fields move to the
-      document row; the media admin UI keeps its own grid and upload flow.
-- [ ] **Docs**: `TERMINOLOGY.md` (identity part, document part, internal
-      entry type), `DECISIONS.md` entries as each stage ships,
-      `ARCHITECTURE.md` resource model paragraph.
+Entries first. The foundational change is the entries identity model, and
+nothing else can sit on the shared repository until it is parameterized over the
+root/content shape. Building globals on the current shape and migrating it
+afterwards would be doing the work twice.
+
+- [ ] **Entries.** Split `entries` into `entries` and `entry_content`; rename
+      `entry_versions.entryId` to `contentId` and `versionNumber` to `version`;
+      preview tokens and `deletedAt` onto `entries`; `type` on both rows. The
+      repository takes `{ table, contentTable, versionsTable }`. The entry id
+      becomes the public id everywhere: routes, HTTP API, service methods,
+      codegen, the relationships index (`targetId` is an entry id, and
+      resolution picks the reader's locale with default-locale fallback) and
+      preview. Content-row ids are internal and typed so one cannot be passed
+      where an entry id is expected. A migration for `apps/demo` and the
+      hand-applied one for `apps/demo-cloudflare`, then `db:generate` and the
+      drift snapshot. The walkers in `entries/internal/` (`relationships.ts`,
+      `clear-author-references.ts`) enumerate content tables. Custom tables are
+      unaffected: `tableRepository` keeps its interface and `supports = []`.
+- [ ] **Globals.** `globals`, `global_content`, `global_versions`; a globals
+      service and admin section (the edit-surface-without-list generalization);
+      the site config declares globals, with the config shape settled when the
+      stage starts; settings pages migrate onto it and `settings` keeps the
+      `plugin:*` class. `ctx.settings` and `SettingsPageForm` keep working
+      through the move, or the move is not behaviour-preserving.
+- [ ] **Media.** `media_content` and `media_versions`; `title`, `alt`,
+      `caption` and `fields` move; `media` gains `updatedBy` and loses its
+      out-of-order appended columns; translation opts in through
+      `media: { translatable: true }`.
+- [ ] **Cleanup that does not wait.** `users.roleSlug` becomes `role`.
+- [ ] **Users.** Only when something asks for it.
+- [ ] **Docs, per stage.** `TERMINOLOGY.md`: `Resource` gains global and loses
+      settings page, a `Content` entry is added, `Version` widens from an entry
+      to a content row. `DECISIONS.md`, edited in place per its own rule: the
+      entries that name the `entries` table (expression indexes, FTS5 search),
+      the repository-naming entry, the settings entry, and `resource` under
+      Reserved words; plus one new entry per decision above that earns it.
+      `ARCHITECTURE.md`: the entries-and-fields paragraph.
+      `apps/docs/content/relationships.md`: a locale section.
 
 ## Interactions
 
-- This file is written in the custom-table vocabulary (landed in
-  `roadmap/completed/custom-table-naming.md`). Plugin custom tables carry no
-  entry capabilities: `tableRepository` declares `supports = []`, so trash,
-  statuses, slug and translation are all off, and plugin data needing them
-  belongs in the entries table. The open relations question is tracked in
-  `custom-table-relations.md`.
-- `content-module-symmetry.md` asks which differences between the five
-  content modules are design; this file is most of the answer (users and
-  media keep services and identity tables, lose their bespoke document
-  handling).
-- `flatten-user-and-media-operations.md` and `settings-version-history.md`
-  intersect with the user-documents and globals stages respectively; check
-  both when those stages start.
+- `content-module-symmetry.md` asks whether the repository seam is deliberate.
+  This file answers it for the content resources: one shared repository over
+  the root/content/versions shape, with `tableRepository` as the only custom
+  seam.
+- `settings-version-history.md` describes the convergence the globals stage
+  performs, leans to the same name, and carves out the naked-key class this
+  file keeps on `settings`.
+- `relationships-model.md`: the relation target changes from a locale row to
+  the entry id. Check that file when the entries stage starts.
+- `custom-table-relations.md` is unaffected; a custom table stays outside this
+  shape.
+- `flatten-user-and-media-operations.md` intersects the media stage.
+- `profile-entry-type.md` is untouched; `profile` stays earmarked.
