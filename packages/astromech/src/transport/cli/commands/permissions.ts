@@ -13,7 +13,7 @@ export default defineCommand({
         },
         source: {
             type: 'string',
-            description: 'Filter by source: core | entry | plugin',
+            description: 'Filter by source: core | entry | global | plugin',
         },
         json: { type: 'boolean', default: false, description: 'Output as JSON' },
         config: { type: 'string', description: 'Path to astromech.config.ts' },

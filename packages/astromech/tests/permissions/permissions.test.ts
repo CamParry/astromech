@@ -310,6 +310,13 @@ describe('buildPermissionCatalogue', () => {
                 fields: [{ name: 'from', type: 'text' }],
             },
         ],
+        globals: [
+            {
+                key: 'settings',
+                label: 'Settings',
+                fields: [{ name: 'enabled', type: 'boolean' }],
+            },
+        ],
     });
     const pluginDefinition = catalogued();
 
@@ -329,6 +336,19 @@ describe('buildPermissionCatalogue', () => {
                 fields: [{ name: 'title', type: 'text' }],
             },
         },
+        globals: [
+            {
+                key: 'site',
+                label: 'Site',
+                fields: [{ name: 'tagline', type: 'text' }],
+            },
+            {
+                key: 'footer',
+                label: 'Footer',
+                versioning: false,
+                fields: [{ name: 'copyright', type: 'text' }],
+            },
+        ],
         plugins: [pluginDefinition],
     } satisfies AstromechConfig);
 
@@ -374,8 +394,33 @@ describe('buildPermissionCatalogue', () => {
         expect(entry?.owner).toBe('redirects');
     });
 
+    it('derives global permissions for a host global', () => {
+        const global = find('global:site:update');
+        expect(global?.source).toBe('global');
+        expect(global?.label).toBe('Update "site" global');
+        expect(global?.owner).toBe('site');
+        expect(find('global:site:read')).toBeDefined();
+        expect(find('global:site:publish')).toBeDefined();
+    });
+
+    it('offers no global create or delete', () => {
+        expect(find('global:site:create')).toBeUndefined();
+        expect(find('global:site:delete')).toBeUndefined();
+    });
+
+    it('omits publish for a global without versioning', () => {
+        expect(find('global:footer:update')).toBeDefined();
+        expect(find('global:footer:publish')).toBeUndefined();
+    });
+
+    it('derives plugin-scoped global permissions for a plugin global', () => {
+        const global = find('plugin:redirects:global:settings:update');
+        expect(global?.source).toBe('global');
+        expect(global?.owner).toBe('redirects/settings');
+    });
+
     it('sorts by source group, then by permission string within the group', () => {
-        const order = ['core', 'entry', 'plugin'];
+        const order = ['core', 'entry', 'global', 'plugin'];
         const groups = catalogue.map((p) => order.indexOf(p.source));
         expect(groups).toEqual([...groups].sort((a, b) => a - b));
 

@@ -111,6 +111,20 @@ export function derivePluginNav(
         }
     );
 
+    // Globals contributed by the plugin, listed between its entry types and
+    // its pages, gating on `plugin:{ns}:global:{key}:read`.
+    const globalChildren: PluginNavItem[] = (def.globals ?? [])
+        .filter((global) => global.nav !== false)
+        .map((global) => {
+            const item: PluginNavItem = {
+                label: typeof global.label === 'string' ? global.label : global.label.$t,
+                to: `/plugin/${identity.namespace}/globals/${global.key}`,
+                permission: `plugin:${identity.permissionNamespace}:global:${global.key}:read`,
+            };
+            if (global.icon !== undefined) item.icon = global.icon;
+            return item;
+        });
+
     const pageChildren = (def.admin?.pages ?? [])
         .filter((page) => page.nav !== false)
         .map((page) => {
@@ -130,7 +144,7 @@ export function derivePluginNav(
             return item;
         });
 
-    const children = [...entryChildren, ...pageChildren];
+    const children = [...entryChildren, ...globalChildren, ...pageChildren];
     if (children.length === 0) return [];
 
     const group: PluginNavItem = {

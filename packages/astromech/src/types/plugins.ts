@@ -11,6 +11,7 @@ import type {
     AdminSlotContribution,
     DbDump,
     EntryType,
+    GlobalConfig,
     ResolvedConfig,
     StorageObject,
 } from './config';
@@ -398,6 +399,11 @@ export type PluginDefinition = PluginIdentity & {
     permissions?: PermissionDeclarations;
     /** Entry types contributed by the plugin. Each self-declares its `type`. */
     entries?: EntryType[];
+    /**
+     * Globals contributed by the plugin. Each is addressed as
+     * `<namespace>/<key>` on the one globals service.
+     */
+    globals?: GlobalConfig[];
     fields?: PluginFieldTypeRegistration[];
     /**
      * Tables shipped by the plugin (create via

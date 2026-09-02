@@ -11,7 +11,9 @@ import type {
 } from '@/types/index';
 import { resolveAdminPage } from '@/config/admin-pages';
 import { toResolvedEntryType } from '@/config/entry-types';
+import { resolveGlobals } from '@/config/globals';
 import { assertPluginsValid, resolvePluginEntries } from '@/config/plugin-entries';
+import { resolvePluginGlobals } from '@/config/plugin-globals';
 import { resolvePublicSettingKeys } from '@/config/public-settings';
 import { assertMediaAccessCompatible } from '@/config/validate/media-access';
 import { assertQualifiedRelationshipTargets } from '@/config/validate/relationships';
@@ -34,6 +36,9 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
 
     const pluginEntries = resolvePluginEntries(plugins);
 
+    const globals = resolveGlobals(config.globals);
+    const pluginGlobals = resolvePluginGlobals(plugins);
+
     assertQualifiedRelationshipTargets({ entries, pluginEntries });
 
     const adminPages: ResolvedAdminPage[] = (config.admin?.pages ?? []).map(
@@ -53,8 +58,9 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     // `PluginConfigView`, so it is dropped here rather than only in the type.
     const { image: _image, ...media } = config.media ?? {};
 
-    // The registry-held modules and `plugins` are destructured out to match
-    // `ResolvedConfig`'s `Omit`, so the strip holds at runtime too.
+    // The registry-held modules, `plugins` and the authored `globals` array are
+    // destructured out to match `ResolvedConfig`'s `Omit`, so the strip holds at
+    // runtime too — the resolved `globals` map replaces the array below.
     const {
         db: _db,
         storage: _storage,
@@ -62,6 +68,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
         scheduler: _scheduler,
         ai: _ai,
         plugins: _plugins,
+        globals: _globals,
         ...rest
     } = config;
 
@@ -71,7 +78,9 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
         mediaRoute: config.mediaRoute ?? '/_media',
         media: { ...media, access: mediaAccess },
         entries,
+        globals,
         pluginEntries,
+        pluginGlobals,
         adminPages,
         trash: {
             enabled: config.trash?.enabled ?? true,

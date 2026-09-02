@@ -510,3 +510,42 @@ describe('resolveConfig qualified relationship targets', () => {
         ).toThrow(/store\/missing/);
     });
 });
+
+describe('resolveConfig globals', () => {
+    const site = {
+        key: 'site',
+        label: 'Site',
+        fields: [{ name: 'tagline', type: 'text' as const }],
+    };
+
+    it('resolves host globals into a keyed map', () => {
+        const resolved = resolveConfig({ ...baseConfig([]), globals: [site] });
+
+        expect(Object.keys(resolved.globals)).toEqual(['site']);
+        expect(resolved.globals['site']?.id).toBe('site');
+        expect(resolved.globals['site']?.capabilities.versioning).toBe(true);
+    });
+
+    it('resolves plugin globals under the plugin namespace', () => {
+        const resolved = resolveConfig(
+            baseConfig([
+                { package: '@astromech/seo', globals: [{ ...site, key: 'settings' }] },
+            ])
+        );
+
+        expect(resolved.pluginGlobals['seo']?.['settings']?.id).toBe('seo/settings');
+    });
+
+    it('always produces both maps, empty when nothing is declared', () => {
+        const resolved = resolveConfig(baseConfig([]));
+
+        expect(resolved.globals).toEqual({});
+        expect(resolved.pluginGlobals).toEqual({});
+    });
+
+    it('does not leave the authored globals array on the resolved config', () => {
+        const resolved = resolveConfig({ ...baseConfig([]), globals: [site] });
+
+        expect(Array.isArray(resolved.globals)).toBe(false);
+    });
+});

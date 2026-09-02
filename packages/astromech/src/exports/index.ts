@@ -30,6 +30,12 @@ export {
     entryPermission,
     entryPermissions,
 } from '@/permissions/entry-permission';
+/** Global permissions are derived the same way, from a global's key. */
+export {
+    type GlobalAction,
+    globalPermission,
+    globalPermissions,
+} from '@/permissions/global-permission';
 export { withDefaults } from '@/utilities/options';
 export { resolveEntryUrl, resolveEntryPath } from '@/entries/entry-url.shared';
 export type { UrlEntry } from '@/entries/entry-url.shared';
@@ -115,6 +121,7 @@ export { formatAiContextMessage } from '@/utilities/ai-context';
 export { defineConfig } from '@/config/define-config';
 export { defineAdminPage } from '@/config/define-admin-page';
 export { defineEntryType } from '@/entries/define-entry-type';
+export { defineGlobal } from '@/config/define-global';
 export { definePlugin } from '@/plugins/define-plugin';
 export { defineServiceMethod, noInput } from '@/plugins/define-service-method';
 export { defineHook } from '@/plugins/define-hook';

@@ -1,17 +1,22 @@
 /**
  * Permission catalogue — every grantable permission a resolved config
- * produces, in one flat list. Pure function; three sources: `core`, `entry`
- * (derived per registered type) and `plugin` (each plugin's declaration).
+ * produces, in one flat list. Pure function; four sources: `core`, `entry` and
+ * `global` (derived per declared resource) and `plugin` (its declaration).
  */
 
 import type { PermissionDeclarations } from '@/permissions/define';
 import type { EntryAction } from '@/permissions/entry-permission';
+import type { GlobalAction } from '@/permissions/global-permission';
 import type { PluginDefinition, ResolvedConfig } from '@/types/index';
 import { CORE_PERMISSIONS } from '@/permissions/core-permissions';
 import {
     pluginEntryPermission,
     rootEntryPermission,
 } from '@/permissions/entry-permission';
+import {
+    pluginGlobalPermission,
+    rootGlobalPermission,
+} from '@/permissions/global-permission';
 import {
     resolvePluginIdentity,
     resolvePluginPermission,
@@ -22,8 +27,8 @@ export type PermissionCatalogueEntry = {
     permission: string;
     label: string;
     description?: string;
-    source: 'core' | 'entry' | 'plugin';
-    /** Entry type id for `entry`, plugin namespace for `plugin`. Absent for core. */
+    source: 'core' | 'entry' | 'global' | 'plugin';
+    /** Resource id for `entry`/`global`, plugin namespace for `plugin`. Absent for core. */
     owner?: string;
 };
 
@@ -55,11 +60,35 @@ function entryPermissionLabel(action: EntryAction, type: string): string {
     return `${verb} "${type}" entries`;
 }
 
+/** Global actions, with the capability each one needs — the entry gate again. */
+const GLOBAL_ACTIONS: { action: GlobalAction; requires?: 'versioning' }[] = [
+    { action: 'read' },
+    { action: 'update' },
+    { action: 'publish', requires: 'versioning' },
+];
+
+/** e.g. action='update', key='site' → 'Update "site" global'. */
+function globalPermissionLabel(action: GlobalAction, key: string): string {
+    const verb = action.charAt(0).toUpperCase() + action.slice(1);
+    return `${verb} "${key}" global`;
+}
+
 const SOURCE_ORDER: Record<PermissionCatalogueEntry['source'], number> = {
     core: 0,
     entry: 1,
-    plugin: 2,
+    global: 2,
+    plugin: 3,
 };
+
+/** Plugin namespace → permissionNamespace, for plugin-mounted resources. */
+function pluginNamespaceMap(plugins: PluginDefinition[]): Map<string, string> {
+    const map = new Map<string, string>();
+    for (const def of plugins) {
+        const identity = resolvePluginIdentity(def);
+        map.set(identity.namespace, identity.permissionNamespace);
+    }
+    return map;
+}
 
 function buildCorePermissions(): PermissionCatalogueEntry[] {
     // Widened: `CORE_PERMISSIONS` infers literal declarations, so an entry
@@ -85,12 +114,7 @@ function buildEntryPermissions(
 ): PermissionCatalogueEntry[] {
     const entries: PermissionCatalogueEntry[] = [];
 
-    // Plugin namespace → permissionNamespace, for plugin-mounted entry types.
-    const pluginNsMap = new Map<string, string>();
-    for (const def of plugins) {
-        const identity = resolvePluginIdentity(def);
-        pluginNsMap.set(identity.namespace, identity.permissionNamespace);
-    }
+    const pluginNsMap = pluginNamespaceMap(plugins);
 
     // Root entry types
     for (const [type, entryType] of Object.entries(config.entries)) {
@@ -116,6 +140,43 @@ function buildEntryPermissions(
                     label: entryPermissionLabel(action, type),
                     source: 'entry',
                     owner: `${pluginName}/${type}`,
+                });
+            }
+        }
+    }
+
+    return entries;
+}
+
+function buildGlobalPermissions(
+    config: ResolvedConfig,
+    plugins: PluginDefinition[]
+): PermissionCatalogueEntry[] {
+    const entries: PermissionCatalogueEntry[] = [];
+    const pluginNsMap = pluginNamespaceMap(plugins);
+
+    for (const [key, global] of Object.entries(config.globals)) {
+        for (const { action, requires } of GLOBAL_ACTIONS) {
+            if (!actionCapabilityMet(requires, global.capabilities)) continue;
+            entries.push({
+                permission: rootGlobalPermission(key, action),
+                label: globalPermissionLabel(action, key),
+                source: 'global',
+                owner: key,
+            });
+        }
+    }
+
+    for (const [pluginName, globals] of Object.entries(config.pluginGlobals)) {
+        const permissionNamespace = pluginNsMap.get(pluginName) ?? pluginName;
+        for (const [key, global] of Object.entries(globals)) {
+            for (const { action, requires } of GLOBAL_ACTIONS) {
+                if (!actionCapabilityMet(requires, global.capabilities)) continue;
+                entries.push({
+                    permission: pluginGlobalPermission(permissionNamespace, key, action),
+                    label: globalPermissionLabel(action, key),
+                    source: 'global',
+                    owner: `${pluginName}/${key}`,
                 });
             }
         }
@@ -155,6 +216,7 @@ export function buildPermissionCatalogue(
     const catalogue = [
         ...buildCorePermissions(),
         ...buildEntryPermissions(config, plugins),
+        ...buildGlobalPermissions(config, plugins),
         ...buildPluginPermissions(plugins),
     ];
 

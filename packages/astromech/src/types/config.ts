@@ -271,6 +271,57 @@ export type ResolvedEntryType = Omit<EntryType, 'repository' | 'fields' | 'type'
     fields: ResolvedEntryFields;
 };
 
+/**
+ * One editor-owned, exactly-one, site-wide piece of content. Authored in the
+ * top-level `globals` array or in a plugin's, the same shape in both places.
+ */
+export type GlobalConfig = {
+    /** Unique across the site and every plugin's globals. No `/` or `:`. */
+    key: string;
+    label: Label;
+    /** Lucide icon name for the sidebar. Defaults to a globe icon. */
+    icon?: string;
+    fields: EntryFields;
+    /** Default false. */
+    translatable?: boolean;
+    /** Default true. `maxVersions` as for entry types. */
+    versioning?: boolean | VersioningConfig;
+    /** Default true. */
+    statuses?: boolean;
+    /** Default false. Requires `statuses`. */
+    staging?: boolean;
+    /** Unauthenticated `get` returns the published content. Default false. */
+    public?: boolean;
+    /** Show in the sidebar. Default true. */
+    nav?: boolean;
+    /**
+     * Cross-field validator for the whole global, run after every field has
+     * been processed. Server-side only — it is a function, so it cannot cross
+     * into the admin's JSON config.
+     */
+    validate?: ResourceValidator;
+};
+
+/** A global's capability set with its defaults applied. */
+export type ResolvedGlobalCapabilities = {
+    statuses: boolean;
+    translatable: boolean;
+    versioning: boolean;
+    staging: boolean;
+};
+
+/**
+ * A resolved global. `versioning` keeps whatever the author wrote (including
+ * `maxVersions`); whether versioning is on at all is `capabilities.versioning`,
+ * as on entry types.
+ */
+export type ResolvedGlobal = Omit<GlobalConfig, 'key' | 'fields'> & {
+    /** Bare `key` for a host global, `<namespace>/<key>` for a plugin's. */
+    id: string;
+    capabilities: ResolvedGlobalCapabilities;
+    fields: ResolvedEntryFields;
+};
+
 export type TrashConfig = {
     enabled?: boolean;
     retentionDays?: number;
@@ -419,6 +470,8 @@ export type AstromechConfig = {
     basePath?: string;
     mediaRoute?: string;
     entries: Record<string, EntryType>;
+    /** Site-wide globals, each self-contained with its own `key`. */
+    globals?: GlobalConfig[];
     admin?: {
         pages?: AdminPage[];
     };
@@ -492,11 +545,13 @@ export type TrustProxy = boolean | number;
  */
 export type ResolvedConfig = Omit<
     AstromechConfig,
-    'db' | 'storage' | 'email' | 'scheduler' | 'ai' | 'plugins'
+    'db' | 'storage' | 'email' | 'scheduler' | 'ai' | 'plugins' | 'globals'
 > & {
     basePath: string;
     mediaRoute: string;
     entries: Record<string, ResolvedEntryType>;
+    /** Host-declared globals, keyed by bare key. Always present. */
+    globals: Record<string, ResolvedGlobal>;
     /** Always present — `access` defaults to `'public'`. */
     media: ResolvedMediaConfig;
     /**
@@ -504,6 +559,11 @@ export type ResolvedConfig = Omit<
      * resolved config. Always present (empty when no plugins contribute types).
      */
     pluginEntries: Record<string, Record<string, ResolvedEntryType>>;
+    /**
+     * Plugin-contributed globals, namespaced by plugin name → bare key →
+     * resolved config. Always present (empty when no plugins contribute one).
+     */
+    pluginGlobals: Record<string, Record<string, ResolvedGlobal>>;
     adminPages: ResolvedAdminPage[];
     trash: Required<TrashConfig>;
     /**
@@ -540,6 +600,8 @@ export type AdminConfig = {
     defaultLocale: string;
     roles: { slug: string; name: string }[];
     entries: Record<string, AdminEntryType>;
+    /** Host-declared globals, keyed by bare key. */
+    globals: Record<string, AdminGlobal>;
     /** Host-defined admin pages (settings form or custom component). */
     pages: ResolvedAdminPage[];
     /** Static plugin metadata for the admin shell (serializable only). */
@@ -565,9 +627,25 @@ export type AdminConfig = {
          * either without divergence.
          */
         entries: Record<string, AdminEntryType>;
+        /**
+         * Plugin-contributed globals, keyed by bare key. Same shape as root
+         * `globals`, so the shared global page components consume either.
+         */
+        globals: Record<string, AdminGlobal>;
         /** Page metadata: unified ResolvedAdminPage (origin-erased). */
         pages: ResolvedAdminPage[];
     }[];
+};
+
+/** One global's admin config, shared by host and plugin globals. */
+export type AdminGlobal = {
+    label: Label;
+    /** Lucide icon name for the sidebar; absent falls back to a globe icon. */
+    icon?: string;
+    fields: ResolvedEntryFields;
+    capabilities: ResolvedGlobalCapabilities;
+    public: boolean;
+    nav: boolean;
 };
 
 /** Single entry-type admin config, shared by root and plugin entry types. */

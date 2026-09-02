@@ -200,3 +200,70 @@ describe('buildAdminConfig', () => {
         expect(plugin?.pages).toHaveLength(1);
     });
 });
+
+describe('buildAdminConfig — globals', () => {
+    const site = {
+        key: 'site',
+        label: 'Site',
+        icon: 'Globe',
+        fields: [{ name: 'tagline', type: 'text' as const }],
+    };
+
+    it('projects host globals with nav and public defaults applied', () => {
+        const config = baseConfig([], { globals: [site] });
+        const adminConfig = buildAdminConfig(config, resolveConfig(config));
+
+        const global = adminConfig.globals['site'];
+        expect(global?.label).toBe('Site');
+        expect(global?.icon).toBe('Globe');
+        expect(global?.nav).toBe(true);
+        expect(global?.public).toBe(false);
+        expect(global?.capabilities.versioning).toBe(true);
+        expect(global?.fields.main).toHaveLength(1);
+    });
+
+    it('carries explicit nav and public through', () => {
+        const config = baseConfig([], {
+            globals: [{ ...site, nav: false, public: true }],
+        });
+        const adminConfig = buildAdminConfig(config, resolveConfig(config));
+
+        expect(adminConfig.globals['site']?.nav).toBe(false);
+        expect(adminConfig.globals['site']?.public).toBe(true);
+    });
+
+    it('projects plugin globals and lists them in the plugin nav', () => {
+        const config = baseConfig([
+            { package: '@astromech/seo', globals: [{ ...site, key: 'settings' }] },
+        ]);
+        const adminConfig = buildAdminConfig(config, resolveConfig(config));
+
+        const plugin = adminConfig.plugins[0];
+        expect(plugin?.globals['settings']?.label).toBe('Site');
+
+        const navItem = plugin?.nav[0]?.children?.[0];
+        expect(navItem?.to).toBe('/plugin/seo/globals/settings');
+        expect(navItem?.permission).toBe('plugin:seo:global:settings:read');
+    });
+
+    it('omits a nav-hidden plugin global from the nav tree', () => {
+        const config = baseConfig([
+            {
+                package: '@astromech/seo',
+                globals: [{ ...site, key: 'settings', nav: false }],
+            },
+        ]);
+        const adminConfig = buildAdminConfig(config, resolveConfig(config));
+
+        expect(adminConfig.plugins[0]?.nav).toEqual([]);
+        expect(adminConfig.plugins[0]?.globals['settings']).toBeDefined();
+    });
+
+    it('produces an empty globals map when none are declared', () => {
+        const config = baseConfig();
+        const adminConfig = buildAdminConfig(config, resolveConfig(config));
+
+        expect(adminConfig.globals).toEqual({});
+        expect(adminConfig.plugins).toEqual([]);
+    });
+});

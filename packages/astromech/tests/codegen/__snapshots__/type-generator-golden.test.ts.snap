@@ -8,6 +8,9 @@ declare module 'astromech' {
     posts: { fields: PostsFields; fieldsPublic: PostsFieldsPublic; relations: PostsRelations };
     categories: { fields: CategoriesFields; fieldsPublic: CategoriesFieldsPublic; relations: CategoriesRelations };
   }
+  interface AstromechGlobalTypes {
+
+  }
 }
 
 // --- Collection: posts (Posts) ---

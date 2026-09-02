@@ -6,8 +6,10 @@
 import type {
     AdminConfig,
     AdminEntryType,
+    AdminGlobal,
     ResolvedAdminPage,
     ResolvedEntryType,
+    ResolvedGlobal,
 } from '@/types/config';
 import type { AstromechConfig, ResolvedConfig } from '@/types/index';
 import { defaultImageWidths, normaliseWidths } from '@/media/image-widths.shared';
@@ -46,6 +48,21 @@ export function toAdminEntryType(entryType: ResolvedEntryType): AdminEntryType {
     };
 }
 
+/**
+ * Project a resolved global into the serializable admin shape. Shared by host
+ * and plugin globals so the two never drift.
+ */
+export function toAdminGlobal(global: ResolvedGlobal): AdminGlobal {
+    return {
+        label: global.label,
+        fields: global.fields,
+        capabilities: global.capabilities,
+        public: global.public ?? false,
+        nav: global.nav !== false,
+        ...(global.icon !== undefined ? { icon: global.icon } : {}),
+    };
+}
+
 /** Build the full `AdminConfig` — plugins, roles, locales, entries, and pages — served to the virtual module. */
 export function buildAdminConfig(
     config: AstromechConfig,
@@ -68,6 +85,11 @@ export function buildAdminConfig(
                         toAdminEntryType(entryType),
                     ])
                 ),
+                globals: Object.fromEntries(
+                    Object.entries(
+                        resolvedConfig.pluginGlobals[identity.namespace] ?? {}
+                    ).map(([key, global]) => [key, toAdminGlobal(global)])
+                ),
                 pages: derivePluginPages(identity, p) as ResolvedAdminPage[],
             };
         }),
@@ -86,6 +108,12 @@ export function buildAdminConfig(
             Object.entries(resolvedConfig.entries).map(([name, entryType]) => [
                 name,
                 toAdminEntryType(entryType),
+            ])
+        ),
+        globals: Object.fromEntries(
+            Object.entries(resolvedConfig.globals).map(([key, global]) => [
+                key,
+                toAdminGlobal(global),
             ])
         ),
         pages: resolvedConfig.adminPages,
