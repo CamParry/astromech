@@ -33,6 +33,10 @@ This is a living reference; it grows as the project does.
 - [content/entry-types.md](content/entry-types.md) — declaring entry types: the
   `entries` record, and `defineEntryType` for splitting a type into its own
   module.
+- [content/globals.md](content/globals.md) — declaring globals: the `globals`
+  array and `defineGlobal`, reading one from a site or a plugin, translation,
+  versions, publishing and scheduling, staged changes, and the per-global
+  permissions.
 - [content/relationships.md](content/relationships.md) — linking content to
   content: declaring a relation, why the value is ids rather than expanded
   records, what a relation stores on a translated site, querying the reverse
@@ -55,8 +59,8 @@ This is a living reference; it grows as the project does.
   keys on, who it does not limit, and what a refused submission returns.
 - [plugins/authoring.md](plugins/authoring.md) — write a plugin: the file-layout
   convention, identity, and every surface (custom fields, running the field
-  pipeline, admin pages, admin slots, permissions, service methods, hooks, entry
-  types, database tables, and i18n).
+  pipeline, admin pages, globals, admin slots, permissions, service methods,
+  hooks, entry types, database tables, and i18n).
 - [cli.md](cli.md) — the `astromech` CLI: entry CRUD + publish, JSON output,
   method-manifest discovery, rebuilding the relationships index, and reporting
   stored rows that fail the current validation.

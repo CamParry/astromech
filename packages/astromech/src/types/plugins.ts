@@ -295,10 +295,9 @@ export type PluginNavItem = {
 };
 
 /**
- * Plugin admin pages use the unified `AdminPage` type. The plugin author
- * declares exactly one of `fields` (settings form) or `component` (custom
- * React page), with an optional `permission` override (bare keys are
- * auto-namespaced to `plugin:<ns>:<key>`).
+ * Plugin admin pages use the unified `AdminPage` type: a `component` import
+ * specifier for the React page, with an optional `permission` override (bare
+ * keys are auto-namespaced to `plugin:<ns>:<key>`).
  */
 export type PluginAdmin = {
     pages?: AdminPage[];

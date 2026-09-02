@@ -1,14 +1,14 @@
 /**
- * Ratings settings — an auto-rendered settings form at
- * `/cms/plugin/rating/settings`. Values are stored as one object blob at
- * `plugin:demo_rating:/settings` in the core settings table.
+ * Ratings settings — a global edited at
+ * `/cms/plugin/demo_rating/globals/settings`, stored under the qualified key
+ * `demo_rating/settings`.
  */
 
-import { defineAdminPage } from 'astromech';
+import { defineGlobal } from 'astromech';
 import * as fields from 'astromech/fields';
 
-export const settingsPage = defineAdminPage({
-    path: '/settings',
+export const settingsGlobal = defineGlobal({
+    key: 'settings',
     label: 'Settings',
     icon: 'Settings',
     fields: [

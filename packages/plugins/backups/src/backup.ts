@@ -8,7 +8,7 @@ import type { BackupRunRow } from './tables/runs';
 import type { PluginContext } from 'astromech';
 import { Readable } from 'node:stream';
 import { createGzip } from 'node:zlib';
-import { BACKUPS_SETTINGS_PATH } from './pages/settings';
+import { BACKUPS_SETTINGS_KEY } from './globals/settings';
 import { createBackupRunsRepository } from './repository';
 
 declare global {
@@ -106,23 +106,20 @@ export async function performBackup(
 }
 
 /**
- * Read the retention setting for this plugin from the settings store, shared
- * across the cron handler and HTTP routes. Falls back to `fallback` if the
- * setting is absent or not a valid positive number.
+ * Read the retention count from the plugin's `settings` global, shared across
+ * the cron handler and HTTP routes. Falls back to `fallback` if the global is
+ * unsaved or the value is not a valid positive number.
  */
 export async function resolveKeep(ctx: PluginContext, fallback: number): Promise<number> {
-    const key = `plugin:${ctx.plugin.permissionNamespace}:${BACKUPS_SETTINGS_PATH}`;
+    const key = `${ctx.plugin.namespace}/${BACKUPS_SETTINGS_KEY}`;
     try {
-        const settings = await ctx.settings.get({ key });
-        const value =
-            typeof settings === 'object' && settings !== null && !Array.isArray(settings)
-                ? settings['retention']
-                : null;
+        const global = await ctx.globals.get({ key });
+        const value = global?.fields['retention'];
         if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
             return Math.floor(value);
         }
     } catch {
-        // Settings not available in this context; fall through to fallback.
+        // Globals not available in this context; fall through to fallback.
     }
     return fallback;
 }

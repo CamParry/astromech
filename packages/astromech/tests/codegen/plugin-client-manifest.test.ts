@@ -20,12 +20,6 @@ const seoPlugin: PluginDefinition = {
                 component: '@astromech/seo/pages/Overview',
                 permission: 'view',
             },
-            {
-                // Settings-only page: no component — must be excluded from pages export.
-                path: '/settings',
-                label: 'Settings',
-                fields: [{ name: 'siteName', type: 'text' }],
-            },
         ],
     },
     i18n: {
@@ -77,12 +71,6 @@ describe('generatePluginClientManifest', () => {
         const result = generatePluginClientManifest([seoPlugin]);
         // bare `view` → `plugin:seo:view`
         expect(result).toContain('permission: "plugin:seo:view"');
-    });
-
-    it('excludes settings-only (no component) page from pages export', () => {
-        const result = generatePluginClientManifest([seoPlugin]);
-        // `/settings` has no component — should not appear in pages
-        expect(result).not.toContain('"seo/settings"');
     });
 
     it('contains i18n export keyed by permissionNamespace', () => {
@@ -158,17 +146,8 @@ describe('generatePluginClientManifest — host pages', () => {
         expect(guarded).toContain('permission: "users:read"');
     });
 
-    it('omits fields-mode host pages', () => {
-        const result = generatePluginClientManifest([], {
-            pages: [
-                {
-                    path: 'globals',
-                    label: 'Globals',
-                    fields: [{ name: 'siteName', type: 'text' }],
-                },
-            ],
-            root,
-        });
+    it('emits an empty hostPages export when no host pages are declared', () => {
+        const result = generatePluginClientManifest([], { pages: [], root });
         expect(result).toContain('export const hostPages = {\n\n};');
     });
 });

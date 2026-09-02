@@ -45,11 +45,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
         resolveAdminPage
     );
 
-    const publicSettingKeys = resolvePublicSettingKeys({
-        adminPages,
-        plugins,
-        publicSettings: config.publicSettings,
-    });
+    const publicSettingKeys = resolvePublicSettingKeys(config.publicSettings);
 
     const mediaAccess = config.media?.access ?? 'public';
     assertMediaAccessCompatible(mediaAccess, config.media?.image?.driver.name);

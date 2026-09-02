@@ -4,6 +4,12 @@ import * as fields from 'astromech/fields';
 export const menuItemFields = [
     fields.text('label', { label: 'Label', translatable: true }),
     fields.relationship('entry', { label: 'Entry (internal link)' }),
-    fields.url('url', { label: 'URL (external link)', translatable: true }),
+    // `text`, not `url`: a menu item usually links to a site-relative path
+    // (`/blog`), which the `url` field's absolute-URL rule refuses.
+    fields.text('url', {
+        label: 'URL',
+        description: 'A site-relative path such as /blog, or a full URL.',
+        translatable: true,
+    }),
     fields.boolean('newTab', { label: 'Open in new tab' }),
 ];

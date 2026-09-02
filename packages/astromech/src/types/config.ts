@@ -380,10 +380,10 @@ export type UsersConfig = {
 };
 
 /**
- * One shape for host + plugin pages. Exactly one of `fields` / `component`
- * must be provided (validated crash-loud at config resolution).
+ * One shape for host + plugin pages. A page renders a React component; a
+ * field-bearing destination is a global, not a page.
  *
- * - Host: authored into `admin.pages`; path is the route + settings key.
+ * - Host: authored into `admin.pages`; path is the route.
  * - Plugin: authored into `PluginDefinition.admin.pages`; path is relative to
  *   `${basePath}/plugin/<name>`.
  */
@@ -391,32 +391,15 @@ export type AdminPage = {
     path: string;
     label: Label;
     icon?: string;
-    /** MODE A: managed settings form (full EntryFields tree). */
-    fields?: EntryFields;
-    /** MODE B: custom React component (import specifier string). */
-    component?: string;
-    /** Settings-form mode only; default false. */
-    translatable?: boolean;
+    /** Import specifier for the React component the page renders. */
+    component: string;
     /**
-     * Settings-form mode only. Cross-field validator for the page's values, run
-     * after every field has been processed. Server-side only — it is a
-     * function, so it cannot cross into the admin's JSON config.
-     */
-    validate?: ResourceValidator;
-    /**
-     * Permission override. Host default: `'settings:read'`. Plugin default:
-     * `'settings:read'` for settings pages, null for component pages.
-     * Bare keys on plugin pages are auto-namespaced.
+     * Permission gating the page. Default: none. A bare key on a plugin page is
+     * auto-namespaced.
      */
     permission?: string;
     /** Whether this page appears in the sidebar. Default true. */
     nav?: boolean;
-    /**
-     * When true, the settings stored under this page's `baseKey` (and any
-     * per-locale variants `baseKey:<locale>`) are readable without
-     * authentication. Default: false (private). Opt-in — must be explicit.
-     */
-    public?: boolean;
 };
 
 /** Named admin-shell slots a plugin can contribute persistent UI into. */
@@ -446,20 +429,10 @@ export type ResolvedAdminPage = {
     path: string;
     label: Label;
     icon?: string;
-    /** Settings key base — host: `'<path>'`; plugin: `'plugin:<ns>:<path>'`. */
-    baseKey: string;
-    /** Resolved field tree; null in component mode. */
-    fields: ResolvedEntryFields | null;
-    /** Lazy-import registry key; null in settings mode. */
-    componentKey: string | null;
-    translatable: boolean;
+    /** Lazy-import registry key for the page's component. */
+    componentKey: string;
     permission: string | null;
     nav: boolean;
-    /**
-     * Whether settings under this page's baseKey are publicly readable
-     * (no auth required). Mirrors the authored `AdminPage.public` flag.
-     */
-    public: boolean;
 };
 
 /** The config object passed to `defineConfig`. */
@@ -476,13 +449,11 @@ export type AstromechConfig = {
         pages?: AdminPage[];
     };
     /**
-     * Setting keys readable without authentication. Complements the page-level
-     * `public` flag on `AdminPage`. Keys not listed here (and not on a public
-     * admin page) are private by default.
+     * Setting keys readable without authentication. Keys not listed here are
+     * private by default.
      *
-     * A bare key exposes the key itself and every `<key>:<locale>` variant, the
-     * same pair a `public: true` admin page derives. An entry already ending
-     * with `:` is a prefix and is taken as written.
+     * A bare key exposes the key itself and every `<key>:<locale>` variant. An
+     * entry already ending with `:` is a prefix and is taken as written.
      *
      * Example: `['site-meta']` allows `'site-meta'` and `'site-meta:en'`.
      */
@@ -568,10 +539,9 @@ export type ResolvedConfig = Omit<
     trash: Required<TrashConfig>;
     /**
      * Derived set of setting keys (exact) and prefixes (ending with `:`) that
-     * are publicly readable. Computed once at config resolution from:
-     *   1. Admin pages with `public: true` → their `baseKey` and `baseKey:` prefix.
-     *   2. `AstromechConfig.publicSettings` → the same pair per bare entry; an
-     *      entry already ending with `:` is kept as written.
+     * are publicly readable. Computed once at config resolution from
+     * `AstromechConfig.publicSettings`: a bare entry contributes the key and
+     * the `<key>:` prefix, an entry already ending with `:` is kept as written.
      * Always present (empty array when nothing is public).
      */
     publicSettingKeys: string[];
@@ -602,7 +572,7 @@ export type AdminConfig = {
     entries: Record<string, AdminEntryType>;
     /** Host-declared globals, keyed by bare key. */
     globals: Record<string, AdminGlobal>;
-    /** Host-defined admin pages (settings form or custom component). */
+    /** Host-defined admin pages, each rendering its own React component. */
     pages: ResolvedAdminPage[];
     /** Static plugin metadata for the admin shell (serializable only). */
     plugins: {

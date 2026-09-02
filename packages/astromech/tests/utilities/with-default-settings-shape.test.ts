@@ -56,11 +56,11 @@ describe('withDefaultSettingsShape', () => {
         expect(calls.get).toEqual([{ key: 'site', full: false }]);
     });
 
-    it('preserves the other get() members while injecting full', async () => {
+    it('preserves the key while injecting full', async () => {
         const { api, calls } = fakeSettings();
-        await withDefaultSettingsShape(api, 'full').get({ key: 'site', locale: 'de' });
+        await withDefaultSettingsShape(api, 'full').get({ key: 'site' });
 
-        expect(calls.get).toEqual([{ key: 'site', locale: 'de', full: true }]);
+        expect(calls.get).toEqual([{ key: 'site', full: true }]);
     });
 
     it('injects full: true into all() called with no arguments', async () => {

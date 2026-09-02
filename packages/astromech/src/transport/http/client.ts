@@ -378,26 +378,8 @@ const settingsService = restService<SettingsService>('settings', callRoute, {
     // the wire — the HTTP route does not yet expose a public endpoint.
     all: () => callRoute('settings.all', {}),
 
-    get: (params) => {
-        const { key, locale } = (params ?? {}) as { key: string; locale?: string };
-        if (locale === undefined) return settingValue(key);
-        // Base (shared) and per-locale values are independent keys — fetch
-        // them concurrently rather than serially.
-        return Promise.all([settingValue(key), settingValue(`${key}:${locale}`)]).then(
-            ([base, localised]) => {
-                if (isRecord(base) && isRecord(localised)) {
-                    return { ...base, ...localised };
-                }
-                return localised ?? base;
-            }
-        );
-    },
+    get: (params) => settingValue((params as { key: string }).key),
 });
-
-/** A JSON object, as opposed to an array or a scalar — the shape locales merge. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
 
 /**
  * Globals over the table. `get` is the one override: a global that has never

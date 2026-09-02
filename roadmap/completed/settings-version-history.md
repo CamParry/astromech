@@ -1,5 +1,13 @@
 # Settings version history, audit, and persistence convergence
 
+**Done by the globals stage of `roadmap/in-progress/resource-surface.md`.** The
+convergence this file argued for is `globals`: a global is a resource over the
+shared content repository, so it carries locales, statuses, versions, staged
+changes and `createdBy`/`updatedBy` exactly as an entry does, and the admin
+edits it through the entry edit surface. `settings` keeps the naked `plugin:*`
+key-value class this file carved out, with no fields, no locales and no
+statuses. What follows is the analysis as it stood.
+
 **Not designed.** This file holds the pressures, the direction worth designing
 against, and the open naming question. The settings/config split itself is
 decided — `DECISIONS.md` — and is not

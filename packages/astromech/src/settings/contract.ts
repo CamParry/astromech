@@ -19,7 +19,6 @@ export const settingsContract = {
         summary: 'Read one setting by key.',
         input: z.object({
             key: z.string(),
-            locale: z.string().optional(),
             full: z.boolean().optional(),
         }),
         permission: 'settings:read',

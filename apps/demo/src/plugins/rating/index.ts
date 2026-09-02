@@ -1,13 +1,13 @@
 /**
  * demo-rating — a teaching plugin that exercises the external-plugin surface:
- * a custom `rating` field type, a component admin page, an auto-rendered
- * settings form, a service method, localized strings, and a declared permission.
+ * a custom `rating` field type, a component admin page, a settings global, a
+ * service method, localized strings, and a declared permission.
  */
 
 import { definePlugin } from 'astromech';
 import { ratingField } from './fields/rating';
+import { settingsGlobal } from './globals/settings';
 import { overviewPage } from './pages/overview';
-import { settingsPage } from './pages/settings';
 import { ratingPermissions } from './permissions/rating';
 import { ratingService } from './service/describe';
 
@@ -23,8 +23,9 @@ export const rating = definePlugin({
     i18n: ['en'],
     fields: [ratingField],
     service: ratingService,
+    globals: [settingsGlobal],
     admin: {
-        pages: [overviewPage, settingsPage],
+        pages: [overviewPage],
     },
 });
 

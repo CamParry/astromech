@@ -48,12 +48,9 @@ export function Sidebar() {
     const globals = Object.entries(adminConfig.globals ?? {}).filter(
         ([key, global]) => global.nav && hasPermission(`global:${key}:read`)
     );
-    // Only component pages: a page with a field tree is a global now, and the
-    // fields-mode page renderer is gone. Each carries its own resolved
-    // permission, so the group gates per page.
+    // Each page carries its own resolved permission, so the group gates per page.
     const appPages = (adminConfig.pages ?? []).filter(
         (page) =>
-            page.fields === null &&
             page.nav !== false &&
             (page.permission === null || hasPermission(page.permission))
     );

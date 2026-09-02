@@ -1,13 +1,13 @@
 /**
  * Demo marketing-site seed. Clears all content entries plus relationships,
- * redirects and settings on every run; preserves auth rows and creates
+ * globals, redirects and settings on every run; preserves auth rows and creates
  * admin@astromech.dev / password if missing. Run with `tsx demo/seed.ts`.
  */
 
-import type { Field, PluginDB } from 'astromech';
+import type { Field, JsonObject, PluginDB } from 'astromech';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { redirectsTable } from '@astromech/redirects/tables';
-import { collectRelationshipEdges, encodeWith } from 'astromech';
+import { collectRelationshipEdges, createAstromech, encodeWith } from 'astromech';
 import { libsql } from 'astromech/database/libsql';
 import * as schema from 'astromech/database/schema';
 import { contentVersion, readImageDimensions, sharp } from 'astromech/media/image/sharp';
@@ -55,7 +55,12 @@ void link; // suppress unused-var warnings for helpers not used in current seed
 
 const DB_PATH = new URL('./database.db', import.meta.url).pathname;
 
-const db = libsql({ url: `file:${DB_PATH}` }).getInstance();
+// One driver for both paths: the raw Kysely writes below and the Astromech
+// runtime the globals go through. `tsx apps/demo/seed.ts` runs from the repo
+// root, so a bare `libsql()` would resolve `file:./database.db` there instead.
+const dbDriver = libsql({ url: `file:${DB_PATH}` });
+
+const db = dbDriver.getInstance();
 
 /**
  * The same handle, widened with the redirects plugin's own table. Core's `DB`
@@ -232,27 +237,6 @@ function entryFields(type: string): Field[] {
     return Array.isArray(fields) ? fields : [...fields.main, ...(fields.sidebar ?? [])];
 }
 
-async function upsertSetting(key: string, value: unknown): Promise<void> {
-    await db
-        .insertInto('settings')
-        .values(
-            schema.encodeWith(schema.settingsTable, {
-                key,
-                value,
-                updatedAt: now,
-            })
-        )
-        .onConflict((oc) =>
-            oc.column('key').doUpdateSet(
-                schema.encodeWith(schema.settingsTable, {
-                    value,
-                    updatedAt: now,
-                })
-            )
-        )
-        .execute();
-}
-
 /** Clears content (keeps users / accounts / sessions / roles) and reseeds it. */
 async function seed(): Promise<void> {
     console.log('Seeding demo marketing database…\n');
@@ -277,14 +261,18 @@ async function seed(): Promise<void> {
     await db.deleteFrom('entryContent').where('type', 'in', CLEARED_TYPES).execute();
     await db.deleteFrom('entries').where('type', 'in', CLEARED_TYPES).execute();
 
-    // Clear settings and redirects
+    // Clear globals, settings and redirects. Deleting the `globals` row
+    // cascades to its content and versions.
+    await db.deleteFrom('globals').execute();
     await db.deleteFrom('settings').execute();
     await pluginDb.deleteFrom('pluginRedirectsRedirects').execute();
 
     // Clear leftover media rows (no files on disk referenced)
     await db.deleteFrom('media').execute();
 
-    console.log('  Cleared content entries, relationships, settings, redirects, media\n');
+    console.log(
+        '  Cleared content entries, relationships, globals, settings, redirects, media\n'
+    );
 
     const adminId = await upsertAdmin();
     console.log();
@@ -1736,112 +1724,108 @@ async function seed(): Promise<void> {
 
     console.log('  Created 2 French translations (home page + 1 post)\n');
 
-    /**
-     * Globals settings are partitioned by field: non-translatable fields key
-     * under `globals`, translatable ones under `globals:en`/`globals:fr`.
-     * `settings.get('globals', { locale })` merges the two.
-     */
-    const globalsShared = {
-        copyright: '© 2026 Astromech. All rights reserved.',
-        // logo media field — leave null (no logo media row)
-        logo: null,
-        // socials.url is non-translatable but platform label is translatable;
-        // store the full socials array in the per-locale key to keep them coherent
-    };
+    // Globals go through the service so field validation, shared-field
+    // propagation and the version snapshot run exactly as they do in the admin.
+    // `logo` and `copyright` are `translatable: false`, so writing them on the
+    // default content locale propagates them to every other locale's row.
+    const app = await createAstromech({ config: { ...config, db: dbDriver } });
 
-    const globalsEn = {
-        siteName: 'Astromech',
-        tagline: 'The CMS built for the modern web',
-        footerText:
-            'Astromech is an open-source headless CMS designed for Astro + Cloudflare. Fast, type-safe, and developer-first.',
-        socials: [
-            { platform: 'GitHub', url: 'https://github.com/astromech' },
-            { platform: 'Twitter / X', url: 'https://twitter.com/astromechcms' },
-        ],
-    };
-
-    const globalsFr = {
-        siteName: 'Astromech',
-        tagline: 'Le CMS conçu pour le web moderne',
-        footerText:
-            'Astromech est un CMS headless open source conçu pour Astro + Cloudflare. Rapide, type-safe et orienté développeur.',
-        socials: [
-            { platform: 'GitHub', url: 'https://github.com/astromech' },
-            { platform: 'Twitter / X', url: 'https://twitter.com/astromechcms' },
-        ],
-    };
-
-    await upsertSetting('globals', globalsShared);
-    await upsertSetting('globals:en', globalsEn);
-    await upsertSetting('globals:fr', globalsFr);
-    console.log('  Wrote globals settings (shared + en + fr)\n');
-
-    // Menus plugin settings, keyed `plugin:menus:/menus/<key>[:<locale>]`.
-
-    // Shared base (non-translatable fields — items are translatable so kept per-locale)
-    const menusShared = {};
-
-    // Main menu — EN
-    const mainMenuEn = {
-        items: [
-            { _id: bid(), label: 'Home', url: '/' },
-            { _id: bid(), label: 'Features', url: '/features' },
-            { _id: bid(), label: 'Pricing', url: '/pricing' },
-            { _id: bid(), label: 'Blog', url: '/blog' },
-            { _id: bid(), label: 'Customers', url: '/customers' },
-            { _id: bid(), label: 'About', url: '/about' },
-        ],
-    };
-
-    // Main menu — FR
-    const mainMenuFr = {
-        items: [
-            { _id: bid(), label: 'Accueil', url: '/fr' },
-            { _id: bid(), label: 'Fonctionnalités', url: '/fr/features' },
-            { _id: bid(), label: 'Tarifs', url: '/fr/pricing' },
-            { _id: bid(), label: 'Blog', url: '/fr/blog' },
-            { _id: bid(), label: 'Clients', url: '/fr/customers' },
-            { _id: bid(), label: 'À propos', url: '/fr/about' },
-        ],
-    };
-
-    // Footer menu — EN
-    const footerMenuEn = {
-        items: [
-            { _id: bid(), label: 'Blog', url: '/blog' },
-            { _id: bid(), label: 'Customers', url: '/customers' },
-            { _id: bid(), label: 'About', url: '/about' },
-            {
-                _id: bid(),
-                label: 'GitHub',
-                url: 'https://github.com/astromech',
-                newTab: true,
+    await app.globals.update({
+        key: 'site',
+        locale: 'en',
+        data: {
+            fields: {
+                siteName: 'Astromech',
+                tagline: 'The CMS built for the modern web',
+                footerText:
+                    'Astromech is an open-source headless CMS designed for Astro + Cloudflare. Fast, type-safe, and developer-first.',
+                copyright: '© 2026 Astromech. All rights reserved.',
+                logo: null,
+                socials: [
+                    { platform: 'GitHub', url: 'https://github.com/astromech' },
+                    { platform: 'Twitter / X', url: 'https://twitter.com/astromechcms' },
+                ],
             },
-        ],
-    };
+        },
+    });
 
-    // Footer menu — FR
-    const footerMenuFr = {
-        items: [
-            { _id: bid(), label: 'Blog', url: '/fr/blog' },
-            { _id: bid(), label: 'Clients', url: '/fr/customers' },
-            { _id: bid(), label: 'À propos', url: '/fr/about' },
-            {
-                _id: bid(),
-                label: 'GitHub',
-                url: 'https://github.com/astromech',
-                newTab: true,
+    await app.globals.update({
+        key: 'site',
+        locale: 'fr',
+        data: {
+            fields: {
+                siteName: 'Astromech',
+                tagline: 'Le CMS conçu pour le web moderne',
+                footerText:
+                    'Astromech est un CMS headless open source conçu pour Astro + Cloudflare. Rapide, type-safe et orienté développeur.',
+                socials: [
+                    { platform: 'GitHub', url: 'https://github.com/astromech' },
+                    { platform: 'Twitter / X', url: 'https://twitter.com/astromechcms' },
+                ],
             },
-        ],
-    };
+        },
+    });
 
-    await upsertSetting('plugin:menus:/menus/main', menusShared);
-    await upsertSetting('plugin:menus:/menus/main:en', mainMenuEn);
-    await upsertSetting('plugin:menus:/menus/main:fr', mainMenuFr);
-    await upsertSetting('plugin:menus:/menus/footer', menusShared);
-    await upsertSetting('plugin:menus:/menus/footer:en', footerMenuEn);
-    await upsertSetting('plugin:menus:/menus/footer:fr', footerMenuFr);
-    console.log('  Wrote menus plugin settings (main + footer, en + fr)\n');
+    await app.globals.publish({ key: 'site', locale: 'en' });
+    await app.globals.publish({ key: 'site', locale: 'fr' });
+    console.log('  Wrote the `site` global (en + fr, published)\n');
+
+    // Menus globals, one per configured menu at `menus/menu-<key>`. `items` is
+    // translatable, so each locale carries its own tree.
+    const mainMenuEn = [
+        { _id: bid(), label: 'Home', url: '/' },
+        { _id: bid(), label: 'Features', url: '/features' },
+        { _id: bid(), label: 'Pricing', url: '/pricing' },
+        { _id: bid(), label: 'Blog', url: '/blog' },
+        { _id: bid(), label: 'Customers', url: '/customers' },
+        { _id: bid(), label: 'About', url: '/about' },
+    ];
+
+    const mainMenuFr = [
+        { _id: bid(), label: 'Accueil', url: '/fr' },
+        { _id: bid(), label: 'Fonctionnalités', url: '/fr/features' },
+        { _id: bid(), label: 'Tarifs', url: '/fr/pricing' },
+        { _id: bid(), label: 'Blog', url: '/fr/blog' },
+        { _id: bid(), label: 'Clients', url: '/fr/customers' },
+        { _id: bid(), label: 'À propos', url: '/fr/about' },
+    ];
+
+    const footerMenuEn = [
+        { _id: bid(), label: 'Blog', url: '/blog' },
+        { _id: bid(), label: 'Customers', url: '/customers' },
+        { _id: bid(), label: 'About', url: '/about' },
+        {
+            _id: bid(),
+            label: 'GitHub',
+            url: 'https://github.com/astromech',
+            newTab: true,
+        },
+    ];
+
+    const footerMenuFr = [
+        { _id: bid(), label: 'Blog', url: '/fr/blog' },
+        { _id: bid(), label: 'Clients', url: '/fr/customers' },
+        { _id: bid(), label: 'À propos', url: '/fr/about' },
+        {
+            _id: bid(),
+            label: 'GitHub',
+            url: 'https://github.com/astromech',
+            newTab: true,
+        },
+    ];
+
+    const menuTrees: [string, string, JsonObject[]][] = [
+        ['menus/menu-main', 'en', mainMenuEn],
+        ['menus/menu-main', 'fr', mainMenuFr],
+        ['menus/menu-footer', 'en', footerMenuEn],
+        ['menus/menu-footer', 'fr', footerMenuFr],
+    ];
+
+    for (const [key, locale, items] of menuTrees) {
+        await app.globals.update({ key, locale, data: { fields: { items } } });
+        await app.globals.publish({ key, locale });
+    }
+    console.log('  Wrote the menus globals (main + footer, en + fr, published)\n');
 
     // The redirects table is the plugin's own, so its rows go through the
     // plugin's own table codec rather than being hand-built: `encodeWith` mints
@@ -1977,10 +1961,8 @@ async function seed(): Promise<void> {
     );
     console.log('  Posts          6  (all published, en) + 1 FR translation');
     console.log('  Case studies   3  (lumenflow, pixel-agency, nortide-media)');
-    console.log('  Globals        3  settings keys (globals, globals:en, globals:fr)');
-    console.log(
-        '  Menus          6  settings keys (main + footer, shared + en + fr each)'
-    );
+    console.log('  Globals        1  (site, en + fr)');
+    console.log('  Menus          2  globals (main + footer, en + fr each)');
     console.log('  Redirects      3');
     console.log('  Forms          1  (contact)');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

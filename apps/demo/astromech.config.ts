@@ -11,6 +11,7 @@ import { seo, seoSection } from '@astromech/seo';
 import {
     defineAdminPage,
     defineConfig,
+    defineGlobal,
     entryPermissions,
     permissionsForBuiltInRole,
 } from 'astromech';
@@ -193,6 +194,74 @@ export default defineConfig({
         },
     },
 
+    globals: [
+        defineGlobal({
+            key: 'site',
+            label: 'Site',
+            icon: 'Globe',
+            translatable: true,
+            public: true,
+            fields: [
+                fields.tabs({
+                    fields: [
+                        fields.tab('general', {
+                            label: 'General',
+                            fields: [
+                                fields.section('brand', {
+                                    label: 'Brand',
+                                    fields: [
+                                        fields.text('siteName', {
+                                            label: 'Site Name',
+                                        }),
+                                        fields.text('tagline', { label: 'Tagline' }),
+                                        fields.media('logo', {
+                                            label: 'Logo',
+                                            translatable: false,
+                                        }),
+                                    ],
+                                }),
+                                fields.section('footer', {
+                                    label: 'Footer',
+                                    fields: [
+                                        fields.textarea('footerText', {
+                                            label: 'Footer Text',
+                                        }),
+                                        fields.text('copyright', {
+                                            label: 'Copyright',
+                                            translatable: false,
+                                        }),
+                                    ],
+                                }),
+                            ],
+                        }),
+                        fields.tab('navigation', {
+                            label: 'Navigation',
+                            fields: [
+                                fields.section('social', {
+                                    label: 'Social',
+                                    fields: [
+                                        fields.repeater('socials', {
+                                            label: 'Social Links',
+                                            fields: [
+                                                fields.text('platform', {
+                                                    label: 'Platform',
+                                                }),
+                                                fields.url('url', {
+                                                    label: 'URL',
+                                                    translatable: false,
+                                                }),
+                                            ],
+                                        }),
+                                    ],
+                                }),
+                            ],
+                        }),
+                    ],
+                }),
+            ],
+        }),
+    ],
+
     entries: {
         page: {
             single: 'Page',
@@ -366,71 +435,6 @@ export default defineConfig({
 
     admin: {
         pages: [
-            defineAdminPage({
-                path: 'globals',
-                label: 'Globals',
-                icon: 'Settings',
-                translatable: true,
-                public: true,
-                fields: [
-                    fields.tabs({
-                        fields: [
-                            fields.tab('general', {
-                                label: 'General',
-                                fields: [
-                                    fields.section('brand', {
-                                        label: 'Brand',
-                                        fields: [
-                                            fields.text('siteName', {
-                                                label: 'Site Name',
-                                            }),
-                                            fields.text('tagline', { label: 'Tagline' }),
-                                            fields.media('logo', {
-                                                label: 'Logo',
-                                                translatable: false,
-                                            }),
-                                        ],
-                                    }),
-                                    fields.section('footer', {
-                                        label: 'Footer',
-                                        fields: [
-                                            fields.textarea('footerText', {
-                                                label: 'Footer Text',
-                                            }),
-                                            fields.text('copyright', {
-                                                label: 'Copyright',
-                                                translatable: false,
-                                            }),
-                                        ],
-                                    }),
-                                ],
-                            }),
-                            fields.tab('navigation', {
-                                label: 'Navigation',
-                                fields: [
-                                    fields.section('social', {
-                                        label: 'Social',
-                                        fields: [
-                                            fields.repeater('socials', {
-                                                label: 'Social Links',
-                                                fields: [
-                                                    fields.text('platform', {
-                                                        label: 'Platform',
-                                                    }),
-                                                    fields.url('url', {
-                                                        label: 'URL',
-                                                        translatable: false,
-                                                    }),
-                                                ],
-                                            }),
-                                        ],
-                                    }),
-                                ],
-                            }),
-                        ],
-                    }),
-                ],
-            }),
             defineAdminPage({
                 path: 'site-status',
                 label: 'Site Status',

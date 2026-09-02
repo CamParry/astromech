@@ -15,7 +15,7 @@ export type FieldValidationHandlers = {
 const noop = (): undefined => undefined;
 
 // Default to no-ops so a `FormField` with no provider in scope (plugin admin
-// pages, settings forms) still renders correctly.
+// pages, global forms) still renders correctly.
 const FieldValidationContext = React.createContext<FieldValidationHandlers>({
     onFieldChange: noop,
     onFieldBlur: noop,

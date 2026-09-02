@@ -1,14 +1,14 @@
 /**
  * @astromech/seo — search metadata for any entry type: a composed `seo` field
- * group, an SEO health dashboard, a default-OG-image setting, and public
+ * group, an SEO health dashboard, a default-OG-image global, and public
  * `sitemap` / `meta` service methods. Attach via `seoSection()` on an entry type's `fields`.
  */
 
 import type { ServiceInterface } from 'astromech';
 import { definePlugin } from 'astromech';
 import { seoPreviewField } from './fields/seo-preview';
+import { settingsGlobal } from './globals/settings';
 import { overviewPage } from './pages/overview';
-import { settingsPage } from './pages/settings';
 import { seoPermissions } from './permissions/seo';
 import { seoService } from './service/seo';
 
@@ -43,8 +43,9 @@ export const seo = definePlugin({
     permissions: seoPermissions,
     i18n: ['en', 'fr'],
     fields: [seoPreviewField],
+    globals: [settingsGlobal],
     admin: {
-        pages: [overviewPage, settingsPage],
+        pages: [overviewPage],
     },
     service: seoService,
 });

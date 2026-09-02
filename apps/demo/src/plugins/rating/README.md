@@ -2,8 +2,8 @@
 
 A teaching plugin that demonstrates the **external-plugin** authoring format on
 a small surface: a custom `rating` field type (1–5 stars, with a validator), a
-component overview page, an auto-rendered settings form, a service method,
-localized strings, and a declared permission.
+component overview page, a settings global, a service method, localized
+strings, and a declared permission.
 
 It is structured exactly like a first-party plugin — see
 [`apps/docs/plugins/authoring.md`](../../../../docs/plugins/authoring.md) for the
@@ -21,7 +21,7 @@ rating/
   admin/fields/rating-field.tsx  the field renderer (browser asset) + validate()
   pages/overview.ts           defineAdminPage — component view
   admin/pages/overview-page.tsx  the overview renderer (browser asset)
-  pages/settings.ts           defineAdminPage — auto-rendered settings form
+  globals/settings.ts         defineGlobal — the settings global
   service/describe.ts         an RPC method (the repo's only multi-word service key)
   locales/en.json             i18n bundle
 ```
@@ -56,7 +56,7 @@ is where the two derived forms are actually distinguishable:
 
 | form        | value         | where it appears                                     |
 | ----------- | ------------- | ---------------------------------------------------- |
-| namespace   | `demo_rating` | permissions, settings keys, i18n, admin URLs         |
+| namespace   | `demo_rating` | permissions, global keys, i18n, admin URLs           |
 | service key | `demoRating`  | `Astromech.plugins.demoRating`, `/cms/api/plugins/…` |
 
 ## Permissions
@@ -87,5 +87,6 @@ HTTP as `POST /cms/api/plugins/demoRating/describe`. The namespace form
 
 - **Overview** — `/cms/plugin/demo_rating/overview` (requires
   `plugin:demo_rating:view`).
-- **Settings** — `/cms/plugin/demo_rating/settings`, an auto-rendered form for
-  `minimumQuality` and `showInListing`.
+- **Settings** — `/cms/plugin/demo_rating/globals/settings`, the `settings`
+  global holding `minimumQuality` and `showInListing`. It is addressed as
+  `demo_rating/settings` from `ctx.globals`.

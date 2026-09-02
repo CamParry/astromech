@@ -42,7 +42,9 @@ astromech.ts · plugins/runtime/plugin-runtime.ts     composition root
 transport (http · tools) · admin                     delivery
 codegen                                              generation
 policies                                             who may call what
-entries · media · users · settings · notifications   the content modules
+entries · globals · media · users · settings ·       the content modules
+  notifications
+content                                              the shared content repository, under entries and globals
 plugins · config · database · storage · fields ·     the modules those build on
   permissions · hooks · request-context · email ·
   ai · cron
@@ -82,7 +84,7 @@ types · utilities · env · errors · registry.ts       pure leaves
   services and refuses a method the role lacks; every untrusted path (HTTP, RPC,
   the AI tool-loop) composes it. Trusted paths (the application instance used in
   SSR and hooks, the CLI, the MCP server) do not.
-- **The content modules** (`entries`, `media`, `users`, `settings`, `notifications`) own the business verbs. Each has a `service.ts` (its verbs), a `tables.ts` (its `defineTable` tables and row types), a contract catalogue (`contract.ts`, or `methods.ts` in `entries`) that puts it in the method manifest, and a `schema.ts` of Zod request schemas where it validates input. A large module splits its verbs into `operations/` and helpers into `internal/`, with `service.ts` assembling them. They are siblings: one may call another's service, but reaches tables through `database/tables.ts`.
+- **The content modules** (`entries`, `globals`, `media`, `users`, `settings`, `notifications`) own the business verbs. Each has a `service.ts` (its verbs), a `tables.ts` (its `defineTable` tables and row types), a contract catalogue (`contract.ts`, or `methods.ts` in `entries`) that puts it in the method manifest, and a `schema.ts` of Zod request schemas where it validates input. A large module splits its verbs into `operations/` and helpers into `internal/`, with `service.ts` assembling them. They are siblings: one may call another's service, but reaches tables through `database/tables.ts`. `entries` and `globals` build on a shelf module of their own, `content/`, which holds the shared content repository over `{ table, contentTable, versionsTable }` plus the translatable, versioning and visibility helpers both need.
 - **The modules below them** (`database`, `storage`, `fields`, `config`, `permissions`, `hooks`, `request-context`, `email`, `ai`, `cron`, and `plugins` — the `define*` authoring API and every `runtime/` file except `plugin-runtime.ts`) are what the content modules build on. Each does one thing and holds no business logic.
 - **Leaves** import only other leaves and third-party packages. A small pure file (a constant, a type, a function over its arguments) may sit inside any module and still be imported from any layer.
 
@@ -129,7 +131,7 @@ tokens, trash, statuses, translation and relationships are entries features, in
 `entries/operations/`. The `relationships` table is a derived
 index over field data, rebuildable from it.
 
-**Fields** are shared by entry types, plugin tables and settings pages. `fields/builder.ts` is the authoring API (`fields.text(...)`), and
+**Fields** are shared by entry types, globals and plugin tables. `fields/builder.ts` is the authoring API (`fields.text(...)`), and
 `fields/field-type-registry.ts` holds one `FieldType` per type name, carrying
 its `build`, `coerce`, `validate` and `tsType`. The pipeline is
 `coerce → default → validate`, recursing through nested fields (`group`,
@@ -137,14 +139,15 @@ its `build`, `coerce`, `validate` and `tsType`. The pipeline is
 `tabs`, `accordion`), which store nothing. The admin renders a form from the
 same field definitions.
 
-`fields/parse-fields.ts` runs that pipeline for all four resources.
+`fields/parse-fields.ts` runs that pipeline for all four resources — entry,
+global, media item and user.
 `parseFields` returns the coerced values and throws a 422; `safeParseFields`
 returns what reported instead, for the callers that display errors rather than
 reject. An entry write reaches it through `entries/internal/stored-fields.ts`,
 which merges or inherits first and prunes dead relation ids after. Two
 unrelated checks are both spelled `validate`: a field type's own, on its
 `FieldType`, and the author's whole-resource function, declared on the entry
-type, `media`, `users` or a settings page. The Zod parse over request input
+type, the global, `media` or `users`. The Zod parse over request input
 around the fields is `parseInput`, in `errors/validation.ts`.
 
 `TERMINOLOGY.md` defines the vocabulary (entry vs custom-table type, relation

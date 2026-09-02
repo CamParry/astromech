@@ -1,13 +1,8 @@
 /**
- * `settingsService.get` behaviour, pinned across the move onto the settings repository.
- *
- * `get` used to load EVERY settings row to build a `byKey` map and read one key
- * out of it; it now fetches `[key, '<key>:<locale>']` targetedly. These tests fix
- * the observable behaviour that swap must not change: the base/locale merge, the
- * per-locale key needing its own public check, and the private-key early return.
- *
- * `makeTestConfig()` declares no admin pages, so `set` runs no field processing —
- * values round-trip verbatim.
+ * `settingsService.get` behaviour over the naked key-value class: one key in,
+ * one stored value out, with the public/private check deciding whether an
+ * unauthenticated read sees it. `settings` declares no fields, so values
+ * round-trip verbatim.
  */
 
 import type { AstromechConfig } from '@/types/index';
@@ -25,8 +20,8 @@ beforeEach(async () => {
     setupTestConfig(makePublicConfig());
 });
 
-describe('settingsService.get — locale merge', () => {
-    it('returns the base value for a key with no locale variant', async () => {
+describe('settingsService.get — one key, one value', () => {
+    it('returns the stored object value', async () => {
         await settingsService.set({
             key: 'site',
             value: { title: 'Base', tagline: 'Shared' },
@@ -38,34 +33,23 @@ describe('settingsService.get — locale merge', () => {
         });
     });
 
-    it('merges the per-locale variant over the base value', async () => {
+    it('reads `site:en` as its own key, never merged into `site`', async () => {
         await settingsService.set({
             key: 'site',
             value: { title: 'Base', tagline: 'Shared' },
         });
         await settingsService.set({ key: 'site:en', value: { title: 'English' } });
 
-        // Default locale is 'en'.
         expect(await settingsService.get({ key: 'site' })).toEqual({
+            title: 'Base',
+            tagline: 'Shared',
+        });
+        expect(await settingsService.get({ key: 'site:en' })).toEqual({
             title: 'English',
-            tagline: 'Shared',
         });
     });
 
-    it('falls back to the base value for a locale with no variant stored', async () => {
-        await settingsService.set({
-            key: 'site',
-            value: { title: 'Base', tagline: 'Shared' },
-        });
-        await settingsService.set({ key: 'site:en', value: { title: 'English' } });
-
-        expect(await settingsService.get({ key: 'site', locale: 'de' })).toEqual({
-            title: 'Base',
-            tagline: 'Shared',
-        });
-    });
-
-    it('returns a scalar base value unmerged', async () => {
+    it('returns a scalar value as stored', async () => {
         await settingsService.set({ key: 'site', value: 'just-a-string' });
 
         expect(await settingsService.get({ key: 'site' })).toBe('just-a-string');
@@ -91,14 +75,12 @@ describe('settingsService.get — visibility', () => {
         });
     });
 
-    it('exposes per-locale variants of a bare publicSettings entry', async () => {
-        // A bare entry derives both `site` and the `site:` prefix, so `site:en`
-        // is public too — the same pair a `public: true` admin page derives.
+    it('exposes `<key>:<suffix>` variants of a bare publicSettings entry', async () => {
+        // A bare entry derives both `site` and the `site:` prefix.
         setupTestConfig({ ...makeTestConfig(), publicSettings: ['site'] });
-        await settingsService.set({ key: 'site', value: { title: 'Base' } });
         await settingsService.set({ key: 'site:en', value: { title: 'English' } });
 
-        expect(await settingsService.get({ key: 'site' })).toEqual({
+        expect(await settingsService.get({ key: 'site:en' })).toEqual({
             title: 'English',
         });
     });

@@ -1,6 +1,6 @@
 # Field validation
 
-Every write to an entry, a media record, a user or a settings group runs its
+Every write to an entry, a global, a media record or a user runs its
 values through one pipeline: **coerce → default → validate**. The same pipeline
 runs in the browser before a submit, so an author sees a bad value the moment
 they leave the field rather than after a round trip.
@@ -36,8 +36,10 @@ scheduling counts as publishing — a scheduled entry goes live unattended and
 must be complete. An entry type with `statuses: false` has no draft concept at
 all, so it always validates as a publish.
 
-Media, users and settings have no draft concept either, so they always run both
-halves.
+A global validates the same way: it has statuses by default, so completeness is
+checked only when it is published, and a global declared with `statuses: false`
+always validates as a publish. Media and users have no draft concept, so they
+always run both halves.
 
 ## Declaring rules
 
@@ -206,7 +208,7 @@ on a field inside a repeater item sees that item's siblings.
 
 Some rules belong to no single field — "an event's end date must follow its
 start", "supply at least one contact method". Declare a `validate` on the entry
-type (or on `media`, `users`, or a settings page):
+type (or on a global, `media`, or `users`):
 
 ```ts
 entries: {

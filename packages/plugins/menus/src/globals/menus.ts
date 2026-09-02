@@ -1,14 +1,18 @@
 import type { MenuConfig } from '../types';
-import type { AdminPage } from 'astromech';
-import { defineAdminPage } from 'astromech';
+import type { GlobalConfig } from 'astromech';
+import { defineGlobal } from 'astromech';
 import * as fields from 'astromech/fields';
 import { menuItemFields } from '../fields/menu-item';
 
-/** One auto-rendered settings page per configured menu, at `/menus/<key>`. */
-export function buildMenuPages(configs: MenuConfig[]): AdminPage[] {
+/**
+ * One global per configured menu, keyed `menu-<key>`. A global key carries no
+ * `/` or `:` (they separate the plugin namespace and the permission parts), so
+ * the prefix keeps a menu apart from a plugin's other globals.
+ */
+export function buildMenuGlobals(configs: MenuConfig[]): GlobalConfig[] {
     return configs.map(({ key, label }) =>
-        defineAdminPage({
-            path: `/menus/${key}`,
+        defineGlobal({
+            key: `menu-${key}`,
             label,
             icon: 'Menu',
             translatable: true,

@@ -1,13 +1,13 @@
 /**
- * @astromech/menus — developer-declared navigation menus stored as settings
- * blobs, edited through generated per-menu admin pages, and read via a public
- * service method that resolves entry refs to front-end URLs.
+ * @astromech/menus — developer-declared navigation menus, each stored as a
+ * translatable global the plugin generates from its config, and read via a
+ * public service method that resolves entry refs to front-end URLs.
  */
 
 import type { MenuItem, MenusOptions } from './types';
 import type { ServiceInterface } from 'astromech';
 import { definePlugin, defineServiceMethod } from 'astromech';
-import { buildMenuPages } from './pages/menus';
+import { buildMenuGlobals } from './globals/menus';
 import { buildMenusService } from './service/menus';
 
 /** Typed service shape — used only for the module augmentation. */
@@ -35,8 +35,6 @@ export type { MenuItem, MenuConfig, MenusOptions } from './types';
 export const menus = definePlugin((options?: MenusOptions) => {
     const menuConfigs = options?.menus ?? [];
 
-    const pages = buildMenuPages(menuConfigs);
-
     const service = buildMenusService(menuConfigs);
 
     return {
@@ -44,9 +42,7 @@ export const menus = definePlugin((options?: MenusOptions) => {
         version: '0.1.0',
         label: 'Menus',
         icon: 'Menu',
-        admin: {
-            pages,
-        },
+        globals: buildMenuGlobals(menuConfigs),
         service,
     };
 });

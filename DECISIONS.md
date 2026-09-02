@@ -100,6 +100,29 @@ a dedicated `createTranslation` method, a second write path for the same row, an
 duplicating the entry into a translation group, which `duplicate` no longer does
 (it copies an entry, not a locale).
 
+**The word is `globals`.** Payload (`globals: []`), Craft ("Global Sets") and
+Statamic ("Globals") share it for editor-owned, exactly-one, site-wide content.
+Rejected: "single types" (Strapi; two words, and it names the constraint on a
+type rather than the thing), "singletons" (Sanity and Directus; names the
+constraint, and a stranger does not guess it), and "settings" or "options"
+(WordPress; "settings" is reserved for operator config and the key-value table
+keeps the name).
+
+**A global's identifier is `key`, not `slug`.** `slug` is editor-authored,
+per-locale and appears in URLs, unique per `(type, locale)`; a global's
+identifier is developer-written, locale-invariant and never in a URL, so it
+pairs with `type` on entry types. Rejected: Craft and Statamic's "handle", which
+is precise but not a word a reader guesses.
+
+**`globals` is an array of self-contained `defineGlobal` objects, not a
+name-keyed record.** A global carries its own `key`, so host and plugin globals
+have one shape and a global moves between them unchanged. A key declared twice
+in one array is a crash-loud `resolveConfig` error naming both declarations.
+Rejected: a `Record<string, GlobalConfig>` mirroring `entries` (it splits the
+identifier from the object and gives plugin globals a second shape), and a
+fields mode on `admin.pages`, which put a field tree behind a route rather than
+behind a resource.
+
 **Filtering entries by field data rides declared expression indexes** over
 `json_extract(fields, '$.path')` on `entry_content`, with the index DDL and the
 query SQL emitted from one declaration. Undeclared field filters throw. Rejected:
@@ -375,11 +398,12 @@ preservation on translate is prompt plus human review, not a guarantee.
 
 ## Product shape
 
-**Settings are content, config is code, secrets are env-only, and core ships no
+**Globals are content, config is code, secrets are env-only, and core ships no
 settings page.** Runtime config and secrets live in `astromech.config.ts` and
-`.env`; editor-owned site-wide values are `defineAdminPage` settings-table
-content. Rejected: a WordPress-style General Settings page, and admin-editable
-secrets.
+`.env`; editor-owned site-wide values are globals, declared with `defineGlobal`
+and stored in the `globals` tables. `settings` holds only the naked `plugin:*`
+key-value class: no fields, no locales, no statuses. Rejected: a WordPress-style
+General Settings page, and admin-editable secrets.
 
 **Form notifications are one `notifications` blocks field, and spam protection is
 an open `SpamProvider` contract** with `turnstile()` and `recaptcha()` factories,
@@ -435,10 +459,10 @@ plain name would: they arrive with the wrong model and have to unlearn it.
   (taken), and Drizzle's `driverParam` (reads backwards for a select cell).
 - **access** — permission, and nothing else.
 - **resource** — the superordinate noun for the four field-bearing things: entry,
-  user, media item, settings page. The document validators are resource
+  global, user, media item. The document validators are resource
   validators. Rejected: `record` (database-flavoured, already refused for
   entries), and `document` (collides with a ProseMirror doc).
-- **module** — everything under `src/`; the five business ones are the content
+- **module** — everything under `src/`; the six business ones are the content
   modules, and the shelf below them has no group name. Rejected: "domains" (DDD
   bounded-context freight), "infrastructure", "primitives", and "ports" for the
   `PluginContext` members.

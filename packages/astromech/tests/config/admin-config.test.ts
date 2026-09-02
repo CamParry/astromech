@@ -181,7 +181,7 @@ describe('buildAdminConfig', () => {
                         {
                             path: '/overview',
                             label: 'Overview',
-                            fields: [{ name: 'title', type: 'text' }],
+                            component: '@astromech/seo/pages/Overview',
                         },
                     ],
                 },

@@ -9,8 +9,8 @@ import type { PluginContext, ServiceInterface } from 'astromech';
 import { definePlugin, withDefaults } from 'astromech';
 import { migrationProvider } from '../migrations/index';
 import { performBackup, resolveKeep } from './backup';
+import { settingsGlobal } from './globals/settings';
 import { backupsPage } from './pages/backups';
-import { settingsPage } from './pages/settings';
 import { backupsPermissions } from './permissions/backups';
 import { buildBackupRoutes } from './routes/backups';
 import { buildBackupsService } from './service/backups';
@@ -49,8 +49,9 @@ export const backups = definePlugin((options?: BackupsOptions) => {
         migrations: migrationProvider,
         permissions: backupsPermissions,
         i18n: ['en'],
+        globals: [settingsGlobal],
         admin: {
-            pages: [backupsPage, settingsPage],
+            pages: [backupsPage],
         },
         service: buildBackupsService(keep),
         // Streaming only — the JSON endpoints live on the service above.

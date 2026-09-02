@@ -12,8 +12,7 @@ import { RESERVED_KEY } from '@/fields/reserved-keys';
 
 /**
  * What a relation points at — the relation-eligible subset of `ResourceType`
- * (`types/domain.ts`), which also covers settings pages. Mirrors the index's
- * `targetKind` column.
+ * (`types/domain.ts`). Mirrors the index's `targetKind` column.
  */
 export type TargetKind = 'entry' | 'user' | 'media';
 

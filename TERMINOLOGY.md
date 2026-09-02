@@ -7,8 +7,9 @@ lives is in `ARCHITECTURE.md`.
 **Adapter.** Code that reshapes one internal interface into another. Distinct
 from a driver, which reaches an external system.
 
-**Admin page.** A routed destination in the admin app, built in or contributed by
-a plugin.
+**Admin page.** A routed destination in the admin app that renders a React
+component, built in or contributed by a plugin. A field-bearing destination is a
+global.
 
 **Admin slot.** A named mount point for persistent admin UI that lives outside any
 one page. A page is somewhere you navigate to, a slot is always present.
@@ -57,6 +58,13 @@ form: a `Date` as an ISO string, an object as JSON, a boolean as `0`/`1`.
 **Entry type.** A named kind of entry, declared in the site config with its
 fields, slug rules, admin columns and capabilities.
 
+**Global.** One editor-owned item with no list: there is exactly one of it, and
+it exists because the site config or a plugin declares it by key. It carries
+fields, locales, statuses, versions and staged changes exactly as an entry does,
+and is addressed by its `key` plus a locale. Chosen over "single type", which
+names the constraint rather than the thing, and over "settings", which is the
+operator's key-value store.
+
 **Field.** One authored input on a resource: a name, a type, and that type's
 options.
 
@@ -82,9 +90,9 @@ underneath it.
 **Method manifest.** The catalogue of callable service methods that every
 transport dispatches through, rather than each one knowing the services directly.
 
-**Module.** A directory owning one thing inside the core package. The five that
-own content verbs (entries, media, users, settings, notifications) are the
-content modules. Modules keep to their boundaries but do call each other, so they
+**Module.** A directory owning one thing inside the core package. The six that
+own content verbs (entries, globals, media, users, settings, notifications) are
+the content modules. Modules keep to their boundaries but do call each other, so they
 are not "domains" in the bounded-context sense.
 
 **Mount.** Which package an entry type comes from: the site itself, or a
@@ -122,8 +130,8 @@ deletion.
 Distinct from storage.
 
 **Resource.** The superordinate noun for the four things that carry fields and
-run the field pipeline: an entry, a media item, a user, and a settings page.
-Chosen over "record" and "document".
+run the field pipeline: an entry, a global, a media item, and a user. Chosen
+over "record" and "document".
 
 **Schema.** Request validation, or a whole-shape aggregate. Never the table
 declarations themselves, which are tables.

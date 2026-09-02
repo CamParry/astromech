@@ -25,22 +25,20 @@ const {
     hreflangUrls,
 } = Astro.props;
 
-// Fetch globals settings
-let globals: Record<string, unknown> = {};
+// Fetch the `site` global
+let site: Record<string, unknown> = {};
 try {
     const app = await getAstromech();
-    const raw = await app.settings.get({ key: 'globals', locale });
-    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-        globals = raw as Record<string, unknown>;
-    }
+    const global = await app.globals.get({ key: 'site', locale });
+    site = global?.fields ?? {};
 } catch {
-    // settings not seeded yet — graceful fallback
+    // the global is not seeded yet — graceful fallback
 }
 
-const siteName = typeof globals.siteName === 'string' ? globals.siteName : 'Astromech';
-const logoMedia = globals.logo as { url?: string } | null | undefined;
-const footerText = typeof globals.footerText === 'string' ? globals.footerText : '';
-const copyright = typeof globals.copyright === 'string' ? globals.copyright : '';
+const siteName = typeof site.siteName === 'string' ? site.siteName : 'Astromech';
+const logoMedia = site.logo as { url?: string } | null | undefined;
+const footerText = typeof site.footerText === 'string' ? site.footerText : '';
+const copyright = typeof site.copyright === 'string' ? site.copyright : '';
 
 // Fetch menus from the menus plugin
 type MenuItem = { label?: string; url?: string; newTab?: boolean; children?: MenuItem[] };
@@ -62,7 +60,7 @@ try {
 }
 
 type SocialLink = { platform?: string; url?: string };
-const socials = Array.isArray(globals.socials) ? (globals.socials as SocialLink[]) : [];
+const socials = Array.isArray(site.socials) ? (site.socials as SocialLink[]) : [];
 
 const otherLocales = locales().filter((l) => l !== locale);
 ---

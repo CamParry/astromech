@@ -13,12 +13,12 @@
  *  4. performBackup failure — no dump capability → failed run row
  *  5. rotate keep-N — oldest artifacts deleted, rows marked artifactDeletedAt
  *  6. in-process guard — isBackupRunning reflects an in-flight performBackup
- *  7. resolveKeep — the retention settings blob overrides the configured keep
+ *  7. resolveKeep — the retention global overrides the configured keep
  */
 
 import type { DB } from '@/database/types';
 import type {
-    JsonValue,
+    JsonObject,
     PluginContext,
     PluginDatabase,
     PluginStorage,
@@ -40,7 +40,6 @@ import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { decodeWith } from '@/database/codec';
 import { libsql } from '@/database/drivers/libsql';
-import { derivePluginPages } from '@/plugins/runtime/plugin-admin';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import { filesystem } from '@/storage/drivers/filesystem';
 import { listAll } from '@/storage/prefix';
@@ -563,46 +562,48 @@ describe('isBackupRunning / in-process guard', () => {
 
 describe('resolveKeep', () => {
     /**
-     * A ctx whose settings service answers one key with one blob, and records
-     * the key it was asked for.
+     * A ctx whose globals service answers with one global, and records the key
+     * it was asked for.
      */
-    async function ctxWithSettings(
-        blob: JsonValue | null
+    async function ctxWithGlobal(
+        fields: JsonObject | null
     ): Promise<{ ctx: PluginContext; keys: string[] }> {
         const { db } = await makeFileDb(dbPath);
         const storage = makeStorage(storageDir);
         const ctx = makeCtx(db, storage, { dialect: 'test-no-dump' });
         const keys: string[] = [];
-        ctx.settings = {
+        ctx.globals = {
             get: async (params: { key: string }) => {
                 keys.push(params.key);
-                return blob;
+                return fields === null ? null : { fields };
             },
-        } as unknown as PluginContext['settings'];
+        } as unknown as PluginContext['globals'];
         return { ctx, keys };
     }
 
-    it('should read retention out of the settings page blob', async () => {
-        const { ctx, keys } = await ctxWithSettings({ retention: 3 });
+    it('should read retention out of the settings global', async () => {
+        const { ctx, keys } = await ctxWithGlobal({ retention: 3 });
         expect(await resolveKeep(ctx, 7)).toBe(3);
-        expect(keys).toEqual(['plugin:backups:/settings']);
+        expect(keys).toEqual(['backups/settings']);
     });
 
-    it('should read the key the plugin’s settings page actually writes', async () => {
+    it('should read the key the plugin’s settings global actually writes', async () => {
         const definition = backups();
-        const pages = derivePluginPages(resolvePluginIdentity(definition), definition);
-        const settingsPage = pages.find((page) => page.fields !== null);
+        const settingsGlobal = definition.globals?.find(
+            (global) => global.key === 'settings'
+        );
 
-        // The retention field is reachable, and its blob lands on the key
-        // resolveKeep asks for (asserted in the test above).
-        expect(settingsPage?.baseKey).toBe('plugin:backups:/settings');
-        expect(settingsPage?.fields?.main.map((field) => field.name)).toEqual([
-            'retention',
-        ]);
+        // The retention field is reachable, and it lands on the key resolveKeep
+        // asks for (asserted in the test above).
+        expect(settingsGlobal).toBeDefined();
+        expect(resolvePluginIdentity(definition).namespace).toBe('backups');
+        expect(
+            (settingsGlobal?.fields as { name: string }[]).map((field) => field.name)
+        ).toEqual(['retention']);
     });
 
-    it('should fall back when the setting is absent, empty or not positive', async () => {
-        const blobs: (JsonValue | null)[] = [
+    it('should fall back when the global is absent, empty or not positive', async () => {
+        const rows: (JsonObject | null)[] = [
             null,
             {},
             { retention: null },
@@ -610,24 +611,24 @@ describe('resolveKeep', () => {
             { retention: -1 },
             { retention: 'lots' },
         ];
-        for (const blob of blobs) {
-            const { ctx } = await ctxWithSettings(blob);
+        for (const fields of rows) {
+            const { ctx } = await ctxWithGlobal(fields);
             expect(await resolveKeep(ctx, 7)).toBe(7);
         }
     });
 
     it('should floor a fractional retention value', async () => {
-        const { ctx } = await ctxWithSettings({ retention: 4.8 });
+        const { ctx } = await ctxWithGlobal({ retention: 4.8 });
         expect(await resolveKeep(ctx, 7)).toBe(4);
     });
 
-    it('should fall back when the settings service throws', async () => {
-        const { ctx } = await ctxWithSettings(null);
-        ctx.settings = {
+    it('should fall back when the globals service throws', async () => {
+        const { ctx } = await ctxWithGlobal(null);
+        ctx.globals = {
             get: async () => {
-                throw new Error('no settings here');
+                throw new Error('no globals here');
             },
-        } as unknown as PluginContext['settings'];
+        } as unknown as PluginContext['globals'];
         expect(await resolveKeep(ctx, 7)).toBe(7);
     });
 });

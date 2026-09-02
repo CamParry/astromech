@@ -52,9 +52,9 @@ const baseConfig = (overrides: Partial<AstromechConfig> = {}): AstromechConfig =
 });
 
 const simplePage = (overrides: Partial<AdminPage> = {}): AdminPage => ({
-    path: 'globals',
-    label: 'Globals',
-    fields: [{ name: 'siteName', type: 'text' }],
+    path: 'site-status',
+    label: 'Site Status',
+    component: './src/admin/pages/site-status.tsx',
     ...overrides,
 });
 
@@ -67,59 +67,6 @@ describe('resolveConfig adminPages — absence', () => {
     it('should return [] when admin.pages is empty array', () => {
         const resolved = resolveConfig(baseConfig({ admin: { pages: [] } }));
         expect(resolved.adminPages).toEqual([]);
-    });
-});
-
-describe('resolveConfig adminPages — flat fields normalization', () => {
-    it('should normalize a flat fields array to { main, sidebar: [] }', () => {
-        const resolved = resolveConfig(
-            baseConfig({
-                admin: {
-                    pages: [simplePage({ fields: [{ name: 'siteName', type: 'text' }] })],
-                },
-            })
-        );
-        const page = resolved.adminPages[0];
-        expect(page?.fields?.main).toHaveLength(1);
-        expect(page?.fields?.main[0]?.name).toBe('siteName');
-        expect(page?.fields?.sidebar).toEqual([]);
-    });
-
-    it('should normalize a { main, sidebar } fields shape through unchanged', () => {
-        const resolved = resolveConfig(
-            baseConfig({
-                admin: {
-                    pages: [
-                        simplePage({
-                            fields: {
-                                main: [{ name: 'siteName', type: 'text' }],
-                                sidebar: [{ name: 'logo', type: 'text' }],
-                            },
-                        }),
-                    ],
-                },
-            })
-        );
-        const page = resolved.adminPages[0];
-        expect(page?.fields?.main).toHaveLength(1);
-        expect(page?.fields?.sidebar).toHaveLength(1);
-        expect(page?.fields?.main[0]?.name).toBe('siteName');
-        expect(page?.fields?.sidebar[0]?.name).toBe('logo');
-    });
-
-    it('should default sidebar to [] when only main is given in object shape', () => {
-        const resolved = resolveConfig(
-            baseConfig({
-                admin: {
-                    pages: [
-                        simplePage({
-                            fields: { main: [{ name: 'title', type: 'text' }] },
-                        }),
-                    ],
-                },
-            })
-        );
-        expect(resolved.adminPages[0]?.fields?.sidebar).toEqual([]);
     });
 });
 
@@ -150,128 +97,13 @@ describe('resolveConfig adminPages — scalar fields preserved', () => {
     });
 });
 
-describe('resolveConfig adminPages — translatable flag', () => {
-    it('should default translatable to false when not set', () => {
-        const resolved = resolveConfig(baseConfig({ admin: { pages: [simplePage()] } }));
-        expect(resolved.adminPages[0]?.translatable).toBe(false);
-    });
-
-    it('should preserve translatable: true', () => {
-        const resolved = resolveConfig(
-            baseConfig({
-                admin: { pages: [simplePage({ translatable: true })] },
-            })
-        );
-        expect(resolved.adminPages[0]?.translatable).toBe(true);
-    });
-
-    it('should preserve explicit translatable: false', () => {
-        const resolved = resolveConfig(
-            baseConfig({
-                admin: { pages: [simplePage({ translatable: false })] },
-            })
-        );
-        expect(resolved.adminPages[0]?.translatable).toBe(false);
-    });
-});
-
-describe('resolveConfig adminPages — field tree validation', () => {
-    it('should throw when a tab appears outside of tabs in main fields', () => {
-        expect(() =>
-            resolveConfig(
-                baseConfig({
-                    admin: {
-                        pages: [
-                            simplePage({
-                                path: 'bad-page',
-                                fields: [{ name: 'oops', type: 'tab', fields: [] }],
-                            }),
-                        ],
-                    },
-                })
-            )
-        ).toThrow(/bad-page.*tab.*must be a direct child of `tabs`/);
-    });
-
-    it('should throw when tabs contains a non-tab child in main fields', () => {
-        expect(() =>
-            resolveConfig(
-                baseConfig({
-                    admin: {
-                        pages: [
-                            simplePage({
-                                path: 'bad-page',
-                                fields: [
-                                    {
-                                        name: 'myTabs',
-                                        type: 'tabs',
-                                        fields: [{ name: 'notATab', type: 'text' }],
-                                    },
-                                ],
-                            }),
-                        ],
-                    },
-                })
-            )
-        ).toThrow(/bad-page.*tabs.*may only contain.*tab.*children/);
-    });
-
-    it('should throw when a tab appears outside of tabs in sidebar fields', () => {
-        expect(() =>
-            resolveConfig(
-                baseConfig({
-                    admin: {
-                        pages: [
-                            simplePage({
-                                path: 'bad-sidebar',
-                                fields: {
-                                    main: [{ name: 'title', type: 'text' }],
-                                    sidebar: [{ name: 'stray', type: 'tab', fields: [] }],
-                                },
-                            }),
-                        ],
-                    },
-                })
-            )
-        ).toThrow(/bad-sidebar.*tab.*must be a direct child of `tabs`/);
-    });
-
-    it('should accept valid tabs → tab structure', () => {
-        expect(() =>
-            resolveConfig(
-                baseConfig({
-                    admin: {
-                        pages: [
-                            simplePage({
-                                fields: [
-                                    {
-                                        name: 'myTabs',
-                                        type: 'tabs',
-                                        fields: [
-                                            {
-                                                name: 'tab1',
-                                                type: 'tab',
-                                                fields: [{ name: 'title', type: 'text' }],
-                                            },
-                                        ],
-                                    },
-                                ],
-                            }),
-                        ],
-                    },
-                })
-            )
-        ).not.toThrow();
-    });
-});
-
 describe('resolveConfig adminPages — multiple pages', () => {
     it('should preserve order of multiple admin pages', () => {
         const resolved = resolveConfig(
             baseConfig({
                 admin: {
                     pages: [
-                        simplePage({ path: 'globals', label: 'Globals' }),
+                        simplePage({ path: 'status', label: 'Status' }),
                         simplePage({ path: 'branding', label: 'Branding' }),
                         simplePage({ path: 'social', label: 'Social' }),
                     ],
@@ -279,7 +111,7 @@ describe('resolveConfig adminPages — multiple pages', () => {
             })
         );
         expect(resolved.adminPages).toHaveLength(3);
-        expect(resolved.adminPages[0]?.path).toBe('globals');
+        expect(resolved.adminPages[0]?.path).toBe('status');
         expect(resolved.adminPages[1]?.path).toBe('branding');
         expect(resolved.adminPages[2]?.path).toBe('social');
     });
@@ -289,50 +121,39 @@ describe('resolveConfig adminPages — multiple pages', () => {
             baseConfig({
                 admin: {
                     pages: [
-                        simplePage({
-                            path: 'globals',
-                            translatable: true,
-                            icon: 'Globe',
-                        }),
-                        simplePage({ path: 'branding', translatable: false }),
+                        simplePage({ path: 'status', icon: 'Activity' }),
+                        simplePage({ path: 'branding' }),
                     ],
                 },
             })
         );
-        expect(resolved.adminPages[0]?.translatable).toBe(true);
-        expect(resolved.adminPages[0]?.icon).toBe('Globe');
-        expect(resolved.adminPages[1]?.translatable).toBe(false);
+        expect(resolved.adminPages[0]?.icon).toBe('Activity');
         expect('icon' in (resolved.adminPages[1] ?? {})).toBe(false);
     });
 });
 
 describe('resolveConfig adminPages — unified ResolvedAdminPage shape', () => {
-    it('host page has baseKey equal to path', () => {
+    it('host page keys on its path', () => {
         const resolved = resolveConfig(
-            baseConfig({ admin: { pages: [simplePage({ path: 'globals' })] } })
+            baseConfig({ admin: { pages: [simplePage({ path: 'status' })] } })
         );
         const page = resolved.adminPages[0];
-        expect(page?.baseKey).toBe('globals');
-        expect(page?.key).toBe('globals');
+        expect(page?.key).toBe('status');
+        expect(page?.componentKey).toBe('status');
     });
 
-    it('host page has componentKey null (fields mode)', () => {
+    it('host page defaults permission to null (nothing to guard)', () => {
         const resolved = resolveConfig(baseConfig({ admin: { pages: [simplePage()] } }));
-        expect(resolved.adminPages[0]?.componentKey).toBeNull();
+        expect(resolved.adminPages[0]?.permission).toBeNull();
     });
 
-    it('host page defaults permission to settings:read', () => {
-        const resolved = resolveConfig(baseConfig({ admin: { pages: [simplePage()] } }));
-        expect(resolved.adminPages[0]?.permission).toBe('settings:read');
-    });
-
-    it('host page respects explicit permission override', () => {
+    it('host page respects an explicit permission', () => {
         const resolved = resolveConfig(
             baseConfig({
-                admin: { pages: [simplePage({ permission: 'settings:update' })] },
+                admin: { pages: [simplePage({ permission: 'users:read' })] },
             })
         );
-        expect(resolved.adminPages[0]?.permission).toBe('settings:update');
+        expect(resolved.adminPages[0]?.permission).toBe('users:read');
     });
 
     it('host page nav defaults to true', () => {
@@ -348,116 +169,12 @@ describe('resolveConfig adminPages — unified ResolvedAdminPage shape', () => {
     });
 });
 
-// XOR validation — exactly one of fields / component
-
-describe('resolveConfig adminPages — XOR validation', () => {
-    it('throws when neither fields nor component is provided', () => {
-        const page = { path: 'empty', label: 'Empty' } as AdminPage;
-        expect(() => resolveConfig(baseConfig({ admin: { pages: [page] } }))).toThrow(
-            /empty.*exactly one of/
-        );
-    });
-
-    it('throws when both fields and component are provided', () => {
-        const page: AdminPage = {
-            path: 'both',
-            label: 'Both',
-            fields: [{ name: 'x', type: 'text' }],
-            component: './Both.tsx',
-        };
-        expect(() => resolveConfig(baseConfig({ admin: { pages: [page] } }))).toThrow(
-            /both.*exactly one of/
-        );
-    });
-
-    it('accepts a page with only fields', () => {
-        expect(() =>
-            resolveConfig(baseConfig({ admin: { pages: [simplePage()] } }))
-        ).not.toThrow();
-    });
-
-    it('accepts a page with only component', () => {
-        const page: AdminPage = {
-            path: 'widget',
-            label: 'Widget',
-            component: './Widget.tsx',
-        };
-        expect(() =>
-            resolveConfig(baseConfig({ admin: { pages: [page] } }))
-        ).not.toThrow();
-    });
-});
-
-describe('resolveConfig adminPages — component mode', () => {
-    const componentPage = (overrides: Partial<AdminPage> = {}): AdminPage => ({
-        path: 'site-status',
-        label: 'Site Status',
-        component: './src/admin/pages/site-status.tsx',
-        ...overrides,
-    });
-
-    it('resolves fields to null', () => {
-        const resolved = resolveConfig(
-            baseConfig({ admin: { pages: [componentPage()] } })
-        );
-        expect(resolved.adminPages[0]?.fields).toBeNull();
-    });
-
-    it('sets componentKey to the page path', () => {
-        const resolved = resolveConfig(
-            baseConfig({ admin: { pages: [componentPage()] } })
-        );
-        expect(resolved.adminPages[0]?.componentKey).toBe('site-status');
-    });
-
-    it('defaults permission to null (nothing to guard)', () => {
-        const resolved = resolveConfig(
-            baseConfig({ admin: { pages: [componentPage()] } })
-        );
-        expect(resolved.adminPages[0]?.permission).toBeNull();
-    });
-
-    it('honours an explicit permission', () => {
-        const resolved = resolveConfig(
-            baseConfig({
-                admin: { pages: [componentPage({ permission: 'users:read' })] },
-            })
-        );
-        expect(resolved.adminPages[0]?.permission).toBe('users:read');
-    });
-
-    it('still resolves label, icon, nav and public', () => {
-        const resolved = resolveConfig(
-            baseConfig({
-                admin: {
-                    pages: [
-                        componentPage({ icon: 'Activity', nav: false, public: true }),
-                    ],
-                },
-            })
-        );
-        const page = resolved.adminPages[0];
-        expect(page?.label).toBe('Site Status');
-        expect(page?.icon).toBe('Activity');
-        expect(page?.nav).toBe(false);
-        expect(page?.public).toBe(true);
-    });
-
-    it('defaults nav to true and public to false', () => {
-        const resolved = resolveConfig(
-            baseConfig({ admin: { pages: [componentPage()] } })
-        );
-        expect(resolved.adminPages[0]?.nav).toBe(true);
-        expect(resolved.adminPages[0]?.public).toBe(false);
-    });
-});
-
 describe('defineAdminPage — round-trip', () => {
-    it('returns the page unchanged (fields mode)', () => {
+    it('returns the page unchanged', () => {
         const page: AdminPage = {
-            path: 'globals',
-            label: 'Globals',
-            fields: [{ name: 'siteName', type: 'text' }],
+            path: 'site-status',
+            label: 'Site Status',
+            component: './src/admin/pages/site-status.tsx',
         };
         expect(defineAdminPage(page)).toBe(page);
     });

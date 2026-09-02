@@ -4,7 +4,6 @@
  * with permission strings resolved so the browser never needs the namespacing rule.
  */
 
-import type { EntryFields, ResolvedEntryFields } from '@/types/fields';
 import type {
     AdminPage,
     PluginDefinition,
@@ -17,13 +16,6 @@ import {
     resolvePluginPermission,
     titleCaseNamespace,
 } from './plugin-identity';
-
-// Mirrors config-resolver's toResolvedFields.
-function toResolvedFields(fields: EntryFields | undefined): ResolvedEntryFields {
-    if (fields === undefined) return { main: [], sidebar: [] };
-    if (Array.isArray(fields)) return { main: fields, sidebar: [] };
-    return { main: fields.main, sidebar: fields.sidebar ?? [] };
-}
 
 /**
  * Admin display name: plugin `label` if set, otherwise the namespace
@@ -38,35 +30,16 @@ export function resolvePluginLabel(
 }
 
 function resolvePagePermission(namespace: string, page: AdminPage): string | null {
-    if (page.permission !== undefined) {
-        return resolvePluginPermission(namespace, page.permission);
-    }
-    // Settings pages read/write the core settings table, whose API enforces
-    // the core settings permissions — keep the page guard aligned.
-    if (page.fields !== undefined) return 'settings:read';
-    return null;
+    if (page.permission === undefined) return null;
+    return resolvePluginPermission(namespace, page.permission);
 }
 
-/** Validate and flatten a plugin's pages into unified ResolvedAdminPage[]. */
+/** Flatten a plugin's pages into unified ResolvedAdminPage[]. */
 export function derivePluginPages(
     identity: ResolvedPluginIdentity,
     def: PluginDefinition
 ): ResolvedAdminPage[] {
     return (def.admin?.pages ?? []).map((page) => {
-        if (page.component === undefined && page.fields === undefined) {
-            throw new Error(
-                `Astromech plugin "${identity.package}" page "${page.path}" needs ` +
-                    `exactly one of \`component\` or \`fields\`.`
-            );
-        }
-        if (page.component !== undefined && page.fields !== undefined) {
-            throw new Error(
-                `Astromech plugin "${identity.package}" page "${page.path}" must have ` +
-                    `exactly one of \`component\` or \`fields\`, not both.`
-            );
-        }
-
-        const baseKey = `plugin:${identity.permissionNamespace}:${page.path}`;
         const key = `${identity.namespace}${page.path}`;
 
         return {
@@ -74,13 +47,9 @@ export function derivePluginPages(
             path: page.path,
             label: page.label,
             ...(page.icon !== undefined ? { icon: page.icon } : {}),
-            baseKey,
-            fields: page.fields !== undefined ? toResolvedFields(page.fields) : null,
-            componentKey: page.component !== undefined ? key : null,
-            translatable: page.translatable ?? false,
+            componentKey: key,
             permission: resolvePagePermission(identity.permissionNamespace, page),
             nav: page.nav !== false,
-            public: page.public ?? false,
         };
     });
 }

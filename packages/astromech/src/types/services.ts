@@ -371,11 +371,7 @@ export type SettingsService = {
      * Return a single setting value. Without `full: true` only public-marked
      * keys resolve; a non-public key returns `null` on a public read.
      */
-    get(params: {
-        key: string;
-        locale?: string;
-        full?: boolean;
-    }): Promise<JsonValue | null>;
+    get(params: { key: string; full?: boolean }): Promise<JsonValue | null>;
     set(params: { key: string; value: JsonValue }): Promise<Setting>;
 };
 

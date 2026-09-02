@@ -215,7 +215,7 @@ export type ResourceValidationContext = {
 
 /**
  * A whole-resource validator — cross-field rules no single field owns, for an
- * entry, a media item, a user or a settings page. Async only, matching
+ * entry, a global, a media item or a user. Async only, matching
  * `FieldValidator`. Server-side only: it is a function, so it cannot survive
  * the JSON round trip into the admin config.
  */

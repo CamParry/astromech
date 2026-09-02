@@ -85,162 +85,59 @@ describe('derivePluginNav — entry types', () => {
 });
 
 describe('derivePluginPages — unified ResolvedAdminPage', () => {
-    it('produces namespaced baseKey for settings pages', () => {
-        const plugin: PluginDefinition = {
-            package: '@astromech/seo',
+    const componentPlugin = (path: string, extra: Partial<AdminPage> = {}) =>
+        ({
+            package: 'widgets',
             admin: {
                 pages: [
-                    {
-                        path: '/settings',
-                        label: 'Settings',
-                        fields: [{ name: 'x', type: 'text' }],
-                    },
+                    { path, label: 'Overview', component: './overview.js', ...extra },
                 ],
             },
-        };
-        const identity = resolvePluginIdentity(plugin);
-        const pages = derivePluginPages(identity, plugin);
-        expect(pages[0]?.baseKey).toBe('plugin:seo:/settings');
-    });
+        }) satisfies PluginDefinition;
 
     it('produces key as name+path', () => {
         const plugin: PluginDefinition = {
             package: '@astromech/seo',
             admin: {
                 pages: [
-                    {
-                        path: '/settings',
-                        label: 'Settings',
-                        fields: [{ name: 'x', type: 'text' }],
-                    },
-                ],
-            },
-        };
-        const identity = resolvePluginIdentity(plugin);
-        const pages = derivePluginPages(identity, plugin);
-        expect(pages[0]?.key).toBe('seo/settings');
-    });
-
-    it('sets fields to resolved tree and componentKey null for settings pages', () => {
-        const plugin: PluginDefinition = {
-            package: 'widgets',
-            admin: {
-                pages: [
-                    {
-                        path: '/cfg',
-                        label: 'Config',
-                        fields: [{ name: 'x', type: 'text' }],
-                    },
-                ],
-            },
-        };
-        const identity = resolvePluginIdentity(plugin);
-        const pages = derivePluginPages(identity, plugin);
-        expect(pages[0]?.fields).not.toBeNull();
-        expect(pages[0]?.componentKey).toBeNull();
-    });
-
-    it('sets componentKey for component pages and fields null', () => {
-        const plugin: PluginDefinition = {
-            package: 'widgets',
-            admin: {
-                pages: [
                     { path: '/overview', label: 'Overview', component: './overview.js' },
                 ],
             },
         };
+        const identity = resolvePluginIdentity(plugin);
+        const pages = derivePluginPages(identity, plugin);
+        expect(pages[0]?.key).toBe('seo/overview');
+    });
+
+    it('sets componentKey to the namespaced key', () => {
+        const plugin = componentPlugin('/overview');
         const identity = resolvePluginIdentity(plugin);
         const pages = derivePluginPages(identity, plugin);
         expect(pages[0]?.componentKey).toBe('widgets/overview');
-        expect(pages[0]?.fields).toBeNull();
     });
 
-    it('defaults permission to settings:read for fields-mode pages', () => {
-        const plugin: PluginDefinition = {
-            package: 'widgets',
-            admin: {
-                pages: [
-                    {
-                        path: '/cfg',
-                        label: 'Config',
-                        fields: [{ name: 'x', type: 'text' }],
-                    },
-                ],
-            },
-        };
-        const identity = resolvePluginIdentity(plugin);
-        const pages = derivePluginPages(identity, plugin);
-        expect(pages[0]?.permission).toBe('settings:read');
-    });
-
-    it('defaults permission to null for component pages', () => {
-        const plugin: PluginDefinition = {
-            package: 'widgets',
-            admin: {
-                pages: [
-                    { path: '/overview', label: 'Overview', component: './overview.js' },
-                ],
-            },
-        };
+    it('defaults permission to null', () => {
+        const plugin = componentPlugin('/overview');
         const identity = resolvePluginIdentity(plugin);
         const pages = derivePluginPages(identity, plugin);
         expect(pages[0]?.permission).toBeNull();
     });
 
-    it('throws when neither fields nor component is provided', () => {
-        const plugin: PluginDefinition = {
-            package: 'widgets',
-            admin: {
-                pages: [{ path: '/bad', label: 'Bad' } as AdminPage],
-            },
-        };
-        const identity = resolvePluginIdentity(plugin);
-        expect(() => derivePluginPages(identity, plugin)).toThrow(
-            /widgets.*\/bad.*exactly one of/
-        );
-    });
-
-    it('throws when both fields and component are provided', () => {
-        const plugin: PluginDefinition = {
-            package: 'widgets',
-            admin: {
-                pages: [
-                    {
-                        path: '/both',
-                        label: 'Both',
-                        fields: [{ name: 'x', type: 'text' }],
-                        component: './Both.tsx',
-                    },
-                ],
-            },
-        };
-        const identity = resolvePluginIdentity(plugin);
-        expect(() => derivePluginPages(identity, plugin)).toThrow(
-            /widgets.*\/both.*exactly one of/
-        );
-    });
-
-    it('resolves full EntryFields tree (main + sidebar) for settings pages', () => {
-        const plugin: PluginDefinition = {
-            package: 'widgets',
-            admin: {
-                pages: [
-                    {
-                        path: '/settings',
-                        label: 'Settings',
-                        fields: {
-                            main: [{ name: 'mode', type: 'select', options: ['a', 'b'] }],
-                            sidebar: [{ name: 'enabled', type: 'boolean' }],
-                        },
-                    },
-                ],
-            },
-        };
+    it('namespaces a bare permission', () => {
+        const plugin = componentPlugin('/overview', { permission: 'view' });
         const identity = resolvePluginIdentity(plugin);
         const pages = derivePluginPages(identity, plugin);
-        expect(pages[0]?.fields?.main).toHaveLength(1);
-        expect(pages[0]?.fields?.sidebar).toHaveLength(1);
-        expect(pages[0]?.fields?.main[0]?.name).toBe('mode');
-        expect(pages[0]?.fields?.sidebar[0]?.name).toBe('enabled');
+        expect(pages[0]?.permission).toBe('plugin:widgets:view');
+    });
+
+    it('defaults nav to true and respects nav: false', () => {
+        const identity = resolvePluginIdentity(componentPlugin('/overview'));
+        expect(derivePluginPages(identity, componentPlugin('/overview'))[0]?.nav).toBe(
+            true
+        );
+        expect(
+            derivePluginPages(identity, componentPlugin('/overview', { nav: false }))[0]
+                ?.nav
+        ).toBe(false);
     });
 });

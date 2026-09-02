@@ -641,27 +641,15 @@ describe('settings.get', () => {
         await expect(client.settings.get({ key: 'absent' })).resolves.toBeNull();
     });
 
-    it('merges the per-locale value over the base one', async () => {
-        vi.stubGlobal('fetch', (url: string) => {
-            requests.push({ url, method: 'GET', body: undefined });
-            const value = url.endsWith('%3Afr')
-                ? { title: 'Bonjour' }
-                : { title: 'A', x: 1 };
-            return Promise.resolve(
-                new Response(JSON.stringify({ data: { key: 'site', value } }), {
-                    status: 200,
-                    headers: { 'Content-Type': 'application/json' },
-                })
-            );
-        });
+    it('fetches the one key and returns its value', async () => {
+        stub({ data: { key: 'site', value: { title: 'A', x: 1 } } });
 
-        const value = await client.settings.get({ key: 'site', locale: 'fr' });
+        const value = await client.settings.get({ key: 'site' });
 
         expect(requests.map((request) => request.url)).toEqual([
             '/cms/api/settings/site',
-            '/cms/api/settings/site%3Afr',
         ]);
-        expect(value).toEqual({ title: 'Bonjour', x: 1 });
+        expect(value).toEqual({ title: 'A', x: 1 });
     });
 });
 

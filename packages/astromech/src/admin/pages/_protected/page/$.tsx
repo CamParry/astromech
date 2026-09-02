@@ -64,8 +64,7 @@ function AppPage(): React.ReactElement {
         );
     }
 
-    const registration =
-        page.componentKey !== null ? hostPages[page.componentKey] : undefined;
+    const registration = hostPages[page.componentKey];
 
     if (!registration) {
         return (

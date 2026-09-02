@@ -1,7 +1,7 @@
 /**
- * Service method for @astromech/menus. Reads a menu blob from settings, drops
- * disabled nodes, resolves entry refs to front-end URLs via the entry type's
- * `url` template, and returns a clean tree.
+ * Service method for @astromech/menus. Reads a menu's global, drops disabled
+ * nodes, resolves entry refs to front-end URLs via the entry type's `url`
+ * template, and returns a clean tree.
  */
 
 import type { MenuConfig, MenuItem } from '../types';
@@ -112,28 +112,17 @@ export function buildMenusService(
 
                 const locale =
                     typeof input?.locale === 'string' ? input.locale : undefined;
-                // The settings page has `path: '/menus/<key>'`, so its blob lives
-                // at `plugin:<ns>:/menus/<key>` — the same `baseKey` core computes
-                // for a plugin page. The namespace comes from the context, not
-                // from an identity import.
-                const blobKey = `plugin:${ctx.plugin.namespace}:/menus/${key}`;
-
-                // Trusted internal read of the plugin's own menu blob: reads through
-                // ctx.settings are full-shaped by default (plugin altitude is trusted
-                // server code) — the handler returns a sanitised menu tree, never the
-                // raw settings, so this never leaks.
-                const blob = await ctx.settings.get({
-                    key: blobKey,
+                // Trusted internal read of the plugin's own menu global, at the
+                // qualified key core resolves it under. Reads through
+                // `ctx.globals` are full-shaped by default (plugin altitude is
+                // trusted server code) — the handler returns a sanitised menu
+                // tree, never the raw fields, so this never leaks.
+                const global = await ctx.globals.get({
+                    key: `${ctx.plugin.namespace}/menu-${key}`,
                     ...(locale ? { locale } : {}),
                 });
-                if (blob === null || typeof blob !== 'object' || Array.isArray(blob)) {
-                    return [];
-                }
-
-                const raw = blob as Record<string, unknown>;
-                const items = Array.isArray(raw['items'])
-                    ? (raw['items'] as RawNode[])
-                    : [];
+                const stored = global?.fields['items'];
+                const items = Array.isArray(stored) ? (stored as RawNode[]) : [];
                 return walkNodes(items, ctx, locale);
             },
         }),

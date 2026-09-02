@@ -59,34 +59,29 @@ export function generatePluginClientManifest(
     });
 
     // Component pages keyed `{name}{path}` (e.g. `seo/overview`), matching
-    // the catch-all's `/plugin/$` splat. Settings-only pages have no import —
-    // they ship via admin-config metadata.
+    // the catch-all's `/plugin/$` splat.
     const pageLines = plugins.flatMap((def) => {
         const identity = resolvePluginIdentity(def);
-        return (def.admin?.pages ?? [])
-            .filter((page: AdminPage) => page.component !== undefined)
-            .map((page: AdminPage) => {
-                const permission =
-                    page.permission !== undefined
-                        ? resolvePluginPermission(
-                              identity.permissionNamespace,
-                              page.permission
-                          )
-                        : null;
-                return `\t${JSON.stringify(`${identity.namespace}${page.path}`)}: { load: () => import(${JSON.stringify(resolveAssetSpecifier(def, page.component as string))}), plugin: ${JSON.stringify(identity.namespace)}, permission: ${JSON.stringify(permission)}, label: ${JSON.stringify(labelText(page.label))} },`;
-            });
+        return (def.admin?.pages ?? []).map((page: AdminPage) => {
+            const permission =
+                page.permission !== undefined
+                    ? resolvePluginPermission(
+                          identity.permissionNamespace,
+                          page.permission
+                      )
+                    : null;
+            return `\t${JSON.stringify(`${identity.namespace}${page.path}`)}: { load: () => import(${JSON.stringify(resolveAssetSpecifier(def, page.component))}), plugin: ${JSON.stringify(identity.namespace)}, permission: ${JSON.stringify(permission)}, label: ${JSON.stringify(labelText(page.label))} },`;
+        });
     });
 
     // Host `admin.pages` component views, keyed by the bare `path` — exactly
     // the `/page/$` splat. Host keys are NOT namespaced (that's the plugin
     // rule); permissions are taken verbatim, since a host page authors a real key.
     const hostRoot = host?.root ?? '';
-    const hostPageLines = (host?.pages ?? [])
-        .filter((page) => page.component !== undefined)
-        .map(
-            (page) =>
-                `\t${JSON.stringify(page.path)}: { load: () => import(${JSON.stringify(resolveHostSpecifier(hostRoot, page.component as string))}), permission: ${JSON.stringify(page.permission ?? null)}, label: ${JSON.stringify(labelText(page.label))} },`
-        );
+    const hostPageLines = (host?.pages ?? []).map(
+        (page) =>
+            `\t${JSON.stringify(page.path)}: { load: () => import(${JSON.stringify(resolveHostSpecifier(hostRoot, page.component))}), permission: ${JSON.stringify(page.permission ?? null)}, label: ${JSON.stringify(labelText(page.label))} },`
+    );
 
     const SLOT_NAMES: AdminSlotName[] = ['global-overlay', 'right-drawer', 'toolbar'];
     const slotRows: Record<AdminSlotName, { order: number; line: string }[]> = {

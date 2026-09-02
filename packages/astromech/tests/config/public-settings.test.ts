@@ -3,10 +3,9 @@
  *
  * Covers:
  *  (a) Empty by default
- *  (b) PluginPage with `public: true` adds key + prefix
- *  (c) Non-public plugin pages are excluded
- *  (d) config.publicSettings entries derive key + prefix, like public pages
- *  (e) No duplicates when page key and publicSettings overlap
+ *  (b) A bare `publicSettings` entry derives the key and its `:` prefix
+ *  (c) An entry already ending with `:` is taken as written
+ *  (d) No duplicates when both forms are listed
  */
 
 import type { AstromechConfig, DatabaseDriver, StorageDriver } from '@/types/index';
@@ -54,100 +53,16 @@ function baseConfig(overrides: Partial<AstromechConfig> = {}): AstromechConfig {
 }
 
 describe('publicSettingKeys — default', () => {
-    it('is an empty array when no plugins and no publicSettings', () => {
+    it('is an empty array when publicSettings is not set', () => {
         const resolved = resolveConfig(baseConfig());
         expect(resolved.publicSettingKeys).toEqual([]);
     });
 
-    it('is an empty array when plugin has no public pages', () => {
-        const resolved = resolveConfig(
-            baseConfig({
-                plugins: [
-                    {
-                        package: 'test-plugin',
-                        admin: {
-                            pages: [
-                                {
-                                    path: '/settings',
-                                    label: 'Settings',
-                                    fields: [{ name: 'key', type: 'text' }],
-                                    // public not set → defaults private
-                                },
-                            ],
-                        },
-                    },
-                ],
-            })
-        );
+    it('is an empty array when publicSettings is empty', () => {
+        const resolved = resolveConfig(baseConfig({ publicSettings: [] }));
         expect(resolved.publicSettingKeys).toEqual([]);
     });
 });
-
-// (b) Plugin page with `public: true` → key + prefix
-
-describe('publicSettingKeys — plugin page public: true', () => {
-    it('adds the plugin settings key and its locale prefix', () => {
-        const resolved = resolveConfig(
-            baseConfig({
-                plugins: [
-                    {
-                        package: 'test-plugin',
-                        admin: {
-                            pages: [
-                                {
-                                    path: '/settings',
-                                    label: 'Settings',
-                                    fields: [],
-                                    public: true,
-                                },
-                            ],
-                        },
-                    },
-                ],
-            })
-        );
-        // Plugin identity: package=test-plugin, namespace=test_plugin
-        // Key: plugin:test_plugin:/settings
-        expect(resolved.publicSettingKeys).toContain('plugin:test_plugin:/settings');
-        // Prefix for locale variants: plugin:test_plugin:/settings:
-        expect(resolved.publicSettingKeys).toContain('plugin:test_plugin:/settings:');
-    });
-
-    it('a non-public setting read returns null (key absent from public list)', () => {
-        const resolved = resolveConfig(
-            baseConfig({
-                plugins: [
-                    {
-                        package: 'test-plugin',
-                        admin: {
-                            pages: [
-                                {
-                                    path: '/settings',
-                                    label: 'Settings',
-                                    fields: [],
-                                    // public: false (default)
-                                },
-                                {
-                                    path: '/public-settings',
-                                    label: 'Public Settings',
-                                    fields: [],
-                                    public: true,
-                                },
-                            ],
-                        },
-                    },
-                ],
-            })
-        );
-        // Only the public page's key is included
-        expect(resolved.publicSettingKeys).toContain(
-            'plugin:test_plugin:/public-settings'
-        );
-        expect(resolved.publicSettingKeys).not.toContain('plugin:test_plugin:/settings');
-    });
-});
-
-// (c) config.publicSettings derives key + prefix
 
 describe('publicSettingKeys — config.publicSettings', () => {
     it('includes raw publicSettings entries', () => {
@@ -176,34 +91,11 @@ describe('publicSettingKeys — config.publicSettings', () => {
         );
         expect(resolved.publicSettingKeys).toEqual(['my-key', 'my-key:']);
     });
-});
 
-describe('publicSettingKeys — no duplicates', () => {
-    it('does not duplicate a key when plugin page key and publicSettings overlap', () => {
+    it('does not duplicate a key listed twice', () => {
         const resolved = resolveConfig(
-            baseConfig({
-                plugins: [
-                    {
-                        package: 'test-plugin',
-                        admin: {
-                            pages: [
-                                {
-                                    path: '/settings',
-                                    label: 'Settings',
-                                    fields: [],
-                                    public: true,
-                                },
-                            ],
-                        },
-                    },
-                ],
-                // Also list the same key explicitly
-                publicSettings: ['plugin:test_plugin:/settings'],
-            })
+            baseConfig({ publicSettings: ['my-key', 'my-key'] })
         );
-        const exact = resolved.publicSettingKeys.filter(
-            (k) => k === 'plugin:test_plugin:/settings'
-        );
-        expect(exact).toHaveLength(1);
+        expect(resolved.publicSettingKeys).toEqual(['my-key', 'my-key:']);
     });
 });

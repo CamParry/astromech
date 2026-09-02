@@ -101,7 +101,7 @@ language's row and every translation has to re-point it.
   table back.
 - **Globals replace settings pages as the fifth resource.** A global is one item
   with content, versions, drafts and per-locale values, which is the
-  convergence `settings-version-history.md` describes and the naming it leans
+  convergence `settings-version-history.md` described and the naming it leaned
   to. A ULID `id` plus a unique `key` (the config identity), so every FK target
   in the system has the same id shape; "exactly one" is the unique index on
   `key`. The `settings` key-value table keeps only the naked `plugin:*` class
@@ -193,12 +193,14 @@ afterwards would be doing the work twice.
       as ids and the reader picks the locale on the second `get`; and `update`
       with a locale that has no content row is how a translation is created,
       rather than `duplicate` with a locale override.
-- [ ] **Globals.** `globals`, `global_content`, `global_versions`; a globals
+- [x] **Globals.** `globals`, `global_content`, `global_versions`; a globals
       service and admin section (the edit-surface-without-list generalization);
-      the site config declares globals, with the config shape settled when the
-      stage starts; settings pages migrate onto it and `settings` keeps the
-      `plugin:*` class. `ctx.settings` and `SettingsPageForm` keep working
-      through the move, or the move is not behaviour-preserving.
+      the site config declares globals in a top-level `globals` array of
+      `defineGlobal` objects, each carrying its own `key`. The cut was clean
+      rather than behaviour-preserving: the fields mode on `AdminPage` is gone,
+      the seo, backups and menus plugins and the demo read through
+      `ctx.globals`, and `settings` keeps the naked `plugin:*` class with no
+      fields, locales or statuses.
 - [ ] **Media.** `media_content` and `media_versions`; `title`, `alt`,
       `caption` and `fields` move; `media` gains `updatedBy` and loses its
       out-of-order appended columns; translation opts in through
@@ -220,9 +222,9 @@ afterwards would be doing the work twice.
   This file answers it for the content resources: one shared repository over
   the root/content/versions shape, with `tableRepository` as the only custom
   seam.
-- `settings-version-history.md` describes the convergence the globals stage
-  performs, leans to the same name, and carves out the naked-key class this
-  file keeps on `settings`.
+- `settings-version-history.md` described the convergence the globals stage
+  performs, leaned to the same name, and carved out the naked-key class this
+  file keeps on `settings`. Completed by that stage.
 - `relationships-model.md`: the relation target changes from a locale row to
   the entry id. Check that file when the entries stage starts.
 - `custom-table-relations.md` is unaffected; a custom table stays outside this

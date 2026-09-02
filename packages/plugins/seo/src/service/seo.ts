@@ -36,15 +36,14 @@ async function footprintEntries(
 }
 
 /**
- * Settings page blob key for the SEO plugin. The settings page has
- * `path: '/settings'`, so the blob lives at `plugin:<ns>:/settings`.
+ * The plugin's default Open Graph image URL, read from the `settings` global
+ * at the qualified key `<namespace>/settings`. Null when none is set.
  */
 async function resolveDefaultOgImage(ctx: PluginContext): Promise<string | null> {
-    const blob = await ctx.settings.get({
-        key: `plugin:${ctx.plugin.namespace}:/settings`,
+    const global = await ctx.globals.get({
+        key: `${ctx.plugin.namespace}/settings`,
     });
-    if (blob === null || typeof blob !== 'object' || Array.isArray(blob)) return null;
-    const mediaId = (blob as Record<string, unknown>).defaultOgImage;
+    const mediaId = global?.fields['defaultOgImage'];
     if (typeof mediaId !== 'string' || mediaId === '') return null;
     const media = await ctx.media.get({ id: mediaId });
     return media?.url ?? null;

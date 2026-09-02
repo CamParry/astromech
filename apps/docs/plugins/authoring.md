@@ -62,6 +62,7 @@ my-plugin/
   tables/widgets.ts      one file per database table (definePluginTable)
   migrations/            generated — never hand-edited
   entries/               entry-type definitions, one per file
+  globals/               global definitions (defineGlobal), one per file
   fields/                custom field-type registrations
   pages/                 admin page registrations
   permissions/           definePermissions() — the grantable permission keys
@@ -113,7 +114,8 @@ become `_`.
 The two forms split cleanly by audience:
 
 - **namespace** — everything that lives in your database or your permission
-  strings: `plugin_acme_seo_settings`, `plugin:acme_seo:view`, the i18n bundle
+  strings: `plugin_acme_seo_settings`, `plugin:acme_seo:view`, a global's
+  qualified key `acme_seo/settings`, the i18n bundle
   key, and the admin URL `/cms/plugin/acme_seo/*`.
 - **service key** — everything an API caller says: `Astromech.plugins.acmeSeo`
   and the matching route, `POST /cms/api/plugins/acmeSeo/*`. Both transports use it,
@@ -271,9 +273,9 @@ right trade for an unauthenticated submission and the wrong one for an import.
 
 ### Admin pages
 
-A page appears in the sidebar (unless it sets `nav: false`) and is **either** a
-`component` view **or** an auto-rendered `fields` settings form — exactly one,
-validated crash-loud at config resolution.
+A page appears in the sidebar (unless it sets `nav: false`) and renders a React
+component named by `component`. A field-bearing destination is a global, not a
+page — see [content/globals.md](../content/globals.md).
 
 ```ts
 // pages/overview.ts
@@ -288,19 +290,6 @@ export const overviewPage = defineAdminPage({
 });
 ```
 
-```ts
-// pages/settings.ts — auto-rendered form (no component)
-import { defineAdminPage } from 'astromech';
-import * as fields from 'astromech/fields';
-
-export const settingsPage = defineAdminPage({
-    path: '/settings',
-    label: 'Settings',
-    icon: 'Settings',
-    fields: [fields.boolean('showInListing', { label: 'Show ratings in lists' })],
-});
-```
-
 #### Where a page ends up
 
 `defineAdminPage` is one helper for both origins — a host app's `admin.pages`
@@ -308,10 +297,10 @@ and a plugin's `admin.pages` take the same object. **The registration site
 decides the scoping, not the name of the helper**, so what you declare is a
 **bare `path`** and Astromech absolutizes it wherever it was registered:
 
-| declared in     | route                           | settings `baseKey`          | default permission                                 |
-| --------------- | ------------------------------- | --------------------------- | -------------------------------------------------- |
-| a plugin        | `/cms/plugin/<namespace><path>` | `plugin:<namespace>:<path>` | `settings:read` for `fields`, none for `component` |
-| the host config | `/cms/page/<path>`              | `<path>`                    | `settings:read` for `fields`, none for `component` |
+| declared in     | route                           | default permission |
+| --------------- | ------------------------------- | ------------------ |
+| a plugin        | `/cms/plugin/<namespace><path>` | none               |
+| the host config | `/cms/page/<path>`              | none               |
 
 A `component` specifier is resolved relative to the **plugin's `root`** for a
 plugin page and relative to the **Astro project root** for a host page — so a
@@ -321,19 +310,14 @@ both cases, so a page component can come from a package subpath. Host page
 components must **not** call `useAstromechPlugin()`: there is no plugin identity
 to provide and the hook throws. Use the `astromech/ui` primitives directly.
 
-The `baseKey` is the settings key a `fields` page reads and writes: a
-non-translatable page stores one blob at `baseKey`, a translatable one stores
-the shared fields at `baseKey` and per-locale fields at `baseKey:<locale>`.
-
 Plugin paths lead with a `/` (`'/overview'` → `/cms/plugin/seo/overview`);
 `path: ''` is legal and mounts the page at the plugin's root,
-`/cms/plugin/backups`. Host paths don't (`path: 'globals'` →
-`/cms/page/globals`), because the host route already supplies the separator.
+`/cms/plugin/backups`. Host paths don't (`path: 'site-status'` →
+`/cms/page/site-status`), because the host route already supplies the separator.
 
 **Do not namespace the path yourself.** A declaration is relative by design and
 there is no double-prefix guard — writing `path: '/myplugin/overview'` inside
-`@acme/myplugin` gets you `/cms/plugin/myplugin/myplugin/overview` and a
-`baseKey` of `plugin:myplugin:/myplugin/overview`. The same rule holds for
+`@acme/myplugin` gets you `/cms/plugin/myplugin/myplugin/overview`. The same rule holds for
 `permission`, which takes a bare key (`'view'` → `plugin:<namespace>:view`).
 
 Page components call `useAstromechPlugin()` (from `astromech/ui/app`) for context:
@@ -347,6 +331,27 @@ export default function OverviewPage() {
     // ...
 }
 ```
+
+### Globals
+
+A plugin's editor-owned, exactly-one values are globals, declared in a
+`globals` array on the definition and addressed at runtime by the qualified key
+`<namespace>/<key>`:
+
+```ts
+// globals/settings.ts
+export const settingsGlobal = defineGlobal({
+    key: 'settings',
+    label: 'Settings',
+    icon: 'Settings',
+    fields: [fields.boolean('showInListing', { label: 'Show ratings in lists' })],
+});
+```
+
+Astromech mounts it at `/cms/plugin/<namespace>/globals/<key>`, derives
+`plugin:<namespace>:global:<key>:<action>` permissions for it, and lists it in
+the plugin's nav tree. [content/globals.md](../content/globals.md) covers every
+option and how to read one back.
 
 ### Admin slots
 
@@ -649,15 +654,15 @@ from there instead of importing an identity module:
 ```ts
 // backup.ts
 export async function resolveKeep(ctx: PluginContext, fallback: number): Promise<number> {
-    const key = `plugin:${ctx.plugin.namespace}:retention`;
-    const value = await ctx.settings.get({ key });
+    const global = await ctx.globals.get({ key: `${ctx.plugin.namespace}/settings` });
+    const value = global?.fields['retention'];
     // ...
 }
 ```
 
 ```ts
 // menus/service/menus.ts
-const blobKey = `plugin:${ctx.plugin.namespace}:/menus/${key}`;
+const global = await ctx.globals.get({ key: `${ctx.plugin.namespace}/menu-${key}` });
 ```
 
 `ctx.config` sits alongside it, and is a projection of the site's resolved
@@ -848,7 +853,7 @@ Two things to hold onto:
 
 Plugins can also contribute **service methods** (`defineServiceMethod`,
 callable off `Astromech.plugins.<serviceKey>`), **hooks** (`defineHook`, e.g.
-`entry:afterUpdate`), **entry types**, **cron jobs**, and **i18n** locale
+`entry:afterUpdate`), **entry types**, **globals**, **cron jobs**, and **i18n** locale
 bundles. See the bundled `redirects` and `seo` plugins for each.
 
 > Plugins can't register routes outside `${basePath}/api`. To integrate with the front end,
