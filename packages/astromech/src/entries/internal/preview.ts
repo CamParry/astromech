@@ -3,10 +3,10 @@
  * and the preview projection (public shape with the publish gate bypassed).
  */
 
-import type { AudienceContext } from '../visibility';
+import type { AudienceContext } from '@/content/visibility';
 import type { Entry, Field } from '@/types/index';
+import { applyVisibility, markPublic } from '@/content/visibility';
 import { createEntriesTableRepository } from '../repository/entries-table';
-import { applyVisibility, markPublic } from '../visibility';
 
 /** SHA-256 hex of a token (crypto.subtle — Workers-safe). */
 export async function hashPreviewToken(plaintext: string): Promise<string> {

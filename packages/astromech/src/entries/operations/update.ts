@@ -6,7 +6,9 @@ import type {
     EntryUpdateData,
     ResolvedEntryType,
 } from '@/types/index';
+import { getDefaultContentLocale } from '@/config/content-locale';
 import { getConfig } from '@/config/registry';
+import { isPublicBranded, PublicShapeWriteError } from '@/content/visibility';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { parseInput, ValidationError } from '@/errors/validation';
@@ -18,7 +20,6 @@ import {
     EntryNotFoundError,
     UnknownEntryTypeError,
 } from '../errors';
-import { getDefaultContentLocale } from '../internal/entry-type';
 import { asEntry, asRecord, findEntryOfType, getEntryOfType } from '../internal/records';
 import { indexEntryRelationships } from '../internal/relationships';
 import { deriveSlug, uniqueSlugIfChanged } from '../internal/slug';
@@ -27,7 +28,6 @@ import { propagateSharedFields } from '../internal/translatable';
 import { changesVersionedContent, snapshotVersion } from '../internal/versions';
 import { getEntryRepository } from '../repository/registry';
 import { createEntrySchema, updateEntrySchema } from '../schema';
-import { isPublicBranded, PublicShapeWriteError } from '../visibility';
 
 /**
  * Updates one locale of a batch of entries, atomically, firing the entry write

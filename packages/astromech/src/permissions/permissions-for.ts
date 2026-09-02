@@ -13,7 +13,8 @@ export type Permissions = {
     /**
      * True if the role may call `method` with `input`. Reads the method's
      * declared `permission` (resolving an input-dependent rule); a method that
-     * declares no permission is public and always allowed.
+     * declares no permission — or whose rule answers `null` for this input —
+     * is public and always allowed.
      */
     allowsMethod<Input>(method: ServiceMethodContract<Input>, input?: Input): boolean;
 };
@@ -31,7 +32,9 @@ export function permissionsFor(role: Role | null | undefined): Permissions {
         allowsMethod(method, input) {
             const rule = method.permission;
             if (rule === undefined) return true; // public method — no permission gate
-            return allows(typeof rule === 'function' ? rule(input as never) : rule);
+            const permission = typeof rule === 'function' ? rule(input as never) : rule;
+            if (permission === null) return true; // public for this input
+            return allows(permission);
         },
     };
 }

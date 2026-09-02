@@ -6,12 +6,12 @@
 import type { EntryRepository } from '../repository/types';
 import type { Field } from '@/types/fields';
 import type { JsonObject, ResolvedEntryType } from '@/types/index';
+import { getDefaultContentLocale } from '@/config/content-locale';
 import {
     inheritSharedFields as inheritContentFields,
     propagateSharedFields as propagateContentFields,
 } from '@/content/translatable';
 import { flattenEntryFields } from '@/fields/flatten';
-import { getDefaultContentLocale } from './entry-type';
 
 /**
  * Merges the entry's shared fields in from its default-locale row. A field

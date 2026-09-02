@@ -111,6 +111,7 @@ function makeCtx(
         user: null,
         role: null,
         entries: null as unknown as PluginContext['entries'],
+        globals: null as unknown as PluginContext['globals'],
         media: null as unknown as PluginContext['media'],
         settings: null as unknown as PluginContext['settings'],
         users: null as unknown as PluginContext['users'],

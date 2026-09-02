@@ -204,15 +204,17 @@ export class UnknownSortKeyError extends Error {
 }
 
 /**
- * Thrown when a route or entries-service operation is attempted on an entry type
- * that does not support the required capability.
+ * Thrown when an operation is attempted on a resource that does not declare the
+ * required capability. Shared with globals, which pass `kind: 'Global'` so the
+ * message names what was addressed; `entryType` keeps its name and holds the
+ * resource's id either way.
  */
 export class CapabilityError extends Error {
     public readonly capability: Capability;
     public readonly entryType: string;
 
-    constructor(entryType: string, capability: Capability) {
-        super(`Entry type "${entryType}" does not support capability: ${capability}`);
+    constructor(entryType: string, capability: Capability, kind = 'Entry type') {
+        super(`${kind} "${entryType}" does not support capability: ${capability}`);
         this.name = 'CapabilityError';
         this.capability = capability;
         this.entryType = entryType;

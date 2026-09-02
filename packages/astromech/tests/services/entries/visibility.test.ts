@@ -4,7 +4,7 @@
  * All tests call the functions directly with hand-built Entry + Field[]
  * — no client, no virtual:astromech/config, no getDb().
  */
-import type { AudienceContext, VisibilityOptions } from '@/entries/visibility';
+import type { AudienceContext, VisibilityOptions } from '@/content/visibility';
 import type { Entry, Field } from '@/types/index';
 import { describe, expect, it } from 'vitest';
 import {
@@ -12,7 +12,7 @@ import {
     isPublicBranded,
     markPublic,
     PublicShapeWriteError,
-} from '@/entries/visibility';
+} from '@/content/visibility';
 
 const NOW = new Date('2026-06-15T12:00:00Z');
 

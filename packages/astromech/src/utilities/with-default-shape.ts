@@ -1,10 +1,11 @@
 /**
  * `withDefaultShape(entries, shape)` wraps an `EntriesService` so `query`/`get`
  * inject `full: true` when the caller didn't ask — an explicit per-call value
- * always wins. `withDefaultSettingsShape` does the same for settings.
+ * always wins. `withDefaultGlobalsShape` and `withDefaultSettingsShape` do the
+ * same for globals and settings.
  */
 
-import type { EntriesService, SettingsService } from '@/types/index';
+import type { EntriesService, GlobalsService, SettingsService } from '@/types/index';
 
 /**
  * Return a thin wrapper around `entries` that injects `full: true` into
@@ -55,6 +56,35 @@ export function withDefaultShape(
         deleteStaged: (params) => entries.deleteStaged(params),
         issuePreviewToken: (params) => entries.issuePreviewToken(params),
         revokePreviewToken: (params) => entries.revokePreviewToken(params),
+    };
+}
+
+/**
+ * Return a thin wrapper around `globals` that injects `full: true` into `get()`
+ * when the caller didn't specify `full` — `get` is the only global method with a
+ * shape axis. Every other method is forwarded unchanged.
+ */
+export function withDefaultGlobalsShape(
+    globals: GlobalsService,
+    shape: 'full' | 'public'
+): GlobalsService {
+    if (shape === 'public') return globals;
+
+    return {
+        get(params) {
+            if ('full' in params) return globals.get(params);
+            return globals.get({ ...params, full: true });
+        },
+        update: (params) => globals.update(params),
+        publish: (params) => globals.publish(params),
+        unpublish: (params) => globals.unpublish(params),
+        schedule: (params) => globals.schedule(params),
+        versions: (params) => globals.versions(params),
+        restoreVersion: (params) => globals.restoreVersion(params),
+        createStaged: (params) => globals.createStaged(params),
+        getStaged: (params) => globals.getStaged(params),
+        mergeStaged: (params) => globals.mergeStaged(params),
+        deleteStaged: (params) => globals.deleteStaged(params),
     };
 }
 

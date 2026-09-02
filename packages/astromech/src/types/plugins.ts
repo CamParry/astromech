@@ -26,6 +26,7 @@ import type {
     UsersService,
 } from './services';
 import type { TypedEntriesService } from './typed-entries';
+import type { TypedGlobalsService } from './typed-globals';
 import type { Table } from '@/database/define-table';
 import type { DB } from '@/database/types';
 import type { PermissionDeclarations } from '@/permissions/define';
@@ -97,6 +98,8 @@ export type PluginConfigView = Pick<
     ResolvedConfig,
     | 'entries'
     | 'pluginEntries'
+    | 'globals'
+    | 'pluginGlobals'
     | 'adminPages'
     | 'admin'
     | 'media'
@@ -148,6 +151,15 @@ export type PluginContext = {
      * enforcement boundary.
      */
     entries: TypedEntriesService;
+    /**
+     * The GLOBAL globals service — not scoped, not qualified, the way
+     * `entries` is. A plugin addresses its own globals by the qualified key it
+     * builds from context: ``ctx.globals.get({ key: `${ctx.plugin.namespace}/settings` })``.
+     * Reads default to the `full` shape (plugin altitude is trusted server
+     * code); an explicit per-call `full` still wins. No permission checks —
+     * HTTP is the enforcement boundary.
+     */
+    globals: TypedGlobalsService;
     /** The global media service. */
     media: MediaService;
     /** The global settings service. Reads default to the `full` shape. */

@@ -6,10 +6,10 @@
  */
 
 import type { Entry, EntryQueryParams, QueryResult } from '@/types/index';
+import { getDefaultContentLocale } from '@/config/content-locale';
 import { getConfig } from '@/config/registry';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { flattenEntryFields } from '@/fields/flatten';
-import { getDefaultContentLocale } from '../../internal/entry-type';
 import { projectPreview, verifyPreviewToken } from '../../internal/preview';
 import { asEntry } from '../../internal/records';
 import { getEntryRepository } from '../../repository/registry';

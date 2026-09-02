@@ -13,6 +13,7 @@ import type {
     Role,
     SettingsService,
     TypedEntriesService,
+    TypedGlobalsService,
     User,
     UsersService,
 } from '@/types/index';
@@ -37,6 +38,7 @@ import { entryJobs } from '@/entries/jobs/entry-jobs';
 import { setEntryRepository } from '@/entries/repository/registry';
 import { typedEntriesService } from '@/entries/typed-entries-service';
 import { AstromechError } from '@/errors/astromech-error';
+import { typedGlobalsService } from '@/globals/typed-globals-service';
 import { defaultImageWidths, normaliseWidths } from '@/media/image-widths.shared';
 import { mediaService } from '@/media/service';
 import { setImageConfig } from '@/media/serving/image/registry';
@@ -55,6 +57,8 @@ export type Astromech = {
     config: ResolvedConfig;
     /** Typed read and write access to the entry types. */
     entries: TypedEntriesService;
+    /** Typed read and write access to the declared globals. */
+    globals: TypedGlobalsService;
     /** Media items: store, transform, and serve. */
     media: MediaService;
     /** Users, roles, and authentication. */
@@ -183,6 +187,7 @@ async function build(config: AstromechConfig): Promise<Astromech> {
     return {
         config: resolved,
         entries: typedEntriesService,
+        globals: typedGlobalsService,
         media: mediaService,
         users: usersService,
         settings: settingsService,

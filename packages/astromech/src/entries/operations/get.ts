@@ -1,14 +1,14 @@
-import type { VisibilityShape } from '../visibility';
+import type { VisibilityShape } from '@/content/visibility';
 import type { Entry } from '@/types/index';
+import { getDefaultContentLocale } from '@/config/content-locale';
 import { getConfig } from '@/config/registry';
+import { applyVisibility, markPublic } from '@/content/visibility';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { ValidationError } from '@/errors/validation';
 import { flattenEntryFields } from '@/fields/flatten';
 import { getCurrentUser } from '@/request-context/request-context';
-import { getDefaultContentLocale } from '../internal/entry-type';
 import { asEntry } from '../internal/records';
 import { getEntryRepository } from '../repository/registry';
-import { applyVisibility, markPublic } from '../visibility';
 import { getPreviewEntry } from './preview/read';
 
 /**

@@ -1,7 +1,7 @@
 /**
- * Config-derived helpers shared across entry operations: locale defaulting,
- * title-field + capability lookups, capability assertions, and field-definition
- * resolution. All read the resolved config.
+ * Config-derived helpers shared across entry operations: title-field and
+ * capability lookups, capability assertions, and field-definition resolution.
+ * All read the resolved config.
  */
 
 import type { Capability } from '@/entries/capabilities';
@@ -9,22 +9,8 @@ import type { Field, ResolvedEntryType } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { flattenEntryFields } from '@/fields/flatten';
-import { resolveContentLocale } from '@/utilities/locale';
 import { CapabilityError } from '../errors';
 import { getEntryRepository } from '../repository/registry';
-
-/**
- * The content locale entries are tagged with by default, reached by walking
- * `defaultLocale` down its RFC 4647 fallback chain.
- */
-export function getDefaultContentLocale(): string {
-    // `defaultLocale` is a display tag (e.g. `en-GB`) and the repository matches
-    // locale exactly, so fall back to the first configured locale.
-    const config = getConfig();
-    const locales = config.locales ?? [];
-    const requested = config.defaultLocale ?? 'en';
-    return resolveContentLocale(requested, locales) ?? locales[0] ?? requested;
-}
 
 /** Whether the type carries a title. Unknown types are titled, like the default. */
 export function isTitled(type: string): boolean {

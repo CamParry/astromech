@@ -27,10 +27,14 @@ export type ServiceMethodEffect = {
 
 /**
  * A method's declared permission: either a fixed permission string, or one
- * resolved from the call input (e.g. entries, where the permission depends on
- * the target entry type). Absent ⇒ the method is not permission-gated.
+ * resolved from the call input (e.g. globals, where the permission depends on
+ * the target key). Absent ⇒ the method is not permission-gated; a rule
+ * returning `null` says the same for that one input, which is how a `public`
+ * global's plain read is ungated while its `full` read is not.
  */
-export type PermissionRule<Input = unknown> = Permission | ((input: Input) => Permission);
+export type PermissionRule<Input = unknown> =
+    | Permission
+    | ((input: Input) => Permission | null);
 
 /**
  * A core service method's declared contract, authored in its domain's catalogue

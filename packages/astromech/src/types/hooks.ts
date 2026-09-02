@@ -4,7 +4,7 @@
  * (`hookEvents`). An event name is `KnownCoreEvent | (string & {})`.
  */
 
-import type { Entry, EntryStatus, JsonObject, User } from './domain';
+import type { Entry, EntryStatus, Global, JsonObject, User } from './domain';
 import type { PluginContext } from './plugins';
 
 /**
@@ -43,6 +43,20 @@ export type EntryUpdateContext = {
     user: User | null;
 };
 
+/**
+ * A write to one locale of one global. `global` is null when that locale has
+ * never been saved — the first `update` creates it, so a before-handler sees
+ * no prior record.
+ */
+export type GlobalUpdateContext = {
+    key: string;
+    locale: string;
+    /** Null when the global has never been saved in this locale. */
+    global: Global | null;
+    data: { fields: JsonObject };
+    user: User | null;
+};
+
 export type EntryDeleteContext = {
     type: string;
     entry: Entry;
@@ -72,6 +86,14 @@ export type CoreHookHandlers = {
         ctx: EntryUpdateContext,
         plugin: PluginContext
     ) => Promise<void | EntryUpdateContext> | void | EntryUpdateContext;
+    'global:beforeUpdate': (
+        ctx: GlobalUpdateContext,
+        plugin: PluginContext
+    ) => Promise<void | GlobalUpdateContext> | void | GlobalUpdateContext;
+    'global:afterUpdate': (
+        ctx: GlobalUpdateContext,
+        plugin: PluginContext
+    ) => Promise<void | GlobalUpdateContext> | void | GlobalUpdateContext;
     'entry:beforeDelete': (
         ctx: EntryDeleteContext,
         plugin: PluginContext

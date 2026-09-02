@@ -8,6 +8,7 @@
  */
 
 import type {
+    AstromechConfig,
     CoreManifestMethod,
     EntriesService,
     ManifestMethod,
@@ -16,7 +17,7 @@ import type {
     ServiceMethodContract,
     User,
 } from '@/types/index';
-import { setupTestConfig } from '@tests/harness';
+import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PermissionDeniedError } from '@/errors/permission';
 import { permissionsFor } from '@/permissions/permissions-for';
@@ -332,6 +333,124 @@ describe('scopeEntries', () => {
             PermissionDeniedError
         );
         expect(stub.mystery).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * A config whose globals cover the two branches `globals.get`'s permission rule
+ * takes: a `public` global (whose plain read is ungated) and a private one.
+ */
+function globalsConfig(): AstromechConfig {
+    return {
+        ...makeTestConfig(),
+        globals: [
+            {
+                key: 'site',
+                label: 'Site',
+                public: true,
+                fields: [{ name: 'title', type: 'text', label: 'Title' }],
+            },
+            {
+                key: 'internal',
+                label: 'Internal',
+                fields: [{ name: 'note', type: 'text', label: 'Note' }],
+            },
+        ],
+        plugins: [
+            {
+                package: '@astromech/seo',
+                globals: [
+                    {
+                        key: 'settings',
+                        label: 'SEO',
+                        fields: [{ name: 'title', type: 'text', label: 'Title' }],
+                    },
+                ],
+            },
+        ],
+    };
+}
+
+/**
+ * The globals handle refuses before the service is entered, so these assert on
+ * the refusal alone — the service itself has no database here.
+ */
+describe('scopedServices — globals', () => {
+    beforeEach(async () => {
+        // The ungated branch reaches the real service, so it needs a database
+        // to answer from; every other case refuses before the call.
+        await createTestDb();
+        setupTestConfig(globalsConfig());
+    });
+
+    it('derives the read permission per key', () => {
+        const scoped = scopedServices(role('global:internal:read'));
+
+        try {
+            void scoped.globals.get({ key: 'site', full: true });
+            expect.unreachable('a read grant for one global must not reach another');
+        } catch (e) {
+            expect((e as PermissionDeniedError).method).toBe('globals.get');
+            expect((e as PermissionDeniedError).permission).toBe('global:site:read');
+        }
+    });
+
+    it('refuses the full shape of a public global without the read permission', () => {
+        const scoped = scopedServices(role());
+
+        expect(() => scoped.globals.get({ key: 'site', full: true })).toThrow(
+            PermissionDeniedError
+        );
+        expect(() => scoped.globals.get({ key: 'site', staged: true })).toThrow(
+            PermissionDeniedError
+        );
+    });
+
+    it('allows a public global\u2019s plain read with no role at all', async () => {
+        const scoped = scopedServices(null);
+
+        // Reaches the service, which answers null: nothing is saved.
+        await expect(scoped.globals.get({ key: 'site' })).resolves.toBeNull();
+    });
+
+    it('refuses a private global\u2019s plain read', () => {
+        const scoped = scopedServices(null);
+
+        try {
+            void scoped.globals.get({ key: 'internal' });
+            expect.unreachable('a non-public global is never an anonymous read');
+        } catch (e) {
+            expect((e as PermissionDeniedError).permission).toBe('global:internal:read');
+        }
+    });
+
+    it('gates a plugin global on the plugin permission form', () => {
+        const scoped = scopedServices(role('global:site:update'));
+
+        try {
+            void scoped.globals.update({
+                key: 'seo/settings',
+                data: { fields: {} },
+            });
+            expect.unreachable('a host global grant must not reach a plugin global');
+        } catch (e) {
+            expect((e as PermissionDeniedError).permission).toBe(
+                'plugin:seo:global:settings:update'
+            );
+        }
+    });
+
+    it('derives the permission per action', () => {
+        const scoped = scopedServices(role('global:internal:update'));
+
+        try {
+            void scoped.globals.publish({ key: 'internal' });
+            expect.unreachable('publish must not be reachable from an update grant');
+        } catch (e) {
+            expect((e as PermissionDeniedError).permission).toBe(
+                'global:internal:publish'
+            );
+        }
     });
 });
 

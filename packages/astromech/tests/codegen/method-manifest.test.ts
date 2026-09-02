@@ -224,6 +224,57 @@ describe('generateMethodManifest — core methods', () => {
     });
 });
 
+describe('generateMethodManifest — globals', () => {
+    const GLOBAL_METHODS = [
+        'get',
+        'update',
+        'publish',
+        'unpublish',
+        'schedule',
+        'versions',
+        'restoreVersion',
+        'createStaged',
+        'getStaged',
+        'mergeStaged',
+        'deleteStaged',
+    ];
+
+    it('emits one core method per GlobalsService verb', () => {
+        const { methods } = parseManifest([]);
+        for (const method of GLOBAL_METHODS) {
+            const m = findMethod(methods, `globals.${method}`);
+            expect(m, method).toBeDefined();
+            expect(m?.['source']).toBe('core');
+            expect(m?.['domain']).toBe('globals');
+        }
+    });
+
+    it('marks the permission dynamic, since it comes from the key in the call', () => {
+        const { methods } = parseManifest([]);
+        const m = findMethod(methods, 'globals.update');
+        expect(m?.['permission']).toBeNull();
+        expect(m?.['permissionDynamic']).toBe(true);
+    });
+
+    it('describes globals.update as { key, locale, data }', () => {
+        const { methods } = parseManifest([]);
+        const input = findMethod(methods, 'globals.update')?.['input'] as {
+            properties?: Record<string, { properties?: Record<string, unknown> }>;
+        };
+        expect(Object.keys(input?.properties ?? {})).toEqual(['key', 'locale', 'data']);
+        expect(Object.keys(input?.properties?.['data']?.properties ?? {})).toEqual([
+            'fields',
+        ]);
+    });
+
+    it('marks the read methods non-mutating and unpublish destructive', () => {
+        const { methods } = parseManifest([]);
+        expect(findMethod(methods, 'globals.get')?.['mutates']).toBe(false);
+        expect(findMethod(methods, 'globals.versions')?.['mutates']).toBe(false);
+        expect(findMethod(methods, 'globals.unpublish')?.['destructive']).toBe(true);
+    });
+});
+
 describe('generateMethodManifest — root entries', () => {
     it('should emit entries.query for root type posts with mount root', () => {
         const { methods } = parseManifest([]);

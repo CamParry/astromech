@@ -1,23 +1,16 @@
 /**
- * Settings service — the settings verbs (all / get / set). Talks
- * to the repository and applies the public/private key visibility rule.
- * Unaware of delivery shape — the Local API, HTTP API, etc. project it.
+ * Settings service — the settings verbs (all / get / set) over the naked
+ * key-value class. Talks to the repository and applies the public/private key
+ * visibility rule. Unaware of delivery shape — the Local API, HTTP API, etc.
+ * project it.
  */
 
 import type { SettingRow } from './tables';
 import type { JsonValue, Setting, SettingsService } from '@/types/index';
 import { getConfig } from '@/config/registry';
-import { existingEntryTypes } from '@/database/repository/resource-existence';
-import { fieldLookupsFromRecords } from '@/fields/field-lookups';
-import { flattenEntryFields } from '@/fields/flatten';
-import { parseFields } from '@/fields/parse-fields';
-import { getCurrentUser } from '@/request-context/request-context';
 import { mergeLocaleSetting } from './page-values.shared';
 import { createSettingsRepository } from './repository';
 import { isPublicSettingKey } from './visibility';
-
-const isPlainObject = (v: unknown): v is Record<string, unknown> =>
-    typeof v === 'object' && v !== null && !Array.isArray(v);
 
 function toSetting(row: SettingRow): Setting {
     return {
@@ -77,50 +70,12 @@ export const settingsService: SettingsService = {
         return base;
     },
 
+    /**
+     * Write one key. The value is stored as given: `settings` is the naked
+     * `plugin:*` key-value class, so nothing here declares fields to validate
+     * against — editor-owned content with a field schema is a global.
+     */
     async set(params: { key: string; value: JsonValue }): Promise<Setting> {
-        const { key } = params;
-        let effectiveValue = params.value;
-
-        const config = getConfig();
-        const baseKey = key.includes(':') ? key.slice(0, key.indexOf(':')) : key;
-        const page = config.adminPages.find((p) => p.baseKey === baseKey);
-        if (page?.fields && isPlainObject(effectiveValue)) {
-            // Validate ONLY the fields present in this key's blob. Translatable pages
-            // split global fields (baseKey) from per-locale fields (baseKey:<locale>)
-            // across separate keys, so a full-field required sweep would false-fail.
-            const allDefs = flattenEntryFields(page.fields);
-            const presentDefs = allDefs.filter((f) =>
-                Object.prototype.hasOwnProperty.call(effectiveValue, f.name)
-            );
-            // `ResolvedAdminPage` drops `validate` along with everything else
-            // it does not project, so it has to come from the AUTHORED page.
-            const validate = config.admin?.pages?.find(
-                (p) => p.path === page.path
-            )?.validate;
-            const parsed = await parseFields(
-                effectiveValue as Record<string, unknown>,
-                presentDefs,
-                {
-                    operation: 'update',
-                    resource: { kind: 'setting', record: null },
-                    user: await getCurrentUser(),
-                    lookups: fieldLookupsFromRecords({
-                        load: async () =>
-                            (await settingsService.all({ full: true })).filter(
-                                (s) =>
-                                    s.key === baseKey || s.key.startsWith(`${baseKey}:`)
-                            ),
-                        getId: (s) => s.key,
-                        getFields: (s) => (isPlainObject(s.value) ? s.value : {}),
-                        excludeId: key,
-                        entryTypes: (ids) => existingEntryTypes(ids),
-                    }),
-                    ...(validate ? { validate } : {}),
-                }
-            );
-            effectiveValue = parsed as JsonValue;
-        }
-
-        return toSetting(await createSettingsRepository().set(key, effectiveValue));
+        return toSetting(await createSettingsRepository().set(params.key, params.value));
     },
 };

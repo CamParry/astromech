@@ -1,5 +1,6 @@
 /**
- * Core domain types — entries, users, media, settings, roles, relationships
+ * Core domain types — entries, globals, users, media, settings, roles,
+ * relationships
  */
 
 export type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
@@ -7,11 +8,18 @@ export type JsonObject = { [key: string]: JsonValue };
 export type JsonArray = JsonValue[];
 
 /**
- * What carries fields and runs the field pipeline — an entry, a user, a media
- * item or a settings page. `TargetKind` (`fields/relationship-edges.ts`) is the
+ * What carries fields and runs the field pipeline — an entry, a global, a user
+ * or a media item. `TargetKind` (`fields/relationship-edges.ts`) is the
  * relation-eligible subset.
  */
-export type ResourceType = 'entry' | 'user' | 'media' | 'setting';
+export type ResourceType =
+    | 'entry'
+    | 'global'
+    | 'user'
+    | 'media'
+    // Goes with the CLI validator's settings scan
+    // (`transport/cli/validate-stored-content.ts`), the last reader of it.
+    | 'setting';
 
 export type EntryStatus = 'unpublished' | 'published' | 'scheduled';
 
@@ -31,7 +39,7 @@ export type Entry = {
     /**
      * The publication gate, not a record of when publication happened. While
      * `status` is `'scheduled'` this holds a time ahead of now, and
-     * `entries/visibility.ts` compares it against the clock: an entry whose
+     * `content/visibility.ts` compares it against the clock: an entry whose
      * `publishedAt` is in the future is not publicly visible. Null means no gate
      * is set. `status` is what tells you which side of now the value is on.
      */
@@ -49,6 +57,49 @@ export type Entry = {
      */
     createdBy?: string | null;
     updatedBy?: string | null;
+};
+
+/**
+ * One editor-owned, exactly-one, site-wide piece of content, in one locale. A
+ * global is addressed by its config `key` everywhere public; `id` is the row it
+ * was saved as, present so a future relation has the same target shape every
+ * other resource offers.
+ */
+export type Global = {
+    id: string;
+    key: string;
+    locale: string;
+    /** Locales that have a content row, this one included. Sorted. */
+    locales: string[];
+    fields: JsonObject;
+    status: EntryStatus;
+    /** True when this read is the staged change rather than the canonical row. */
+    staged: boolean;
+    /** The publication gate, read exactly as `Entry.publishedAt` is. */
+    publishedAt: Date | null;
+    /** When the global was first saved; every locale reports the same value. */
+    createdAt: Date;
+    /** When this locale was last edited. */
+    updatedAt: Date;
+    /**
+     * Who made this locale and who last wrote to it. Null for a write with no
+     * request identity — a seed script, the CLI, the scheduler.
+     */
+    createdBy?: string | null;
+    updatedBy?: string | null;
+};
+
+/** A saved snapshot of one locale of one global. */
+export type GlobalVersion = {
+    id: string;
+    key: string;
+    locale: string;
+    /** Position in the sequence, which runs per global and locale from 1. */
+    version: number;
+    fields: JsonObject | null;
+    status: EntryStatus | null;
+    createdAt: Date;
+    createdBy: string | null;
 };
 
 /** A saved snapshot of one locale of one entry. */

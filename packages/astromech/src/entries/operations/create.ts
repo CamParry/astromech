@@ -1,19 +1,19 @@
 import type { Entry, EntryCreateParams } from '@/types/index';
+import { getDefaultContentLocale } from '@/config/content-locale';
 import { getConfig } from '@/config/registry';
+import { isPublicBranded, PublicShapeWriteError } from '@/content/visibility';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { parseInput, ValidationError } from '@/errors/validation';
 import { runHook } from '@/hooks/hooks';
 import { getCurrentUser } from '@/request-context/request-context';
 import { UnknownEntryTypeError } from '../errors';
-import { getDefaultContentLocale } from '../internal/entry-type';
 import { asEntry } from '../internal/records';
 import { indexEntryRelationships } from '../internal/relationships';
 import { deriveSlug } from '../internal/slug';
 import { toStoredFields } from '../internal/stored-fields';
 import { getEntryRepository } from '../repository/registry';
 import { createEntrySchema } from '../schema';
-import { isPublicBranded, PublicShapeWriteError } from '../visibility';
 
 /**
  * Creates an entry of the given type: validates input, fills defaults, runs

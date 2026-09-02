@@ -6,8 +6,8 @@
 
 import type { ContentRowId, EntryRepository, EntryRow } from '../repository/types';
 import type { Entry } from '@/types/index';
+import { getDefaultContentLocale } from '@/config/content-locale';
 import { EntryNotFoundError, EntryTypeMismatchError } from '../errors';
-import { getDefaultContentLocale } from './entry-type';
 
 /**
  * One locale of one entry as the operations read it: the public shape plus the

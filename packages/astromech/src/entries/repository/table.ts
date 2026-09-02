@@ -16,10 +16,10 @@ import type { Column, Table } from '@/database/define-table';
 import type { Repository, Where } from '@/database/repository/create-repository';
 import type { Db } from '@/database/types';
 import type { JsonObject } from '@/types/index';
+import { getDefaultContentLocale } from '@/config/content-locale';
 import { decodeWith } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 import { RelationshipFilterUnsupportedError, UnknownSortKeyError } from '../errors';
-import { getDefaultContentLocale } from '../internal/entry-type';
 
 type OrderPair = [column: string, direction: 'asc' | 'desc'];
 

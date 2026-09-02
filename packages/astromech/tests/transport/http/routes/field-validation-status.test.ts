@@ -7,7 +7,7 @@
  * `ValidationError` was flattened to a 500 ("Internal server error: Validation
  * failed") before `onError` could see it — for every domain, since the CMS
  * shipped. These tests pin the 422 at the HTTP boundary for all four domains
- * that run the pipeline (entries, users, media, settings).
+ * that run the pipeline (entries, users, media).
  *
  * Two things beyond the bare status:
  *  - a NESTED error key (`socials[<id>].url`, produced by the repeater's
@@ -42,7 +42,6 @@ import { setStorageDriver } from '@/storage/registry';
 import { onError } from '@/transport/http/middleware/errors';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
 import { mediaRouter } from '@/transport/http/routes/media';
-import { settingsRouter } from '@/transport/http/routes/settings';
 import { usersRouter } from '@/transport/http/routes/users';
 
 type ErrorBody = {
@@ -115,15 +114,11 @@ function mountedApp(): OpenAPIHono<{ Variables: AuthVariables }> {
     app.route('/entries', createEntriesRouter());
     app.route('/users', usersRouter);
     app.route('/media', mediaRouter);
-    app.route('/settings', settingsRouter);
     return app;
 }
 
-/** The admin page whose `fields` govern `settings.set` validation. */
-const SETTINGS_KEY = 'site';
-
 /**
- * One config covering all four domains. `boom` (on `note`) is the
+ * One config covering all three domains. `boom` (on `note`) is the
  * non-`ValidationError` probe: a `custom` rule that throws rather than
  * returning a message, so the pipeline propagates a plain `Error`.
  */
@@ -204,22 +199,6 @@ function makeConfig(): AstromechConfig {
         },
         media: {
             fields: [{ name: 'caption', type: 'text', label: 'Caption', required: true }],
-        },
-        admin: {
-            pages: [
-                {
-                    path: SETTINGS_KEY,
-                    label: 'Site',
-                    fields: [
-                        {
-                            name: 'contact',
-                            type: 'text',
-                            label: 'Contact',
-                            validation: [{ email: true }],
-                        },
-                    ],
-                },
-            ],
         },
     };
 }
@@ -439,24 +418,6 @@ describe('PUT /media/:id — invalid field value', () => {
         expect(body.error.code).toBe('VALIDATION_FAILED');
         expect(body.error.details?.fields).toEqual({
             caption: ['This field is required'],
-        });
-    });
-});
-
-describe('PUT /settings/:key — invalid field value', () => {
-    it('422s with details.fields', async () => {
-        const app = mountedApp();
-        const res = await app.request(`/settings/${SETTINGS_KEY}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ value: { contact: 'not-an-email' } }),
-        });
-
-        expect(res.status).toBe(422);
-        const body = (await res.json()) as ErrorBody;
-        expect(body.error.code).toBe('VALIDATION_FAILED');
-        expect(body.error.details?.fields).toEqual({
-            contact: ['Must be a valid email address'],
         });
     });
 });

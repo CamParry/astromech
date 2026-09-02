@@ -1,6 +1,6 @@
 /**
- * Service contract types — the operations each domain offers (entries, media,
- * settings, users, content, notifications).
+ * Service contract types — the operations each domain offers (entries, globals,
+ * media, settings, users, content, notifications).
  *
  * Entry surface design:
  *  - Every entry method takes a single options object.
@@ -13,6 +13,8 @@ import type {
     Entry,
     EntryStatus,
     EntryVersion,
+    Global,
+    GlobalVersion,
     JsonObject,
     JsonValue,
     Media,
@@ -234,6 +236,101 @@ export type EntriesService = {
     }): Promise<{ token: string }>;
     /** Revoke the entry's preview token. */
     revokePreviewToken(params: { type: string; id: string }): Promise<void>;
+};
+
+/** The patch one `globals.update` call writes. Omitted fields keep their value. */
+export type GlobalUpdateData = { fields: JsonObject };
+
+/**
+ * The globals domain's service contract. Every method takes one options object
+ * with `key` first and an optional `locale`; a missing locale is the default
+ * content locale. There is no `query`, `create` or `delete`: a global exists
+ * because the config declares it. An undeclared key is `GlobalNotFoundError`
+ * from every method, `get` included.
+ */
+export type GlobalsService = {
+    /**
+     * One locale of one global, or null when it has never been saved there.
+     * No fallback to another locale. Without `full` this is the public read:
+     * it answers null unless the row is published and its publish gate has
+     * passed, and strips `private` fields. `staged: true` requires `full` and
+     * reads the staged change instead of the canonical row.
+     */
+    get(params: {
+        key: string;
+        locale?: string;
+        /** Request the full (admin) shape instead of the default public shape. */
+        full?: boolean;
+        /** Read the staged change rather than the canonical row. Needs `full`. */
+        staged?: boolean;
+    }): Promise<Global | null>;
+    /**
+     * Write one locale, creating the global's row and that locale's content row
+     * on demand. Fields merge: an omitted field keeps its stored value, and an
+     * array or container value replaces wholesale. A locale other than the
+     * default on a non-translatable global is a `GlobalValidationError`; on a
+     * translatable one the new locale inherits the shared (`translatable:
+     * false`) fields from the default-locale row.
+     */
+    update(params: {
+        key: string;
+        locale?: string;
+        data: GlobalUpdateData;
+    }): Promise<Global>;
+    /**
+     * Move this locale to `published`, stamping `publishedAt` when it has none.
+     * Needs the `statuses` capability and an already-saved locale.
+     */
+    publish(params: { key: string; locale?: string }): Promise<Global>;
+    /**
+     * Move this locale back to `unpublished` and clear its publish gate. Needs
+     * the `statuses` capability and an already-saved locale.
+     */
+    unpublish(params: { key: string; locale?: string }): Promise<Global>;
+    /**
+     * Schedule this locale to publish at `publishedAt`, which must be a date.
+     * Needs the `statuses` capability and an already-saved locale.
+     */
+    schedule(params: {
+        key: string;
+        locale?: string;
+        publishedAt: Date;
+    }): Promise<Global>;
+    /**
+     * The saved versions of this locale, newest first. Needs the `versioning`
+     * capability and an already-saved locale.
+     */
+    versions(params: { key: string; locale?: string }): Promise<GlobalVersion[]>;
+    /**
+     * Roll this locale back to one of its versions, snapshotting the state
+     * being overwritten first. Needs the `versioning` capability.
+     */
+    restoreVersion(params: {
+        key: string;
+        locale?: string;
+        versionId: string;
+    }): Promise<Global>;
+    /**
+     * Stage a change: copy this locale's content into a second, linked row,
+     * with `data.fields` patched over the copy. Needs the `staging` capability
+     * and an already-saved locale; throws `StagedGlobalExistsError` when one
+     * already exists.
+     */
+    createStaged(params: {
+        key: string;
+        locale?: string;
+        data?: GlobalUpdateData;
+    }): Promise<Global>;
+    /** This locale's staged change, or null. Needs the `staging` capability. */
+    getStaged(params: { key: string; locale?: string }): Promise<Global | null>;
+    /**
+     * Merge the staged change into the canonical row (snapshot, overwrite,
+     * discard) and return the updated canonical. Content-only: the canonical's
+     * status is untouched.
+     */
+    mergeStaged(params: { key: string; locale?: string }): Promise<Global>;
+    /** Discard this locale's staged change (hard delete). */
+    deleteStaged(params: { key: string; locale?: string }): Promise<void>;
 };
 
 /** The media domain's service contract. */

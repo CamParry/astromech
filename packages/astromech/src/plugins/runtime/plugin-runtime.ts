@@ -8,6 +8,7 @@ import type { DB } from '@/database/types';
 import type {
     AnyServiceMethod,
     EntriesService,
+    GlobalsService,
     HookHandler,
     MediaService,
     NotificationsService,
@@ -25,6 +26,7 @@ import type {
     Role,
     SettingsService,
     TypedEntriesService,
+    TypedGlobalsService,
     User,
     UsersService,
 } from '@/types/index';
@@ -45,6 +47,7 @@ import { typedEntriesService } from '@/entries/typed-entries-service';
 import { getEnvRecord } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
 import { flattenEntryFields } from '@/fields/flatten';
+import { typedGlobalsService } from '@/globals/typed-globals-service';
 import { addHook, clearHooks, runHook } from '@/hooks/hooks';
 import { mediaService } from '@/media/service';
 import { currentUserNotificationsService } from '@/notifications/current-user-service';
@@ -65,6 +68,7 @@ import { buildScopedTools } from '@/transport/tools/scoped-tools';
 import { usersService } from '@/users/service';
 import { log } from '@/utilities/log';
 import {
+    withDefaultGlobalsShape,
     withDefaultSettingsShape,
     withDefaultShape,
 } from '@/utilities/with-default-shape';
@@ -288,6 +292,8 @@ function makeConfigView(
     return {
         entries: config.entries,
         pluginEntries: config.pluginEntries,
+        globals: config.globals,
+        pluginGlobals: config.pluginGlobals,
         adminPages: config.adminPages,
         media: config.media,
         basePath: config.basePath,
@@ -359,6 +365,12 @@ export function createPluginContext(
                 'full'
             ) as unknown as TypedEntriesService;
         },
+        get globals(): TypedGlobalsService {
+            return withDefaultGlobalsShape(
+                typedGlobalsService as unknown as GlobalsService,
+                'full'
+            ) as unknown as TypedGlobalsService;
+        },
         // media / users / notifications have no shape axis, so they pass through.
         get media(): MediaService {
             return mediaService;
@@ -421,6 +433,8 @@ function emptyConfig(): Omit<PluginConfigView, 'entryTypesWithField'> {
         basePath: '/cms',
         entries: {},
         pluginEntries: {},
+        globals: {},
+        pluginGlobals: {},
         adminPages: [],
         trash: { enabled: true, retentionDays: 30 },
         publicSettingKeys: [],
