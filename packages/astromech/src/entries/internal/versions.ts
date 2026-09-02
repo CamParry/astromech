@@ -1,14 +1,21 @@
 /**
  * Entry version helpers shared by the operations that write or read a version.
- * A version snapshots one content row, so the sequence runs per entry and locale.
+ * A version snapshots one content row, so the sequence runs per entry and
+ * locale. The numbering and the change test are `content/`'s; entries adds its
+ * own snapshot columns (`title`, `slug`) and the public row shape.
  */
 
 import type { EntryRepository } from '../repository/types';
 import type { EntryVersionRow } from '../tables';
 import type { EntryRecord } from './records';
 import type { EntryVersion, JsonObject } from '@/types/index';
-import { getCurrentUser } from '@/request-context/request-context';
-import { deepEqual } from './deep-equal';
+import {
+    changesVersionedContent as changesContent,
+    snapshotVersion as snapshotContentVersion,
+} from '@/content/versions';
+
+/** The entry columns a version snapshots beyond `fields`. */
+const VERSIONED_COLUMNS = ['title', 'slug'] as const;
 
 /**
  * Saves the entry locale's current state as its next version, credited to the
@@ -19,15 +26,9 @@ export async function snapshotVersion(
     versions: NonNullable<EntryRepository['versions']>,
     record: EntryRecord
 ): Promise<void> {
-    const latestNumber = await versions.latestNumber(record.contentId);
-    const user = await getCurrentUser();
-    await versions.create({
-        contentId: record.contentId,
-        version: latestNumber + 1,
+    await snapshotContentVersion(versions, record, {
         title: record.title,
         slug: record.slug,
-        fields: record.fields,
-        createdBy: user?.id ?? null,
     });
 }
 
@@ -65,7 +66,5 @@ export function changesVersionedContent(
         fields?: JsonObject | undefined;
     }
 ): boolean {
-    if (next.title !== undefined && next.title !== current.title) return true;
-    if (next.slug !== undefined && next.slug !== current.slug) return true;
-    return next.fields !== undefined && !deepEqual(current.fields, next.fields);
+    return changesContent(current, next, VERSIONED_COLUMNS);
 }

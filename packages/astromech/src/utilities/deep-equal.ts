@@ -1,4 +1,4 @@
-/** Structural deep-equality used to detect entry changes (versioning decisions). */
+/** Structural deep-equality used to detect content changes (versioning decisions). */
 export function deepEqual(a: unknown, b: unknown): boolean {
     if (a === b) return true;
     if (typeof a !== typeof b) return false;

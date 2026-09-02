@@ -1,5 +1,6 @@
 /**
- * Repository-level tests for `createVersionRepository`. The CRUD/list/latestNumber
+ * Repository-level tests for the shared versions repository over
+ * `entry_versions`. The CRUD/list/latestNumber
  * surface is already exercised through `createEntriesTableRepository.versions` in
  * `entries-table.test.ts`; this file covers what the wrapper cannot show — that a
  * version belongs to a content row and dies with it.
@@ -8,18 +9,21 @@
 import type { Db } from '@/database/types';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { createVersionsRepository } from '@/content/repository/versions';
+import { entryVersionsTable } from '@/database/tables';
 import { createEntriesTableRepository } from '@/entries/repository/entries-table';
-import { createVersionRepository } from '@/entries/repository/versions';
 
 let db: Db;
 let entryRepository: ReturnType<typeof createEntriesTableRepository>;
-let versionRepository: ReturnType<typeof createVersionRepository>;
+let versionRepository: ReturnType<
+    typeof createVersionsRepository<typeof entryVersionsTable>
+>;
 
 beforeEach(async () => {
     db = await createTestDb();
     setupTestConfig();
     entryRepository = createEntriesTableRepository();
-    versionRepository = createVersionRepository(db);
+    versionRepository = createVersionsRepository(entryVersionsTable, db);
 });
 
 describe('content-row ownership', () => {

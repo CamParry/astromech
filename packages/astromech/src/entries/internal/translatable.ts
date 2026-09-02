@@ -1,13 +1,17 @@
 /**
- * Non-translatable fields belong to the entry, not to one of its locales: they
- * are inherited from the default-locale row when a translation is written, and
- * propagated to the other locales when the default one is updated.
+ * Entries' adapter over the shared translatable helpers: it reads what the
+ * entry type says about translation and hands the rest to `content/`.
  */
 
 import type { EntryRepository } from '../repository/types';
 import type { Field } from '@/types/fields';
 import type { JsonObject, ResolvedEntryType } from '@/types/index';
-import { getDefaultContentLocale, getNonTranslatableFieldNames } from './entry-type';
+import {
+    inheritSharedFields as inheritContentFields,
+    propagateSharedFields as propagateContentFields,
+} from '@/content/translatable';
+import { flattenEntryFields } from '@/fields/flatten';
+import { getDefaultContentLocale } from './entry-type';
 
 /**
  * Merges the entry's shared fields in from its default-locale row. A field
@@ -23,27 +27,15 @@ export async function inheritSharedFields(params: {
     entryId: string | undefined;
     locale: string;
 }): Promise<Record<string, unknown>> {
-    const { repository, entryType, values, definitions, entryId, locale } = params;
-    const defaultLocale = getDefaultContentLocale();
-    if (entryId === undefined || locale === defaultLocale) return values;
-
-    const shared = getNonTranslatableFieldNames(
-        entryType.id,
-        definitions.map((field) => field.name)
-    );
-    if (shared.length === 0) return values;
-
-    const source = await repository.get(
-        { id: entryId, locale: defaultLocale },
-        { includeTrashed: true }
-    );
-    if (!source) return values;
-
-    const inherited: Record<string, unknown> = {};
-    for (const name of shared) {
-        if (source.fields[name] !== undefined) inherited[name] = source.fields[name];
-    }
-    return { ...values, ...inherited };
+    return inheritContentFields({
+        repository: params.repository,
+        values: params.values,
+        definitions: params.definitions,
+        translatable: params.entryType.translatable === true,
+        id: params.entryId,
+        locale: params.locale,
+        defaultLocale: getDefaultContentLocale(),
+    });
 }
 
 /**
@@ -58,16 +50,12 @@ export async function propagateSharedFields(params: {
     fields: JsonObject;
     patchedFieldNames: string[];
 }): Promise<void> {
-    const { repository, entryType, entry, fields, patchedFieldNames } = params;
-    if (!repository.translatable) return;
-
-    const shared = getNonTranslatableFieldNames(entryType.id, patchedFieldNames);
-    if (shared.length === 0) return;
-
-    const values: JsonObject = {};
-    for (const name of shared) {
-        const value = fields[name];
-        if (value !== undefined) values[name] = value;
-    }
-    await repository.translatable.propagateFields(entry.id, entry.locale, values);
+    return propagateContentFields({
+        translatable: params.repository.translatable,
+        definitions: flattenEntryFields(params.entryType.fields),
+        isTranslatable: params.entryType.translatable === true,
+        record: params.entry,
+        fields: params.fields,
+        patchedFieldNames: params.patchedFieldNames,
+    });
 }

@@ -4,6 +4,7 @@
  * package root.
  */
 
+import type { ContentRef, ContentRow, ContentRowId } from '@/content/repository/types';
 import type { Db } from '@/database/types';
 import type { Capability } from '@/entries/capabilities';
 import type { EntryVersionRow } from '@/entries/tables';
@@ -13,50 +14,25 @@ export type RepositoryDb = Db;
 
 export type { Capability } from '@/entries/capabilities';
 
-/**
- * The id of a row in `entry_content`. Internal to the repository: it exists so
- * versions and `stagedFor` have a row to point at, and never crosses the
- * service boundary.
- */
-export type ContentRowId = string & { readonly __brand: 'ContentRowId' };
+/** The id of a row in `entry_content`. Shared with every other resource. */
+export type { ContentRowId } from '@/content/repository/types';
 
 /**
  * How a caller names one locale of one entry. `id` is the entry id — the only
  * id that appears in a URL, a service call, a relation or a preview. A missing
  * `locale` means the repository's default content locale.
  */
-export type EntryRef = {
-    id: string;
-    locale?: string | undefined;
-};
+export type EntryRef = ContentRef;
 
 /**
- * Universal entry shape a repository returns: the entry row joined to one of
- * its content rows. Capability extras are present only when the repository
+ * Universal entry shape a repository returns: the shared content shape plus the
+ * entry's own columns. Capability extras are present only when the repository
  * supports them; `type` is present on multi-type repositories.
  */
-export type EntryRow = {
-    /** The entry id (`entries.id`). */
-    id: string;
-    /** The content row this read came from. Never leaves the repository layer. */
-    contentId: ContentRowId;
-    locale: string;
-    /** Every locale with a canonical content row, this one included. Sorted. */
-    locales: string[];
-    /** True when this read is the staged change rather than the canonical row. */
-    staged: boolean;
-    fields: JsonObject;
-    /** `entries.createdAt` — when the entry itself was created. */
-    createdAt: Date;
-    /** `entry_content.updatedAt` — this locale's last edit. */
-    updatedAt: Date;
-    createdBy?: string | null;
-    updatedBy?: string | null;
+export type EntryRow = ContentRow & {
     type?: string;
     title?: string;
     slug?: string | null;
-    status?: EntryStatus;
-    publishedAt?: Date | null;
     deletedAt?: Date | null;
 };
 

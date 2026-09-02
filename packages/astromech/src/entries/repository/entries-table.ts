@@ -1,7 +1,8 @@
 /**
- * The default entry repository — persistence over `entries` joined to
- * `entry_content`. Owns row CRUD, list filters, slug uniquification and the
- * capability groups; policy (validation, hooks, relationships) stays in the service.
+ * The default entry repository — the shared content repository over
+ * `entries`/`entry_content`/`entry_versions`, plus what only entries have: the
+ * list query and its filters, slug uniquification, trash and preview tokens.
+ * Policy (validation, hooks, relationships) stays in the service.
  */
 
 import type {
@@ -15,6 +16,7 @@ import type {
     NewEntryVersionSnapshot,
     PreviewTokenRecord,
 } from './types';
+import type { JoinedWhere } from '@/content/repository/types';
 import type { DB, Db } from '@/database/types';
 import type {
     EntryRow as EntriesTableRow,
@@ -27,16 +29,15 @@ import type {
     ReferencesFilter,
     SortOption,
 } from '@/types/index';
-import type { ExpressionBuilder, Updateable } from 'kysely';
-import { decodeWith, encodePatchWith } from '@/database/codec';
+import type { Expression, SqlBool, Updateable } from 'kysely';
+import { createContentRepository } from '@/content/repository/content-table';
+import { encodePatchWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { existingResourceIds } from '@/database/repository/resource-existence';
-import { entriesTable, entryContentTable } from '@/database/tables';
-import { transaction } from '@/database/transaction';
+import { entriesTable, entryContentTable, entryVersionsTable } from '@/database/tables';
 import { ALL_CAPABILITIES } from '@/entries/capabilities';
 import { EntryNotFoundError, UnknownSortKeyError, UnknownWhereKeyError } from '../errors';
-import { createVersionRepository } from './versions';
 
 const SORTABLE_FIELDS: readonly string[] = [
     'title',
@@ -47,16 +48,10 @@ const SORTABLE_FIELDS: readonly string[] = [
     'slug',
 ];
 
-/** Joined tables the list/read queries address. */
-type JoinedTables = 'entryContent' | 'entries';
+/** The expression builder the joined list query is compiled against. */
+type JoinedEb = Parameters<JoinedWhere>[0];
 
 type OrderPair = [column: string, direction: 'asc' | 'desc'];
-
-/** A content row plus the two `entries` columns the entry shape reads. */
-type JoinedRow = EntryContentRow & {
-    entryDeletedAt: Date | null;
-    entryCreatedAt: Date;
-};
 
 /**
  * `createdAt` is the entry's, every other sortable column the content row's —
@@ -81,9 +76,13 @@ function buildOrderBy(sort?: SortOption | SortOption[]): OrderPair[] {
     return clauses.length > 0 ? clauses : fallback;
 }
 
-function buildListWhere(params: ListParams, defaultLocale: string, types: string[]) {
-    return (eb: ExpressionBuilder<DB, JoinedTables>) => {
-        const conditions = [];
+function buildListWhere(
+    params: ListParams,
+    defaultLocale: string,
+    types: string[]
+): JoinedWhere {
+    return (eb: JoinedEb) => {
+        const conditions: Expression<SqlBool>[] = [];
 
         // type condition
         const [firstType] = types;
@@ -196,10 +195,7 @@ function buildListWhere(params: ListParams, defaultLocale: string, types: string
  * `schemaPath`/`targetId` are plain TEXT and `sourceKind` is an enum the table
  * passes through, so all three bind as-is with no `encodeWith`.
  */
-function referencesExists(
-    eb: ExpressionBuilder<DB, JoinedTables>,
-    filter: ReferencesFilter
-) {
+function referencesExists(eb: JoinedEb, filter: ReferencesFilter): Expression<SqlBool> {
     return eb.exists(
         eb
             .selectFrom('relationships')
@@ -218,74 +214,30 @@ function isReferencesFilter(value: unknown): value is ReferencesFilter {
     return typeof path === 'string' && path !== '' && typeof id === 'string' && id !== '';
 }
 
-/** The content row plus the aliased `entries` columns, all decoded. */
-function decodeJoined(row: Record<string, unknown>): JoinedRow {
-    const content = decodeWith(entryContentTable, row);
-    const deletedAt = row['entryDeletedAt'];
-    const createdAt = row['entryCreatedAt'];
+/** The two joined rows plus the locale list, in the shape the service reads. */
+function toEntryRow(
+    entry: EntriesTableRow,
+    content: EntryContentRow,
+    locales: string[]
+): EntryRow {
     return {
-        ...content,
-        entryDeletedAt:
-            deletedAt === null || deletedAt === undefined
-                ? null
-                : (entriesTable.columns.deletedAt.parse(deletedAt) as Date),
-        entryCreatedAt: entriesTable.columns.createdAt.parse(createdAt) as Date,
-    };
-}
-
-/** One joined row plus its locale list, in the shape the service reads. */
-function toEntryRow(row: JoinedRow, locales: string[]): EntryRow {
-    return {
-        id: row.entryId,
-        contentId: row.id as ContentRowId,
-        type: row.type,
-        locale: row.locale,
+        id: content.entryId,
+        contentId: content.id as ContentRowId,
+        type: content.type,
+        locale: content.locale,
         locales,
-        staged: row.stagedFor !== null,
-        title: row.title,
-        slug: row.slug,
-        fields: (row.fields ?? {}) as JsonObject,
-        status: row.status,
-        publishedAt: row.publishedAt,
-        deletedAt: row.entryDeletedAt,
-        createdAt: row.entryCreatedAt,
-        updatedAt: row.updatedAt,
-        createdBy: row.createdBy,
-        updatedBy: row.updatedBy,
+        staged: content.stagedFor !== null,
+        title: content.title,
+        slug: content.slug,
+        fields: (content.fields ?? {}) as JsonObject,
+        status: content.status,
+        publishedAt: content.publishedAt,
+        deletedAt: entry.deletedAt,
+        createdAt: entry.createdAt,
+        updatedAt: content.updatedAt,
+        createdBy: content.createdBy,
+        updatedBy: content.updatedBy,
     };
-}
-
-/**
- * One grouped `SELECT entry_id, locale FROM entry_content` over the page, so a
- * list of N rows costs one extra query rather than N.
- */
-async function populateLocales(db: Db, rows: JoinedRow[]): Promise<EntryRow[]> {
-    if (rows.length === 0) return [];
-
-    const entryIds = Array.from(new Set(rows.map((row) => row.entryId)));
-    const siblings = await db
-        .selectFrom('entryContent')
-        .select(['entryId', 'locale'])
-        .where((eb) =>
-            eb.and([eb('entryId', 'in', entryIds), eb('stagedFor', 'is', null)])
-        )
-        .execute();
-
-    const byEntry = new Map<string, string[]>();
-    for (const sibling of siblings) {
-        const locales = byEntry.get(sibling.entryId);
-        if (locales) locales.push(sibling.locale);
-        else byEntry.set(sibling.entryId, [sibling.locale]);
-    }
-    for (const locales of byEntry.values()) locales.sort();
-
-    return rows.map((row) => toEntryRow(row, byEntry.get(row.entryId) ?? [row.locale]));
-}
-
-async function populateLocaleSingle(db: Db, row: JoinedRow): Promise<EntryRow> {
-    const [populated] = await populateLocales(db, [row]);
-    if (!populated) throw new Error('Failed to populate entry');
-    return populated;
 }
 
 /**
@@ -298,67 +250,34 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
 
     const handle = (): Db => dbOverride ?? getDb();
 
-    // Unbound when there is no override, so they follow `setDb` per call exactly
+    // Unbound when there is no override, so it follows `setDb` per call exactly
     // as `handle()` does.
     const entries = createRepository(entriesTable, dbOverride);
-    const contents = createRepository(entryContentTable, dbOverride);
+
+    const content = createContentRepository(
+        {
+            table: entriesTable,
+            contentTable: entryContentTable,
+            versionsTable: entryVersionsTable,
+            ownerColumn: 'entryId',
+            // `entry_content.type` is copied from `entries.type`: the slug-unique
+            // and list indexes cannot reach across the join.
+            inheritedColumns: ['type'],
+            insertDefaults: { title: '', slug: null },
+        },
+        {
+            ...(dbOverride ? { db: dbOverride } : {}),
+            defaultLocale,
+            decode: toEntryRow,
+            // Trash is resource-level, so it filters on the entry row.
+            ownerFilter: (eb, options) =>
+                options.includeTrashed === true
+                    ? []
+                    : [eb('entries.deletedAt', 'is', null)],
+        }
+    );
 
     const supports: readonly Capability[] = ALL_CAPABILITIES;
-
-    /** The content row read joined to the two `entries` columns it needs. */
-    function joinedQuery(db: Db) {
-        return db
-            .selectFrom('entryContent')
-            .innerJoin('entries', 'entries.id', 'entryContent.entryId')
-            .selectAll('entryContent')
-            .select([
-                'entries.deletedAt as entryDeletedAt',
-                'entries.createdAt as entryCreatedAt',
-            ]);
-    }
-
-    /** One canonical (non-staged) content row, or null. */
-    async function findCanonical(
-        id: string,
-        locale: string,
-        includeTrashed: boolean
-    ): Promise<JoinedRow | null> {
-        const row = await joinedQuery(handle())
-            .where((eb) =>
-                eb.and([
-                    eb('entryContent.entryId', '=', id),
-                    eb('entryContent.locale', '=', locale),
-                    eb('entryContent.stagedFor', 'is', null),
-                    ...(includeTrashed ? [] : [eb('entries.deletedAt', 'is', null)]),
-                ])
-            )
-            .executeTakeFirst();
-        return row ? decodeJoined(row) : null;
-    }
-
-    /**
-     * Any one canonical row of the entry: the default locale's when it has one,
-     * else the first locale alphabetically.
-     */
-    async function findAnyLocale(
-        id: string,
-        includeTrashed: boolean
-    ): Promise<JoinedRow | null> {
-        const preferred = await findCanonical(id, defaultLocale, includeTrashed);
-        if (preferred) return preferred;
-
-        const row = await joinedQuery(handle())
-            .where((eb) =>
-                eb.and([
-                    eb('entryContent.entryId', '=', id),
-                    eb('entryContent.stagedFor', 'is', null),
-                    ...(includeTrashed ? [] : [eb('entries.deletedAt', 'is', null)]),
-                ])
-            )
-            .orderBy('entryContent.locale', 'asc')
-            .executeTakeFirst();
-        return row ? decodeJoined(row) : null;
-    }
 
     /** Ids with a row in `entries` — trashed entries included. */
     async function existingIds(ids: string[]): Promise<Set<string>> {
@@ -409,7 +328,6 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
     async function list(
         params: ListParams
     ): Promise<{ data: EntryRow[]; total: number }> {
-        const db = handle();
         const typeParam = params.type;
         const types = Array.isArray(typeParam)
             ? Array.from(typeParam)
@@ -423,127 +341,37 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
         const whereFn = buildListWhere(params, defaultLocale, types);
 
         if (limit === 'all') {
-            let q = joinedQuery(db).where(whereFn);
+            let q = content.query.joined().where(whereFn);
             for (const [column, direction] of orderPairs) {
-                q = q.orderBy(column as never, direction);
+                q = q.orderBy(column, direction);
             }
-            const data = await populateLocales(db, (await q.execute()).map(decodeJoined));
+            const data = await content.query.rows(await q.execute());
             return { data, total: data.length };
         }
 
         const perPage = typeof limit === 'number' ? limit : 20;
         const offset = (page - 1) * perPage;
 
-        const cr = await db
-            .selectFrom('entryContent')
-            .innerJoin('entries', 'entries.id', 'entryContent.entryId')
-            .select((eb) => eb.fn.countAll<number>().as('c'))
-            .where(whereFn)
-            .executeTakeFirst();
-        const total = Number(cr?.c ?? 0);
+        const total = await content.query.count(whereFn);
 
-        let rowsQ = joinedQuery(db).where(whereFn).limit(perPage).offset(offset);
+        let rowsQ = content.query.joined().where(whereFn).limit(perPage).offset(offset);
         for (const [column, direction] of orderPairs) {
-            rowsQ = rowsQ.orderBy(column as never, direction);
+            rowsQ = rowsQ.orderBy(column, direction);
         }
-        const data = await populateLocales(db, (await rowsQ.execute()).map(decodeJoined));
+        const data = await content.query.rows(await rowsQ.execute());
         return { data, total };
     }
 
-    async function get(
-        ref: EntryRef,
-        opts?: { includeTrashed?: boolean }
-    ): Promise<EntryRow | null> {
-        const row = await findCanonical(
-            ref.id,
-            ref.locale ?? defaultLocale,
-            opts?.includeTrashed === true
-        );
-        if (!row) return null;
-        return populateLocaleSingle(handle(), row);
-    }
-
-    async function anyLocale(
-        id: string,
-        opts?: { includeTrashed?: boolean }
-    ): Promise<EntryRow | null> {
-        const row = await findAnyLocale(id, opts?.includeTrashed === true);
-        if (!row) return null;
-        return populateLocaleSingle(handle(), row);
-    }
-
     async function create(data: EntryWrite & { type: string }): Promise<EntryRow> {
-        return transaction(async () => {
-            const entry = await entries.create({
-                type: data.type,
+        const { type, ...write } = data;
+        return content.create(
+            {
+                type,
                 createdBy: data.createdBy ?? null,
                 updatedBy: data.updatedBy ?? null,
-            });
-            const content = await contents.create({
-                entryId: entry.id,
-                type: data.type,
-                locale: data.locale ?? defaultLocale,
-                title: data.title ?? '',
-                slug: data.slug ?? null,
-                fields: data.fields ?? {},
-                status: data.status ?? 'unpublished',
-                publishedAt: data.publishedAt ?? null,
-                stagedFor: null,
-                createdBy: data.createdBy ?? null,
-                updatedBy: data.updatedBy ?? null,
-            });
-            return populateLocaleSingle(handle(), joinOf(entry, content));
-        });
-    }
-
-    /**
-     * Write one locale's content row. A locale with no row yet gets one — the
-     * write that makes a translation. Nothing on the `entries` row changes: it
-     * carries no per-locale content.
-     */
-    async function update(ref: EntryRef, data: EntryWrite): Promise<EntryRow> {
-        const locale = ref.locale ?? defaultLocale;
-        const existing = await findCanonical(ref.id, locale, true);
-
-        if (!existing) {
-            const entry = await entries.findOne({ id: ref.id });
-            if (!entry) throw new Error(`Entry '${ref.id}' not found`);
-            const content = await contents.create({
-                entryId: entry.id,
-                type: entry.type,
-                locale,
-                title: data.title ?? '',
-                slug: data.slug ?? null,
-                fields: data.fields ?? {},
-                status: data.status ?? 'unpublished',
-                publishedAt: data.publishedAt ?? null,
-                stagedFor: null,
-                createdBy: data.createdBy ?? null,
-                updatedBy: data.updatedBy ?? null,
-            });
-            return populateLocaleSingle(handle(), joinOf(entry, content));
-        }
-
-        // An explicitly-`undefined` key means "leave this column alone" (`Patch`
-        // admits it and the encoder drops it), so the partial write forwards
-        // straight through. `updatedAt` is stamped by the wrapper (the column
-        // declares `onUpdate`).
-        await contents.update(existing.id, {
-            title: data.title,
-            slug: data.slug,
-            fields: data.fields,
-            status: data.status,
-            publishedAt: data.publishedAt,
-            updatedBy: data.updatedBy,
-        });
-
-        const updated = await findCanonical(ref.id, locale, true);
-        if (!updated) throw new Error(`Entry '${ref.id}' not found`);
-        return populateLocaleSingle(handle(), updated);
-    }
-
-    async function del(id: string): Promise<void> {
-        await entries.delete(id);
+            },
+            write
+        );
     }
 
     const trash = {
@@ -561,10 +389,9 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
         },
 
         restore: async (id: string, actor?: string | null): Promise<EntryRow> => {
-            const db = handle();
             // Guarded *and* returning: not expressible through the wrapper's
             // primary-key `update` / count-returning `updateMany`.
-            await db
+            await handle()
                 .updateTable('entries')
                 .set(
                     encodePatchWith(entriesTable, {
@@ -578,9 +405,9 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
                 )
                 .executeTakeFirstOrThrow();
 
-            const restored = await findAnyLocale(id, false);
+            const restored = await content.anyLocale(id);
             if (!restored) throw new EntryNotFoundError({ entryId: id });
-            return populateLocaleSingle(db, restored);
+            return restored;
         },
 
         emptyTrash: async (type: string): Promise<void> => {
@@ -589,141 +416,14 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
     };
 
     const versions = {
-        list: async (contentId: ContentRowId): Promise<EntryVersionRow[]> => {
-            return createVersionRepository(handle()).list(contentId);
-        },
-
-        get: async (versionId: string): Promise<EntryVersionRow | null> => {
-            return createVersionRepository(handle()).get(versionId);
-        },
-
-        create: async (snapshot: NewEntryVersionSnapshot): Promise<void> => {
-            await createVersionRepository(handle()).create({
-                contentId: snapshot.contentId,
-                version: snapshot.version,
-                title: snapshot.title,
-                slug: snapshot.slug,
-                fields: snapshot.fields,
-                createdBy: snapshot.createdBy,
-            });
-        },
-
-        latestNumber: async (contentId: ContentRowId): Promise<number> => {
-            return createVersionRepository(handle()).getLatestNumber(contentId);
-        },
-    };
-
-    /** The staged content row for one locale, or null. */
-    async function findStaged(id: string, locale: string): Promise<JoinedRow | null> {
-        const row = await joinedQuery(handle())
-            .where((eb) =>
-                eb.and([
-                    eb('entryContent.entryId', '=', id),
-                    eb('entryContent.locale', '=', locale),
-                    eb('entryContent.stagedFor', 'is not', null),
-                    eb('entries.deletedAt', 'is', null),
-                ])
-            )
-            .executeTakeFirst();
-        return row ? decodeJoined(row) : null;
-    }
-
-    const staging = {
-        getByCanonical: async (id: string, locale?: string): Promise<EntryRow | null> => {
-            const row = await findStaged(id, locale ?? defaultLocale);
-            if (!row) return null;
-            return populateLocaleSingle(handle(), row);
-        },
-
-        create: async (ref: EntryRef, data: EntryWrite): Promise<EntryRow> => {
-            const locale = ref.locale ?? defaultLocale;
-            const canonical = await findCanonical(ref.id, locale, false);
-            if (!canonical) throw new Error(`Entry '${ref.id}' not found`);
-
-            const content = await contents.create({
-                entryId: ref.id,
-                type: canonical.type,
-                locale,
-                title: data.title ?? '',
-                slug: data.slug ?? null,
-                fields: data.fields ?? {},
-                status: data.status ?? 'unpublished',
-                publishedAt: data.publishedAt ?? null,
-                stagedFor: canonical.id,
-                createdBy: data.createdBy ?? null,
-                updatedBy: data.updatedBy ?? null,
-            });
-            const staged = await findStaged(ref.id, locale);
-            if (!staged) throw new Error(`Staged row '${content.id}' not found`);
-            return populateLocaleSingle(handle(), staged);
-        },
-
-        update: async (ref: EntryRef, data: EntryWrite): Promise<EntryRow> => {
-            const locale = ref.locale ?? defaultLocale;
-            const existing = await findStaged(ref.id, locale);
-            if (!existing) throw new Error(`No staged change for entry '${ref.id}'`);
-
-            await contents.update(existing.id, {
-                title: data.title,
-                slug: data.slug,
-                fields: data.fields,
-                status: data.status,
-                publishedAt: data.publishedAt,
-                updatedBy: data.updatedBy,
-            });
-
-            const updated = await findStaged(ref.id, locale);
-            if (!updated) throw new Error(`No staged change for entry '${ref.id}'`);
-            return populateLocaleSingle(handle(), updated);
-        },
-
-        delete: async (ref: EntryRef): Promise<void> => {
-            await contents.deleteMany({
-                entryId: ref.id,
-                locale: ref.locale ?? defaultLocale,
-                stagedFor: { ne: null },
-            });
-        },
-    };
-
-    const translatable = {
-        siblings: async (id: string, excludeLocale?: string): Promise<EntryRow[]> => {
-            const rows = await joinedQuery(handle())
-                .where((eb) =>
-                    eb.and([
-                        eb('entryContent.entryId', '=', id),
-                        eb('entryContent.stagedFor', 'is', null),
-                        eb('entries.deletedAt', 'is', null),
-                        ...(excludeLocale === undefined
-                            ? []
-                            : [eb('entryContent.locale', '!=', excludeLocale)]),
-                    ])
-                )
-                .execute();
-            return populateLocales(handle(), rows.map(decodeJoined));
-        },
-
-        propagateFields: async (
-            id: string,
-            excludeLocale: string,
-            values: JsonObject
-        ): Promise<void> => {
-            const siblings = await contents.findMany({
-                where: {
-                    entryId: id,
-                    locale: { ne: excludeLocale },
-                    stagedFor: null,
-                },
-            });
-
-            for (const sibling of siblings) {
-                // Rows come back decoded, so `fields` is already the parsed object.
-                const existingFields = (sibling.fields ?? {}) as JsonObject;
-                await contents.update(sibling.id, {
-                    fields: { ...existingFields, ...values },
-                });
-            }
-        },
+        list: async (contentId: ContentRowId): Promise<EntryVersionRow[]> =>
+            content.versions.list(contentId),
+        get: async (versionId: string): Promise<EntryVersionRow | null> =>
+            content.versions.get(versionId),
+        create: async (snapshot: NewEntryVersionSnapshot): Promise<void> =>
+            content.versions.create(snapshot),
+        latestNumber: async (contentId: ContentRowId): Promise<number> =>
+            content.versions.latestNumber(contentId),
     };
 
     const previewToken = {
@@ -753,24 +453,17 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
         existingIds,
         uniqueSlug,
         list,
-        get,
-        anyLocale,
+        get: (ref: EntryRef, options?: { includeTrashed?: boolean }) =>
+            content.get(ref, options),
+        anyLocale: (id: string, options?: { includeTrashed?: boolean }) =>
+            content.anyLocale(id, options),
         create,
-        update,
-        delete: del,
+        update: content.update,
+        delete: content.delete,
         trash,
         versions,
-        staging,
-        translatable,
+        staging: content.staging,
+        translatable: content.translatable,
         previewToken,
     } satisfies EntryRepository<EntryRow>;
-}
-
-/** The two rows a fresh write already holds, in the joined read shape. */
-function joinOf(entry: EntriesTableRow, content: EntryContentRow): JoinedRow {
-    return {
-        ...content,
-        entryDeletedAt: entry.deletedAt,
-        entryCreatedAt: entry.createdAt,
-    };
 }

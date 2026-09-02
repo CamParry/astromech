@@ -1,6 +1,7 @@
 import type { Table, TableInsert, TableSelect } from '@/database/define-table';
 import { defineTable } from '@/database/define-table';
 import { entriesTable, entryContentTable, entryVersionsTable } from '@/entries/tables';
+import { globalContentTable, globalsTable, globalVersionsTable } from '@/globals/tables';
 import { mediaTable } from '@/media/tables';
 import { notificationsTable } from '@/notifications/tables';
 import { settingsTable } from '@/settings/tables';
@@ -35,6 +36,18 @@ export {
     type EntryVersionRow,
     type NewEntryVersionRow,
 } from '@/entries/tables';
+
+export {
+    globalsTable,
+    globalContentTable,
+    globalVersionsTable,
+    type GlobalRow,
+    type NewGlobalRow,
+    type GlobalContentRow,
+    type NewGlobalContentRow,
+    type GlobalVersionRow,
+    type NewGlobalVersionRow,
+} from '@/globals/tables';
 
 export { mediaTable, type MediaRow, type NewMediaRow } from '@/media/tables';
 export { settingsTable, type SettingRow, type NewSettingRow } from '@/settings/tables';
@@ -121,6 +134,9 @@ export const CORE_TABLES: Table[] = [
     entriesTable,
     entryContentTable,
     entryVersionsTable,
+    globalsTable,
+    globalContentTable,
+    globalVersionsTable,
     mediaTable,
     settingsTable,
     notificationsTable,

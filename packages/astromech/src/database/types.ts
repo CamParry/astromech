@@ -13,6 +13,9 @@ import type {
     entriesTable,
     entryContentTable,
     entryVersionsTable,
+    globalContentTable,
+    globalsTable,
+    globalVersionsTable,
     mediaTable,
     notificationsTable,
     pluginsTable,
@@ -30,6 +33,9 @@ export type DB = {
     entries: KyselyOf<typeof entriesTable>;
     entryContent: KyselyOf<typeof entryContentTable>;
     entryVersions: KyselyOf<typeof entryVersionsTable>;
+    globals: KyselyOf<typeof globalsTable>;
+    globalContent: KyselyOf<typeof globalContentTable>;
+    globalVersions: KyselyOf<typeof globalVersionsTable>;
     media: KyselyOf<typeof mediaTable>;
     settings: KyselyOf<typeof settingsTable>;
     notifications: KyselyOf<typeof notificationsTable>;

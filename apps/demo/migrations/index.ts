@@ -2,12 +2,14 @@
 import type { MigrationProvider } from 'kysely';
 import * as m0000 from './0000_baseline';
 import * as m0001 from './0001_entry_content';
+import * as m0002 from './0002_globals';
 
 export const migrationProvider: MigrationProvider = {
     async getMigrations() {
         return {
             '0000_baseline': m0000,
             '0001_entry_content': m0001,
+            '0002_globals': m0002,
         };
     },
 };

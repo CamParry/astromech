@@ -38,25 +38,6 @@ export function isVersioningEnabled(type: string): boolean {
     );
 }
 
-/**
- * The subset of the given field names that are non-translatable. Empty when the
- * type is not translatable.
- */
-export function getNonTranslatableFieldNames(
-    type: string,
-    fieldNames: string[]
-): string[] {
-    const entryType = resolveType(type);
-    if (!entryType?.translatable) return [];
-    const nonTranslatable: string[] = [];
-    for (const field of flattenEntryFields(entryType.fields)) {
-        if (fieldNames.includes(field.name) && field.translatable === false) {
-            nonTranslatable.push(field.name);
-        }
-    }
-    return nonTranslatable;
-}
-
 /** Flattened field definitions for an entry type (`[]` if the type is unknown). */
 export function resolveTypeFields(type: string): Field[] {
     const entryType = resolveType(type);
