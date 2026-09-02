@@ -33,7 +33,6 @@ import {
 } from '@/admin/components/fields/field-errors-context';
 import { FieldValidationProvider } from '@/admin/components/fields/field-validation-context';
 import { LocaleSwitcher } from '@/admin/components/translations/locale-switcher';
-import { Badge } from '@/admin/components/ui/badge';
 import { Breadcrumb } from '@/admin/components/ui/breadcrumb';
 import { Button } from '@/admin/components/ui/button';
 import { useConfirm } from '@/admin/components/ui/confirm';
@@ -50,6 +49,7 @@ import {
     Stack,
 } from '@/admin/components/ui/page';
 import { Panel } from '@/admin/components/ui/panel';
+import { StatusBadge } from '@/admin/components/ui/status-badge';
 import { useToast } from '@/admin/components/ui/toast';
 import { Tooltip } from '@/admin/components/ui/tooltip';
 import { useAiContext } from '@/admin/context/ai-context';
@@ -78,25 +78,6 @@ import { EntryFormErrors } from './entry-form-errors';
 // Surface link bases are runtime strings; address `Link` by string `to`.
 type LinkProps = Omit<React.ComponentProps<typeof RouterLink>, 'to'> & { to: string };
 const Link = RouterLink as unknown as (props: LinkProps) => React.ReactElement;
-
-type StatusBadgeProps = { status: EntryStatus };
-
-function StatusBadge({ status }: StatusBadgeProps): React.ReactElement {
-    const { t } = useTranslation();
-    const variant =
-        status === 'published'
-            ? 'success'
-            : status === 'scheduled'
-              ? 'warning'
-              : 'neutral';
-    const label =
-        status === 'published'
-            ? t('entries.published')
-            : status === 'scheduled'
-              ? t('entries.scheduled')
-              : t('entries.unpublished');
-    return <Badge variant={variant}>{label}</Badge>;
-}
 
 /**
  * Keyed by the row in view: duplicate navigates to a different id, and the
@@ -378,7 +359,7 @@ function EntryEditPageBody({
                         )}
                         {!isStaged && capabilities?.translatable && entry != null && (
                             <LocaleSwitcher
-                                entryId={id}
+                                id={id}
                                 currentLocale={entry.locale}
                                 type={type}
                                 basePath={basePath}

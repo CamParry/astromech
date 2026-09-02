@@ -24,6 +24,22 @@ export const queryKeys = {
             ['entries', collection, 'staged', id, locale] as const,
     },
 
+    // Globals
+    globals: {
+        /** Everything cached for one global, across its locales. */
+        all: (key: string) => ['globals', key] as const,
+        /**
+         * One locale of one global. A global is addressed by its key alone, so
+         * the locale is the only thing separating two rows of it.
+         */
+        get: (key: string, locale: string) => ['globals', key, 'detail', locale] as const,
+        versions: (key: string, locale: string) =>
+            ['globals', key, 'versions', locale] as const,
+        /** The staged change of one locale of a global (forward versioning). */
+        staged: (key: string, locale: string) =>
+            ['globals', key, 'staged', locale] as const,
+    },
+
     // Media
     media: {
         all: () => ['media'] as const,
@@ -79,5 +95,24 @@ export function scopedEntryKeys(cacheScope: string) {
             [...prefix, 'entries', collection, 'versions', id, locale] as const,
         staged: (collection: string, id: string, locale: string) =>
             [...prefix, 'entries', collection, 'staged', id, locale] as const,
+    };
+}
+
+/**
+ * Cache-scope-aware global query keys, the counterpart of `scopedEntryKeys`.
+ * Host globals use scope `''` and get `queryKeys.globals.*`; a plugin's pass
+ * the plugin name, so a plugin global cannot collide with a host one.
+ */
+export function scopedGlobalKeys(cacheScope: string) {
+    if (cacheScope === '') return queryKeys.globals;
+    const prefix = ['plugin', cacheScope] as const;
+    return {
+        all: (key: string) => [...prefix, 'globals', key] as const,
+        get: (key: string, locale: string) =>
+            [...prefix, 'globals', key, 'detail', locale] as const,
+        versions: (key: string, locale: string) =>
+            [...prefix, 'globals', key, 'versions', locale] as const,
+        staged: (key: string, locale: string) =>
+            [...prefix, 'globals', key, 'staged', locale] as const,
     };
 }

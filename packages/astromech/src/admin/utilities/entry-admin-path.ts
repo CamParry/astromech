@@ -15,8 +15,11 @@ export type EntryEditSearch = {
     staged?: boolean | undefined;
 };
 
-/** The search string for an edit link; empty when nothing narrows it. */
-function editSearchString(search: EntryEditSearch | undefined): string {
+/**
+ * The search string for an edit link; empty when nothing narrows it. Shared
+ * with `global-admin-path.ts`, whose links carry the same two params.
+ */
+export function editSearchString(search: EntryEditSearch | undefined): string {
     const params = new URLSearchParams();
     if (search?.locale !== undefined) params.set('locale', search.locale);
     if (search?.staged === true) params.set('staged', 'true');

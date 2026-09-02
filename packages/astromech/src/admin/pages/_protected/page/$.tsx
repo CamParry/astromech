@@ -1,7 +1,8 @@
 /**
  * Host-defined admin pages catch-all — mounts everything under `/admin/page/*`.
- * Looks up the page by splat path in `adminConfig.pages`, then renders a
- * `SettingsPageForm` (fields mode) or `ComponentPageView` (component mode).
+ * Looks up the page by splat path in `adminConfig.pages` and renders its
+ * component. A page declaring a field tree is a global now, so it has no
+ * renderer here and falls through to the not-found view.
  */
 
 import { createFileRoute } from '@tanstack/react-router';
@@ -10,7 +11,6 @@ import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { hostPages } from 'virtual:astromech/plugins/components';
 import { ComponentPageView } from '@/admin/components/pages/component-page-view';
-import { SettingsPageForm } from '@/admin/components/pages/settings-page-form';
 import { EmptyState } from '@/admin/components/ui/empty-state';
 import { Page, PageContent } from '@/admin/components/ui/page';
 import { useAiContext } from '@/admin/context/ai-context';
@@ -21,7 +21,7 @@ function AppPage(): React.ReactElement {
     const params = Route.useParams();
     const splat = params._splat ?? '';
     const { t } = useTranslation();
-    const { hasPermission, canUpdateSettings } = usePermissions();
+    const { hasPermission } = usePermissions();
 
     const page = adminConfig.pages.find((p) => p.path === splat);
 
@@ -50,8 +50,8 @@ function AppPage(): React.ReactElement {
         );
     }
 
-    // The page's own resolved permission: `settings:read` for a fields page,
-    // null (unguarded) for a component page unless it declared one.
+    // The page's own resolved permission — null (unguarded) unless it declared
+    // one.
     if (page.permission !== null && !hasPermission(page.permission)) {
         return (
             <Page>
@@ -64,20 +64,6 @@ function AppPage(): React.ReactElement {
         );
     }
 
-    // fields mode
-    if (page.fields !== null) {
-        return (
-            <SettingsPageForm
-                baseKey={page.baseKey}
-                fields={page.fields}
-                label={page.label}
-                translatable={page.translatable}
-                readOnly={!canUpdateSettings()}
-            />
-        );
-    }
-
-    // component mode
     const registration =
         page.componentKey !== null ? hostPages[page.componentKey] : undefined;
 

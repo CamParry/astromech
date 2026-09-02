@@ -467,6 +467,7 @@
     },
     "globals": {
         "saved": "{{label}} saved.",
+        "updated": "{{name}} updated.",
         "notFound": "Global not found",
         "accessDenied": "You don't have permission to edit global settings."
     },

@@ -1,47 +1,41 @@
 /**
- * Entry version history page, parameterized by an `EntriesMount`. A version
+ * Global version history page, parameterized by a `GlobalsMount`. A version
  * snapshots one locale's content row, so the list is the versions of the
  * locale in view; the list, diff and restore UI is the shared
  * `VersionHistory`.
  */
 
-import type { EntriesMount } from './mount';
+import type { GlobalsMount } from './mount';
 import { useNavigate } from '@tanstack/react-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { VersionHistory } from '@/admin/components/versions/version-history';
-import {
-    useEntry,
-    useEntryVersions,
-    useRestoreEntryVersion,
-} from '@/admin/hooks/entries';
+import { useGlobalVersions, useRestoreGlobalVersion } from '@/admin/hooks/globals';
+import { namespaceForScope } from '@/admin/i18n/entry-namespace';
+import { resolveLabel } from '@/admin/i18n/labels';
 import { defaultContentLocale } from '@/admin/utilities/content-locale';
-import { entryEditPath } from '@/admin/utilities/entry-admin-path';
+import { globalEditPath } from '@/admin/utilities/global-admin-path';
 
-export function EntryVersionsPage({
+export function GlobalVersionsPage({
     mount,
-    id,
     locale: localeProp,
 }: {
-    mount: EntriesMount;
-    id: string;
+    mount: GlobalsMount;
     /** Locale from the route search params; defaults to the default content locale. */
     locale: string | undefined;
 }): React.ReactElement {
-    const { type, api, cacheScope, config: entryType, basePath } = mount;
+    const { key, api, cacheScope, config, basePath } = mount;
     const locale = localeProp ?? defaultContentLocale();
-    const editPath = entryEditPath(basePath, id, { locale });
+    const editPath = globalEditPath(basePath, { locale });
     const scope = { api, cacheScope };
     const { t } = useTranslation();
     const navigate = useNavigate();
 
-    const plural = entryType?.plural ?? type;
-    const hasTitle = entryType?.titleField !== false;
+    const label = resolveLabel(config?.label, key, t, namespaceForScope(cacheScope));
 
-    const { data: entry } = useEntry(type, id, locale, scope);
-    const { data: versions, isLoading } = useEntryVersions(type, id, locale, true, scope);
+    const { data: versions, isLoading } = useGlobalVersions(key, locale, true, scope);
 
-    const restoreMutation = useRestoreEntryVersion(type, id, locale, {
+    const restoreMutation = useRestoreGlobalVersion(key, locale, {
         ...scope,
         onSuccess: () => void navigate({ to: editPath }),
     });
@@ -52,13 +46,10 @@ export function EntryVersionsPage({
             isLoading={isLoading}
             onRestore={(versionId) => restoreMutation.mutate(versionId)}
             isRestoring={restoreMutation.isPending}
-            breadcrumb={[
-                { label: plural, to: basePath },
-                { label: (hasTitle ? entry?.title : undefined) || id, to: editPath },
-                { label: t('versions.pageTitle') },
-            ]}
+            // A global has no list to go back to, so the trail starts at itself.
+            breadcrumb={[{ label, to: editPath }, { label: t('versions.pageTitle') }]}
             editPath={editPath}
-            hasTitle={hasTitle}
+            hasTitle={false}
         />
     );
 }

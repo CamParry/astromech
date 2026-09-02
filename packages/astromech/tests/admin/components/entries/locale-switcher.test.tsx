@@ -1,10 +1,11 @@
 /**
  * @vitest-environment happy-dom
  *
- * The locale switcher on the entry edit page. An entry has one id across its
- * locales, so switching is a change of the `locale` search param on the same
- * id — never a jump to a second row's id. A locale the entry has no content
- * row for is written first, by `update` on that locale.
+ * The locale switcher. A resource keeps one address across its locales, so
+ * switching is a change of the `locale` search param on the same id — never a
+ * jump to a second row's id. A locale with no content row is written first, by
+ * `update` on that locale, unless the caller passes `onSelectMissing` and takes
+ * it over (which is what the global edit page does).
  */
 
 import type { EntriesService, Entry } from '@/types/index';
@@ -53,14 +54,18 @@ function frEntry(): Entry {
  * Mount the switcher under a real router, so the navigation it fires is
  * observable as a location rather than as a mock call.
  */
-function mountSwitcher(options: { locales: string[]; api: EntriesService }) {
+function mountSwitcher(options: {
+    locales: string[];
+    api: EntriesService;
+    onSelectMissing?: (locale: string) => void;
+}) {
     const rootRoute = createRootRoute({ component: () => <Outlet /> });
     const switcherRoute = createRoute({
         getParentRoute: () => rootRoute,
         path: '/',
         component: () => (
             <LocaleSwitcher
-                entryId={ID}
+                id={ID}
                 currentLocale="en"
                 locales={options.locales}
                 allLocales={['en', 'fr']}
@@ -68,6 +73,9 @@ function mountSwitcher(options: { locales: string[]; api: EntriesService }) {
                 basePath={BASE_PATH}
                 type={TYPE}
                 scope={{ api: options.api }}
+                {...(options.onSelectMissing !== undefined
+                    ? { onSelectMissing: options.onSelectMissing }
+                    : {})}
                 compact
             />
         ),
@@ -149,5 +157,19 @@ describe('the locale switcher', () => {
         await waitFor(() => {
             expect(router.state.location.href).toBe(`${BASE_PATH}/${ID}?locale=fr`);
         });
+    });
+
+    it('hands a missing locale to `onSelectMissing` instead of writing it', async () => {
+        const update = vi.fn();
+        const onSelectMissing = vi.fn();
+        const api = { update } as unknown as EntriesService;
+        mountSwitcher({ locales: ['en'], api, onSelectMissing });
+
+        await pick('Add FR');
+
+        await waitFor(() => {
+            expect(onSelectMissing).toHaveBeenCalledWith('fr');
+        });
+        expect(update).not.toHaveBeenCalled();
     });
 });

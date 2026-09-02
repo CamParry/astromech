@@ -3,6 +3,7 @@ import { Link, useRouterState } from '@tanstack/react-router';
 import {
     ChevronLeft,
     ChevronRight,
+    Globe,
     icons,
     Image,
     LayoutDashboard,
@@ -42,11 +43,17 @@ export function Sidebar() {
     const { sidebarOpen, setSidebarOpen } = useUi();
     const { canReadMedia, canReadUsers, hasPermission } = usePermissions();
     const entryTypes = Object.entries(adminConfig.entries);
-    // Each host page carries its own resolved permission (`settings:read` for a
-    // fields page, null/explicit for a component page), so the group gates
-    // per-page rather than on settings access as a whole.
+    // Host globals, each gated on its own read permission. A plugin's appear
+    // in that plugin's nav tree instead.
+    const globals = Object.entries(adminConfig.globals ?? {}).filter(
+        ([key, global]) => global.nav && hasPermission(`global:${key}:read`)
+    );
+    // Only component pages: a page with a field tree is a global now, and the
+    // fields-mode page renderer is gone. Each carries its own resolved
+    // permission, so the group gates per page.
     const appPages = (adminConfig.pages ?? []).filter(
         (page) =>
+            page.fields === null &&
             page.nav !== false &&
             (page.permission === null || hasPermission(page.permission))
     );
@@ -108,6 +115,28 @@ export function Sidebar() {
                         </ul>
                     </nav>
                 )}
+                {globals.length > 0 && (
+                    <>
+                        <div className="am-sidebar-nav-divider"></div>
+                        <nav className="am-sidebar-nav" aria-label={t('nav.globals')}>
+                            <ul className="am-sidebar-nav-list" role="list">
+                                {globals.map(([key, global]) => (
+                                    <SidebarNavItem
+                                        key={key}
+                                        to={`/globals/${key}`}
+                                        label={resolveLabel(
+                                            global.label,
+                                            key,
+                                            t,
+                                            'translation'
+                                        )}
+                                        icon={<GlobalIcon name={global.icon} />}
+                                    />
+                                ))}
+                            </ul>
+                        </nav>
+                    </>
+                )}
                 {appPages.length > 0 && (
                     <>
                         <div className="am-sidebar-nav-divider"></div>
@@ -161,6 +190,12 @@ export function Sidebar() {
             </div>
         </aside>
     );
+}
+
+function GlobalIcon({ name }: { name?: string | undefined }) {
+    const Icon =
+        name !== undefined ? (icons[name as keyof typeof icons] ?? Globe) : Globe;
+    return <Icon size={16} />;
 }
 
 function PluginNavIcon({ name }: { name?: string | undefined }) {

@@ -46,7 +46,13 @@ export type EntryPayload = {
     publishedAt?: Date | null;
 };
 
-type UseEntryFormOptions = {
+/**
+ * `TSaved` is what the caller's write resolves to — an `Entry` for the entry
+ * pages, a `Global` for the global one. The hook never reads it; it only hands
+ * it back to `onSuccess`, so parameterizing beats forcing globals through a
+ * cast.
+ */
+type UseEntryFormOptions<TSaved> = {
     /**
      * The type's full field tree (`[...main, ...sidebar]`), which the browser
      * runs the server's own pipeline over before letting a submit through.
@@ -72,21 +78,21 @@ type UseEntryFormOptions = {
     defaultValues?: Partial<EntryFormValues>;
     /**
      * The mutation function for the "save" action (save as unpublished / update).
-     * Receives the built payload; must return a Promise<Entry>.
+     * Receives the built payload; must return the saved record.
      */
-    saveFn: (payload: EntryPayload) => Promise<Entry>;
+    saveFn: (payload: EntryPayload) => Promise<TSaved>;
     /**
      * The mutation function for the "publish" action.
-     * Receives the built payload (status forced to 'published'); must return a Promise<Entry>.
+     * Receives the built payload (status forced to 'published').
      */
-    publishFn: (payload: EntryPayload) => Promise<Entry>;
-    /** Called after either mutation succeeds, with the returned entry. */
-    onSuccess?: (entry: Entry) => void;
+    publishFn: (payload: EntryPayload) => Promise<TSaved>;
+    /** Called after either mutation succeeds, with the saved record. */
+    onSuccess?: (record: TSaved) => void;
     /** When true, save and publish actions become no-ops. */
     readOnly?: boolean;
 };
 
-export function useEntryForm({
+export function useEntryForm<TSaved = Entry>({
     fieldDefinitions,
     operation,
     namespace,
@@ -97,7 +103,7 @@ export function useEntryForm({
     publishFn,
     onSuccess,
     readOnly = false,
-}: UseEntryFormOptions) {
+}: UseEntryFormOptions<TSaved>) {
     const { toast } = useToast();
     const { t } = useTranslation();
 
@@ -209,31 +215,31 @@ export function useEntryForm({
         });
     }
 
-    const saveMutation: UseMutationResult<Entry, Error, EntryPayload> = useMutation<
-        Entry,
+    const saveMutation: UseMutationResult<TSaved, Error, EntryPayload> = useMutation<
+        TSaved,
         Error,
         EntryPayload
     >({
         mutationFn: saveFn,
-        onSuccess: (entry) => {
+        onSuccess: (record) => {
             // Reset dirty state without changing values
             form.reset(form.state.values);
-            onSuccess?.(entry);
+            onSuccess?.(record);
         },
         onError: (err) => {
             handleFieldError(err, 'Save failed');
         },
     });
 
-    const publishMutation: UseMutationResult<Entry, Error, EntryPayload> = useMutation<
-        Entry,
+    const publishMutation: UseMutationResult<TSaved, Error, EntryPayload> = useMutation<
+        TSaved,
         Error,
         EntryPayload
     >({
         mutationFn: publishFn,
-        onSuccess: (entry) => {
+        onSuccess: (record) => {
             form.reset(form.state.values);
-            onSuccess?.(entry);
+            onSuccess?.(record);
         },
         onError: (err) => {
             handleFieldError(err, 'Publish failed');
@@ -309,5 +315,8 @@ export function useEntryForm({
     };
 }
 
-/** The return type of `useEntryForm`, derived from the hook itself. */
-export type UseEntryFormResult = ReturnType<typeof useEntryForm>;
+/**
+ * The return type of `useEntryForm`, derived from the hook itself at the entry
+ * instantiation — the one the entry pages and their tests hold.
+ */
+export type UseEntryFormResult = ReturnType<typeof useEntryForm<Entry>>;
