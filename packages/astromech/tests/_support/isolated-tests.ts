@@ -12,6 +12,8 @@
  */
 export const isolatedTests = [
     'tests/admin/components/entries/entry-edit-locale-switch.test.tsx',
+    'tests/admin/components/globals/global-edit-page.test.tsx',
+    'tests/admin/components/layout/sidebar-globals.test.tsx',
     'tests/admin/components/fields/plugin-field-loading.test.tsx',
     'tests/admin/components/fields/reference-field-loading.test.tsx',
     'tests/admin/components/media/media-detail-modal-replace.test.tsx',
@@ -42,6 +44,7 @@ export const isolatedTests = [
     'tests/storage/drivers/s3.test.ts',
     'tests/transport/http/client-address.test.ts',
     'tests/transport/http/client/entries-service.test.ts',
+    'tests/transport/http/client/globals-service.test.ts',
     'tests/transport/http/client/media-upload-path.test.ts',
     'tests/transport/http/client/methods.test.ts',
     'tests/transport/http/routes/app-root.test.ts',

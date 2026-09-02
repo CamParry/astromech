@@ -21,6 +21,7 @@ import { onError, onNotFound } from './middleware/errors';
 import { cronRouter } from './routes/cron';
 import { entriesRouter } from './routes/entries';
 import { entryTypesRouter } from './routes/entry-types';
+import { globalsRouter } from './routes/globals';
 import { mediaRouter } from './routes/media';
 import { notificationsRouter } from './routes/notifications';
 import { pluginsRouter } from './routes/plugins';
@@ -135,6 +136,9 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
     });
 
     app.route(`${api}/entries`, entriesRouter);
+    // Authenticated, as entries are: a site reads a `public` global through the
+    // local API, not over HTTP.
+    app.route(`${api}/globals`, globalsRouter);
     app.route(`${api}/users`, usersRouter);
     app.route(`${api}/media`, mediaRouter);
     app.route(`${api}/settings`, settingsRouter);

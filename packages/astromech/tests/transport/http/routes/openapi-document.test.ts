@@ -17,6 +17,7 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createEntriesRouter, ENTRIES_ROUTES } from '@/transport/http/routes/entries';
+import { createGlobalsRouter, GLOBALS_ROUTES } from '@/transport/http/routes/globals';
 import { HTTP_ROUTES } from '@/transport/http/routes/http-routes.shared';
 import { MEDIA_ROUTES, mediaRouter } from '@/transport/http/routes/media';
 import {
@@ -45,6 +46,7 @@ type Document = {
 function tables(): [string, RestRoute[]][] {
     return [
         ['/entries', ENTRIES_ROUTES],
+        ['/globals', GLOBALS_ROUTES],
         ['/users', USERS_ROUTES],
         ['/media', MEDIA_ROUTES],
         ['/settings', SETTINGS_ROUTES],
@@ -77,10 +79,11 @@ function queryParameters(operation: Operation | undefined): string[] {
         .map((parameter) => parameter.name);
 }
 
-/** The document the five domain routers compose to. */
+/** The document the six domain routers compose to. */
 function document(): Document {
     const app = new OpenAPIHono<{ Variables: AuthVariables }>();
     app.route('/entries', createEntriesRouter());
+    app.route('/globals', createGlobalsRouter());
     app.route('/users', usersRouter);
     app.route('/media', mediaRouter);
     app.route('/settings', settingsRouter);
@@ -121,7 +124,7 @@ describe('the emitted document', () => {
 
     it('covers more than the five paths the hand-written routes described', () => {
         const total = tables().reduce((sum, [, routes]) => sum + routes.length, 0);
-        expect(total).toBe(35);
+        expect(total).toBe(44);
         expect(Object.keys(document().paths).length).toBeGreaterThan(5);
     });
 
@@ -167,6 +170,18 @@ describe('the emitted document', () => {
             'locale',
             'staged',
         ]);
+    });
+
+    it('documents the bespoke global read’s own query string', () => {
+        // The row is bespoke, so nothing but the router declares its query
+        // string; `full` and `staged` are the two shapes it accepts.
+        const doc = document();
+        const get = doc.paths['/globals/{key}']?.['get'];
+        expect(queryParameters(get).sort()).toEqual(['full', 'locale', 'staged']);
+        // The write takes both on the URL and the `data` key alone as its body.
+        const write = doc.paths['/globals/{key}']?.['put'];
+        expect(queryParameters(write).sort()).toEqual(['locale', 'staged']);
+        expect(bodyProperties(write, doc)).toEqual(['fields']);
     });
 
     it('keeps a query-param argument out of the request body', () => {

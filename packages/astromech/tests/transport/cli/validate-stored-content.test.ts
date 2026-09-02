@@ -12,16 +12,17 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createRepository } from '@/database/repository/create-repository';
 import { entriesService as api } from '@/entries/service';
 import { entryContentTable } from '@/entries/tables';
-import { createSettingsRepository } from '@/settings/repository';
-import { settingsService } from '@/settings/service';
+import { globalsService } from '@/globals/service';
+import { globalContentTable } from '@/globals/tables';
 import { validateStoredContent } from '@/transport/cli/validate-stored-content';
 import { createUserRepository } from '@/users/repository';
 import { usersService } from '@/users/service';
 
 /**
  * `article` carries a bounded number and a unique code; `report` carries the
- * same code field so `--type` scoping has a second type to leave alone. One
- * translatable admin page covers the split-blob settings case.
+ * same code field so `--type` scoping has a second type to leave alone. Two
+ * globals cover the resource with a locale per row: `branding` in the default
+ * content locale alone, `site` in each configured one.
  */
 function makeValidateConfig(): AstromechConfig {
     const base = makeTestConfig();
@@ -77,30 +78,28 @@ function makeValidateConfig(): AstromechConfig {
                 },
             ],
         },
-        admin: {
-            pages: [
-                {
-                    path: 'branding',
-                    label: 'Branding',
-                    translatable: true,
-                    fields: [
-                        {
-                            name: 'company',
-                            type: 'text',
-                            label: 'Company',
-                            validation: [{ maxLength: 5 }],
-                        },
-                        {
-                            name: 'tagline',
-                            type: 'text',
-                            label: 'Tagline',
-                            translatable: true,
-                            required: true,
-                        },
-                    ],
-                },
-            ],
-        },
+        globals: [
+            {
+                key: 'branding',
+                label: 'Branding',
+                fields: [
+                    {
+                        name: 'company',
+                        type: 'text',
+                        label: 'Company',
+                        validation: [{ maxLength: 5 }],
+                    },
+                ],
+            },
+            {
+                key: 'site',
+                label: 'Site',
+                translatable: true,
+                fields: [
+                    { name: 'tagline', type: 'text', label: 'Tagline', required: true },
+                ],
+            },
+        ],
     };
 }
 
@@ -114,15 +113,20 @@ async function storeFields(id: string, fields: JsonObject): Promise<void> {
     await createRepository(entryContentTable).updateMany({ entryId: id }, { fields });
 }
 
+/** Overwrite a global's stored field blob without going through the pipeline. */
+async function storeGlobalFields(fields: JsonObject): Promise<void> {
+    await createRepository(globalContentTable).updateMany({}, { fields });
+}
+
 /** Every field blob a run could touch, serialized for a straight comparison. */
 async function snapshot(): Promise<string> {
     const entries = await createRepository(entryContentTable).findMany({ where: {} });
     const users = await createUserRepository().list();
-    const settings = await settingsService.all({ full: true });
+    const globals = await createRepository(globalContentTable).findMany({ where: {} });
     return JSON.stringify([
         entries.map((row) => [row.id, row.fields]),
         users.map((row) => [row.id, row.fields]),
-        settings.map((row) => [row.key, row.value]),
+        globals.map((row) => [row.id, row.fields]),
     ]);
 }
 
@@ -166,7 +170,10 @@ describe('validateStoredContent', () => {
                 fields: { nickname: 'ok' },
             },
         });
-        await settingsService.set({ key: 'branding', value: { company: 'Acme' } });
+        await globalsService.update({
+            key: 'branding',
+            data: { fields: { company: 'Acme' } },
+        });
         const before = await snapshot();
 
         await validateStoredContent();
@@ -292,33 +299,67 @@ describe('validateStoredContent', () => {
         ]);
     });
 
-    // A translatable page splits its blob across `<key>` and `<key>:<locale>`,
-    // so the per-locale required field is absent from the base row by design.
-    it('does not report a translatable settings page as incomplete', async () => {
-        await settingsService.set({ key: 'branding', value: { company: 'Acme' } });
-        await settingsService.set({ key: 'branding:en', value: { tagline: 'Hello' } });
+    it('counts a clean global and reports nothing for it', async () => {
+        await globalsService.update({
+            key: 'branding',
+            data: { fields: { company: 'Acme' } },
+        });
 
         const report = await validateStoredContent();
 
         expect(report.findings).toEqual([]);
-        expect(report.rowsChecked).toBe(2);
+        expect(report.rowsChecked).toBe(1);
     });
 
-    it('reports a settings blob that fails a current rule', async () => {
-        await createSettingsRepository().set('branding', { company: 'Far too long' });
+    it('skips a declared global no locale has saved', async () => {
+        expect((await validateStoredContent()).rowsChecked).toBe(0);
+    });
+
+    it('reports a stored global that fails a current rule', async () => {
+        await globalsService.update({
+            key: 'branding',
+            data: { fields: { company: 'Acme' } },
+        });
+        await storeGlobalFields({ company: 'Far too long' });
 
         const report = await validateStoredContent();
 
         expect(report.findings).toEqual([
             {
-                kind: 'setting',
+                kind: 'global',
                 type: null,
                 id: 'branding',
-                locale: null,
+                locale: 'en',
                 fieldPath: 'company',
                 message: 'Must be at most 5 characters',
             },
         ]);
+    });
+
+    // A draft is written with `required` relaxed; the report applies the
+    // complete rules, so the missing field surfaces under the locale it is
+    // missing from.
+    it('reports each saved locale of a translatable global separately', async () => {
+        await globalsService.update({ key: 'site', data: { fields: {} } });
+        await globalsService.update({
+            key: 'site',
+            locale: 'de',
+            data: { fields: { tagline: 'Hallo' } },
+        });
+
+        const report = await validateStoredContent();
+
+        expect(report.findings).toEqual([
+            {
+                kind: 'global',
+                type: null,
+                id: 'site',
+                locale: 'en',
+                fieldPath: 'tagline',
+                message: 'This field is required',
+            },
+        ]);
+        expect(report.rowsChecked).toBe(2);
     });
 });
 

@@ -59,11 +59,13 @@ export type TypedGlobalsServiceFor<GlobalMap> = {
     update<K extends keyof GlobalMap>(params: {
         key: K;
         locale?: string;
+        staged?: boolean;
         data: { fields: Partial<FieldsForMap<GlobalMap, K>> };
     }): Promise<TypedGlobal<FieldsForMap<GlobalMap, K>>>;
     update(params: {
         key: string;
         locale?: string;
+        staged?: boolean;
         data: GlobalUpdateData;
     }): Promise<Global>;
 

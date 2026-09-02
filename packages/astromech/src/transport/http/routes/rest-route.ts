@@ -114,7 +114,7 @@ export function mountRestRoutes(
 export function documentBespokeRoutes(
     router: OpenAPIHono<Env>,
     contracts: RestContracts,
-    specs: readonly HttpRouteSpec[]
+    specs: readonly (HttpRouteSpec & { query?: z.ZodObject })[]
 ): void {
     for (const spec of specs) {
         if (spec.handler === 'bespoke') documentRoute(router, contracts, spec);

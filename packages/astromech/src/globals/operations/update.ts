@@ -8,8 +8,10 @@ import { parseInput } from '@/errors/validation';
 import { flattenEntryFields } from '@/fields/flatten';
 import { runHook } from '@/hooks/hooks';
 import { getCurrentUser } from '@/request-context/request-context';
+import { GlobalNotFoundError } from '../errors';
 import {
     asGlobal,
+    assertCapability,
     globalRepository,
     resolveGlobal,
     resolveLocale,
@@ -22,21 +24,41 @@ import { updateGlobalSchema } from '../schema';
  * Rows are created on demand: a global nothing has saved gets its `globals` row
  * and this locale's content row, and a translatable global whose locale has no
  * row gets one with the shared fields inherited from the default-locale row.
+ *
+ * `staged` writes the staged change for that locale instead, which is how an
+ * editor drafts against a live global. It must already exist — only
+ * `createStaged` makes one — and it takes no version and propagates no shared
+ * fields, both of which belong to the canonical row the merge writes to.
  */
 export async function updateGlobal(params: {
     key: string;
     locale?: string;
+    staged?: boolean;
     data: GlobalUpdateData;
 }): Promise<Global> {
     if (isPublicBranded(params.data.fields)) throw new PublicShapeWriteError();
 
     const global = resolveGlobal(params.key);
+    const staged = params.staged === true;
+    if (staged) assertCapability(global, 'staging');
     const locale = resolveLocale(global, params.locale);
     const repository = globalRepository();
     const user = await getCurrentUser();
 
     const id = await repository.idByKey(params.key);
-    const current = id === null ? null : await repository.get({ id, locale });
+    const current =
+        id === null
+            ? null
+            : staged
+              ? await repository.staging.getByCanonical(id, locale)
+              : await repository.get({ id, locale });
+    // A staged write addresses a row `createStaged` made; there is nothing here
+    // to create one from.
+    if (staged && (id === null || !current)) {
+        throw new GlobalNotFoundError({ key: params.key, locale });
+    }
+    /** The staged row this write targets, absent on a canonical write. */
+    const stagedRef = staged && id !== null ? { id, locale } : null;
 
     // The before-hook may replace the context, and with it the patch that is
     // written — so it runs before the fields are parsed, not just before the
@@ -64,6 +86,16 @@ export async function updateGlobal(params: {
     });
 
     const saved = await transaction(async () => {
+        if (stagedRef) {
+            // No version and no propagation: the history and the shared fields
+            // belong to the canonical row, which the merge is what writes to.
+            return asGlobal(
+                await repository.staging.update(stagedRef, {
+                    fields,
+                    updatedBy: user?.id ?? null,
+                })
+            );
+        }
         if (current && global.capabilities.versioning) {
             if (changesVersionedContent(current, { fields })) {
                 await snapshotVersion(repository.versions, current);

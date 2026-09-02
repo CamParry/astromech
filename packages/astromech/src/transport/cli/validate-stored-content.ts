@@ -7,11 +7,21 @@
  */
 
 import type { FieldErrors } from '@/types/fields';
-import type { EntryStatus, JsonObject, ResourceType } from '@/types/index';
+import type {
+    EntryStatus,
+    JsonObject,
+    ResolvedGlobal,
+    ResourceType,
+} from '@/types/index';
+import { getDefaultContentLocale } from '@/config/content-locale';
 import { getConfig } from '@/config/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
-import { qualifyEntryType, resolveEntryType } from '@/entries/entry-types.shared';
+import {
+    QUALIFIED_SEPARATOR,
+    qualifyEntryType,
+    resolveEntryType,
+} from '@/entries/entry-types.shared';
 import { createEntryLookups } from '@/entries/lookups';
 import { getEntryRepository, hasCustomTable } from '@/entries/repository/registry';
 import { entriesTable, entryContentTable } from '@/entries/tables';
@@ -19,16 +29,17 @@ import { entryValidationMode } from '@/entries/validation-mode.shared';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenEntryFields, flattenFieldNodes } from '@/fields/flatten';
 import { safeParseFields } from '@/fields/parse-fields';
+import { globalLookups } from '@/globals/internal/stored-fields';
+import { globalsService } from '@/globals/service';
 import { createMediaRepository } from '@/media/repository';
-import { settingsService } from '@/settings/service';
 import { createUserRepository } from '@/users/repository';
 
-/** Scope of a report run. `type` is an ENTRY type; it never covers media, users or settings. */
+/** Scope of a report run. `type` is an ENTRY type; it never covers media, users or globals. */
 export type ValidationScope = { type?: string };
 
 export type ValidationFinding = {
     kind: ResourceType;
-    /** Entry type; null for media, users and settings. */
+    /** Entry type; null for media, users and globals. */
     type: string | null;
     id: string;
     locale: string | null;
@@ -53,7 +64,7 @@ export async function validateStoredContent(
     if (opts?.type === undefined) {
         await checkMedia(report);
         await checkUsers(report);
-        await checkSettings(report);
+        await checkGlobals(report);
     }
 
     return report;
@@ -265,61 +276,51 @@ async function checkUsers(report: ValidationReport): Promise<void> {
     }
 }
 
-/** Settings blobs, with `settings/service.ts`'s context. */
-async function checkSettings(report: ValidationReport): Promise<void> {
-    const load = memoize(() => settingsService.all({ full: true }));
-    const rows = await load();
+/**
+ * Every saved locale of every declared global, host and plugin alike, with
+ * `globals/operations/update.ts`'s context. A locale that has never been saved
+ * reads back null and is skipped: there is no stored row to report on.
+ */
+async function checkGlobals(report: ValidationReport): Promise<void> {
+    const config = getConfig();
+    const declared: [string, ResolvedGlobal][] = [
+        ...Object.entries(config.globals),
+        ...Object.entries(config.pluginGlobals).flatMap(([plugin, globals]) =>
+            Object.entries(globals).map(([key, global]): [string, ResolvedGlobal] => [
+                `${plugin}${QUALIFIED_SEPARATOR}${key}`,
+                global,
+            ])
+        ),
+    ];
 
-    for (const row of rows) {
-        const value = row.value;
-        if (!isPlainObject(value)) continue;
-        const baseKey = row.key.includes(':')
-            ? row.key.slice(0, row.key.indexOf(':'))
-            : row.key;
-        const page = getConfig().adminPages.find(
-            (candidate) => candidate.baseKey === baseKey
-        );
-        if (!page?.fields) continue;
+    // A non-translatable global lives in the default content locale alone, and
+    // asking it for another is a caller error, not an empty result.
+    const defaultLocale = getDefaultContentLocale();
+    for (const [key, global] of declared) {
+        const locales = global.capabilities.translatable
+            ? (config.locales ?? [defaultLocale])
+            : [defaultLocale];
+        for (const locale of locales) {
+            const row = await globalsService.get({ key, locale, full: true });
+            if (row === null) continue;
 
-        report.rowsChecked += 1;
-        // Only the fields this key's blob holds. A translatable page splits its
-        // values across `<key>` and `<key>:<locale>`, so the full definition set
-        // would report every field the other row carries as missing.
-        const definitions = flattenEntryFields(page.fields).filter((field) =>
-            Object.prototype.hasOwnProperty.call(value, field.name)
-        );
-        // `ResolvedAdminPage` drops `validate`, so it comes from the AUTHORED page.
-        const validate = getConfig().admin?.pages?.find(
-            (candidate) => candidate.path === page.path
-        )?.validate;
-        const processed = await safeParseFields(value, definitions, {
-            operation: 'update',
-            resource: { kind: 'setting', record: null },
-            user: null,
-            lookups: fieldLookupsFromRecords({
-                // The filter is per row (it keys on this row's `baseKey`); the
-                // load behind it is the pass's single snapshot.
-                load: async () =>
-                    (await load()).filter(
-                        (setting) =>
-                            setting.key === baseKey ||
-                            setting.key.startsWith(`${baseKey}:`)
-                    ),
-                getId: (setting) => setting.key,
-                getFields: (setting) =>
-                    isPlainObject(setting.value) ? setting.value : {},
-                excludeId: row.key,
-                entryTypes: (ids) => existingEntryTypes(ids),
-            }),
-            coerceOnly: new Set(),
-            collectWarnings: false,
-            ...(validate ? { validate } : {}),
-        });
-        collect(
-            report,
-            { kind: 'setting', type: null, id: row.key, locale: null },
-            processed
-        );
+            report.rowsChecked += 1;
+            const validate = global.validate;
+            const processed = await safeParseFields(
+                row.fields as Record<string, unknown>,
+                flattenEntryFields(global.fields),
+                {
+                    operation: 'update',
+                    resource: { kind: 'global', record: row },
+                    user: null,
+                    lookups: globalLookups(),
+                    coerceOnly: new Set(),
+                    collectWarnings: false,
+                    ...(validate ? { validate } : {}),
+                }
+            );
+            collect(report, { kind: 'global', type: null, id: key, locale }, processed);
+        }
     }
 }
 
@@ -343,8 +344,4 @@ function collect(
 function memoize<T>(load: () => Promise<T[]>): () => Promise<T[]> {
     let pending: Promise<T[]> | undefined;
     return () => (pending ??= load());
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

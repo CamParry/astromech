@@ -10,6 +10,7 @@ import type {
 } from '@/transport/http/routes/http-routes.shared';
 import type {
     EntriesService,
+    GlobalsService,
     Media,
     MediaQueryParams,
     MediaService,
@@ -19,6 +20,7 @@ import type {
     SettingsService,
     SortOption,
     TypedEntriesService,
+    TypedGlobalsService,
     UserQueryParams,
     UsersService,
 } from '@/types/index';
@@ -397,6 +399,23 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+/**
+ * Globals over the table. `get` is the one override: a global that has never
+ * been saved is a normal state, and the route answers 404 for it, so the client
+ * reads it back as `null` rather than raising — the same swallow
+ * {@link settingValue} makes.
+ */
+const globalsService = restService<GlobalsService>('globals', callRoute, {
+    get: async (params) => {
+        try {
+            return await callRoute('globals.get', params ?? {});
+        } catch (err) {
+            if (err instanceof AstromechApiError && err.status === 404) return null;
+            throw err;
+        }
+    },
+});
+
 const usersService = restService<UsersService>('users', callRoute, {
     query: (params) =>
         callRoute('users.query', listingArgs((params ?? {}) as UserQueryParams)),
@@ -449,6 +468,7 @@ const pluginsApi: PluginServiceNamespace = new Proxy({} as PluginServiceNamespac
 
 export const astromechClient = {
     entries: entriesService as unknown as TypedEntriesService,
+    globals: globalsService as unknown as TypedGlobalsService,
     media: mediaService,
     settings: settingsService,
     users: usersService,

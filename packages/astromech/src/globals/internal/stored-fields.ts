@@ -23,7 +23,7 @@ import { getCurrentUser } from '@/request-context/request-context';
  * is still supplied, since a relationship field's target-type check reads real
  * rows.
  */
-function globalLookups(): ReturnType<typeof fieldLookupsFromRecords> {
+export function globalLookups(): ReturnType<typeof fieldLookupsFromRecords> {
     return fieldLookupsFromRecords<never>({
         load: async () => [],
         getId: () => undefined,

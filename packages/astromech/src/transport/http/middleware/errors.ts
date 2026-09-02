@@ -11,6 +11,7 @@ import { HTTPException } from 'hono/http-exception';
 import { BulkOperationError, EntryNotFoundError } from '@/entries/errors';
 import { resolveEnv } from '@/env';
 import { ValidationError } from '@/errors/validation';
+import { GlobalNotFoundError } from '@/globals/errors';
 
 export type ApiErrorCode =
     | 'NOT_FOUND'
@@ -160,16 +161,19 @@ function fieldErrorsFrom(err: ValidationError): Record<string, string[]> {
 }
 
 /**
- * Hono's app-level error handler: canonicalises HTTPException,
- * EntryNotFoundError, ValidationError — bare, or wrapped by a batch write's
+ * Hono's app-level error handler: canonicalises HTTPException, the two
+ * not-found errors, ValidationError — bare, or wrapped by a batch write's
  * BulkOperationError — and unknown errors alike.
+ *
+ * `GlobalValidationError` needs no case of its own: it extends
+ * `ValidationError`, so it maps to the same 422.
  */
 export const onError: ErrorHandler = (err, c) => {
     if (err instanceof HTTPException) {
         return apiError(c, err.status, 'INTERNAL_ERROR', err.message);
     }
 
-    if (err instanceof EntryNotFoundError) {
+    if (err instanceof EntryNotFoundError || err instanceof GlobalNotFoundError) {
         return notFound(c, err.message);
     }
 

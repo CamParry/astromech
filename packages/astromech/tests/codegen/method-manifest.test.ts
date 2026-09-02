@@ -256,12 +256,17 @@ describe('generateMethodManifest — globals', () => {
         expect(m?.['permissionDynamic']).toBe(true);
     });
 
-    it('describes globals.update as { key, locale, data }', () => {
+    it('describes globals.update as { key, locale, staged, data }', () => {
         const { methods } = parseManifest([]);
         const input = findMethod(methods, 'globals.update')?.['input'] as {
             properties?: Record<string, { properties?: Record<string, unknown> }>;
         };
-        expect(Object.keys(input?.properties ?? {})).toEqual(['key', 'locale', 'data']);
+        expect(Object.keys(input?.properties ?? {})).toEqual([
+            'key',
+            'locale',
+            'staged',
+            'data',
+        ]);
         expect(Object.keys(input?.properties?.['data']?.properties ?? {})).toEqual([
             'fields',
         ]);

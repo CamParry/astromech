@@ -258,6 +258,77 @@ export const ENTRIES_ROUTE_SPECS = [
     },
 ] as const satisfies readonly HttpRouteSpec[];
 
+/**
+ * Every global is served here, addressed by the key the globals service uses —
+ * bare for a host global, `<namespace>/<key>` for a plugin's, URL-encoded into
+ * the `:key` segment.
+ *
+ * Two rows are bespoke; `transport/http/routes/globals.ts` records the reason
+ * against each handler.
+ */
+export const GLOBALS_ROUTE_SPECS = [
+    { verb: 'get', path: '/:key', id: 'globals.get', handler: 'bespoke' },
+    {
+        verb: 'put',
+        path: '/:key',
+        id: 'globals.update',
+        bodyKey: 'data',
+        queryArgs: ['locale', 'staged'],
+    },
+    { verb: 'post', path: '/:key/publish', id: 'globals.publish', queryArgs: ['locale'] },
+    {
+        verb: 'post',
+        path: '/:key/unpublish',
+        id: 'globals.unpublish',
+        queryArgs: ['locale'],
+    },
+    {
+        verb: 'post',
+        path: '/:key/schedule',
+        id: 'globals.schedule',
+        queryArgs: ['locale'],
+    },
+    {
+        verb: 'get',
+        path: '/:key/versions',
+        id: 'globals.versions',
+        queryArgs: ['locale'],
+    },
+    {
+        verb: 'post',
+        path: '/:key/versions/:versionId/restore',
+        id: 'globals.restoreVersion',
+        queryArgs: ['locale'],
+    },
+    {
+        verb: 'post',
+        path: '/:key/staged',
+        id: 'globals.createStaged',
+        status: 201,
+        queryArgs: ['locale'],
+        handler: 'bespoke',
+    },
+    {
+        verb: 'get',
+        path: '/:key/staged',
+        id: 'globals.getStaged',
+        queryArgs: ['locale'],
+    },
+    {
+        verb: 'post',
+        path: '/:key/staged/merge',
+        id: 'globals.mergeStaged',
+        queryArgs: ['locale'],
+    },
+    {
+        verb: 'delete',
+        path: '/:key/staged',
+        id: 'globals.deleteStaged',
+        envelope: 'success',
+        queryArgs: ['locale'],
+    },
+] as const satisfies readonly HttpRouteSpec[];
+
 export const USERS_ROUTE_SPECS = [
     { verb: 'get', path: '/', id: 'users.query', envelope: 'raw' },
     { verb: 'post', path: '/', id: 'users.create', status: 201, bodyKey: 'data' },
@@ -309,9 +380,10 @@ function mountedAt(base: string, specs: readonly HttpRouteSpec[]): MountedRoute[
     return specs.map((spec) => ({ ...spec, base }));
 }
 
-/** Every REST route the fetch client can reach, across all five domains. */
+/** Every REST route the fetch client can reach, across all six domains. */
 export const HTTP_ROUTES: readonly MountedRoute[] = [
     ...mountedAt('/entries', ENTRIES_ROUTE_SPECS),
+    ...mountedAt('/globals', GLOBALS_ROUTE_SPECS),
     ...mountedAt('/users', USERS_ROUTE_SPECS),
     ...mountedAt('/media', MEDIA_ROUTE_SPECS),
     ...mountedAt('/settings', SETTINGS_ROUTE_SPECS),

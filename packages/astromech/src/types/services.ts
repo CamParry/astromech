@@ -275,6 +275,13 @@ export type GlobalsService = {
     update(params: {
         key: string;
         locale?: string;
+        /**
+         * Write this locale's staged change rather than its canonical row. It
+         * must already exist — `createStaged` makes it — and the write takes no
+         * version and propagates no shared fields. Needs the `staging`
+         * capability.
+         */
+        staged?: boolean;
         data: GlobalUpdateData;
     }): Promise<Global>;
     /**

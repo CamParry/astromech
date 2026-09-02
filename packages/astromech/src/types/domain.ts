@@ -12,14 +12,7 @@ export type JsonArray = JsonValue[];
  * or a media item. `TargetKind` (`fields/relationship-edges.ts`) is the
  * relation-eligible subset.
  */
-export type ResourceType =
-    | 'entry'
-    | 'global'
-    | 'user'
-    | 'media'
-    // Goes with the CLI validator's settings scan
-    // (`transport/cli/validate-stored-content.ts`), the last reader of it.
-    | 'setting';
+export type ResourceType = 'entry' | 'global' | 'user' | 'media';
 
 export type EntryStatus = 'unpublished' | 'published' | 'scheduled';
 

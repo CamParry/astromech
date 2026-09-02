@@ -112,6 +112,89 @@ describe('getStaged', () => {
     });
 });
 
+describe('update with staged', () => {
+    it('edits the staged row and leaves the canonical alone', async () => {
+        await saveSite();
+        await api.createStaged({ key: 'site' });
+
+        const edited = await api.update({
+            key: 'site',
+            staged: true,
+            data: { fields: { title: 'Draft' } },
+        });
+
+        expect(edited.staged).toBe(true);
+        expect(edited.fields).toEqual({ title: 'Draft', brand: 'Acme' });
+        expect((await api.getStaged({ key: 'site' }))?.fields['title']).toBe('Draft');
+        const live = await api.get({ key: 'site', full: true });
+        expect(live?.fields['title']).toBe('Live');
+        expect(live?.staged).toBe(false);
+    });
+
+    it('takes no version — the history belongs to the canonical row', async () => {
+        await saveSite();
+        await api.createStaged({ key: 'site' });
+
+        await api.update({ key: 'site', staged: true, data: { fields: { title: 'A' } } });
+        await api.update({ key: 'site', staged: true, data: { fields: { title: 'B' } } });
+
+        expect(await api.versions({ key: 'site' })).toEqual([]);
+    });
+
+    it('validates at the draft stage, since a staged row is unpublished', async () => {
+        await api.update({
+            key: 'announcement',
+            data: { fields: { headline: 'Launch', body: 'Soon' } },
+        });
+        await api.publish({ key: 'announcement' });
+        await api.createStaged({ key: 'announcement' });
+
+        const edited = await api.update({
+            key: 'announcement',
+            staged: true,
+            data: { fields: { headline: null } },
+        });
+        expect(edited.fields['headline']).toBeNull();
+    });
+
+    it('leaves a shared field with the staged row until the merge', async () => {
+        await saveSite();
+        await api.update({
+            key: 'site',
+            locale: 'de',
+            data: { fields: { title: 'DE' } },
+        });
+        await api.createStaged({ key: 'site' });
+
+        await api.update({
+            key: 'site',
+            staged: true,
+            data: { fields: { brand: 'Staged' } },
+        });
+
+        const de = await api.get({ key: 'site', locale: 'de', full: true });
+        expect(de?.fields['brand']).toBe('Acme');
+    });
+
+    it('refuses a locale with no staged change', async () => {
+        await saveSite();
+        await expect(
+            api.update({ key: 'site', staged: true, data: { fields: { title: 'X' } } })
+        ).rejects.toThrow(GlobalNotFoundError);
+    });
+
+    it('refuses a global without the staging capability', async () => {
+        await api.update({ key: 'contact', data: { fields: {} } });
+        await expect(
+            api.update({
+                key: 'contact',
+                staged: true,
+                data: { fields: { email: 'a@b.dev' } },
+            })
+        ).rejects.toThrow(CapabilityError);
+    });
+});
+
 describe('mergeStaged', () => {
     it('copies the staged fields onto the canonical, snapshots it and clears the staged row', async () => {
         await saveSite();

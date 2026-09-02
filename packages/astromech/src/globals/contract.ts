@@ -5,6 +5,7 @@
  * `PermissionRule` rather than a fixed string.
  */
 
+import type { GlobalCapability } from './internal/global';
 import type { GlobalAction } from '@/permissions/global-permission';
 import type {
     GlobalsService,
@@ -34,6 +35,26 @@ export const GLOBAL_METHOD_ACTIONS = {
     mergeStaged: 'publish',
     deleteStaged: 'update',
 } as const satisfies Record<keyof GlobalsService, GlobalAction>;
+
+/**
+ * The capability a `GlobalsService` method needs the global to declare. A method
+ * absent from the map needs none. Read by the HTTP routes, which answer 409
+ * before the service is reached, so a misconfigured global refuses with the
+ * capability named rather than with the operation's own error.
+ */
+export const GLOBAL_METHOD_REQUIRES: Partial<
+    Record<keyof GlobalsService, GlobalCapability>
+> = {
+    publish: 'statuses',
+    unpublish: 'statuses',
+    schedule: 'statuses',
+    versions: 'versioning',
+    restoreVersion: 'versioning',
+    createStaged: 'staging',
+    getStaged: 'staging',
+    mergeStaged: 'staging',
+    deleteStaged: 'staging',
+};
 
 /**
  * The key one call names. A call with no key is not refused here: it resolves to
@@ -89,8 +110,14 @@ export const globalsContract = {
     update: {
         summary:
             'Update a global. Fields merge: omitted fields keep their current ' +
-            'value, and arrays are replaced whole.',
-        input: z.object({ key, locale, data: updateGlobalSchema }),
+            'value, and arrays are replaced whole. `staged` writes the staged ' +
+            'change instead of the canonical row.',
+        input: z.object({
+            key,
+            locale,
+            staged: z.boolean().optional(),
+            data: updateGlobalSchema,
+        }),
         permission: gate('update'),
         mutates: true,
         idempotent: true,
