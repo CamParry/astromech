@@ -84,7 +84,7 @@ types · utilities · env · errors · registry.ts       pure leaves
   services and refuses a method the role lacks; every untrusted path (HTTP, RPC,
   the AI tool-loop) composes it. Trusted paths (the application instance used in
   SSR and hooks, the CLI, the MCP server) do not.
-- **The content modules** (`entries`, `globals`, `media`, `users`, `settings`, `notifications`) own the business verbs. Each has a `service.ts` (its verbs), a `tables.ts` (its `defineTable` tables and row types), a contract catalogue (`contract.ts`, or `methods.ts` in `entries`) that puts it in the method manifest, and a `schema.ts` of Zod request schemas where it validates input. A large module splits its verbs into `operations/` and helpers into `internal/`, with `service.ts` assembling them. They are siblings: one may call another's service, but reaches tables through `database/tables.ts`. `entries` and `globals` build on a shelf module of their own, `content/`, which holds the shared content repository over `{ table, contentTable, versionsTable }` plus the translatable, versioning and visibility helpers both need.
+- **The content modules** (`entries`, `globals`, `media`, `users`, `settings`, `notifications`) own the business verbs. Each has a `service.ts` (its verbs), a `tables.ts` (its `defineTable` tables and row types), a contract catalogue (`contract.ts`, or `methods.ts` in `entries`) that puts it in the method manifest, and a `schema.ts` of Zod request schemas where it validates input. A large module splits its verbs into `operations/` and helpers into `internal/`, with `service.ts` assembling them. They are siblings: one may call another's service, but reaches tables through `database/tables.ts`. `entries`, `globals` and `media` build on a shelf module of their own, `content/`, which holds the shared content repository over `{ table, contentTable, versionsTable }` plus the translatable, versioning and visibility helpers both need.
 - **The modules below them** (`database`, `storage`, `fields`, `config`, `permissions`, `hooks`, `request-context`, `email`, `ai`, `cron`, and `plugins` — the `define*` authoring API and every `runtime/` file except `plugin-runtime.ts`) are what the content modules build on. Each does one thing and holds no business logic.
 - **Leaves** import only other leaves and third-party packages. A small pure file (a constant, a type, a function over its arguments) may sit inside any module and still be imported from any layer.
 
@@ -130,6 +130,18 @@ caller uses, and locale is a parameter beside it. Versions, staging, preview
 tokens, trash, statuses, translation and relationships are entries features, in
 `entries/operations/`. The `relationships` table is a derived
 index over field data, rebuildable from it.
+
+A **media item** lives in the same three tables, declared in `media/tables.ts`:
+`media` holds the file (`filename`, `mimeType`, `size`, `width`, `height`,
+`metadata`), `media_content` holds one row per locale of the title, alt text,
+caption and `fields`, and `media_versions` snapshots a content row.
+`media/repository.ts` composes the shared content repository with the queries
+only media has: the library list with its filename search, mime buckets and sort
+allow-list over the resource row's columns, and the overlay that reads a page's
+content rows in the requested locale. The bytes are in the storage driver under a
+key derived from the media id, never from a URL. Translation opts in through
+`media: { translatable: true }`; versioning is always on, and a media item
+declares no statuses, staging or trash.
 
 **Fields** are shared by entry types, globals and plugin tables. `fields/builder.ts` is the authoring API (`fields.text(...)`), and
 `fields/field-type-registry.ts` holds one `FieldType` per type name, carrying

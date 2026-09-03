@@ -34,9 +34,9 @@ question to put to a human, and the caller re-issues it carrying the answer. It
 buys one turn against a runaway agent and is not a security boundary.
 
 **Content.** One locale of a resource's authored values: its fields, and the
-content-level identifiers that go with them (an entry's title and slug). A
-content row carries its own internal id, which is never public; a caller
-addresses one by the resource's id plus a locale.
+content-level identifiers that go with them (an entry's title and slug; a media
+item's title, alt text and caption). A content row carries its own internal id,
+which is never public; a caller addresses one by the resource's id plus a locale.
 
 **Custom table.** A plugin's own table backing an entry type, presented through
 the entries admin surface with all entry capabilities switched off. Every entry
@@ -86,6 +86,13 @@ uses for its deploy targets.
 **Layout field.** A field that draws structure and stores nothing: sections,
 tabs, accordions. Its own name never appears in a data path, so data stays flat
 underneath it.
+
+**Media item.** One uploaded file and what editors say about it. The file
+(`filename`, mime type, size, dimensions, metadata) lives on the `media` row and
+is shared across locales; the title, alt text, caption and fields are content,
+one `media_content` row per locale, versioned in `media_versions`. A media item
+has no status, no staged change and no trash. Its id is the id every relation
+and URL uses.
 
 **Method manifest.** The catalogue of callable service methods that every
 transport dispatches through, rather than each one knowing the services directly.

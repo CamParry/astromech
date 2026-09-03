@@ -123,6 +123,38 @@ identifier from the object and gives plugin globals a second shape), and a
 fields mode on `admin.pages`, which put a field tree behind a route rather than
 behind a resource.
 
+**A media read falls back to the default locale; entries and globals do not.**
+`media.get` and `media.query` in a locale with no content row return the item
+with the default locale's content, and `Media.locale` names the row the content
+came from. A file is one file, and media carries no publish state for a fallback
+to misreport, so a library listing in `fr` that hid every untranslated upload
+would be useless. Entries and globals do not fall back: each of their locales
+carries its own status and staged change, so borrowing another locale's row
+would report a publish state that locale does not have. `Media.locales` says
+which rows exist, so the admin can still offer to add one. Prior art: Drupal's
+file entities fall back the same way. Rejected: returning `null`, and returning
+the item with empty content, which makes an untranslated alt text look
+deliberately blank.
+
+**A media translation starts as a copy of the default-locale row.** The first
+`media.update` to a locale with no row inserts one seeded with that row's
+`title`, `alt`, `caption` and `fields`, then applies the patch, so the read does
+not change shape at the moment the row is created, which is what the fallback
+promised. An entry starts a translation empty because a title and a slug are
+per-locale by definition; alt text is the same text until someone translates it.
+Rejected: an empty row (it turns a fallback read into a blank one on first
+save), and creating every locale's row up front.
+
+**`Media.updatedAt` is the file's last change, not the content row's.** It is
+the cache-buster the admin appends to every image URL, so it has to move when
+the file is replaced and stay put when only the caption is edited; `replace`
+writes `updatedBy` on the resource row for the same reason. A global exposes its
+content row's `updatedAt` because a global has no file. `MediaVersion` and the
+content row keep their own timestamps for anything that wants the edit time.
+Rejected: the content row's timestamp (a caption edit would bust every cached
+variant), and a second field on `Media` for each, which asks every caller to
+know which one it wants.
+
 **Filtering entries by field data rides declared expression indexes** over
 `json_extract(fields, '$.path')` on `entry_content`, with the index DDL and the
 query SQL emitted from one declaration. Undeclared field filters throw. Rejected:

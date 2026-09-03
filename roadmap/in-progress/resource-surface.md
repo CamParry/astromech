@@ -201,10 +201,14 @@ afterwards would be doing the work twice.
       the seo, backups and menus plugins and the demo read through
       `ctx.globals`, and `settings` keeps the naked `plugin:*` class with no
       fields, locales or statuses.
-- [ ] **Media.** `media_content` and `media_versions`; `title`, `alt`,
+- [x] **Media.** `media_content` and `media_versions`; `title`, `alt`,
       `caption` and `fields` move; `media` gains `updatedBy` and loses its
       out-of-order appended columns; translation opts in through
-      `media: { translatable: true }`.
+      `media: { translatable: true }`. Two things settled differently from the
+      plan: a read in a locale with no content row falls back to the default
+      locale and says so in `Media.locale`, where entries and globals return
+      nothing; and the first write to such a locale copies the default-locale
+      row before applying the patch, where an entry starts a translation empty.
 - [ ] **Cleanup that does not wait.** `users.roleSlug` becomes `role`.
 - [ ] **Users.** Only when something asks for it.
 - [ ] **Docs, per stage.** `TERMINOLOGY.md`: `Resource` gains global and loses
