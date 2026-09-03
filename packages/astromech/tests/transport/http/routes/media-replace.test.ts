@@ -72,11 +72,14 @@ beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeTestConfig());
     setStorageDriver(noopStorage);
-    const row = await createMediaRepository().create({
-        filename: 'old.png',
-        mimeType: 'image/png',
-        size: 1,
-    });
+    const row = await createMediaRepository().create(
+        {
+            filename: 'old.png',
+            mimeType: 'image/png',
+            size: 1,
+        },
+        {}
+    );
     id = row.id;
 });
 

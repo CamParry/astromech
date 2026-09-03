@@ -158,11 +158,14 @@ async function touch(id: string): Promise<Entry> {
 
 /** A media row, inserted through the repository so no driver or real bytes are needed. */
 async function createMedia(): Promise<string> {
-    const row = await createMediaRepository().create({
-        filename: 'a.png',
-        mimeType: 'image/png',
-        size: 1,
-    });
+    const row = await createMediaRepository().create(
+        {
+            filename: 'a.png',
+            mimeType: 'image/png',
+            size: 1,
+        },
+        {}
+    );
     return row.id;
 }
 

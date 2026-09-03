@@ -1,4 +1,5 @@
 import type { Media } from '@/types/index';
+import { getCurrentUser } from '@/request-context/request-context';
 import { deletePrefix } from '@/storage/prefix';
 import { getStorageDriver } from '@/storage/registry';
 import { originalKey } from '../internal/keys';
@@ -28,14 +29,19 @@ export async function replaceMedia(params: { id: string; file: File }): Promise<
     }
     await deletePrefix(driver, variantPrefix(id));
 
+    const user = await getCurrentUser();
+
+    // The file columns only: replacing the bytes changes no authored content,
+    // so no content row and no version is written.
     return toMedia(
-        await repository.update(id, {
+        await repository.updateFile(id, {
             filename: file.name,
             mimeType: file.type,
             size: file.size,
             width,
             height,
             metadata,
+            updatedBy: user?.id ?? null,
         })
     );
 }

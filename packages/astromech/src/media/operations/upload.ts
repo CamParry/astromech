@@ -1,5 +1,6 @@
 import type { Media } from '@/types/index';
 import { ulid } from 'ulidx';
+import { getCurrentUser } from '@/request-context/request-context';
 import { getStorageDriver } from '@/storage/registry';
 import { originalKey } from '../internal/keys';
 import { storeFile } from '../internal/store-file';
@@ -21,15 +22,25 @@ export async function uploadMedia(params: { file: File }): Promise<Media> {
 
     const { width, height, metadata } = await storeFile(driver, key, file);
 
+    const user = await getCurrentUser();
+    const actor = user?.id ?? null;
+
+    // The resource row and its default-locale content row are one insert pair:
+    // the repository wraps both in a transaction.
     return toMedia(
-        await createMediaRepository().create({
-            id,
-            filename: file.name,
-            mimeType: file.type,
-            size: file.size,
-            width,
-            height,
-            metadata,
-        })
+        await createMediaRepository().create(
+            {
+                id,
+                filename: file.name,
+                mimeType: file.type,
+                size: file.size,
+                width,
+                height,
+                metadata,
+                createdBy: actor,
+                updatedBy: actor,
+            },
+            { fields: {}, createdBy: actor, updatedBy: actor }
+        )
     );
 }

@@ -50,7 +50,7 @@ beforeEach(async () => {
 
     const repository = createMediaRepository();
     for (const row of FIXTURES) {
-        await repository.create({ ...row });
+        await repository.create({ ...row }, {});
     }
 });
 

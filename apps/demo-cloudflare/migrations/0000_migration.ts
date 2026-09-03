@@ -167,19 +167,59 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`size\` integer NOT NULL,
             \`width\` integer,
             \`height\` integer,
-            \`alt\` text,
-            \`fields\` text,
             \`metadata\` text,
             \`created_at\` text NOT NULL,
             \`updated_at\` text NOT NULL,
             \`created_by\` text,
-            \`title\` text,
-            \`caption\` text,
-            CONSTRAINT \`media_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
+            \`updated_by\` text,
+            CONSTRAINT \`media_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE set null,
+            CONSTRAINT \`media_updated_by_fkey\` FOREIGN KEY (\`updated_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE set null
         )
     `.execute(db);
     await sql`CREATE INDEX \`idx_media_mime\` ON \`media\` (\`mime_type\`)`.execute(db);
     await sql`CREATE INDEX \`idx_media_created\` ON \`media\` (\`created_at\`)`.execute(
+        db
+    );
+    await sql`
+        CREATE TABLE \`media_content\` (
+            \`id\` text PRIMARY KEY NOT NULL,
+            \`media_id\` text NOT NULL,
+            \`locale\` text NOT NULL,
+            \`title\` text,
+            \`alt\` text,
+            \`caption\` text,
+            \`fields\` text,
+            \`created_at\` text NOT NULL,
+            \`updated_at\` text NOT NULL,
+            \`created_by\` text,
+            \`updated_by\` text,
+            CONSTRAINT \`media_content_media_id_fkey\` FOREIGN KEY (\`media_id\`) REFERENCES \`media\`(\`id\`) ON UPDATE no action ON DELETE cascade,
+            CONSTRAINT \`media_content_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE set null,
+            CONSTRAINT \`media_content_updated_by_fkey\` FOREIGN KEY (\`updated_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE set null
+        )
+    `.execute(db);
+    await sql`CREATE INDEX \`idx_media_content_media\` ON \`media_content\` (\`media_id\`)`.execute(
+        db
+    );
+    await sql`CREATE UNIQUE INDEX \`media_content_media_locale_unique\` ON \`media_content\` (\`media_id\`,\`locale\`)`.execute(
+        db
+    );
+    await sql`
+        CREATE TABLE \`media_versions\` (
+            \`id\` text PRIMARY KEY NOT NULL,
+            \`content_id\` text NOT NULL,
+            \`version\` integer NOT NULL,
+            \`title\` text,
+            \`alt\` text,
+            \`caption\` text,
+            \`fields\` text,
+            \`created_at\` text NOT NULL,
+            \`created_by\` text,
+            CONSTRAINT \`media_versions_content_id_fkey\` FOREIGN KEY (\`content_id\`) REFERENCES \`media_content\`(\`id\`) ON UPDATE no action ON DELETE cascade,
+            CONSTRAINT \`media_versions_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE set null
+        )
+    `.execute(db);
+    await sql`CREATE INDEX \`idx_media_versions_content\` ON \`media_versions\` (\`content_id\`,\`version\`)`.execute(
         db
     );
     await sql`

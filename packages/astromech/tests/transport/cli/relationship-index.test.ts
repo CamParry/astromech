@@ -152,11 +152,14 @@ beforeEach(async () => {
 
 /** A media row, inserted through the repository so no driver or real bytes are needed. */
 async function createMedia(filename = 'a.png'): Promise<string> {
-    const row = await createMediaRepository().create({
-        filename,
-        mimeType: 'image/png',
-        size: 1,
-    });
+    const row = await createMediaRepository().create(
+        {
+            filename,
+            mimeType: 'image/png',
+            size: 1,
+        },
+        {}
+    );
     return row.id;
 }
 

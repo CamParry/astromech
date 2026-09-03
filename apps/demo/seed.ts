@@ -267,7 +267,9 @@ async function seed(): Promise<void> {
     await db.deleteFrom('settings').execute();
     await pluginDb.deleteFrom('pluginRedirectsRedirects').execute();
 
-    // Clear leftover media rows (no files on disk referenced)
+    // Clear leftover media rows (no files on disk referenced). Content rows go
+    // first: SQLite only cascades when `foreign_keys` is on.
+    await db.deleteFrom('mediaContent').execute();
     await db.deleteFrom('media').execute();
 
     console.log(
@@ -311,7 +313,13 @@ async function seed(): Promise<void> {
         }
     }
 
-    async function seedMedia(spec: MediaSpec): Promise<schema.NewMediaRow> {
+    /** The resource row and its default-locale content row, as one pair. */
+    type SeededMedia = {
+        media: schema.NewMediaTableRow;
+        content: schema.NewMediaContentRow;
+    };
+
+    async function seedMedia(spec: MediaSpec): Promise<SeededMedia> {
         let buf = await fetchPlaceholder(spec.seed, spec.width, spec.height);
         const downloaded = buf !== null;
         if (!buf) {
@@ -343,18 +351,30 @@ async function seed(): Promise<void> {
         const blurhash = (await sharp().placeholder?.(bytes)) ?? null;
 
         return {
-            id: spec.id,
-            filename: spec.filename,
-            mimeType: 'image/jpeg',
-            size: buf.length,
-            width: dims?.width ?? spec.width,
-            height: dims?.height ?? spec.height,
-            alt: spec.alt,
-            fields: spec.fields,
-            metadata: { version, blurhash },
-            createdAt: now,
-            updatedAt: now,
-            createdBy: adminId,
+            media: {
+                id: spec.id,
+                filename: spec.filename,
+                mimeType: 'image/jpeg',
+                size: buf.length,
+                width: dims?.width ?? spec.width,
+                height: dims?.height ?? spec.height,
+                metadata: { version, blurhash },
+                createdAt: now,
+                updatedAt: now,
+                createdBy: adminId,
+                updatedBy: adminId,
+            },
+            content: {
+                id: crypto.randomUUID(),
+                mediaId: spec.id,
+                locale: 'en',
+                alt: spec.alt,
+                fields: spec.fields,
+                createdAt: now,
+                updatedAt: now,
+                createdBy: adminId,
+                updatedBy: adminId,
+            },
         };
     }
 
@@ -468,8 +488,19 @@ async function seed(): Promise<void> {
     await db
         .insertInto('media')
         .values(
-            (mediaRows as Record<string, unknown>[]).map((r) =>
-                schema.encodeWith(schema.mediaTable, r)
+            mediaRows.map((r) =>
+                schema.encodeWith(schema.mediaTable, r.media as Record<string, unknown>)
+            )
+        )
+        .execute();
+    await db
+        .insertInto('mediaContent')
+        .values(
+            mediaRows.map((r) =>
+                schema.encodeWith(
+                    schema.mediaContentTable,
+                    r.content as Record<string, unknown>
+                )
             )
         )
         .execute();

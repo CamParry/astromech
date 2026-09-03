@@ -55,7 +55,7 @@ beforeEach(async () => {
 
     const repository = createMediaRepository();
     for (const [filename, mimeType] of FIXTURES) {
-        await repository.create({ filename, mimeType, size: 1 });
+        await repository.create({ filename, mimeType, size: 1 }, {});
     }
 });
 

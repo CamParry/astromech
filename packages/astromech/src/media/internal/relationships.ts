@@ -39,6 +39,6 @@ export async function collectMediaRelationshipSources(): Promise<
     const rows = await createMediaRepository().list();
     return rows.map((row) => ({
         source: { id: row.id, kind: 'media' as const },
-        edges: collectRelationshipEdges(definitions, (row.fields ?? {}) as JsonObject),
+        edges: collectRelationshipEdges(definitions, row.fields),
     }));
 }

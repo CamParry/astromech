@@ -42,10 +42,13 @@ function mediaItem(id: string, filename: string): Media {
         alt: '',
         title: '',
         caption: '',
-        fields: null,
+        fields: {},
+        locale: 'en',
+        locales: ['en'],
         createdAt: new Date('2026-01-01T00:00:00Z'),
         updatedAt: new Date('2026-01-01T00:00:00Z'),
         createdBy: null,
+        updatedBy: null,
     };
 }
 

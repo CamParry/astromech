@@ -207,28 +207,23 @@ async function checkMedia(report: ValidationReport): Promise<void> {
 
     for (const row of rows) {
         report.rowsChecked += 1;
-        const processed = await safeParseFields(
-            (row.fields ?? {}) as Record<string, unknown>,
-            definitions,
-            {
-                operation: 'update',
-                resource: { kind: 'media', record: row },
-                user: null,
-                // Built per row: `excludeId` is what keeps a row from colliding
-                // with itself, and only the load behind it is shared.
-                lookups: fieldLookupsFromRecords({
-                    load,
-                    getId: (record) => record.id,
-                    getFields: (record) =>
-                        (record.fields ?? {}) as Record<string, unknown>,
-                    excludeId: row.id,
-                    entryTypes: (ids) => existingEntryTypes(ids),
-                }),
-                coerceOnly: new Set(),
-                collectWarnings: false,
-                ...(validate ? { validate } : {}),
-            }
-        );
+        const processed = await safeParseFields(row.fields, definitions, {
+            operation: 'update',
+            resource: { kind: 'media', record: row },
+            user: null,
+            // Built per row: `excludeId` is what keeps a row from colliding
+            // with itself, and only the load behind it is shared.
+            lookups: fieldLookupsFromRecords({
+                load,
+                getId: (record) => record.id,
+                getFields: (record) => record.fields,
+                excludeId: row.id,
+                entryTypes: (ids) => existingEntryTypes(ids),
+            }),
+            coerceOnly: new Set(),
+            collectWarnings: false,
+            ...(validate ? { validate } : {}),
+        });
         collect(
             report,
             { kind: 'media', type: null, id: row.id, locale: null },

@@ -2,7 +2,7 @@ import type { Table, TableInsert, TableSelect } from '@/database/define-table';
 import { defineTable } from '@/database/define-table';
 import { entriesTable, entryContentTable, entryVersionsTable } from '@/entries/tables';
 import { globalContentTable, globalsTable, globalVersionsTable } from '@/globals/tables';
-import { mediaTable } from '@/media/tables';
+import { mediaContentTable, mediaTable, mediaVersionsTable } from '@/media/tables';
 import { notificationsTable } from '@/notifications/tables';
 import { settingsTable } from '@/settings/tables';
 // `export { x } from '...'` (below) re-exports without binding `x` locally —
@@ -49,7 +49,17 @@ export {
     type NewGlobalVersionRow,
 } from '@/globals/tables';
 
-export { mediaTable, type MediaRow, type NewMediaRow } from '@/media/tables';
+export {
+    mediaTable,
+    mediaContentTable,
+    mediaVersionsTable,
+    type MediaTableRow,
+    type NewMediaTableRow,
+    type MediaContentRow,
+    type NewMediaContentRow,
+    type MediaVersionRow,
+    type NewMediaVersionRow,
+} from '@/media/tables';
 export { settingsTable, type SettingRow, type NewSettingRow } from '@/settings/tables';
 export {
     notificationsTable,
@@ -138,6 +148,8 @@ export const CORE_TABLES: Table[] = [
     globalContentTable,
     globalVersionsTable,
     mediaTable,
+    mediaContentTable,
+    mediaVersionsTable,
     settingsTable,
     notificationsTable,
     relationshipsTable,

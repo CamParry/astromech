@@ -131,14 +131,24 @@ export type Media = {
     url: string;
     width?: number | null;
     height?: number | null;
-    alt?: string | null;
-    title?: string | null;
-    caption?: string | null;
-    fields: JsonObject | null;
     metadata?: MediaMetadata | null;
+    /** The locale the content came from. */
+    locale: string;
+    /** Locales that have a content row, this one included. Sorted. */
+    locales: string[];
+    title: string | null;
+    alt: string | null;
+    caption: string | null;
+    fields: JsonObject;
     createdAt: Date;
+    /**
+     * The file's last change (upload or replace), which the admin uses to bust
+     * its image cache.
+     */
     updatedAt: Date;
     createdBy: string | null;
+    /** Who last replaced the file. */
+    updatedBy: string | null;
 };
 
 /**

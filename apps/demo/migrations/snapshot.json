@@ -886,22 +886,6 @@
           "primaryKey": false
         },
         {
-          "key": "alt",
-          "name": "alt",
-          "kind": "text",
-          "type": "text",
-          "notNull": false,
-          "primaryKey": false
-        },
-        {
-          "key": "fields",
-          "name": "fields",
-          "kind": "json",
-          "type": "text",
-          "notNull": false,
-          "primaryKey": false
-        },
-        {
           "key": "metadata",
           "name": "metadata",
           "kind": "json",
@@ -934,17 +918,9 @@
           "primaryKey": false
         },
         {
-          "key": "title",
-          "name": "title",
-          "kind": "text",
-          "type": "text",
-          "notNull": false,
-          "primaryKey": false
-        },
-        {
-          "key": "caption",
-          "name": "caption",
-          "kind": "text",
+          "key": "updatedBy",
+          "name": "updated_by",
+          "kind": "reference",
           "type": "text",
           "notNull": false,
           "primaryKey": false
@@ -955,7 +931,13 @@
           "column": "created_by",
           "targetTable": "users",
           "targetColumn": "id",
-          "onDelete": "no action"
+          "onDelete": "set null"
+        },
+        {
+          "column": "updated_by",
+          "targetTable": "users",
+          "targetColumn": "id",
+          "onDelete": "set null"
         }
       ],
       "indexes": [
@@ -970,6 +952,237 @@
           "name": "idx_media_created",
           "columns": [
             "created_at"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "media_content": {
+      "name": "media_content",
+      "columns": [
+        {
+          "key": "id",
+          "name": "id",
+          "kind": "id",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
+        },
+        {
+          "key": "mediaId",
+          "name": "media_id",
+          "kind": "reference",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "locale",
+          "name": "locale",
+          "kind": "text",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "title",
+          "name": "title",
+          "kind": "text",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "alt",
+          "name": "alt",
+          "kind": "text",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "caption",
+          "name": "caption",
+          "kind": "text",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "fields",
+          "name": "fields",
+          "kind": "json",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "createdAt",
+          "name": "created_at",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "updatedAt",
+          "name": "updated_at",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "createdBy",
+          "name": "created_by",
+          "kind": "reference",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "updatedBy",
+          "name": "updated_by",
+          "kind": "reference",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ],
+      "fks": [
+        {
+          "column": "media_id",
+          "targetTable": "media",
+          "targetColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "created_by",
+          "targetTable": "users",
+          "targetColumn": "id",
+          "onDelete": "set null"
+        },
+        {
+          "column": "updated_by",
+          "targetTable": "users",
+          "targetColumn": "id",
+          "onDelete": "set null"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_media_content_media",
+          "columns": [
+            "media_id"
+          ],
+          "unique": false
+        },
+        {
+          "name": "media_content_media_locale_unique",
+          "columns": [
+            "media_id",
+            "locale"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    "media_versions": {
+      "name": "media_versions",
+      "columns": [
+        {
+          "key": "id",
+          "name": "id",
+          "kind": "id",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": true
+        },
+        {
+          "key": "contentId",
+          "name": "content_id",
+          "kind": "reference",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "version",
+          "name": "version",
+          "kind": "integer",
+          "type": "integer",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "title",
+          "name": "title",
+          "kind": "text",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "alt",
+          "name": "alt",
+          "kind": "text",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "caption",
+          "name": "caption",
+          "kind": "text",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "fields",
+          "name": "fields",
+          "kind": "json",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "key": "createdAt",
+          "name": "created_at",
+          "kind": "timestamp",
+          "type": "text",
+          "notNull": true,
+          "primaryKey": false
+        },
+        {
+          "key": "createdBy",
+          "name": "created_by",
+          "kind": "reference",
+          "type": "text",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ],
+      "fks": [
+        {
+          "column": "content_id",
+          "targetTable": "media_content",
+          "targetColumn": "id",
+          "onDelete": "cascade"
+        },
+        {
+          "column": "created_by",
+          "targetTable": "users",
+          "targetColumn": "id",
+          "onDelete": "set null"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_media_versions_content",
+          "columns": [
+            "content_id",
+            "version"
           ],
           "unique": false
         }

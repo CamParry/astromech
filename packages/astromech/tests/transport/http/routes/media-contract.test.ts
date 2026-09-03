@@ -7,7 +7,7 @@
 
 import type { Media, Role, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { adminRole, mountRouter, roleWith } from '@tests/mount-router';
+import { adminRole, mountRouter, roleWith, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createMediaRepository } from '@/media/repository';
 import { mediaService } from '@/media/service';
@@ -43,14 +43,19 @@ function app(role: Role = adminRole) {
 let pngId: string;
 
 beforeEach(async () => {
-    await createTestDb();
+    // Upload stamps `createdBy`/`updatedBy` with the acting user, so the row
+    // has to exist or the foreign key fails.
+    await seedTestUser(await createTestDb());
     setupTestConfig(makeTestConfig());
     setStorageDriver(noopStorage);
-    const row = await createMediaRepository().create({
-        filename: 'photo.png',
-        mimeType: 'image/png',
-        size: 12,
-    });
+    const row = await createMediaRepository().create(
+        {
+            filename: 'photo.png',
+            mimeType: 'image/png',
+            size: 12,
+        },
+        {}
+    );
     pngId = row.id;
 });
 
@@ -68,11 +73,14 @@ describe('GET /media', () => {
     });
 
     it('filters on the mimeType bucket', async () => {
-        await createMediaRepository().create({
-            filename: 'notes.pdf',
-            mimeType: 'application/pdf',
-            size: 3,
-        });
+        await createMediaRepository().create(
+            {
+                filename: 'notes.pdf',
+                mimeType: 'application/pdf',
+                size: 3,
+            },
+            {}
+        );
 
         const images = await app().request('/media?mimeType=images');
         expect(((await images.json()) as { data: Media[] }).data).toHaveLength(1);
@@ -90,11 +98,14 @@ describe('GET /media', () => {
     });
 
     it('honours search, limit=all and an allowed sort field', async () => {
-        await createMediaRepository().create({
-            filename: 'apple.png',
-            mimeType: 'image/png',
-            size: 1,
-        });
+        await createMediaRepository().create(
+            {
+                filename: 'apple.png',
+                mimeType: 'image/png',
+                size: 1,
+            },
+            {}
+        );
 
         const searched = await app().request('/media?search=apple');
         expect(((await searched.json()) as { data: Media[] }).data).toHaveLength(1);

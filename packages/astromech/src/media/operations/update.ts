@@ -1,6 +1,7 @@
 import type { JsonObject, Media } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
+import { transaction } from '@/database/transaction';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
 import { parseInput } from '@/errors/validation';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
@@ -37,10 +38,7 @@ export async function updateMedia(params: {
         // explicit `null` stores null, and a container replaces wholesale.
         const patch = validatedData.fields as Record<string, unknown>;
         const patchedNames = Object.keys(patch).filter((k) => patch[k] !== undefined);
-        const merged = mergePatch(
-            current?.fields as Record<string, unknown> | null | undefined,
-            patch
-        );
+        const merged = mergePatch(current?.fields, patch);
         const parsed = await parseFields(merged, fieldDefs, {
             operation: 'update',
             resource: { kind: 'media', record: current },
@@ -48,7 +46,7 @@ export async function updateMedia(params: {
             lookups: fieldLookupsFromRecords({
                 load: async () => (await queryMedia({ limit: 'all' })).data,
                 getId: (r) => r.id,
-                getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
+                getFields: (r) => r.fields,
                 excludeId: id,
                 entryTypes: (relIds) => existingEntryTypes(relIds),
             }),
@@ -65,17 +63,26 @@ export async function updateMedia(params: {
         validatedData.fields = pruned.values;
     }
 
-    // `updatedAt` is stamped by the repository (the column declares
-    // `onUpdate`); an explicitly-`undefined` key means "leave this column alone".
-    const updated = await createMediaRepository().update(id, {
-        alt: validatedData.alt,
-        title: validatedData.title,
-        caption: validatedData.caption,
-        fields: validatedData.fields as JsonObject | undefined,
+    const user = await getCurrentUser();
+
+    // The row write and its index write are one transaction: an index that
+    // outlived a failed write would name relations the stored fields do not.
+    const updated = await transaction(async () => {
+        // `updatedAt` is stamped by the repository (the column declares
+        // `onUpdate`); an explicitly-`undefined` key means "leave this column
+        // alone".
+        const row = await createMediaRepository().update(id, {
+            alt: validatedData.alt,
+            title: validatedData.title,
+            caption: validatedData.caption,
+            fields: validatedData.fields as JsonObject | undefined,
+            updatedBy: user?.id ?? null,
+        });
+        // An update that never touched `fields` must leave the index alone.
+        if (validatedData.fields !== undefined) {
+            await indexMediaRelationships(id, validatedData.fields as JsonObject);
+        }
+        return row;
     });
-    // An update that never touched `fields` must leave the index alone.
-    if (validatedData.fields !== undefined) {
-        await indexMediaRelationships(id, validatedData.fields as JsonObject);
-    }
     return toMedia(updated);
 }

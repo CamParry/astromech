@@ -3,19 +3,39 @@
  * path returns through here, so a `Media.url` is made in exactly one place.
  */
 
-import type { MediaRow } from '../tables';
+import type { MediaRow } from '../repository';
 import type { Media } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { getStorageDriver } from '@/storage/registry';
 import { buildMediaUrl } from '../serving/image/url.shared';
 import { extOf, originalKey } from './keys';
 
-/** The stored row with its delivery URL resolved. */
+/**
+ * The stored row with its delivery URL resolved. Mapped column by column, not
+ * spread: `contentId` never leaves the repository layer, and `Media.updatedAt`
+ * is the file's last change, which the row carries as `fileUpdatedAt`.
+ */
 export function toMedia(row: MediaRow): Media {
     return {
-        ...row,
+        id: row.id,
+        filename: row.filename,
+        mimeType: row.mimeType,
+        size: row.size,
         url: resolveMediaUrl(row.id, row.filename),
-    } as Media;
+        width: row.width,
+        height: row.height,
+        metadata: row.metadata,
+        locale: row.locale,
+        locales: row.locales,
+        title: row.title,
+        alt: row.alt,
+        caption: row.caption,
+        fields: row.fields,
+        createdAt: row.createdAt,
+        updatedAt: row.fileUpdatedAt,
+        createdBy: row.createdBy ?? null,
+        updatedBy: row.fileUpdatedBy,
+    };
 }
 
 /**
