@@ -44,7 +44,7 @@ export async function restoreMediaVersion(params: {
                 fields,
             }
         );
-        await indexMediaRelationships(id, fields);
+        await indexMediaRelationships(id);
         return row;
     });
 

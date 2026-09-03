@@ -31,6 +31,7 @@ import { flattenEntryFields, flattenFieldNodes } from '@/fields/flatten';
 import { safeParseFields } from '@/fields/parse-fields';
 import { globalLookups } from '@/globals/internal/stored-fields';
 import { globalsService } from '@/globals/service';
+import { createMediaLookups } from '@/media/internal/lookups';
 import { createMediaRepository } from '@/media/repository';
 import { createUserRepository } from '@/users/repository';
 
@@ -190,45 +191,47 @@ function customTableEntryTypes(type: string | undefined): string[] {
 }
 
 /**
- * Media rows, with `media/operations/update.ts`'s context. Rows come straight from
- * the repository rather than through `query`, which resolves a delivery URL and so
- * needs a storage driver the report has no use for; `isUnique` reads only `fields`,
- * which both carry identically.
+ * Every content row of every media item, with `media/operations/update.ts`'s
+ * context. Rows come straight from the repository rather than through `query`,
+ * which resolves a delivery URL and so needs a storage driver the report has no
+ * use for; `isUnique` reads only `fields`, which both carry identically. A
+ * `unique` rule on media compares within one locale, so each locale is a pass of
+ * its own.
  */
 async function checkMedia(report: ValidationReport): Promise<void> {
     const config = getConfig();
     const definitions = flattenFieldNodes(config.media?.fields ?? []);
     const validate = config.media?.validate;
     const repository = createMediaRepository();
-    // One load for the whole pass: a `unique` rule reads it per row, and the
-    // run writes nothing, so the snapshot cannot go stale under it.
-    const load = memoize(() => repository.list());
-    const rows = await load();
 
-    for (const row of rows) {
-        report.rowsChecked += 1;
-        const processed = await safeParseFields(row.fields, definitions, {
-            operation: 'update',
-            resource: { kind: 'media', record: row },
-            user: null,
-            // Built per row: `excludeId` is what keeps a row from colliding
-            // with itself, and only the load behind it is shared.
-            lookups: fieldLookupsFromRecords({
-                load,
-                getId: (record) => record.id,
-                getFields: (record) => record.fields,
-                excludeId: row.id,
-                entryTypes: (ids) => existingEntryTypes(ids),
-            }),
-            coerceOnly: new Set(),
-            collectWarnings: false,
-            ...(validate ? { validate } : {}),
-        });
-        collect(
-            report,
-            { kind: 'media', type: null, id: row.id, locale: null },
-            processed
-        );
+    // Non-translatable media lives in the default content locale alone.
+    const defaultLocale = getDefaultContentLocale();
+    const locales = config.media?.translatable
+        ? (config.locales ?? [defaultLocale])
+        : [defaultLocale];
+
+    for (const locale of locales) {
+        // One load per locale: a `unique` rule reads it per row, and the run
+        // writes nothing, so the snapshot cannot go stale under it.
+        const load = memoize(() => repository.listContent(locale));
+        for (const row of await load()) {
+            report.rowsChecked += 1;
+            const processed = await safeParseFields(row.fields, definitions, {
+                operation: 'update',
+                resource: { kind: 'media', record: row },
+                user: null,
+                // Built per row: `excludeId` is what keeps a row from colliding
+                // with itself, and only the load behind it is shared.
+                lookups: createMediaLookups(
+                    { listContent: load },
+                    { locale, excludeId: row.id }
+                ),
+                coerceOnly: new Set(),
+                collectWarnings: false,
+                ...(validate ? { validate } : {}),
+            });
+            collect(report, { kind: 'media', type: null, id: row.id, locale }, processed);
+        }
     }
 }
 

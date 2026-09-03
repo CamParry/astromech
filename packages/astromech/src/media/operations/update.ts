@@ -121,7 +121,7 @@ export async function updateMedia(params: {
                 fields,
                 patchedFieldNames: patchedNames,
             });
-            await indexMediaRelationships(id, fields);
+            await indexMediaRelationships(id);
         }
         return row;
     });

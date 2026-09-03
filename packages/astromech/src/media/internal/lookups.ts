@@ -11,7 +11,7 @@ import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 
 export function createMediaLookups(
-    repository: MediaRepository,
+    repository: Pick<MediaRepository, 'listContent'>,
     scope: { locale: string; excludeId?: string | readonly string[] }
 ): FieldLookups {
     return fieldLookupsFromRecords({

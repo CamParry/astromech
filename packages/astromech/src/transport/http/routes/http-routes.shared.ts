@@ -356,8 +356,14 @@ export const USERS_ROUTE_SPECS = [
  */
 export const MEDIA_ROUTE_SPECS = [
     { verb: 'get', path: '/', id: 'media.query', envelope: 'raw' },
-    { verb: 'get', path: '/:id', id: 'media.get' },
-    { verb: 'put', path: '/:id', id: 'media.update', bodyKey: 'data' },
+    { verb: 'get', path: '/:id', id: 'media.get', queryArgs: ['locale'] },
+    {
+        verb: 'put',
+        path: '/:id',
+        id: 'media.update',
+        bodyKey: 'data',
+        queryArgs: ['locale'],
+    },
     { verb: 'delete', path: '/:id', id: 'media.delete', envelope: 'success' },
     { verb: 'get', path: '/:id/usage', id: 'media.usedBy', handler: 'bespoke' },
     {

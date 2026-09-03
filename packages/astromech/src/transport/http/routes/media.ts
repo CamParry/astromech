@@ -24,6 +24,7 @@ const SORTABLE_FIELDS = new Set(['filename', 'mimeType', 'size', 'createdAt']);
 
 /** The query string the list route accepts. `dir` is the only one that can fail. */
 const listQuery = z.object({
+    locale: z.string().optional(),
     search: z.string().optional(),
     page: z.string().optional(),
     limit: z.string().optional(),
@@ -35,12 +36,12 @@ const listQuery = z.object({
 export const MEDIA_ROUTES: RestRoute[] = attachHandlers(MEDIA_ROUTE_SPECS, {
     'get /': { args: queryArgs, query: listQuery },
     'get /:id': {
-        args: (c) => ({ id: c.req.param('id') }),
+        args: contentArgs,
         notFound: (c) => `Media '${c.req.param('id')}' not found`,
     },
     'put /:id': {
         args: async (c) => ({
-            id: c.req.param('id'),
+            ...contentArgs(c),
             data: await c.req.json<Record<string, unknown>>(),
         }),
     },
@@ -67,6 +68,7 @@ function contentArgs(c: Context<Env>): { id: string; locale?: string } {
 function queryArgs(c: Context<Env>): MediaQueryParams {
     const q = c.req.query();
     const params: MediaQueryParams = {};
+    if (q['locale']) params.locale = q['locale'];
     if (q['search']) params.search = q['search'];
     if (q['page']) params.page = Number(q['page']);
     if (q['limit'] === 'all') params.limit = 'all';
