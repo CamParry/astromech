@@ -440,6 +440,6 @@ function emptyConfig(): Omit<PluginConfigView, 'entryTypesWithField'> {
         publicSettingKeys: [],
         timezone: 'UTC',
         mediaRoute: '/_media',
-        media: { access: 'public' },
+        media: { access: 'public', translatable: false },
     };
 }

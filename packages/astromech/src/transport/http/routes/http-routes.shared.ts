@@ -360,6 +360,18 @@ export const MEDIA_ROUTE_SPECS = [
     { verb: 'put', path: '/:id', id: 'media.update', bodyKey: 'data' },
     { verb: 'delete', path: '/:id', id: 'media.delete', envelope: 'success' },
     { verb: 'get', path: '/:id/usage', id: 'media.usedBy', handler: 'bespoke' },
+    {
+        verb: 'get',
+        path: '/:id/versions',
+        id: 'media.versions',
+        queryArgs: ['locale'],
+    },
+    {
+        verb: 'post',
+        path: '/:id/versions/:versionId/restore',
+        id: 'media.restoreVersion',
+        queryArgs: ['locale'],
+    },
 ] as const satisfies readonly HttpRouteSpec[];
 
 export const SETTINGS_ROUTE_SPECS = [

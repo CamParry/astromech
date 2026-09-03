@@ -1,11 +1,11 @@
 /**
- * The five `routes/media.ts` handlers that `media-replace.test.ts` and
- * `media-update-fields.test.ts` do not already own: list, get, usage, upload
- * and delete. Status, envelope, the keys each returns, and the permission each
- * enforces.
+ * The `routes/media.ts` handlers that `media-replace.test.ts` and
+ * `media-update-fields.test.ts` do not already own: list, get, usage, upload,
+ * delete and the two version routes. Status, envelope, the keys each returns,
+ * and the permission each enforces.
  */
 
-import type { Media, Role, StorageDriver } from '@/types/index';
+import type { Media, MediaVersion, Role, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { adminRole, mountRouter, roleWith, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -233,6 +233,67 @@ describe('PUT /media/:id', () => {
         expect(((await res.json()) as { error: { code: string } }).error.code).toBe(
             'VALIDATION_FAILED'
         );
+    });
+});
+
+describe('GET /media/:id/versions', () => {
+    it('returns { data } with the locale’s versions', async () => {
+        await mediaService.update({ id: pngId, data: { alt: 'first' } });
+        await mediaService.update({ id: pngId, data: { alt: 'second' } });
+
+        const res = await app().request(`/media/${pngId}/versions`);
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { data: MediaVersion[] };
+        expect(Object.keys(body)).toEqual(['data']);
+        // Newest first, and the upload's empty row is what the first save replaced.
+        expect(body.data.map((v) => v.alt)).toEqual(['first', null]);
+    });
+
+    it('422s another locale — this config does not declare media translatable', async () => {
+        const res = await app().request(`/media/${pngId}/versions?locale=de`);
+        expect(res.status).toBe(422);
+    });
+
+    it('403s without media:read', async () => {
+        const res = await app(roleWith([])).request(`/media/${pngId}/versions`);
+        expect(res.status).toBe(403);
+    });
+});
+
+describe('POST /media/:id/versions/:versionId/restore', () => {
+    async function firstVersionId(): Promise<string> {
+        await mediaService.update({ id: pngId, data: { alt: 'first' } });
+        await mediaService.update({ id: pngId, data: { alt: 'second' } });
+        const [version] = await mediaService.versions({ id: pngId });
+        if (!version) throw new Error('expected a version');
+        return version.id;
+    }
+
+    it('restores and returns { data: media }', async () => {
+        const versionId = await firstVersionId();
+        const res = await app().request(`/media/${pngId}/versions/${versionId}/restore`, {
+            method: 'POST',
+        });
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { data: Media };
+        expect(Object.keys(body)).toEqual(['data']);
+        expect(body.data.alt).toBe('first');
+    });
+
+    it('404s an unknown version id', async () => {
+        const res = await app().request(`/media/${pngId}/versions/nope/restore`, {
+            method: 'POST',
+        });
+        expect(res.status).toBe(404);
+    });
+
+    it('403s without media:update', async () => {
+        const versionId = await firstVersionId();
+        const res = await app(roleWith(['media:read'])).request(
+            `/media/${pngId}/versions/${versionId}/restore`,
+            { method: 'POST' }
+        );
+        expect(res.status).toBe(403);
     });
 });
 

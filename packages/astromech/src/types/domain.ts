@@ -95,6 +95,21 @@ export type GlobalVersion = {
     createdBy: string | null;
 };
 
+/** A saved snapshot of one locale of one media item. */
+export type MediaVersion = {
+    id: string;
+    mediaId: string;
+    locale: string;
+    /** Position in the sequence, which runs per media item and locale from 1. */
+    version: number;
+    title: string | null;
+    alt: string | null;
+    caption: string | null;
+    fields: JsonObject | null;
+    createdAt: Date;
+    createdBy: string | null;
+};
+
 /** A saved snapshot of one locale of one entry. */
 export type EntryVersion = {
     id: string;

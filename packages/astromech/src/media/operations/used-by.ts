@@ -10,6 +10,7 @@ import { createRelationshipRepository } from '@/database/repository/relationship
 import { getEntryResource } from '@/entries/internal/records';
 import { getEntryRepository } from '@/entries/repository/registry';
 import { createUserRepository } from '@/users/repository';
+import { MediaNotFoundError } from '../errors';
 import { createMediaRepository } from '../repository';
 
 /**
@@ -20,7 +21,7 @@ import { createMediaRepository } from '../repository';
 export async function listMediaUsage(params: { id: string }): Promise<MediaUsage[]> {
     const { id } = params;
     const row = await createMediaRepository().get(id);
-    if (!row) throw new Error(`Media '${id}' not found`);
+    if (!row) throw new MediaNotFoundError({ id });
 
     // Staged sources count: a pending merge that uses this file is a reason
     // not to delete it.

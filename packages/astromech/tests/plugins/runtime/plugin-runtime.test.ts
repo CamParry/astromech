@@ -83,7 +83,7 @@ const config: ResolvedConfig = {
     publicSettingKeys: [],
     timezone: 'UTC',
     mediaRoute: '/_media',
-    media: { access: 'public' },
+    media: { access: 'public', translatable: false },
 };
 
 const def = (

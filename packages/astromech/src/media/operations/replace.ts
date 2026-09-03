@@ -2,6 +2,7 @@ import type { Media } from '@/types/index';
 import { getCurrentUser } from '@/request-context/request-context';
 import { deletePrefix } from '@/storage/prefix';
 import { getStorageDriver } from '@/storage/registry';
+import { MediaNotFoundError } from '../errors';
 import { originalKey } from '../internal/keys';
 import { storeFile } from '../internal/store-file';
 import { toMedia } from '../internal/to-media';
@@ -15,7 +16,7 @@ export async function replaceMedia(params: { id: string; file: File }): Promise<
     const driver = getStorageDriver();
 
     const row = await repository.get(id);
-    if (!row) throw new Error(`Media '${id}' not found`);
+    if (!row) throw new MediaNotFoundError({ id });
 
     const newKey = originalKey(id, file.name);
     const oldKey = originalKey(id, row.filename);

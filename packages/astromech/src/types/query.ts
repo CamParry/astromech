@@ -80,6 +80,8 @@ export type UserQueryParams = {
 export type MediaMimeTypeFilter = 'images' | 'videos' | 'documents' | 'other';
 
 export type MediaQueryParams = {
+    /** The locale each item's content is read in. Default: the default locale. */
+    locale?: string;
     search?: string;
     where?: {
         mimeType?: MediaMimeTypeFilter;

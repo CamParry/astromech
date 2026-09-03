@@ -2,9 +2,9 @@ import { z } from '@hono/zod-openapi';
 
 export const updateMediaSchema = z
     .object({
-        alt: z.string().optional(),
-        title: z.string().optional(),
-        caption: z.string().optional(),
+        alt: z.string().nullable().optional(),
+        title: z.string().nullable().optional(),
+        caption: z.string().nullable().optional(),
         fields: z.record(z.string(), z.unknown()).optional(),
     })
     .openapi('UpdateMedia');
@@ -17,6 +17,7 @@ const sortDirection = z.enum(['asc', 'desc']);
  * method manifest can describe how the method is called.
  */
 export const mediaQuerySchema = z.object({
+    locale: z.string().optional(),
     search: z.string().optional(),
     where: z
         .object({

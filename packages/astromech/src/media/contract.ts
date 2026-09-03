@@ -8,6 +8,9 @@ import type { ServiceMethodContract } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { mediaQuerySchema, updateMediaSchema } from './schema';
 
+/** A content-level method addresses one locale of the item. */
+const locale = z.string().optional();
+
 export const mediaContract = {
     query: {
         summary: 'List media items.',
@@ -17,7 +20,7 @@ export const mediaContract = {
     },
     get: {
         summary: 'Read one media item by id.',
-        input: z.object({ id: z.string() }),
+        input: z.object({ id: z.string(), locale }),
         permission: 'media:read',
         mutates: false,
     },
@@ -45,7 +48,7 @@ export const mediaContract = {
         summary:
             'Update a media item’s metadata. Fields merge: omitted fields keep ' +
             'their current value, and arrays are replaced whole.',
-        input: z.object({ id: z.string(), data: updateMediaSchema }),
+        input: z.object({ id: z.string(), locale, data: updateMediaSchema }),
         permission: 'media:update',
         mutates: true,
         idempotent: true,
@@ -62,5 +65,17 @@ export const mediaContract = {
         input: z.object({ id: z.string() }),
         permission: 'media:read',
         mutates: false,
+    },
+    versions: {
+        summary: 'List the saved versions of one locale of a media item.',
+        input: z.object({ id: z.string(), locale }),
+        permission: 'media:read',
+        mutates: false,
+    },
+    restoreVersion: {
+        summary: 'Restore one locale of a media item to a saved version.',
+        input: z.object({ id: z.string(), locale, versionId: z.string() }),
+        permission: 'media:update',
+        mutates: true,
     },
 } satisfies Record<string, ServiceMethodContract>;

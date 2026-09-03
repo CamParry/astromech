@@ -18,6 +18,7 @@ import type {
     JsonObject,
     JsonValue,
     Media,
+    MediaVersion,
     Notification,
     Setting,
     User,
@@ -340,23 +341,38 @@ export type GlobalsService = {
     deleteStaged(params: { key: string; locale?: string }): Promise<void>;
 };
 
-/** The media domain's service contract. */
+/** What one `media.update` call may write. */
+export type MediaUpdateData = Partial<{
+    title: string | null;
+    alt: string | null;
+    caption: string | null;
+    fields: JsonObject;
+}>;
+
+/**
+ * The media domain's service contract. A missing `locale` is the default content
+ * locale; `query` and `get` fall back to it when the one asked for has no
+ * content row, while `versions` and `restoreVersion` address a content row and
+ * throw `MediaNotFoundError` when there is none.
+ */
 export type MediaService = {
-    query(params?: MediaQueryParams): Promise<QueryResult<Media>>;
-    get(params: { id: string }): Promise<Media | null>;
+    query(params?: MediaQueryParams & { locale?: string }): Promise<QueryResult<Media>>;
+    get(params: { id: string; locale?: string }): Promise<Media | null>;
     upload(params: { file: File }): Promise<Media>;
     replace(params: { id: string; file: File }): Promise<Media>;
     update(params: {
         id: string;
-        data: Partial<{
-            alt: string;
-            title: string;
-            caption: string;
-            fields: JsonObject;
-        }>;
+        locale?: string;
+        data: MediaUpdateData;
     }): Promise<Media>;
     delete(params: { id: string }): Promise<void>;
     usedBy(params: { id: string }): Promise<MediaUsage[]>;
+    versions(params: { id: string; locale?: string }): Promise<MediaVersion[]>;
+    restoreVersion(params: {
+        id: string;
+        locale?: string;
+        versionId: string;
+    }): Promise<Media>;
 };
 
 /** The settings domain's service contract. */

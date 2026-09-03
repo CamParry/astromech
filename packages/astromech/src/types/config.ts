@@ -345,6 +345,8 @@ export type MediaAccess = 'public' | 'private';
 
 export type MediaConfig = {
     fields?: Field[];
+    /** Default false. Every locale in `locales` may hold its own content row. */
+    translatable?: boolean;
     /** How media is delivered. Default: `'public'`. */
     access?: MediaAccess;
     /**
@@ -367,6 +369,7 @@ export type MediaConfig = {
  */
 export type ResolvedMediaConfig = Omit<MediaConfig, 'access' | 'image'> & {
     access: MediaAccess;
+    translatable: boolean;
 };
 
 export type UsersConfig = {

@@ -45,10 +45,23 @@ export const MEDIA_ROUTES: RestRoute[] = attachHandlers(MEDIA_ROUTE_SPECS, {
         }),
     },
     'delete /:id': { args: (c) => ({ id: c.req.param('id') }) },
+    'get /:id/versions': { args: contentArgs },
+    'post /:id/versions/:versionId/restore': {
+        args: (c) => ({ ...contentArgs(c), versionId: c.req.param('versionId') ?? '' }),
+    },
 });
 
 mountRestRoutes(router, mediaContract, MEDIA_ROUTES);
 documentBespokeRoutes(router, mediaContract, MEDIA_ROUTE_SPECS);
+
+/**
+ * The `{ id }` a media route addresses, plus the locale a content-level one
+ * names. An absent locale leaves the service to fill in the default.
+ */
+function contentArgs(c: Context<Env>): { id: string; locale?: string } {
+    const locale = c.req.query('locale');
+    return { id: c.req.param('id') ?? '', ...(locale ? { locale } : {}) };
+}
 
 /** `media.query` arguments, read off the query string. */
 function queryArgs(c: Context<Env>): MediaQueryParams {

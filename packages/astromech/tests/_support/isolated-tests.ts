@@ -38,6 +38,7 @@ export const isolatedTests = [
     'tests/services/entries/duplicate-atomicity.test.ts',
     'tests/services/entries/restore-atomicity.test.ts',
     'tests/services/entries/staging-create-atomicity.test.ts',
+    'tests/services/media/atomicity.test.ts',
     'tests/services/users/auth-base-path.test.ts',
     'tests/services/users/auth-signup.test.ts',
     'tests/services/users/role-validation.test.ts',

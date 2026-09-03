@@ -12,6 +12,8 @@ import { replaceMedia } from './operations/replace';
 import { updateMedia } from './operations/update';
 import { uploadMedia } from './operations/upload';
 import { listMediaUsage } from './operations/used-by';
+import { listMediaVersions } from './operations/versions/list';
+import { restoreMediaVersion } from './operations/versions/restore';
 
 export const mediaService: MediaService = {
     query: queryMedia,
@@ -21,4 +23,6 @@ export const mediaService: MediaService = {
     delete: deleteMedia,
     replace: replaceMedia,
     usedBy: listMediaUsage,
+    versions: listMediaVersions,
+    restoreVersion: restoreMediaVersion,
 };
