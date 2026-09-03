@@ -15,10 +15,23 @@ import { MediaDetailModal } from '@/admin/components/media/media-detail-modal';
 import { ConfirmProvider } from '@/admin/components/ui/confirm';
 import en from '@/admin/locales/en.json';
 
-const { updateMutate, deleteMutate } = vi.hoisted(() => ({
+const { updateMutate, deleteMutate, updateOptions, adminConfig } = vi.hoisted(() => ({
     updateMutate: vi.fn(),
     deleteMutate: vi.fn(),
+    // The locale reaches the service through the hook's options, not `mutate`.
+    updateOptions: { current: undefined as { locale?: string } | undefined },
+    adminConfig: {
+        defaultLocale: 'en',
+        locales: ['en', 'fr'],
+        media: { translatable: false },
+    },
 }));
+
+// The shim declares one locale and no translation; the switcher needs both.
+vi.mock('virtual:astromech/admin-config', () => ({ default: adminConfig }));
+
+/** The locale `useMediaItem` was asked for, so a fallback read can be faked. */
+const requestedLocale = { current: undefined as string | undefined };
 
 const ITEM: Media = {
     id: 'm1',
@@ -40,11 +53,20 @@ const ITEM: Media = {
 
 // The usage panel queries too, so the whole hooks module is stood in for.
 vi.mock('@/admin/hooks/media', () => ({
-    useMediaItem: () => ({ data: ITEM, isLoading: false, isError: false }),
-    useUpdateMedia: () => ({ mutate: updateMutate, isPending: false }),
+    useMediaItem: (_id: string, _enabled: boolean, locale?: string) => {
+        requestedLocale.current = locale;
+        // The item has an `en` row alone, so every read falls back to it.
+        return { data: ITEM, isLoading: false, isError: false };
+    },
+    useUpdateMedia: (_id: string, options?: { locale?: string }) => {
+        updateOptions.current = options;
+        return { mutate: updateMutate, isPending: false };
+    },
     useDeleteMedia: () => ({ mutate: deleteMutate, isPending: false }),
     useReplaceMedia: () => ({ mutate: vi.fn(), isPending: false }),
     useMediaUsage: () => ({ data: [], isLoading: false }),
+    useMediaVersions: () => ({ data: [], isLoading: false }),
+    useRestoreMediaVersion: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 beforeAll(async () => {
@@ -61,6 +83,9 @@ afterEach(() => {
     cleanup();
     updateMutate.mockReset();
     deleteMutate.mockReset();
+    updateOptions.current = undefined;
+    requestedLocale.current = undefined;
+    adminConfig.media.translatable = false;
 });
 
 /** Open the modal on the fixed item with the permission flags under test. */
@@ -133,5 +158,74 @@ describe('MediaDetailModal permissions', () => {
 
         expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
         expect(screen.queryByRole('button', { name: 'Update' })).not.toBeNull();
+    });
+});
+
+/** Open the modal's locale listbox and pick the option with this label. */
+async function pickLocale(label: string): Promise<void> {
+    const user = userEvent.setup();
+    const trigger = screen.getByRole('combobox');
+    await user.click(trigger);
+    const option = [...document.querySelectorAll('[role="option"]')].find(
+        (item) => item.textContent === label
+    );
+    if (option === undefined) {
+        throw new Error(
+            `no "${label}" option; rendered: ${[
+                ...document.querySelectorAll('[role="option"]'),
+            ]
+                .map((item) => item.textContent)
+                .join(', ')}`
+        );
+    }
+    await user.click(option);
+}
+
+describe('MediaDetailModal locales', () => {
+    it('renders no locale select when media is not translatable', () => {
+        openModal();
+
+        expect(screen.queryByRole('combobox')).toBeNull();
+    });
+
+    it('offers every configured locale when media is translatable', async () => {
+        adminConfig.media.translatable = true;
+        const user = userEvent.setup();
+        openModal();
+
+        await user.click(screen.getByRole('combobox'));
+
+        expect(
+            [...document.querySelectorAll('[role="option"]')].map((o) => o.textContent)
+        ).toEqual(['EN', 'Add FR']);
+    });
+
+    it('reads the chosen locale and says the shown content is the fallback', async () => {
+        adminConfig.media.translatable = true;
+        openModal();
+
+        await pickLocale('Add FR');
+
+        expect(requestedLocale.current).toBe('fr');
+        expect(
+            screen.getByText('Showing the EN content until this locale is saved.')
+        ).not.toBeNull();
+    });
+
+    it('saves into the chosen locale', async () => {
+        adminConfig.media.translatable = true;
+        const user = userEvent.setup();
+        openModal();
+
+        await pickLocale('Add FR');
+        await user.type(screen.getByLabelText('Alt text'), 'Un chat');
+        await user.click(saveButton());
+
+        expect(updateOptions.current?.locale).toBe('fr');
+        expect(updateMutate).toHaveBeenCalledWith({
+            alt: 'Un chat',
+            title: '',
+            caption: '',
+        });
     });
 });

@@ -6,8 +6,10 @@
 
 import type { Media } from '@/types/index';
 import { useForm, useStore } from '@tanstack/react-form';
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import adminConfig from 'virtual:astromech/admin-config';
+import { defaultContentLocale } from '@/admin/utilities/content-locale';
 import { FileTypeIcon, versionedMediaUrl } from '@/admin/utilities/media';
 import { formatBytes } from '@/utilities/bytes';
 import { formatDatetime } from '@/utilities/dates';
@@ -23,9 +25,11 @@ import { useConfirm } from '../ui/confirm';
 import { EmptyState } from '../ui/empty-state';
 import { Input } from '../ui/input';
 import { Modal } from '../ui/modal';
+import { Select } from '../ui/select';
 import { Spinner } from '../ui/spinner';
 import { UploadButton } from '../ui/upload-button';
 import { MediaUsagePanel } from './media-usage-panel';
+import { MediaVersionsPanel } from './media-versions-panel';
 
 export type MediaDetailModalProps = {
     mediaId: string | null;
@@ -44,11 +48,14 @@ export function MediaDetailModal({
     canUpdate = true,
     canUpload = true,
 }: MediaDetailModalProps): React.ReactElement {
+    // The modal is addressed by `?item=` alone, so the locale being edited is
+    // its own state rather than a search param.
+    const [locale, setLocale] = useState(defaultContentLocale);
     const {
         data: item,
         isLoading,
         isError,
-    } = useMediaItem(mediaId ?? '', mediaId !== null);
+    } = useMediaItem(mediaId ?? '', mediaId !== null, locale);
     const { t } = useTranslation();
 
     return (
@@ -65,12 +72,14 @@ export function MediaDetailModal({
                     <Spinner />
                 </div>
             ) : (
-                // Keyed on the record: one form instance per item. Without this a
-                // touched form keeps the previous item's values and saves them
-                // onto the next one.
+                // Keyed on the record and the locale read: one form instance
+                // per set of values. Without this a touched form keeps the
+                // previous ones and saves them onto the next.
                 <MediaDetailBody
-                    key={item.id}
+                    key={`${item.id}:${item.locale}:${locale}`}
                     item={item}
+                    locale={locale}
+                    onLocaleChange={setLocale}
                     onClose={onClose}
                     onDeleted={onDeleted}
                     canDelete={canDelete}
@@ -84,6 +93,9 @@ export function MediaDetailModal({
 
 type MediaDetailBodyProps = {
     item: Media;
+    /** The locale being edited, which `item.locale` falls back from. */
+    locale: string;
+    onLocaleChange: (locale: string) => void;
     onClose: () => void;
     onDeleted: () => void;
     canDelete: boolean;
@@ -94,6 +106,8 @@ type MediaDetailBodyProps = {
 /** The loaded modal. Split out so `key` can remount it per media record. */
 function MediaDetailBody({
     item,
+    locale,
+    onLocaleChange,
     onClose,
     onDeleted,
     canDelete,
@@ -102,6 +116,9 @@ function MediaDetailBody({
 }: MediaDetailBodyProps): React.ReactElement {
     const { t } = useTranslation();
     const confirm = useConfirm();
+
+    const isTranslatable =
+        adminConfig.media.translatable && adminConfig.locales.length > 1;
 
     const form = useForm({
         defaultValues: {
@@ -115,6 +132,7 @@ function MediaDetailBody({
     });
 
     const updateMutation = useUpdateMedia(item.id, {
+        ...(isTranslatable ? { locale } : {}),
         onSuccess: () => form.reset(form.state.values),
     });
 
@@ -206,6 +224,25 @@ function MediaDetailBody({
                 </div>
 
                 <div className="am-media-modal-form-panel">
+                    {isTranslatable && (
+                        <div className="am-media-modal-locale">
+                            <Select
+                                value={locale}
+                                onValueChange={(value) => {
+                                    if (value !== null) onLocaleChange(value);
+                                }}
+                                options={localeOptions(item.locales)}
+                            />
+                            {locale !== item.locale && (
+                                <p className="am-text-muted am-text-sm">
+                                    {t('media.translationFallbackHint', {
+                                        locale: item.locale.toUpperCase(),
+                                    })}
+                                </p>
+                            )}
+                        </div>
+                    )}
+
                     <form.Field name="alt">
                         {(field) => (
                             <Input
@@ -248,6 +285,14 @@ function MediaDetailBody({
                             />
                         )}
                     </form.Field>
+
+                    {/* `item.locale` is the row that was read: a locale with
+                        no row has no versions to list. */}
+                    <MediaVersionsPanel
+                        mediaId={item.id}
+                        locale={item.locale}
+                        canUpdate={canUpdate}
+                    />
                 </div>
             </div>
 
@@ -296,4 +341,17 @@ function MediaDetailBody({
             </div>
         </>
     );
+}
+
+/**
+ * Locale options for the modal's switcher: the default first, the rest
+ * alphabetical, and a locale with no content row labelled "Add XX".
+ */
+function localeOptions(itemLocales: string[]): { value: string; label: string }[] {
+    const { defaultLocale, locales } = adminConfig;
+    const sorted = [defaultLocale, ...locales.filter((l) => l !== defaultLocale).sort()];
+    return sorted.map((loc) => ({
+        value: loc,
+        label: itemLocales.includes(loc) ? loc.toUpperCase() : `Add ${loc.toUpperCase()}`,
+    }));
 }

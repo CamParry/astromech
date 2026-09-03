@@ -562,6 +562,11 @@ export type AdminConfig = {
     basePath: string;
     /** Where `/_media` variants are served from, so the admin can build thumbnail URLs. */
     mediaRoute: string;
+    /** The media library's own settings. */
+    media: {
+        /** Whether a media item may hold a content row per locale. */
+        translatable: boolean;
+    };
     /**
      * The image variant allowlist. Empty when no image driver is configured —
      * the admin then falls back to the original file rather than requesting a

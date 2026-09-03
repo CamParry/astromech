@@ -374,6 +374,7 @@
         "altLabel": "Alt text",
         "altPlaceholder": "Describe this image…",
         "altHint": "Used for accessibility and SEO.",
+        "translationFallbackHint": "Showing the {{locale}} content until this locale is saved.",
         "titleLabel": "Title",
         "titlePlaceholder": "Optional title…",
         "captionLabel": "Caption",

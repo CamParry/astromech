@@ -620,6 +620,52 @@
     word-break: break-all;
 }
 
+/* Media detail modal — locale switcher and versions panel */
+.am-media-modal-locale {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.am-media-versions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--am-color-border);
+}
+
+.am-media-versions-heading {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--am-color-text-default);
+}
+
+.am-media-versions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.am-media-versions-item {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    font-size: 0.8125rem;
+}
+
+.am-media-versions-number {
+    font-weight: 500;
+}
+
+.am-media-versions-date {
+    flex: 1;
+}
+
 @media (max-width: 600px) {
     .am-media-modal-layout {
         grid-template-columns: 1fr;

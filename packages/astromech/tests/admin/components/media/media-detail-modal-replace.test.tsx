@@ -70,6 +70,8 @@ vi.mock('@/admin/hooks/media', () => ({
     useDeleteMedia: () => ({ mutate: vi.fn(), isPending: false }),
     useReplaceMedia: () => ({ mutate: replaceMutate, isPending: false }),
     useMediaUsage: () => ({ data: usage, isLoading: false }),
+    useMediaVersions: () => ({ data: [], isLoading: false }),
+    useRestoreMediaVersion: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 beforeAll(async () => {

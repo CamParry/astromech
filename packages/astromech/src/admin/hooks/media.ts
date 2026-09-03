@@ -23,15 +23,66 @@ export function useMediaQuery(params?: MediaQueryParams) {
     });
 }
 
-export function mediaItemQueryOptions(id: string) {
+/**
+ * One media item, in `locale` when given. A locale with no content row reads
+ * back the default locale's content, so every locale is its own cache entry.
+ */
+export function mediaItemQueryOptions(id: string, locale?: string) {
     return queryOptions({
-        queryKey: queryKeys.media.detail(id),
-        queryFn: () => astromechClient.media.get({ id }),
+        queryKey: queryKeys.media.detail(id, locale),
+        queryFn: () =>
+            astromechClient.media.get({
+                id,
+                ...(locale !== undefined ? { locale } : {}),
+            }),
     });
 }
 
-export function useMediaItem(id: string, enabled = true) {
-    return useQuery({ ...mediaItemQueryOptions(id), enabled });
+export function useMediaItem(id: string, enabled = true, locale?: string) {
+    return useQuery({ ...mediaItemQueryOptions(id, locale), enabled });
+}
+
+/** One locale's saved versions of a media item, newest last. */
+export function mediaVersionsQueryOptions(id: string, locale: string) {
+    return queryOptions({
+        queryKey: queryKeys.media.versions(id, locale),
+        queryFn: () => astromechClient.media.versions({ id, locale }),
+    });
+}
+
+export function useMediaVersions(id: string, locale: string, enabled = true) {
+    return useQuery({ ...mediaVersionsQueryOptions(id, locale), enabled });
+}
+
+/** Restore one of a locale's versions over its current content row. */
+export function useRestoreMediaVersion(
+    id: string,
+    locale: string,
+    options?: { onSuccess?: () => void }
+) {
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+    const { t } = useTranslation();
+
+    return useMutation({
+        mutationFn: (versionId: string) =>
+            astromechClient.media.restoreVersion({ id, locale, versionId }),
+        onSuccess: () => {
+            // The versions key sits under the detail prefix, so one
+            // invalidation covers the item's locales and their versions.
+            void queryClient.invalidateQueries({
+                queryKey: queryKeys.media.detailPrefix(id),
+            });
+            toast({ message: t('versions.restored'), variant: 'success' });
+            options?.onSuccess?.();
+        },
+        onError: (err) => {
+            toast({
+                message: err instanceof Error ? err.message : t('versions.restoreFailed'),
+                variant: 'error',
+            });
+        },
+    });
 }
 
 /**
@@ -40,26 +91,35 @@ export function useMediaItem(id: string, enabled = true) {
  */
 export function useMediaUsage(id: string, enabled = true) {
     return useQuery({
-        queryKey: [...queryKeys.media.detail(id), 'usage'] as const,
+        queryKey: [...queryKeys.media.detailPrefix(id), 'usage'] as const,
         queryFn: () => astromechClient.media.usedBy({ id }),
         enabled,
     });
 }
 
+/**
+ * Edit one locale's content. The first write to a locale with no row creates
+ * it, so every locale of the item goes stale, not just the one written.
+ */
 export function useUpdateMedia(
     id: string,
-    options?: { onSuccess?: (media: Media) => void }
+    options?: { locale?: string; onSuccess?: (media: Media) => void }
 ) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
+    const locale = options?.locale;
 
     return useMutation({
         mutationFn: (data: Record<string, unknown>) =>
-            astromechClient.media.update({ id, data }),
+            astromechClient.media.update({
+                id,
+                ...(locale !== undefined ? { locale } : {}),
+                data,
+            }),
         onSuccess: (media) => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.media.detail(id),
+                queryKey: queryKeys.media.detailPrefix(id),
             });
             void queryClient.invalidateQueries({ queryKey: queryKeys.media.all() });
             toast({ message: t('media.saved'), variant: 'success' });
@@ -87,7 +147,7 @@ export function useReplaceMedia(id: string, options?: { onSuccess?: () => void }
         mutationFn: (file: File) => astromechClient.media.replace({ id, file }),
         onSuccess: () => {
             void queryClient.invalidateQueries({
-                queryKey: queryKeys.media.detail(id),
+                queryKey: queryKeys.media.detailPrefix(id),
             });
             void queryClient.invalidateQueries({ queryKey: queryKeys.media.all() });
             toast({ message: t('media.replaced'), variant: 'success' });

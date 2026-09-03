@@ -13,6 +13,7 @@ import type { AdminConfig } from '@/types/index';
 const config = {
     defaultLocale: 'en',
     locales: ['en'],
+    media: { translatable: false },
 } as unknown as AdminConfig;
 
 export default config;
