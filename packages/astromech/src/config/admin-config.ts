@@ -96,6 +96,10 @@ export function buildAdminConfig(
         basePath: resolvedConfig.basePath,
         mediaRoute: resolvedConfig.mediaRoute,
         media: { translatable: resolvedConfig.media.translatable },
+        users: {
+            translatable: resolvedConfig.users.translatable,
+            fields: resolvedConfig.users.fields,
+        },
         // No driver means no variants exist to request — the admin falls back
         // to the original rather than asking for a width that would 404.
         imageWidths: config.media?.image

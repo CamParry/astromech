@@ -2,7 +2,12 @@
  * Query and mutation hooks for users.
  */
 
-import type { User, UserCreateData, UserQueryParams } from '@/types/index';
+import type {
+    User,
+    UserCreateData,
+    UserQueryParams,
+    UserUpdateData,
+} from '@/types/index';
 import {
     queryOptions,
     useMutation,
@@ -21,15 +26,66 @@ export function useUsersQuery(params?: UserQueryParams) {
     });
 }
 
-export function userQueryOptions(id: string) {
+/**
+ * One user, in `locale` when given. A locale with no content row reads back
+ * the default locale's content, so every locale is its own cache entry.
+ */
+export function userQueryOptions(id: string, locale?: string) {
     return queryOptions({
-        queryKey: queryKeys.users.detail(id),
-        queryFn: () => astromechClient.users.get({ id }),
+        queryKey: queryKeys.users.detail(id, locale),
+        queryFn: () =>
+            astromechClient.users.get({
+                id,
+                ...(locale !== undefined ? { locale } : {}),
+            }),
     });
 }
 
-export function useUser(id: string) {
-    return useQuery(userQueryOptions(id));
+export function useUser(id: string, locale?: string) {
+    return useQuery(userQueryOptions(id, locale));
+}
+
+/** One locale's saved versions of a user, newest last. */
+export function userVersionsQueryOptions(id: string, locale: string) {
+    return queryOptions({
+        queryKey: queryKeys.users.versions(id, locale),
+        queryFn: () => astromechClient.users.versions({ id, locale }),
+    });
+}
+
+export function useUserVersions(id: string, locale: string, enabled = true) {
+    return useQuery({ ...userVersionsQueryOptions(id, locale), enabled });
+}
+
+/** Restore one of a locale's versions over its current content row. */
+export function useRestoreUserVersion(
+    id: string,
+    locale: string,
+    options?: { onSuccess?: () => void }
+) {
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+    const { t } = useTranslation();
+
+    return useMutation({
+        mutationFn: (versionId: string) =>
+            astromechClient.users.restoreVersion({ id, locale, versionId }),
+        onSuccess: () => {
+            // The versions key sits under the detail prefix, so one
+            // invalidation covers the user's locales and their versions.
+            void queryClient.invalidateQueries({
+                queryKey: queryKeys.users.detailPrefix(id),
+            });
+            toast({ message: t('versions.restored'), variant: 'success' });
+            options?.onSuccess?.();
+        },
+        onError: (err) => {
+            toast({
+                message: err instanceof Error ? err.message : t('versions.restoreFailed'),
+                variant: 'error',
+            });
+        },
+    });
 }
 
 export function useCreateUser(options?: { onSuccess?: (user: User) => void }) {
@@ -53,9 +109,14 @@ export function useCreateUser(options?: { onSuccess?: (user: User) => void }) {
     });
 }
 
+/**
+ * Edit one locale's content. The first write to a locale with no row creates
+ * it, so every locale of the user goes stale, not just the one written.
+ */
 export function useUpdateUser(
     id: string,
     options?: {
+        locale?: string;
         onSuccess?: (user: User) => void;
         onFormReset?: () => void;
     }
@@ -63,13 +124,25 @@ export function useUpdateUser(
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
+    const locale = options?.locale;
 
     return useMutation({
-        mutationFn: (data: Partial<{ name: string; role: string }>) =>
-            astromechClient.users.update({ id, data }),
+        mutationFn: (data: UserUpdateData) =>
+            astromechClient.users.update({
+                id,
+                ...(locale !== undefined ? { locale } : {}),
+                data,
+            }),
         onSuccess: (user) => {
-            void queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(id) });
+            void queryClient.invalidateQueries({
+                queryKey: queryKeys.users.detailPrefix(id),
+            });
             void queryClient.invalidateQueries({ queryKey: queryKeys.users.all() });
+            if (locale !== undefined) {
+                void queryClient.invalidateQueries({
+                    queryKey: queryKeys.users.versions(id, locale),
+                });
+            }
             toast({ message: t('users.updated'), variant: 'success' });
             options?.onFormReset?.();
             options?.onSuccess?.(user);

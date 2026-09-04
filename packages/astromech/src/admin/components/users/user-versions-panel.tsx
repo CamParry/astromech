@@ -1,26 +1,26 @@
 /**
- * Media's wiring for `ContentVersionsPanel`: the media hooks in, the shared
+ * Users' wiring for `ContentVersionsPanel`: the users hooks in, the shared
  * list out.
  */
 
 import React from 'react';
-import { useMediaVersions, useRestoreMediaVersion } from '@/admin/hooks/media';
+import { useRestoreUserVersion, useUserVersions } from '@/admin/hooks/users';
 import { ContentVersionsPanel } from '../versions/content-versions-panel';
 
-export type MediaVersionsPanelProps = {
-    mediaId: string;
+export type UserVersionsPanelProps = {
+    userId: string;
     /** The locale whose versions are listed. */
     locale: string;
     canUpdate: boolean;
 };
 
-export function MediaVersionsPanel({
-    mediaId,
+export function UserVersionsPanel({
+    userId,
     locale,
     canUpdate,
-}: MediaVersionsPanelProps): React.ReactElement {
-    const { data, isLoading } = useMediaVersions(mediaId, locale);
-    const restoreMutation = useRestoreMediaVersion(mediaId, locale);
+}: UserVersionsPanelProps): React.ReactElement {
+    const { data, isLoading } = useUserVersions(userId, locale);
+    const restoreMutation = useRestoreUserVersion(userId, locale);
 
     return (
         <ContentVersionsPanel

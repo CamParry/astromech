@@ -221,7 +221,9 @@
         "confirmDeleteFallback": "This action cannot be undone.",
         "roleField": "Role",
         "createTitle": "New User",
-        "createUser": "New User"
+        "createUser": "New User",
+        "translationFallbackHint": "Showing the {{locale}} content until this locale is saved.",
+        "fieldsPanel": "Fields"
     },
     "permissions": {
         "readOnly": "You have read-only access to this entry type.",

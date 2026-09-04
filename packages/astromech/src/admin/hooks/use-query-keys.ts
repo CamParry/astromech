@@ -60,7 +60,16 @@ export const queryKeys = {
     users: {
         all: () => ['users'] as const,
         list: (params?: Record<string, unknown>) => ['users', 'list', params] as const,
-        detail: (id: string) => ['users', 'detail', id] as const,
+        /** Everything cached for one user, across its locales. */
+        detailPrefix: (id: string) => ['users', 'detail', id] as const,
+        /**
+         * One locale of one user. A read with no locale falls back to the
+         * default locale's content, so `null` is its own cache entry.
+         */
+        detail: (id: string, locale?: string) =>
+            ['users', 'detail', id, locale ?? null] as const,
+        versions: (id: string, locale: string) =>
+            ['users', 'detail', id, 'versions', locale] as const,
     },
 
     // Settings

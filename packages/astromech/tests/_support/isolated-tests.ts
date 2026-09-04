@@ -21,6 +21,7 @@ export const isolatedTests = [
     'tests/admin/components/media/media-picker.test.tsx',
     'tests/admin/components/media/media-versions-panel.test.tsx',
     'tests/admin/components/plugins/plugin-slot.test.tsx',
+    'tests/admin/components/users/user-edit-page.test.tsx',
     'tests/admin/hooks/use-bulk-delete-media.test.tsx',
     'tests/admin/hooks/use-media-browser.test.tsx',
     'tests/admin/hooks/use-media-versions.test.tsx',

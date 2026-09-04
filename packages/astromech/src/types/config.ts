@@ -578,6 +578,13 @@ export type AdminConfig = {
         /** Whether a media item may hold a content row per locale. */
         translatable: boolean;
     };
+    /** The users section's own settings. */
+    users: {
+        /** Whether a user may hold a content row per locale. */
+        translatable: boolean;
+        /** The custom field tree a user's `fields` column holds. */
+        fields: Field[];
+    };
     /**
      * The image variant allowlist. Empty when no image driver is configured —
      * the admin then falls back to the original file rather than requesting a
