@@ -1,7 +1,7 @@
 # Three identical validate helpers
 
 `entries/internal/validate.ts`, `users/internal/validate.ts` and
-`media/internal/validate.ts` are byte-identical: the same twelve lines wrapping
+`media/internal/validate.ts` were byte-identical: the same twelve lines wrapping
 a zod parse and re-throwing `ZodError` as the framework's 422.
 
 ```ts
@@ -15,17 +15,19 @@ export function validate<T>(schema: z.ZodType<T>, data: unknown): T {
 }
 ```
 
-Seven call sites across the three domains.
+Seven call sites across the three domains. `parseInput` in
+`packages/astromech/src/errors/validation.ts` replaced all three; the work landed
+as part of `validation-naming-and-navigability.md`.
 
 ## The work
 
-- [ ] One implementation. It depends only on `zod` and `errors/validation`, so
+- [x] One implementation. It depends only on `zod` and `errors/validation`, so
       it belongs in a leaf rather than in any one domain.
-- [ ] Pick the home against the layer table in `ARCHITECTURE.md`. `utilities/`
+- [x] Pick the home against the layer table in `ARCHITECTURE.md`. `utilities/`
       holds pure helpers and is where the stage 1 symbol moves landed; `errors/`
       is the other candidate, since what the function really does is translate
-      one error type into another.
-- [ ] Update the seven call sites and delete the three copies.
+      one error type into another. `errors/` won, for that reason.
+- [x] Update the seven call sites and delete the three copies.
 
 ## Why it was left
 

@@ -54,7 +54,7 @@ advertise a difference that does not exist.
       `packages/astromech/src/entries/internal/validate.ts`,
       `packages/astromech/src/users/internal/validate.ts` and
       `packages/astromech/src/media/internal/validate.ts`. Absorbs
-      `roadmap/planned/three-identical-validate-helpers.md`, which had left the
+      `roadmap/completed/three-identical-validate-helpers.md`, which had left the
       home open.
 - [x] **Split the pipeline's throwing and non-throwing shapes**, following
       zod's own convention. `parseFields` throws the 422; `safeParseFields`
@@ -88,10 +88,3 @@ advertise a difference that does not exist.
 
 No behaviour change. The existing tests were the safety net, and they held: the
 only test edits were renamed symbols, 194 insertions against 194 deletions.
-
-## Left open
-
-`roadmap/planned/three-identical-validate-helpers.md` still sits in `planned/`
-describing the dedupe that `parseInput` completed. Retiring it also means
-updating the reference to it in `roadmap/completed/naming-audit-renames.md`,
-which `check:docs` exempts but which would then point at a stale path.

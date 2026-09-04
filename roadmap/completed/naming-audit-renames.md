@@ -223,7 +223,7 @@ PascalCase.
   read verb (decision 4).
 - **`validate(schema, data)` changes** — kept as is (decision 5). The
   triplication of the helper itself is tracked in
-  `roadmap/planned/three-identical-validate-helpers.md`.
+  `roadmap/completed/three-identical-validate-helpers.md`.
 - **Renaming the blob side to `blob/`** — inverted by decision 3 and again by
   `DECISIONS.md`; the file side keeps `storage`.
 - **`types/` break-up** — the shared-contracts barrel stays; co-location is
