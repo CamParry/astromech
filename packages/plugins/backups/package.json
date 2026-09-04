@@ -29,7 +29,9 @@
     "scripts": {
         "build": "tsup",
         "build:js": "ASTROMECH_NO_DTS=1 tsup",
-        "typecheck": "tsc -p tsconfig.json"
+        "typecheck": "tsc -p tsconfig.json",
+        "test": "vitest",
+        "test:run": "vitest run"
     },
     "peerDependencies": {
         "@tanstack/react-query": "^5.94.5",
@@ -42,8 +44,10 @@
         "@types/node": "^22.20.1",
         "@types/react": "^19.2.18",
         "astromech": "workspace:*",
+        "kysely": "^0.28.17",
         "tsup": "^8.5.1",
-        "typescript": "^5.9.3"
+        "typescript": "^5.9.3",
+        "vitest": "^4.1.10"
     },
     "engines": {
         "node": ">=22.13.0"

@@ -32,14 +32,12 @@ The problems sit at the edges and in the conventions:
   (`packages/astromech/src/integrations/astro/`, six modules whose only
   coverage is a full `astro build`), `src/config/load.ts`, the email drivers,
   and the entire `@astromech/seo` plugin (627 lines, twelve files, no tests).
-- **Plugin tests cannot grow where they belong.** The first-party plugins are
-  tested from `packages/astromech/tests/plugins/` via vitest aliases; the
-  plugin packages themselves have no `tests/` directories, and root `test:run`
-  only runs schema-engine, core and assistant, so a plugin suite added in its
-  own package would never run.
+- **`@astromech/seo` has no tests.** Every other first-party plugin has a
+  `tests/` directory, a `test:run` script and a place in the gate; seo has the
+  script and the config and no test files behind them.
 - **A handful of tests cannot fail**, most clearly
-  `tests/plugins/redirects/schema.test.ts` (asserts only that the harness
-  created tables) and the no-throw assertions in
+  `packages/plugins/redirects/tests/schema.test.ts` (asserts only that the
+  harness created tables) and the no-throw assertions in
   `tests/admin/components/fields/richtext-field.test.ts`.
 - **Wall-clock sleeps are the flake surface**: ~15 places use `setTimeout`
   where `waitFor`/`findBy*` (admin components) or `vi.setSystemTime` (timestamp
@@ -70,17 +68,16 @@ being enforced by memory.
       the registry-wiping tests rely on.
 - [ ] Replace the `setTimeout` sleeps (eight admin files, six DB files) with
       `waitFor`/`findBy*` and `vi.setSystemTime`.
-- [ ] Delete `tests/plugins/redirects/schema.test.ts`, rewrite the weak
+- [ ] Delete `packages/plugins/redirects/tests/schema.test.ts`, rewrite the weak
       assertions in `richtext-field.test.ts`, and add real redirects coverage:
       `service/redirects.ts` matching and `hooks/slug-change.ts`.
 - [ ] Sweep the stale docblocks. The tree itself now mirrors `src/`
-      ([test-tree-mirrors-src](test-tree-mirrors-src.md)).
+      ([test-tree-mirrors-src](../completed/test-tree-mirrors-src.md)).
 - [ ] Export the shared fixtures (`noopStorage`, `noopDriver`, the role
       helpers) from `_support/` and replace the ~22 local copies.
-- [ ] Give each first-party plugin package its own `tests/` directory and
-      `test:run` script, wire them into root `test:run`, and write the seo
-      plugin's first tests (`utilities/length.ts`, `utilities/meta-value.ts`,
-      `service/seo.ts`).
+- [ ] Write the seo plugin's first tests (`utilities/length.ts`,
+      `utilities/meta-value.ts`, `service/seo.ts`). Its `tests/` directory,
+      `test:run` script and place in the gate are already there.
 - [ ] Cover the Astro integration with unit tests: the emitted virtual module,
       the injected route paths, and the `optimizeDeps.include` versus
       `publicHoistPattern` parity check that currently costs a `check:boot` run to

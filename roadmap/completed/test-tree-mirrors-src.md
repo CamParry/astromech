@@ -29,8 +29,9 @@ that its tests are in `tests/services/settings/`, and the mirror rule that would
 have told them is written down and wrong.
 
 The four plugin suites are a different problem in the same tree, and the
-package-boundary half of it belongs to `publishing-hygiene.md`. What belongs
-here is that `tests/plugins/` mixes them with `tests/plugins/runtime/`, which
+package-boundary half of it belongs to `../planned/publishing-hygiene.md`.
+What belongs here is that `tests/plugins/` mixes them with
+`tests/plugins/runtime/`, which
 tests core's plugin runtime and is correctly placed.
 
 ## The work
@@ -42,10 +43,10 @@ tests core's plugin runtime and is correctly placed.
       `tests/media/serving/image/`.
 - [x] `tests/builders/` empties into `tests/fields/`: all three files build
       fields and columns from `src/fields/`, none of them a table.
-- [ ] The four plugin suites move to their own packages (`publishing-hygiene.md`
-      covers the scripts and the boundary). `tests/plugins/` keeps only
-      `runtime/`, and the directory is renamed to match `src/plugins/runtime/`.
-      This box waits on `publishing-hygiene.md`.
+- [x] The four plugin suites move to their own packages
+      (`../planned/publishing-hygiene.md` covers the scripts and the
+      boundary). `tests/plugins/` keeps only `runtime/`, matching
+      `src/plugins/runtime/`.
 - [x] Every moved file's `@/` imports keep working, since the alias is rooted at
       `src/`. The relative imports that climb out of the package do not, which
       is the point of moving them.

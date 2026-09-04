@@ -19,8 +19,8 @@ import { compileFormFields } from '../../../../plugins/forms/src/fields/compile'
 
 A published package that cannot be verified on its own has no way to prove it
 still works when only it has changed. Moving those suites is the subject of
-`test-tree-mirrors-src.md`; the scripts and the package boundary are the part
-that belongs here.
+`../completed/test-tree-mirrors-src.md`; the scripts and the package boundary
+are the part that belongs here.
 
 **The version line disagrees with itself.** `astromech` is `0.0.1`. Every plugin
 and `@astromech/schema-engine` are `0.1.0`, and all six plugins peer-depend on
@@ -65,7 +65,7 @@ which both demos also declare.
 
 ## The work
 
-- [ ] Give each of the five plugins a `test` and `test:run` script, and a
+- [x] Give each of the five plugins a `test` and `test:run` script, and a
       `tests/` directory of its own. The core suite keeps only what tests the
       plugin **runtime** (`tests/plugins/runtime/`), which is core's code.
 - [ ] Bring `astromech` onto the same version as the rest, or move the rest onto

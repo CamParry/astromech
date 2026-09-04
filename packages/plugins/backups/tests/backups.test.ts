@@ -28,14 +28,6 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { backups } from '@astromech/backups';
-import {
-    isBackupRunning,
-    performBackup,
-    resolveKeep,
-    rotate,
-} from '@astromech/backups/internals';
-import { backupRunsTable } from '@astromech/backups/tables';
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { decodeWith } from '@/database/codec';
@@ -43,6 +35,9 @@ import { libsql } from '@/database/drivers/libsql';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import { filesystem } from '@/storage/drivers/filesystem';
 import { listAll } from '@/storage/prefix';
+import { isBackupRunning, performBackup, resolveKeep, rotate } from '../src/backup';
+import { backups } from '../src/index';
+import { backupRunsTable } from '../src/tables/index';
 
 declare global {
     var __astromechBackupRunning: boolean | undefined;

@@ -18,6 +18,7 @@
  * emitted from the table alongside it.
  */
 
+import type { FormsOptions, PublicForm, SubmitResult } from '../src/index';
 import type { DB } from '@/database/types';
 import type {
     AstromechConfig,
@@ -26,9 +27,7 @@ import type {
     PluginDefinition,
     ResolvedConfig,
 } from '@/types/index';
-import type { FormsOptions, PublicForm, SubmitResult } from '@astromech/forms';
 import type { Kysely } from 'kysely';
-import { forms, turnstile } from '@astromech/forms';
 import {
     createTestDb,
     makeTestConfig,
@@ -41,7 +40,8 @@ import { setEmailDriver } from '@/email/registry';
 import { entriesService as localEntries } from '@/entries/service';
 import { defineHook } from '@/plugins/define-hook';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
-import { resetRateLimit } from '../../../../plugins/forms/src/service/rate-limit';
+import { forms, turnstile } from '../src/index';
+import { resetRateLimit } from '../src/service/rate-limit';
 
 const FORM = 'forms/form';
 

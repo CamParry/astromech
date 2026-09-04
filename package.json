@@ -24,7 +24,7 @@
         "format:check": "prettier --check .",
         "lint:css": "pnpm -F astromech lint:css",
         "test": "pnpm -F astromech test",
-        "test:run": "pnpm -F @astromech/schema-engine test:run && pnpm -F astromech test:run && pnpm -F @astromech/assistant test:run",
+        "test:run": "pnpm -F @astromech/schema-engine test:run && pnpm -F astromech test:run && pnpm -r -F \"./packages/plugins/**\" test:run",
         "db:generate": "pnpm -F astromech-demo db:generate",
         "db:init": "pnpm -F astromech-demo db:init",
         "db:seed": "pnpm -F astromech db:seed",

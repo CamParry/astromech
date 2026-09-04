@@ -8,9 +8,8 @@
  * - a global and a nav item appear for each configured menu; none for unconfigured keys
  */
 
+import type { MenuItem } from '../src/index';
 import type { AstromechConfig, JsonObject, PluginDefinition } from '@/types/index';
-import type { MenuItem } from '@astromech/menus';
-import { menus } from '@astromech/menus';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService } from '@/entries/service';
@@ -18,6 +17,7 @@ import { globalsService } from '@/globals/service';
 import { derivePluginNav } from '@/plugins/runtime/plugin-admin';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
+import { menus } from '../src/index';
 
 type MenusService = {
     get(input: { key: string; locale?: string }): Promise<MenuItem[] | null>;

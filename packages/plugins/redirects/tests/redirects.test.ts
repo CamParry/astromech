@@ -12,6 +12,7 @@
  * - hooks observe the QUALIFIED type id (`redirects/redirect`) on afterCreate.
  */
 
+import type { RedirectMatch } from '../src/index';
 import type { DB } from '@/database/types';
 import type {
     AstromechConfig,
@@ -20,9 +21,7 @@ import type {
     PluginServiceNamespace,
     ResolvedConfig,
 } from '@/types/index';
-import type { RedirectMatch } from '@astromech/redirects';
 import type { Kysely } from 'kysely';
-import { redirects } from '@astromech/redirects';
 import {
     createTestDb,
     makeTestConfig,
@@ -34,6 +33,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService as localEntries } from '@/entries/service';
 import { defineHook } from '@/plugins/define-hook';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
+import { redirects } from '../src/index';
 
 // Type-level proof: redirects.lookup carries real Input/Output via
 // self-augmentation of `PluginServiceNamespace`, which is the type behind

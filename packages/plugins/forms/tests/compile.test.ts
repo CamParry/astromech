@@ -1,16 +1,13 @@
 /**
- * Unit tests for the forms plugin's block → `Field` compiler.
+ * Unit tests for the forms plugin's block to `Field` compiler.
  *
- * `@astromech/forms` has no test setup of its own (unlike `redirects`/
- * `menus`/`backups`, which are aliased for the astromech vitest instance) and
- * no `@astromech/forms` alias exists yet, so this file imports the compiler
- * by relative path and lives here — under `packages/astromech/tests/` — so
- * `npm run test` (which runs the astromech workspace's vitest) picks it up.
+ * The compiler is internal, so this file imports it by relative path into
+ * `src/` rather than through the package's public entry.
  */
 
 import { describe, expect, it } from 'vitest';
 import { safeParseFields } from '@/fields/parse-fields';
-import { compileFormFields } from '../../../../plugins/forms/src/fields/compile';
+import { compileFormFields } from '../src/fields/compile';
 
 describe('compileFormFields', () => {
     it('compiles a text block', () => {

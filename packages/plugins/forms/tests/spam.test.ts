@@ -8,18 +8,18 @@
  *   into a throw (the gate), tested against a hand-written `SpamProvider` stub.
  *
  * These are plain unit tests with no plugin registration or DB, so they
- * import the source files directly rather than through the (not yet built)
- * `@astromech/forms` package alias.
+ * import the source files directly rather than through the package's public
+ * entry.
  */
 
-import type { FormsBeforeSubmitPayload } from '../../../../plugins/forms/src/hooks/events';
-import type { SpamProvider } from '../../../../plugins/forms/src/spam/types';
+import type { FormsBeforeSubmitPayload } from '../src/hooks/events';
+import type { SpamProvider } from '../src/spam/types';
 import type { PluginContext } from 'astromech';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { BEFORE_SUBMIT } from '../../../../plugins/forms/src/hooks/events';
-import { spamHook } from '../../../../plugins/forms/src/spam/hook';
-import { recaptcha } from '../../../../plugins/forms/src/spam/providers/recaptcha';
-import { turnstile } from '../../../../plugins/forms/src/spam/providers/turnstile';
+import { BEFORE_SUBMIT } from '../src/hooks/events';
+import { spamHook } from '../src/spam/hook';
+import { recaptcha } from '../src/spam/providers/recaptcha';
+import { turnstile } from '../src/spam/providers/turnstile';
 
 function jsonResponse(body: unknown, status = 200): Response {
     return new Response(JSON.stringify(body), {

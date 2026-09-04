@@ -2,20 +2,17 @@
  * The `form` entry type's own schema, validated through core's pipeline.
  *
  * The only rule under test is the `name` pattern on every field block: a stored
- * `name` becomes a compiled field's name at submit time (`../../../..
- * /plugins/forms/src/fields/compile.ts`), and a submission error is keyed by the
- * field-path grammar — which cannot address a name containing `.`, `[` or `]`.
- * The rule is only reachable server-side because the pipeline recurses into the
- * `fields` blocks container.
- *
- * Lives here, under `packages/astromech/tests/`, for the same reason
- * `compile.test.ts` does: `@astromech/forms` has no vitest instance of its own.
+ * `name` becomes a compiled field's name at submit time (`src/fields/
+ * compile.ts`), and a submission error is keyed by the field-path grammar,
+ * which cannot address a name containing `.`, `[` or `]`. The rule is only
+ * reachable server-side because the pipeline recurses into the `fields`
+ * blocks container.
  */
 
 import type { Field } from '@/types/fields';
 import { describe, expect, it } from 'vitest';
 import { safeParseFields } from '@/fields/parse-fields';
-import { formEntryType } from '../../../../plugins/forms/src/entries/form';
+import { formEntryType } from '../src/entries/form';
 
 /** The `form` type declares a plain array; narrow the `EntryFields` union to it. */
 function definitions(): Field[] {

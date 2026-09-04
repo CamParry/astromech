@@ -4,11 +4,10 @@
  * the window-reset and cap rules on the counter itself.
  */
 
+import type { FormsOptions, SubmitResult } from '../src/index';
 import type { DB } from '@/database/types';
 import type { EntriesService, PluginContext } from '@/types/index';
-import type { FormsOptions, SubmitResult } from '@astromech/forms';
 import type { Kysely } from 'kysely';
-import { forms } from '@astromech/forms';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -19,10 +18,8 @@ import {
     getPluginIdentity,
     getPluginServiceMethods,
 } from '@/plugins/runtime/plugin-runtime';
-import {
-    consumeRateLimit,
-    resetRateLimit,
-} from '../../../../plugins/forms/src/service/rate-limit';
+import { forms } from '../src/index';
+import { consumeRateLimit, resetRateLimit } from '../src/service/rate-limit';
 
 const FORM = 'forms/form';
 
