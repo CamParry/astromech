@@ -53,8 +53,10 @@ them this way.
 
 **`defineService(namespace, record)` assembles a module.** From one keyed
 record it yields the catalogue (what the manifest, `policies/scoped-services.ts`
-and REST mounting read) and the callable service (`app.globals`, the raw
-trusted form). It stamps `name` (`globals.get`) onto each method after
+and REST mounting read) and `bind(ctx)`, which closes every handler over one
+context. The composition root binds the current request's context to make the
+callable service (`app.globals`, the raw trusted form), so a content module
+never imports the composition root. It stamps `name` (`globals.get`) onto each method after
 assembly, so a method never states its own name and no typo can mis-name a
 manifest entry, the reason `types/methods.ts` gives for having no `name` field
 today. A handler reaches its id through `ctx.method.name`, which retires the
@@ -136,7 +138,7 @@ objects instead, and if it lands second, it starts from them.
 - [ ] `ServiceMethod` in `types/` replaces `ServiceMethodContract`; plugins
       compile unchanged. `defineServiceMethod` and `noInput` move with it.
 - [ ] `defineService` beside it, stamping `name` and returning
-      `{ catalogue, service }`.
+      `{ catalogue, bind }`.
 - [ ] `AppContext` built in one place from the request store, with
       `createPluginContext` extending it. Tests: a context built with no
       request has `user: null` and `role: null`; the plugin layer adds
