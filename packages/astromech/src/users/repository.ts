@@ -82,6 +82,7 @@ export type UserRepository = ReturnType<typeof createUserRepository>;
 export function createUserRepository(opts?: { defaultLocale?: string }) {
     const defaultLocale = opts?.defaultLocale ?? getDefaultContentLocale();
     const accounts = createRepository(usersTable);
+    const contents = createRepository(userContentTable);
 
     /** The two joined rows plus the locale list, in the shape the service reads. */
     function decode(
@@ -143,14 +144,43 @@ export function createUserRepository(opts?: { defaultLocale?: string }) {
         };
     }
 
-    async function list(params?: UserListParams): Promise<UserRow[]> {
+    /**
+     * Replace each row's content with the requested locale's, where that locale
+     * has a row. One query for the whole page; a row with no match keeps the
+     * default locale's content, which is the fallback a user read promises.
+     */
+    async function overlayLocale(rows: UserRow[], locale: string): Promise<UserRow[]> {
+        if (rows.length === 0) return rows;
+        const translations = await contents.findMany({
+            where: { userId: { in: rows.map((row) => row.id) }, locale },
+        });
+        const byUserId = new Map(translations.map((row) => [row.userId, row]));
+
+        return rows.map((row) => {
+            const translation = byUserId.get(row.id);
+            if (!translation) return row;
+            return {
+                ...row,
+                contentId: translation.id as UserRow['contentId'],
+                locale: translation.locale,
+                fields: (translation.fields ?? {}) as JsonObject,
+                updatedAt: translation.updatedAt,
+                updatedBy: translation.updatedBy,
+                createdBy: translation.createdBy,
+            };
+        });
+    }
+
+    async function list(params?: UserListParams, locale?: string): Promise<UserRow[]> {
         let q = content.query.joined().where(filter(params));
         for (const { col, dir } of buildOrderBy(params?.sort)) {
             q = q.orderBy(`${ownerKey}.${col}`, dir);
         }
         if (params?.limit !== undefined) q = q.limit(params.limit);
         if (params?.offset !== undefined) q = q.offset(params.offset);
-        return content.query.rows(await q.execute());
+        const rows = await content.query.rows(await q.execute());
+        if (locale === undefined || locale === defaultLocale) return rows;
+        return overlayLocale(rows, locale);
     }
 
     async function count(params?: { search?: string | undefined }): Promise<number> {

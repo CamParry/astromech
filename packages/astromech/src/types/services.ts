@@ -22,6 +22,7 @@ import type {
     Notification,
     Setting,
     User,
+    UserVersion,
 } from './domain';
 import type {
     EntryQueryParams,
@@ -399,21 +400,32 @@ export type UserCreateData = {
     role?: string;
 };
 
-/** The users domain's service contract. */
+/** What one `users.update` call may write. */
+export type UserUpdateData = Partial<{
+    email: string;
+    name: string;
+    fields: JsonObject;
+    role: string;
+}>;
+
+/**
+ * The users domain's service contract. A missing `locale` is the default content
+ * locale; `query` and `get` fall back to it when the one asked for has no
+ * content row, while `versions` and `restoreVersion` address a content row and
+ * throw `UserNotFoundError` when there is none.
+ */
 export type UsersService = {
     query(params?: UserQueryParams): Promise<QueryResult<User>>;
-    get(params: { id: string }): Promise<User | null>;
+    get(params: { id: string; locale?: string }): Promise<User | null>;
     create(params: { data: UserCreateData }): Promise<User>;
-    update(params: {
-        id: string;
-        data: Partial<{
-            email: string;
-            name: string;
-            fields?: JsonObject;
-            role: string;
-        }>;
-    }): Promise<User>;
+    update(params: { id: string; locale?: string; data: UserUpdateData }): Promise<User>;
     delete(params: { id: string }): Promise<void>;
+    versions(params: { id: string; locale?: string }): Promise<UserVersion[]>;
+    restoreVersion(params: {
+        id: string;
+        locale?: string;
+        versionId: string;
+    }): Promise<User>;
 };
 
 /**

@@ -20,7 +20,7 @@ export async function indexUserRelationships(
     id: string,
     fields: JsonObject
 ): Promise<void> {
-    const definitions = flattenFieldNodes(getConfig().users?.fields ?? []);
+    const definitions = flattenFieldNodes(getConfig().users.fields);
     await createRelationshipRepository().replaceForSource(
         { id, kind: 'user' },
         collectRelationshipEdges(definitions, fields)
@@ -35,7 +35,7 @@ export async function indexUserRelationships(
 export async function collectUserRelationshipSources(): Promise<
     RelationshipIndexSource[]
 > {
-    const definitions = flattenFieldNodes(getConfig().users?.fields ?? []);
+    const definitions = flattenFieldNodes(getConfig().users.fields);
     const rows = await createUserRepository().list();
     return rows.map((row) => ({
         source: { id: row.id, kind: 'user' as const },

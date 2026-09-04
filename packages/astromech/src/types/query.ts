@@ -71,6 +71,8 @@ export type QueryResult<T = Entry> = {
 export type EntryQueryResult<T = Entry> = QueryResult<T>;
 
 export type UserQueryParams = {
+    /** The locale each user's content is read in. Default: the default locale. */
+    locale?: string;
     search?: string;
     page?: number;
     limit?: number | 'all';

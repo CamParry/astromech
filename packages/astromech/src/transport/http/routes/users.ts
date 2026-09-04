@@ -31,6 +31,7 @@ const SORTABLE_FIELDS = new Set(['name', 'email', 'createdAt', 'updatedAt', 'rol
 
 /** The query string the list route accepts. `dir` is the only one that can fail. */
 const listQuery = z.object({
+    locale: z.string().optional(),
     search: z.string().optional(),
     page: z.string().optional(),
     limit: z.string().optional(),
@@ -43,15 +44,29 @@ export const USERS_ROUTES: RestRoute[] = attachHandlers(USERS_ROUTE_SPECS, {
     'post /': {
         args: async (c) => ({ data: await c.req.json<Record<string, unknown>>() }),
     },
+    'get /:id/versions': { args: contentArgs },
+    'post /:id/versions/:versionId/restore': {
+        args: (c) => ({ ...contentArgs(c), versionId: c.req.param('versionId') ?? '' }),
+    },
 });
 
 mountRestRoutes(router, usersContract, USERS_ROUTES);
 documentBespokeRoutes(router, usersContract, USERS_ROUTE_SPECS);
 
+/**
+ * The `{ id }` a user route addresses, plus the locale a content-level one
+ * names. An absent locale leaves the service to fill in the default.
+ */
+function contentArgs(c: Context<Env>): { id: string; locale?: string } {
+    const locale = c.req.query('locale');
+    return { id: c.req.param('id') ?? '', ...(locale ? { locale } : {}) };
+}
+
 /** `users.query` arguments, read off the query string. */
 function queryArgs(c: Context<Env>): UserQueryParams {
     const q = c.req.query();
     const params: UserQueryParams = {};
+    if (q['locale']) params.locale = q['locale'];
     if (q['search']) params.search = q['search'];
     if (q['page']) params.page = Number(q['page']);
     if (q['limit'] === 'all') params.limit = 'all';

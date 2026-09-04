@@ -374,12 +374,21 @@ export type ResolvedMediaConfig = Omit<MediaConfig, 'access' | 'image'> & {
 
 export type UsersConfig = {
     fields?: Field[];
+    /** Default false. Every locale in `locales` may hold its own content row. */
+    translatable?: boolean;
     /**
      * Cross-field validator for a user record, run after every field has been
      * processed. Server-side only — it is a function, so it cannot cross into
      * the admin's JSON config.
      */
     validate?: ResourceValidator;
+};
+
+/** `UsersConfig` with its defaults applied. */
+export type ResolvedUsersConfig = {
+    fields: Field[];
+    validate?: ResourceValidator;
+    translatable: boolean;
 };
 
 /**
@@ -528,6 +537,8 @@ export type ResolvedConfig = Omit<
     globals: Record<string, ResolvedGlobal>;
     /** Always present — `access` defaults to `'public'`. */
     media: ResolvedMediaConfig;
+    /** Always present — `fields` defaults to empty and `translatable` to false. */
+    users: ResolvedUsersConfig;
     /**
      * Plugin-contributed entry types, namespaced by plugin name → bare type →
      * resolved config. Always present (empty when no plugins contribute types).

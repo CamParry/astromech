@@ -347,6 +347,18 @@ export const USERS_ROUTE_SPECS = [
         envelope: 'success',
         handler: 'bespoke',
     },
+    {
+        verb: 'get',
+        path: '/:id/versions',
+        id: 'users.versions',
+        queryArgs: ['locale'],
+    },
+    {
+        verb: 'post',
+        path: '/:id/versions/:versionId/restore',
+        id: 'users.restoreVersion',
+        queryArgs: ['locale'],
+    },
 ] as const satisfies readonly HttpRouteSpec[];
 
 /**

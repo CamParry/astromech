@@ -84,6 +84,7 @@ const config: ResolvedConfig = {
     timezone: 'UTC',
     mediaRoute: '/_media',
     media: { access: 'public', translatable: false },
+    users: { fields: [], translatable: false },
 };
 
 const def = (

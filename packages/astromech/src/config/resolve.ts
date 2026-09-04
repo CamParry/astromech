@@ -77,6 +77,11 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
             access: mediaAccess,
             translatable: config.media?.translatable ?? false,
         },
+        users: {
+            fields: config.users?.fields ?? [],
+            ...(config.users?.validate ? { validate: config.users.validate } : {}),
+            translatable: config.users?.translatable ?? false,
+        },
         entries,
         globals,
         pluginEntries,

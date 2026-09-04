@@ -238,8 +238,8 @@ async function checkMedia(report: ValidationReport): Promise<void> {
 /** User rows, with `users/operations/update.ts`'s context. */
 async function checkUsers(report: ValidationReport): Promise<void> {
     const config = getConfig();
-    const definitions = flattenFieldNodes(config.users?.fields ?? []);
-    const validate = config.users?.validate;
+    const definitions = flattenFieldNodes(config.users.fields);
+    const validate = config.users.validate;
     const repository = createUserRepository();
     const load = memoize(() => repository.list());
     const rows = await load();

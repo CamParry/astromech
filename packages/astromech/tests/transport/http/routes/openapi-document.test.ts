@@ -124,7 +124,7 @@ describe('the emitted document', () => {
 
     it('covers more than the five paths the hand-written routes described', () => {
         const total = tables().reduce((sum, [, routes]) => sum + routes.length, 0);
-        expect(total).toBe(46);
+        expect(total).toBe(48);
         expect(Object.keys(document().paths).length).toBeGreaterThan(5);
     });
 

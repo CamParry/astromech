@@ -13,6 +13,7 @@ import { resolveEnv } from '@/env';
 import { ValidationError } from '@/errors/validation';
 import { GlobalNotFoundError } from '@/globals/errors';
 import { MediaNotFoundError } from '@/media/errors';
+import { UserNotFoundError } from '@/users/errors';
 
 export type ApiErrorCode =
     | 'NOT_FOUND'
@@ -177,7 +178,8 @@ export const onError: ErrorHandler = (err, c) => {
     if (
         err instanceof EntryNotFoundError ||
         err instanceof GlobalNotFoundError ||
-        err instanceof MediaNotFoundError
+        err instanceof MediaNotFoundError ||
+        err instanceof UserNotFoundError
     ) {
         return notFound(c, err.message);
     }

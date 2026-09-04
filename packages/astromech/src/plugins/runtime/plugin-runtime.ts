@@ -296,13 +296,13 @@ function makeConfigView(
         pluginGlobals: config.pluginGlobals,
         adminPages: config.adminPages,
         media: config.media,
+        users: config.users,
         basePath: config.basePath,
         mediaRoute: config.mediaRoute,
         trash: config.trash,
         publicSettingKeys: config.publicSettingKeys,
         timezone: config.timezone,
         ...(config.admin ? { admin: config.admin } : {}),
-        ...(config.users ? { users: config.users } : {}),
         ...(config.roles ? { roles: config.roles } : {}),
         ...(config.locales ? { locales: config.locales } : {}),
         ...(config.defaultLocale ? { defaultLocale: config.defaultLocale } : {}),
@@ -441,5 +441,6 @@ function emptyConfig(): Omit<PluginConfigView, 'entryTypesWithField'> {
         timezone: 'UTC',
         mediaRoute: '/_media',
         media: { access: 'public', translatable: false },
+        users: { fields: [], translatable: false },
     };
 }

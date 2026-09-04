@@ -10,6 +10,8 @@ import { deleteUser } from './operations/delete';
 import { getUser } from './operations/get';
 import { queryUsers } from './operations/query';
 import { updateUser } from './operations/update';
+import { listUserVersions } from './operations/versions/list';
+import { restoreUserVersion } from './operations/versions/restore';
 
 export const usersService: UsersService = {
     query: queryUsers,
@@ -17,4 +19,6 @@ export const usersService: UsersService = {
     create: createUser,
     update: updateUser,
     delete: deleteUser,
+    versions: listUserVersions,
+    restoreVersion: restoreUserVersion,
 };

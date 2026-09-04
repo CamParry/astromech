@@ -1,96 +1,121 @@
-import type { JsonObject, User } from '@/types/index';
+import type { JsonObject, User, UserUpdateData } from '@/types/index';
 import { getConfig } from '@/config/registry';
-import { existingEntryTypes } from '@/database/repository/resource-existence';
+import { propagateSharedFields } from '@/content/translatable';
+import { changesVersionedContent, snapshotVersion } from '@/content/versions';
+import { transaction } from '@/database/transaction';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
-import { AstromechError } from '@/errors/astromech-error';
 import { parseInput } from '@/errors/validation';
-import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { requireRole } from '@/permissions/roles';
 import { getCurrentUser } from '@/request-context/request-context';
+import { UserNotFoundError } from '../errors';
+import { resolveUserLocale, userRepository } from '../internal/locale';
+import { createUserLookups } from '../internal/lookups';
 import { indexUserRelationships } from '../internal/relationships';
 import { toUser } from '../internal/to-user';
-import { createUserRepository } from '../repository';
 import { updateUserSchema } from '../schema';
-import { getUser } from './get';
-import { queryUsers } from './query';
 
-/** Update a user's profile, role and custom fields. */
+/**
+ * Update a user's profile, role and custom fields. `name`, `email` and `role`
+ * are the account row and are written whatever the locale; `fields` addresses
+ * one locale's content row, and a locale with none gets one seeded from the
+ * default-locale row with the patch applied over it.
+ */
 export async function updateUser(params: {
     id: string;
-    data: Partial<{
-        name: string;
-        email: string;
-        fields: JsonObject;
-        role: string;
-    }>;
+    locale?: string;
+    data: UserUpdateData;
 }): Promise<User> {
     const { id } = params;
-    const validatedData = parseInput(updateUserSchema, params.data);
+    const locale = resolveUserLocale(params.locale);
+    const repository = userRepository();
 
-    if (validatedData.role !== undefined) {
-        requireRole(getConfig(), validatedData.role);
-    }
+    // The row this write edits, or — when the locale has none — the
+    // default-locale row the new one is copied from.
+    const current = await repository.getExact(id, locale);
+    const base = current ?? (await repository.get(id));
+    if (!base) throw new UserNotFoundError({ id });
 
-    if (validatedData.fields !== undefined) {
-        const current = await getUser({ id });
-        const config = getConfig();
-        const fieldDefs = flattenFieldNodes(config.users?.fields ?? []);
-        const validate = config.users?.validate;
+    const data = parseInput(updateUserSchema, params.data);
+    const config = getConfig();
+    if (data.role !== undefined) requireRole(config, data.role);
+
+    const definitions = flattenFieldNodes(config.users.fields);
+    const patch = data.fields as Record<string, unknown> | undefined;
+    const patchedNames =
+        patch === undefined
+            ? []
+            : Object.keys(patch).filter((name) => patch[name] !== undefined);
+
+    // A patch is merged over `base`, so a locale being written for the first
+    // time is seeded from the default-locale row. A write naming no `fields` at
+    // all touches the account row alone and creates no content row.
+    let fields: JsonObject | undefined;
+    if (patch !== undefined) {
         // `fields` is a patch: an omitted field keeps its stored value, an
         // explicit `null` stores null, and a container replaces wholesale.
-        const patch = validatedData.fields as Record<string, unknown>;
-        const patchedNames = Object.keys(patch).filter((k) => patch[k] !== undefined);
-        const merged = mergePatch(
-            current?.fields as Record<string, unknown> | undefined,
-            patch
-        );
-        const parsed = await parseFields(merged, fieldDefs, {
+        const merged = mergePatch(base.fields, patch);
+        const parsed = await parseFields(merged, definitions, {
             operation: 'update',
-            resource: { kind: 'user', record: current },
+            resource: { kind: 'user', record: toUser(base) },
             user: await getCurrentUser(),
-            lookups: fieldLookupsFromRecords({
-                load: async () => (await queryUsers({ limit: 'all' })).data,
-                getId: (r) => r.id,
-                getFields: (r) => r.fields as Record<string, unknown>,
-                excludeId: id,
-                entryTypes: (relIds) => existingEntryTypes(relIds),
-            }),
+            lookups: createUserLookups(repository, { locale, excludeId: id }),
             coerceOnly: new Set(patchedNames),
-            ...(validate ? { validate } : {}),
+            ...(config.users.validate ? { validate: config.users.validate } : {}),
         });
-        // After `parseFields`, before the write — same ordering as create.
+        // After `parseFields` (its minted item ids are what the traversal
+        // needs) and before the write, so the index derives from the pruned
+        // values.
         const pruned = await pruneDanglingRelations(
-            fieldDefs,
-            projectToSchema(parsed, fieldDefs) as JsonObject
+            definitions,
+            projectToSchema(parsed, definitions) as JsonObject
         );
-        validatedData.fields = pruned.values;
+        fields = pruned.values;
     }
 
-    const repository = createUserRepository();
-    const { name, email, role } = validatedData;
+    const { name, email, role } = data;
+    const userId = (await getCurrentUser())?.id ?? null;
 
-    // The account columns and the content row are two writes, each made only
-    // when the patch names that part.
-    if (name !== undefined || email !== undefined || role !== undefined) {
-        await repository.updateAccount(id, { name, email, role });
-    }
-    if (validatedData.fields !== undefined) {
-        const userId = (await getCurrentUser())?.id ?? null;
-        await repository.update(
-            { id },
-            { fields: validatedData.fields as JsonObject, updatedBy: userId }
-        );
-    }
+    // The version, the account write, the content write and the index write are
+    // one transaction: an index that outlived a failed write would name
+    // relations the stored fields do not.
+    await transaction(async () => {
+        if (current && changesVersionedContent(current, { fields }, [])) {
+            await snapshotVersion(repository.versions, current, {});
+        }
+        if (name !== undefined || email !== undefined || role !== undefined) {
+            await repository.updateAccount(id, { name, email, role });
+        }
+        if (fields !== undefined) {
+            await repository.update(
+                { id, locale },
+                {
+                    fields,
+                    updatedBy: userId,
+                    // A locale being written for the first time is authored
+                    // now, whoever created the account.
+                    ...(current ? {} : { createdBy: userId }),
+                }
+            );
+        }
+        // An update that never touched `fields` must leave the index and the
+        // user's other locales alone.
+        if (fields !== undefined && patch !== undefined) {
+            await propagateSharedFields({
+                translatable: repository.translatable,
+                definitions,
+                isTranslatable: config.users.translatable,
+                record: { id, locale },
+                fields,
+                patchedFieldNames: patchedNames,
+            });
+            await indexUserRelationships(id, fields);
+        }
+    });
 
-    // An update that never touched `fields` must leave the index alone.
-    if (validatedData.fields !== undefined) {
-        await indexUserRelationships(id, validatedData.fields as JsonObject);
-    }
-
-    const updated = await repository.get(id);
-    if (!updated) throw new AstromechError(`User '${id}' not found`);
+    const updated = await repository.get(id, locale);
+    if (!updated) throw new UserNotFoundError({ id });
     return toUser(updated);
 }

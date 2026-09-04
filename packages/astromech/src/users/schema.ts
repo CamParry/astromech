@@ -29,6 +29,7 @@ const sortDirection = z.enum(['asc', 'desc']);
  * method manifest can describe how the method is called.
  */
 export const userQuerySchema = z.object({
+    locale: z.string().optional(),
     search: z.string().optional(),
     page: z.number().optional(),
     limit: z.union([z.number(), z.literal('all')]).optional(),

@@ -1,6 +1,7 @@
 import type { JsonObject, User, UserCreateData } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
+import { transaction } from '@/database/transaction';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
 import { parseInput } from '@/errors/validation';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
@@ -21,8 +22,8 @@ export async function createUser(params: { data: UserCreateData }): Promise<User
     const config = getConfig();
     requireRole(config, validated.role);
 
-    const fieldDefs = flattenFieldNodes(config.users?.fields ?? []);
-    const validate = config.users?.validate;
+    const fieldDefs = flattenFieldNodes(config.users.fields);
+    const validate = config.users.validate;
     const parsedFields = await parseFields(
         (validated.fields ?? {}) as Record<string, unknown>,
         fieldDefs,
@@ -46,17 +47,20 @@ export async function createUser(params: { data: UserCreateData }): Promise<User
         parsedFields as JsonObject
     );
 
-    // The content repository wraps the account row and its content row in one
-    // transaction.
+    // The account row, its content row and the index write are one transaction:
+    // an index that outlived a failed create would name a user that is not there.
     const userId = (await getCurrentUser())?.id ?? null;
-    const created = await createUserRepository().create(
-        {
-            email: validated.email,
-            name: validated.name,
-            role: validated.role,
-        },
-        { fields, createdBy: userId, updatedBy: userId }
-    );
-    await indexUserRelationships(created.id, fields);
+    const created = await transaction(async () => {
+        const row = await createUserRepository().create(
+            {
+                email: validated.email,
+                name: validated.name,
+                role: validated.role,
+            },
+            { fields, createdBy: userId, updatedBy: userId }
+        );
+        await indexUserRelationships(row.id, fields);
+        return row;
+    });
     return toUser(created);
 }

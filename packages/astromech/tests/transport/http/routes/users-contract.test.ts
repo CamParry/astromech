@@ -3,12 +3,12 @@
  *
  * Users carries the two checks a method contract cannot state — self-access on
  * `get`/`update`, and the last-admin guard on `update`/`delete` — so these
- * assert the status, the envelope and the keys of all five handlers, and pin
+ * assert the status, the envelope and the keys of all seven handlers, and pin
  * which role each one turns away.
  */
 
 import type { DB } from '@/database/types';
-import type { Role, User } from '@/types/index';
+import type { Role, User, UserVersion } from '@/types/index';
 import type { Kysely } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import {
@@ -338,5 +338,65 @@ describe('DELETE /users/:id', () => {
         await makeUser('admin2@test.dev', 'Admin Two', 'admin');
         const res = await app().request(`/users/${first.id}`, { method: 'DELETE' });
         expect(res.status).toBe(200);
+    });
+});
+
+describe('GET /users/:id/versions', () => {
+    it('returns { data: versions } for the addressed locale', async () => {
+        const user = await makeUser('a@test.dev', 'Ann');
+        await usersService.update({ id: user.id, data: { fields: { bio: 'second' } } });
+
+        const res = await app().request(`/users/${user.id}/versions`);
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { data: UserVersion[] };
+        expect(Object.keys(body)).toEqual(['data']);
+        expect(body.data).toHaveLength(1);
+        expect(body.data[0]?.userId).toBe(user.id);
+        expect(body.data[0]?.locale).toBe('en');
+    });
+
+    it('403s without users:read', async () => {
+        const user = await makeUser('a@test.dev', 'Ann');
+        const res = await app(roleWith([])).request(`/users/${user.id}/versions`);
+        expect(res.status).toBe(403);
+    });
+
+    it('404s an unknown id', async () => {
+        const res = await app().request('/users/nope/versions');
+        expect(res.status).toBe(404);
+    });
+});
+
+describe('POST /users/:id/versions/:versionId/restore', () => {
+    // The restore snapshots the state it overwrites, crediting the acting user,
+    // so that row has to exist or the foreign key fails.
+    beforeEach(async () => {
+        await seedTestUser(db);
+    });
+
+    it('restores and returns { data: user }', async () => {
+        const user = await makeUser('a@test.dev', 'Ann');
+        await usersService.update({ id: user.id, data: { fields: { bio: 'first' } } });
+        await usersService.update({ id: user.id, data: { fields: { bio: 'second' } } });
+        const [version] = await usersService.versions({ id: user.id });
+        if (!version) throw new Error('expected a version');
+
+        const res = await app().request(
+            `/users/${user.id}/versions/${version.id}/restore`,
+            { method: 'POST' }
+        );
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { data: User };
+        expect(Object.keys(body)).toEqual(['data']);
+        expect(body.data.fields['bio']).toBe('first');
+    });
+
+    it('403s without users:update', async () => {
+        const user = await makeUser('a@test.dev', 'Ann');
+        const res = await app(roleWith(['users:read'])).request(
+            `/users/${user.id}/versions/anything/restore`,
+            { method: 'POST' }
+        );
+        expect(res.status).toBe(403);
     });
 });

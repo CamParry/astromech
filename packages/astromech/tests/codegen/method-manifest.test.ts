@@ -179,13 +179,13 @@ describe('generateMethodManifest — core methods', () => {
         expect(m?.['mutates']).toBe(false);
     });
 
-    it('should describe users.update as the METHOD { id, data }, not the body', () => {
+    it('should describe users.update as the METHOD { id, locale, data }, not the body', () => {
         const { methods } = parseManifest([]);
         const input = findMethod(methods, 'users.update')?.['input'] as {
             properties?: Record<string, { properties?: Record<string, unknown> }>;
             required?: string[];
         };
-        expect(Object.keys(input?.properties ?? {})).toEqual(['id', 'data']);
+        expect(Object.keys(input?.properties ?? {})).toEqual(['id', 'locale', 'data']);
         expect(input?.required).toEqual(['id', 'data']);
         // The body schema is nested intact — `fields` was dropped by the
         // hand-written MCP schema this replaces.
