@@ -44,7 +44,7 @@ codegen                                              generation
 policies                                             who may call what
 entries · globals · media · users · settings ·       the content modules
   notifications
-content                                              the shared content repository, under entries and globals
+content                                              the shared content repository, under entries, globals and media
 plugins · config · database · storage · fields ·     the modules those build on
   permissions · hooks · request-context · email ·
   ai · cron

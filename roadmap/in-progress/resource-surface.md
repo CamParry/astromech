@@ -214,7 +214,7 @@ afterwards would be doing the work twice.
       has no rename op, and it refuses a `users` rebuild because every author
       column references the table.
 - [ ] **Users.** Only when something asks for it.
-- [ ] **Docs, per stage.** `TERMINOLOGY.md`: `Resource` gains global and loses
+- [x] **Docs, per stage.** `TERMINOLOGY.md`: `Resource` gains global and loses
       settings page, a `Content` entry is added, `Version` widens from an entry
       to a content row. `DECISIONS.md`, edited in place per its own rule: the
       entries that name the `entries` table (expression indexes, FTS5 search),
