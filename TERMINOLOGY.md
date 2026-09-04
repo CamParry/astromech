@@ -103,10 +103,6 @@ own content verbs (entries, globals, media, users, settings, notifications) are
 the content modules. Modules keep to their boundaries but do call each other, so they
 are not "domains" in the bounded-context sense.
 
-**Mount.** Which package an entry type comes from: the site itself, or a
-plugin. It decides the type's permission namespace and where the admin serves it,
-and is never the identifier a caller passes.
-
 **Nested field.** A field that owns one data key and nests its children's values
 under it: groups, repeaters, blocks, trees. Everything that is neither nested nor
 layout is a leaf, holding one value.

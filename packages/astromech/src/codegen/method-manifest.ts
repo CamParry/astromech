@@ -78,7 +78,7 @@ function methodCapabilityMet(
 }
 
 function buildCoreMethods(): CoreManifestMethod[] {
-    // The domain prefix is paired with the catalogue here, so a method's name is
+    // The module prefix is paired with the catalogue here, so a method's name is
     // its position (`users.query`) rather than a hand-written string that can
     // drift from the key it sits under.
     const catalogues: [string, Record<string, ServiceMethodContract>][] = [
@@ -90,16 +90,16 @@ function buildCoreMethods(): CoreManifestMethod[] {
     ];
     const methods: CoreManifestMethod[] = [];
 
-    for (const [domain, catalogue] of catalogues) {
+    for (const [module, catalogue] of catalogues) {
         for (const [key, contract] of Object.entries(catalogue)) {
             const method: CoreManifestMethod = {
-                // A core domain has one method per key, so the name is already
+                // A core module has one method per key, so the name is already
                 // unique — id and name coincide.
-                id: `${domain}.${key}`,
-                name: `${domain}.${key}`,
+                id: `${module}.${key}`,
+                name: `${module}.${key}`,
                 summary: contract.summary,
                 source: 'core',
-                domain,
+                module,
                 method: key,
                 permission: staticPermission(contract),
                 mutates: contract.mutates,
@@ -165,7 +165,7 @@ function buildEntriesMethods(
                 projectEntryMethod(contract, {
                     typeId: type,
                     entryType: type,
-                    mount: 'root',
+                    namespace: 'root',
                 })
             );
         }
@@ -189,7 +189,7 @@ function buildEntriesMethods(
                     projectEntryMethod(contract, {
                         typeId,
                         entryType: type,
-                        mount: permissionNamespace,
+                        namespace: permissionNamespace,
                         plugin: pluginName,
                     })
                 );
@@ -209,7 +209,7 @@ function projectEntryMethod(
     placement: {
         typeId: string;
         entryType: string;
-        mount: string;
+        namespace: string;
         plugin?: string;
     }
 ): EntriesManifestMethod {
@@ -221,7 +221,7 @@ function projectEntryMethod(
         method: contract.method,
         typeId: placement.typeId,
         entryType: placement.entryType,
-        mount: placement.mount,
+        namespace: placement.namespace,
         permission: staticPermission(contract),
         mutates: contract.mutates,
         destructive: contract.destructive ?? false,
@@ -307,7 +307,7 @@ export function generateMethodManifest(
     // list renders at prompt position 0, so a reorder would bust the prompt cache.
     methods.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
-    return { version: 2, methods };
+    return { version: 3, methods };
 }
 
 /**

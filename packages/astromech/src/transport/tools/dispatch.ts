@@ -42,7 +42,7 @@ type ResolvedInvoke = { ok: true; invoke: Invoke } | { ok: false; reason: string
 type ResolveStrategy = (manifest: ManifestMethod) => ResolvedInvoke;
 
 /**
- * Core domain services, keyed by the manifest's `domain`. Imported lazily so
+ * Core module services, keyed by the manifest's `module`. Imported lazily so
  * building the tool LIST pulls in no service code; only an actual call does.
  */
 const CORE_SERVICES: Record<string, () => Promise<ServiceObject>> = {
@@ -134,15 +134,15 @@ async function invokePluginMethod(
 function toolNameFor(manifest: ManifestMethod): string {
     switch (manifest.source) {
         case 'core':
-            return `${manifest.domain}_${manifest.method}`;
+            return `${manifest.module}_${manifest.method}`;
         case 'plugin':
             return `plugins_${manifest.serviceKey}_${manifest.method}`;
         case 'entries':
-            // Root types are addressed bare; a plugin type keeps its mount, so
-            // two plugins mounting a `page` type do not collide.
-            return manifest.mount === 'root'
+            // Root types are addressed bare; a plugin type keeps its namespace,
+            // so two plugins declaring a `page` type do not collide.
+            return manifest.namespace === 'root'
                 ? `entries_${manifest.entryType}_${manifest.method}`
-                : `entries_${manifest.mount}_${manifest.entryType}_${manifest.method}`;
+                : `entries_${manifest.namespace}_${manifest.entryType}_${manifest.method}`;
     }
 }
 
@@ -248,7 +248,7 @@ function resolveCoreInvoke(manifest: CoreManifestMethod): ResolvedInvoke {
     if (manifest.sessionScoped === true) {
         return { ok: false, reason: 'session-scoped — this transport has no user' };
     }
-    const load = CORE_SERVICES[manifest.domain];
+    const load = CORE_SERVICES[manifest.module];
     if (!load) return { ok: false, reason: noServiceReason(manifest) };
     return {
         ok: true,
@@ -281,7 +281,7 @@ export function dispatchArgs(
     return manifest.source === 'entries' ? entriesArgs(manifest, args) : args;
 }
 
-/** The refusal for a manifest domain that names no registered service. */
+/** The refusal for a manifest module that names no registered service. */
 function noServiceReason(manifest: ManifestMethod): string {
     return `no service registered for domain "${manifest.name}"`;
 }
@@ -336,16 +336,16 @@ function resolveScopedCoreInvoke(
     manifest: CoreManifestMethod,
     handle: ScopedHandle
 ): ResolvedInvoke {
-    if (CORE_SERVICES[manifest.domain] === undefined) {
+    if (CORE_SERVICES[manifest.module] === undefined) {
         return { ok: false, reason: noServiceReason(manifest) };
     }
     // The handle's core keys are exactly `CORE_SERVICES`' keys, checked above.
-    const domain = manifest.domain as Exclude<keyof ScopedServices, 'entries'>;
+    const module = manifest.module as Exclude<keyof ScopedServices, 'entries'>;
     return {
         ok: true,
         invoke: async (args) =>
             callServiceMethod(
-                (await handle())[domain] as unknown as ServiceObject,
+                (await handle())[module] as unknown as ServiceObject,
                 manifest.method,
                 args
             ),

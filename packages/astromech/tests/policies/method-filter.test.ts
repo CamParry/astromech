@@ -14,12 +14,12 @@ import type {
 import { describe, expect, it } from 'vitest';
 import { filterMethods } from '@/policies/method-filter';
 
-function coreMethod(domain: string, name: string, mutates: boolean): CoreManifestMethod {
+function coreMethod(module: string, name: string, mutates: boolean): CoreManifestMethod {
     return {
-        id: `${domain}.${name}`,
-        name: `${domain}.${name}`,
+        id: `${module}.${name}`,
+        name: `${module}.${name}`,
         source: 'core',
-        domain,
+        module,
         method: name,
         permission: null,
         mutates,
@@ -41,7 +41,7 @@ function entryMethod(
         method: name,
         typeId: type,
         entryType: type,
-        mount: 'root',
+        namespace: 'root',
         permission: `entry:${type}:${name}`,
         mutates,
         destructive: false,

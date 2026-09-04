@@ -35,15 +35,15 @@ const objectSchema: JsonSchemaObject = {
 };
 
 function core(
-    domain: string,
+    module: string,
     method: string,
     rest: Partial<CoreManifestMethod> & Pick<CoreManifestMethod, 'mutates'>
 ): CoreManifestMethod {
     return {
-        id: `${domain}.${method}`,
-        name: `${domain}.${method}`,
+        id: `${module}.${method}`,
+        name: `${module}.${method}`,
         source: 'core',
-        domain,
+        module,
         method,
         permission: null,
         destructive: false,
@@ -57,15 +57,15 @@ function entry(
     rest: Partial<EntriesManifestMethod> & Pick<EntriesManifestMethod, 'mutates'>
 ): EntriesManifestMethod {
     const entryType = rest.entryType ?? 'post';
-    const mount = rest.mount ?? 'root';
+    const namespace = rest.namespace ?? 'root';
     return {
-        id: `entries.${mount}.${entryType}.${method}`,
+        id: `entries.${namespace}.${entryType}.${method}`,
         name: `entries.${method}`,
         source: 'entries',
         method,
         typeId: entryType,
         entryType,
-        mount,
+        namespace,
         permission: null,
         destructive: false,
         idempotent: false,
@@ -260,21 +260,21 @@ describe('buildTools', () => {
         }
     });
 
-    it('entries tool with non-root mount uses mount in name', () => {
-        const manifestWithMount: MethodManifest = {
+    it('entries tool with non-root namespace uses namespace in name', () => {
+        const manifestWithNamespace: MethodManifest = {
             version: 2,
             methods: [
                 entry('get', {
                     summary: 'Get a "redirect" entry.',
                     entryType: 'redirect',
-                    mount: 'redirects',
+                    namespace: 'redirects',
                     typeId: 'redirects/redirect',
                     mutates: false,
                     input: idSchema(),
                 }),
             ],
         };
-        const { tools } = buildTools(manifestWithMount);
+        const { tools } = buildTools(manifestWithNamespace);
         expect(tools[0]?.name).toBe('entries_redirects_redirect_get');
     });
 

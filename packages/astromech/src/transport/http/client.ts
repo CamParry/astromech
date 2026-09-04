@@ -246,12 +246,12 @@ async function callRoute(id: string, args: Args = {}, base?: string): Promise<un
 }
 
 /**
- * A domain handle over the table: `<domain>.<method>(args)` resolves the route
- * for `<domain>.<method>` and calls it. `overrides` names the methods that
+ * A module handle over the table: `<module>.<method>(args)` resolves the route
+ * for `<module>.<method>` and calls it. `overrides` names the methods that
  * cannot be reached that way, each carrying the reason where it is declared.
  */
 function restService<T extends object>(
-    domain: string,
+    module: string,
     call: Call,
     overrides: Record<string, Method>
 ): T {
@@ -260,7 +260,7 @@ function restService<T extends object>(
             if (typeof property !== 'string' || property === 'then') return undefined;
             return (
                 overrides[property] ??
-                ((params?: Args) => call(`${domain}.${property}`, params))
+                ((params?: Args) => call(`${module}.${property}`, params))
             );
         },
     });

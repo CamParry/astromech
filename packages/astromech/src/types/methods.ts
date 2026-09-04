@@ -42,7 +42,7 @@ export type PermissionRule<Input = unknown> =
  * reads. Plugin methods declare the same facts on their `ServiceMethod` object.
  *
  * There is no `name`: a method's dotted id is its position in the catalogue
- * (`<domain>.<key>`), derived by the manifest generator. Restating it by hand
+ * (`<module>.<key>`), derived by the manifest generator. Restating it by hand
  * meant a typo produced a mis-named manifest entry with no build failure.
  */
 export type ServiceMethodContract<Input = unknown, Output = unknown> = {
@@ -147,9 +147,9 @@ type ManifestMethodBase = {
 /** A core domain method (`users`, `media`, `settings`). */
 export type CoreManifestMethod = ManifestMethodBase & {
     source: 'core';
-    /** Domain the catalogue belongs to — `id` is `<domain>.<method>`. */
-    domain: string;
-    /** Key on the domain's service API, e.g. `update`. */
+    /** Module the catalogue belongs to — `id` is `<module>.<method>`. */
+    module: string;
+    /** Key on the module's service API, e.g. `update`. */
     method: string;
 };
 
@@ -161,14 +161,14 @@ export type EntriesManifestMethod = ManifestMethodBase & {
     /**
      * The type id the service is actually called with: bare for a root type
      * (`posts`), qualified for a plugin type (`redirects/redirect`). Carried
-     * rather than re-derived from `mount` + `entryType` — those are a permission
+     * rather than re-derived from `namespace` + `entryType` — those are a permission
      * namespace and a label, and re-deriving an identifier is how they drift.
      */
     typeId: string;
     /** Bare wire type, e.g. `posts`. */
     entryType: string;
     /** `'root'`, or the owning plugin's permission namespace. */
-    mount: string;
+    namespace: string;
     /** Plugin namespace this entry type belongs to; absent for root types. */
     plugin?: string;
 };

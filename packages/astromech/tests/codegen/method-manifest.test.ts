@@ -128,9 +128,9 @@ describe('generateMethodManifest', () => {
         expect(() => JSON.parse(result)).not.toThrow();
     });
 
-    it('should set version to 2', () => {
+    it('should set version to 3', () => {
         const { version } = parseManifest([]);
-        expect(version).toBe(2);
+        expect(version).toBe(3);
     });
 
     it('should include a methods array', () => {
@@ -245,7 +245,7 @@ describe('generateMethodManifest — globals', () => {
             const m = findMethod(methods, `globals.${method}`);
             expect(m, method).toBeDefined();
             expect(m?.['source']).toBe('core');
-            expect(m?.['domain']).toBe('globals');
+            expect(m?.['module']).toBe('globals');
         }
     });
 
@@ -281,12 +281,12 @@ describe('generateMethodManifest — globals', () => {
 });
 
 describe('generateMethodManifest — root entries', () => {
-    it('should emit entries.query for root type posts with mount root', () => {
+    it('should emit entries.query for root type posts with namespace root', () => {
         const { methods } = parseManifest([]);
         const m = findMethod(methods, 'entries.query', 'posts');
         expect(m).toBeDefined();
         expect(m?.['source']).toBe('entries');
-        expect(m?.['mount']).toBe('root');
+        expect(m?.['namespace']).toBe('root');
     });
 
     it('should set permission to entry:<type>:read for entries.query', () => {
@@ -447,11 +447,11 @@ describe('generateMethodManifest — plugin entries', () => {
         expect(m?.['source']).toBe('entries');
     });
 
-    it('should set mount to the plugin permissionNamespace for plugin entries', () => {
+    it('should set namespace to the plugin permissionNamespace for plugin entries', () => {
         const { methods } = parseManifest();
         const m = findMethod(methods, 'entries.query', 'widget');
         // @test/my-plugin → test_my_plugin
-        expect(m?.['mount']).toBe('test_my_plugin');
+        expect(m?.['namespace']).toBe('test_my_plugin');
     });
 
     it('should set plugin field for plugin entry methods', () => {

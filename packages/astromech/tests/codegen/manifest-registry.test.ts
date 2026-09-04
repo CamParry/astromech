@@ -17,7 +17,7 @@ const method: CoreManifestMethod = {
     id: 'users.query',
     name: 'users.query',
     source: 'core',
-    domain: 'users',
+    module: 'users',
     method: 'query',
     permission: null,
     mutates: false,

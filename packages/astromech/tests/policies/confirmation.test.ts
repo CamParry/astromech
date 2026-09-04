@@ -17,15 +17,15 @@ import { describe, expect, it } from 'vitest';
 import { evaluateConfirmation } from '@/policies/confirmation';
 
 function coreMethod(
-    domain: string,
+    module: string,
     name: string,
     effect: { mutates: boolean; destructive?: boolean }
 ): CoreManifestMethod {
     return {
-        id: `${domain}.${name}`,
-        name: `${domain}.${name}`,
+        id: `${module}.${name}`,
+        name: `${module}.${name}`,
         source: 'core',
-        domain,
+        module,
         method: name,
         permission: null,
         mutates: effect.mutates,
@@ -46,7 +46,7 @@ function entryMethod(
         method: name,
         typeId: type,
         entryType: type,
-        mount: 'root',
+        namespace: 'root',
         permission: `entry:${type}:${name}`,
         mutates: effect.mutates,
         destructive: effect.destructive ?? false,

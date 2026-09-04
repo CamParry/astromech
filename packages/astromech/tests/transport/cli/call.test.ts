@@ -15,7 +15,7 @@ function coreMethod(overrides: Partial<ManifestMethod> = {}): ManifestMethod {
         source: 'core',
         id: 'users.get',
         name: 'users.get',
-        domain: 'users',
+        module: 'users',
         method: 'get',
         permission: 'users:read',
         mutates: false,
@@ -31,7 +31,7 @@ const METHODS: ManifestMethod[] = [
     coreMethod({
         id: 'notifications.list',
         name: 'notifications.list',
-        domain: 'notifications',
+        module: 'notifications',
         method: 'list',
         permission: null,
         sessionScoped: true,
@@ -39,7 +39,7 @@ const METHODS: ManifestMethod[] = [
     coreMethod({
         id: 'media.upload',
         name: 'media.upload',
-        domain: 'media',
+        module: 'media',
         method: 'upload',
         permission: 'media:create',
         mutates: true,
@@ -48,7 +48,7 @@ const METHODS: ManifestMethod[] = [
     coreMethod({
         id: 'settings.all',
         name: 'settings.all',
-        domain: 'settings',
+        module: 'settings',
         method: 'all',
         permission: 'settings:read',
         input: null,

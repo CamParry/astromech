@@ -25,7 +25,7 @@ function coreMethod(id: string): ManifestMethod {
         id,
         name: id,
         source: 'core',
-        domain: id.split('.')[0] ?? 'users',
+        module: id.split('.')[0] ?? 'users',
         method: id.split('.')[1] ?? 'query',
         permission: null,
         mutates: false,

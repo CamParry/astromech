@@ -42,7 +42,7 @@ const usersQuery: CoreManifestMethod = {
     name: 'users.query',
     summary: 'List users.',
     source: 'core',
-    domain: 'users',
+    module: 'users',
     method: 'query',
     permission: null,
     mutates: false,
@@ -71,7 +71,7 @@ const binaryMethod: CoreManifestMethod = {
     ...usersQuery,
     id: 'media.upload',
     name: 'media.upload',
-    domain: 'media',
+    module: 'media',
     method: 'upload',
     binaryInput: true,
 };

@@ -57,13 +57,13 @@ the field name and the local variables do.
 One branch, `manifest-and-admin-naming`, in a worktree at
 `../Astromech-worktrees/manifest-and-admin-naming`, one commit per rename.
 
-- [ ] `mount` → `namespace` on the manifest, its builder, the dispatch tool-name
+- [x] `mount` → `namespace` on the manifest, its builder, the dispatch tool-name
       branch, and the manifest version bump.
-- [ ] `EntriesMount` → `EntriesBinding`, with the file rename and every call
+- [x] `EntriesMount` → `EntriesBinding`, with the file rename and every call
       site.
-- [ ] `domain` → `module` on the manifest base, the dispatch lookups, and the two
+- [x] `domain` → `module` on the manifest base, the dispatch lookups, and the two
       parameters that carry it onward.
-- [ ] Update the `Mount` entry in `TERMINOLOGY.md`, or drop it: once the manifest
+- [x] Update the `Mount` entry in `TERMINOLOGY.md`, or drop it: once the manifest
       field is `namespace` and the admin type is `EntriesBinding`, "mount" means
       only the two ordinary things and needs no entry.
 - [ ] Full gate, plus `pnpm run check:boot`, since codegen output and tool

@@ -48,7 +48,7 @@ function notificationMethods(): CoreManifestMethod[] {
     const manifest = generateMethodManifest(resolveConfig(makeTestConfig()));
     return manifest.methods.filter(
         (m): m is CoreManifestMethod =>
-            m.source === 'core' && m.domain === 'notifications'
+            m.source === 'core' && m.module === 'notifications'
     );
 }
 

@@ -87,7 +87,7 @@ export function scopeMethods<S extends object>(
     service: S,
     contracts: ContractCatalogue,
     permissions: Permissions,
-    domain: string
+    module: string
 ): S {
     const scoped: ServiceRecord = {};
 
@@ -97,7 +97,7 @@ export function scopeMethods<S extends object>(
             continue;
         }
         const fn = value as ServiceFn;
-        const id = `${domain}.${key}`;
+        const id = `${module}.${key}`;
 
         scoped[key] = (...args: unknown[]): unknown => {
             const contract = contracts[key];

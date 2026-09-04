@@ -500,7 +500,7 @@ function coreMethod(
         id: `users.${name}`,
         name: `users.${name}`,
         source: 'core',
-        domain: 'users',
+        module: 'users',
         method: name,
         permission,
         mutates: false,
