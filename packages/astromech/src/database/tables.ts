@@ -9,7 +9,12 @@ import { settingsTable } from '@/settings/tables';
 // these value imports are ONLY so `CORE_TABLES` (bottom of file) can
 // reference the tables; the `export {...} from` blocks stay the public
 // re-export surface.
-import { rolesTable, usersTable } from '@/users/tables';
+import {
+    rolesTable,
+    userContentTable,
+    usersTable,
+    userVersionsTable,
+} from '@/users/tables';
 
 /**
  * Aggregate schema surface for Astromech — re-exports every table's
@@ -20,9 +25,16 @@ import { rolesTable, usersTable } from '@/users/tables';
 export {
     rolesTable,
     usersTable,
+    userContentTable,
+    userVersionsTable,
     type RoleRow,
     type NewRoleRow,
-    type UserRow,
+    type UserTableRow,
+    type NewUserTableRow,
+    type UserContentRow,
+    type NewUserContentRow,
+    type UserVersionRow,
+    type NewUserVersionRow,
 } from '@/users/tables';
 
 export {
@@ -141,6 +153,8 @@ export type NewPluginTrackingRow = TableInsert<typeof pluginsTable>;
 export const CORE_TABLES: Table[] = [
     rolesTable,
     usersTable,
+    userContentTable,
+    userVersionsTable,
     entriesTable,
     entryContentTable,
     entryVersionsTable,

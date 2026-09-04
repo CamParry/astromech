@@ -272,7 +272,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`value\` text,
             \`updated_at\` text NOT NULL,
             \`updated_by\` text,
-            CONSTRAINT \`settings_updated_by_fkey\` FOREIGN KEY (\`updated_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE no action
+            CONSTRAINT \`settings_updated_by_fkey\` FOREIGN KEY (\`updated_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE set null
         )
     `.execute(db);
     await sql`
@@ -282,13 +282,48 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`name\` text NOT NULL,
             \`email_verified\` integer DEFAULT 0 NOT NULL,
             \`image\` text,
-            \`fields\` text,
             \`role\` text NOT NULL,
             \`created_at\` text NOT NULL,
             \`updated_at\` text NOT NULL
         )
     `.execute(db);
     await sql`CREATE UNIQUE INDEX \`users_email_unique\` ON \`users\` (\`email\`)`.execute(
+        db
+    );
+    await sql`
+        CREATE TABLE \`user_content\` (
+            \`id\` text PRIMARY KEY NOT NULL,
+            \`user_id\` text NOT NULL,
+            \`locale\` text NOT NULL,
+            \`fields\` text,
+            \`created_at\` text NOT NULL,
+            \`updated_at\` text NOT NULL,
+            \`created_by\` text,
+            \`updated_by\` text,
+            CONSTRAINT \`user_content_user_id_fkey\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE cascade,
+            CONSTRAINT \`user_content_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE set null,
+            CONSTRAINT \`user_content_updated_by_fkey\` FOREIGN KEY (\`updated_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE set null
+        )
+    `.execute(db);
+    await sql`CREATE INDEX \`idx_user_content_user\` ON \`user_content\` (\`user_id\`)`.execute(
+        db
+    );
+    await sql`CREATE UNIQUE INDEX \`user_content_user_locale_unique\` ON \`user_content\` (\`user_id\`,\`locale\`)`.execute(
+        db
+    );
+    await sql`
+        CREATE TABLE \`user_versions\` (
+            \`id\` text PRIMARY KEY NOT NULL,
+            \`content_id\` text NOT NULL,
+            \`version\` integer NOT NULL,
+            \`fields\` text,
+            \`created_at\` text NOT NULL,
+            \`created_by\` text,
+            CONSTRAINT \`user_versions_content_id_fkey\` FOREIGN KEY (\`content_id\`) REFERENCES \`user_content\`(\`id\`) ON UPDATE no action ON DELETE cascade,
+            CONSTRAINT \`user_versions_created_by_fkey\` FOREIGN KEY (\`created_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE set null
+        )
+    `.execute(db);
+    await sql`CREATE INDEX \`idx_user_versions_content\` ON \`user_versions\` (\`content_id\`,\`version\`)`.execute(
         db
     );
 }

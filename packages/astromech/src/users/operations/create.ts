@@ -33,7 +33,7 @@ export async function createUser(params: { data: UserCreateData }): Promise<User
             lookups: fieldLookupsFromRecords({
                 load: async () => (await queryUsers({ limit: 'all' })).data,
                 getId: (r) => r.id,
-                getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
+                getFields: (r) => r.fields as Record<string, unknown>,
                 entryTypes: (relIds) => existingEntryTypes(relIds),
             }),
             ...(validate ? { validate } : {}),
@@ -46,12 +46,17 @@ export async function createUser(params: { data: UserCreateData }): Promise<User
         parsedFields as JsonObject
     );
 
-    const created = await createUserRepository().create({
-        email: validated.email,
-        name: validated.name,
-        ...(Object.keys(fields).length > 0 && { fields }),
-        role: validated.role,
-    });
+    // The content repository wraps the account row and its content row in one
+    // transaction.
+    const userId = (await getCurrentUser())?.id ?? null;
+    const created = await createUserRepository().create(
+        {
+            email: validated.email,
+            name: validated.name,
+            role: validated.role,
+        },
+        { fields, createdBy: userId, updatedBy: userId }
+    );
     await indexUserRelationships(created.id, fields);
     return toUser(created);
 }

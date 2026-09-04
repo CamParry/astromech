@@ -28,11 +28,12 @@
  * records the acting user, so a route test acting as `testUser` needs that row
  * to exist — `mount-router.ts`'s `seedTestUser` inserts it via `createTestUser`.
  */
-import type { UserRow } from '@/database/tables';
+import type { UserTableRow } from '@/database/tables';
 import type { DB } from '@/database/types';
 import type {
     AstromechConfig,
     DatabaseDriver,
+    JsonObject,
     PluginDefinition,
     ResolvedConfig,
     StorageDriver,
@@ -52,7 +53,7 @@ import { resolveConfig } from '@/config/resolve';
 import { decodeWith, encodeWith } from '@/database/codec';
 import { setDatabaseDriver } from '@/database/driver-registry';
 import { setDb } from '@/database/registry';
-import { usersTable } from '@/database/tables';
+import { userContentTable, usersTable } from '@/database/tables';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { runWithContext } from '@/request-context/request-context';
@@ -281,23 +282,42 @@ export function registerTestPlugins(
     registerPlugins(plugins, resolved);
 }
 
-/** Insert a user row (entries reference users via nullable FKs). */
+/**
+ * Insert a user row and its content row (entries reference users via nullable
+ * FKs). `fields` and `locale` go on the content row; `locale` defaults to `en`
+ * rather than reading the config, because a route test seeds its acting user
+ * before `setupTestConfig` runs.
+ */
 export async function createTestUser(
     db: Db,
-    overrides: Partial<UserRow> = {}
-): Promise<UserRow> {
+    overrides: Partial<UserTableRow> & { fields?: JsonObject; locale?: string } = {}
+): Promise<UserTableRow> {
+    const { fields, locale, ...account } = overrides;
     const row = await db
         .insertInto('users')
         .values(
             encodeWith(usersTable, {
-                email: overrides.email ?? `user-${crypto.randomUUID()}@test.dev`,
-                name: overrides.name ?? 'Test User',
-                role: overrides.role ?? DEFAULT_ROLE_SLUG,
-                ...overrides,
+                email: account.email ?? `user-${crypto.randomUUID()}@test.dev`,
+                name: account.name ?? 'Test User',
+                role: account.role ?? DEFAULT_ROLE_SLUG,
+                ...account,
             })
         )
         .returningAll()
         .executeTakeFirst();
     if (!row) throw new Error('failed to insert test user');
-    return decodeWith(usersTable, row);
+    const user = decodeWith(usersTable, row);
+
+    await db
+        .insertInto('userContent')
+        .values(
+            encodeWith(userContentTable, {
+                userId: user.id,
+                locale: locale ?? 'en',
+                fields: fields ?? {},
+            }) as never
+        )
+        .execute();
+
+    return user;
 }

@@ -247,7 +247,7 @@ async function checkUsers(report: ValidationReport): Promise<void> {
     for (const row of rows) {
         report.rowsChecked += 1;
         const processed = await safeParseFields(
-            (row.fields ?? {}) as Record<string, unknown>,
+            row.fields as Record<string, unknown>,
             definitions,
             {
                 operation: 'update',
@@ -256,8 +256,7 @@ async function checkUsers(report: ValidationReport): Promise<void> {
                 lookups: fieldLookupsFromRecords({
                     load,
                     getId: (record) => record.id,
-                    getFields: (record) =>
-                        (record.fields ?? {}) as Record<string, unknown>,
+                    getFields: (record) => record.fields as Record<string, unknown>,
                     excludeId: row.id,
                     entryTypes: (ids) => existingEntryTypes(ids),
                 }),

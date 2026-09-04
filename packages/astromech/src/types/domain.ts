@@ -209,10 +209,15 @@ export type User = {
     name: string;
     emailVerified: boolean;
     image: string | null;
-    fields: JsonObject | null;
+    /** The locale the content came from. */
+    locale: string;
+    /** Locales that have a content row, this one included. Sorted. */
+    locales: string[];
+    fields: JsonObject;
     /** The slug of the user's role, resolved against the config. */
     role: string;
     createdAt: Date;
+    /** The account row's last change: profile, email, role. */
     updatedAt: Date;
 };
 

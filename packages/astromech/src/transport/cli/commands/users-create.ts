@@ -42,15 +42,18 @@ export default defineCommand({
         const accountId = crypto.randomUUID();
         const hashedPassword = await hashPassword(password);
 
-        await createUserRepository().create({
-            id: userId,
-            email,
-            name,
-            emailVerified: true,
-            role,
-            createdAt: now,
-            updatedAt: now,
-        });
+        await createUserRepository().create(
+            {
+                id: userId,
+                email,
+                name,
+                emailVerified: true,
+                role,
+                createdAt: now,
+                updatedAt: now,
+            },
+            { fields: {} }
+        );
 
         // `accounts` is a better-auth table with no repository of its own, and
         // it is not the `users` domain's to own — so this one insert stays raw.

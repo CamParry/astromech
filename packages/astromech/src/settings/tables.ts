@@ -6,7 +6,7 @@ export const settingsTable = defineTable('settings', ({ col }) => ({
     key: col.text({ primaryKey: true }),
     value: col.json<JsonValue>(),
     updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
-    updatedBy: col.reference('users'),
+    updatedBy: col.reference('users', { onDelete: 'set null' }),
 }));
 
 export type SettingRow = TableSelect<typeof settingsTable>;

@@ -636,6 +636,21 @@ async function upsertUser(email: string, name: string, role: string): Promise<st
         )
         .execute();
 
+    // Every path that inserts a `users` row writes its content row with it.
+    await db
+        .insertInto('userContent')
+        .values(
+            schema.encodeWith(schema.userContentTable, {
+                id: userId,
+                userId,
+                locale: 'en',
+                fields: {},
+                createdAt: now,
+                updatedAt: now,
+            })
+        )
+        .execute();
+
     await db
         .insertInto('accounts')
         .values(

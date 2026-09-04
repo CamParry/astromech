@@ -7,9 +7,17 @@
  * which role each one turns away.
  */
 
+import type { DB } from '@/database/types';
 import type { Role, User } from '@/types/index';
+import type { Kysely } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { adminRole, mountRouter, roleWith, testUser } from '@tests/mount-router';
+import {
+    adminRole,
+    mountRouter,
+    roleWith,
+    seedTestUser,
+    testUser,
+} from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { usersRouter } from '@/transport/http/routes/users';
@@ -30,8 +38,10 @@ async function makeUser(email: string, name: string, role?: string): Promise<Use
     });
 }
 
+let db: Kysely<DB>;
+
 beforeEach(async () => {
-    await createTestDb();
+    db = await createTestDb();
     setupTestConfig(makeTestConfig());
 });
 
@@ -140,6 +150,12 @@ describe('GET /users/:id', () => {
 });
 
 describe('POST /users', () => {
+    // Create stamps `created_by`/`updated_by` with the acting user, so the row
+    // has to exist or the foreign key fails.
+    beforeEach(async () => {
+        await seedTestUser(db);
+    });
+
     it('creates and returns { data: user } with 201', async () => {
         const res = await app().request('/users', {
             method: 'POST',

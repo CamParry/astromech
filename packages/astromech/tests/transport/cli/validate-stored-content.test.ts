@@ -281,9 +281,10 @@ describe('validateStoredContent', () => {
                 fields: { nickname: 'ok' },
             },
         });
-        await createUserRepository().update(user.id, {
-            fields: { nickname: 'far too long' },
-        });
+        await createUserRepository().update(
+            { id: user.id },
+            { fields: { nickname: 'far too long' } }
+        );
 
         const report = await validateStoredContent();
 

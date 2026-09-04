@@ -39,9 +39,6 @@ export async function collectUserRelationshipSources(): Promise<
     const rows = await createUserRepository().list();
     return rows.map((row) => ({
         source: { id: row.id, kind: 'user' as const },
-        edges: collectRelationshipEdges(
-            definitions,
-            (row.fields ?? {}) as unknown as JsonObject
-        ),
+        edges: collectRelationshipEdges(definitions, row.fields),
     }));
 }

@@ -12,6 +12,7 @@ import type { Kysely } from 'kysely';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { getDefaultContentLocale } from '@/config/content-locale';
 import { decodeWith } from '@/database/codec';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { getAuth } from '@/users/auth';
@@ -43,6 +44,29 @@ describe('better-auth email signup', () => {
 
         expect(row.role).toBe(DEFAULT_ROLE_SLUG);
         expect(row.role).not.toBe('admin');
+    });
+
+    // better-auth's insert is not our write path, so the content row every
+    // other create path writes comes from `databaseHooks.user.create.after`.
+    it('writes the default-locale content row for the new user', async () => {
+        await getAuth().api.signUpEmail({
+            body: { email: 'content@test.dev', password: 'password123', name: 'Content' },
+        });
+
+        const user = await db
+            .selectFrom('users')
+            .select('id')
+            .where('email', '=', 'content@test.dev')
+            .executeTakeFirstOrThrow();
+
+        const rows = await db
+            .selectFrom('userContent')
+            .select(['locale', 'fields'])
+            .where('userId', '=', user.id)
+            .execute();
+
+        expect(rows).toHaveLength(1);
+        expect(rows[0]?.locale).toBe(getDefaultContentLocale());
     });
 
     // `input: false` makes better-auth substitute the declared default for
@@ -109,11 +133,14 @@ describe('better-auth email signup', () => {
         await getAuth().api.signUpEmail({
             body: { email: 'stamp@test.dev', password: 'password123', name: 'Stamp' },
         });
-        await createUserRepository().create({
-            email: 'ours@test.dev',
-            name: 'Ours',
-            role: DEFAULT_ROLE_SLUG,
-        });
+        await createUserRepository().create(
+            {
+                email: 'ours@test.dev',
+                name: 'Ours',
+                role: DEFAULT_ROLE_SLUG,
+            },
+            { fields: {} }
+        );
 
         const { rows } = await sql<{ email: string; kind: string; value: unknown }>`
             SELECT email, typeof(created_at) AS kind, created_at AS value

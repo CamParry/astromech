@@ -5,6 +5,7 @@ import * as m0001 from './0001_entry_content';
 import * as m0002 from './0002_globals';
 import * as m0003 from './0003_media-content';
 import * as m0004 from './0004_users-role';
+import * as m0005 from './0005_user-content';
 
 export const migrationProvider: MigrationProvider = {
     async getMigrations() {
@@ -14,6 +15,7 @@ export const migrationProvider: MigrationProvider = {
             '0002_globals': m0002,
             '0003_media-content': m0003,
             '0004_users-role': m0004,
+            '0005_user-content': m0005,
         };
     },
 };

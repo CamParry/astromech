@@ -6,8 +6,11 @@
 
 import type { Auth, BetterAuthOptions } from 'better-auth';
 import { betterAuth } from 'better-auth';
+import { getDefaultContentLocale } from '@/config/content-locale';
 import { getConfig } from '@/config/registry';
 import { getDatabaseDriverOrThrow } from '@/database/driver-registry';
+import { createRepository } from '@/database/repository/create-repository';
+import { userContentTable } from '@/database/tables';
 import { resolveEnv } from '@/env';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { createRegistry } from '@/registry';
@@ -35,6 +38,22 @@ function buildAuth(): Auth<BetterAuthOptions> {
         database: {
             dialect: getDatabaseDriverOrThrow().createDialect(),
             type: 'sqlite',
+        },
+        databaseHooks: {
+            user: {
+                create: {
+                    // better-auth inserts the account row through its own
+                    // Kysely instance, so the default-locale content row that
+                    // every other create path writes is written here.
+                    after: async (user: { id: string }) => {
+                        await createRepository(userContentTable).create({
+                            userId: user.id,
+                            locale: getDefaultContentLocale(),
+                            fields: {},
+                        });
+                    },
+                },
+            },
         },
         user: {
             modelName: 'users',

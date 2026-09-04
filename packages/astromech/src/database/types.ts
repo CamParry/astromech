@@ -24,7 +24,9 @@ import type {
     relationshipsTable,
     rolesTable,
     settingsTable,
+    userContentTable,
     usersTable,
+    userVersionsTable,
 } from '@/database/tables';
 import type { Kysely, Transaction } from 'kysely';
 
@@ -32,6 +34,8 @@ export type DB = {
     // Ours — derived from defineTable tables
     roles: KyselyOf<typeof rolesTable>;
     users: KyselyOf<typeof usersTable>;
+    userContent: KyselyOf<typeof userContentTable>;
+    userVersions: KyselyOf<typeof userVersionsTable>;
     entries: KyselyOf<typeof entriesTable>;
     entryContent: KyselyOf<typeof entryContentTable>;
     entryVersions: KyselyOf<typeof entryVersionsTable>;

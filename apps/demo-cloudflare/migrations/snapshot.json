@@ -1387,10 +1387,185 @@
                     "column": "updated_by",
                     "targetTable": "users",
                     "targetColumn": "id",
-                    "onDelete": "no action"
+                    "onDelete": "set null"
                 }
             ],
             "indexes": []
+        },
+        "user_content": {
+            "name": "user_content",
+            "columns": [
+                {
+                    "key": "id",
+                    "name": "id",
+                    "kind": "id",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": true
+                },
+                {
+                    "key": "userId",
+                    "name": "user_id",
+                    "kind": "reference",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "locale",
+                    "name": "locale",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "fields",
+                    "name": "fields",
+                    "kind": "json",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "createdAt",
+                    "name": "created_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "updatedAt",
+                    "name": "updated_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "createdBy",
+                    "name": "created_by",
+                    "kind": "reference",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "updatedBy",
+                    "name": "updated_by",
+                    "kind": "reference",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                }
+            ],
+            "fks": [
+                {
+                    "column": "user_id",
+                    "targetTable": "users",
+                    "targetColumn": "id",
+                    "onDelete": "cascade"
+                },
+                {
+                    "column": "created_by",
+                    "targetTable": "users",
+                    "targetColumn": "id",
+                    "onDelete": "set null"
+                },
+                {
+                    "column": "updated_by",
+                    "targetTable": "users",
+                    "targetColumn": "id",
+                    "onDelete": "set null"
+                }
+            ],
+            "indexes": [
+                {
+                    "name": "idx_user_content_user",
+                    "columns": ["user_id"],
+                    "unique": false
+                },
+                {
+                    "name": "user_content_user_locale_unique",
+                    "columns": ["user_id", "locale"],
+                    "unique": true
+                }
+            ]
+        },
+        "user_versions": {
+            "name": "user_versions",
+            "columns": [
+                {
+                    "key": "id",
+                    "name": "id",
+                    "kind": "id",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": true
+                },
+                {
+                    "key": "contentId",
+                    "name": "content_id",
+                    "kind": "reference",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "version",
+                    "name": "version",
+                    "kind": "integer",
+                    "type": "integer",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "fields",
+                    "name": "fields",
+                    "kind": "json",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "createdAt",
+                    "name": "created_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "createdBy",
+                    "name": "created_by",
+                    "kind": "reference",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                }
+            ],
+            "fks": [
+                {
+                    "column": "content_id",
+                    "targetTable": "user_content",
+                    "targetColumn": "id",
+                    "onDelete": "cascade"
+                },
+                {
+                    "column": "created_by",
+                    "targetTable": "users",
+                    "targetColumn": "id",
+                    "onDelete": "set null"
+                }
+            ],
+            "indexes": [
+                {
+                    "name": "idx_user_versions_content",
+                    "columns": ["content_id", "version"],
+                    "unique": false
+                }
+            ]
         },
         "users": {
             "name": "users",
@@ -1432,14 +1607,6 @@
                     "key": "image",
                     "name": "image",
                     "kind": "text",
-                    "type": "text",
-                    "notNull": false,
-                    "primaryKey": false
-                },
-                {
-                    "key": "fields",
-                    "name": "fields",
-                    "kind": "json",
                     "type": "text",
                     "notNull": false,
                     "primaryKey": false

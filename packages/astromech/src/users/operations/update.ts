@@ -2,6 +2,7 @@ import type { JsonObject, User } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
+import { AstromechError } from '@/errors/astromech-error';
 import { parseInput } from '@/errors/validation';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenFieldNodes } from '@/fields/flatten';
@@ -43,7 +44,7 @@ export async function updateUser(params: {
         const patch = validatedData.fields as Record<string, unknown>;
         const patchedNames = Object.keys(patch).filter((k) => patch[k] !== undefined);
         const merged = mergePatch(
-            current?.fields as Record<string, unknown> | null | undefined,
+            current?.fields as Record<string, unknown> | undefined,
             patch
         );
         const parsed = await parseFields(merged, fieldDefs, {
@@ -53,7 +54,7 @@ export async function updateUser(params: {
             lookups: fieldLookupsFromRecords({
                 load: async () => (await queryUsers({ limit: 'all' })).data,
                 getId: (r) => r.id,
-                getFields: (r) => (r.fields ?? {}) as Record<string, unknown>,
+                getFields: (r) => r.fields as Record<string, unknown>,
                 excludeId: id,
                 entryTypes: (relIds) => existingEntryTypes(relIds),
             }),
@@ -68,17 +69,28 @@ export async function updateUser(params: {
         validatedData.fields = pruned.values;
     }
 
-    // An explicitly-`undefined` key means "leave this column alone"; the
-    // repository stamps `updatedAt`.
-    const updated = await createUserRepository().update(id, {
-        name: validatedData.name,
-        email: validatedData.email,
-        fields: validatedData.fields as JsonObject | undefined,
-        role: validatedData.role,
-    });
+    const repository = createUserRepository();
+    const { name, email, role } = validatedData;
+
+    // The account columns and the content row are two writes, each made only
+    // when the patch names that part.
+    if (name !== undefined || email !== undefined || role !== undefined) {
+        await repository.updateAccount(id, { name, email, role });
+    }
+    if (validatedData.fields !== undefined) {
+        const userId = (await getCurrentUser())?.id ?? null;
+        await repository.update(
+            { id },
+            { fields: validatedData.fields as JsonObject, updatedBy: userId }
+        );
+    }
+
     // An update that never touched `fields` must leave the index alone.
     if (validatedData.fields !== undefined) {
         await indexUserRelationships(id, validatedData.fields as JsonObject);
     }
+
+    const updated = await repository.get(id);
+    if (!updated) throw new AstromechError(`User '${id}' not found`);
     return toUser(updated);
 }

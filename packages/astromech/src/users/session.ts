@@ -9,6 +9,7 @@ import { getConfig } from '@/config/registry';
 import { resolveRole } from '@/permissions/roles';
 import { log } from '@/utilities/log';
 import { getAuth } from './auth';
+import { toUser } from './internal/to-user';
 import { createUserRepository } from './repository';
 
 /** What Better Auth's `getSession` resolves to — null when there is no session. */
@@ -33,17 +34,7 @@ export async function getSession(
     const userRow = await createUserRepository().get(session.user.id);
     if (!userRow) return null;
 
-    const user: User = {
-        id: userRow.id,
-        email: userRow.email,
-        name: userRow.name,
-        emailVerified: userRow.emailVerified,
-        image: userRow.image,
-        fields: (userRow.fields as User['fields']) ?? null,
-        role: userRow.role,
-        createdAt: userRow.createdAt,
-        updatedAt: userRow.updatedAt,
-    };
+    const user = toUser(userRow);
 
     // A role the config no longer defines refuses the session rather than
     // resolving to something. Removing a role from `astromech.config.ts` logs
