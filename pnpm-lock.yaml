@@ -83,6 +83,12 @@ importers:
       '@astromech/seo':
         specifier: workspace:*
         version: link:../../packages/plugins/seo
+      '@libsql/client':
+        specifier: ^0.17.2
+        version: 0.17.4
+      '@libsql/kysely-libsql':
+        specifier: ^0.4.1
+        version: 0.4.1(kysely@0.28.17)
       '@tailwindcss/vite':
         specifier: ^4.3.1
         version: 4.3.3(vite@7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)(yaml@2.9.0))
@@ -222,12 +228,6 @@ importers:
       '@hono/zod-openapi':
         specifier: ^1.2.3
         version: 1.6.0(hono@4.13.2)(zod@4.4.3)
-      '@libsql/client':
-        specifier: ^0.17.2
-        version: 0.17.4
-      '@libsql/kysely-libsql':
-        specifier: ^0.4.1
-        version: 0.4.1(kysely@0.28.17)
       '@react-email/components':
         specifier: ^1.0.10
         version: 1.0.12(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -270,12 +270,6 @@ importers:
       ai:
         specifier: ^7.0.51
         version: 7.0.65(zod@4.4.3)
-      aws4fetch:
-        specifier: ^1.0.20
-        version: 1.0.20
-      better-auth:
-        specifier: ^1.5.5
-        version: 1.6.28(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(vitest@4.1.10(@types/node@22.20.1)(happy-dom@20.11.2)(vite@7.3.6(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)(yaml@2.9.0)))
       blurhash:
         specifier: ^2.0.5
         version: 2.0.5
@@ -303,9 +297,6 @@ importers:
       jiti:
         specifier: ^2.6.1
         version: 2.7.0
-      kysely:
-        specifier: ^0.28.14
-        version: 0.28.17
       linkedom:
         specifier: ^0.18.13
         version: 0.18.13
@@ -318,21 +309,12 @@ importers:
       nodemailer:
         specifier: ^7.0.0
         version: 7.0.13
-      react:
-        specifier: ^19.0.0
-        version: 19.2.8
       react-colorful:
         specifier: ^5.6.1
         version: 5.8.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      react-dom:
-        specifier: ^19.0.0
-        version: 19.2.8(react@19.2.8)
       react-i18next:
         specifier: ^16.6.0
         version: 16.6.6(i18next@25.10.10(typescript@5.9.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@5.9.3)
-      sharp:
-        specifier: ^0.35.1
-        version: 0.35.3(@types/node@22.20.1)
       ulidx:
         specifier: ^2.4.1
         version: 2.4.1
@@ -340,6 +322,12 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
+      '@libsql/client':
+        specifier: ^0.17.2
+        version: 0.17.4
+      '@libsql/kysely-libsql':
+        specifier: ^0.4.1
+        version: 0.4.1(kysely@0.28.17)
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.30.0(supports-color@10.2.2)(zod@4.4.3)
@@ -367,15 +355,33 @@ importers:
       astro:
         specifier: ^6.0.8
         version: 6.4.8(@types/node@22.20.1)(aws4fetch@1.0.20)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.62.4)(supports-color@10.2.2)(tsx@4.23.12)(yaml@2.9.0)
+      aws4fetch:
+        specifier: ^1.0.20
+        version: 1.0.20
+      better-auth:
+        specifier: ^1.5.5
+        version: 1.6.28(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(vitest@4.1.10(@types/node@22.20.1)(happy-dom@20.11.2)(vite@7.3.6(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)(yaml@2.9.0)))
       eslint:
         specifier: ^10.8.1
         version: 10.8.1(jiti@2.7.0)(supports-color@10.2.2)
       happy-dom:
         specifier: ^20.10.4
         version: 20.11.2
+      kysely:
+        specifier: ^0.28.14
+        version: 0.28.17
       prettier:
         specifier: 3.8.1
         version: 3.8.1
+      react:
+        specifier: ^19.0.0
+        version: 19.2.8
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.8(react@19.2.8)
+      sharp:
+        specifier: ^0.35.1
+        version: 0.35.3(@types/node@22.20.1)
       stylelint:
         specifier: ^17.14.1
         version: 17.14.1(supports-color@10.2.2)(typescript@5.9.3)

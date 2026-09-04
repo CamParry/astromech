@@ -68,20 +68,20 @@ which both demos also declare.
 - [x] Give each of the five plugins a `test` and `test:run` script, and a
       `tests/` directory of its own. The core suite keeps only what tests the
       plugin **runtime** (`tests/plugins/runtime/`), which is core's code.
-- [ ] Bring `astromech` onto the same version as the rest, or move the rest onto
+- [x] Bring `astromech` onto the same version as the rest, or move the rest onto
       its. One decision, applied to all eight.
-- [ ] Add `repository` (with `directory`), `homepage` and `bugs` to all eight
+- [x] Add `repository` (with `directory`), `homepage` and `bugs` to all eight
       package manifests, and fix the repo in `.changeset/config.json`. Add
       `keywords` and `author` where they are missing.
-- [ ] Write `README.md` for `packages/astromech` and for the repository root,
+- [x] Write `README.md` for `packages/astromech` and for the repository root,
       and add `README.md` to core's `files`.
-- [ ] Decide, per dependency, which of the forty-seven are genuinely required to
+- [x] Decide, per dependency, which of the forty-seven are genuinely required to
       boot and which belong to a subpath a consumer opts into. The candidates
       are the five in the table above plus `react`, `react-dom`, `better-auth`
       and `kysely`. An optional peer with `peerDependenciesMeta.optional` is the
       pattern already used for `nodemailer`, `wrangler` and
       `@modelcontextprotocol/sdk`.
-- [ ] `pnpm run check:node-imports` has to keep passing for every subpath after
+- [x] `pnpm run check:node-imports` has to keep passing for every subpath after
       the move, which is what proves an optional peer is genuinely reachable
       when installed.
 

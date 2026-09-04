@@ -29,6 +29,9 @@ v1 is SQLite-only. Postgres and MySQL are a future major, not a flag.
 
 ## `libsql()`
 
+Install `@libsql/client` and `@libsql/kysely-libsql` alongside `astromech`; both
+are optional peer dependencies that only this driver loads.
+
 ```ts
 import { libsql } from 'astromech/database/libsql';
 

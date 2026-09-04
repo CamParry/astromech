@@ -281,6 +281,21 @@ subpaths can move, because the config half loads in plain Node with no alias and
 no TypeScript. Rejected: pointing `types` at `src` with relative specifiers,
 de-aliasing 825 `@/` specifiers, and Node `#src/*` subpath imports.
 
+**A dependency reached only through an opt-in subpath is an optional peer, and
+one the site already instantiates is a required peer.** `sharp`,
+`@libsql/client`, `@libsql/kysely-libsql` and `aws4fetch` each back a single
+driver subpath, so they sit in `peerDependencies` with
+`peerDependenciesMeta.optional`: a Workers site installs no `sharp` binary, and
+`check:node-imports` loads each of those subpaths to prove the peer is reachable
+when a site does install it. `react`, `react-dom`, `better-auth` and `kysely`
+are required peers, so the site and the admin share one copy of each; a second
+React is what `admin/support/ui-instance-guard.ts` exists to detect, and a
+second `kysely` or `better-auth` splits the query builder types and the session.
+`linkedom` stays a plain dependency because the root export imports it, so every
+site loads it whatever it configures. Rejected: keeping all of them as
+dependencies, which ships tens of megabytes of native binary to sites that never
+transform an image.
+
 **Codegen emits `export type`, not `export interface`**, so a generated field
 type gets an implicit index signature and satisfies `Entry['fields']`. Rejected:
 a hand-added `[k: string]: unknown`, which reopens the type to typos.

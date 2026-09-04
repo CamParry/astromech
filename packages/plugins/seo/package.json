@@ -3,7 +3,20 @@
     "version": "0.1.0",
     "type": "module",
     "description": "Search metadata, sitemap and SEO health dashboard for Astromech.",
+    "author": "Cam Parry",
     "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/CamParry/astromech.git",
+        "directory": "packages/plugins/seo"
+    },
+    "homepage": "https://github.com/CamParry/astromech/tree/main/packages/plugins/seo#readme",
+    "bugs": "https://github.com/CamParry/astromech/issues",
+    "keywords": [
+        "astromech",
+        "astromech-plugin",
+        "seo"
+    ],
     "sideEffects": [
         "**/*.css"
     ],

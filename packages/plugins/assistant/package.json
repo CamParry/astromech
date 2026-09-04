@@ -3,7 +3,20 @@
     "version": "0.1.0",
     "type": "module",
     "description": "An AI assistant for the Astromech admin.",
+    "author": "Cam Parry",
     "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/CamParry/astromech.git",
+        "directory": "packages/plugins/assistant"
+    },
+    "homepage": "https://github.com/CamParry/astromech/tree/main/packages/plugins/assistant#readme",
+    "bugs": "https://github.com/CamParry/astromech/issues",
+    "keywords": [
+        "astromech",
+        "astromech-plugin",
+        "ai-assistant"
+    ],
     "sideEffects": [
         "**/*.css"
     ],

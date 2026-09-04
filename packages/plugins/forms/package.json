@@ -3,7 +3,20 @@
     "version": "0.1.0",
     "type": "module",
     "description": "Forms with runtime-composed fields, a public submission API, and spam protection for Astromech.",
+    "author": "Cam Parry",
     "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/CamParry/astromech.git",
+        "directory": "packages/plugins/forms"
+    },
+    "homepage": "https://github.com/CamParry/astromech/tree/main/packages/plugins/forms#readme",
+    "bugs": "https://github.com/CamParry/astromech/issues",
+    "keywords": [
+        "astromech",
+        "astromech-plugin",
+        "forms"
+    ],
     "sideEffects": false,
     "exports": {
         ".": {

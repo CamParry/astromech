@@ -95,6 +95,9 @@ binding, e.g. `r2({ bucket: env.MY_BUCKET })` inside a Worker.
 
 ## `s3()`
 
+Install `aws4fetch` alongside `astromech`; it is an optional peer dependency
+that only this driver loads.
+
 ```ts
 import { s3 } from 'astromech/storage/s3';
 
@@ -193,6 +196,9 @@ set `media.access: 'public'`, or use a different image driver (e.g. `sharp()`).
 That driver hands your own media-route URL to Cloudflare's network and lets
 Cloudflare fetch the origin. A private route is exactly what refuses that
 request, so every optimised image would fail at the edge.
+
+`sharp()` needs the `sharp` package installed alongside `astromech`; it is an
+optional peer dependency that only that driver loads.
 
 ## Range requests
 

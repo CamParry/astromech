@@ -23,6 +23,8 @@
         "@astromech/menus": "workspace:*",
         "@astromech/redirects": "workspace:*",
         "@astromech/seo": "workspace:*",
+        "@libsql/client": "^0.17.2",
+        "@libsql/kysely-libsql": "^0.4.1",
         "@tailwindcss/vite": "^4.3.1",
         "astro": "^6.0.8",
         "astromech": "workspace:*",

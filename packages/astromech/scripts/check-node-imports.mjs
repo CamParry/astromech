@@ -19,6 +19,12 @@ const SUBPATHS = [
     // The component kit. `astromech/ui` resolves to source in this repo and to
     // dist for npm (`DECISIONS.md`), so Node is pointed at what npm publishes.
     './dist/admin/components/ui/index.js',
+    // Each of these imports an optional peer (`sharp`, `@libsql/client` with
+    // `@libsql/kysely-libsql`, `aws4fetch`). Loading them proves the peer is
+    // reachable from the driver subpath when a site installs it.
+    'astromech/media/image/sharp',
+    'astromech/database/libsql',
+    'astromech/storage/s3',
 ];
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');

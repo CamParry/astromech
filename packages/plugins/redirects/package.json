@@ -3,7 +3,20 @@
     "version": "0.1.0",
     "type": "module",
     "description": "URL redirects as a first-class entry type for Astromech.",
+    "author": "Cam Parry",
     "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/CamParry/astromech.git",
+        "directory": "packages/plugins/redirects"
+    },
+    "homepage": "https://github.com/CamParry/astromech/tree/main/packages/plugins/redirects#readme",
+    "bugs": "https://github.com/CamParry/astromech/issues",
+    "keywords": [
+        "astromech",
+        "astromech-plugin",
+        "redirects"
+    ],
     "sideEffects": false,
     "exports": {
         ".": {

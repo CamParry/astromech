@@ -3,8 +3,21 @@
     "version": "0.1.0",
     "type": "module",
     "description": "Schema-as-state migration engine for SQLite: snapshot in — DDL, diffs, and forward-only Kysely migration files out.",
-    "author": "Cam",
+    "author": "Cam Parry",
     "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/CamParry/astromech.git",
+        "directory": "packages/schema-engine"
+    },
+    "homepage": "https://github.com/CamParry/astromech/tree/main/packages/schema-engine#readme",
+    "bugs": "https://github.com/CamParry/astromech/issues",
+    "keywords": [
+        "kysely",
+        "sqlite",
+        "migrations",
+        "schema"
+    ],
     "sideEffects": false,
     "exports": {
         ".": {

@@ -19,8 +19,15 @@ the packages the runtime shares with it. Install these alongside:
 pnpm add react react-dom better-auth kysely
 ```
 
-Some drivers need a package of their own: the SMTP email driver loads
-`nodemailer`, an optional peer dependency, and only when you configure it.
+Some drivers need a package of their own, as an optional peer dependency you
+install only with the subpath that loads it:
+
+| Subpath                       | Install                                |
+| ----------------------------- | -------------------------------------- |
+| `astromech/database/libsql`   | `@libsql/client @libsql/kysely-libsql` |
+| `astromech/storage/s3`        | `aws4fetch`                            |
+| `astromech/media/image/sharp` | `sharp`                                |
+| `astromech/email/smtp`        | `nodemailer`                           |
 
 ## Setup
 
