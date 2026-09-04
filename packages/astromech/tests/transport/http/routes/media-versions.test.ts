@@ -15,7 +15,7 @@ import { createMediaRepository } from '@/media/repository';
 import { mediaService } from '@/media/service';
 import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
-import { makeTranslatableMediaConfig } from '../../../services/media/media-config';
+import { makeTranslatableMediaConfig } from '../../../media/media-config';
 
 const noopStorage: StorageDriver = {
     name: 'noop',

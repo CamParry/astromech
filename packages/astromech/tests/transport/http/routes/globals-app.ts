@@ -1,10 +1,10 @@
 /**
  * The config and the mounted router the globals route tests share.
  *
- * The globals themselves are the service tests' set (`tests/services/globals/
- * globals-config.ts`), so a route test names the same `site`, `contact`,
- * `banner` and `theme` the service tests do, plus one plugin global to prove a
- * qualified key reaches the same handlers.
+ * The globals themselves are the service tests' set
+ * (`tests/globals/globals-config.ts`), so a route test names the same `site`,
+ * `contact`, `banner` and `theme` the service tests do, plus one plugin global
+ * to prove a qualified key reaches the same handlers.
  */
 
 import type { AstromechConfig, PluginDefinition, Role } from '@/types/index';
@@ -12,7 +12,7 @@ import type { OpenAPIHono } from '@hono/zod-openapi';
 import type { RouteEnv } from '@tests/mount-router';
 import { adminRole, mountRouter } from '@tests/mount-router';
 import { createGlobalsRouter } from '@/transport/http/routes/globals';
-import { makeGlobalsConfig } from '../../../services/globals/globals-config';
+import { makeGlobalsConfig } from '../../../globals/globals-config';
 
 /** A plugin declaring one global, reached as `seo/settings`. */
 export const seoPlugin: PluginDefinition = {

@@ -35,20 +35,21 @@ tests core's plugin runtime and is correctly placed.
 
 ## The work
 
-- [ ] `tests/services/*` splits into `tests/entries/`, `tests/media/`,
+- [x] `tests/services/*` splits into `tests/entries/`, `tests/media/`,
       `tests/users/`, `tests/settings/` and `tests/notifications/`, merging with
       the existing `tests/entries/`.
-- [ ] `tests/db/` becomes `tests/database/`. `tests/images/` moves under
+- [x] `tests/db/` becomes `tests/database/`. `tests/images/` moves under
       `tests/media/serving/image/`.
-- [ ] `tests/builders/` splits between `tests/database/` and `tests/fields/`
-      along what each file actually builds.
+- [x] `tests/builders/` empties into `tests/fields/`: all three files build
+      fields and columns from `src/fields/`, none of them a table.
 - [ ] The four plugin suites move to their own packages (`publishing-hygiene.md`
       covers the scripts and the boundary). `tests/plugins/` keeps only
       `runtime/`, and the directory is renamed to match `src/plugins/runtime/`.
-- [ ] Every moved file's `@/` imports keep working, since the alias is rooted at
+      This box waits on `publishing-hygiene.md`.
+- [x] Every moved file's `@/` imports keep working, since the alias is rooted at
       `src/`. The relative imports that climb out of the package do not, which
       is the point of moving them.
-- [ ] Re-read both AGENTS.md claims once the tree matches, and delete the
+- [x] Re-read both AGENTS.md claims once the tree matches, and delete the
       parenthetical from the root gate table rather than restating the rule in
       two files.
 

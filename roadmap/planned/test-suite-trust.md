@@ -44,11 +44,9 @@ The problems sit at the edges and in the conventions:
 - **Wall-clock sleeps are the flake surface**: ~15 places use `setTimeout`
   where `waitFor`/`findBy*` (admin components) or `vi.setSystemTime` (timestamp
   separation in DB tests) belong.
-- **The tree and the docblocks describe an older codebase.**
-  `tests/services/` mirrors a `src/services/` that no longer exists, contrary
-  to the nested `AGENTS.md`, and roughly eight docblocks still narrate shipped
-  refactors ("Phase 2, slice 2b", "in-memory database" over a file-backed
-  harness, a dead cross-reference to `src/services/entries/service.test.ts`).
+- **The docblocks describe an older codebase.** Roughly eight of them still
+  narrate shipped refactors ("Phase 2, slice 2b", "in-memory database" over a
+  file-backed harness, a dead cross-reference to `src/services/entries/service.test.ts`).
 - **No conventions are written down**, and it shows: 196 `it('should …')`
   names in some files against declarative names elsewhere, 28 files on
   `@testing-library/react` against 21 on hand-rolled `createRoot`, barrel
@@ -75,9 +73,8 @@ being enforced by memory.
 - [ ] Delete `tests/plugins/redirects/schema.test.ts`, rewrite the weak
       assertions in `richtext-field.test.ts`, and add real redirects coverage:
       `service/redirects.ts` matching and `hooks/slug-change.ts`.
-- [ ] Sweep the stale docblocks, and make the tree claim true: either rename
-      `tests/services/` and `tests/db/` to mirror today's `src/`, or fix the
-      nested `AGENTS.md` to describe the layout that exists.
+- [ ] Sweep the stale docblocks. The tree itself now mirrors `src/`
+      ([test-tree-mirrors-src](test-tree-mirrors-src.md)).
 - [ ] Export the shared fixtures (`noopStorage`, `noopDriver`, the role
       helpers) from `_support/` and replace the ~22 local copies.
 - [ ] Give each first-party plugin package its own `tests/` directory and

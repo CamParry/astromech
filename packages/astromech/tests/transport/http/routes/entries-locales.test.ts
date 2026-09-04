@@ -6,7 +6,7 @@
  * that wiring: which row a read returns, that an update writes the translation
  * a locale has no row for yet, that a preview token reaches every locale, and
  * that a version list is per locale. The service policy behind each is pinned
- * in tests/services/entries/.
+ * in tests/entries/.
  *
  * `de` is the second locale `makeTestConfig` declares; `post` is its only
  * translatable type.

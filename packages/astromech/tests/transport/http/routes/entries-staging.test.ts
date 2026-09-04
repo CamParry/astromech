@@ -6,7 +6,7 @@
  * Mounts the root entries router in isolation with an injected user/role (Better
  * Auth sessions are out of scope here) against a config where `post` has the
  * `staging` capability enabled. The service layer's policy is pinned in
- * tests/services/entries/staging.test.ts — these tests own the route wiring:
+ * tests/entries/staging.test.ts — these tests own the route wiring:
  * status codes, the 409 duplicate-stage envelope (carrying `locale`), the
  * capability 409, and the permission matrix (merge = publish; the rest = update).
  *

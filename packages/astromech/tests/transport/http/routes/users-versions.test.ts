@@ -13,7 +13,7 @@ import { adminRole, mountRouter, roleWith, seedTestUser } from '@tests/mount-rou
 import { beforeEach, describe, expect, it } from 'vitest';
 import { usersRouter } from '@/transport/http/routes/users';
 import { usersService } from '@/users/service';
-import { makeTranslatableUsersConfig } from '../../../services/users/users-config';
+import { makeTranslatableUsersConfig } from '../../../users/users-config';
 
 /** The users router mounted in isolation, acting as `role`. */
 function app(role = adminRole) {

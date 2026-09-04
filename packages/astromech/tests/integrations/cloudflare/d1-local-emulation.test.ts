@@ -2,7 +2,7 @@
  * The D1 driver against Cloudflare's own D1 implementation, run locally through
  * wrangler's `getPlatformProxy()` (workerd over SQLite, no account, no network).
  *
- * `tests/db/drivers/d1.test.ts` covers the same driver against a hand-written
+ * `tests/database/drivers/d1.test.ts` covers the same driver against a hand-written
  * `D1DatabaseLike` fake, which can only prove the dialect asks for what we think
  * it asks for. This is the one file where the answers come back from D1 itself:
  * its result and `meta` shapes, and whether a migration chain really applies
