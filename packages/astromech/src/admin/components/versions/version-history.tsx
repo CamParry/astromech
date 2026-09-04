@@ -24,7 +24,7 @@ import { Panel } from '@/admin/components/ui/panel';
 import { authorName, useAuthorNames } from '@/admin/hooks/author-names';
 import { formatDatetime } from '@/utilities/dates';
 
-// Mount link bases are runtime strings; address `Link` by string `to`.
+// Binding link bases are runtime strings; address `Link` by string `to`.
 type LinkProps = Omit<React.ComponentProps<typeof RouterLink>, 'to'> & { to: string };
 const Link = RouterLink as unknown as (props: LinkProps) => React.ReactElement;
 

@@ -1,10 +1,10 @@
 /**
- * Shared entry create page body, parameterized by an `EntriesMount`; serves
+ * Shared entry create page body, parameterized by an `EntriesBinding`; serves
  * root and plugin-namespaced entry types. Two-column layout with title,
  * optional slug, and a status panel; non-default-locale creates prompt a modal.
  */
 
-import type { EntriesMount } from './mount';
+import type { EntriesBinding } from './binding';
 import type { Entry, EntryUpdateData } from '@/types/index';
 import { useNavigate } from '@tanstack/react-router';
 import React, { useState } from 'react';
@@ -47,7 +47,7 @@ type CreateMode = 'translate' | 'blank-in-entry' | 'standalone';
 
 type CreateLocaleModalProps = {
     open: boolean;
-    mount: EntriesMount;
+    binding: EntriesBinding;
     locale: string;
     defaultLocale: string;
     onCancel: () => void;
@@ -58,7 +58,7 @@ type CreateLocaleModalProps = {
 
 function CreateLocaleModal({
     open,
-    mount,
+    binding,
     locale,
     defaultLocale,
     onCancel,
@@ -73,11 +73,11 @@ function CreateLocaleModal({
     // Source entries are existing rows in the default locale (the dominant case).
     const { data: sourceList } = useEntriesQuery(
         {
-            type: mount.type,
+            type: binding.type,
             locale: defaultLocale,
             limit: 'all',
         },
-        { api: mount.api, cacheScope: mount.cacheScope }
+        { api: binding.api, cacheScope: binding.cacheScope }
     );
 
     const sourceEntries = sourceList?.data ?? [];
@@ -195,19 +195,19 @@ function RadioOption({
 }
 
 export function EntryNewPage({
-    mount,
+    binding,
     requestedLocale: requestedLocaleProp,
 }: {
-    mount: EntriesMount;
+    binding: EntriesBinding;
     /** Requested locale from the route search params; defaults to default locale. */
     requestedLocale: string | undefined;
 }): React.ReactElement {
-    const { type, api, cacheScope, config: entryType, basePath } = mount;
+    const { type, api, cacheScope, config: entryType, basePath } = binding;
     const navigate = useNavigate();
     const { toast } = useToast();
     const { t } = useTranslation();
     const { hasPermission } = usePermissions();
-    const canCreate = hasPermission(mount.permissionFor('create'));
+    const canCreate = hasPermission(binding.permissionFor('create'));
 
     const capabilities = entryType?.capabilities;
     const hasI18n = capabilities?.translatable === true;
@@ -323,7 +323,7 @@ export function EntryNewPage({
                 {isNonDefaultLocale && (
                     <CreateLocaleModal
                         open={modalOpen}
-                        mount={mount}
+                        binding={binding}
                         locale={requestedLocale}
                         defaultLocale={adminConfig.defaultLocale}
                         onCancel={handleModalCancel}

@@ -1,5 +1,5 @@
 /**
- * Plugin global edit route. Builds a plugin `GlobalsMount` and renders the
+ * Plugin global edit route. Builds a plugin `GlobalsBinding` and renders the
  * shared `GlobalEditPage`; no loader prefetch, the page's `useGlobal` hook
  * fetches instead.
  */
@@ -9,8 +9,8 @@ import { createFileRoute } from '@tanstack/react-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
+import { buildPluginGlobalsBinding } from '@/admin/components/globals/binding';
 import { GlobalEditPage } from '@/admin/components/globals/global-edit-page';
-import { buildPluginGlobalsMount } from '@/admin/components/globals/mount';
 import { EmptyState } from '@/admin/components/ui/empty-state';
 import { Page, PageContent } from '@/admin/components/ui/page';
 import { validateEntryEditSearch } from '@/admin/utilities/entry-admin-path';
@@ -21,8 +21,8 @@ function PluginGlobalEditPage(): React.ReactElement {
     const { locale, staged } = Route.useSearch();
     const { t } = useTranslation();
     const api = astromechClient.globals as unknown as GlobalsService;
-    const mount = buildPluginGlobalsMount(adminConfig.plugins, name, key, api);
-    if (!mount) {
+    const binding = buildPluginGlobalsBinding(adminConfig.plugins, name, key, api);
+    if (!binding) {
         return (
             <Page>
                 <PageContent>
@@ -34,7 +34,7 @@ function PluginGlobalEditPage(): React.ReactElement {
             </Page>
         );
     }
-    return <GlobalEditPage mount={mount} locale={locale} staged={staged} />;
+    return <GlobalEditPage binding={binding} locale={locale} staged={staged} />;
 }
 
 export const Route = createFileRoute('/_protected/plugin/$name/globals/$key/')({

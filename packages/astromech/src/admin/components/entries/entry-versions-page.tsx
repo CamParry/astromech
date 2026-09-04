@@ -1,11 +1,11 @@
 /**
- * Entry version history page, parameterized by an `EntriesMount`. A version
+ * Entry version history page, parameterized by an `EntriesBinding`. A version
  * snapshots one locale's content row, so the list is the versions of the
  * locale in view; the list, diff and restore UI is the shared
  * `VersionHistory`.
  */
 
-import type { EntriesMount } from './mount';
+import type { EntriesBinding } from './binding';
 import { useNavigate } from '@tanstack/react-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,16 +19,16 @@ import { defaultContentLocale } from '@/admin/utilities/content-locale';
 import { entryEditPath } from '@/admin/utilities/entry-admin-path';
 
 export function EntryVersionsPage({
-    mount,
+    binding,
     id,
     locale: localeProp,
 }: {
-    mount: EntriesMount;
+    binding: EntriesBinding;
     id: string;
     /** Locale from the route search params; defaults to the default content locale. */
     locale: string | undefined;
 }): React.ReactElement {
-    const { type, api, cacheScope, config: entryType, basePath } = mount;
+    const { type, api, cacheScope, config: entryType, basePath } = binding;
     const locale = localeProp ?? defaultContentLocale();
     const editPath = entryEditPath(basePath, id, { locale });
     const scope = { api, cacheScope };

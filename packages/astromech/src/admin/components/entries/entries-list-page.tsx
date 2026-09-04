@@ -1,10 +1,10 @@
 /**
- * Shared entry-type list page body, parameterized by an `EntriesMount` so it
+ * Shared entry-type list page body, parameterized by an `EntriesBinding` so it
  * serves both root and plugin-namespaced entry types. Searchable, filterable,
  * paginated table/grid of entries with bulk actions and per-type view state.
  */
 
-import type { EntriesListSearch, EntriesMount } from './mount';
+import type { EntriesBinding, EntriesListSearch } from './binding';
 import type { DropdownItem } from '@/admin/components/ui/dropdown';
 import type { SortDirection } from '@/admin/components/ui/table';
 import type { CellRenderContext, Entry, TableColumn } from '@/types/index';
@@ -431,8 +431,12 @@ function parseSortParam(
     return { key, direction };
 }
 
-export function EntriesListPage({ mount }: { mount: EntriesMount }): React.ReactElement {
-    const { type, api, cacheScope, config: entryType, basePath } = mount;
+export function EntriesListPage({
+    binding,
+}: {
+    binding: EntriesBinding;
+}): React.ReactElement {
+    const { type, api, cacheScope, config: entryType, basePath } = binding;
     const scope = { api, cacheScope };
     const navigate = useNavigate();
     const { toast } = useToast();
@@ -447,8 +451,8 @@ export function EntriesListPage({ mount }: { mount: EntriesMount }): React.React
         [t, ns]
     );
     const { hasPermission } = usePermissions();
-    const canCreate = hasPermission(mount.permissionFor('create'));
-    const canDelete = hasPermission(mount.permissionFor('delete'));
+    const canCreate = hasPermission(binding.permissionFor('create'));
+    const canDelete = hasPermission(binding.permissionFor('delete'));
 
     const single = entryType?.single ?? type;
     const plural = entryType?.plural ?? type;
@@ -462,7 +466,7 @@ export function EntriesListPage({ mount }: { mount: EntriesMount }): React.React
     const showSearch =
         entryType?.titleField !== false || (entryType?.search?.length ?? 0) > 0;
 
-    // `resolveTable` needs a full AdminEntryType. When the mount config is
+    // `resolveTable` needs a full AdminEntryType. When the binding config is
     // undefined (unknown root type), resolveAdminEntryType synthesizes a default
     // reproducing the historical undefined-config behaviour.
     const resolvedConfig = React.useMemo(

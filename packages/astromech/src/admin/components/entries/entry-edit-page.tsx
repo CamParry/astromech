@@ -1,10 +1,10 @@
 /**
- * Shared entry edit page body, parameterized by an `EntriesMount`; serves
+ * Shared entry edit page body, parameterized by an `EntriesBinding`; serves
  * root and plugin-namespaced entry types. Two-column layout: sticky action
  * bar, main content fields left, metadata sidebar right.
  */
 
-import type { EntriesMount } from './mount';
+import type { EntriesBinding } from './binding';
 import type { Entry, EntryStatus } from '@/types/index';
 import { Menu } from '@base-ui/react/menu';
 import { useStore } from '@tanstack/react-form';
@@ -88,7 +88,7 @@ const Link = RouterLink as unknown as (props: LinkProps) => React.ReactElement;
  * (repeater, blocks, tree) would keep the last row's state.
  */
 export function EntryEditPage({
-    mount,
+    binding,
     id,
     locale,
     staged = false,
@@ -97,7 +97,7 @@ export function EntryEditPage({
     return (
         <EntryEditPageBody
             key={`${id}:${resolvedLocale}:${String(staged)}`}
-            mount={mount}
+            binding={binding}
             id={id}
             locale={resolvedLocale}
             staged={staged}
@@ -106,7 +106,7 @@ export function EntryEditPage({
 }
 
 type EntryEditPageProps = {
-    mount: EntriesMount;
+    binding: EntriesBinding;
     id: string;
     /** Locale from the route search params; defaults to the default content locale. */
     locale: string | undefined;
@@ -115,17 +115,17 @@ type EntryEditPageProps = {
 };
 
 function EntryEditPageBody({
-    mount,
+    binding,
     id,
     locale,
     staged: isStaged,
 }: {
-    mount: EntriesMount;
+    binding: EntriesBinding;
     id: string;
     locale: string;
     staged: boolean;
 }): React.ReactElement {
-    const { type, api, cacheScope, config: entryType, basePath } = mount;
+    const { type, api, cacheScope, config: entryType, basePath } = binding;
     const scope = { api, cacheScope };
     const { toast } = useToast();
     const { t } = useTranslation();
@@ -142,7 +142,7 @@ function EntryEditPageBody({
     // The two columns together ARE the full field tree the client validates.
     const fieldDefinitions = React.useMemo(() => [...main, ...sidebar], [main, sidebar]);
 
-    const isReadOnly = !hasPermission(mount.permissionFor('update'));
+    const isReadOnly = !hasPermission(binding.permissionFor('update'));
 
     const hasStaging = entryType?.capabilities?.staging === true;
     const { data: canonicalEntry, isLoading: canonicalLoading } = useEntry(
@@ -251,7 +251,7 @@ function EntryEditPageBody({
     // so every staging call is `{ id, locale }` and only the search param says
     // which row is on screen.
     const confirm = useConfirm();
-    const canPublish = hasPermission(mount.permissionFor('publish'));
+    const canPublish = hasPermission(binding.permissionFor('publish'));
     const canonicalPath = entryEditPath(basePath, id, { locale });
     const stagedPath = entryEditPath(basePath, id, { locale, staged: true });
 

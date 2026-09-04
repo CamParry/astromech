@@ -7,7 +7,7 @@
  * on `update`, and a locale with no row is opened, not written.
  */
 
-import type { GlobalsMount } from '@/admin/components/globals/mount';
+import type { GlobalsBinding } from '@/admin/components/globals/binding';
 import type { AuthUser } from '@/admin/context/auth';
 import type { AdminGlobal, Global, GlobalsService } from '@/types/index';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -161,7 +161,7 @@ function mountPage(options: {
     permissions?: string[];
     initialUrl?: string;
 }) {
-    const mount: GlobalsMount = {
+    const binding: GlobalsBinding = {
         api: options.api,
         key: KEY,
         cacheScope: '',
@@ -185,7 +185,7 @@ function mountPage(options: {
             };
             return (
                 <GlobalEditPage
-                    mount={mount}
+                    binding={binding}
                     locale={search.locale}
                     staged={search.staged ?? false}
                 />

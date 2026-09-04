@@ -1,5 +1,5 @@
 /**
- * Plugin entry-type list route. Builds a plugin `EntriesMount` from
+ * Plugin entry-type list route. Builds a plugin `EntriesBinding` from
  * `adminConfig.plugins` and renders the shared `EntriesListPage`; an unknown
  * plugin/type falls back to the standard not-found UI.
  */
@@ -9,11 +9,11 @@ import { createFileRoute } from '@tanstack/react-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import { EntriesListPage } from '@/admin/components/entries/entries-list-page';
 import {
-    buildPluginEntriesMount,
+    buildPluginEntriesBinding,
     validateEntriesListSearch,
-} from '@/admin/components/entries/mount';
+} from '@/admin/components/entries/binding';
+import { EntriesListPage } from '@/admin/components/entries/entries-list-page';
 import { EmptyState } from '@/admin/components/ui/empty-state';
 import { Page, PageContent } from '@/admin/components/ui/page';
 import { useAiContext } from '@/admin/context/ai-context';
@@ -23,19 +23,19 @@ function PluginEntryListPage(): React.ReactElement {
     const { name, type } = Route.useParams();
     const { t } = useTranslation();
     const api = astromechClient.entries as unknown as EntriesService;
-    const mount = buildPluginEntriesMount(adminConfig.plugins, name, type, api);
-    // The mount carries the qualified type id the entries service addresses.
+    const binding = buildPluginEntriesBinding(adminConfig.plugins, name, type, api);
+    // The binding carries the qualified type id the entries service addresses.
     useAiContext(
-        mount !== null
+        binding !== null
             ? {
                   kind: 'entries',
-                  type: mount.type,
-                  label: mount.config?.plural ?? mount.type,
+                  type: binding.type,
+                  label: binding.config?.plural ?? binding.type,
               }
             : null,
         { depth: 0 }
     );
-    if (!mount) {
+    if (!binding) {
         return (
             <Page>
                 <PageContent>
@@ -47,7 +47,7 @@ function PluginEntryListPage(): React.ReactElement {
             </Page>
         );
     }
-    return <EntriesListPage mount={mount} />;
+    return <EntriesListPage binding={binding} />;
 }
 
 export const Route = createFileRoute('/_protected/plugin/$name/entries/$type/')({

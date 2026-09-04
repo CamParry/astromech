@@ -30,7 +30,7 @@ type LocaleSwitcherProps = {
     basePath: string;
     /** Entry type id. Needed only for the create-translation write. */
     type?: string;
-    /** Mount binding for the create-translation write (plugin types bind theirs). */
+    /** Binding for the create-translation write (plugin types bind theirs). */
     scope?: EntryHookScope;
     /**
      * Take over a locale the resource has no row for. When given, the switcher

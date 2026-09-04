@@ -1,8 +1,8 @@
 /**
- * Global admin mount: the parameter object that lets the shared global page
+ * Global admin binding: the parameter object that lets the shared global page
  * components serve both host and plugin-namespaced globals without
  * behavioural divergence. The entries counterpart is
- * `admin/components/entries/mount.ts`.
+ * `admin/components/entries/binding.ts`.
  */
 
 import type { AdminConfig, AdminGlobal, GlobalsService } from '@/types/index';
@@ -10,8 +10,8 @@ import { qualifyEntryType } from '@/entries/entry-types.shared';
 
 export type GlobalAction = 'read' | 'update' | 'publish';
 
-export type GlobalsMount = {
-    /** Globals client bound to the mount's base path. */
+export type GlobalsBinding = {
+    /** Globals client bound to the binding's base path. */
     api: GlobalsService;
     /** Wire key: bare for a host global (`site`), qualified for a plugin's (`seo/settings`). */
     key: string;
@@ -24,21 +24,21 @@ export type GlobalsMount = {
     config: AdminGlobal | undefined;
     /** Link base: `/globals/site` vs `/plugin/seo/globals/settings`. */
     basePath: string;
-    /** Resolve a permission string for an action against this mount. */
+    /** Resolve a permission string for an action against this binding. */
     permissionFor: (action: GlobalAction) => string;
 };
 
 /**
- * Build the mount for a plugin-namespaced global, or `null` when the plugin or
- * key is unknown. `key` is the bare key from the route; the mount carries the
+ * Build the binding for a plugin-namespaced global, or `null` when the plugin or
+ * key is unknown. `key` is the bare key from the route; the binding carries the
  * qualified key the globals service uses.
  */
-export function buildPluginGlobalsMount(
+export function buildPluginGlobalsBinding(
     plugins: AdminConfig['plugins'],
     name: string,
     key: string,
     api: GlobalsService
-): GlobalsMount | null {
+): GlobalsBinding | null {
     const plugin = plugins.find((p) => p.namespace === name);
     if (!plugin) return null;
     const config = plugin.globals[key];

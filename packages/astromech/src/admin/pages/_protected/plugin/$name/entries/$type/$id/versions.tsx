@@ -1,5 +1,5 @@
 /**
- * Plugin entry-type version history route. Builds a plugin `EntriesMount`
+ * Plugin entry-type version history route. Builds a plugin `EntriesBinding`
  * and renders the shared `EntryVersionsPage`; types with versioning off
  * never link here.
  */
@@ -9,8 +9,8 @@ import { createFileRoute } from '@tanstack/react-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
+import { buildPluginEntriesBinding } from '@/admin/components/entries/binding';
 import { EntryVersionsPage } from '@/admin/components/entries/entry-versions-page';
-import { buildPluginEntriesMount } from '@/admin/components/entries/mount';
 import { EmptyState } from '@/admin/components/ui/empty-state';
 import { Page, PageContent } from '@/admin/components/ui/page';
 import { validateEntryEditSearch } from '@/admin/utilities/entry-admin-path';
@@ -21,8 +21,8 @@ function PluginEntryVersionsPage(): React.ReactElement {
     const { locale } = Route.useSearch();
     const { t } = useTranslation();
     const api = astromechClient.entries as unknown as EntriesService;
-    const mount = buildPluginEntriesMount(adminConfig.plugins, name, type, api);
-    if (!mount) {
+    const binding = buildPluginEntriesBinding(adminConfig.plugins, name, type, api);
+    if (!binding) {
         return (
             <Page>
                 <PageContent>
@@ -34,7 +34,7 @@ function PluginEntryVersionsPage(): React.ReactElement {
             </Page>
         );
     }
-    return <EntryVersionsPage mount={mount} id={id} locale={locale} />;
+    return <EntryVersionsPage binding={binding} id={id} locale={locale} />;
 }
 
 export const Route = createFileRoute(

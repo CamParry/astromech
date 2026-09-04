@@ -4,7 +4,7 @@
  * a qualified key redirects to the plugin route.
  */
 
-import type { GlobalsMount } from '@/admin/components/globals/mount';
+import type { GlobalsBinding } from '@/admin/components/globals/binding';
 import type { GlobalsService } from '@/types/index';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import React from 'react';
@@ -36,7 +36,7 @@ function GlobalVersionsRoutePage(): React.ReactElement {
             </Page>
         );
     }
-    const mount: GlobalsMount = {
+    const binding: GlobalsBinding = {
         api: astromechClient.globals as unknown as GlobalsService,
         key,
         cacheScope: '',
@@ -44,7 +44,7 @@ function GlobalVersionsRoutePage(): React.ReactElement {
         basePath: `/globals/${key}`,
         permissionFor: (action) => `global:${key}:${action}`,
     };
-    return <GlobalVersionsPage mount={mount} locale={locale} />;
+    return <GlobalVersionsPage binding={binding} locale={locale} />;
 }
 
 export const Route = createFileRoute('/_protected/globals/$key/versions')({

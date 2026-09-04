@@ -4,7 +4,7 @@
  * to the plugin route.
  */
 
-import type { EntriesMount } from '@/admin/components/entries/mount';
+import type { EntriesBinding } from '@/admin/components/entries/binding';
 import type { EntriesService } from '@/types/index';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import React from 'react';
@@ -20,7 +20,7 @@ type SearchParams = {
 function EntryCreatePage(): React.ReactElement {
     const { type } = Route.useParams();
     const search = Route.useSearch();
-    const mount: EntriesMount = {
+    const binding: EntriesBinding = {
         api: astromechClient.entries as unknown as EntriesService,
         type,
         cacheScope: '',
@@ -28,7 +28,7 @@ function EntryCreatePage(): React.ReactElement {
         basePath: `/entries/${type}`,
         permissionFor: (action) => `entry:${type}:${action}`,
     };
-    return <EntryNewPage mount={mount} requestedLocale={search.locale} />;
+    return <EntryNewPage binding={binding} requestedLocale={search.locale} />;
 }
 
 export const Route = createFileRoute('/_protected/entries/$type/new')({

@@ -1,5 +1,5 @@
 /**
- * Plugin entry-type edit route. Builds a plugin `EntriesMount` and renders
+ * Plugin entry-type edit route. Builds a plugin `EntriesBinding` and renders
  * the shared `EntryEditPage`; no loader prefetch, the page's `useEntry`
  * hook fetches instead.
  */
@@ -9,8 +9,8 @@ import { createFileRoute } from '@tanstack/react-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
+import { buildPluginEntriesBinding } from '@/admin/components/entries/binding';
 import { EntryEditPage } from '@/admin/components/entries/entry-edit-page';
-import { buildPluginEntriesMount } from '@/admin/components/entries/mount';
 import { EmptyState } from '@/admin/components/ui/empty-state';
 import { Page, PageContent } from '@/admin/components/ui/page';
 import { validateEntryEditSearch } from '@/admin/utilities/entry-admin-path';
@@ -21,8 +21,8 @@ function PluginEntryEditPage(): React.ReactElement {
     const { locale, staged } = Route.useSearch();
     const { t } = useTranslation();
     const api = astromechClient.entries as unknown as EntriesService;
-    const mount = buildPluginEntriesMount(adminConfig.plugins, name, type, api);
-    if (!mount) {
+    const binding = buildPluginEntriesBinding(adminConfig.plugins, name, type, api);
+    if (!binding) {
         return (
             <Page>
                 <PageContent>
@@ -34,7 +34,7 @@ function PluginEntryEditPage(): React.ReactElement {
             </Page>
         );
     }
-    return <EntryEditPage mount={mount} id={id} locale={locale} staged={staged} />;
+    return <EntryEditPage binding={binding} id={id} locale={locale} staged={staged} />;
 }
 
 export const Route = createFileRoute('/_protected/plugin/$name/entries/$type/$id/')({

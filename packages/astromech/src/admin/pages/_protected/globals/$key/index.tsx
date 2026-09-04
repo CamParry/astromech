@@ -4,7 +4,7 @@
  * route.
  */
 
-import type { GlobalsMount } from '@/admin/components/globals/mount';
+import type { GlobalsBinding } from '@/admin/components/globals/binding';
 import type { GlobalsService } from '@/types/index';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import React from 'react';
@@ -36,7 +36,7 @@ function GlobalEditRoutePage(): React.ReactElement {
             </Page>
         );
     }
-    const mount: GlobalsMount = {
+    const binding: GlobalsBinding = {
         api: astromechClient.globals as unknown as GlobalsService,
         key,
         cacheScope: '',
@@ -44,7 +44,7 @@ function GlobalEditRoutePage(): React.ReactElement {
         basePath: `/globals/${key}`,
         permissionFor: (action) => `global:${key}:${action}`,
     };
-    return <GlobalEditPage mount={mount} locale={locale} staged={staged} />;
+    return <GlobalEditPage binding={binding} locale={locale} staged={staged} />;
 }
 
 export const Route = createFileRoute('/_protected/globals/$key/')({

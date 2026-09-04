@@ -1,5 +1,5 @@
 /**
- * Plugin global version history route. Builds a plugin `GlobalsMount` and
+ * Plugin global version history route. Builds a plugin `GlobalsBinding` and
  * renders the shared `GlobalVersionsPage`; globals with versioning off never
  * link here.
  */
@@ -9,8 +9,8 @@ import { createFileRoute } from '@tanstack/react-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
+import { buildPluginGlobalsBinding } from '@/admin/components/globals/binding';
 import { GlobalVersionsPage } from '@/admin/components/globals/global-versions-page';
-import { buildPluginGlobalsMount } from '@/admin/components/globals/mount';
 import { EmptyState } from '@/admin/components/ui/empty-state';
 import { Page, PageContent } from '@/admin/components/ui/page';
 import { validateEntryEditSearch } from '@/admin/utilities/entry-admin-path';
@@ -21,8 +21,8 @@ function PluginGlobalVersionsPage(): React.ReactElement {
     const { locale } = Route.useSearch();
     const { t } = useTranslation();
     const api = astromechClient.globals as unknown as GlobalsService;
-    const mount = buildPluginGlobalsMount(adminConfig.plugins, name, key, api);
-    if (!mount) {
+    const binding = buildPluginGlobalsBinding(adminConfig.plugins, name, key, api);
+    if (!binding) {
         return (
             <Page>
                 <PageContent>
@@ -34,7 +34,7 @@ function PluginGlobalVersionsPage(): React.ReactElement {
             </Page>
         );
     }
-    return <GlobalVersionsPage mount={mount} locale={locale} />;
+    return <GlobalVersionsPage binding={binding} locale={locale} />;
 }
 
 export const Route = createFileRoute('/_protected/plugin/$name/globals/$key/versions')({

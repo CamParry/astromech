@@ -5,7 +5,7 @@
  * made the entry, and drops the author when the id resolves to no known user.
  */
 
-import type { EntriesMount } from '@/admin/components/entries/mount';
+import type { EntriesBinding } from '@/admin/components/entries/binding';
 import type { AuthUser } from '@/admin/context/auth';
 import type { AdminEntryType, EntriesService, Entry, EntryStatus } from '@/types/index';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -99,7 +99,7 @@ function mountPage(entry: Entry): void {
         get: vi.fn(async () => entry),
         update: vi.fn(),
     } as unknown as EntriesService;
-    const mount: EntriesMount = {
+    const binding: EntriesBinding = {
         api,
         type: TYPE,
         cacheScope: '',
@@ -114,7 +114,7 @@ function mountPage(entry: Entry): void {
         path: '/entries/$type/$id',
         component: function EditRoute() {
             const params = useParams({ strict: false }) as { id: string };
-            return <EntryEditPage mount={mount} id={params.id} locale="en" />;
+            return <EntryEditPage binding={binding} id={params.id} locale="en" />;
         },
     });
     const router = createRouter({

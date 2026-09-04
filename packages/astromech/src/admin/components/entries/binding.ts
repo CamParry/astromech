@@ -1,5 +1,5 @@
 /**
- * Entry admin mount: the parameter object that lets the shared entry page
+ * Entry admin binding: the parameter object that lets the shared entry page
  * components serve both root and plugin-namespaced entry types without
  * behavioural divergence.
  */
@@ -9,8 +9,8 @@ import { qualifyEntryType } from '@/entries/entry-types.shared';
 
 export type EntryAction = 'read' | 'create' | 'update' | 'delete' | 'publish';
 
-export type EntriesMount = {
-    /** Entries client bound to the mount's base path. */
+export type EntriesBinding = {
+    /** Entries client bound to the binding's base path. */
     api: EntriesService;
     /** Wire type id: bare for a root type (`post`), qualified for a plugin type (`redirects/redirect`). */
     type: string;
@@ -25,21 +25,21 @@ export type EntriesMount = {
     config: AdminConfig['entries'][string] | undefined;
     /** Link base: `/entries/post` vs `/plugin/redirects/entries/redirect`. */
     basePath: string;
-    /** Resolve a permission string for an action against this mount. */
+    /** Resolve a permission string for an action against this binding. */
     permissionFor: (action: EntryAction) => string;
 };
 
 /**
- * Build the mount for a plugin-namespaced entry type, or `null` when the
- * plugin or type is unknown. `type` is the bare id from the route; the mount
+ * Build the binding for a plugin-namespaced entry type, or `null` when the
+ * plugin or type is unknown. `type` is the bare id from the route; the binding
  * carries the qualified id the entries service uses internally.
  */
-export function buildPluginEntriesMount(
+export function buildPluginEntriesBinding(
     plugins: AdminConfig['plugins'],
     name: string,
     type: string,
     api: EntriesService
-): EntriesMount | null {
+): EntriesBinding | null {
     const plugin = plugins.find((p) => p.namespace === name);
     if (!plugin) return null;
     const config = plugin.entries[type];

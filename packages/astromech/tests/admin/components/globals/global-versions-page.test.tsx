@@ -6,7 +6,7 @@
  * the global by key and locale — never by a row id.
  */
 
-import type { GlobalsMount } from '@/admin/components/globals/mount';
+import type { GlobalsBinding } from '@/admin/components/globals/binding';
 import type { AuthUser } from '@/admin/context/auth';
 import type { AdminGlobal, GlobalsService, GlobalVersion } from '@/types/index';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -74,7 +74,7 @@ function mountPage() {
         get: vi.fn(async () => null),
     } as unknown as GlobalsService;
 
-    const mount: GlobalsMount = {
+    const binding: GlobalsBinding = {
         api,
         key: KEY,
         cacheScope: '',
@@ -99,7 +99,7 @@ function mountPage() {
     const versionsRoute = createRoute({
         getParentRoute: () => rootRoute,
         path: `${BASE_PATH}/versions`,
-        component: () => <GlobalVersionsPage mount={mount} locale="en" />,
+        component: () => <GlobalVersionsPage binding={binding} locale="en" />,
     });
     const router = createRouter({
         routeTree: rootRoute.addChildren([versionsRoute]),

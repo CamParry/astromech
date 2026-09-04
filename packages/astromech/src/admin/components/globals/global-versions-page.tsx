@@ -1,11 +1,11 @@
 /**
- * Global version history page, parameterized by a `GlobalsMount`. A version
+ * Global version history page, parameterized by a `GlobalsBinding`. A version
  * snapshots one locale's content row, so the list is the versions of the
  * locale in view; the list, diff and restore UI is the shared
  * `VersionHistory`.
  */
 
-import type { GlobalsMount } from './mount';
+import type { GlobalsBinding } from './binding';
 import { useNavigate } from '@tanstack/react-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,14 +17,14 @@ import { defaultContentLocale } from '@/admin/utilities/content-locale';
 import { globalEditPath } from '@/admin/utilities/global-admin-path';
 
 export function GlobalVersionsPage({
-    mount,
+    binding,
     locale: localeProp,
 }: {
-    mount: GlobalsMount;
+    binding: GlobalsBinding;
     /** Locale from the route search params; defaults to the default content locale. */
     locale: string | undefined;
 }): React.ReactElement {
-    const { key, api, cacheScope, config, basePath } = mount;
+    const { key, api, cacheScope, config, basePath } = binding;
     const locale = localeProp ?? defaultContentLocale();
     const editPath = globalEditPath(basePath, { locale });
     const scope = { api, cacheScope };

@@ -17,7 +17,7 @@
  * `Link` resolve, plus the plain-React-context providers the page's hooks
  * need (`ToastProvider`, `AuthProvider`, `ConfirmProvider`, `AiContextProvider`).
  * It deliberately skips the app's `_protected` layout/`AppShell` — that's nav
- * chrome unrelated to this bug — and builds an `EntriesMount` by hand rather
+ * chrome unrelated to this bug — and builds an `EntriesBinding` by hand rather
  * than going through a route loader, exactly as `entry-edit-cache-invalidation`
  * needs: a save must survive whatever the real page's `onSuccess` does, not
  * whatever this test's own copy of it does.
@@ -45,7 +45,7 @@ import { AiContextProvider } from '@/admin/context/ai-context';
 import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
 import { scopedEntryKeys } from '@/admin/hooks/use-query-keys';
 import '@/admin/rendering/register-fields';
-import type { EntriesMount } from '@/admin/components/entries/mount';
+import type { EntriesBinding } from '@/admin/components/entries/binding';
 import type { AdminEntryType, EntriesService, Entry, EntryStatus } from '@/types/index';
 
 afterEach(cleanup);
@@ -117,7 +117,7 @@ function mountEditPage(queryClient: QueryClient) {
         update,
     } as unknown as EntriesService;
 
-    const mount: EntriesMount = {
+    const binding: EntriesBinding = {
         api,
         type: TYPE,
         cacheScope: CACHE_SCOPE,
@@ -130,7 +130,7 @@ function mountEditPage(queryClient: QueryClient) {
     const editRoute = createRoute({
         getParentRoute: () => rootRoute,
         path: '/',
-        component: () => <EntryEditPage mount={mount} id={ID} locale={LOCALE} />,
+        component: () => <EntryEditPage binding={binding} id={ID} locale={LOCALE} />,
     });
     const router = createRouter({
         routeTree: rootRoute.addChildren([editRoute]),

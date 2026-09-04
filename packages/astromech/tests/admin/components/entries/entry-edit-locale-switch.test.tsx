@@ -37,7 +37,7 @@ import { ToastProvider } from '@/admin/components/ui/toast';
 import { AiContextProvider } from '@/admin/context/ai-context';
 import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
 import '@/admin/rendering/register-fields';
-import type { EntriesMount } from '@/admin/components/entries/mount';
+import type { EntriesBinding } from '@/admin/components/entries/binding';
 import type * as UseEntryForm from '@/admin/hooks/use-entry-form';
 import type { AdminEntryType, EntriesService, Entry, EntryStatus } from '@/types/index';
 
@@ -179,7 +179,7 @@ function makeApi() {
 }
 
 function mountApp(queryClient: QueryClient, api: EntriesService) {
-    const mount: EntriesMount = {
+    const binding: EntriesBinding = {
         api,
         type: TYPE,
         cacheScope: '',
@@ -198,7 +198,9 @@ function mountApp(queryClient: QueryClient, api: EntriesService) {
         component: function EditRoute() {
             const params = useParams({ strict: false }) as { id: string };
             const search = useSearch({ strict: false }) as { locale?: string };
-            return <EntryEditPage mount={mount} id={params.id} locale={search.locale} />;
+            return (
+                <EntryEditPage binding={binding} id={params.id} locale={search.locale} />
+            );
         },
     });
     const router = createRouter({

@@ -1,5 +1,5 @@
 /**
- * Global edit page, parameterized by a `GlobalsMount`; serves host and
+ * Global edit page, parameterized by a `GlobalsBinding`; serves host and
  * plugin-namespaced globals. Composed from the entry edit page's own building
  * blocks (`useEntryForm`, `EntryFieldColumn`, `PublishPanel`, `LocaleSwitcher`,
  * `EntryFormErrors`) rather than a copy of it. A global has no list to return
@@ -7,7 +7,7 @@
  * status, the locale, the staging controls and Update, and nothing else.
  */
 
-import type { GlobalsMount } from './mount';
+import type { GlobalsBinding } from './binding';
 import type { EntryPayload } from '@/admin/hooks/use-entry-form';
 import type { EntryStatus, Global } from '@/types/index';
 import { useStore } from '@tanstack/react-form';
@@ -60,12 +60,12 @@ import { resolveLabel } from '@/admin/i18n/labels';
 import { defaultContentLocale } from '@/admin/utilities/content-locale';
 import { globalEditPath, globalVersionsPath } from '@/admin/utilities/global-admin-path';
 
-// Mount link bases are runtime strings; address `Link` by string `to`.
+// Binding link bases are runtime strings; address `Link` by string `to`.
 type LinkProps = Omit<React.ComponentProps<typeof RouterLink>, 'to'> & { to: string };
 const Link = RouterLink as unknown as (props: LinkProps) => React.ReactElement;
 
 type GlobalEditPageProps = {
-    mount: GlobalsMount;
+    binding: GlobalsBinding;
     /** Locale from the route search params; defaults to the default content locale. */
     locale: string | undefined;
     /** Show the staged change for that locale rather than the canonical row. */
@@ -78,15 +78,15 @@ type GlobalEditPageProps = {
  * stateful field containers would keep the last row's state.
  */
 export function GlobalEditPage({
-    mount,
+    binding,
     locale,
     staged = false,
 }: GlobalEditPageProps): React.ReactElement {
     const resolvedLocale = locale ?? defaultContentLocale();
     return (
         <GlobalEditPageBody
-            key={`${mount.key}:${resolvedLocale}:${String(staged)}`}
-            mount={mount}
+            key={`${binding.key}:${resolvedLocale}:${String(staged)}`}
+            binding={binding}
             locale={resolvedLocale}
             staged={staged}
         />
@@ -94,15 +94,15 @@ export function GlobalEditPage({
 }
 
 function GlobalEditPageBody({
-    mount,
+    binding,
     locale,
     staged: isStaged,
 }: {
-    mount: GlobalsMount;
+    binding: GlobalsBinding;
     locale: string;
     staged: boolean;
 }): React.ReactElement {
-    const { key, api, cacheScope, config, basePath } = mount;
+    const { key, api, cacheScope, config, basePath } = binding;
     const scope = { api, cacheScope };
     const namespace = namespaceForScope(cacheScope);
     const { toast } = useToast();
@@ -124,8 +124,8 @@ function GlobalEditPageBody({
     // The two columns together ARE the full field tree the client validates.
     const fieldDefinitions = React.useMemo(() => [...main, ...sidebar], [main, sidebar]);
 
-    const isReadOnly = !hasPermission(mount.permissionFor('update'));
-    const canPublish = hasPermission(mount.permissionFor('publish'));
+    const isReadOnly = !hasPermission(binding.permissionFor('update'));
+    const canPublish = hasPermission(binding.permissionFor('publish'));
 
     // `null` is a declared global nobody has saved yet: an empty form, whose
     // first save is the `update` that creates the row.

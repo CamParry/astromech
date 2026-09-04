@@ -4,7 +4,7 @@
  * route.
  */
 
-import type { EntriesMount } from '@/admin/components/entries/mount';
+import type { EntriesBinding } from '@/admin/components/entries/binding';
 import type { EntriesService } from '@/types/index';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import React from 'react';
@@ -21,7 +21,7 @@ import { astromechClient } from '@/transport/http/client';
 function EntryEditRoutePage(): React.ReactElement {
     const { type, id } = Route.useParams();
     const { locale, staged } = Route.useSearch();
-    const mount: EntriesMount = {
+    const binding: EntriesBinding = {
         api: astromechClient.entries as unknown as EntriesService,
         type,
         cacheScope: '',
@@ -29,7 +29,7 @@ function EntryEditRoutePage(): React.ReactElement {
         basePath: `/entries/${type}`,
         permissionFor: (action) => `entry:${type}:${action}`,
     };
-    return <EntryEditPage mount={mount} id={id} locale={locale} staged={staged} />;
+    return <EntryEditPage binding={binding} id={id} locale={locale} staged={staged} />;
 }
 
 export const Route = createFileRoute('/_protected/entries/$type/$id/')({
