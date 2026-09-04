@@ -64,7 +64,7 @@ being enforced by memory.
 - [ ] Test `getSession()` and `resolveRole()` against the harness database
       instead of mocking `@/users/session` at its five call sites: valid session
       resolves the right role, deleted user resolves to nothing, and an unknown
-      `roleSlug` asserts whichever behaviour
+      `role` asserts whichever behaviour
       [role-resolution-fails-open](../completed/role-resolution-fails-open.md) settles on.
 - [ ] Write a `testing` skill: present-tense test names, one React rendering
       approach (`@testing-library/react`), mock leaves not barrels, no wall-clock

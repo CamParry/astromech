@@ -1445,8 +1445,8 @@
                     "primaryKey": false
                 },
                 {
-                    "key": "roleSlug",
-                    "name": "role_slug",
+                    "key": "role",
+                    "name": "role",
                     "kind": "text",
                     "type": "text",
                     "notNull": true,

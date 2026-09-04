@@ -209,7 +209,10 @@ afterwards would be doing the work twice.
       locale and says so in `Media.locale`, where entries and globals return
       nothing; and the first write to such a locale copies the default-locale
       row before applying the patch, where an entry starts a translation empty.
-- [ ] **Cleanup that does not wait.** `users.roleSlug` becomes `role`.
+- [x] **Cleanup that does not wait.** `users.roleSlug` becomes `role`. The
+      demo migration is a `RENAME COLUMN` written by hand: the schema differ
+      has no rename op, and it refuses a `users` rebuild because every author
+      column references the table.
 - [ ] **Users.** Only when something asks for it.
 - [ ] **Docs, per stage.** `TERMINOLOGY.md`: `Resource` gains global and loses
       settings page, a `Content` entry is added, `Version` widens from an entry

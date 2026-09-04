@@ -283,7 +283,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`email_verified\` integer DEFAULT 0 NOT NULL,
             \`image\` text,
             \`fields\` text,
-            \`role_slug\` text NOT NULL,
+            \`role\` text NOT NULL,
             \`created_at\` text NOT NULL,
             \`updated_at\` text NOT NULL
         )
