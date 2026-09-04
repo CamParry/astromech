@@ -66,7 +66,7 @@ One branch, `manifest-and-admin-naming`, in a worktree at
 - [x] Update the `Mount` entry in `TERMINOLOGY.md`, or drop it: once the manifest
       field is `namespace` and the admin type is `EntriesBinding`, "mount" means
       only the two ordinary things and needs no entry.
-- [ ] Full gate, plus `pnpm run check:boot`, since codegen output and tool
+- [x] Full gate, plus `pnpm run check:boot`, since codegen output and tool
       dispatch both change.
 
 ## Not changing
