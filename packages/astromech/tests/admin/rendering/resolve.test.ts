@@ -68,7 +68,7 @@ const titlelessConfig: AdminEntryType = {
 };
 
 describe('resolveTable', () => {
-    it('orders columns: title, status, slug, locale, translations, ...adminColumns, updatedAt', () => {
+    it('orders columns: title, status, slug, locale, translations, ...adminColumns, updatedAt, updatedBy', () => {
         const table = resolveTable(fullConfig);
         expect(table.type).toBe('Post');
         expect(table.columns.map((c) => c.key)).toEqual([
@@ -80,6 +80,7 @@ describe('resolveTable', () => {
             'featured',
             'category',
             'updatedAt',
+            'updatedBy',
         ]);
     });
 
@@ -124,6 +125,13 @@ describe('resolveTable', () => {
             system: true,
             requires: null,
         });
+        expect(byKey.updatedBy).toMatchObject({
+            kind: 'author',
+            source: 'entry',
+            sortable: false,
+            system: true,
+            requires: null,
+        });
     });
 
     it('derives admin column kinds from field type', () => {
@@ -149,6 +157,7 @@ describe('resolveTable', () => {
             'status',
             'enabled',
             'updatedAt',
+            'updatedBy',
         ]);
         const enabled = table.columns.find((c) => c.key === 'enabled');
         expect(enabled?.kind).toBe('boolean');

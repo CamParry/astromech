@@ -5,7 +5,7 @@
  */
 
 import type { EntriesMount } from './mount';
-import type { EntryStatus } from '@/types/index';
+import type { Entry, EntryStatus } from '@/types/index';
 import { Menu } from '@base-ui/react/menu';
 import { useStore } from '@tanstack/react-form';
 import { useQueryClient } from '@tanstack/react-query';
@@ -53,6 +53,7 @@ import { StatusBadge } from '@/admin/components/ui/status-badge';
 import { useToast } from '@/admin/components/ui/toast';
 import { Tooltip } from '@/admin/components/ui/tooltip';
 import { useAiContext } from '@/admin/context/ai-context';
+import { authorName, useAuthorNames } from '@/admin/hooks/author-names';
 import {
     useCreateStaged,
     useDeleteStaged,
@@ -73,6 +74,7 @@ import { resolveAdminEntryType, resolveForm } from '@/admin/rendering/resolve';
 import { defaultContentLocale } from '@/admin/utilities/content-locale';
 import { entryEditPath, entryVersionsPath } from '@/admin/utilities/entry-admin-path';
 import { resolveEntryUrl } from '@/entries/entry-url.shared';
+import { formatDatetime } from '@/utilities/dates';
 import { EntryFormErrors } from './entry-form-errors';
 
 // Surface link bases are runtime strings; address `Link` by string `to`.
@@ -159,6 +161,7 @@ function EntryEditPageBody({
         scope
     );
     const entry = isStaged ? (stagedChange ?? undefined) : canonicalEntry;
+    const authorNames = useAuthorNames();
     const isLoading = isStaged ? canonicalLoading || stagedLoading : canonicalLoading;
 
     // Declare the entry in view; `null` until it loads, so no placeholder label
@@ -517,6 +520,12 @@ function EntryEditPageBody({
                     </PageHeaderActions>
                 </PageHeader>
 
+                {entry != null && (
+                    <p className="am-entry-meta">
+                        {entryMetaLine(entry, authorNames, t)}
+                    </p>
+                )}
+
                 <PageContent>
                     {isStaged && (
                         <div
@@ -743,4 +752,34 @@ function EntryEditPageBody({
             </Page>
         </EntryNamespaceProvider>
     );
+}
+
+/**
+ * The edit page's one metadata line: when this locale was last written and by
+ * whom, then when the entry was made and by whom. An author the current user
+ * cannot resolve is left out rather than shown as a raw id.
+ */
+function entryMetaLine(
+    entry: Entry,
+    authorNames: Map<string, string>,
+    t: ReturnType<typeof useTranslation>['t']
+): string {
+    const updatedName = authorName(entry.updatedBy, authorNames);
+    const createdName = authorName(entry.createdBy, authorNames);
+    const updated =
+        updatedName !== undefined
+            ? t('entries.updatedMeta', {
+                  date: formatDatetime(entry.updatedAt),
+                  name: updatedName,
+              })
+            : t('entries.updatedMetaNoAuthor', { date: formatDatetime(entry.updatedAt) });
+    const created =
+        createdName !== undefined
+            ? t('entries.createdMeta', {
+                  date: formatDatetime(entry.createdAt),
+                  name: createdName,
+              })
+            : t('entries.createdMetaNoAuthor', { date: formatDatetime(entry.createdAt) });
+
+    return `${updated} · ${created}`;
 }

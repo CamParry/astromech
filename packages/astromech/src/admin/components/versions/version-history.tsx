@@ -8,7 +8,7 @@
 import type { EntryStatus, JsonObject } from '@/types/index';
 import { Link as RouterLink } from '@tanstack/react-router';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Breadcrumb } from '@/admin/components/ui/breadcrumb';
 import { Button } from '@/admin/components/ui/button';
@@ -21,7 +21,7 @@ import {
     PageTitle,
 } from '@/admin/components/ui/page';
 import { Panel } from '@/admin/components/ui/panel';
-import { useUsersQuery } from '@/admin/hooks/users';
+import { authorName, useAuthorNames } from '@/admin/hooks/author-names';
 import { formatDatetime } from '@/utilities/dates';
 
 // Mount link bases are runtime strings; address `Link` by string `to`.
@@ -101,19 +101,6 @@ function renderFieldValue(value: unknown): React.ReactElement {
     return <span>{String(value)}</span>;
 }
 
-/**
- * The name to credit a version to, or undefined when it cannot be resolved —
- * an unauthored version, or a users query the current user may not read. The
- * caller renders nothing rather than a raw user id.
- */
-function resolveAuthor(
-    createdBy: string | null,
-    authorNames: Map<string, string>
-): string | undefined {
-    if (createdBy == null) return undefined;
-    return authorNames.get(createdBy);
-}
-
 type VersionItemProps = {
     version: Version;
     isSelected: boolean;
@@ -127,7 +114,7 @@ function VersionItem({
     authorNames,
     onClick,
 }: VersionItemProps): React.ReactElement {
-    const author = resolveAuthor(version.createdBy, authorNames);
+    const author = authorName(version.createdBy, authorNames);
 
     return (
         <button
@@ -169,7 +156,7 @@ function DiffView({
 }: DiffViewProps): React.ReactElement {
     const { t } = useTranslation();
     const diff = computeDiff(previous, selected, hasTitle);
-    const author = resolveAuthor(selected.createdBy, authorNames);
+    const author = authorName(selected.createdBy, authorNames);
 
     return (
         <div className="am-versions-diff">
@@ -258,16 +245,7 @@ export function VersionHistory({
 
     const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
 
-    // Versions store the author as a user id. Reading users can fail for an
-    // editor without the permission, so a missing name renders no author at all.
-    const { data: usersResult } = useUsersQuery({ limit: 'all' });
-    const authorNames = useMemo(() => {
-        const names = new Map<string, string>();
-        for (const user of usersResult?.data ?? []) {
-            names.set(user.id, user.name !== '' ? user.name : user.email);
-        }
-        return names;
-    }, [usersResult]);
+    const authorNames = useAuthorNames();
 
     const versions =
         rawVersions !== undefined

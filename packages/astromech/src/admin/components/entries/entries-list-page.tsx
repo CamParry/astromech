@@ -42,6 +42,7 @@ import { Table } from '@/admin/components/ui/table';
 import { useToast } from '@/admin/components/ui/toast';
 import { ToggleGroup } from '@/admin/components/ui/toggle-group';
 import { Toolbar, ToolbarEnd, ToolbarStart } from '@/admin/components/ui/toolbar';
+import { useAuthorNames } from '@/admin/hooks/author-names';
 import {
     useBulkDeleteEntries,
     useBulkPublishEntries,
@@ -84,6 +85,7 @@ const ALL_COLUMNS = [
     'locale',
     'translations',
     'updatedAt',
+    'updatedBy',
 ] as const;
 const LOCALE_FILTER_ALL = '__all__';
 
@@ -205,6 +207,7 @@ type EntryTableRowProps = RowActionsProps & {
     columns: TableColumn[];
     navigate: (opts: { id: string; locale: string }) => void;
     configuredLocales: string[];
+    authorNames: Map<string, string>;
 };
 
 function EntryTableRow({
@@ -223,6 +226,7 @@ function EntryTableRow({
     navigate,
     rowLabels,
     configuredLocales,
+    authorNames,
 }: EntryTableRowProps): React.ReactElement {
     const { t } = useTranslation();
     const items = buildRowItems({
@@ -238,7 +242,7 @@ function EntryTableRow({
         rowLabels,
     });
     const { onContextMenu, contextMenuNode } = useContextMenu(items);
-    const ctx: CellRenderContext = { basePath, configuredLocales, isTrash };
+    const ctx: CellRenderContext = { basePath, configuredLocales, isTrash, authorNames };
 
     return (
         <>
@@ -297,6 +301,7 @@ type EntryCardProps = RowActionsProps & {
     navigate: (opts: { id: string; locale: string }) => void;
     hasTitle: boolean;
     configuredLocales: string[];
+    authorNames: Map<string, string>;
 };
 
 function EntryCard({
@@ -315,6 +320,7 @@ function EntryCard({
     rowLabels,
     hasTitle,
     configuredLocales,
+    authorNames,
 }: EntryCardProps): React.ReactElement {
     const { t } = useTranslation();
     const items = buildRowItems({
@@ -330,7 +336,7 @@ function EntryCard({
         rowLabels,
     });
     const { onContextMenu, contextMenuNode } = useContextMenu(items);
-    const ctx: CellRenderContext = { basePath, configuredLocales, isTrash };
+    const ctx: CellRenderContext = { basePath, configuredLocales, isTrash, authorNames };
 
     function handleCardClick() {
         if (isTrash) return;
@@ -478,6 +484,7 @@ export function EntriesListPage({ mount }: { mount: EntriesMount }): React.React
 
     const hasI18n = capabilities?.translatable === true;
     const configuredLocales = adminConfig.locales;
+    const authorNames = useAuthorNames();
 
     // Filter/sort/page state lives in the URL so it survives refresh,
     // back/forward, and link-sharing. `patchSearch` applies a partial change in
@@ -1039,6 +1046,7 @@ export function EntriesListPage({ mount }: { mount: EntriesMount }): React.React
                                             rowLabels={rowLabels}
                                             hasTitle={hasTitle}
                                             configuredLocales={configuredLocales}
+                                            authorNames={authorNames}
                                         />
                                     ))}
                                 </div>
@@ -1128,6 +1136,7 @@ export function EntriesListPage({ mount }: { mount: EntriesMount }): React.React
                                             navigate={navigateCompat}
                                             rowLabels={rowLabels}
                                             configuredLocales={configuredLocales}
+                                            authorNames={authorNames}
                                         />
                                     ))
                                 )}

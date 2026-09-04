@@ -95,6 +95,15 @@ export function resolveTable(config: AdminEntryType): ResolvedTable {
         system: true,
         requires: null,
     });
+    columns.push({
+        key: 'updatedBy',
+        label: 'entries.columnUpdatedBy',
+        kind: 'author',
+        source: 'entry',
+        sortable: false,
+        system: true,
+        requires: null,
+    });
 
     return { type: config.single, columns };
 }

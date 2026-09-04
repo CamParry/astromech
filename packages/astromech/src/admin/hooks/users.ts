@@ -19,10 +19,11 @@ import { astromechClient } from '@/transport/http/client';
 import { useToast } from '../components/ui/toast';
 import { queryKeys } from './use-query-keys';
 
-export function useUsersQuery(params?: UserQueryParams) {
+export function useUsersQuery(params?: UserQueryParams, options?: { enabled?: boolean }) {
     return useQuery({
         queryKey: queryKeys.users.list(params as Record<string, unknown>),
         queryFn: () => astromechClient.users.query(params),
+        enabled: options?.enabled ?? true,
     });
 }
 

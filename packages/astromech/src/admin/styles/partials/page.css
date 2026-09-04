@@ -49,6 +49,14 @@
     align-items: center;
 }
 
+/* The entry edit page's metadata line, directly under the sticky header. */
+.am-entry-meta {
+    padding: 0 2rem;
+    margin: 0 0 0.5rem;
+    font-size: 0.875rem;
+    color: var(--am-color-text-muted);
+}
+
 .am-page-title {
     margin: 0;
     font-size: 1.5rem;

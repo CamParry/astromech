@@ -18,6 +18,7 @@ export const CELL_KINDS = [
     'relationship',
     'locale',
     'translations',
+    'author',
 ] as const;
 export type CellKind = (typeof CELL_KINDS)[number];
 
@@ -33,7 +34,7 @@ export type TableColumn = {
     /** 'field' reads entry.fields[key]; 'entry' reads (entry as Record)[key]. */
     source: 'field' | 'entry';
     sortable: boolean;
-    /** True for the built-in system columns (title/status/slug/locale/translations/updatedAt). */
+    /** True for the built-in system columns (title/status/slug/locale/translations/updatedAt/updatedBy). */
     system: boolean;
     /** Declarative capability/visibility gate; the page shell evaluates it against runtime state. */
     requires?: 'statuses' | 'slug' | 'translatable' | 'title' | 'locale' | null;
@@ -59,6 +60,8 @@ export type CellRenderContext = {
     basePath: string;
     configuredLocales: string[];
     isTrash: boolean;
+    /** Names by user id, for the author columns; empty when unreadable. */
+    authorNames: Map<string, string>;
 };
 export type CellRendererProps = {
     entry: Entry;

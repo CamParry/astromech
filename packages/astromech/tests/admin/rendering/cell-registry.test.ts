@@ -23,7 +23,12 @@ describe('cell-registry', () => {
                 entry: {} as never,
                 column: {} as never,
                 value: undefined,
-                ctx: { basePath: '', configuredLocales: [], isTrash: false },
+                ctx: {
+                    basePath: '',
+                    configuredLocales: [],
+                    isTrash: false,
+                    authorNames: new Map(),
+                },
             })
         ).not.toThrow();
     });

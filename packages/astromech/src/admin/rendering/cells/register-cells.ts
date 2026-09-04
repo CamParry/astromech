@@ -4,6 +4,7 @@
  * available before any render.
  */
 import { registerCell } from '../cell-registry';
+import { AuthorCell } from './author-cell';
 import { BadgeCell } from './badge-cell';
 import { BooleanCell } from './boolean-cell';
 import { DateCell } from './date-cell';
@@ -25,3 +26,4 @@ registerCell('number', NumberCell);
 registerCell('relationship', RelationshipCell);
 registerCell('locale', LocaleCell);
 registerCell('translations', TranslationsCell);
+registerCell('author', AuthorCell);

@@ -1,8 +1,7 @@
 # Entry author columns are never written
 
-The columns are written and surfaced. What is left is what happens to the
-reference when the user it names is deleted, and showing either value in the
-admin.
+The columns are written, go null when the user they name is deleted, and are
+shown in the admin.
 
 The defect this file opened on: the `entries` table declared `createdBy` and
 `updatedBy`, the repository contract accepted both, the built-in repository
@@ -48,12 +47,14 @@ writes `user?.id ?? null` into a `col.reference('users')` column of its own.
       (`DECISIONS.md`, "Author columns are `ON DELETE set null`"). `set null` is a
       new option on the `OnDelete` type, and the migration rebuild guard now
       refuses a rebuild of a table a `set null` FK points at, the same way it
-      already refuses one under `cascade`. `media.createdBy` and
-      `settings.updatedBy` reference `users` the same way and still carry the old
-      `no action`; giving them the same treatment is follow-up work.
-- [ ] **Surface it in the admin.** An entry list column and a detail line are the
-      obvious places. Both need an id-to-name lookup; the version history page
-      has one, and it should not grow a second copy.
+      already refuses one under `cascade`. Every other author column (globals,
+      media, users, settings) is `set null` too, and `deleteUser` finds them by
+      walking the table descriptors rather than a hand list.
+- [x] **Surface it in the admin.** An "Updated by" system column on the entry
+      list and one metadata line under the edit page header (updated and created,
+      each with a date and a name). The id-to-name lookup the version history
+      page had is now the shared `useAuthorNames` hook in `admin/hooks/`, gated
+      on `users:read`; an id it cannot resolve renders nothing, never a raw id.
 
 ## Related
 
