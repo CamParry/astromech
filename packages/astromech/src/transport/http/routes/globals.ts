@@ -129,10 +129,10 @@ function flag(c: Context<Env>, name: string): boolean {
 const CONTRACTS_BY_GLOBAL = new WeakMap<ResolvedGlobal, ContractCatalogue>();
 
 /**
- * `globalsContract` with each method's permission resolved to the string this
- * global checks. The shared catalogue states the permission as a function of the
- * call's `key`, which the generic mount cannot evaluate — it guards before the
- * body is read, and so before any argument object exists.
+ * `globalsContract` with each method's `access` resolved to the permission this
+ * global checks. The shared catalogue states it as a function of the call's
+ * `key`, which the generic mount cannot evaluate — it guards before the body is
+ * read, and so before any argument object exists.
  */
 function globalContracts(global: ResolvedGlobal): ContractCatalogue {
     const cached = CONTRACTS_BY_GLOBAL.get(global);
@@ -143,7 +143,7 @@ function globalContracts(global: ResolvedGlobal): ContractCatalogue {
             method,
             {
                 ...contract,
-                permission: globalPermission(
+                access: globalPermission(
                     global.id,
                     GLOBAL_METHOD_ACTIONS[method as GlobalMethodName]
                 ),

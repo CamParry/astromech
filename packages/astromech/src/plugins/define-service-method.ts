@@ -1,22 +1,14 @@
-import type { ServiceMethod } from '@/types/index';
-import * as zod from 'zod';
-
 /**
- * Define a typed service method — a plugin's contribution to the unified
- * services layer. Input/Output generics flow into the plugin's
- * self-augmentation of `AstromechPluginServices` so callers see real signatures.
+ * The plugin-facing `defineServiceMethod` — the generic one pinned to
+ * `PluginContext`, so a plugin handler sees `ctx.plugin` with no annotation.
+ * Input/Output generics flow into the plugin's `AstromechPluginServices`.
  */
-export function defineServiceMethod<Input = unknown, Output = unknown>(
-    method: ServiceMethod<Input, Output>
-): ServiceMethod<Input, Output> {
-    return method;
-}
 
-/**
- * The `input` schema for a service method that takes no arguments. MCP
- * requires an object schema, so a bare `z.object({})` won't typecheck against
- * `defineServiceMethod<undefined, ...>` — the transform reconciles the two.
- */
-export function noInput(): zod.ZodType<undefined> {
-    return zod.object({}).transform(() => undefined);
-}
+import type { PluginContext, ServiceMethod } from '@/types/index';
+import { defineServiceMethod as defineServiceMethodGeneric } from '@/services/define-service-method';
+
+export const defineServiceMethod: <Input = unknown, Output = unknown>(
+    method: ServiceMethod<Input, Output, PluginContext>
+) => ServiceMethod<Input, Output, PluginContext> = defineServiceMethodGeneric;
+
+export { noInput } from '@/services/define-service-method';

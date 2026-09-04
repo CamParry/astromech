@@ -7,6 +7,7 @@ export * from './fields';
 export * from './config';
 export * from './hooks';
 export * from './plugins';
+export * from './app-context';
 export * from './methods';
 export * from './query';
 export * from './services';

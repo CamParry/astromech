@@ -11,18 +11,21 @@ export const notificationsContract = {
     list: {
         summary: 'List your own notifications, newest first.',
         input: z.object({}),
+        access: 'public',
         sessionScoped: true,
         mutates: false,
     },
     count: {
         summary: 'Count your own undismissed notifications.',
         input: z.object({}),
+        access: 'public',
         sessionScoped: true,
         mutates: false,
     },
     dismiss: {
         summary: 'Dismiss one of your own notifications.',
         input: z.object({ id: z.string() }),
+        access: 'public',
         sessionScoped: true,
         mutates: true,
         destructive: true,
@@ -31,6 +34,7 @@ export const notificationsContract = {
     dismissAll: {
         summary: 'Dismiss every one of your own notifications.',
         input: z.object({}),
+        access: 'public',
         sessionScoped: true,
         mutates: true,
         destructive: true,

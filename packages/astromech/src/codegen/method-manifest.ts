@@ -13,11 +13,11 @@ import type {
     ManifestAccess,
     ManifestMethod,
     MethodManifest,
-    PluginAccess,
     PluginDefinition,
     PluginManifestMethod,
     ResolvedConfig,
     ResolvedEntryCapabilities,
+    ServiceMethodAccess,
     ServiceMethodContract,
 } from '@/types/index';
 import { z } from '@hono/zod-openapi';
@@ -62,7 +62,9 @@ function toJSONSchema(
  * `permissionDynamic` flags them instead.
  */
 function staticPermission(contract: ServiceMethodContract): string | null {
-    return typeof contract.permission === 'string' ? contract.permission : null;
+    const { access } = contract;
+    if (typeof access !== 'string') return null;
+    return access === 'public' || access === 'authenticated' ? null : access;
 }
 
 /**
@@ -108,7 +110,7 @@ function buildCoreMethods(): CoreManifestMethod[] {
             };
 
             // Flag function-form permissions — they cannot be statically serialised.
-            if (typeof contract.permission === 'function') {
+            if (typeof contract.access === 'function') {
                 method.permissionDynamic = true;
             }
 
@@ -236,9 +238,10 @@ function projectEntryMethod(
     return method;
 }
 
-function normaliseAccess(access: PluginAccess): ManifestAccess {
-    if (typeof access === 'object') return 'permission';
-    return access;
+function normaliseAccess(access: ServiceMethodAccess<never>): ManifestAccess {
+    if (access === 'public') return 'public';
+    if (access === 'authenticated') return 'authenticated';
+    return 'permission';
 }
 
 function buildPluginServiceMethods(plugins: PluginDefinition[]): PluginManifestMethod[] {

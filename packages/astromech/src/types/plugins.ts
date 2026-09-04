@@ -6,6 +6,7 @@
  * hatch.
  */
 
+import type { AppContext } from './app-context';
 import type {
     AdminPage,
     AdminSlotContribution,
@@ -15,23 +16,16 @@ import type {
     ResolvedConfig,
     StorageObject,
 } from './config';
-import type { NotifyInput, Permission, Role, User } from './domain';
+import type { Permission } from './domain';
 import type { Field, FieldValidator } from './fields';
-import type { HookEvent, HookPayloadFor, PluginHooks } from './hooks';
-import type { ServiceMethodEffect, ToolDefinition } from './methods';
-import type {
-    MediaService,
-    NotificationsService,
-    SettingsService,
-    UsersService,
-} from './services';
+import type { PluginHooks } from './hooks';
+import type { ServiceMethod, ToolDefinition } from './methods';
 import type { TypedEntriesService } from './typed-entries';
 import type { TypedGlobalsService } from './typed-globals';
 import type { Table } from '@/database/define-table';
-import type { DB } from '@/database/types';
 import type { PermissionDeclarations } from '@/permissions/define';
 import type { z } from '@hono/zod-openapi';
-import type { Kysely, MigrationProvider } from 'kysely';
+import type { MigrationProvider } from 'kysely';
 import type { ComponentType, ReactElement } from 'react';
 
 export type EmailTemplateOverride = {
@@ -117,9 +111,12 @@ export type PluginConfigView = Pick<
     entryTypesWithField(fieldName: string): string[];
 };
 
-/** Everything a plugin's hooks, service methods, cron jobs and routes run with. */
-export type PluginContext = {
-    db: Kysely<DB>;
+/**
+ * Everything a plugin's hooks, service methods, cron jobs and routes run with:
+ * the app context, plus this plugin's identity, config view and namespaced
+ * ports. `Omit` rather than `extends`, since `PluginConfigView` is a supertype.
+ */
+export type PluginContext = Omit<AppContext, 'config' | 'entries' | 'globals'> & {
     /**
      * This plugin's own resolved identity. Runtime code that needs a namespaced
      * string — a settings key, a permission, an i18n bundle name — reads it
@@ -128,20 +125,6 @@ export type PluginContext = {
      */
     plugin: ResolvedPluginIdentity;
     config: PluginConfigView;
-    /** The acting user, or null for unauthenticated / system contexts. */
-    user: User | null;
-    /**
-     * The acting user's role, or null outside a request context. Fixed when the
-     * context is built, and passed straight to `scopedServices`.
-     */
-    role: Role | null;
-    /**
-     * The connecting address, set by the HTTP transport when the runtime exposes
-     * one it can trust. Absent for a CLI, MCP or in-process caller, and absent
-     * over HTTP where no trustworthy source exists — so it is an identity to
-     * meter traffic by, never proof of who the caller is.
-     */
-    clientAddress?: string | undefined;
     /**
      * The GLOBAL entries service — not scoped, not qualified. A plugin addresses
      * its own types explicitly, built from context rather than an import:
@@ -160,40 +143,10 @@ export type PluginContext = {
      * HTTP is the enforcement boundary.
      */
     globals: TypedGlobalsService;
-    /** The global media service. */
-    media: MediaService;
-    /** The global settings service. Reads default to the `full` shape. */
-    settings: SettingsService;
-    /** The global users service. */
-    users: UsersService;
-    /** The global notifications service (session-scoped). */
-    notifications: NotificationsService;
-    /** Other plugins' service methods — `ctx.plugins.<serviceKey>.<method>(input)`. */
-    plugins?: PluginServiceNamespace | undefined;
-    /** Email port — the element is rendered here, and an unconfigured driver throws. */
-    email: PluginEmail;
-    notify: (input: NotifyInput) => Promise<void>;
-    logger: PluginLogger;
-    /** Env vars (resolved via import.meta.env in Vite/Astro SSR). Never the browser. */
-    env: Record<string, string | undefined>;
-    /**
-     * Run `event`'s handlers in registration order, replacing the payload with
-     * any non-`undefined` return; a handler throw propagates to the caller
-     * (`DECISIONS.md`).
-     */
-    runHook: <E extends HookEvent>(
-        event: E,
-        payload: HookPayloadFor<E>
-    ) => Promise<HookPayloadFor<E>>;
     /** Storage scoped to this plugin — keys are namespaced under `plugin/<alias>/` transparently. */
     storage: PluginStorage;
-    /** Database maintenance capabilities (feature-detected per driver). Distinct from `db` (the query instance). */
-    database: PluginDatabase;
-    /**
-     * The method manifest, scoped to the plugin. A plugin cannot import
-     * `astromech/methods`, so the dispatch surface arrives here instead.
-     */
-    methods: PluginMethods;
+    /** Other plugins' service methods — `ctx.plugins.<serviceKey>.<method>(input)`. */
+    plugins?: PluginServiceNamespace | undefined;
 };
 
 /**
@@ -202,32 +155,16 @@ export type PluginContext = {
  */
 export type PluginAccess = 'public' | 'authenticated' | { permission: string };
 
-export type ServiceMethod<Input = unknown, Output = unknown> = {
-    access: PluginAccess;
-    handler: (input: Input, ctx: PluginContext) => Promise<Output> | Output;
-    /** One-line summary for the method manifest (discovery / MCP / AI tool-loop). */
-    summary?: string;
-    /**
-     * Zod schema for the call input — how the method is called, which is what
-     * the manifest publishes to MCP and the AI tool-loop. Optional, but without
-     * it a caller that isn't reading the plugin's TypeScript has no schema.
-     */
-    input?: z.ZodType<Input>;
-    /** Zod schema for the result, where worth declaring. */
-    output?: z.ZodType<Output>;
-    // The effect declaration is MANDATORY (`ServiceMethodEffect` requires
-    // `mutates`; `destructive`/`idempotent` stay optional). An undeclared effect
-    // used to fall back to "mutating", which silently mislabelled pure reads in
-    // the method manifest and so in MCP; it is now a compile error instead.
-} & ServiceMethodEffect;
-
 /**
  * Collection element for a plugin's service record: variance-safe over any
  * concrete method. `Input` is contravariant in `handler` (hence `never`) but
  * covariant in `input`, so the schema position is widened separately — a single
  * type argument cannot satisfy both.
  */
-export type AnyServiceMethod = Omit<ServiceMethod<never, unknown>, 'input'> & {
+export type AnyServiceMethod = Omit<
+    ServiceMethod<never, unknown, PluginContext>,
+    'input'
+> & {
     input?: z.ZodType;
 };
 
@@ -237,7 +174,7 @@ export type AnyServiceMethod = Omit<ServiceMethod<never, unknown>, 'input'> & {
  * parameter is optional and `.method()` is a legal bare call.
  */
 export type ServiceInterface<T> = {
-    [K in keyof T]: T[K] extends ServiceMethod<infer I, infer O>
+    [K in keyof T]: T[K] extends ServiceMethod<infer I, infer O, PluginContext>
         ? undefined extends I
             ? (input?: I) => Promise<O>
             : (input: I) => Promise<O>

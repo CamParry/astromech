@@ -5,6 +5,7 @@
  */
 
 import type { Permission, Role, ServiceMethodContract } from '@/types/index';
+import { resolveAccess } from '@/permissions/access';
 import { can } from '@/permissions/roles';
 
 export type Permissions = {
@@ -12,9 +13,8 @@ export type Permissions = {
     allows(permission: Permission): boolean;
     /**
      * True if the role may call `method` with `input`. Reads the method's
-     * declared `permission` (resolving an input-dependent rule); a method that
-     * declares no permission — or whose rule answers `null` for this input —
-     * is public and always allowed.
+     * declared `access`: a public method is always allowed, an authenticated
+     * one needs a role, and a permission one needs that permission.
      */
     allowsMethod<Input>(method: ServiceMethodContract<Input>, input?: Input): boolean;
 };
@@ -30,11 +30,10 @@ export function permissionsFor(role: Role | null | undefined): Permissions {
     return {
         allows,
         allowsMethod(method, input) {
-            const rule = method.permission;
-            if (rule === undefined) return true; // public method — no permission gate
-            const permission = typeof rule === 'function' ? rule(input as never) : rule;
-            if (permission === null) return true; // public for this input
-            return allows(permission);
+            const resolved = resolveAccess(method.access, input);
+            if (resolved.kind === 'public') return true;
+            if (resolved.kind === 'authenticated') return role != null;
+            return allows(resolved.permission);
         },
     };
 }

@@ -45,8 +45,8 @@ function makeService() {
 }
 
 const contracts = {
-    read: { permission: 'settings:read', mutates: false },
-    write: { permission: 'settings:update', mutates: true },
+    read: { access: 'settings:read', mutates: false },
+    write: { access: 'settings:update', mutates: true },
 } satisfies Record<string, ServiceMethodContract>;
 
 describe('scopeMethods', () => {
@@ -160,7 +160,7 @@ describe('scopeMethods', () => {
 });
 
 const sessionContracts = {
-    read: { sessionScoped: true, mutates: false },
+    read: { access: 'public', sessionScoped: true, mutates: false },
 } satisfies Record<string, ServiceMethodContract>;
 
 /** A scoped handle over `makeService()`, with `read` declared session-scoped. */

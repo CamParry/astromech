@@ -156,7 +156,7 @@ export function entryMethodContracts(params: {
         return {
             method,
             summary: entryMethodSummary(method, action, label),
-            permission: entryPermission(typeId, action),
+            access: entryPermission(typeId, action),
             mutates: action !== 'read',
             destructive: action === 'delete',
         };

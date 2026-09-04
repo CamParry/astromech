@@ -4,7 +4,7 @@
  * `virtual:astromech/config` resolves, so the session module is imported lazily.
  */
 
-import type { Role, User } from '@/types/index';
+import type { AppContext, Role, User } from '@/types/index';
 import { AsyncLocalStorage } from 'node:async_hooks';
 // `@/registry` imports nothing, which is what keeps this module
 // service-free and loadable before `virtual:astromech/config` resolves.
@@ -16,6 +16,8 @@ export type RequestContext = {
     user?: User | null;
     /** Cached from the same resolve; goes away once the role map is computed during config resolution. */
     role?: Role | null;
+    /** The request's `AppContext`, built once by `currentAppContext()`. */
+    app?: AppContext;
 };
 
 const requestContext = createRegistry<AsyncLocalStorage<RequestContext>>(

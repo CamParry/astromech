@@ -8,15 +8,14 @@
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type {
-    Permission,
-    PluginAccess,
     PluginContext,
     ResolvedPluginIdentity,
+    ServiceMethodAccess,
 } from '@/types/index';
 import type { Context } from 'hono';
 import { Hono } from 'hono';
+import { resolveAccess } from '@/permissions/access';
 import { permissionsFor } from '@/permissions/permissions-for';
-import { resolvePluginPermission } from '@/plugins/runtime/plugin-identity';
 import {
     createPluginContext,
     getPluginIdentity,
@@ -36,21 +35,18 @@ pluginsRouter.use('*', optionalAuth);
 /** Enforce a method/route's declared access. Returns a denial Response, or null to proceed. */
 function enforceAccess(
     c: Context<PluginEnv>,
-    access: PluginAccess,
+    access: ServiceMethodAccess<never>,
     identity: ResolvedPluginIdentity
 ): Response | null {
-    if (access === 'public') return null;
+    const resolved = resolveAccess(access, undefined, identity.permissionNamespace);
+    if (resolved.kind === 'public') return null;
 
     const user = c.var.user;
     if (!user) return unauthorized(c);
-    if (access === 'authenticated') return null;
+    if (resolved.kind === 'authenticated') return null;
 
     const permissions = permissionsFor(c.var.role);
-    const permission = resolvePluginPermission(
-        identity.permissionNamespace,
-        access.permission
-    ) as Permission;
-    if (!permissions.allows(permission)) return forbidden(c);
+    if (!permissions.allows(resolved.permission)) return forbidden(c);
     return null;
 }
 

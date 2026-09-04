@@ -1,7 +1,7 @@
 /**
- * Globals service method contracts — the declared shape + permission + effect
- * for each verb. One catalogue for every global, not one per global: the
- * permission depends on the `key` a call names, so it is the function form of
+ * Globals service method contracts — the declared shape + access + effect for
+ * each verb. One catalogue for every global, not one per global: the permission
+ * depends on the `key` a call names, so it is the function form of
  * `PermissionRule` rather than a fixed string.
  */
 
@@ -104,7 +104,7 @@ export const globalsContract = {
             full: z.boolean().optional(),
             staged: z.boolean().optional(),
         }),
-        permission: readGate,
+        access: readGate,
         mutates: false,
     },
     update: {
@@ -118,21 +118,21 @@ export const globalsContract = {
             staged: z.boolean().optional(),
             data: updateGlobalSchema,
         }),
-        permission: gate('update'),
+        access: gate('update'),
         mutates: true,
         idempotent: true,
     },
     publish: {
         summary: 'Publish a global.',
         input: localised,
-        permission: gate('publish'),
+        access: gate('publish'),
         mutates: true,
         idempotent: true,
     },
     unpublish: {
         summary: 'Unpublish a global.',
         input: localised,
-        permission: gate('publish'),
+        access: gate('publish'),
         mutates: true,
         // Data-losing in the sense the effect hints mean: the global stops
         // being served. `ServiceMethodEffect` names unpublish explicitly.
@@ -142,45 +142,45 @@ export const globalsContract = {
     schedule: {
         summary: 'Schedule a global to publish at a future time.',
         input: localised.extend(scheduleGlobalSchema.shape),
-        permission: gate('publish'),
+        access: gate('publish'),
         mutates: true,
         idempotent: true,
     },
     versions: {
         summary: 'List the version history of a global.',
         input: localised,
-        permission: gate('read'),
+        access: gate('read'),
         mutates: false,
     },
     restoreVersion: {
         summary: 'Roll a global back to an earlier version.',
         input: z.object({ key, locale, versionId: z.string() }),
-        permission: gate('update'),
+        access: gate('update'),
         mutates: true,
         idempotent: true,
     },
     createStaged: {
         summary: 'Stage a change to a global.',
         input: z.object({ key, locale, data: updateGlobalSchema.optional() }),
-        permission: gate('update'),
+        access: gate('update'),
         mutates: true,
     },
     getStaged: {
         summary: 'Get the staged change of a global.',
         input: localised,
-        permission: gate('read'),
+        access: gate('read'),
         mutates: false,
     },
     mergeStaged: {
         summary: 'Merge the staged change into a global.',
         input: localised,
-        permission: gate('publish'),
+        access: gate('publish'),
         mutates: true,
     },
     deleteStaged: {
         summary: 'Discard the staged change of a global.',
         input: localised,
-        permission: gate('update'),
+        access: gate('update'),
         mutates: true,
     },
 } satisfies Record<keyof GlobalsService, ServiceMethodContract>;

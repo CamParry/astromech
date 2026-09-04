@@ -1,7 +1,7 @@
 /**
- * Settings service method contracts — the declared shape + permission +
- * effect for each verb. `input` is the method's argument object, not the
- * HTTP body: `settings.set` is `set({ key, value })`, key on the wire path.
+ * Settings service method contracts — the declared shape + access + effect for
+ * each verb. `input` is the method's argument object, not the HTTP body:
+ * `settings.set` is `set({ key, value })`, key on the wire path.
  */
 
 import type { ServiceMethodContract } from '@/types/index';
@@ -12,7 +12,7 @@ export const settingsContract = {
     all: {
         summary: 'List all settings (full shape, for an authenticated admin).',
         input: z.object({ full: z.boolean().optional() }),
-        permission: 'settings:read',
+        access: 'settings:read',
         mutates: false,
     },
     get: {
@@ -21,13 +21,13 @@ export const settingsContract = {
             key: z.string(),
             full: z.boolean().optional(),
         }),
-        permission: 'settings:read',
+        access: 'settings:read',
         mutates: false,
     },
     set: {
         summary: 'Create or update a setting value.',
         input: setSettingSchema.extend({ key: z.string() }),
-        permission: 'settings:update',
+        access: 'settings:update',
         mutates: true,
         idempotent: true,
     },

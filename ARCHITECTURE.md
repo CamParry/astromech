@@ -38,7 +38,8 @@ apps/
 
 ```
 integrations · transport/cli · transport/mcp         process entry points, each boots the application
-astromech.ts · plugins/runtime/plugin-runtime.ts     composition root
+astromech.ts · plugins/runtime/plugin-runtime.ts ·   composition root
+  app-context/app-context.ts
 transport (http · tools) · admin                     delivery
 codegen                                              generation
 policies                                             who may call what
@@ -48,7 +49,8 @@ content                                              the shared content reposito
 plugins · config · database · storage · fields ·     the modules those build on
   permissions · hooks · request-context · email ·
   ai · cron
-types · utilities · env · errors · registry.ts       pure leaves
+types · services · utilities · env · errors ·        pure leaves
+  registry.ts
 ```
 
 - **`astromech.ts`** is the composition root: `createAstromech` resolves the
@@ -56,6 +58,8 @@ types · utilities · env · errors · registry.ts       pure leaves
   application instance. `plugins/runtime/plugin-runtime.ts` is the other half of
   the composition root: `createPluginContext` assembles the plugin `ctx` from
   the same content services, so it imports them the way `astromech.ts` does.
+  `app-context/app-context.ts` builds the `AppContext` a method receives, and
+  `createPluginContext` layers the plugin members over it.
   `exports/` holds the re-export barrels, one per published subpath except
   three that name a source file directly: `./admin/shell.astro`,
   `./media/Image` and `./routes/handler.ts`. Nothing else in `src/`

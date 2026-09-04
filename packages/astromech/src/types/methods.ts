@@ -1,14 +1,10 @@
 /**
- * Service-method contracts — the self-description a service method carries so
- * the manifest, MCP projection, CLI and the assistant can all deal in one unit.
- * Identical shape for core and plugin methods.
- *
- * The projected form (`ManifestMethod`) lives here too, in the pure leaf, rather
- * than in the generator that emits it: the generator, the MCP transport and the
- * CLI all deal in the same record, and every consumer that redeclared "the bit
- * it needed" drifted from the emitter within one change.
+ * A service method: the handler plus the self-description the manifest, MCP
+ * projection, CLI and assistant all deal in. `defineService` assembles a
+ * catalogue of them into a service. Identical shape for core and plugin methods.
  */
 
+import type { AppContext } from './app-context';
 import type { Permission } from './domain';
 import type { z } from '@hono/zod-openapi';
 
@@ -26,26 +22,45 @@ export type ServiceMethodEffect = {
 };
 
 /**
- * A method's declared permission: either a fixed permission string, or one
- * resolved from the call input (e.g. globals, where the permission depends on
- * the target key). Absent ⇒ the method is not permission-gated; a rule
- * returning `null` says the same for that one input, which is how a `public`
- * global's plain read is ungated while its `full` read is not.
+ * What a method demands of its caller. `'authenticated'` holds when the caller
+ * has a role, `Permission` is the bare core form, `{ permission }` is the plugin
+ * form resolved under the plugin's namespace, and the function form answers per
+ * input — `null` for none.
+ */
+export type ServiceMethodAccess<Input = unknown> =
+    | 'public'
+    | 'authenticated'
+    | Permission
+    | { permission: string }
+    | ((input: Input) => Permission | null);
+
+/**
+ * The two core forms of {@link ServiceMethodAccess}: a fixed permission string,
+ * or one resolved from the call input (e.g. globals, where the permission
+ * depends on the target key).
  */
 export type PermissionRule<Input = unknown> =
     | Permission
     | ((input: Input) => Permission | null);
 
+/** The one fact a handler learns about itself: the id it was assembled under. */
+export type MethodContext = {
+    method: { name: string };
+};
+
 /**
- * A core service method's declared contract, authored in its domain's catalogue
- * — the single declaration the `permissionsFor` guard enforces and the manifest
- * reads. Plugin methods declare the same facts on their `ServiceMethod` object.
+ * One service method: what it demands of its caller, what it does, and the
+ * schemas it is called and answers with. There is no `name` — `defineService`
+ * stamps a method's dotted id from its position in the catalogue, so a typo
+ * cannot produce a mis-named manifest entry with no build failure.
  *
- * There is no `name`: a method's dotted id is its position in the catalogue
- * (`<module>.<key>`), derived by the manifest generator. Restating it by hand
- * meant a typo produced a mis-named manifest entry with no build failure.
+ * `Ctx` is unbounded because the plugin layer narrows `config`, `entries` and
+ * `globals`, so `PluginContext` is not a subtype of `AppContext`.
  */
-export type ServiceMethodContract<Input = unknown, Output = unknown> = {
+export type ServiceMethod<Input = unknown, Output = unknown, Ctx = AppContext> = {
+    /** What the caller must hold to call this method. */
+    access: ServiceMethodAccess<Input>;
+    handler: (input: Input, ctx: Ctx & MethodContext) => Promise<Output> | Output;
     /** One-line summary for humans / the AI tool-loop. */
     summary?: string;
     /**
@@ -57,8 +72,8 @@ export type ServiceMethodContract<Input = unknown, Output = unknown> = {
     input?: z.ZodType<Input>;
     /** Zod schema for the result, where worth declaring. */
     output?: z.ZodType<Output>;
-    /** The permission this method requires; absent ⇒ no permission gate. */
-    permission?: PermissionRule<Input>;
+    /** The capability the target must declare; absent ⇒ none. */
+    requires?: string;
     /**
      * The method acts on the CALLER'S OWN rows. Its `userId` argument is filled
      * from the request context by `policies/scoped-services.ts`, and a
@@ -83,6 +98,35 @@ export type ServiceMethodContract<Input = unknown, Output = unknown> = {
      */
     binaryInput?: boolean;
 } & ServiceMethodEffect;
+
+/**
+ * The interim handler-less form the readers (the manifest generator,
+ * `permissionsFor`, `scopedServices`, the REST mount) are typed over while the
+ * core catalogues still declare no handlers. Deleted when they all do.
+ */
+export type ServiceMethodContract<Input = unknown, Output = unknown> = Omit<
+    ServiceMethod<Input, Output>,
+    'handler'
+>;
+
+/** The method record a hand-written service interface demands. */
+export type MethodsFor<S, Ctx = AppContext> = {
+    [K in keyof S]: S[K] extends (input: infer I) => infer R
+        ? ServiceMethod<I, Awaited<R>, Ctx>
+        : never;
+};
+
+/** A method after assembly: the same object, with the id it was assembled under. */
+export type NamedServiceMethod<M> = M & { name: string };
+
+/** One service: its catalogue of methods, and the interface they bind to. */
+export type ServiceDefinition<S> = {
+    name: string;
+    /** The methods, keyed as the interface keys them, each stamped with `name`. */
+    catalogue: { [K in keyof MethodsFor<S>]: NamedServiceMethod<MethodsFor<S>[K]> };
+    /** The interface, with every handler closed over `ctx`. */
+    bind(ctx: AppContext): S;
+};
 
 // Method manifest — the serialised projection of the contracts
 

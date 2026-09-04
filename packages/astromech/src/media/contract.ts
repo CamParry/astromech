@@ -1,5 +1,5 @@
 /**
- * Media service method contracts — declared permission + effect per verb.
+ * Media service method contracts — declared access + effect per verb.
  * `input` is the method's argument object, not the HTTP body: `media.update`
  * is called `update({ id, data })`, composing the body schema into that shape.
  */
@@ -15,13 +15,13 @@ export const mediaContract = {
     query: {
         summary: 'List media items.',
         input: mediaQuerySchema,
-        permission: 'media:read',
+        access: 'media:read',
         mutates: false,
     },
     get: {
         summary: 'Read one media item by id.',
         input: z.object({ id: z.string(), locale }),
-        permission: 'media:read',
+        access: 'media:read',
         mutates: false,
     },
     upload: {
@@ -33,14 +33,14 @@ export const mediaContract = {
         // rather than by keeping its own list of exceptions.
         input: z.object({ file: z.instanceof(File) }),
         binaryInput: true,
-        permission: 'media:upload',
+        access: 'media:upload',
         mutates: true,
     },
     replace: {
         summary: 'Replace a media item’s file, keeping its id, URL and metadata.',
         input: z.object({ id: z.string(), file: z.instanceof(File) }),
         binaryInput: true,
-        permission: 'media:upload',
+        access: 'media:upload',
         mutates: true,
         destructive: true,
     },
@@ -49,33 +49,33 @@ export const mediaContract = {
             'Update a media item’s metadata. Fields merge: omitted fields keep ' +
             'their current value, and arrays are replaced whole.',
         input: z.object({ id: z.string(), locale, data: updateMediaSchema }),
-        permission: 'media:update',
+        access: 'media:update',
         mutates: true,
         idempotent: true,
     },
     delete: {
         summary: 'Delete a media item.',
         input: z.object({ id: z.string() }),
-        permission: 'media:delete',
+        access: 'media:delete',
         mutates: true,
         destructive: true,
     },
     usedBy: {
         summary: 'List the entries, users and media items that reference a media item.',
         input: z.object({ id: z.string() }),
-        permission: 'media:read',
+        access: 'media:read',
         mutates: false,
     },
     versions: {
         summary: 'List the saved versions of one locale of a media item.',
         input: z.object({ id: z.string(), locale }),
-        permission: 'media:read',
+        access: 'media:read',
         mutates: false,
     },
     restoreVersion: {
         summary: 'Restore one locale of a media item to a saved version.',
         input: z.object({ id: z.string(), locale, versionId: z.string() }),
-        permission: 'media:update',
+        access: 'media:update',
         mutates: true,
     },
 } satisfies Record<string, ServiceMethodContract>;

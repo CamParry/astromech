@@ -25,6 +25,7 @@ import { mediaContract } from '@/media/contract';
 import { mediaService } from '@/media/service';
 import { notificationsContract } from '@/notifications/contract';
 import { notificationsService } from '@/notifications/service';
+import { resolveAccess } from '@/permissions/access';
 import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/core-permissions';
 import { entryPermission } from '@/permissions/entry-permission';
 import { permissionsFor } from '@/permissions/permissions-for';
@@ -73,9 +74,8 @@ function resolvePermission(
     contract: ServiceMethodContract,
     input: unknown
 ): string | null {
-    const rule = contract.permission;
-    if (rule === undefined) return null;
-    return typeof rule === 'function' ? rule(input) : rule;
+    const resolved = resolveAccess(contract.access, input);
+    return resolved.kind === 'permission' ? resolved.permission : null;
 }
 
 /**

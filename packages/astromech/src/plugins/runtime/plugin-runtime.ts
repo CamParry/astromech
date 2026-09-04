@@ -4,21 +4,16 @@
  * leaf — a caller like any other (`DECISIONS.md`).
  */
 
-import type { DB } from '@/database/types';
 import type {
     AnyServiceMethod,
     EntriesService,
     GlobalsService,
     HookHandler,
-    MediaService,
-    NotificationsService,
     NotifyInput,
     PluginConfigView,
     PluginContext,
-    PluginDatabase,
     PluginDefinition,
     PluginLogger,
-    PluginMethods,
     PluginRawRoute,
     PluginServiceNamespace,
     ResolvedConfig,
@@ -28,16 +23,10 @@ import type {
     TypedEntriesService,
     TypedGlobalsService,
     User,
-    UsersService,
 } from '@/types/index';
-import type { Kysely } from 'kysely';
-import type { ReactElement } from 'react';
+import { createAppContext } from '@/app-context/app-context';
 import { registerCronJob } from '@/cron/registry';
 import { kyselyTableKey, registerTableCodec } from '@/database/codec';
-import { getDatabaseDriver } from '@/database/driver-registry';
-import { getDb } from '@/database/registry';
-import { getEmailDriver } from '@/email/registry';
-import { renderEmail } from '@/email/render';
 import { qualifyEntryType } from '@/entries/entry-types.shared';
 import {
     resetEntryRepositoryOverrides,
@@ -45,12 +34,9 @@ import {
 } from '@/entries/repository/registry';
 import { typedEntriesService } from '@/entries/typed-entries-service';
 import { getEnvRecord } from '@/env';
-import { AstromechError } from '@/errors/astromech-error';
 import { flattenEntryFields } from '@/fields/flatten';
 import { typedGlobalsService } from '@/globals/typed-globals-service';
-import { addHook, clearHooks, runHook } from '@/hooks/hooks';
-import { mediaService } from '@/media/service';
-import { currentUserNotificationsService } from '@/notifications/current-user-service';
+import { addHook, clearHooks } from '@/hooks/hooks';
 import { notify } from '@/notifications/service';
 import {
     pluginEntryTypes,
@@ -64,8 +50,6 @@ import { getCurrentRole, getCurrentUser } from '@/request-context/request-contex
 import { settingsService } from '@/settings/service';
 import { listAll } from '@/storage/prefix';
 import { getStorageDriver } from '@/storage/registry';
-import { buildScopedTools } from '@/transport/tools/scoped-tools';
-import { usersService } from '@/users/service';
 import { log } from '@/utilities/log';
 import {
     withDefaultGlobalsShape,
@@ -318,24 +302,10 @@ function makeConfigView(
     };
 }
 
-/** Backs `ctx.email.send`: render the element, then hand it to the configured driver. */
-async function sendPluginEmail(
-    to: string,
-    subject: string,
-    element: ReactElement
-): Promise<void> {
-    const driver = getEmailDriver();
-    if (!driver) {
-        throw new AstromechError('Email is not configured; cannot send from a plugin.');
-    }
-    const { html, text } = await renderEmail(element);
-    await driver.send({ to, subject, html, text });
-}
-
 /**
- * Build the unified PluginContext for a given plugin, acting user and role.
- * `db` and every domain are lazy getters so a context can be constructed
- * before they're wired (e.g. unit tests). `clientAddress` is HTTP-transport only.
+ * Build the unified PluginContext for a given plugin, acting user and role: the
+ * app context, with this plugin's own layer over it. `clientAddress` is
+ * HTTP-transport only.
  */
 export function createPluginContext(
     identity: ResolvedPluginIdentity,
@@ -347,18 +317,11 @@ export function createPluginContext(
     const configView = config ? makeConfigView(config) : makeConfigView(emptyConfig());
     const PREFIX = `plugin/${identity.namespace}/`;
 
-    return {
-        get db(): Kysely<DB> {
-            return getDb();
-        },
+    const layer = {
         plugin: identity,
         config: configView,
-        user,
-        role,
-        clientAddress,
-        // The domains, flattened onto the context — global services; a plugin
-        // addresses its own entry types by qualified id instead of a scoping
-        // wrapper. Domains with a shape axis default to 'full' (trusted server code).
+        // The domains a plugin sees differently from the app: those with a shape
+        // axis default to 'full', since plugin altitude is trusted server code.
         get entries(): TypedEntriesService {
             return withDefaultShape(
                 typedEntriesService as unknown as EntriesService,
@@ -371,61 +334,41 @@ export function createPluginContext(
                 'full'
             ) as unknown as TypedGlobalsService;
         },
-        // media / users / notifications have no shape axis, so they pass through.
-        get media(): MediaService {
-            return mediaService;
-        },
         get settings(): SettingsService {
             return withDefaultSettingsShape(settingsService, 'full');
-        },
-        get users(): UsersService {
-            return usersService;
-        },
-        get notifications(): NotificationsService {
-            return currentUserNotificationsService;
         },
         get plugins(): PluginServiceNamespace | undefined {
             return pluginServices;
         },
-        email: { send: sendPluginEmail },
         notify: (input: NotifyInput) =>
             notify({
                 ...input,
                 type: `plugin:${identity.namespace}.${input.type}`,
             }),
         logger: makeLogger(identity.namespace),
-        get env() {
-            return getEnvRecord();
-        },
-        runHook: (event, payload) => runHook(event, payload),
         storage: {
-            put: (key, body, opts) => getStorageDriver().put(PREFIX + key, body, opts),
-            get: (key) => getStorageDriver().get(PREFIX + key),
-            delete: (key) => getStorageDriver().delete(PREFIX + key),
+            put: (
+                key: string,
+                body: ReadableStream | Uint8Array,
+                opts?: { contentType?: string }
+            ) => getStorageDriver().put(PREFIX + key, body, opts),
+            get: (key: string) => getStorageDriver().get(PREFIX + key),
+            delete: (key: string) => getStorageDriver().delete(PREFIX + key),
             list: async (prefix = '') =>
                 (await listAll(getStorageDriver(), PREFIX + prefix)).map((k) =>
                     k.slice(PREFIX.length)
                 ),
         },
-        get methods(): PluginMethods {
-            return {
-                tools: (options) => buildScopedTools(role, options),
-            };
-        },
-        get database(): PluginDatabase {
-            // Probes rather than throws: plugin unit tests build a context
-            // without ever wiring a db driver, and read `dialect` from it.
-            const drv = getDatabaseDriver();
-            const dialect = drv?.type ?? 'unknown';
-            const dump = drv?.dump?.bind(drv);
-            const restore = drv?.restore?.bind(drv);
-            return {
-                dialect,
-                ...(dump ? { dump } : {}),
-                ...(restore ? { restore } : {}),
-            };
-        },
-    };
+    } satisfies Partial<PluginContext>;
+
+    // Descriptors rather than a spread, so the app context's getters are carried
+    // across unevaluated.
+    return Object.defineProperties({} as PluginContext, {
+        ...Object.getOwnPropertyDescriptors(
+            createAppContext({ user, role, clientAddress })
+        ),
+        ...Object.getOwnPropertyDescriptors(layer),
+    });
 }
 
 function emptyConfig(): Omit<PluginConfigView, 'entryTypesWithField'> {
