@@ -33,7 +33,7 @@ export async function restoreUserVersion(params: {
     const updated = await transaction(async () => {
         await snapshotVersion(repository.versions, current, {});
         const row = await repository.update({ id, locale }, { fields });
-        await indexUserRelationships(id, fields);
+        await indexUserRelationships(id);
         return row;
     });
 

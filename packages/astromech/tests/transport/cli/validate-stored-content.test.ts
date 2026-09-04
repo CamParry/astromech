@@ -293,7 +293,7 @@ describe('validateStoredContent', () => {
                 kind: 'user',
                 type: null,
                 id: user.id,
-                locale: null,
+                locale: 'en',
                 fieldPath: 'nickname',
                 message: 'Must be at most 5 characters',
             },

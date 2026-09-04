@@ -332,13 +332,20 @@ export const GLOBALS_ROUTE_SPECS = [
 export const USERS_ROUTE_SPECS = [
     { verb: 'get', path: '/', id: 'users.query', envelope: 'raw' },
     { verb: 'post', path: '/', id: 'users.create', status: 201, bodyKey: 'data' },
-    { verb: 'get', path: '/:id', id: 'users.get', handler: 'bespoke' },
+    {
+        verb: 'get',
+        path: '/:id',
+        id: 'users.get',
+        handler: 'bespoke',
+        queryArgs: ['locale'],
+    },
     {
         verb: 'put',
         path: '/:id',
         id: 'users.update',
         bodyKey: 'data',
         handler: 'bespoke',
+        queryArgs: ['locale'],
     },
     {
         verb: 'delete',

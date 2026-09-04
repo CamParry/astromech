@@ -16,7 +16,6 @@ import type {
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { getConfig } from '@/config/registry';
 import { createRepository } from '@/database/repository/create-repository';
-import { existingEntryTypes } from '@/database/repository/resource-existence';
 import {
     QUALIFIED_SEPARATOR,
     qualifyEntryType,
@@ -26,13 +25,13 @@ import { createEntryLookups } from '@/entries/lookups';
 import { getEntryRepository, hasCustomTable } from '@/entries/repository/registry';
 import { entriesTable, entryContentTable } from '@/entries/tables';
 import { entryValidationMode } from '@/entries/validation-mode.shared';
-import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenEntryFields, flattenFieldNodes } from '@/fields/flatten';
 import { safeParseFields } from '@/fields/parse-fields';
 import { globalLookups } from '@/globals/internal/stored-fields';
 import { globalsService } from '@/globals/service';
 import { createMediaLookups } from '@/media/internal/lookups';
 import { createMediaRepository } from '@/media/repository';
+import { createUserLookups } from '@/users/internal/lookups';
 import { createUserRepository } from '@/users/repository';
 
 /** Scope of a report run. `type` is an ENTRY type; it never covers media, users or globals. */
@@ -235,41 +234,44 @@ async function checkMedia(report: ValidationReport): Promise<void> {
     }
 }
 
-/** User rows, with `users/operations/update.ts`'s context. */
+/**
+ * Every content row of every user, with `users/operations/update.ts`'s
+ * context. A `unique` rule on users compares within one locale, so each
+ * locale is a pass of its own — the same shape as `checkMedia`.
+ */
 async function checkUsers(report: ValidationReport): Promise<void> {
     const config = getConfig();
     const definitions = flattenFieldNodes(config.users.fields);
     const validate = config.users.validate;
     const repository = createUserRepository();
-    const load = memoize(() => repository.list());
-    const rows = await load();
 
-    for (const row of rows) {
-        report.rowsChecked += 1;
-        const processed = await safeParseFields(
-            row.fields as Record<string, unknown>,
-            definitions,
-            {
-                operation: 'update',
-                resource: { kind: 'user', record: row },
-                user: null,
-                lookups: fieldLookupsFromRecords({
-                    load,
-                    getId: (record) => record.id,
-                    getFields: (record) => record.fields as Record<string, unknown>,
-                    excludeId: row.id,
-                    entryTypes: (ids) => existingEntryTypes(ids),
-                }),
-                coerceOnly: new Set(),
-                collectWarnings: false,
-                ...(validate ? { validate } : {}),
-            }
-        );
-        collect(
-            report,
-            { kind: 'user', type: null, id: row.id, locale: null },
-            processed
-        );
+    const defaultLocale = getDefaultContentLocale();
+    const locales = config.users.translatable
+        ? (config.locales ?? [defaultLocale])
+        : [defaultLocale];
+
+    for (const locale of locales) {
+        const load = memoize(() => repository.listContent(locale));
+        for (const row of await load()) {
+            report.rowsChecked += 1;
+            const processed = await safeParseFields(
+                row.fields as Record<string, unknown>,
+                definitions,
+                {
+                    operation: 'update',
+                    resource: { kind: 'user', record: row },
+                    user: null,
+                    lookups: createUserLookups(
+                        { listContent: load },
+                        { locale, excludeId: row.id }
+                    ),
+                    coerceOnly: new Set(),
+                    collectWarnings: false,
+                    ...(validate ? { validate } : {}),
+                }
+            );
+            collect(report, { kind: 'user', type: null, id: row.id, locale }, processed);
+        }
     }
 }
 

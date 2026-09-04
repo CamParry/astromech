@@ -111,7 +111,7 @@ export async function updateUser(params: {
                 fields,
                 patchedFieldNames: patchedNames,
             });
-            await indexUserRelationships(id, fields);
+            await indexUserRelationships(id);
         }
     });
 

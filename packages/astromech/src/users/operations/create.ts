@@ -59,7 +59,7 @@ export async function createUser(params: { data: UserCreateData }): Promise<User
             },
             { fields, createdBy: userId, updatedBy: userId }
         );
-        await indexUserRelationships(row.id, fields);
+        await indexUserRelationships(row.id);
         return row;
     });
     return toUser(created);

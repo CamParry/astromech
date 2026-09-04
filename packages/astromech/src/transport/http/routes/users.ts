@@ -83,14 +83,14 @@ function queryArgs(c: Context<Env>): UserQueryParams {
 // Not in the table: self-access. A caller reading its own row passes without
 // `users:read`, which no method contract can state.
 router.get('/:id', async (c) => {
-    const { id } = c.req.param();
     const permissions = permissionsFor(c.var.role);
     const currentUser = c.var.user;
-    if (!permissions.allowsMethod(usersContract.get) && currentUser.id !== id)
+    const args = contentArgs(c);
+    if (!permissions.allowsMethod(usersContract.get) && currentUser.id !== args.id)
         return forbidden(c);
 
-    const user = await usersService.get({ id });
-    if (!user) return notFound(c, `User '${id}' not found`);
+    const user = await usersService.get(args);
+    if (!user) return notFound(c, `User '${args.id}' not found`);
     return c.json({ data: user });
 });
 
@@ -98,7 +98,7 @@ router.get('/:id', async (c) => {
 // Not in the table: self-access, a `role` change that still demands
 // `users:update`, and the last-admin guard — which is a second repository call.
 router.put('/:id', async (c) => {
-    const { id } = c.req.param();
+    const { id, locale } = contentArgs(c);
     const permissions = permissionsFor(c.var.role);
     const currentUser = c.var.user;
     const canUpdateUsers = permissions.allowsMethod(usersContract.update);
@@ -128,6 +128,7 @@ router.put('/:id', async (c) => {
 
     const user = await usersService.update({
         id,
+        ...(locale ? { locale } : {}),
         data: {
             ...(email !== undefined && { email }),
             ...(name !== undefined && { name }),
