@@ -23,26 +23,27 @@ from `entries/`:
 
 ## The work
 
-The media half is done, in the media stage of `resource-surface.md`. The users
-half remains.
+Both halves are done, in the media and users stages of
+`roadmap/completed/resource-surface.md`.
 
 - [x] `media/repository.ts`: drop the `db` parameter from `delete` (and any
       sibling that carries it); call `createRelationshipRepository()` and let
       `getDb()` resolve the scope.
-- [ ] `users/repository.ts`: the same.
+- [x] `users/repository.ts`: the same.
 - [x] `media/operations/` (`upload`, `replace`, `update`, `delete`): wrap each
       row write and its relationship-index write in one `transaction()`, so
       neither is left without the other. This is the same atomicity fix Stage 5
       made for entries.
-- [ ] `users/operations/` (`create`, `update`, `delete`): the same.
+- [x] `users/operations/` (`create`, `update`, `delete`): the same.
 - [x] Confirm no `db`/`txRepository` parameter remains in `media/`'s write path;
       a function that seems to need one is answered by the scope, per 0080.
-- [ ] The same for `users/`.
+- [x] The same for `users/`.
 - [x] Gate, plus `pnpm run check:boot`. Add atomicity tests mirroring the
       `*-atomicity.test.ts` files in `packages/astromech/tests/services/entries/`
       where a write path gained a transaction
       (`packages/astromech/tests/services/media/atomicity.test.ts`).
-- [ ] The same for `users/`.
+- [x] The same for `users/`
+      (`packages/astromech/tests/services/users/atomicity.test.ts`).
 
 ## Rules
 

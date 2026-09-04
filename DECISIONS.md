@@ -37,16 +37,17 @@ the forward field path, not the relation name. Editorial identity is a `profile`
 entry linking to `users`.
 
 **Author columns are `ON DELETE set null`, cleared in the app.**
-`entries.createdBy`/`updatedBy`, the same pair on `entry_content`, and
-`entry_versions.createdBy` reference `users` and go null when that user is
-deleted: content outlives its author, and the column already means "the acting
-user, if known". Rejected: reassigning to another user (WordPress's model, too
-heavy for a "who touched this row" stamp, and Astromech has no ownership concept
-to reassign to), cascade (deletes the content), and restrict (blocks a
-legitimate user removal). libSQL opens with foreign keys off, so the FK action
-is inert there and `deleteUser` nulls the columns itself: the DB clause records
-the intent and enforces it on D1, the app guarantees it on every driver. This is
-a column FK, unlike the `relationships` index above whose dangling ids are field
+`entries.createdBy`/`updatedBy`, the same pair on `entry_content`,
+`entry_versions.createdBy`, and every other author column in core (including
+`settings.updatedBy`) reference `users` and go null when that user is deleted:
+content outlives its author, and the column already means "the acting user, if
+known". Rejected: reassigning to another user (WordPress's model, too heavy for
+a "who touched this row" stamp, and Astromech has no ownership concept to
+reassign to), cascade (deletes the content), and restrict (blocks a legitimate
+user removal). libSQL opens with foreign keys off, so the FK action is inert
+there and `deleteUser` nulls the columns itself: the DB clause records the
+intent and enforces it on D1, the app guarantees it on every driver. This is a
+column FK, unlike the `relationships` index above whose dangling ids are field
 data with nothing to act on.
 
 **Every resource is its own three tables, not rows in one shared table.** An
@@ -154,6 +155,29 @@ content row keep their own timestamps for anything that wants the edit time.
 Rejected: the content row's timestamp (a caption edit would bust every cached
 variant), and a second field on `Media` for each, which asks every caller to
 know which one it wants.
+
+**A user row without a content row reads as empty content.** better-auth mints
+`users` rows outside Astromech's write path, and the hook that adds the
+default-locale `user_content` row runs after that insert, so a provider added
+later may not run it. A session must not fail on a profile nobody has written:
+`get` and `query` answer with `fields: {}`, the default locale and no locales,
+and the first `update` creates the row. Rejected: a strict inner join, which
+locks a user out of their own profile, and a lazy insert on read, which puts a
+write in a read path.
+
+**Only a user's `fields` are versioned.** `name`, `email`, `image` and `role`
+are the account row, which better-auth and the roles machinery own; a version
+of a profile is a version of what the site's own fields say, not of an account
+change that machinery already tracks.
+
+**Author clearing enumerates columns from the table descriptors.** The
+hand-kept list under `entries/internal/` was three tables when nine carried the
+column; `users/internal/clear-author-references.ts` walks `CORE_TABLES` and
+clears every column whose FK targets `users` with `onDelete: 'set null'`.
+Rejected: relying on `ON DELETE set null` alone (libSQL does not enforce
+foreign keys), and a plugin table walk (a plugin's table descriptors reach the
+runtime only through `config.plugins`, which `ResolvedConfig` strips, so the
+delete path cannot enumerate them without being handed the config).
 
 **Filtering entries by field data rides declared expression indexes** over
 `json_extract(fields, '$.path')` on `entry_content`, with the index DDL and the

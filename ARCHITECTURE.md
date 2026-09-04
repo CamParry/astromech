@@ -44,7 +44,7 @@ codegen                                              generation
 policies                                             who may call what
 entries · globals · media · users · settings ·       the content modules
   notifications
-content                                              the shared content repository, under entries, globals and media
+content                                              the shared content repository, under entries, globals, media and users
 plugins · config · database · storage · fields ·     the modules those build on
   permissions · hooks · request-context · email ·
   ai · cron
@@ -84,7 +84,7 @@ types · utilities · env · errors · registry.ts       pure leaves
   services and refuses a method the role lacks; every untrusted path (HTTP, RPC,
   the AI tool-loop) composes it. Trusted paths (the application instance used in
   SSR and hooks, the CLI, the MCP server) do not.
-- **The content modules** (`entries`, `globals`, `media`, `users`, `settings`, `notifications`) own the business verbs. Each has a `service.ts` (its verbs), a `tables.ts` (its `defineTable` tables and row types), a contract catalogue (`contract.ts`, or `methods.ts` in `entries`) that puts it in the method manifest, and a `schema.ts` of Zod request schemas where it validates input. A large module splits its verbs into `operations/` and helpers into `internal/`, with `service.ts` assembling them. They are siblings: one may call another's service, but reaches tables through `database/tables.ts`. `entries`, `globals` and `media` build on a shelf module of their own, `content/`, which holds the shared content repository over `{ table, contentTable, versionsTable }` plus the translatable, versioning and visibility helpers both need.
+- **The content modules** (`entries`, `globals`, `media`, `users`, `settings`, `notifications`) own the business verbs. Each has a `service.ts` (its verbs), a `tables.ts` (its `defineTable` tables and row types), a contract catalogue (`contract.ts`, or `methods.ts` in `entries`) that puts it in the method manifest, and a `schema.ts` of Zod request schemas where it validates input. A large module splits its verbs into `operations/` and helpers into `internal/`, with `service.ts` assembling them. They are siblings: one may call another's service, but reaches tables through `database/tables.ts`. `entries`, `globals`, `media` and `users` build on a shelf module of their own, `content/`, which holds the shared content repository over `{ table, contentTable, versionsTable }` plus the translatable, versioning and visibility helpers both need.
 - **The modules below them** (`database`, `storage`, `fields`, `config`, `permissions`, `hooks`, `request-context`, `email`, `ai`, `cron`, and `plugins` — the `define*` authoring API and every `runtime/` file except `plugin-runtime.ts`) are what the content modules build on. Each does one thing and holds no business logic.
 - **Leaves** import only other leaves and third-party packages. A small pure file (a constant, a type, a function over its arguments) may sit inside any module and still be imported from any layer.
 
@@ -142,6 +142,16 @@ content rows in the requested locale. The bytes are in the storage driver under 
 key derived from the media id, never from a URL. Translation opts in through
 `media: { translatable: true }`; versioning is always on, and a media item
 declares no statuses, staging or trash.
+
+A **user** lives across the same three tables, declared in `users/tables.ts`:
+`users` is the account row, which better-auth owns and writes through its own
+Kysely instance; `user_content` holds one row per locale of the site's own
+`fields`; `user_versions` snapshots a content row. `name`, `email` and `role`
+are written whatever the locale, while `fields` addresses one locale.
+`users/internal/clear-author-references.ts` walks the core table descriptors on
+delete, clearing every column whose reference targets `users` with
+`onDelete: 'set null'`, rather than naming tables by hand. Translation opts in
+through `users: { translatable: true }`; versioning is always on.
 
 **Fields** are shared by entry types, globals and plugin tables. `fields/builder.ts` is the authoring API (`fields.text(...)`), and
 `fields/field-type-registry.ts` holds one `FieldType` per type name, carrying

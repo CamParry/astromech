@@ -228,7 +228,7 @@ thread reviews the diff and runs the gate itself.
 - [x] Open a roadmap file for `users/` and `media/` with the same rules, so the
       repository `delete` in each (which already calls
       `createRelationshipRepository(db ?? getDb())`) is brought onto the scope.
-      (`roadmap/planned/flatten-user-and-media-operations.md`)
+      (`roadmap/completed/flatten-user-and-media-operations.md`)
 
 ## Not changing
 

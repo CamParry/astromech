@@ -35,8 +35,9 @@ buys one turn against a runaway agent and is not a security boundary.
 
 **Content.** One locale of a resource's authored values: its fields, and the
 content-level identifiers that go with them (an entry's title and slug; a media
-item's title, alt text and caption). A content row carries its own internal id,
-which is never public; a caller addresses one by the resource's id plus a locale.
+item's title, alt text and caption; a user's fields). A content row carries its
+own internal id, which is never public; a caller addresses one by the
+resource's id plus a locale.
 
 **Custom table.** A plugin's own table backing an entry type, presented through
 the entries admin surface with all entry capabilities switched off. Every entry
@@ -160,6 +161,11 @@ call, with the description, input schema and confirmation wording it needs.
 
 **Trash.** Soft delete: the item is marked and kept, and restoring reverses it.
 Deleting is permanent and separate; there is no force-delete.
+
+**User.** An admin account. `email`, `name` and `role` are the account
+better-auth owns; the site's own fields are content, one `user_content` row per
+locale, versioned in `user_versions`. A user has no status, no staged change
+and no trash.
 
 **Validation mode.** The split between completeness (has the field been filled
 in) and correctness (is what it holds valid). A draft is checked for correctness

@@ -28,14 +28,14 @@ Translation, versioning and staging are one implementation over one shape,
 capabilities it supports, and the shared machinery never touches a resource's
 own columns; the resource module owns those.
 
-|              | entries | globals | media  | users (deferred) |
-| ------------ | ------- | ------- | ------ | ---------------- |
-| translatable | opt-in  | opt-in  | opt-in | opt-in           |
-| versioning   | on      | on      | on     | on               |
-| statuses     | on      | on      | off    | off              |
-| staging      | on      | on      | off    | off              |
-| slug         | on      | off     | off    | off              |
-| trash        | on      | off     | off    | off              |
+|              | entries | globals | media  | users  |
+| ------------ | ------- | ------- | ------ | ------ |
+| translatable | opt-in  | opt-in  | opt-in | opt-in |
+| versioning   | on      | on      | on     | on     |
+| statuses     | on      | on      | off    | off    |
+| staging      | on      | on      | off    | off    |
+| slug         | on      | off     | off    | off    |
+| trash        | on      | off     | off    | off    |
 
 Prior art: Drupal's `node` and `node_field_data` (a base row and a per-language
 authored row), Craft's `elements` and `elements_sites`, and Payload's base table
@@ -87,7 +87,8 @@ language's row and every translation has to re-point it.
   Drupal do not trash uploads, a trashed file has no answer to what happens to
   the file, and the dangerous accident (deleting an image a page uses) is
   already refused by media's incoming-reference check. Globals cannot be
-  trashed. Users are better-auth's to delete.
+  trashed. Users have no trash either: deleting one clears every author
+  reference to it and removes the row outright.
 - **`type` lives on the entries row and is copied onto content rows.** The
   slug-unique index `(type, locale, slug)` and the list index
   `(type, locale, status)` cannot reach across a join. This is the one accepted
@@ -113,9 +114,11 @@ language's row and every translation has to re-point it.
   `alt`, `caption` and `fields` move to `media_content`, one row per locale, so
   alt text is translatable. Relations and the `media` field keep storing
   `media.id`. Media declares no statuses, staging or trash.
-- **Users move last, and only on demand.** Nothing asks for translated or
-  versioned profiles. `users.fields` stays where it is. When it moves,
-  `user_content` and `user_versions` follow the template with nothing to invent.
+- **Users move onto `user_content` and `user_versions` following the template
+  with nothing to invent.** `users.fields` moves off the `users` row; better-auth
+  still mints the account row outside Astromech's write path, so a user with no
+  content row reads as empty content rather than failing, and only `fields` is
+  versioned, not the account columns better-auth and the roles machinery own.
 
 ### Column template
 
@@ -213,7 +216,13 @@ afterwards would be doing the work twice.
       demo migration is a `RENAME COLUMN` written by hand: the schema differ
       has no rename op, and it refuses a `users` rebuild because every author
       column references the table.
-- [ ] **Users.** Only when something asks for it.
+- [x] **Users.** `user_content` and `user_versions`; `fields` moves off the
+      `users` row; translation opts in through `users: { translatable: true }`.
+      Two things settled differently from the plan: a user row with no content
+      row reads as empty content, because better-auth mints the row outside
+      Astromech's write path rather than through it; and only `fields` is
+      versioned, since `name`, `email` and `role` are the account row that
+      better-auth and the roles machinery already own.
 - [x] **Docs, per stage.** `TERMINOLOGY.md`: `Resource` gains global and loses
       settings page, a `Content` entry is added, `Version` widens from an entry
       to a content row. `DECISIONS.md`, edited in place per its own rule: the
