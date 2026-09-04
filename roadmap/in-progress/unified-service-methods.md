@@ -131,15 +131,15 @@ objects instead, and if it lands second, it starts from them.
 
 **Stage 0 — spec and types**
 
-- [ ] A spec in `specs/` pinning `AppContext`, `PluginContext` as its
+- [x] A spec in `specs/` pinning `AppContext`, `PluginContext` as its
       extension, the unified `ServiceMethod<Input, Output, Ctx>` with `access`
       and `(input, ctx)`, and the `defineService` signature with its
       `satisfies` check. Deleted when stage 5 lands.
-- [ ] `ServiceMethod` in `types/` replaces `ServiceMethodContract`; plugins
+- [x] `ServiceMethod` in `types/` replaces `ServiceMethodContract`; plugins
       compile unchanged. `defineServiceMethod` and `noInput` move with it.
-- [ ] `defineService` beside it, stamping `name` and returning
+- [x] `defineService` beside it, stamping `name` and returning
       `{ catalogue, bind }`.
-- [ ] `AppContext` built in one place from the request store, with
+- [x] `AppContext` built in one place from the request store, with
       `createPluginContext` extending it. Tests: a context built with no
       request has `user: null` and `role: null`; the plugin layer adds
       `plugin` and namespaced `storage` and nothing else.
