@@ -4,7 +4,7 @@
  * and every policy lives there or in `internal/**`.
  */
 
-import type { EntriesService, EntryUpdateParams } from '@/types/index';
+import type { EntriesService } from '@/types/index';
 import { BulkOperationError } from './errors';
 import { createEntry } from './operations/create';
 import { deleteEntries } from './operations/delete';
@@ -31,98 +31,17 @@ export const entriesService: EntriesService = {
     // `update`, `trash`, `restore`, `delete`, `publish`, `unpublish` and
     // `schedule` adapt the `string | readonly string[]` overloads onto the
     // batch-only operations (`DECISIONS.md`).
-    update: ((params: EntryUpdateParams) => {
-        const many = Array.isArray(params.id);
-        return updateEntries({
-            type: params.type,
-            ids: [params.id].flat(),
-            ...(params.locale !== undefined ? { locale: params.locale } : {}),
-            ...(params.staged !== undefined ? { staged: params.staged } : {}),
-            data: params.data,
-        })
-            .then((rows) => (many ? rows : rows[0]))
-            .catch((err: unknown) => {
-                throw many ? err : unwrapBatchOfOne(err);
-            });
-    }) as EntriesService['update'],
+    update: fromBatch(updateEntries) as EntriesService['update'],
     duplicate: duplicateEntry,
-    trash: (params) => {
-        const many = Array.isArray(params.id);
-        return trashEntries({ type: params.type, ids: [params.id].flat() }).catch(
-            (err: unknown) => {
-                throw many ? err : unwrapBatchOfOne(err);
-            }
-        );
-    },
-    restore: ((params: { type: string; id: string | readonly string[] }) => {
-        const many = Array.isArray(params.id);
-        return restoreEntries({ type: params.type, ids: [params.id].flat() })
-            .then((rows) => (many ? rows : rows[0]))
-            .catch((err: unknown) => {
-                throw many ? err : unwrapBatchOfOne(err);
-            });
-    }) as EntriesService['restore'],
-    delete: (params) => {
-        const many = Array.isArray(params.id);
-        return deleteEntries({ type: params.type, ids: [params.id].flat() }).catch(
-            (err: unknown) => {
-                throw many ? err : unwrapBatchOfOne(err);
-            }
-        );
-    },
+    trash: fromBatch(trashEntries),
+    restore: fromBatch(restoreEntries) as EntriesService['restore'],
+    delete: fromBatch(deleteEntries),
     emptyTrash,
     versions: listEntryVersions,
     restoreVersion: restoreEntryVersion,
-    publish: ((params: {
-        type: string;
-        id: string | readonly string[];
-        locale?: string;
-    }) => {
-        const many = Array.isArray(params.id);
-        return publishEntries({
-            type: params.type,
-            ids: [params.id].flat(),
-            ...(params.locale !== undefined ? { locale: params.locale } : {}),
-        })
-            .then((rows) => (many ? rows : rows[0]))
-            .catch((err: unknown) => {
-                throw many ? err : unwrapBatchOfOne(err);
-            });
-    }) as EntriesService['publish'],
-    unpublish: ((params: {
-        type: string;
-        id: string | readonly string[];
-        locale?: string;
-    }) => {
-        const many = Array.isArray(params.id);
-        return unpublishEntries({
-            type: params.type,
-            ids: [params.id].flat(),
-            ...(params.locale !== undefined ? { locale: params.locale } : {}),
-        })
-            .then((rows) => (many ? rows : rows[0]))
-            .catch((err: unknown) => {
-                throw many ? err : unwrapBatchOfOne(err);
-            });
-    }) as EntriesService['unpublish'],
-    schedule: ((params: {
-        type: string;
-        id: string | readonly string[];
-        publishedAt: Date;
-        locale?: string;
-    }) => {
-        const many = Array.isArray(params.id);
-        return scheduleEntries({
-            type: params.type,
-            ids: [params.id].flat(),
-            publishedAt: params.publishedAt,
-            ...(params.locale !== undefined ? { locale: params.locale } : {}),
-        })
-            .then((rows) => (many ? rows : rows[0]))
-            .catch((err: unknown) => {
-                throw many ? err : unwrapBatchOfOne(err);
-            });
-    }) as EntriesService['schedule'],
+    publish: fromBatch(publishEntries) as EntriesService['publish'],
+    unpublish: fromBatch(unpublishEntries) as EntriesService['unpublish'],
+    schedule: fromBatch(scheduleEntries) as EntriesService['schedule'],
     incomingRelationships: listIncomingRelationships,
     createStaged: createStagedEntry,
     getStaged: getStagedEntry,
@@ -131,6 +50,31 @@ export const entriesService: EntriesService = {
     issuePreviewToken,
     revokePreviewToken,
 };
+
+/**
+ * Adapts a batch-only operation onto the `id: string | readonly string[]`
+ * overload: one id is a batch of one, and its result and errors are unwrapped.
+ */
+function fromBatch<B extends { ids: readonly string[] }>(
+    operation: (params: B) => Promise<void>
+): (params: Omit<B, 'ids'> & { id: string | readonly string[] }) => Promise<void>;
+function fromBatch<B extends { ids: readonly string[] }, R>(
+    operation: (params: B) => Promise<R[]>
+): (params: Omit<B, 'ids'> & { id: string | readonly string[] }) => Promise<R | R[]>;
+function fromBatch<B extends { ids: readonly string[] }, R>(
+    operation: (params: B) => Promise<R[] | void>
+) {
+    return async (params: Omit<B, 'ids'> & { id: string | readonly string[] }) => {
+        const { id, ...rest } = params;
+        const many = Array.isArray(id);
+        try {
+            const rows = await operation({ ...rest, ids: [id].flat() } as unknown as B);
+            return many ? rows : rows?.[0];
+        } catch (err: unknown) {
+            throw many ? err : unwrapBatchOfOne(err);
+        }
+    };
+}
 
 /**
  * For a batch of one the `BulkOperationError` envelope names nothing the caller

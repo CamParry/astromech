@@ -10,13 +10,20 @@
  * suite stays well under the runtime budget.
  */
 
+import type { EntryRepository } from '@/entries/repository/types';
 import type { Entry, PluginDefinition } from '@/types/index';
 import { createTestDb, registerTestPlugins, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { decodeWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { entriesTable } from '@/database/tables';
+import {
+    getEntryRepository,
+    resetEntryRepositoryOverrides,
+    setEntryRepository,
+} from '@/entries/repository/registry';
 import { entriesService } from '@/entries/service';
+import { ValidationError } from '@/errors/validation';
 import { defineHook } from '@/plugins/define-hook';
 
 const api = entriesService;
@@ -932,6 +939,95 @@ describe('bulk', () => {
     it('bulk update rejecting an empty array is a no-op (no error)', async () => {
         const res = await api.update({ type: 'post', id: [], data: { title: 'X' } });
         expect(res).toEqual([]);
+    });
+});
+
+// A single id is a batch of one, and the `BulkOperationError` envelope the
+// write loop adds names nothing the caller does not know, so each single-id
+// verb hands back the underlying error. The failure is forced by mounting a
+// repository whose one relevant method throws inside that loop.
+describe('a single id rethrows the underlying error, unwrapped', () => {
+    function failing(patch: (base: EntryRepository) => Partial<EntryRepository>): void {
+        const base = getEntryRepository('post');
+        setEntryRepository('post', { ...base, ...patch(base) });
+    }
+
+    function rejects(): Promise<never> {
+        return Promise.reject(new ValidationError([]));
+    }
+
+    function trashGroup(base: EntryRepository): NonNullable<EntryRepository['trash']> {
+        const { trash } = base;
+        if (!trash) throw new Error('expected the post repository to support trash');
+        return trash;
+    }
+
+    afterEach(() => {
+        resetEntryRepositoryOverrides();
+    });
+
+    it('update', async () => {
+        const entry = await api.create({ type: 'post', data: { title: 'A' } });
+        failing(() => ({ update: rejects }));
+        await expect(
+            api.update({ type: 'post', id: entry.id, data: { title: 'B' } })
+        ).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it('publish', async () => {
+        const entry = await api.create({ type: 'post', data: { title: 'A' } });
+        failing(() => ({ update: rejects }));
+        await expect(api.publish({ type: 'post', id: entry.id })).rejects.toBeInstanceOf(
+            ValidationError
+        );
+    });
+
+    it('unpublish', async () => {
+        const entry = await api.create({
+            type: 'post',
+            data: { title: 'A', status: 'published' },
+        });
+        failing(() => ({ update: rejects }));
+        await expect(
+            api.unpublish({ type: 'post', id: entry.id })
+        ).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it('schedule', async () => {
+        const entry = await api.create({ type: 'post', data: { title: 'A' } });
+        failing(() => ({ update: rejects }));
+        await expect(
+            api.schedule({
+                type: 'post',
+                id: entry.id,
+                publishedAt: new Date(Date.now() + 60_000),
+            })
+        ).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it('trash', async () => {
+        const entry = await api.create({ type: 'post', data: { title: 'A' } });
+        failing((base) => ({ trash: { ...trashGroup(base), trash: rejects } }));
+        await expect(api.trash({ type: 'post', id: entry.id })).rejects.toBeInstanceOf(
+            ValidationError
+        );
+    });
+
+    it('restore', async () => {
+        const entry = await api.create({ type: 'post', data: { title: 'A' } });
+        await api.trash({ type: 'post', id: entry.id });
+        failing((base) => ({ trash: { ...trashGroup(base), restore: rejects } }));
+        await expect(api.restore({ type: 'post', id: entry.id })).rejects.toBeInstanceOf(
+            ValidationError
+        );
+    });
+
+    it('delete', async () => {
+        const entry = await api.create({ type: 'post', data: { title: 'A' } });
+        failing(() => ({ delete: rejects }));
+        await expect(api.delete({ type: 'post', id: entry.id })).rejects.toBeInstanceOf(
+            ValidationError
+        );
     });
 });
 

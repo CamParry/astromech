@@ -45,9 +45,9 @@ overload; they are the same casts the file carries now.
 
 ## The work
 
-- [ ] `service.ts` to the shape above. The service tests in
+- [x] `service.ts` to the shape above. The service tests in
       `packages/astromech/tests/services/entries/` are the safety net; the single-id
       `ValidationError` assertions are the check that the unwrap still holds.
-- [ ] `update-operation-takes-a-batch.md` records "written out per verb, no
+- [x] `update-operation-takes-a-batch.md` records "written out per verb, no
       shared wrapper"; note in the commit message that the helper replaces
       that, and why (seven identical copies).
