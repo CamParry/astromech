@@ -210,7 +210,8 @@ export type User = {
     emailVerified: boolean;
     image: string | null;
     fields: JsonObject | null;
-    roleSlug: string;
+    /** The slug of the user's role, resolved against the config. */
+    role: string;
     createdAt: Date;
     updatedAt: Date;
 };

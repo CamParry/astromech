@@ -32,8 +32,8 @@ let bob: string;
 beforeEach(async () => {
     db = await createTestDb();
     setupTestConfig();
-    alice = (await createTestUser(db, { name: 'Alice', roleSlug: 'admin' })).id;
-    bob = (await createTestUser(db, { name: 'Bob', roleSlug: 'editor' })).id;
+    alice = (await createTestUser(db, { name: 'Alice', role: 'admin' })).id;
+    bob = (await createTestUser(db, { name: 'Bob', role: 'editor' })).id;
 });
 
 const editor: Role = {

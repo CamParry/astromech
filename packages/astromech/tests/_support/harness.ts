@@ -292,7 +292,7 @@ export async function createTestUser(
             encodeWith(usersTable, {
                 email: overrides.email ?? `user-${crypto.randomUUID()}@test.dev`,
                 name: overrides.name ?? 'Test User',
-                roleSlug: overrides.roleSlug ?? DEFAULT_ROLE_SLUG,
+                role: overrides.role ?? DEFAULT_ROLE_SLUG,
                 ...overrides,
             })
         )

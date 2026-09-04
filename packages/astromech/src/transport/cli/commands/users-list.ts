@@ -18,7 +18,7 @@ export default defineCommand({
             return;
         }
         for (const u of users) {
-            console.log(`${u.id}  ${u.email}  ${u.name ?? ''}  ${u.roleSlug ?? ''}`);
+            console.log(`${u.id}  ${u.email}  ${u.name ?? ''}  ${u.role ?? ''}`);
         }
     },
 });

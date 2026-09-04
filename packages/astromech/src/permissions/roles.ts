@@ -109,7 +109,7 @@ export function requireRole(
     if (role) return role;
     const configured = Object.keys(config.resolvedRoles).join(', ');
     throw ValidationError.fromFieldErrors({
-        roleSlug: [`Unknown role "${slug}". Configured roles: ${configured}`],
+        role: [`Unknown role "${slug}". Configured roles: ${configured}`],
     });
 }
 

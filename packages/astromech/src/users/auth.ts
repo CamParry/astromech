@@ -47,9 +47,8 @@ function buildAuth(): Auth<BetterAuthOptions> {
                 // Signup inserts through better-auth's own Kysely instance, so
                 // the role it writes is declared here rather than left to a
                 // column default. `input: false` stops a signup body naming its own role.
-                roleSlug: {
+                role: {
                     type: 'string',
-                    fieldName: 'role_slug',
                     input: false,
                     defaultValue: DEFAULT_ROLE_SLUG,
                 },

@@ -30,7 +30,7 @@ function makeUser(id: string): User {
         emailVerified: true,
         image: null,
         fields: null,
-        roleSlug: 'admin',
+        role: 'admin',
         createdAt: new Date(0),
         updatedAt: new Date(0),
     };

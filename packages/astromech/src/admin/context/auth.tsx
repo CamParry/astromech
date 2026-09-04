@@ -14,7 +14,7 @@ export type AuthUser = {
     name: string;
     email: string;
     image: string | null;
-    roleSlug: string;
+    role: string;
     permissions: string[];
 };
 
@@ -32,7 +32,7 @@ type MeResponse = {
             name: string;
             email: string;
             image: string | null;
-            roleSlug: string;
+            role: string;
         };
         role: {
             slug: string;

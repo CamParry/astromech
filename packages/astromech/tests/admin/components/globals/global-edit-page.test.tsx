@@ -149,7 +149,7 @@ function makeClient(permissions: string[]): QueryClient {
         name: 'Admin',
         email: 'admin@astromech.dev',
         image: null,
-        roleSlug: 'admin',
+        role: 'admin',
         permissions,
     });
     return queryClient;

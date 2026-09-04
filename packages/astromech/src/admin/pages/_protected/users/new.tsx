@@ -29,7 +29,7 @@ import { useCreateUser } from '@/admin/hooks/users';
 type FormValues = {
     name: string;
     email: string;
-    roleSlug: string;
+    role: string;
 };
 
 function UserCreatePage(): React.ReactElement {
@@ -53,13 +53,13 @@ function UserCreatePage(): React.ReactElement {
         defaultValues: {
             name: '',
             email: '',
-            roleSlug: defaultRole,
+            role: defaultRole,
         } satisfies FormValues,
         onSubmit: ({ value }) => {
             createMutation.mutate({
                 name: value.name,
                 email: value.email,
-                roleSlug: value.roleSlug,
+                role: value.role,
             });
         },
     });
@@ -168,7 +168,7 @@ function UserCreatePage(): React.ReactElement {
                                     )}
                                 </form.Field>
 
-                                <form.Field name="roleSlug">
+                                <form.Field name="role">
                                     {(field) => (
                                         <div className="am-field">
                                             <label

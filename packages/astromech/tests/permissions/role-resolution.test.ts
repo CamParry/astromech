@@ -52,7 +52,7 @@ describe('requireRole', () => {
             expect.unreachable('requireRole should have thrown');
         } catch (err) {
             expect(err).toBeInstanceOf(ValidationError);
-            const message = (err as ValidationError).fields?.roleSlug?.[0] ?? '';
+            const message = (err as ValidationError).fields?.role?.[0] ?? '';
             expect(message).toContain('reviewer');
             expect(message).toContain('admin, editor');
         }

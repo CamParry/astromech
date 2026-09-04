@@ -39,7 +39,7 @@ import { formatDatetime } from '@/utilities/dates';
 
 type FormValues = {
     name: string;
-    roleSlug: string;
+    role: string;
 };
 
 function UserEditPage(): React.ReactElement {
@@ -66,14 +66,14 @@ function UserEditPage(): React.ReactElement {
     const form = useForm({
         defaultValues: {
             name: user?.name ?? '',
-            roleSlug: user?.roleSlug ?? '',
+            role: user?.role ?? '',
         } satisfies FormValues,
         onSubmit: ({ value }) => {
-            const payload: Partial<{ name: string; roleSlug: string }> = {
+            const payload: Partial<{ name: string; role: string }> = {
                 name: value.name,
             };
             if (canUpdateUsers() && !isSelf) {
-                payload.roleSlug = value.roleSlug;
+                payload.role = value.role;
             }
             updateMutation.mutate(payload);
         },
@@ -187,7 +187,7 @@ function UserEditPage(): React.ReactElement {
                                 </div>
 
                                 {canUpdateUsers() && !isSelf && (
-                                    <form.Field name="roleSlug">
+                                    <form.Field name="role">
                                         {(field) => (
                                             <div className="am-field">
                                                 <label

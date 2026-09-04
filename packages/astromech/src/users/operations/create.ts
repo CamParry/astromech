@@ -19,7 +19,7 @@ export async function createUser(params: { data: UserCreateData }): Promise<User
     const validated = parseInput(createUserSchema, params.data);
 
     const config = getConfig();
-    requireRole(config, validated.roleSlug);
+    requireRole(config, validated.role);
 
     const fieldDefs = flattenFieldNodes(config.users?.fields ?? []);
     const validate = config.users?.validate;
@@ -50,7 +50,7 @@ export async function createUser(params: { data: UserCreateData }): Promise<User
         email: validated.email,
         name: validated.name,
         ...(Object.keys(fields).length > 0 && { fields }),
-        roleSlug: validated.roleSlug,
+        role: validated.role,
     });
     await indexUserRelationships(created.id, fields);
     return toUser(created);

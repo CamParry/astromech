@@ -37,24 +37,24 @@ describe('better-auth email signup', () => {
 
         const row = await db
             .selectFrom('users')
-            .select('roleSlug')
+            .select('role')
             .where('email', '=', 'signup@test.dev')
             .executeTakeFirstOrThrow();
 
-        expect(row.roleSlug).toBe(DEFAULT_ROLE_SLUG);
-        expect(row.roleSlug).not.toBe('admin');
+        expect(row.role).toBe(DEFAULT_ROLE_SLUG);
+        expect(row.role).not.toBe('admin');
     });
 
     // `input: false` makes better-auth substitute the declared default for
     // whatever the body sent, so a signup cannot name its own role. The cast is
-    // the point: the signup body type already has no `roleSlug`, and this is
+    // the point: the signup body type already has no `role`, and this is
     // what an untyped HTTP caller sending one gets.
     it('ignores a role named by the signup body', async () => {
         const body = {
             email: 'escalate@test.dev',
             password: 'password123',
             name: 'Escalate',
-            roleSlug: 'admin',
+            role: 'admin',
         };
         type SignUpEmail = ReturnType<typeof getAuth>['api']['signUpEmail'];
         type SignUpArgs = NonNullable<Parameters<SignUpEmail>[0]>;
@@ -62,11 +62,11 @@ describe('better-auth email signup', () => {
 
         const row = await db
             .selectFrom('users')
-            .select('roleSlug')
+            .select('role')
             .where('email', '=', 'escalate@test.dev')
             .executeTakeFirstOrThrow();
 
-        expect(row.roleSlug).toBe(DEFAULT_ROLE_SLUG);
+        expect(row.role).toBe(DEFAULT_ROLE_SLUG);
     });
 
     // The descriptor is generated from, and generates, both the DDL and the
@@ -93,7 +93,7 @@ describe('better-auth email signup', () => {
         // `col.id({ format: 'uuid' })` describes what OUR writes mint.
         expect(user?.id).toMatch(/^[A-Za-z0-9]{32}$/);
         expect(user?.emailVerified).toBe(false);
-        expect(user?.roleSlug).toBe(DEFAULT_ROLE_SLUG);
+        expect(user?.role).toBe(DEFAULT_ROLE_SLUG);
         expect(user?.createdAt).toBeInstanceOf(Date);
         expect(user?.createdAt.getTime()).not.toBeNaN();
         expect(Math.abs((user?.createdAt.getTime() ?? 0) - before)).toBeLessThan(60_000);
@@ -112,7 +112,7 @@ describe('better-auth email signup', () => {
         await createUserRepository().create({
             email: 'ours@test.dev',
             name: 'Ours',
-            roleSlug: DEFAULT_ROLE_SLUG,
+            role: DEFAULT_ROLE_SLUG,
         });
 
         const { rows } = await sql<{ email: string; kind: string; value: unknown }>`

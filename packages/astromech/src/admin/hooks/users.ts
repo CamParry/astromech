@@ -65,7 +65,7 @@ export function useUpdateUser(
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: (data: Partial<{ name: string; roleSlug: string }>) =>
+        mutationFn: (data: Partial<{ name: string; role: string }>) =>
             astromechClient.users.update({ id, data }),
         onSuccess: (user) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(id) });

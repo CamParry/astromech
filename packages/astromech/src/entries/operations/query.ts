@@ -85,7 +85,7 @@ export async function queryEntries(
     const data = rows.map(asEntry);
 
     const user = await getCurrentUser();
-    const audience = { roleSlug: user?.roleSlug ?? null, now: new Date() };
+    const audience = { role: user?.role ?? null, now: new Date() };
 
     const visibleData: Entry[] = [];
     for (const entry of data) {

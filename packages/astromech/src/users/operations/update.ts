@@ -23,14 +23,14 @@ export async function updateUser(params: {
         name: string;
         email: string;
         fields: JsonObject;
-        roleSlug: string;
+        role: string;
     }>;
 }): Promise<User> {
     const { id } = params;
     const validatedData = parseInput(updateUserSchema, params.data);
 
-    if (validatedData.roleSlug !== undefined) {
-        requireRole(getConfig(), validatedData.roleSlug);
+    if (validatedData.role !== undefined) {
+        requireRole(getConfig(), validatedData.role);
     }
 
     if (validatedData.fields !== undefined) {
@@ -74,7 +74,7 @@ export async function updateUser(params: {
         name: validatedData.name,
         email: validatedData.email,
         fields: validatedData.fields as JsonObject | undefined,
-        roleSlug: validatedData.roleSlug,
+        role: validatedData.role,
     });
     // An update that never touched `fields` must leave the index alone.
     if (validatedData.fields !== undefined) {

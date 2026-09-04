@@ -12,7 +12,7 @@ import { applyVisibility } from '@/content/visibility';
 const NOW = new Date('2026-06-15T12:00:00Z');
 
 function audience(now = NOW): AudienceContext {
-    return { roleSlug: null, now };
+    return { role: null, now };
 }
 
 function publishedEntry(fields: JsonObject): Entry {

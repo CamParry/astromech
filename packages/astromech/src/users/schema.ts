@@ -8,7 +8,7 @@ export const createUserSchema = z
         fields: z.record(z.string(), z.unknown()).optional(),
         // Defaulted here, not by the column: a create that names no role gets
         // the least-privileged built-in rather than whatever the DDL says.
-        roleSlug: z.string().default(DEFAULT_ROLE_SLUG),
+        role: z.string().default(DEFAULT_ROLE_SLUG),
     })
     .openapi('CreateUser');
 
@@ -17,7 +17,7 @@ export const updateUserSchema = z
         email: z.string().email('Must be a valid email address').optional(),
         name: z.string().min(1, 'Name cannot be empty').optional(),
         fields: z.record(z.string(), z.unknown()).optional(),
-        roleSlug: z.string().optional(),
+        role: z.string().optional(),
     })
     .openapi('UpdateUser');
 

@@ -20,12 +20,12 @@ function app(role: Role = adminRole, user: User = testUser) {
 }
 
 /** Create a user through the Local API (no permission checks). */
-async function makeUser(email: string, name: string, roleSlug?: string): Promise<User> {
+async function makeUser(email: string, name: string, role?: string): Promise<User> {
     return usersService.create({
         data: {
             email,
             name,
-            ...(roleSlug !== undefined && { roleSlug }),
+            ...(role !== undefined && { role }),
         },
     });
 }
@@ -154,22 +154,22 @@ describe('POST /users', () => {
         expect(body.data.id).toBeTruthy();
     });
 
-    it('carries roleSlug and fields through', async () => {
+    it('carries role and fields through', async () => {
         const res = await app().request('/users', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 email: 'ed@test.dev',
                 name: 'Ed',
-                roleSlug: 'editor',
+                role: 'editor',
                 fields: { bio: 'hello' },
             }),
         });
         expect(res.status).toBe(201);
         const body = (await res.json()) as {
-            data: { roleSlug: string; fields: Record<string, unknown> };
+            data: { role: string; fields: Record<string, unknown> };
         };
-        expect(body.data.roleSlug).toBe('editor');
+        expect(body.data.role).toBe('editor');
         expect(body.data.fields['bio']).toBe('hello');
     });
 
@@ -232,12 +232,12 @@ describe('PUT /users/:id', () => {
         expect(((await res.json()) as { data: User }).data.name).toBe('Myself');
     });
 
-    it('403s a self-edit that changes roleSlug', async () => {
+    it('403s a self-edit that changes role', async () => {
         const self = await makeUser('self@test.dev', 'Self', 'editor');
         const res = await app(roleWith([]), self).request(`/users/${self.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ roleSlug: 'admin' }),
+            body: JSON.stringify({ role: 'admin' }),
         });
         expect(res.status).toBe(403);
     });
@@ -260,7 +260,7 @@ describe('PUT /users/:id', () => {
         const res = await app().request(`/users/${onlyAdmin.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ roleSlug: 'editor' }),
+            body: JSON.stringify({ role: 'editor' }),
         });
         expect(res.status).toBe(400);
         const body = (await res.json()) as { error: { code: string; message: string } };
@@ -274,10 +274,10 @@ describe('PUT /users/:id', () => {
         const res = await app().request(`/users/${first.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ roleSlug: 'editor' }),
+            body: JSON.stringify({ role: 'editor' }),
         });
         expect(res.status).toBe(200);
-        expect(((await res.json()) as { data: User }).data.roleSlug).toBe('editor');
+        expect(((await res.json()) as { data: User }).data.role).toBe('editor');
     });
 });
 
@@ -294,8 +294,8 @@ describe('DELETE /users/:id', () => {
     // `admin`, so it does not count toward the last-admin guard.
     it('deletes a user created without a role — the default is not admin', async () => {
         const user = await makeUser('b@test.dev', 'Bob');
-        expect(user.roleSlug).toBe(DEFAULT_ROLE_SLUG);
-        expect(user.roleSlug).not.toBe('admin');
+        expect(user.role).toBe(DEFAULT_ROLE_SLUG);
+        expect(user.role).not.toBe('admin');
 
         const res = await app().request(`/users/${user.id}`, { method: 'DELETE' });
         expect(res.status).toBe(200);

@@ -69,7 +69,7 @@ describe('usersService create / get / update / delete', () => {
             data: { email: 'new@test.dev', name: 'New' },
         });
 
-        expect(created.roleSlug).toBe(DEFAULT_ROLE_SLUG);
+        expect(created.role).toBe(DEFAULT_ROLE_SLUG);
         expect(created.createdAt).toBeInstanceOf(Date);
         expect(created.updatedAt).toBeInstanceOf(Date);
         expect(await usersService.get({ id: created.id })).toMatchObject({ name: 'New' });
@@ -80,10 +80,10 @@ describe('usersService create / get / update / delete', () => {
             data: {
                 email: 'ed@test.dev',
                 name: 'Ed',
-                roleSlug: 'editor',
+                role: 'editor',
             },
         });
-        expect(created.roleSlug).toBe('editor');
+        expect(created.role).toBe('editor');
     });
 
     it('leaves columns absent from the patch alone', async () => {
@@ -100,7 +100,7 @@ describe('usersService create / get / update / delete', () => {
         });
         expect(patched.name).toBe('Renamed');
         expect(patched.email).toBe('p@test.dev');
-        expect(patched.roleSlug).toBe(created.roleSlug);
+        expect(patched.role).toBe(created.role);
     });
 
     it('throws when updating a row that does not exist', async () => {

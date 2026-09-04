@@ -26,8 +26,8 @@ let editor: string;
 beforeEach(async () => {
     db = await createTestDb();
     setupTestConfig();
-    admin = (await createTestUser(db, { name: 'Admin', roleSlug: 'admin' })).id;
-    editor = (await createTestUser(db, { name: 'Editor', roleSlug: 'editor' })).id;
+    admin = (await createTestUser(db, { name: 'Admin', role: 'admin' })).id;
+    editor = (await createTestUser(db, { name: 'Editor', role: 'editor' })).id;
 });
 
 /** First row's id, or a loud failure — keeps the assertions free of `!`. */

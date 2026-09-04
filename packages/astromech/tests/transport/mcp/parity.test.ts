@@ -177,7 +177,7 @@ describe('contract ↔ MCP tool schema parity', () => {
 
     it('users.update carries `fields` and the email format — the shipped drift', () => {
         // The concrete regression. The hand-written adapter schema declared only
-        // id/name/email/roleSlug with additionalProperties:false, so a custom user
+        // id/name/email/role with additionalProperties:false, so a custom user
         // field could not be set through MCP at all.
         const method = manifest.methods.find((m) => m.id === 'users.update');
         expect(method).toBeDefined();

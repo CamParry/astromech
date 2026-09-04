@@ -36,11 +36,11 @@ export type VisibilityShape = 'public' | 'full';
 
 /**
  * Audience context for the visibility filter.
- * `roleSlug` is the current user's role slug, or null for anonymous.
+ * `role` is the current user's role slug, or null for anonymous.
  * `now` is the reference time for the publishedAt check.
  */
 export type AudienceContext = {
-    roleSlug: string | null;
+    role: string | null;
     now: Date;
 };
 

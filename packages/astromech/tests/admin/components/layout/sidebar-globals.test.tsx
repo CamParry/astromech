@@ -55,7 +55,7 @@ function mountSidebar(permissions: string[]) {
         name: 'Editor',
         email: 'editor@astromech.dev',
         image: null,
-        roleSlug: 'editor',
+        role: 'editor',
         permissions,
     });
 

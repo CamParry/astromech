@@ -183,7 +183,7 @@ describe('the entry edit page after a save', () => {
             name: 'Admin',
             email: 'admin@astromech.dev',
             image: null,
-            roleSlug: 'admin',
+            role: 'admin',
             permissions: ['*'],
         });
 

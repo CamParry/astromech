@@ -6,6 +6,6 @@ export function toUser(row: UserRow): User {
     return {
         ...row,
         fields: (row.fields as JsonObject | null) ?? null,
-        roleSlug: row.roleSlug,
+        role: row.role,
     };
 }

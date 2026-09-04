@@ -396,7 +396,7 @@ export type UserCreateData = {
     email: string;
     name: string;
     fields?: JsonObject;
-    roleSlug?: string;
+    role?: string;
 };
 
 /** The users domain's service contract. */
@@ -410,7 +410,7 @@ export type UsersService = {
             email: string;
             name: string;
             fields?: JsonObject;
-            roleSlug: string;
+            role: string;
         }>;
     }): Promise<User>;
     delete(params: { id: string }): Promise<void>;

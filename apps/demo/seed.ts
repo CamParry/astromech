@@ -98,7 +98,7 @@ async function upsertAdmin(): Promise<string> {
                 email,
                 name: 'Alex Admin',
                 emailVerified: true,
-                roleSlug: 'admin',
+                role: 'admin',
                 createdAt: now,
                 updatedAt: now,
             })

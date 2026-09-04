@@ -607,11 +607,7 @@ async function seed(): Promise<void> {
 }
 
 /** Create a credential user if the email is free; returns the user id either way. */
-async function upsertUser(
-    email: string,
-    name: string,
-    roleSlug: string
-): Promise<string> {
+async function upsertUser(email: string, name: string, role: string): Promise<string> {
     const existing = await db
         .selectFrom('users')
         .select('id')
@@ -632,7 +628,7 @@ async function upsertUser(
                 id: userId,
                 email,
                 name,
-                roleSlug,
+                role,
                 emailVerified: true,
                 createdAt: now,
                 updatedAt: now,

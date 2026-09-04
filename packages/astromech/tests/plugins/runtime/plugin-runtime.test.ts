@@ -99,7 +99,7 @@ const user: User = {
     emailVerified: true,
     image: null,
     fields: null,
-    roleSlug: 'admin',
+    role: 'admin',
     createdAt: new Date(),
     updatedAt: new Date(),
 };

@@ -23,7 +23,7 @@ export type NewUser = TableInsert<typeof usersTable>;
  */
 export type UserPatch = Pick<
     Patch<typeof usersTable>,
-    'email' | 'name' | 'fields' | 'roleSlug'
+    'email' | 'name' | 'fields' | 'role'
 >;
 
 export type UserListParams = {
@@ -33,7 +33,7 @@ export type UserListParams = {
     offset?: number | undefined;
 };
 
-const SORTABLE_COLS = ['name', 'email', 'createdAt', 'updatedAt', 'roleSlug'] as const;
+const SORTABLE_COLS = ['name', 'email', 'createdAt', 'updatedAt', 'role'] as const;
 type SortableCol = (typeof SORTABLE_COLS)[number];
 
 function isSortableCol(s: string): s is SortableCol {
@@ -78,8 +78,8 @@ export function createUserRepository(db?: Db) {
         return repository.count(searchWhere(params?.search));
     }
 
-    async function countByRole(roleSlug: string): Promise<number> {
-        return repository.count({ roleSlug });
+    async function countByRole(role: string): Promise<number> {
+        return repository.count({ role });
     }
 
     /** Every user id — the `notify()` broadcast target. */
@@ -88,8 +88,8 @@ export function createUserRepository(db?: Db) {
     }
 
     /** User ids holding a role — the `notify()` per-role target. */
-    async function idsByRole(roleSlug: string): Promise<string[]> {
-        return repository.pluck('id', { where: { roleSlug } });
+    async function idsByRole(role: string): Promise<string[]> {
+        return repository.pluck('id', { where: { role } });
     }
 
     async function get(id: string): Promise<UserRow | null> {

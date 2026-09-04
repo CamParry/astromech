@@ -27,7 +27,7 @@ type Env = { Variables: AuthVariables };
 const router = new OpenAPIHono<Env>();
 
 /** Sort fields accepted off the wire. An unlisted one is dropped, not rejected. */
-const SORTABLE_FIELDS = new Set(['name', 'email', 'createdAt', 'updatedAt', 'roleSlug']);
+const SORTABLE_FIELDS = new Set(['name', 'email', 'createdAt', 'updatedAt', 'role']);
 
 /** The query string the list route accepts. `dir` is the only one that can fail. */
 const listQuery = z.object({
@@ -80,7 +80,7 @@ router.get('/:id', async (c) => {
 });
 
 // PUT /users/:id — bespoke
-// Not in the table: self-access, a `roleSlug` change that still demands
+// Not in the table: self-access, a `role` change that still demands
 // `users:update`, and the last-admin guard — which is a second repository call.
 router.put('/:id', async (c) => {
     const { id } = c.req.param();
@@ -95,15 +95,15 @@ router.put('/:id', async (c) => {
     const parsed = updateUserSchema.safeParse(raw);
     if (!parsed.success) return fromZodError(c, parsed.error);
 
-    const { email, name, fields, roleSlug } = parsed.data;
+    const { email, name, fields, role } = parsed.data;
 
     // Prevent self-role change or role change without users:update permission
-    if (roleSlug !== undefined) {
+    if (role !== undefined) {
         if (!canUpdateUsers) return forbidden(c);
 
         // Last-admin check: if changing away from 'admin', ensure it's not the last one
         const targetUser = await usersService.get({ id });
-        if (targetUser && targetUser.roleSlug === 'admin' && roleSlug !== 'admin') {
+        if (targetUser && targetUser.role === 'admin' && role !== 'admin') {
             const adminCount = await createUserRepository().countByRole('admin');
             if (adminCount <= 1) {
                 return badRequest(c, 'Cannot remove the last administrator');
@@ -117,7 +117,7 @@ router.put('/:id', async (c) => {
             ...(email !== undefined && { email }),
             ...(name !== undefined && { name }),
             ...(fields !== undefined && { fields: fields as JsonObject }),
-            ...(roleSlug !== undefined && { roleSlug }),
+            ...(role !== undefined && { role }),
         },
     });
     return c.json({ data: user });
@@ -133,7 +133,7 @@ router.delete('/:id', async (c) => {
 
     // Last-admin check
     const targetUser = await usersService.get({ id });
-    if (targetUser && targetUser.roleSlug === 'admin') {
+    if (targetUser && targetUser.role === 'admin') {
         const adminCount = await createUserRepository().countByRole('admin');
         if (adminCount <= 1) {
             return badRequest(c, 'Cannot delete the last administrator');

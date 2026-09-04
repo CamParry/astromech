@@ -2,7 +2,7 @@
  * A role slug the config does not define is refused on the way in, and refused
  * again on the way out.
  *
- * `roleSlug` is a bare string in `users/schema.ts` and a bare `text` column, so
+ * `role` is a bare string in `users/schema.ts` and a bare `text` column, so
  * neither zod nor the DDL constrains it to the configured roles. These pin the
  * two places that do: the write operations, and session resolution for a row
  * written before a config edit removed the role it names.
@@ -33,7 +33,7 @@ describe('usersService.create', () => {
     it('rejects a role the config does not define', async () => {
         await expect(
             usersService.create({
-                data: { email: 'typo@test.dev', name: 'Typo', roleSlug: 'admni' },
+                data: { email: 'typo@test.dev', name: 'Typo', role: 'admni' },
             })
         ).rejects.toThrow(ValidationError);
     });
@@ -41,7 +41,7 @@ describe('usersService.create', () => {
     it('does not write the row it rejected', async () => {
         await usersService
             .create({
-                data: { email: 'rejected@test.dev', name: 'Rejected', roleSlug: 'nope' },
+                data: { email: 'rejected@test.dev', name: 'Rejected', role: 'nope' },
             })
             .catch(() => undefined);
 
@@ -55,9 +55,9 @@ describe('usersService.create', () => {
 
     it('accepts a configured role', async () => {
         const user = await usersService.create({
-            data: { email: 'fine@test.dev', name: 'Fine', roleSlug: 'admin' },
+            data: { email: 'fine@test.dev', name: 'Fine', role: 'admin' },
         });
-        expect(user.roleSlug).toBe('admin');
+        expect(user.role).toBe('admin');
     });
 });
 
@@ -65,11 +65,11 @@ describe('usersService.update', () => {
     it('rejects a role the config does not define', async () => {
         const user = await createTestUser(db, { email: 'held@test.dev' });
         await expect(
-            usersService.update({ id: user.id, data: { roleSlug: 'reviewer' } })
+            usersService.update({ id: user.id, data: { role: 'reviewer' } })
         ).rejects.toThrow(ValidationError);
 
         const after = await usersService.get({ id: user.id });
-        expect(after?.roleSlug).toBe(DEFAULT_ROLE_SLUG);
+        expect(after?.role).toBe(DEFAULT_ROLE_SLUG);
     });
 
     it('leaves the role alone when the update names no role', async () => {
@@ -78,7 +78,7 @@ describe('usersService.update', () => {
             id: user.id,
             data: { name: 'Renamed' },
         });
-        expect(updated.roleSlug).toBe(DEFAULT_ROLE_SLUG);
+        expect(updated.role).toBe(DEFAULT_ROLE_SLUG);
     });
 });
 
@@ -106,7 +106,7 @@ describe('getSession', () => {
 
         await db
             .updateTable('users')
-            .set({ roleSlug: 'reviewer' })
+            .set({ role: 'reviewer' })
             .where('email', '=', 'stale@test.dev')
             .execute();
 

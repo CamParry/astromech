@@ -21,7 +21,7 @@ export default defineCommand({
         await loadConfig(args.config, toAllowRemoteOption(args));
 
         let { name, email, password } = args;
-        const roleSlug = args.role ?? 'admin';
+        const role = args.role ?? 'admin';
 
         if (!name || !email || !password) {
             const readline = await import('node:readline/promises');
@@ -47,7 +47,7 @@ export default defineCommand({
             email,
             name,
             emailVerified: true,
-            roleSlug,
+            role,
             createdAt: now,
             updatedAt: now,
         });

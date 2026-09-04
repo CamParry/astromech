@@ -66,7 +66,7 @@ export async function getGlobal(params: {
         {
             shape,
             fields: flattenEntryFields(global.fields),
-            audience: { roleSlug: user?.roleSlug ?? null, now: new Date() },
+            audience: { role: user?.role ?? null, now: new Date() },
         }
     );
     if (filtered === null) return null;

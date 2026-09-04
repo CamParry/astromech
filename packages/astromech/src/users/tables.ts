@@ -18,7 +18,7 @@ export const usersTable = defineTable('users', ({ col }) => ({
     /** No SQL default on purpose: `DEFAULT_ROLE_SLUG` is the default in code,
      *  and every write path supplies it. A path that forgets fails here
      *  rather than minting a role silently. */
-    roleSlug: col.text({ notNull: true }),
+    role: col.text({ notNull: true }),
     createdAt: col.timestamp({ notNull: true, defaultNow: true }),
     updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
 }));

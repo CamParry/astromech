@@ -40,7 +40,7 @@ export async function getSession(
         emailVerified: userRow.emailVerified,
         image: userRow.image,
         fields: (userRow.fields as User['fields']) ?? null,
-        roleSlug: userRow.roleSlug,
+        role: userRow.role,
         createdAt: userRow.createdAt,
         updatedAt: userRow.updatedAt,
     };
@@ -49,10 +49,10 @@ export async function getSession(
     // resolving to something. Removing a role from `astromech.config.ts` logs
     // out everyone who held it, which is visible; the alternative is granting
     // them a role nobody chose, which is not.
-    const role = resolveRole(getConfig(), userRow.roleSlug);
+    const role = resolveRole(getConfig(), userRow.role);
     if (!role) {
         log.warn(
-            `User ${userRow.id} holds role "${userRow.roleSlug}", which is not in the config. Refusing the session. Configured roles are in \`astromech.config.ts\`.`
+            `User ${userRow.id} holds role "${userRow.role}", which is not in the config. Refusing the session. Configured roles are in \`astromech.config.ts\`.`
         );
         return null;
     }

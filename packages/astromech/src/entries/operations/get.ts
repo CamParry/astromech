@@ -56,7 +56,7 @@ export async function getEntry(params: {
 
     const shape: VisibilityShape = params.full ? 'full' : 'public';
     const user = await getCurrentUser();
-    const audience = { roleSlug: user?.roleSlug ?? null, now: new Date() };
+    const audience = { role: user?.role ?? null, now: new Date() };
     const entryType = resolveEntryType(getConfig(), type);
     const fields = entryType ? flattenEntryFields(entryType.fields) : [];
 
