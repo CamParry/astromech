@@ -9,11 +9,11 @@ import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { usersService as api } from '@/app-context/services';
 import { encodeWith } from '@/database/codec';
 import { usersTable } from '@/database/tables';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { createUserRepository } from '@/users/repository';
-import { usersService as api } from '@/users/service';
 
 let db: Kysely<DB>;
 let id: string;

@@ -8,6 +8,7 @@ import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { JsonObject, SortDirection, UserQueryParams } from '@/types/index';
 import type { Context } from 'hono';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
+import { usersService } from '@/app-context/services';
 import { permissionsFor } from '@/permissions/permissions-for';
 import {
     badRequest,
@@ -15,10 +16,9 @@ import {
     fromZodError,
     notFound,
 } from '@/transport/http/middleware/errors';
-import { usersContract } from '@/users/contract';
 import { createUserRepository } from '@/users/repository';
 import { updateUserSchema } from '@/users/schema';
-import { usersService } from '@/users/service';
+import { usersDefinition } from '@/users/service';
 import { USERS_ROUTE_SPECS } from './http-routes.shared';
 import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 
@@ -50,8 +50,8 @@ export const USERS_ROUTES: RestRoute[] = attachHandlers(USERS_ROUTE_SPECS, {
     },
 });
 
-mountRestRoutes(router, usersContract, USERS_ROUTES);
-documentBespokeRoutes(router, usersContract, USERS_ROUTE_SPECS);
+mountRestRoutes(router, usersDefinition.catalogue, USERS_ROUTES);
+documentBespokeRoutes(router, usersDefinition.catalogue, USERS_ROUTE_SPECS);
 
 /**
  * The `{ id }` a user route addresses, plus the locale a content-level one
@@ -86,7 +86,10 @@ router.get('/:id', async (c) => {
     const permissions = permissionsFor(c.var.role);
     const currentUser = c.var.user;
     const args = contentArgs(c);
-    if (!permissions.allowsMethod(usersContract.get) && currentUser.id !== args.id)
+    if (
+        !permissions.allowsMethod(usersDefinition.catalogue.get) &&
+        currentUser.id !== args.id
+    )
         return forbidden(c);
 
     const user = await usersService.get(args);
@@ -101,7 +104,7 @@ router.put('/:id', async (c) => {
     const { id, locale } = contentArgs(c);
     const permissions = permissionsFor(c.var.role);
     const currentUser = c.var.user;
-    const canUpdateUsers = permissions.allowsMethod(usersContract.update);
+    const canUpdateUsers = permissions.allowsMethod(usersDefinition.catalogue.update);
     const isSelf = currentUser.id === id;
 
     if (!canUpdateUsers && !isSelf) return forbidden(c);
@@ -145,7 +148,7 @@ router.put('/:id', async (c) => {
 router.delete('/:id', async (c) => {
     const { id } = c.req.param();
     const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(usersContract.delete)) return forbidden(c);
+    if (!permissions.allowsMethod(usersDefinition.catalogue.delete)) return forbidden(c);
 
     // Last-admin check
     const targetUser = await usersService.get({ id });

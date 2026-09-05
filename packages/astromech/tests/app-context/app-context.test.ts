@@ -151,5 +151,7 @@ describe('createAppContext', () => {
         expect(app.settings).not.toBe(other.settings);
         expect(app.notifications).toBe(app.notifications);
         expect(app.notifications).not.toBe(other.notifications);
+        expect(app.users).toBe(app.users);
+        expect(app.users).not.toBe(other.users);
     });
 });

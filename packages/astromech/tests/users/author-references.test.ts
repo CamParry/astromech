@@ -11,6 +11,7 @@
 import type { Db } from '@/database/types';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { usersService } from '@/app-context/services';
 import { createRepository } from '@/database/repository/create-repository';
 import {
     entriesTable,
@@ -26,7 +27,6 @@ import {
     userContentTable,
     userVersionsTable,
 } from '@/database/tables';
-import { usersService } from '@/users/service';
 
 let db: Db;
 

@@ -19,9 +19,9 @@ import {
     testUser,
 } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { usersService } from '@/app-context/services';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { usersRouter } from '@/transport/http/routes/users';
-import { usersService } from '@/users/service';
 
 function app(role: Role = adminRole, user: User = testUser) {
     return mountRouter('/users', usersRouter, role, user);

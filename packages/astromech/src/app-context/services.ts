@@ -10,11 +10,13 @@ import type {
     ServiceDefinition,
     SettingsService,
     TypedGlobalsService,
+    UsersService,
 } from '@/types/index';
 import { currentAppContext } from '@/app-context/app-context';
 import { globalsDefinition } from '@/globals/service';
 import { notificationsDefinition } from '@/notifications/service';
 import { settingsDefinition } from '@/settings/service';
+import { usersDefinition } from '@/users/service';
 
 /**
  * The interface, each call bound to `currentAppContext()`. One binding per
@@ -56,3 +58,6 @@ export const settingsService: SettingsService = bindCurrent(settingsDefinition);
 export const notificationsService: NotificationsService = bindCurrent(
     notificationsDefinition
 );
+
+/** The users service, acting as whoever the current request is. */
+export const usersService: UsersService = bindCurrent(usersDefinition);

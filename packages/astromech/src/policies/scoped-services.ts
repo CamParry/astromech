@@ -20,6 +20,7 @@ import {
     globalsService,
     notificationsService,
     settingsService,
+    usersService,
 } from '@/app-context/services';
 import { ENTRY_METHOD_ACTIONS } from '@/entries/methods';
 import { entriesService } from '@/entries/service';
@@ -34,8 +35,7 @@ import { entryPermission } from '@/permissions/entry-permission';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { getCurrentUser } from '@/request-context/request-context';
 import { settingsDefinition } from '@/settings/service';
-import { usersContract } from '@/users/contract';
-import { usersService } from '@/users/service';
+import { usersDefinition } from '@/users/service';
 
 /**
  * A domain's contract catalogue, keyed by service method name. Read at
@@ -221,7 +221,12 @@ export type ScopedServices = {
 export function scopedServices(role: Role | null | undefined): ScopedServices {
     const permissions = permissionsFor(role);
     return {
-        users: scopeMethods(usersService, usersContract, permissions, 'users'),
+        users: scopeMethods(
+            usersService,
+            usersDefinition.catalogue,
+            permissions,
+            'users'
+        ),
         media: scopeMethods(mediaService, mediaContract, permissions, 'media'),
         settings: scopeMethods(
             settingsService,

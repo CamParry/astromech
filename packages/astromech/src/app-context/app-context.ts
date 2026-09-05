@@ -39,7 +39,7 @@ import {
 } from '@/request-context/request-context';
 import { settingsDefinition } from '@/settings/service';
 import { buildScopedTools } from '@/transport/tools/scoped-tools';
-import { usersService } from '@/users/service';
+import { usersDefinition } from '@/users/service';
 import { log } from '@/utilities/log';
 
 /** Who a context acts as, and where the call came from. */
@@ -59,6 +59,7 @@ export function createAppContext(input: AppContextInput): AppContext {
     let globals: GlobalsService | undefined;
     let notifications: NotificationsService | undefined;
     let settings: SettingsService | undefined;
+    let users: UsersService | undefined;
 
     const context: AppContext = {
         get db(): Kysely<DB> {
@@ -85,7 +86,8 @@ export function createAppContext(input: AppContextInput): AppContext {
             return settings;
         },
         get users(): UsersService {
-            return usersService;
+            users ??= usersDefinition.bind(context);
+            return users;
         },
         get notifications(): NotificationsService {
             notifications ??= notificationsDefinition.bind(context);

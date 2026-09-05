@@ -235,7 +235,7 @@ async function checkMedia(report: ValidationReport): Promise<void> {
 }
 
 /**
- * Every content row of every user, with `users/operations/update.ts`'s
+ * Every content row of every user, with `users/methods/update.ts`'s
  * context. A `unique` rule on users compares within one locale, so each
  * locale is a pass of its own — the same shape as `checkMedia`.
  */

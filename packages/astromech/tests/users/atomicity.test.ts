@@ -13,9 +13,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createFileTestDb, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { usersService as api } from '@/app-context/services';
 import { createRepository } from '@/database/repository/create-repository';
 import { entriesTable } from '@/database/tables';
-import { usersService as api } from '@/users/service';
 import { makeTranslatableUsersConfig } from './users-config';
 
 // The relationship writes only reject once `state.failing` is set, so the

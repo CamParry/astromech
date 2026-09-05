@@ -1,19 +1,20 @@
 /**
- * Users service — the user CRUD verbs. Thin assembler: wires the
- * per-operation functions into `UsersService`. All policy lives in
- * `operations/**` + `internal/**`; consumers reach it as `app.users`.
+ * Users service — the user CRUD verbs. A thin assembler: it wires `methods/**`
+ * into the `UsersService` definition, and all policy lives there or in
+ * `internal/**`. Consumers reach the bound form as `app.users`.
  */
 
 import type { UsersService } from '@/types/index';
-import { createUser } from './operations/create';
-import { deleteUser } from './operations/delete';
-import { getUser } from './operations/get';
-import { queryUsers } from './operations/query';
-import { updateUser } from './operations/update';
-import { listUserVersions } from './operations/versions/list';
-import { restoreUserVersion } from './operations/versions/restore';
+import { defineService } from '@/services/define-service';
+import { createUser } from './methods/create';
+import { deleteUser } from './methods/delete';
+import { getUser } from './methods/get';
+import { queryUsers } from './methods/query';
+import { updateUser } from './methods/update';
+import { listUserVersions } from './methods/versions/list';
+import { restoreUserVersion } from './methods/versions/restore';
 
-export const usersService: UsersService = {
+export const usersDefinition = defineService<UsersService>('users', {
     query: queryUsers,
     get: getUser,
     create: createUser,
@@ -21,4 +22,4 @@ export const usersService: UsersService = {
     delete: deleteUser,
     versions: listUserVersions,
     restoreVersion: restoreUserVersion,
-};
+});

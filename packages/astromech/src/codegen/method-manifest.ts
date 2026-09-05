@@ -31,7 +31,7 @@ import {
     resolvePluginPermission,
 } from '@/plugins/runtime/plugin-identity';
 import { settingsDefinition } from '@/settings/service';
-import { usersContract } from '@/users/contract';
+import { usersDefinition } from '@/users/service';
 
 /**
  * Filename of the emitted manifest (lands in the project's `.astro/` dir).
@@ -84,7 +84,7 @@ function buildCoreMethods(): CoreManifestMethod[] {
     // its position (`users.query`) rather than a hand-written string that can
     // drift from the key it sits under.
     const catalogues: [string, Record<string, ServiceMethodContract>][] = [
-        ['users', usersContract],
+        ['users', usersDefinition.catalogue],
         ['media', mediaContract],
         ['settings', settingsDefinition.catalogue],
         ['globals', globalsDefinition.catalogue],

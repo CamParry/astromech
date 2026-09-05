@@ -23,6 +23,7 @@ import {
     notificationsService,
     settingsService,
     typedGlobalsService,
+    usersService,
 } from '@/app-context/services';
 import { setMethodManifest } from '@/codegen/manifest-registry';
 import { generateMethodManifest } from '@/codegen/method-manifest';
@@ -52,7 +53,6 @@ import { createRegistry } from '@/registry';
 import { getCurrentRole, getCurrentUser } from '@/request-context/request-context';
 import { setStorageDriver } from '@/storage/registry';
 import { createHttpApp } from '@/transport/http/app';
-import { usersService } from '@/users/service';
 
 export type Astromech = {
     /** The resolved, read-only config this runtime serves. */

@@ -3,6 +3,7 @@
  * gets. Everything buildDispatch decides is unchanged; what differs is that
  * `invoke` goes through `scopedServices`, so a refusal comes from the handle.
  */
+import type * as appServices from '@/app-context/services';
 import type { ToolDefinition } from '@/transport/tools/dispatch';
 import type {
     CoreManifestMethod,
@@ -14,13 +15,16 @@ import type {
 } from '@/types/index';
 import { setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { usersService } from '@/app-context/services';
 import { PermissionDeniedError } from '@/errors/permission';
 import { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch';
-import { usersService } from '@/users/service';
 
 // The scoped handle resolves the users service at CALL time, so a stub is enough
-// to observe whether a refusal happened before the service was entered.
-vi.mock('@/users/service', () => ({
+// to observe whether a refusal happened before the service was entered. Only
+// `usersService` is replaced — the module is the composition root, and the other
+// bound services on it are what the rest of the dispatch path reaches for.
+vi.mock('@/app-context/services', async (importOriginal) => ({
+    ...(await importOriginal<typeof appServices>()),
     usersService: {
         query: vi.fn(() => Promise.resolve({ items: [], total: 0 })),
     },

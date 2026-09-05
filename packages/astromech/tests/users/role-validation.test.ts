@@ -12,10 +12,10 @@ import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { usersService } from '@/app-context/services';
 import { ValidationError } from '@/errors/validation';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { getAuth } from '@/users/auth';
-import { usersService } from '@/users/service';
 import { getSession } from '@/users/session';
 
 let db: Kysely<DB>;

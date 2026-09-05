@@ -11,6 +11,7 @@ import type { AstromechConfig, PluginDefinition, StorageDriver } from '@/types/i
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { usersService } from '@/app-context/services';
 import { defineTable } from '@/database/define-table';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
@@ -24,7 +25,6 @@ import {
     checkRelationshipIndex,
     rebuildRelationshipIndex,
 } from '@/transport/cli/relationship-index';
-import { usersService } from '@/users/service';
 
 /** Media reads resolve a public URL through the driver; nothing here needs bytes. */
 const noopStorage: StorageDriver = {

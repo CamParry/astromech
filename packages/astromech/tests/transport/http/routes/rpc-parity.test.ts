@@ -20,12 +20,12 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { adminRole, roleWith } from '@tests/mount-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
+import { usersService } from '@/app-context/services';
 import { setMethodManifest } from '@/codegen/manifest-registry';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { entriesService } from '@/entries/service';
 import { createHttpApp } from '@/transport/http/app';
 import { buildScopedDispatch } from '@/transport/tools/dispatch';
-import { usersService } from '@/users/service';
 import { getSession } from '@/users/session';
 
 vi.mock('@/users/session', () => ({ getSession: vi.fn() }));

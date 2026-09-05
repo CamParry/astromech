@@ -11,8 +11,8 @@ import type { User, UserVersion } from '@/types/index';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { adminRole, mountRouter, roleWith, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { usersService } from '@/app-context/services';
 import { usersRouter } from '@/transport/http/routes/users';
-import { usersService } from '@/users/service';
 import { makeTranslatableUsersConfig } from '../../../users/users-config';
 
 /** The users router mounted in isolation, acting as `role`. */

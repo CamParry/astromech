@@ -6,8 +6,8 @@
 
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { usersService as api } from '@/app-context/services';
 import { UserNotFoundError } from '@/users/errors';
-import { usersService as api } from '@/users/service';
 import { makeTranslatableUsersConfig } from './users-config';
 
 let id: string;
