@@ -8,7 +8,7 @@
 import type { AstromechConfig } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { settingsService } from '@/settings/service';
+import { settingsService } from '@/app-context/services';
 
 /** `site` and every `site:<locale>` variant are public; `secret` is not. */
 function makePublicConfig(): AstromechConfig {

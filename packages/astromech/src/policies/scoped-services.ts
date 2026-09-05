@@ -16,7 +16,7 @@ import type {
     SettingsService,
     UsersService,
 } from '@/types/index';
-import { globalsService } from '@/app-context/services';
+import { globalsService, settingsService } from '@/app-context/services';
 import { ENTRY_METHOD_ACTIONS } from '@/entries/methods';
 import { entriesService } from '@/entries/service';
 import { PermissionDeniedError } from '@/errors/permission';
@@ -30,8 +30,7 @@ import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/core-permissions';
 import { entryPermission } from '@/permissions/entry-permission';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { getCurrentUser } from '@/request-context/request-context';
-import { settingsContract } from '@/settings/contract';
-import { settingsService } from '@/settings/service';
+import { settingsDefinition } from '@/settings/service';
 import { usersContract } from '@/users/contract';
 import { usersService } from '@/users/service';
 
@@ -228,7 +227,7 @@ export function scopedServices(role: Role | null | undefined): ScopedServices {
         media: scopeMethods(mediaService, mediaContract, permissions, 'media'),
         settings: scopeMethods(
             settingsService,
-            settingsContract,
+            settingsDefinition.catalogue,
             permissions,
             'settings'
         ),

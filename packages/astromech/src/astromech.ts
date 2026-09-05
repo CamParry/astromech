@@ -19,7 +19,7 @@ import type {
 } from '@/types/index';
 import { buildAiModels } from '@/ai/models';
 import { setAiModels } from '@/ai/registry';
-import { typedGlobalsService } from '@/app-context/services';
+import { settingsService, typedGlobalsService } from '@/app-context/services';
 import { setMethodManifest } from '@/codegen/manifest-registry';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { setConfig } from '@/config/registry';
@@ -47,7 +47,6 @@ import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { createRegistry } from '@/registry';
 import { getCurrentRole, getCurrentUser } from '@/request-context/request-context';
-import { settingsService } from '@/settings/service';
 import { setStorageDriver } from '@/storage/registry';
 import { createHttpApp } from '@/transport/http/app';
 import { usersService } from '@/users/service';

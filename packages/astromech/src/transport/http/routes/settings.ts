@@ -6,9 +6,9 @@
 import type { RestRoute } from './rest-route';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { settingsService } from '@/app-context/services';
 import { permissionsFor } from '@/permissions/permissions-for';
-import { settingsContract } from '@/settings/contract';
-import { settingsService } from '@/settings/service';
+import { settingsDefinition } from '@/settings/service';
 import { forbidden, notFound } from '@/transport/http/middleware/errors';
 import { SETTINGS_ROUTE_SPECS } from './http-routes.shared';
 import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
@@ -31,8 +31,8 @@ export const SETTINGS_ROUTES: RestRoute[] = attachHandlers(SETTINGS_ROUTE_SPECS,
     },
 });
 
-mountRestRoutes(router, settingsContract, SETTINGS_ROUTES);
-documentBespokeRoutes(router, settingsContract, SETTINGS_ROUTE_SPECS);
+mountRestRoutes(router, settingsDefinition.catalogue, SETTINGS_ROUTES);
+documentBespokeRoutes(router, settingsDefinition.catalogue, SETTINGS_ROUTE_SPECS);
 
 // GET /settings/:key — bespoke
 // Not in the table: `settings.get` returns the value alone, and the route
@@ -40,7 +40,7 @@ documentBespokeRoutes(router, settingsContract, SETTINGS_ROUTE_SPECS);
 router.get('/:key', async (c) => {
     const { key } = c.req.param();
     const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(settingsContract.get)) return forbidden(c);
+    if (!permissions.allowsMethod(settingsDefinition.catalogue.get)) return forbidden(c);
 
     // Authenticated admin endpoint (guarded by settings:read): return the
     // full shape so private settings (e.g. plugin pages) are editable. The

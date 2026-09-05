@@ -30,7 +30,7 @@ import {
     resolvePluginIdentity,
     resolvePluginPermission,
 } from '@/plugins/runtime/plugin-identity';
-import { settingsContract } from '@/settings/contract';
+import { settingsDefinition } from '@/settings/service';
 import { usersContract } from '@/users/contract';
 
 /**
@@ -86,7 +86,7 @@ function buildCoreMethods(): CoreManifestMethod[] {
     const catalogues: [string, Record<string, ServiceMethodContract>][] = [
         ['users', usersContract],
         ['media', mediaContract],
-        ['settings', settingsContract],
+        ['settings', settingsDefinition.catalogue],
         ['globals', globalsDefinition.catalogue],
         ['notifications', notificationsContract],
     ];

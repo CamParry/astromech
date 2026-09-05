@@ -45,7 +45,6 @@ import { isTable } from '@/plugins/runtime/plugin-tables';
 import { createPluginTrackingRepository } from '@/plugins/runtime/plugin-tracking-repository';
 import { createRegistry } from '@/registry';
 import { getCurrentRole, getCurrentUser } from '@/request-context/request-context';
-import { settingsService } from '@/settings/service';
 import { listAll } from '@/storage/prefix';
 import { getStorageDriver } from '@/storage/registry';
 import { log } from '@/utilities/log';
@@ -334,7 +333,7 @@ export function createPluginContext(
             ) as unknown as TypedGlobalsService;
         },
         get settings(): SettingsService {
-            return withDefaultSettingsShape(settingsService, 'full');
+            return withDefaultSettingsShape(app.settings, 'full');
         },
         get plugins(): PluginServiceNamespace | undefined {
             return pluginServices;

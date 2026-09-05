@@ -147,5 +147,7 @@ describe('createAppContext', () => {
 
         expect(app.globals).toBe(app.globals);
         expect(app.globals).not.toBe(other.globals);
+        expect(app.settings).toBe(app.settings);
+        expect(app.settings).not.toBe(other.settings);
     });
 });

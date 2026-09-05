@@ -7,10 +7,12 @@ import type {
     AppContext,
     GlobalsService,
     ServiceDefinition,
+    SettingsService,
     TypedGlobalsService,
 } from '@/types/index';
 import { currentAppContext } from '@/app-context/app-context';
 import { globalsDefinition } from '@/globals/service';
+import { settingsDefinition } from '@/settings/service';
 
 /**
  * The interface, each call bound to `currentAppContext()`. One binding per
@@ -44,3 +46,6 @@ export const globalsService: GlobalsService = bindCurrent(globalsDefinition);
 
 /** `globalsService` under its typed facade; the one acknowledged place the cast happens. */
 export const typedGlobalsService = globalsService as unknown as TypedGlobalsService;
+
+/** The settings service, acting as whoever the current request is. */
+export const settingsService: SettingsService = bindCurrent(settingsDefinition);

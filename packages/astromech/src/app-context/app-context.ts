@@ -38,7 +38,7 @@ import {
     getCurrentUser,
     getRequestContext,
 } from '@/request-context/request-context';
-import { settingsService } from '@/settings/service';
+import { settingsDefinition } from '@/settings/service';
 import { buildScopedTools } from '@/transport/tools/scoped-tools';
 import { usersService } from '@/users/service';
 import { log } from '@/utilities/log';
@@ -58,6 +58,7 @@ export function createAppContext(input: AppContextInput): AppContext {
     const { user, role, clientAddress } = input;
     /** Bound once per context, so a handler reaching a sibling acts as this user. */
     let globals: GlobalsService | undefined;
+    let settings: SettingsService | undefined;
 
     const context: AppContext = {
         get db(): Kysely<DB> {
@@ -80,7 +81,8 @@ export function createAppContext(input: AppContextInput): AppContext {
             return mediaService;
         },
         get settings(): SettingsService {
-            return settingsService;
+            settings ??= settingsDefinition.bind(context);
+            return settings;
         },
         get users(): UsersService {
             return usersService;
