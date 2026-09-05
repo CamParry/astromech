@@ -156,7 +156,7 @@ objects instead, and if it lands second, it starts from them.
 
 **Stage 2 — users, media, settings, notifications**
 
-- [ ] The same conversion, one commit each. Each deletes a `contract.ts`.
+- [x] The same conversion, one commit each. Each deletes a `contract.ts`.
       The three users routes that check things no contract can state (own
       profile read, last-admin guard) read `usersService.catalogue.get` and so
       on instead of `usersContract`.
