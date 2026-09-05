@@ -52,8 +52,6 @@ of the present has nowhere to say "and this is on purpose".
 - **`notifications` has no `schema.ts`.** Every other content module validates
   its input with zod at the module edge. Either notifications takes no untrusted
   input, in which case say so, or it is missing the check.
-- **`notifications/current-user-service.ts`** has no counterpart anywhere and no
-  obvious layer. Worth a look on its own.
 - **Transactions.** `users` and `media` still hand-thread a `db` handle, which
   `flatten-user-and-media-operations.md` covers. That file is the work; the
   reason it is listed here is that it is the same question in another form:
@@ -64,11 +62,12 @@ of the present has nowhere to say "and this is on purpose".
 - [ ] Settle the repository seam. Either extend it to `users`, `media`,
       `settings` and `notifications`, or write in `DECISIONS.md` that entries is
       the only pluggable one and what that beat.
-- [ ] Pick one name for the contract catalogue and rename the odd one out. The
-      four-to-one split says `contract.ts`.
+- [ ] The contract catalogue is going away altogether: each verb becomes one
+      method object, per `../in-progress/unified-service-methods.md`.
 - [ ] Decide whether `notifications` needs a `schema.ts` and add it or record
       why not.
-- [ ] Find `current-user-service.ts` a home, or fold it into `service.ts`.
+- [ ] The notifications subject comes from the context a method is bound to,
+      per `../in-progress/unified-service-methods.md`; no separate file is needed.
 - [ ] Once the shapes agree, `ARCHITECTURE.md`'s content-module paragraph loses
       its two parenthetical exceptions.
 
