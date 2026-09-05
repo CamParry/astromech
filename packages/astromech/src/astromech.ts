@@ -19,6 +19,7 @@ import type {
 } from '@/types/index';
 import { buildAiModels } from '@/ai/models';
 import { setAiModels } from '@/ai/registry';
+import { typedGlobalsService } from '@/app-context/services';
 import { setMethodManifest } from '@/codegen/manifest-registry';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { setConfig } from '@/config/registry';
@@ -38,7 +39,6 @@ import { entryJobs } from '@/entries/jobs/entry-jobs';
 import { setEntryRepository } from '@/entries/repository/registry';
 import { typedEntriesService } from '@/entries/typed-entries-service';
 import { AstromechError } from '@/errors/astromech-error';
-import { typedGlobalsService } from '@/globals/typed-globals-service';
 import { defaultImageWidths, normaliseWidths } from '@/media/image-widths.shared';
 import { mediaService } from '@/media/service';
 import { setImageConfig } from '@/media/serving/image/registry';

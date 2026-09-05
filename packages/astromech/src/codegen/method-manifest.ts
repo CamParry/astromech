@@ -23,7 +23,7 @@ import type {
 import { z } from '@hono/zod-openapi';
 import { qualifyEntryType } from '@/entries/entry-types.shared';
 import { entryMethodContracts } from '@/entries/methods';
-import { globalsContract } from '@/globals/contract';
+import { globalsDefinition } from '@/globals/service';
 import { mediaContract } from '@/media/contract';
 import { notificationsContract } from '@/notifications/contract';
 import {
@@ -87,7 +87,7 @@ function buildCoreMethods(): CoreManifestMethod[] {
         ['users', usersContract],
         ['media', mediaContract],
         ['settings', settingsContract],
-        ['globals', globalsContract],
+        ['globals', globalsDefinition.catalogue],
         ['notifications', notificationsContract],
     ];
     const methods: CoreManifestMethod[] = [];

@@ -6,9 +6,9 @@
 
 import { createTestDb, createTestUser, runAsUser, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { globalsService as api } from '@/app-context/services';
 import { getDb } from '@/database/registry';
 import { GlobalNotFoundError } from '@/globals/errors';
-import { globalsService as api } from '@/globals/service';
 import { makeGlobalsConfig } from './globals-config';
 
 beforeEach(async () => {

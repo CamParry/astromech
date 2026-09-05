@@ -16,11 +16,11 @@ import type {
     SettingsService,
     UsersService,
 } from '@/types/index';
+import { globalsService } from '@/app-context/services';
 import { ENTRY_METHOD_ACTIONS } from '@/entries/methods';
 import { entriesService } from '@/entries/service';
 import { PermissionDeniedError } from '@/errors/permission';
-import { globalsContract } from '@/globals/contract';
-import { globalsService } from '@/globals/service';
+import { globalsDefinition } from '@/globals/service';
 import { mediaContract } from '@/media/contract';
 import { mediaService } from '@/media/service';
 import { notificationsContract } from '@/notifications/contract';
@@ -236,7 +236,12 @@ export function scopedServices(role: Role | null | undefined): ScopedServices {
         // Plain `scopeMethods`: a global's permission depends on the `key` in
         // the call, and its contract says so in the function form — including
         // the `full`/`staged` gate `scopeEntries` has to apply by hand.
-        globals: scopeMethods(globalsService, globalsContract, permissions, 'globals'),
+        globals: scopeMethods(
+            globalsService,
+            globalsDefinition.catalogue,
+            permissions,
+            'globals'
+        ),
         notifications: scopeMethods(
             notificationsService,
             notificationsContract,

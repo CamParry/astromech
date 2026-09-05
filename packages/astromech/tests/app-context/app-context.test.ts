@@ -140,4 +140,12 @@ describe('createAppContext', () => {
         expect(app.user).toBe(user);
         expect(app.role).toBe(editor);
     });
+
+    it('binds its services once, and to itself', () => {
+        const app = createAppContext({ user: null, role: editor });
+        const other = createAppContext({ user: null, role: editor });
+
+        expect(app.globals).toBe(app.globals);
+        expect(app.globals).not.toBe(other.globals);
+    });
 });

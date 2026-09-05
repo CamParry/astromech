@@ -6,7 +6,7 @@
  */
 
 import type { GlobalRow, GlobalsRepository } from '../repository/globals-table';
-import type { Global, JsonObject, ResolvedGlobal } from '@/types/index';
+import type { Global, JsonObject, ResolvedGlobal, User } from '@/types/index';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { inheritSharedFields } from '@/content/translatable';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
@@ -15,7 +15,6 @@ import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenEntryFields } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
-import { getCurrentUser } from '@/request-context/request-context';
 
 /**
  * Field lookups for a global. A global has exactly one row per locale, so
@@ -48,6 +47,8 @@ export async function toStoredFields(input: {
     locale: string;
     patch: Record<string, unknown>;
     current: GlobalRow | null;
+    /** Who the write is attributed to; the field validators read it. */
+    user: User | null;
 }): Promise<JsonObject> {
     const { global, current, patch } = input;
     const definitions = flattenEntryFields(global.fields);
@@ -78,7 +79,7 @@ export async function toStoredFields(input: {
             hasStatuses: global.capabilities.statuses,
         }),
         resource: { kind: 'global', record },
-        user: await getCurrentUser(),
+        user: input.user,
         lookups: globalLookups(),
         ...(current ? { coerceOnly: new Set(patchedFieldNames(patch)) } : {}),
         ...(global.validate ? { validate: global.validate } : {}),

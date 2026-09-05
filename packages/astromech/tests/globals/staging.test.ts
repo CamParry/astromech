@@ -6,6 +6,7 @@
 
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { globalsService as api } from '@/app-context/services';
 import { CapabilityError } from '@/entries/errors';
 import { ValidationError } from '@/errors/validation';
 import {
@@ -13,7 +14,6 @@ import {
     GlobalValidationError,
     StagedGlobalExistsError,
 } from '@/globals/errors';
-import { globalsService as api } from '@/globals/service';
 import { makeGlobalsConfig } from './globals-config';
 
 beforeEach(async () => {

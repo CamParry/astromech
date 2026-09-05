@@ -28,7 +28,7 @@ import { renderEmail } from '@/email/render';
 import { entriesService } from '@/entries/service';
 import { getEnvRecord } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
-import { globalsService } from '@/globals/service';
+import { globalsDefinition } from '@/globals/service';
 import { runHook } from '@/hooks/hooks';
 import { mediaService } from '@/media/service';
 import { currentUserNotificationsService } from '@/notifications/current-user-service';
@@ -56,8 +56,10 @@ export type AppContextInput = {
  */
 export function createAppContext(input: AppContextInput): AppContext {
     const { user, role, clientAddress } = input;
+    /** Bound once per context, so a handler reaching a sibling acts as this user. */
+    let globals: GlobalsService | undefined;
 
-    return {
+    const context: AppContext = {
         get db(): Kysely<DB> {
             return getDb();
         },
@@ -71,7 +73,8 @@ export function createAppContext(input: AppContextInput): AppContext {
             return entriesService;
         },
         get globals(): GlobalsService {
-            return globalsService;
+            globals ??= globalsDefinition.bind(context);
+            return globals;
         },
         get media(): MediaService {
             return mediaService;
@@ -110,6 +113,8 @@ export function createAppContext(input: AppContextInput): AppContext {
             };
         },
     };
+
+    return context;
 }
 
 /**

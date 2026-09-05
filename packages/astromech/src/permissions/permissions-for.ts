@@ -16,7 +16,7 @@ export type Permissions = {
      * declared `access`: a public method is always allowed, an authenticated
      * one needs a role, and a permission one needs that permission.
      */
-    allowsMethod<Input>(method: ServiceMethodContract<Input>, input?: Input): boolean;
+    allowsMethod(method: ServiceMethodContract, input?: unknown): boolean;
 };
 
 /**

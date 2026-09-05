@@ -50,7 +50,8 @@ const CORE_SERVICES: Record<string, () => Promise<ServiceObject>> = {
     media: async () => (await import('@/media/service')).mediaService,
     settings: async () => (await import('@/settings/service')).settingsService,
     globals: async () =>
-        (await import('@/globals/service')).globalsService as unknown as ServiceObject,
+        (await import('@/app-context/services'))
+            .globalsService as unknown as ServiceObject,
     notifications: async () =>
         (await import('@/notifications/service')).notificationsService,
 };

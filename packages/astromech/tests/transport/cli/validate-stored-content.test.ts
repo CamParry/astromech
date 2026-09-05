@@ -9,10 +9,10 @@
 import type { AstromechConfig, JsonObject } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { globalsService } from '@/app-context/services';
 import { createRepository } from '@/database/repository/create-repository';
 import { entriesService as api } from '@/entries/service';
 import { entryContentTable } from '@/entries/tables';
-import { globalsService } from '@/globals/service';
 import { globalContentTable } from '@/globals/tables';
 import { validateStoredContent } from '@/transport/cli/validate-stored-content';
 import { createUserRepository } from '@/users/repository';

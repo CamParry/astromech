@@ -11,8 +11,8 @@ import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { globalsContract } from '@/globals/contract';
-import { globalsService } from '@/globals/service';
+import { globalsService } from '@/app-context/services';
+import { globalsDefinition } from '@/globals/service';
 import { createGlobalsRouter } from '@/transport/http/routes/globals';
 import {
     GLOBALS_ROUTE_SPECS,
@@ -41,7 +41,9 @@ describe('the route table', () => {
     it('names a method the contract describes on every row', () => {
         for (const spec of GLOBALS_ROUTE_SPECS) {
             expect(spec.id.startsWith('globals.'), spec.id).toBe(true);
-            expect(Object.keys(globalsContract), spec.id).toContain(methodName(spec.id));
+            expect(Object.keys(globalsDefinition.catalogue), spec.id).toContain(
+                methodName(spec.id)
+            );
         }
     });
 

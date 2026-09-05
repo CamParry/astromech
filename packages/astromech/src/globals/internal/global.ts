@@ -13,8 +13,21 @@ import { CapabilityError } from '@/entries/errors';
 import { GlobalNotFoundError, GlobalValidationError } from '../errors';
 import { createGlobalsRepository } from '../repository/globals-table';
 
+/** Every capability a global may declare, for narrowing a bare string to one. */
+export const GLOBAL_CAPABILITIES = [
+    'statuses',
+    'translatable',
+    'versioning',
+    'staging',
+] as const;
+
 /** The capabilities a global declares. A global is never trashed and has no slug. */
-export type GlobalCapability = 'statuses' | 'translatable' | 'versioning' | 'staging';
+export type GlobalCapability = (typeof GLOBAL_CAPABILITIES)[number];
+
+/** Whether a method's `requires`, typed as a bare string, names a global capability. */
+export function isGlobalCapability(value: string): value is GlobalCapability {
+    return (GLOBAL_CAPABILITIES as readonly string[]).includes(value);
+}
 
 /**
  * The declaration for a key, or undefined when nothing declares it. A bare key

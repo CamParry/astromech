@@ -14,7 +14,7 @@
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { adminRole, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { globalsService } from '@/globals/service';
+import { globalsService } from '@/app-context/services';
 import { GLOBALS_ROUTE_SPECS } from '@/transport/http/routes/http-routes.shared';
 import { app, configWithGlobals, put, SEO } from './globals-app';
 

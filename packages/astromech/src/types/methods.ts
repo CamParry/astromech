@@ -49,6 +49,16 @@ export type MethodContext = {
 };
 
 /**
+ * `Input` as Zod types a parse of it: an optional property reads `T | undefined`,
+ * which `exactOptionalPropertyTypes` keeps distinct from the `T` a hand-written
+ * service interface declares. A conditional, so `input` is never an inference
+ * site — a method's `Input` comes from its handler's parameter alone.
+ */
+export type ParsedInput<Input> = Input extends object
+    ? { [K in keyof Input]: undefined extends Input[K] ? Input[K] | undefined : Input[K] }
+    : Input;
+
+/**
  * One service method: what it demands of its caller, what it does, and the
  * schemas it is called and answers with. There is no `name` — `defineService`
  * stamps a method's dotted id from its position in the catalogue, so a typo
@@ -69,7 +79,7 @@ export type ServiceMethod<Input = unknown, Output = unknown, Ctx = AppContext> =
      * input in the path (`settings.set({ key, value })`) still declares the
      * whole argument object here.
      */
-    input?: z.ZodType<Input>;
+    input?: z.ZodType<ParsedInput<Input>>;
     /** Zod schema for the result, where worth declaring. */
     output?: z.ZodType<Output>;
     /** The capability the target must declare; absent ⇒ none. */
@@ -103,11 +113,17 @@ export type ServiceMethod<Input = unknown, Output = unknown, Ctx = AppContext> =
  * The interim handler-less form the readers (the manifest generator,
  * `permissionsFor`, `scopedServices`, the REST mount) are typed over while the
  * core catalogues still declare no handlers. Deleted when they all do.
+ *
+ * Variance-safe over any concrete method, as `AnyServiceMethod` is: `Input` is
+ * contravariant in `access` and covariant in `input`, so the schema position is
+ * widened separately.
  */
-export type ServiceMethodContract<Input = unknown, Output = unknown> = Omit<
-    ServiceMethod<Input, Output>,
-    'handler'
->;
+export type ServiceMethodContract = Omit<
+    ServiceMethod<never, unknown>,
+    'handler' | 'input'
+> & {
+    input?: z.ZodType;
+};
 
 /** The method record a hand-written service interface demands. */
 export type MethodsFor<S, Ctx = AppContext> = {

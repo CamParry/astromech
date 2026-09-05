@@ -7,7 +7,6 @@
 import type {
     AnyServiceMethod,
     EntriesService,
-    GlobalsService,
     HookHandler,
     NotifyInput,
     PluginConfigView,
@@ -35,7 +34,6 @@ import {
 import { typedEntriesService } from '@/entries/typed-entries-service';
 import { getEnvRecord } from '@/env';
 import { flattenEntryFields } from '@/fields/flatten';
-import { typedGlobalsService } from '@/globals/typed-globals-service';
 import { addHook, clearHooks } from '@/hooks/hooks';
 import { notify } from '@/notifications/service';
 import {
@@ -316,6 +314,7 @@ export function createPluginContext(
     const config = state().config;
     const configView = config ? makeConfigView(config) : makeConfigView(emptyConfig());
     const PREFIX = `plugin/${identity.namespace}/`;
+    const app = createAppContext({ user, role, clientAddress });
 
     const layer = {
         plugin: identity,
@@ -330,7 +329,7 @@ export function createPluginContext(
         },
         get globals(): TypedGlobalsService {
             return withDefaultGlobalsShape(
-                typedGlobalsService as unknown as GlobalsService,
+                app.globals as unknown as TypedGlobalsService,
                 'full'
             ) as unknown as TypedGlobalsService;
         },
@@ -364,9 +363,7 @@ export function createPluginContext(
     // Descriptors rather than a spread, so the app context's getters are carried
     // across unevaluated.
     return Object.defineProperties({} as PluginContext, {
-        ...Object.getOwnPropertyDescriptors(
-            createAppContext({ user, role, clientAddress })
-        ),
+        ...Object.getOwnPropertyDescriptors(app),
         ...Object.getOwnPropertyDescriptors(layer),
     });
 }

@@ -13,6 +13,7 @@ import type {
     ResolvedGlobal,
     ResourceType,
 } from '@/types/index';
+import { globalsService } from '@/app-context/services';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { getConfig } from '@/config/registry';
 import { createRepository } from '@/database/repository/create-repository';
@@ -28,7 +29,6 @@ import { entryValidationMode } from '@/entries/validation-mode.shared';
 import { flattenEntryFields, flattenFieldNodes } from '@/fields/flatten';
 import { safeParseFields } from '@/fields/parse-fields';
 import { globalLookups } from '@/globals/internal/stored-fields';
-import { globalsService } from '@/globals/service';
 import { createMediaLookups } from '@/media/internal/lookups';
 import { createMediaRepository } from '@/media/repository';
 import { createUserLookups } from '@/users/internal/lookups';
@@ -277,7 +277,7 @@ async function checkUsers(report: ValidationReport): Promise<void> {
 
 /**
  * Every saved locale of every declared global, host and plugin alike, with
- * `globals/operations/update.ts`'s context. A locale that has never been saved
+ * `globals/methods/update.ts`'s context. A locale that has never been saved
  * reads back null and is skipped: there is no stored row to report on.
  */
 async function checkGlobals(report: ValidationReport): Promise<void> {

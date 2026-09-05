@@ -121,8 +121,8 @@ part of this work.
 
 ## The work
 
-One branch, `unified-service-methods`, in a worktree at
-`../Astromech-worktrees/unified-service-methods`; one commit per stage. The
+One branch, `unified-service-methods`, in a sibling worktree as
+`AGENTS.md` describes; one commit per stage. The
 manifest JSON and the OpenAPI document must be byte-identical before and after
 every stage, and `packages/astromech/tests/policies/` passes unchanged at every
 stage. `one-method-call-path.md` builds its runtime catalogue from

@@ -6,8 +6,8 @@
 
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { globalsService as api } from '@/app-context/services';
 import { isPublicBranded, markPublic, PublicShapeWriteError } from '@/content/visibility';
-import { globalsService as api } from '@/globals/service';
 import { makeGlobalsConfig } from './globals-config';
 
 beforeEach(async () => {

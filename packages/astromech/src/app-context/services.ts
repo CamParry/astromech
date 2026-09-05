@@ -3,15 +3,33 @@
  * against the context of the request it is made in.
  */
 
-import type { ServiceDefinition } from '@/types/index';
+import type {
+    AppContext,
+    GlobalsService,
+    ServiceDefinition,
+    TypedGlobalsService,
+} from '@/types/index';
 import { currentAppContext } from '@/app-context/app-context';
+import { globalsDefinition } from '@/globals/service';
 
-/** The interface, each call bound to `currentAppContext()`. */
+/**
+ * The interface, each call bound to `currentAppContext()`. One binding per
+ * context, so a request's calls share the objects `bind` builds.
+ */
 export function bindCurrent<S extends object>(definition: ServiceDefinition<S>): S {
+    const byContext = new WeakMap<AppContext, S>();
+    const forContext = (context: AppContext): S => {
+        const existing = byContext.get(context);
+        if (existing) return existing;
+        const service = definition.bind(context);
+        byContext.set(context, service);
+        return service;
+    };
+
     const bound: Record<string, (input: unknown) => Promise<unknown>> = {};
     for (const key of Object.keys(definition.catalogue)) {
         bound[key] = async (input) => {
-            const service = definition.bind(await currentAppContext()) as Record<
+            const service = forContext(await currentAppContext()) as Record<
                 string,
                 (input: unknown) => unknown
             >;
@@ -20,3 +38,9 @@ export function bindCurrent<S extends object>(definition: ServiceDefinition<S>):
     }
     return bound as S;
 }
+
+/** The globals service, acting as whoever the current request is. */
+export const globalsService: GlobalsService = bindCurrent(globalsDefinition);
+
+/** `globalsService` under its typed facade; the one acknowledged place the cast happens. */
+export const typedGlobalsService = globalsService as unknown as TypedGlobalsService;

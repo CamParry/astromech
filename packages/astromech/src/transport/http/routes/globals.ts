@@ -8,19 +8,17 @@
 import type { HttpRouteSpec } from './http-routes.shared';
 import type { ContractCatalogue, RestRoute } from './rest-route';
 import type { GlobalCapability } from '@/globals/internal/global';
+import type { ResolvedAccess } from '@/permissions/access';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { GlobalsService, GlobalUpdateData, ResolvedGlobal } from '@/types/index';
 import type { Context } from 'hono';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
-import {
-    GLOBAL_METHOD_ACTIONS,
-    GLOBAL_METHOD_REQUIRES,
-    globalsContract,
-} from '@/globals/contract';
+import { globalsService } from '@/app-context/services';
 import { StagedGlobalExistsError } from '@/globals/errors';
-import { findGlobal } from '@/globals/internal/global';
-import { globalsService } from '@/globals/service';
-import { globalPermission } from '@/permissions/global-permission';
+import { findGlobal, isGlobalCapability } from '@/globals/internal/global';
+import { createStagedGlobalSchema } from '@/globals/schema';
+import { globalsDefinition } from '@/globals/service';
+import { resolveAccess } from '@/permissions/access';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { forbidden, fromZodError, notFound } from '@/transport/http/middleware/errors';
 import { GLOBALS_ROUTE_SPECS } from './http-routes.shared';
@@ -37,7 +35,10 @@ type GlobalMethodName = keyof GlobalsService;
  */
 export function createGlobalsRouter(): OpenAPIHono<Env> {
     const router = new OpenAPIHono<Env>();
-    const contracts = { forRequest: contractsForRequest, documented: globalsContract };
+    const contracts = {
+        forRequest: contractsForRequest,
+        documented: globalsDefinition.catalogue,
+    };
     mountRestRoutes(router, contracts, GLOBALS_ROUTES);
     documentBespokeRoutes(router, contracts, DOCUMENTED_SPECS);
     mountBespokeRoutes(router);
@@ -129,7 +130,7 @@ function flag(c: Context<Env>, name: string): boolean {
 const CONTRACTS_BY_GLOBAL = new WeakMap<ResolvedGlobal, ContractCatalogue>();
 
 /**
- * `globalsContract` with each method's `access` resolved to the permission this
+ * The catalogue with each method's `access` resolved to the fixed form this
  * global checks. The shared catalogue states it as a function of the call's
  * `key`, which the generic mount cannot evaluate — it guards before the body is
  * read, and so before any argument object exists.
@@ -139,16 +140,19 @@ function globalContracts(global: ResolvedGlobal): ContractCatalogue {
     if (cached) return cached;
 
     const catalogue: ContractCatalogue = Object.fromEntries(
-        Object.entries(globalsContract).map(([method, contract]) => [
-            method,
-            {
-                ...contract,
-                access: globalPermission(
-                    global.id,
-                    GLOBAL_METHOD_ACTIONS[method as GlobalMethodName]
-                ),
-            },
-        ])
+        Object.entries(globalsDefinition.catalogue).map(([name, method]) => {
+            const resolved = resolveAccess(method.access, { key: global.id });
+            return [
+                name,
+                {
+                    ...method,
+                    access:
+                        resolved.kind === 'permission'
+                            ? resolved.permission
+                            : resolved.kind,
+                },
+            ];
+        })
     );
     CONTRACTS_BY_GLOBAL.set(global, catalogue);
     return catalogue;
@@ -180,19 +184,42 @@ function globalAccess(): (c: Context<Env>, route: RestRoute) => Response | null 
 /** {@link globalAccess}, for the bespoke handlers that make the same checks. */
 function globalPrecondition(c: Context<Env>, method: GlobalMethodName): Response | null {
     const key = param(c, 'key');
-    const action = GLOBAL_METHOD_ACTIONS[method];
-    if (!permissionsFor(c.var.role).allows(globalPermission(key, action))) {
-        return forbidden(c);
-    }
+    const declared = globalsDefinition.catalogue[method];
+    if (accessDenied(c, resolveAccess(declared.access, { key }))) return forbidden(c);
 
     const global = findGlobal(key);
     if (!global) return notFound(c, `Global '${key}' not found`);
 
-    const requires = GLOBAL_METHOD_REQUIRES[method];
+    const requires = capabilityRequired(declared.requires, method);
     if (requires !== undefined && !global.capabilities[requires]) {
         return capabilityDenied(c, key, requires);
     }
     return stagedFlagDenied(c, global);
+}
+
+/** Whether the caller falls short of what a method's resolved access demands. */
+function accessDenied(c: Context<Env>, access: ResolvedAccess): boolean {
+    if (access.kind === 'public') return false;
+    if (access.kind === 'authenticated') return !c.var.user;
+    return !permissionsFor(c.var.role).allows(access.permission);
+}
+
+/**
+ * A method's `requires` as a global capability. It is typed `string` on the
+ * common method shape, so a value no global can declare is a wiring error rather
+ * than something to pass over.
+ */
+function capabilityRequired(
+    requires: string | undefined,
+    method: GlobalMethodName
+): GlobalCapability | undefined {
+    if (requires === undefined) return undefined;
+    if (!isGlobalCapability(requires)) {
+        throw new Error(
+            `globals.${method} requires '${requires}', which is not a global capability.`
+        );
+    }
+    return requires;
 }
 
 /**
@@ -239,13 +266,12 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         // Permission before existence for every read but a public one: a 404 an
         // unpermitted caller can read is a global enumeration. A public global's
         // existence is not a secret, so its plain read skips the gate.
-        const isPublicRead = !full && !staged && global?.public === true;
-        if (
-            !isPublicRead &&
-            !permissionsFor(c.var.role).allows(globalPermission(key, 'read'))
-        ) {
-            return forbidden(c);
-        }
+        const access = resolveAccess(globalsDefinition.catalogue.get.access, {
+            key,
+            full,
+            staged,
+        });
+        if (accessDenied(c, access)) return forbidden(c);
         if (!global) return notFound(c, `Global '${key}' not found`);
         const refused = stagedFlagDenied(c, global);
         if (refused) return refused;
@@ -277,7 +303,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         const body: Record<string, unknown> = await c.req
             .json<Record<string, unknown>>()
             .catch(() => ({}));
-        const args = globalsContract.createStaged.input.safeParse({
+        const args = createStagedGlobalSchema.safeParse({
             ...contentArgs(c),
             ...(body['data'] !== undefined ? { data: body['data'] } : {}),
         });
