@@ -163,7 +163,7 @@ objects instead, and if it lands second, it starts from them.
 
 **Stage 3 — entries**
 
-- [ ] `entries/operations/` to `entries/methods/`. `entries/methods.ts`
+- [x] `entries/operations/` to `entries/methods/`. `entries/methods.ts`
       becomes the declared factory form of `defineService`, producing the same
       per-type catalogue the manifest reads today. `EntryMethodContract` goes,
       since `method` is stamped and `requires` is a field of the common type.
