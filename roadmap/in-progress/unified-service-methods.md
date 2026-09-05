@@ -170,10 +170,10 @@ objects instead, and if it lands second, it starts from them.
 
 **Stage 4 — the shared helpers**
 
-- [ ] `content/` and each module's `internal/` take `ctx` everywhere.
+- [x] `content/` and each module's `internal/` take `config`, the user or `ctx`.
       `getCurrentUser()`, `getCurrentRole()` and `getConfig()` have no callers
-      outside the transports and the context builder. A lint rule or import
-      boundary refuses new ones from the content modules.
+      in the content modules beyond the globals read gate, the two identity
+      files and the media serving handler; a lint rule refuses new ones.
 
 **Stage 5 — close out**
 
