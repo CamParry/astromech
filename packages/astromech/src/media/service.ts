@@ -1,21 +1,22 @@
 /**
- * Media service — the media CRUD verbs. Thin assembler: wires the
- * per-operation functions in `operations/**` into the public `MediaService`
- * object. All policy lives in `operations/**` + `internal/**`.
+ * Media service — the media CRUD verbs. A thin assembler: it wires `methods/**`
+ * into the `MediaService` definition, and all policy lives there or in
+ * `internal/**`. Consumers reach the bound form as `app.media`.
  */
 
 import type { MediaService } from '@/types/index';
-import { deleteMedia } from './operations/delete';
-import { getMedia } from './operations/get';
-import { queryMedia } from './operations/query';
-import { replaceMedia } from './operations/replace';
-import { updateMedia } from './operations/update';
-import { uploadMedia } from './operations/upload';
-import { listMediaUsage } from './operations/used-by';
-import { listMediaVersions } from './operations/versions/list';
-import { restoreMediaVersion } from './operations/versions/restore';
+import { defineService } from '@/services/define-service';
+import { deleteMedia } from './methods/delete';
+import { getMedia } from './methods/get';
+import { queryMedia } from './methods/query';
+import { replaceMedia } from './methods/replace';
+import { updateMedia } from './methods/update';
+import { uploadMedia } from './methods/upload';
+import { listMediaUsage } from './methods/used-by';
+import { listMediaVersions } from './methods/versions/list';
+import { restoreMediaVersion } from './methods/versions/restore';
 
-export const mediaService: MediaService = {
+export const mediaDefinition = defineService<MediaService>('media', {
     query: queryMedia,
     get: getMedia,
     upload: uploadMedia,
@@ -25,4 +26,4 @@ export const mediaService: MediaService = {
     usedBy: listMediaUsage,
     versions: listMediaVersions,
     restoreVersion: restoreMediaVersion,
-};
+});

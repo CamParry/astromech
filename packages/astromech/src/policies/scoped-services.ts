@@ -18,6 +18,7 @@ import type {
 } from '@/types/index';
 import {
     globalsService,
+    mediaService,
     notificationsService,
     settingsService,
     usersService,
@@ -26,8 +27,7 @@ import { ENTRY_METHOD_ACTIONS } from '@/entries/methods';
 import { entriesService } from '@/entries/service';
 import { PermissionDeniedError } from '@/errors/permission';
 import { globalsDefinition } from '@/globals/service';
-import { mediaContract } from '@/media/contract';
-import { mediaService } from '@/media/service';
+import { mediaDefinition } from '@/media/service';
 import { notificationsDefinition } from '@/notifications/service';
 import { resolveAccess } from '@/permissions/access';
 import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/core-permissions';
@@ -227,7 +227,12 @@ export function scopedServices(role: Role | null | undefined): ScopedServices {
             permissions,
             'users'
         ),
-        media: scopeMethods(mediaService, mediaContract, permissions, 'media'),
+        media: scopeMethods(
+            mediaService,
+            mediaDefinition.catalogue,
+            permissions,
+            'media'
+        ),
         settings: scopeMethods(
             settingsService,
             settingsDefinition.catalogue,

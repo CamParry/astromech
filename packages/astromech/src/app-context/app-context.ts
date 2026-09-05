@@ -30,7 +30,7 @@ import { getEnvRecord } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
 import { globalsDefinition } from '@/globals/service';
 import { runHook } from '@/hooks/hooks';
-import { mediaService } from '@/media/service';
+import { mediaDefinition } from '@/media/service';
 import { notificationsDefinition, notify } from '@/notifications/service';
 import {
     getCurrentRole,
@@ -57,6 +57,7 @@ export function createAppContext(input: AppContextInput): AppContext {
     const { user, role, clientAddress } = input;
     /** Bound once per context, so a handler reaching a sibling acts as this user. */
     let globals: GlobalsService | undefined;
+    let media: MediaService | undefined;
     let notifications: NotificationsService | undefined;
     let settings: SettingsService | undefined;
     let users: UsersService | undefined;
@@ -79,7 +80,8 @@ export function createAppContext(input: AppContextInput): AppContext {
             return globals;
         },
         get media(): MediaService {
-            return mediaService;
+            media ??= mediaDefinition.bind(context);
+            return media;
         },
         get settings(): SettingsService {
             settings ??= settingsDefinition.bind(context);

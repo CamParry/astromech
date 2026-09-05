@@ -10,7 +10,7 @@
 import type { AstromechConfig, MediaAccess, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { describe, expect, it } from 'vitest';
-import { mediaService } from '@/media/service';
+import { mediaService } from '@/app-context/services';
 import { buildImageAttrs } from '@/media/serving/image/build-image-attrs';
 import { setStorageDriver } from '@/storage/registry';
 

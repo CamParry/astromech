@@ -1,7 +1,7 @@
 import type { ImageFormat } from './image/url.shared';
 import type { ImageSource, StorageDriver } from '@/types/index';
+import { mediaService } from '@/app-context/services';
 import { getConfig } from '@/config/registry';
-import { mediaService } from '@/media/service';
 import { getStorageDriver } from '@/storage/registry';
 import { isOptimisableImage } from './image/dimensions';
 import { getImageConfig } from './image/registry';

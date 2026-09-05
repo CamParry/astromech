@@ -24,7 +24,7 @@ import { z } from '@hono/zod-openapi';
 import { qualifyEntryType } from '@/entries/entry-types.shared';
 import { entryMethodContracts } from '@/entries/methods';
 import { globalsDefinition } from '@/globals/service';
-import { mediaContract } from '@/media/contract';
+import { mediaDefinition } from '@/media/service';
 import { notificationsDefinition } from '@/notifications/service';
 import {
     resolvePluginIdentity,
@@ -85,7 +85,7 @@ function buildCoreMethods(): CoreManifestMethod[] {
     // drift from the key it sits under.
     const catalogues: [string, Record<string, ServiceMethodContract>][] = [
         ['users', usersDefinition.catalogue],
-        ['media', mediaContract],
+        ['media', mediaDefinition.catalogue],
         ['settings', settingsDefinition.catalogue],
         ['globals', globalsDefinition.catalogue],
         ['notifications', notificationsDefinition.catalogue],

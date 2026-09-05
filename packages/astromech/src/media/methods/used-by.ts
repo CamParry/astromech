@@ -5,10 +5,12 @@
 
 import type { RelationshipRow } from '@/database/tables';
 import type { MediaUsage } from '@/types/index';
+import { z } from '@hono/zod-openapi';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 // Peer domains, read only to name a source row. See the `listMediaUsage` docstring.
 import { getEntryResource } from '@/entries/internal/records';
 import { getEntryRepository } from '@/entries/repository/registry';
+import { defineServiceMethod } from '@/services/define-service-method';
 import { createUserRepository } from '@/users/repository';
 import { MediaNotFoundError } from '../errors';
 import { createMediaRepository } from '../repository';
@@ -18,32 +20,38 @@ import { createMediaRepository } from '../repository';
  * edge, so a source using the same file at two paths yields two rows. Titles
  * resolve here so this returns the same shape as `entries.incomingRelationships`.
  */
-export async function listMediaUsage(params: { id: string }): Promise<MediaUsage[]> {
-    const { id } = params;
-    const row = await createMediaRepository().get(id);
-    if (!row) throw new MediaNotFoundError({ id });
+export const listMediaUsage = defineServiceMethod({
+    summary: 'List the entries, users and media items that reference a media item.',
+    input: z.object({ id: z.string() }),
+    access: 'media:read',
+    mutates: false,
+    async handler(params: { id: string }): Promise<MediaUsage[]> {
+        const { id } = params;
+        const row = await createMediaRepository().get(id);
+        if (!row) throw new MediaNotFoundError({ id });
 
-    // Staged sources count: a pending merge that uses this file is a reason
-    // not to delete it.
-    const rows = await createRelationshipRepository().findByTarget(id, 'media', {
-        includeStaged: true,
-    });
+        // Staged sources count: a pending merge that uses this file is a reason
+        // not to delete it.
+        const rows = await createRelationshipRepository().findByTarget(id, 'media', {
+            includeStaged: true,
+        });
 
-    const titles = await resolveSourceTitles(rows);
-    return rows
-        .map(
-            (edge): MediaUsage => ({
-                sourceId: edge.sourceId,
-                sourceKind: edge.sourceKind,
-                sourceType: edge.sourceType,
-                sourceTitle: titles.get(sourceTitleKey(edge)) ?? '',
-                schemaPath: edge.schemaPath,
-                instancePath: edge.instancePath,
-                sourceStaged: edge.sourceStaged,
-            })
-        )
-        .sort(compareUsage);
-}
+        const titles = await resolveSourceTitles(rows);
+        return rows
+            .map(
+                (edge): MediaUsage => ({
+                    sourceId: edge.sourceId,
+                    sourceKind: edge.sourceKind,
+                    sourceType: edge.sourceType,
+                    sourceTitle: titles.get(sourceTitleKey(edge)) ?? '',
+                    schemaPath: edge.schemaPath,
+                    instancePath: edge.instancePath,
+                    sourceStaged: edge.sourceStaged,
+                })
+            )
+            .sort(compareUsage);
+    },
+});
 
 /**
  * Display name per source, keyed by kind+id. Entry sources load through their

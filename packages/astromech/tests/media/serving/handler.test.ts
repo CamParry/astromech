@@ -2,7 +2,7 @@ import type { ImageFormat } from '@/media/serving/image/url.shared';
 import type { ImageDriver, ImageSource, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { mediaService } from '@/media/service';
+import { mediaService } from '@/app-context/services';
 import { handleMediaRequest } from '@/media/serving/handler';
 import { setImageConfig } from '@/media/serving/image/registry';
 import { setStorageDriver } from '@/storage/registry';

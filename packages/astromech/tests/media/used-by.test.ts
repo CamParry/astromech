@@ -9,10 +9,9 @@
 import type { AstromechConfig, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { usersService } from '@/app-context/services';
+import { mediaService, usersService } from '@/app-context/services';
 import { entriesService } from '@/entries/service';
 import { createMediaRepository } from '@/media/repository';
-import { mediaService } from '@/media/service';
 import { setStorageDriver } from '@/storage/registry';
 
 const noopStorage: StorageDriver = {

@@ -6,7 +6,7 @@
 import type { AstromechConfig, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { mediaService } from '@/media/service';
+import { mediaService } from '@/app-context/services';
 import { setStorageDriver } from '@/storage/registry';
 
 function textFile(name = 'doc.txt'): File {

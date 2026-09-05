@@ -6,6 +6,7 @@
 import type {
     AppContext,
     GlobalsService,
+    MediaService,
     NotificationsService,
     ServiceDefinition,
     SettingsService,
@@ -14,6 +15,7 @@ import type {
 } from '@/types/index';
 import { currentAppContext } from '@/app-context/app-context';
 import { globalsDefinition } from '@/globals/service';
+import { mediaDefinition } from '@/media/service';
 import { notificationsDefinition } from '@/notifications/service';
 import { settingsDefinition } from '@/settings/service';
 import { usersDefinition } from '@/users/service';
@@ -61,3 +63,6 @@ export const notificationsService: NotificationsService = bindCurrent(
 
 /** The users service, acting as whoever the current request is. */
 export const usersService: UsersService = bindCurrent(usersDefinition);
+
+/** The media service, acting as whoever the current request is. */
+export const mediaService: MediaService = bindCurrent(mediaDefinition);

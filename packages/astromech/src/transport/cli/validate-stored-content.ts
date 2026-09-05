@@ -190,7 +190,7 @@ function customTableEntryTypes(type: string | undefined): string[] {
 }
 
 /**
- * Every content row of every media item, with `media/operations/update.ts`'s
+ * Every content row of every media item, with `media/methods/update.ts`'s
  * context. Rows come straight from the repository rather than through `query`,
  * which resolves a delivery URL and so needs a storage driver the report has no
  * use for; `isUnique` reads only `fields`, which both carry identically. A

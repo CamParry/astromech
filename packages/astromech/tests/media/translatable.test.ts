@@ -7,9 +7,9 @@
 import type { StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { mediaService as api } from '@/app-context/services';
 import { MediaValidationError } from '@/media/errors';
 import { createMediaRepository } from '@/media/repository';
-import { mediaService as api } from '@/media/service';
 import { setStorageDriver } from '@/storage/registry';
 import { makeTranslatableMediaConfig } from './media-config';
 

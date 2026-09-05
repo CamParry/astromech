@@ -20,6 +20,7 @@ import type {
 import { buildAiModels } from '@/ai/models';
 import { setAiModels } from '@/ai/registry';
 import {
+    mediaService,
     notificationsService,
     settingsService,
     typedGlobalsService,
@@ -45,7 +46,6 @@ import { setEntryRepository } from '@/entries/repository/registry';
 import { typedEntriesService } from '@/entries/typed-entries-service';
 import { AstromechError } from '@/errors/astromech-error';
 import { defaultImageWidths, normaliseWidths } from '@/media/image-widths.shared';
-import { mediaService } from '@/media/service';
 import { setImageConfig } from '@/media/serving/image/registry';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { pluginServices } from '@/plugins/runtime/plugin-services';

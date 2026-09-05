@@ -47,7 +47,7 @@ type ResolveStrategy = (manifest: ManifestMethod) => ResolvedInvoke;
  */
 const CORE_SERVICES: Record<string, () => Promise<ServiceObject>> = {
     users: async () => (await import('@/app-context/services')).usersService,
-    media: async () => (await import('@/media/service')).mediaService,
+    media: async () => (await import('@/app-context/services')).mediaService,
     settings: async () => (await import('@/app-context/services')).settingsService,
     globals: async () =>
         (await import('@/app-context/services'))

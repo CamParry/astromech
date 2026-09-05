@@ -1,7 +1,7 @@
 import type { StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { mediaService } from '@/media/service';
+import { mediaService } from '@/app-context/services';
 import { setStorageDriver } from '@/storage/registry';
 
 // Minimal 1x1 JPEG (SOI + APP0 + SOF0 + EOI) — an optimisable raster image.

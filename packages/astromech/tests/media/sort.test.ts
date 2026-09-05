@@ -10,8 +10,8 @@
 import type { SortOption, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { mediaService } from '@/app-context/services';
 import { createMediaRepository } from '@/media/repository';
-import { mediaService } from '@/media/service';
 import { setStorageDriver } from '@/storage/registry';
 
 const noopStorage: StorageDriver = {

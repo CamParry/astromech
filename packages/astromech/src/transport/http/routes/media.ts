@@ -8,8 +8,8 @@ import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { MediaQueryParams, SortDirection } from '@/types/index';
 import type { Context } from 'hono';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
-import { mediaContract } from '@/media/contract';
-import { mediaService } from '@/media/service';
+import { mediaService } from '@/app-context/services';
+import { mediaDefinition } from '@/media/service';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { badRequest, forbidden, notFound } from '@/transport/http/middleware/errors';
 import { MEDIA_ROUTE_SPECS } from './http-routes.shared';
@@ -52,8 +52,8 @@ export const MEDIA_ROUTES: RestRoute[] = attachHandlers(MEDIA_ROUTE_SPECS, {
     },
 });
 
-mountRestRoutes(router, mediaContract, MEDIA_ROUTES);
-documentBespokeRoutes(router, mediaContract, MEDIA_ROUTE_SPECS);
+mountRestRoutes(router, mediaDefinition.catalogue, MEDIA_ROUTES);
+documentBespokeRoutes(router, mediaDefinition.catalogue, MEDIA_ROUTE_SPECS);
 
 /**
  * The `{ id }` a media route addresses, plus the locale a content-level one
@@ -96,7 +96,7 @@ function queryArgs(c: Context<Env>): MediaQueryParams {
 router.get('/:id/usage', async (c) => {
     const { id } = c.req.param();
     const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(mediaContract.usedBy)) return forbidden(c);
+    if (!permissions.allowsMethod(mediaDefinition.catalogue.usedBy)) return forbidden(c);
 
     const item = await mediaService.get({ id });
     if (!item) return notFound(c, `Media '${id}' not found`);
@@ -110,7 +110,7 @@ router.get('/:id/usage', async (c) => {
 // JSON representation, so no contract schema can validate the call.
 router.post('/upload', async (c) => {
     const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(mediaContract.upload)) return forbidden(c);
+    if (!permissions.allowsMethod(mediaDefinition.catalogue.upload)) return forbidden(c);
 
     const formData = await c.req.formData();
     const file = formData.get('file');
@@ -128,7 +128,7 @@ router.post('/upload', async (c) => {
 router.post('/:id/replace', async (c) => {
     const { id } = c.req.param();
     const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(mediaContract.replace)) return forbidden(c);
+    if (!permissions.allowsMethod(mediaDefinition.catalogue.replace)) return forbidden(c);
 
     const formData = await c.req.formData();
     const file = formData.get('file');
