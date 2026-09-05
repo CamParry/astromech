@@ -7,47 +7,55 @@
 
 import type { EntryRepository, EntryRow } from '../repository/types';
 import type { IncomingRelationship } from '@/types/index';
+import { z } from '@hono/zod-openapi';
 import { createRelationshipRepository } from '@/database/repository/relationships';
+import { defineServiceMethod } from '@/services/define-service-method';
+import { entryGate } from '../internal/access';
 import { getEntryResource } from '../internal/records';
 import { getEntryRepository } from '../repository/registry';
 
 /** One row per index edge: a source referencing the target twice is two rows. */
-export async function listIncomingRelationships(params: {
-    type: string;
-    id: string;
-}): Promise<IncomingRelationship[]> {
-    const repository = getEntryRepository(params.type);
-    await getEntryResource(repository, params.type, params.id);
+export const listIncomingRelationships = defineServiceMethod({
+    summary: 'List the entries that reference an entry.',
+    input: z.object({ type: z.string(), id: z.string() }),
+    access: entryGate('read'),
+    mutates: false,
+    async handler(params: { type: string; id: string }): Promise<IncomingRelationship[]> {
+        const repository = getEntryRepository(params.type);
+        await getEntryResource(repository, params.type, params.id);
 
-    // Staged sources count: a pending merge that references this entry is a
-    // reason not to delete it.
-    const rows = await createRelationshipRepository().findByTarget(params.id, 'entry', {
-        includeStaged: true,
-    });
+        // Staged sources count: a pending merge that references this entry is a
+        // reason not to delete it.
+        const rows = await createRelationshipRepository().findByTarget(
+            params.id,
+            'entry',
+            { includeStaged: true }
+        );
 
-    // An entry source always carries a `sourceType`; a null one is index
-    // corruption, so drop it rather than guessing a repository for it.
-    const sourceRows = rows.filter(
-        (row): row is typeof row & { sourceType: string } =>
-            row.sourceKind === 'entry' && typeof row.sourceType === 'string'
-    );
-    if (sourceRows.length === 0) return [];
+        // An entry source always carries a `sourceType`; a null one is index
+        // corruption, so drop it rather than guessing a repository for it.
+        const sourceRows = rows.filter(
+            (row): row is typeof row & { sourceType: string } =>
+                row.sourceKind === 'entry' && typeof row.sourceType === 'string'
+        );
+        if (sourceRows.length === 0) return [];
 
-    const sources = await loadSources(sourceRows);
+        const sources = await loadSources(sourceRows);
 
-    return sourceRows.flatMap((row) => {
-        const source = sources.get(row.sourceId);
-        if (source === undefined) return [];
-        return [
-            {
-                sourceId: source.id,
-                sourceTitle: source.title ?? '',
-                sourceType: row.sourceType,
-                schemaPath: row.schemaPath,
-            } satisfies IncomingRelationship,
-        ];
-    });
-}
+        return sourceRows.flatMap((row) => {
+            const source = sources.get(row.sourceId);
+            if (source === undefined) return [];
+            return [
+                {
+                    sourceId: source.id,
+                    sourceTitle: source.title ?? '',
+                    sourceType: row.sourceType,
+                    schemaPath: row.schemaPath,
+                } satisfies IncomingRelationship,
+            ];
+        });
+    },
+});
 
 /**
  * Load the sources grouped by their own entry type, each in the locale it

@@ -3,8 +3,7 @@
  * handed this instead of the raw domain services, so authority is a property
  * of the handle, not of checks each caller remembered to write. Fails CLOSED.
  */
-import type { EntryMethodName } from '@/entries/methods';
-import type { EntryAction } from '@/permissions/entry-permission';
+import type { EntryMethodName } from '@/entries/catalogue';
 import type { Permissions } from '@/permissions/permissions-for';
 import type {
     EntriesService,
@@ -12,26 +11,26 @@ import type {
     MediaService,
     NotificationsService,
     Role,
+    ServiceMethodAccess,
     ServiceMethodContract,
     SettingsService,
     UsersService,
 } from '@/types/index';
 import {
+    entriesService,
     globalsService,
     mediaService,
     notificationsService,
     settingsService,
     usersService,
 } from '@/app-context/services';
-import { ENTRY_METHOD_ACTIONS } from '@/entries/methods';
-import { entriesService } from '@/entries/service';
+import { entriesDefinition } from '@/entries/service';
 import { PermissionDeniedError } from '@/errors/permission';
 import { globalsDefinition } from '@/globals/service';
 import { mediaDefinition } from '@/media/service';
 import { notificationsDefinition } from '@/notifications/service';
 import { resolveAccess } from '@/permissions/access';
 import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/core-permissions';
-import { entryPermission } from '@/permissions/entry-permission';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { getCurrentUser } from '@/request-context/request-context';
 import { settingsDefinition } from '@/settings/service';
@@ -150,8 +149,9 @@ function wantsFullShape(input: unknown): boolean {
 
 /**
  * Scope the entries service: its permission is per (type, action)
- * (`entry:posts:update` ≠ `entry:pages:update`), read from
- * `ENTRY_METHOD_ACTIONS`, so the check cannot come from a fixed contract.
+ * (`entry:posts:update` ≠ `entry:pages:update`), so the check is the method's
+ * own `access` rule resolved once per type the call targets, rather than one
+ * fixed contract.
  */
 export function scopeEntries(
     service: EntriesService,
@@ -166,11 +166,12 @@ export function scopeEntries(
         }
         const fn = value as ServiceFn;
         const id = `entries.${key}`;
-        const action: EntryAction | undefined =
-            ENTRY_METHOD_ACTIONS[key as EntryMethodName];
+        const declared = entriesDefinition.catalogue[key as EntryMethodName] as
+            | { access: ServiceMethodAccess<never> }
+            | undefined;
 
         scoped[key] = (...args: unknown[]): unknown => {
-            if (action === undefined) throw new PermissionDeniedError(id, null);
+            if (declared === undefined) throw new PermissionDeniedError(id, null);
 
             const types = targetedTypes(args[0]);
             if (types === null) {
@@ -182,9 +183,15 @@ export function scopeEntries(
             }
 
             for (const type of types) {
-                const permission = entryPermission(type, action);
-                if (!permissions.allows(permission)) {
-                    throw new PermissionDeniedError(id, permission);
+                // The rule reads `type` off the input, so a cross-type call is
+                // resolved once per type rather than once for the list.
+                const resolved = resolveAccess(declared.access, {
+                    ...(args[0] as object),
+                    type,
+                });
+                if (resolved.kind !== 'permission') continue;
+                if (!permissions.allows(resolved.permission)) {
+                    throw new PermissionDeniedError(id, resolved.permission);
                 }
             }
 

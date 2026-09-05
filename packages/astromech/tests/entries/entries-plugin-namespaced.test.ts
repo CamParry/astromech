@@ -8,7 +8,7 @@
 import type { AstromechConfig, PluginDefinition } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { entriesService } from '@/entries/service';
+import { entriesService } from '@/app-context/services';
 
 const redirectsPlugin: PluginDefinition = {
     package: '@astromech/redirects',

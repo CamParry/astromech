@@ -31,8 +31,10 @@ import { buildDispatch } from '@/transport/tools/dispatch';
 
 // The dispatcher resolves the entries service at CALL time, so a stub here is
 // enough to observe exactly what arguments a tool passes it — which is the only
-// thing the dispatcher is responsible for.
-vi.mock('@/entries/service', () => ({
+// thing the dispatcher is responsible for. Only `entriesService` is replaced:
+// the module's other bound services are what the core tools dispatch through.
+vi.mock('@/app-context/services', async (importOriginal) => ({
+    ...(await importOriginal<Record<string, unknown>>()),
     entriesService: {
         get: async (params: unknown) => params,
     },

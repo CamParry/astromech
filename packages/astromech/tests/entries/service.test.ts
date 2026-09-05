@@ -14,6 +14,7 @@ import type { EntryRepository } from '@/entries/repository/types';
 import type { Entry, PluginDefinition } from '@/types/index';
 import { createTestDb, registerTestPlugins, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { entriesService } from '@/app-context/services';
 import { decodeWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { entriesTable } from '@/database/tables';
@@ -22,7 +23,6 @@ import {
     resetEntryRepositoryOverrides,
     setEntryRepository,
 } from '@/entries/repository/registry';
-import { entriesService } from '@/entries/service';
 import { ValidationError } from '@/errors/validation';
 import { defineHook } from '@/plugins/define-hook';
 

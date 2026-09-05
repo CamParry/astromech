@@ -19,3 +19,8 @@ export const ALL_CAPABILITIES: readonly Capability[] = [
     'trash',
     'staging',
 ];
+
+/** Whether a string names a capability — a method's `requires` is typed `string`. */
+export function isCapability(value: string): value is Capability {
+    return (ALL_CAPABILITIES as readonly string[]).includes(value);
+}

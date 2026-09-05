@@ -6,7 +6,6 @@
 
 import type {
     AnyServiceMethod,
-    EntriesService,
     HookHandler,
     NotifyInput,
     PluginConfigView,
@@ -31,7 +30,6 @@ import {
     resetEntryRepositoryOverrides,
     setEntryRepository,
 } from '@/entries/repository/registry';
-import { typedEntriesService } from '@/entries/typed-entries-service';
 import { getEnvRecord } from '@/env';
 import { flattenEntryFields } from '@/fields/flatten';
 import { addHook, clearHooks } from '@/hooks/hooks';
@@ -322,7 +320,7 @@ export function createPluginContext(
         // axis default to 'full', since plugin altitude is trusted server code.
         get entries(): TypedEntriesService {
             return withDefaultShape(
-                typedEntriesService as unknown as EntriesService,
+                app.entries,
                 'full'
             ) as unknown as TypedEntriesService;
         },

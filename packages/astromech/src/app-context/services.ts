@@ -5,15 +5,18 @@
 
 import type {
     AppContext,
+    EntriesService,
     GlobalsService,
     MediaService,
     NotificationsService,
     ServiceDefinition,
     SettingsService,
+    TypedEntriesService,
     TypedGlobalsService,
     UsersService,
 } from '@/types/index';
 import { currentAppContext } from '@/app-context/app-context';
+import { entriesDefinition } from '@/entries/service';
 import { globalsDefinition } from '@/globals/service';
 import { mediaDefinition } from '@/media/service';
 import { notificationsDefinition } from '@/notifications/service';
@@ -46,6 +49,19 @@ export function bindCurrent<S extends object>(definition: ServiceDefinition<S>):
     }
     return bound as S;
 }
+
+/**
+ * The entries service, acting as whoever the current request is. `EntriesMethods`
+ * collapses the overload pairs `EntriesService` declares, so the catalogue can be
+ * checked against a shape the handlers implement; this is one of the two
+ * acknowledged places the cast back happens.
+ */
+export const entriesService: EntriesService = bindCurrent(
+    entriesDefinition
+) as unknown as EntriesService;
+
+/** `entriesService` under its typed facade — build consumer handles from it. */
+export const typedEntriesService = entriesService as unknown as TypedEntriesService;
 
 /** The globals service, acting as whoever the current request is. */
 export const globalsService: GlobalsService = bindCurrent(globalsDefinition);

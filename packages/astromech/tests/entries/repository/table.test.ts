@@ -13,11 +13,11 @@ import type { AstromechConfig, PluginDefinition } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { entriesService } from '@/app-context/services';
 import { defineTable } from '@/database/define-table';
 import { transaction } from '@/database/transaction';
 import { UnknownSortKeyError } from '@/entries/errors';
 import { tableRepository } from '@/entries/repository/table';
-import { entriesService } from '@/entries/service';
 
 /** Crockford base32, the ULID alphabet — ids are 26 uppercase chars. */
 const ULID = /^[0-9A-HJKMNP-TV-Z]{26}$/;

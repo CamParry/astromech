@@ -1,29 +1,30 @@
+import type { AppContext } from '@/types/index';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { transaction } from '@/database/transaction';
-import { runHook } from '@/hooks/hooks';
-import { getCurrentUser } from '@/request-context/request-context';
 import { BulkOperationError } from '../errors';
-import { asEntry, getEntryResources } from '../internal/records';
 import { getEntryRepository } from '../repository/registry';
+import { asEntry, getEntryResources } from './records';
 
 /**
- * Permanently delete one or many entries, atomically per batch, firing the
- * entry delete hooks around the write. Deleting is resource-level: every locale
- * of an entry goes with it. Throws if an id is missing or of another type
- * before any hook fires or any row is touched.
+ * Permanently delete a batch of entries, atomically, firing the entry delete
+ * hooks around the write. Deleting is resource-level: every locale of an entry
+ * goes with it. Throws if an id is missing or of another type before any hook
+ * fires or any row is touched.
+ *
+ * Batch-only: `methods/delete.ts` reaches it through `fromBatch`.
  */
-export async function deleteEntries(params: {
-    type: string;
-    ids: readonly string[];
-}): Promise<void> {
+export async function deleteEntryBatch(
+    params: { type: string; ids: readonly string[] },
+    ctx: AppContext
+): Promise<void> {
     const { type, ids } = params;
     const repository = getEntryRepository(type);
     const entries = await getEntryResources(repository, type, ids);
-    const user = await getCurrentUser();
+    const user = ctx.user;
     const relationships = createRelationshipRepository();
 
     for (const entry of entries) {
-        await runHook('entry:beforeDelete', {
+        await ctx.runHook('entry:beforeDelete', {
             type,
             entry: asEntry(entry),
             user,
@@ -52,7 +53,7 @@ export async function deleteEntries(params: {
 
     for (const entry of entries) {
         // A throw here propagates; the write above stays (`DECISIONS.md`).
-        await runHook('entry:afterDelete', {
+        await ctx.runHook('entry:afterDelete', {
             type,
             entry: asEntry(entry),
             user,

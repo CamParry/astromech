@@ -22,7 +22,7 @@ import { join } from 'node:path';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createFileTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { entriesService as api } from '@/entries/service';
+import { entriesService as api } from '@/app-context/services';
 import { onError } from '@/transport/http/middleware/errors';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
 

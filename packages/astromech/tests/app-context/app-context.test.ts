@@ -145,6 +145,8 @@ describe('createAppContext', () => {
         const app = createAppContext({ user: null, role: editor });
         const other = createAppContext({ user: null, role: editor });
 
+        expect(app.entries).toBe(app.entries);
+        expect(app.entries).not.toBe(other.entries);
         expect(app.globals).toBe(app.globals);
         expect(app.globals).not.toBe(other.globals);
         expect(app.settings).toBe(app.settings);

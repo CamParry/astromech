@@ -25,7 +25,7 @@ import { getDatabaseDriver } from '@/database/driver-registry';
 import { getDb } from '@/database/registry';
 import { getEmailDriver } from '@/email/registry';
 import { renderEmail } from '@/email/render';
-import { entriesService } from '@/entries/service';
+import { entriesDefinition } from '@/entries/service';
 import { getEnvRecord } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
 import { globalsDefinition } from '@/globals/service';
@@ -56,6 +56,7 @@ export type AppContextInput = {
 export function createAppContext(input: AppContextInput): AppContext {
     const { user, role, clientAddress } = input;
     /** Bound once per context, so a handler reaching a sibling acts as this user. */
+    let entries: EntriesService | undefined;
     let globals: GlobalsService | undefined;
     let media: MediaService | undefined;
     let notifications: NotificationsService | undefined;
@@ -73,7 +74,10 @@ export function createAppContext(input: AppContextInput): AppContext {
         role,
         clientAddress,
         get entries(): EntriesService {
-            return entriesService;
+            // `EntriesMethods` collapses the overload pairs the interface
+            // declares; `entries/service.ts` says why the cast is here.
+            entries ??= entriesDefinition.bind(context) as unknown as EntriesService;
+            return entries;
         },
         get globals(): GlobalsService {
             globals ??= globalsDefinition.bind(context);

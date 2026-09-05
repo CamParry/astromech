@@ -1,5 +1,5 @@
 import { defineCommand } from 'citty';
-import { entriesService } from '@/entries/service';
+import { entriesService } from '@/app-context/services';
 import { loadConfig } from '../config';
 import { printResult } from '../output';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';

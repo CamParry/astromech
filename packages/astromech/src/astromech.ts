@@ -23,6 +23,7 @@ import {
     mediaService,
     notificationsService,
     settingsService,
+    typedEntriesService,
     typedGlobalsService,
     usersService,
 } from '@/app-context/services';
@@ -43,7 +44,6 @@ import { setDb } from '@/database/registry';
 import { setEmailDriver } from '@/email/registry';
 import { entryJobs } from '@/entries/jobs/entry-jobs';
 import { setEntryRepository } from '@/entries/repository/registry';
-import { typedEntriesService } from '@/entries/typed-entries-service';
 import { AstromechError } from '@/errors/astromech-error';
 import { defaultImageWidths, normaliseWidths } from '@/media/image-widths.shared';
 import { setImageConfig } from '@/media/serving/image/registry';

@@ -1,6 +1,6 @@
 import type { EntryStatus, EntryUpdateData, JsonObject } from '@/types/index';
 import { defineCommand } from 'citty';
-import { entriesService } from '@/entries/service';
+import { entriesService } from '@/app-context/services';
 import { loadConfig } from '../config';
 import { parseJsonArg, printError, printResult } from '../output';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';

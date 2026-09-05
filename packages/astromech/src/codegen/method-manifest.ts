@@ -4,7 +4,6 @@
  * function — a method's `input` is its ARGUMENT object, not the HTTP body.
  */
 import type { Capability } from '@/entries/capabilities';
-import type { EntryMethodContract } from '@/entries/methods';
 import type {
     AnyServiceMethod,
     CoreManifestMethod,
@@ -21,8 +20,8 @@ import type {
     ServiceMethodContract,
 } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { entryCatalogue } from '@/entries/catalogue';
 import { qualifyEntryType } from '@/entries/entry-types.shared';
-import { entryMethodContracts } from '@/entries/methods';
 import { globalsDefinition } from '@/globals/service';
 import { mediaDefinition } from '@/media/service';
 import { notificationsDefinition } from '@/notifications/service';
@@ -153,10 +152,11 @@ function buildEntriesMethods(
 
     // Root entry types — addressed by their bare id.
     for (const [type, entryType] of Object.entries(config.entries)) {
-        for (const contract of entryMethodContracts({
+        const catalogue = entryCatalogue({
             typeId: type,
             titled: entryType.titleField !== false,
-        })) {
+        });
+        for (const [name, contract] of Object.entries(catalogue)) {
             // Gate capability-bound methods: `publish` needs versioning; the
             // staged-entry/preview methods need the `staging` capability.
             if (!methodCapabilityMet(contract.requires, entryType.capabilities)) {
@@ -164,7 +164,7 @@ function buildEntriesMethods(
             }
 
             methods.push(
-                projectEntryMethod(contract, {
+                projectEntryMethod(contract, name, {
                     typeId: type,
                     entryType: type,
                     namespace: 'root',
@@ -178,17 +178,18 @@ function buildEntriesMethods(
         const permissionNamespace = pluginNsMap.get(pluginName) ?? pluginName;
         for (const [type, entryType] of Object.entries(types)) {
             const typeId = qualifyEntryType(pluginName, type);
-            for (const contract of entryMethodContracts({
+            const catalogue = entryCatalogue({
                 typeId,
                 titled: entryType.titleField !== false,
-            })) {
+            });
+            for (const [name, contract] of Object.entries(catalogue)) {
                 // Same capability gating as root entry types.
                 if (!methodCapabilityMet(contract.requires, entryType.capabilities)) {
                     continue;
                 }
 
                 methods.push(
-                    projectEntryMethod(contract, {
+                    projectEntryMethod(contract, name, {
                         typeId,
                         entryType: type,
                         namespace: permissionNamespace,
@@ -207,7 +208,8 @@ function buildEntriesMethods(
  * dimension `name` lacks, since `entries.create` names every type's create.
  */
 function projectEntryMethod(
-    contract: EntryMethodContract,
+    contract: ServiceMethodContract,
+    name: string,
     placement: {
         typeId: string;
         entryType: string;
@@ -216,11 +218,11 @@ function projectEntryMethod(
     }
 ): EntriesManifestMethod {
     const method: EntriesManifestMethod = {
-        id: `entries.${placement.typeId}.${contract.method}`,
-        name: `entries.${contract.method}`,
+        id: `entries.${placement.typeId}.${name}`,
+        name: `entries.${name}`,
         summary: contract.summary,
         source: 'entries',
-        method: contract.method,
+        method: name,
         typeId: placement.typeId,
         entryType: placement.entryType,
         namespace: placement.namespace,

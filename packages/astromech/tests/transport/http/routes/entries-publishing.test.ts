@@ -12,7 +12,7 @@ import type { Entry, EntryVersion, IncomingRelationship } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { adminRole, mountRouter, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService as api } from '@/entries/service';
+import { entriesService as api } from '@/app-context/services';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
 
 function app() {

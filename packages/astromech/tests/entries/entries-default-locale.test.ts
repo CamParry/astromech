@@ -9,7 +9,7 @@
 
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService } from '@/entries/service';
+import { entriesService } from '@/app-context/services';
 
 const api = entriesService;
 

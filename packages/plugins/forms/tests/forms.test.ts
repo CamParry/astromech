@@ -36,8 +36,8 @@ import {
 } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { entriesService as localEntries } from '@/app-context/services';
 import { setEmailDriver } from '@/email/registry';
-import { entriesService as localEntries } from '@/entries/service';
 import { defineHook } from '@/plugins/define-hook';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { forms, turnstile } from '../src/index';

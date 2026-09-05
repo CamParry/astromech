@@ -127,7 +127,7 @@ async function checkEntries(
     }
 }
 
-/** One entry row through the pipeline, with `entries/operations/update.ts`'s context. */
+/** One entry row through the pipeline, with `entries/internal/update-batch.ts`'s context. */
 async function checkEntryRow(
     report: ValidationReport,
     row: {

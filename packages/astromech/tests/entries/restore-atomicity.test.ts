@@ -11,8 +11,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createFileTestDb, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { entriesService } from '@/app-context/services';
 import { getDb } from '@/database/registry';
-import { entriesService } from '@/entries/service';
 
 // `restoreVersion` snapshots the current state, updates the row, and indexes
 // it inside one database transaction. `replaceForSource` only rejects once

@@ -18,14 +18,13 @@ import type {
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { usersService } from '@/app-context/services';
+import { entriesService as api, usersService } from '@/app-context/services';
 import { defineTable } from '@/database/define-table';
 import { setDb } from '@/database/registry';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { transaction } from '@/database/transaction';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
 import { tableRepository } from '@/entries/repository/table';
-import { entriesService as api } from '@/entries/service';
 import { createMediaRepository } from '@/media/repository';
 import { createUserRepository } from '@/users/repository';
 

@@ -9,8 +9,8 @@
 import type { AstromechConfig } from '@/types/index';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { entriesService } from '@/app-context/services';
 import { CapabilityError } from '@/entries/errors';
-import { entriesService } from '@/entries/service';
 
 function makeCapabilityTestConfig(): AstromechConfig {
     return {

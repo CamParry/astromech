@@ -6,7 +6,9 @@
  * The 30 routes live in `http-routes.shared.ts`; six get a bespoke handler.
  */
 import type { ContractCatalogue, RestRoute } from './rest-route';
-import type { EntryMethodContract, EntryMethodName } from '@/entries/methods';
+import type { Capability } from '@/entries/capabilities';
+import type { EntryMethodName } from '@/entries/catalogue';
+import type { ResolvedAccess } from '@/permissions/access';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type {
     EntryQueryParams,
@@ -17,17 +19,19 @@ import type {
 } from '@/types/index';
 import type { Context } from 'hono';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
+import { entriesService } from '@/app-context/services';
 import { getConfig } from '@/config/registry';
+import { entryCatalogue } from '@/entries/catalogue';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { PublicTrashedReadError, StagedEntryExistsError } from '@/entries/errors';
-import { ENTRY_METHOD_ACTIONS, entryMethodContracts } from '@/entries/methods';
 import {
     createEntrySchema,
     entrySortSchema,
     titledUpdateEntrySchema,
     updateEntrySchema,
 } from '@/entries/schema';
-import { entriesService } from '@/entries/service';
+import { entriesDefinition } from '@/entries/service';
+import { resolveAccess } from '@/permissions/access';
 import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/core-permissions';
 import { entryPermission } from '@/permissions/entry-permission';
 import { permissionsFor } from '@/permissions/permissions-for';
@@ -252,38 +256,30 @@ async function optionalBody(c: Context<Env>): Promise<Record<string, unknown>> {
 }
 
 /** One entry type's method catalogue, built once per resolved type. */
-const CONTRACTS_BY_TYPE = new WeakMap<
-    ResolvedEntryType,
-    Record<string, EntryMethodContract>
->();
+const CONTRACTS_BY_TYPE = new WeakMap<ResolvedEntryType, EntryContracts>();
+
+/** The per-type catalogue, keyed as `EntriesService` keys its methods. */
+type EntryContracts = ReturnType<typeof entryCatalogue>;
 
 /**
  * The catalogue the OpenAPI document is written from. REST addresses a type by
  * path param, so the document describes `{type}` rather than any one type, and
  * the titled schemas are the documented default.
  */
-const DOCUMENTED_CONTRACTS: ContractCatalogue = Object.fromEntries(
-    entryMethodContracts({ typeId: '{type}', titled: true }).map((contract) => [
-        contract.method,
-        contract,
-    ])
-);
+const DOCUMENTED_CONTRACTS: ContractCatalogue = entryCatalogue({
+    typeId: '{type}',
+    titled: true,
+});
 
 /** The method catalogue for `resolved`, addressed as `typeId`. */
-function entryContracts(
-    resolved: ResolvedEntryType,
-    typeId: string
-): Record<string, EntryMethodContract> {
+function entryContracts(resolved: ResolvedEntryType, typeId: string): EntryContracts {
     const cached = CONTRACTS_BY_TYPE.get(resolved);
     if (cached) return cached;
 
-    const catalogue: Record<string, EntryMethodContract> = {};
-    for (const contract of entryMethodContracts({
+    const catalogue = entryCatalogue({
         typeId,
         titled: resolved.titleField !== false,
-    })) {
-        catalogue[contract.method] = contract;
-    }
+    });
     CONTRACTS_BY_TYPE.set(resolved, catalogue);
     return catalogue;
 }
@@ -316,19 +312,25 @@ function entryAccess(): (c: Context<Env>, route: RestRoute) => Response | null {
 /** {@link entryAccess}, for the bespoke handlers that make the same checks. */
 function entryPrecondition(c: Context<Env>, method: EntryMethodName): Response | null {
     const type = param(c, 'type');
-    const action = ENTRY_METHOD_ACTIONS[method];
-    if (!permissionsFor(c.var.role).allows(entryPermission(type, action))) {
-        return forbidden(c);
-    }
+    const declared = entriesDefinition.catalogue[method];
+    if (accessDenied(c, resolveAccess(declared.access, { type }))) return forbidden(c);
 
     const resolved = resolveEntryType(getConfig(), type);
     if (!resolved) return notFound(c, `Entry type '${type}' not found`);
 
-    const requires = entryContracts(resolved, type)[method]?.requires;
+    const requires: Capability | undefined = entryContracts(resolved, type)[method]
+        .requires;
     if (requires !== undefined && !resolved.capabilities[requires]) {
         return capabilityDenied(c, type, requires);
     }
     return null;
+}
+
+/** Whether the caller falls short of what a method's resolved access demands. */
+function accessDenied(c: Context<Env>, access: ResolvedAccess): boolean {
+    if (access.kind === 'public') return false;
+    if (access.kind === 'authenticated') return !c.var.user;
+    return !permissionsFor(c.var.role).allows(access.permission);
 }
 
 /**

@@ -19,11 +19,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createFileTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { entriesService as api } from '@/app-context/services';
 import { getDb } from '@/database/registry';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { CapabilityError, StagedEntryExistsError } from '@/entries/errors';
 import { getEntryRepository } from '@/entries/repository/registry';
-import { entriesService as api } from '@/entries/service';
 
 let dbCounter = 0;
 let dbPath = '';

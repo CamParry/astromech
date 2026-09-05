@@ -11,8 +11,8 @@ import type { Kysely } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { entriesService as localEntries } from '@/app-context/services';
 import { setEmailDriver } from '@/email/registry';
-import { entriesService as localEntries } from '@/entries/service';
 import {
     createPluginContext,
     getPluginIdentity,

@@ -1,28 +1,29 @@
-import type { Entry } from '@/types/index';
+import type { AppContext, Entry } from '@/types/index';
 import { transaction } from '@/database/transaction';
-import { getCurrentUser } from '@/request-context/request-context';
 import { BulkOperationError, CapabilityError } from '../errors';
-import { assertCapability } from '../internal/entry-type';
-import { asEntry, getEntryResources } from '../internal/records';
 import { getEntryRepository } from '../repository/registry';
+import { assertCapability } from './entry-type';
+import { asEntry, getEntryResources } from './records';
 
 /**
- * Restore one or many trashed entries, atomically per batch, returning each
- * one's default-locale row. Restoring is resource-level: every locale comes
- * back. Throws if the type does not support trash. Fires no hooks — there is no
+ * Restore a batch of trashed entries, atomically, returning each one's
+ * default-locale row. Restoring is resource-level: every locale comes back.
+ * Throws if the type does not support trash. Fires no hooks — there is no
  * restore hook event.
+ *
+ * Batch-only: `methods/restore.ts` reaches it through `fromBatch`.
  */
-export async function restoreEntries(params: {
-    type: string;
-    ids: readonly string[];
-}): Promise<Entry[]> {
+export async function restoreEntryBatch(
+    params: { type: string; ids: readonly string[] },
+    ctx: AppContext
+): Promise<Entry[]> {
     const { type, ids } = params;
     const repository = getEntryRepository(type);
     assertCapability(type, 'trash');
     const { trash } = repository;
     if (!trash) throw new CapabilityError(type, 'trash');
     const entries = await getEntryResources(repository, type, ids);
-    const user = await getCurrentUser();
+    const user = ctx.user;
 
     return transaction(async () => {
         const rows: Entry[] = [];

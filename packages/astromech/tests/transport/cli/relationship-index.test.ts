@@ -11,13 +11,16 @@ import type { AstromechConfig, PluginDefinition, StorageDriver } from '@/types/i
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { mediaService, usersService } from '@/app-context/services';
+import {
+    entriesService as api,
+    mediaService,
+    usersService,
+} from '@/app-context/services';
 import { defineTable } from '@/database/define-table';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { relationshipsTable } from '@/database/tables';
 import { tableRepository } from '@/entries/repository/table';
-import { entriesService as api } from '@/entries/service';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import {

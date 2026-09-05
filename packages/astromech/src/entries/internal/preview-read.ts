@@ -10,9 +10,9 @@ import { getDefaultContentLocale } from '@/config/content-locale';
 import { getConfig } from '@/config/registry';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { flattenEntryFields } from '@/fields/flatten';
-import { projectPreview, verifyPreviewToken } from '../../internal/preview';
-import { asEntry } from '../../internal/records';
-import { getEntryRepository } from '../../repository/registry';
+import { getEntryRepository } from '../repository/registry';
+import { projectPreview, verifyPreviewToken } from './preview';
+import { asEntry } from './records';
 
 /**
  * Preview list read by filters (see the file header). Returns an empty result

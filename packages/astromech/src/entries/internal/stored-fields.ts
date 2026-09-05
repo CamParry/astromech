@@ -7,11 +7,16 @@
 import type { EntryRepository } from '../repository/types';
 import type { EntryRecord } from './records';
 import type { Field } from '@/types/fields';
-import type { Entry, EntryStatus, JsonObject, ResolvedEntryType } from '@/types/index';
+import type {
+    Entry,
+    EntryStatus,
+    JsonObject,
+    ResolvedEntryType,
+    User,
+} from '@/types/index';
 import { flattenEntryFields } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
-import { getCurrentUser } from '@/request-context/request-context';
 import { createEntryLookups } from '../lookups';
 import { entryValidationMode } from '../validation-mode.shared';
 import { pruneDanglingRelations } from './dangling-relations';
@@ -22,7 +27,10 @@ import { inheritSharedFields } from './translatable';
  * pre-step needs. A merge is an `'update'` to the parse, so the tag names the
  * write path rather than the operation.
  */
-export type StoredFieldsInput =
+export type StoredFieldsInput = {
+    /** Who the write is attributed to; the field validators read it. */
+    user: User | null;
+} & (
     | {
           kind: 'create';
           repository: EntryRepository;
@@ -50,7 +58,8 @@ export type StoredFieldsInput =
           type: string;
           canonical: EntryRecord;
           staged: EntryRecord;
-      };
+      }
+);
 
 /**
  * Turns what a caller sent into the values that go in the row. Throws a 422
@@ -69,7 +78,7 @@ export async function toStoredFields(input: StoredFieldsInput): Promise<JsonObje
             hasStatuses: entryType ? entryType.capabilities.statuses !== false : true,
         }),
         resource: { kind: 'entry', record: write.record },
-        user: await getCurrentUser(),
+        user: input.user,
         lookups: createEntryLookups(repository, {
             type: write.type,
             locale: write.locale,

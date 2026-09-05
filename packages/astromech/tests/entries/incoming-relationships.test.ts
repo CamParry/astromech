@@ -11,9 +11,9 @@ import type { AstromechConfig, PluginDefinition } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { entriesService as api } from '@/app-context/services';
 import { defineTable } from '@/database/define-table';
 import { tableRepository } from '@/entries/repository/table';
-import { entriesService as api } from '@/entries/service';
 
 const linksTable = defineTable('test_links', ({ col }) => ({
     id: col.id(),

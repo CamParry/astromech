@@ -57,7 +57,8 @@ const CORE_SERVICES: Record<string, () => Promise<ServiceObject>> = {
 };
 
 async function getEntriesService(): Promise<ServiceObject> {
-    return (await import('@/entries/service')).entriesService as unknown as ServiceObject;
+    return (await import('@/app-context/services'))
+        .entriesService as unknown as ServiceObject;
 }
 
 /**

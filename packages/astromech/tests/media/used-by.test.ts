@@ -9,8 +9,7 @@
 import type { AstromechConfig, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { mediaService, usersService } from '@/app-context/services';
-import { entriesService } from '@/entries/service';
+import { entriesService, mediaService, usersService } from '@/app-context/services';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 

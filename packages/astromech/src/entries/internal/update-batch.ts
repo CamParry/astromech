@@ -1,33 +1,32 @@
-import type { EntryRecord } from '../internal/records';
 import type { EntryRepository } from '../repository/types';
+import type { EntryRecord } from './records';
 import type {
+    AppContext,
     Entry,
     EntryCreateContext,
     EntryUpdateData,
     ResolvedEntryType,
+    User,
 } from '@/types/index';
 import { getDefaultContentLocale } from '@/config/content-locale';
-import { getConfig } from '@/config/registry';
 import { isPublicBranded, PublicShapeWriteError } from '@/content/visibility';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { parseInput, ValidationError } from '@/errors/validation';
-import { runHook } from '@/hooks/hooks';
-import { getCurrentUser } from '@/request-context/request-context';
 import {
     BulkOperationError,
     CapabilityError,
     EntryNotFoundError,
     UnknownEntryTypeError,
 } from '../errors';
-import { asEntry, asRecord, findEntryOfType, getEntryOfType } from '../internal/records';
-import { indexEntryRelationships } from '../internal/relationships';
-import { deriveSlug, uniqueSlugIfChanged } from '../internal/slug';
-import { toStoredFields } from '../internal/stored-fields';
-import { propagateSharedFields } from '../internal/translatable';
-import { changesVersionedContent, snapshotVersion } from '../internal/versions';
 import { getEntryRepository } from '../repository/registry';
 import { createEntrySchema, updateEntrySchema } from '../schema';
+import { asEntry, asRecord, findEntryOfType, getEntryOfType } from './records';
+import { indexEntryRelationships } from './relationships';
+import { deriveSlug, uniqueSlugIfChanged } from './slug';
+import { toStoredFields } from './stored-fields';
+import { propagateSharedFields } from './translatable';
+import { changesVersionedContent, snapshotVersion } from './versions';
 
 /**
  * Updates one locale of a batch of entries, atomically, firing the entry write
@@ -35,24 +34,30 @@ import { createEntrySchema, updateEntrySchema } from '../schema';
  * no content row yet is created from the default-locale row (unless
  * `createMissingLocale` is false), which is how a translation is written;
  * `staged` writes the staged change instead.
+ *
+ * Batch-only: `methods/update.ts` and `methods/status.ts` reach it through
+ * `fromBatch`, which is what turns one id into a batch of one.
  */
-export async function updateEntries(params: {
-    type: string;
-    ids: readonly string[];
-    locale?: string;
-    /** Write each entry's staged change for this locale instead of its canonical row. */
-    staged?: boolean;
-    /**
-     * Write a locale with no content row yet, creating it. Only `update` sets
-     * it: a status change addresses a row that must already exist.
-     */
-    createMissingLocale?: boolean;
-    data: EntryUpdateData;
-}): Promise<Entry[]> {
+export async function updateEntryBatch(
+    params: {
+        type: string;
+        ids: readonly string[];
+        locale?: string;
+        /** Write each entry's staged change for this locale instead of its canonical row. */
+        staged?: boolean;
+        /**
+         * Write a locale with no content row yet, creating it. Only `update` sets
+         * it: a status change addresses a row that must already exist.
+         */
+        createMissingLocale?: boolean;
+        data: EntryUpdateData;
+    },
+    ctx: AppContext
+): Promise<Entry[]> {
     if (params.data.fields !== undefined && isPublicBranded(params.data.fields)) {
         throw new PublicShapeWriteError();
     }
-    const entryType = resolveEntryType(getConfig(), params.type);
+    const entryType = resolveEntryType(ctx.config, params.type);
     if (!entryType) {
         throw new UnknownEntryTypeError(params.type);
     }
@@ -75,7 +80,7 @@ export async function updateEntries(params: {
     }
 
     const repository = getEntryRepository(entryType.id);
-    const user = await getCurrentUser();
+    const user = ctx.user;
 
     // Each id is read once, at the top: the record feeds both the before-hook
     // context and the write, so nothing loads twice. An id with no row in this
@@ -105,7 +110,7 @@ export async function updateEntries(params: {
                           id,
                           locale,
                           data: params.data,
-                          user: user?.id ?? null,
+                          user,
                       }),
                   }
         );
@@ -113,14 +118,14 @@ export async function updateEntries(params: {
 
     for (const plan of plans) {
         if (plan.kind === 'update') {
-            await runHook('entry:beforeUpdate', {
+            await ctx.runHook('entry:beforeUpdate', {
                 type: entryType.id,
                 entry: asEntry(plan.record),
                 data: params.data,
                 user,
             });
         } else {
-            await runHook('entry:beforeCreate', {
+            await ctx.runHook('entry:beforeCreate', {
                 type: entryType.id,
                 data: plan.write,
                 user,
@@ -140,7 +145,7 @@ export async function updateEntries(params: {
                               entryType,
                               currentEntry: plan.record,
                               data: params.data,
-                              updatedBy: user?.id ?? null,
+                              user,
                               staging,
                           })
                         : await writeTranslation({
@@ -167,14 +172,14 @@ export async function updateEntries(params: {
     for (const [index, plan] of plans.entries()) {
         // A throw here propagates; the write above stays (`DECISIONS.md`).
         if (plan.kind === 'update') {
-            await runHook('entry:afterUpdate', {
+            await ctx.runHook('entry:afterUpdate', {
                 type: entryType.id,
                 entry: asEntry(plan.record),
                 data: params.data,
                 user,
             });
         } else {
-            await runHook('entry:afterCreate', {
+            await ctx.runHook('entry:afterCreate', {
                 type: entryType.id,
                 data: plan.write,
                 user,
@@ -206,11 +211,11 @@ async function updateOne(params: {
     entryType: ResolvedEntryType;
     currentEntry: EntryRecord;
     data: EntryUpdateData;
-    updatedBy: string | null;
+    user: User | null;
     /** Present when the write targets the staged change rather than the canonical. */
     staging: NonNullable<EntryRepository['staging']> | undefined;
 }): Promise<Entry> {
-    const { repository, entryType, currentEntry, data, updatedBy, staging } = params;
+    const { repository, entryType, currentEntry, data, user, staging } = params;
 
     const titled = entryType.titleField !== false;
     const validated = parseInput(updateEntrySchema({ titled }), data);
@@ -226,6 +231,7 @@ async function updateOne(params: {
               patch,
               patchedFieldNames,
               status: validated.status,
+              user,
           })
         : undefined;
 
@@ -263,7 +269,7 @@ async function updateOne(params: {
         // Moves with `updatedAt`, not with the version snapshot. A publish is a
         // write to the row, so it stamps; whether it also takes a version is
         // `changesVersionedContent`'s separate question.
-        updatedBy,
+        updatedBy: user?.id ?? null,
     };
 
     const entry = asEntry(
@@ -297,7 +303,7 @@ async function planTranslation(params: {
     id: string;
     locale: string;
     data: EntryUpdateData;
-    user: string | null;
+    user: User | null;
 }): Promise<TranslationWrite> {
     const { repository, entryType, id, locale, data, user } = params;
     const source = await getEntryOfType(repository, entryType.id, id);
@@ -329,6 +335,7 @@ async function planTranslation(params: {
         locale,
         entryId: id,
         status,
+        user,
     });
 
     return {
@@ -339,8 +346,8 @@ async function planTranslation(params: {
         status,
         publishedAt:
             status === 'published' ? new Date() : (validated.publishedAt ?? null),
-        createdBy: user,
-        updatedBy: user,
+        createdBy: user?.id ?? null,
+        updatedBy: user?.id ?? null,
     };
 }
 
