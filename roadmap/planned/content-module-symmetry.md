@@ -63,11 +63,11 @@ of the present has nowhere to say "and this is on purpose".
       `settings` and `notifications`, or write in `DECISIONS.md` that entries is
       the only pluggable one and what that beat.
 - [ ] The contract catalogue is going away altogether: each verb becomes one
-      method object, per `../in-progress/unified-service-methods.md`.
+      method object, per `../completed/unified-service-methods.md`.
 - [ ] Decide whether `notifications` needs a `schema.ts` and add it or record
       why not.
 - [ ] The notifications subject comes from the context a method is bound to,
-      per `../in-progress/unified-service-methods.md`; no separate file is needed.
+      per `../completed/unified-service-methods.md`; no separate file is needed.
 - [ ] Once the shapes agree, `ARCHITECTURE.md`'s content-module paragraph loses
       its two parenthetical exceptions.
 

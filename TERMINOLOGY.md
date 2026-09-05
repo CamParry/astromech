@@ -18,6 +18,11 @@ one page. A page is somewhere you navigate to, a slot is always present.
 at, so a model can resolve "this page" or "this field". The prefix is
 load-bearing: unqualified "context" here means React's.
 
+**App context.** What a service method's handler is handed: who is calling (the
+user and their role), the content services bound to that same caller, and
+narrowed handles on the backends. It is passed as an argument, never fetched
+from ambient state.
+
 **Application.** The booted runtime a process holds. There is exactly one, and
 creating it and reading it back are separate calls.
 
@@ -113,10 +118,9 @@ applies it.
 **Plugin.** A separate package that extends a site through tables, routes,
 service methods, hooks, scheduled jobs and admin pages.
 
-**Plugin context.** Everything a plugin is handed at runtime: the content
-services, the current user, and narrowed handles on the backends. A handle is
-deliberately smaller than the driver behind it. Its members have no collective
-name beyond the context itself.
+**Plugin context.** The app context plus the plugin layer: the plugin's own
+identity, a storage handle prefixed to the plugin, and a restricted view of the
+site config. A handle is deliberately smaller than the driver behind it.
 
 **Policy.** Code that answers what an actor may do, not how a request reaches it.
 Not a "guard", which elsewhere means a per-request route interceptor.
@@ -139,6 +143,10 @@ over "record" and "document".
 
 **Schema.** Request validation, or a whole-shape aggregate. Never the table
 declarations themselves, which are tables.
+
+**Service method.** One verb of a content or plugin service: what it demands of
+its caller, its input and output schemas, its effect hints, and the handler.
+Declared once, and read by every transport.
 
 **Staged entry.** A prepared future change to one locale of a live entry, edited
 and previewed on its own and merged deliberately. It shares its entry's id, so a

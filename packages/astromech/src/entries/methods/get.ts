@@ -51,8 +51,8 @@ export const getEntry = defineServiceMethod({
         // for `staged: true` would silently hand back the wrong content.
         if (params.staged === true) {
             throw ValidationError.fromFieldErrors({}, [
-                'entries.get: `staged` requires `previewToken`; use `getStaged` to ' +
-                    'read a staged change without one.',
+                `${ctx.method.name}: \`staged\` requires \`previewToken\`; use ` +
+                    '`getStaged` to read a staged change without one.',
             ]);
         }
 

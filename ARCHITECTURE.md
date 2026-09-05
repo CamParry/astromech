@@ -58,8 +58,9 @@ types · services · utilities · env · errors ·        pure leaves
   application instance. `plugins/runtime/plugin-runtime.ts` is the other half of
   the composition root: `createPluginContext` assembles the plugin `ctx` from
   the same content services, so it imports them the way `astromech.ts` does.
-  `app-context/app-context.ts` builds the `AppContext` a method receives, and
-  `createPluginContext` layers the plugin members over it.
+  `app-context/app-context.ts` builds the `AppContext` a method receives,
+  `app-context/services.ts` holds the bound form of each content module's
+  definition, and `createPluginContext` layers the plugin members over it.
   `exports/` holds the re-export barrels, one per published subpath except
   three that name a source file directly: `./admin/shell.astro`,
   `./media/Image` and `./routes/handler.ts`. Nothing else in `src/`
@@ -88,7 +89,7 @@ types · services · utilities · env · errors ·        pure leaves
   services and refuses a method the role lacks; every untrusted path (HTTP, RPC,
   the AI tool-loop) composes it. Trusted paths (the application instance used in
   SSR and hooks, the CLI, the MCP server) do not.
-- **The content modules** (`entries`, `globals`, `media`, `users`, `settings`, `notifications`) own the business verbs. Each has a `service.ts` (its verbs), a `tables.ts` (its `defineTable` tables and row types), a contract catalogue (`contract.ts`, or `catalogue.ts` in `entries`) that puts it in the method manifest, and a `schema.ts` of Zod request schemas where it validates input. A large module splits its verbs into `methods/` and helpers into `internal/`, with `service.ts` assembling them. They are siblings: one may call another's service, but reaches tables through `database/tables.ts`. `entries`, `globals`, `media` and `users` build on a shelf module of their own, `content/`, which holds the shared content repository over `{ table, contentTable, versionsTable }` plus the translatable, versioning and visibility helpers both need.
+- **The content modules** (`entries`, `globals`, `media`, `users`, `settings`, `notifications`) own the business verbs. Each has a `service.ts` that assembles its `methods/` into a `defineService` definition, a `tables.ts` (its `defineTable` tables and row types), and a `schema.ts` of Zod request schemas where it validates input. A method file exports one `defineServiceMethod` object holding that verb's access rule, its input and output schemas, its effect hints, the capability its target must declare, and the handler. The definition's catalogue is what the method manifest, `policies/scoped-services.ts` and the REST mount read; `entries/catalogue.ts` fixes that catalogue per entry type, since an entry method's permission and schemas vary with the type. `app-context/services.ts` binds each definition to the current request's context to make the callable service (`app.globals`, the raw trusted form), so a content module never imports the composition root. A handler receives an `AppContext` and reaches the user, the config, the hooks and its sibling services through it; helpers in `internal/` take the config, the user or the context as parameters, and a lint rule refuses a content module reading the request store or the config registry. They are siblings: one may call another's service, but reaches tables through `database/tables.ts`. `entries`, `globals`, `media` and `users` build on a shelf module of their own, `content/`, which holds the shared content repository over `{ table, contentTable, versionsTable }` plus the translatable, versioning and visibility helpers both need.
 - **The modules below them** (`database`, `storage`, `fields`, `config`, `permissions`, `hooks`, `request-context`, `email`, `ai`, `cron`, and `plugins` — the `define*` authoring API and every `runtime/` file except `plugin-runtime.ts`) are what the content modules build on. Each does one thing and holds no business logic.
 - **Leaves** import only other leaves and third-party packages. A small pure file (a constant, a type, a function over its arguments) may sit inside any module and still be imported from any layer.
 
@@ -192,9 +193,11 @@ no-op `db:generate` doubles as the CI drift check.
 
 ## Plugins
 
-A plugin is a separate npm package that receives a `PluginContext` (`ctx`) and
-registers tables, routes, service methods, hooks, cron jobs and admin pages
-through it. Everything a plugin needs from the platform is on `ctx`: the content services (`ctx.entries`, `ctx.media`, …), plus plugin-scoped handles on the backends, each narrower than the driver behind it: `ctx.storage` (keys prefixed `plugin/<alias>/`), `ctx.email`, `ctx.database` (`dialect`, plus `dump`/`restore` when the driver has them), and `ctx.config`, an explicit allow-list projection of the resolved config. A new platform feature is added to `ctx`, or as a pure function exported from the root `astromech` barrel, never as a subpath a plugin imports.
+A plugin is a separate npm package that registers tables, routes, service
+methods, hooks, cron jobs and admin pages through a `PluginContext` (`ctx`),
+which is the `AppContext` every service method receives plus the plugin layer
+(`ctx.plugin`, `ctx.storage`, `ctx.plugins`, and `ctx.config` as the restricted
+view). Everything a plugin needs from the platform is on `ctx`: the content services (`ctx.entries`, `ctx.media`, …), plus plugin-scoped handles on the backends, each narrower than the driver behind it: `ctx.storage` (keys prefixed `plugin/<alias>/`), `ctx.email`, `ctx.database` (`dialect`, plus `dump`/`restore` when the driver has them), and `ctx.config`, an explicit allow-list projection of the resolved config. A new platform feature is added to `ctx`, or as a pure function exported from the root `astromech` barrel, never as a subpath a plugin imports.
 
 ### Plugin runtime boundary
 

@@ -41,8 +41,8 @@ export const getGlobal = defineServiceMethod({
         // mistake worth naming rather than an empty result.
         if (params.staged === true && params.full !== true) {
             throw new GlobalValidationError([
-                'globals.get: `staged` requires `full`; a staged change is never ' +
-                    'part of the public read.',
+                `${ctx.method.name}: \`staged\` requires \`full\`; a staged change is ` +
+                    'never part of the public read.',
             ]);
         }
 

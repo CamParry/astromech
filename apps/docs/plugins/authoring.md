@@ -721,8 +721,9 @@ shape, because plugin altitude is trusted server code; pass an explicit
 `full: false` if you want the public shape.
 
 `ctx.notifications` is the exception: it acts on the signed-in user's own rows,
-so it needs a request to run inside and throws outside one. Use `ctx.notify` to
-send a notification, which names its recipients and needs no session.
+so it throws when the context has no user (a cron tick, a boot-time `setup()`).
+Use `ctx.notify` to send a notification, which names its recipients and needs no
+session.
 
 `ctx.entries` therefore addresses a plugin's own entry types by their qualified
 id, built from context rather than from an identity import:
@@ -849,12 +850,77 @@ Two things to hold onto:
   granularity of a raw route is whatever you write, and a streamed artifact is
   usually a much larger grant than the metadata endpoint next to it.
 
+### Service methods
+
+A service method is one verb your plugin offers. Each is callable over RPC as
+`Astromech.plugins.<serviceKey>.<key>`, from an admin page through
+`ctx.service`, and by the assistant, which discovers it from the method
+manifest. Declare each one with `defineServiceMethod` and collect them in a
+plain object your definition passes as `service`:
+
+```ts
+// service/describe.ts
+import { defineServiceMethod, noInput } from 'astromech';
+import { RATING_FIELD_TYPE } from '../fields/rating';
+
+export type RatingDescription = { fieldType: string; usedBy: string[]; max: number };
+
+export const ratingService = {
+    describe: defineServiceMethod<undefined, RatingDescription>({
+        access: 'authenticated',
+        summary: 'Describe the rating field type and where it is used.',
+        input: noInput(),
+        mutates: false,
+        handler: (_input, ctx): RatingDescription => ({
+            fieldType: RATING_FIELD_TYPE,
+            usedBy: ctx.config.entryTypesWithField(RATING_FIELD_TYPE),
+            max: 5,
+        }),
+    }),
+};
+```
+
+`summary` is the one line humans and the assistant read. `input` is a Zod schema
+for the whole argument object (`noInput()` for a method that takes none),
+`output` the same for the result where it is worth declaring, and `mutates` says
+whether the call changes stored state, with the optional `destructive` and
+`idempotent` refining it.
+
+`access` says what a caller must hold, in one of four forms:
+
+- `'public'`: the method is ungated, signed in or not.
+- `'authenticated'`: any caller with a role.
+- `{ permission: 'export' }`: resolved to `plugin:<namespace>:export`, so you
+  write the bare key you declared with `definePermissions` and never a prefix.
+- `(input) => Permission | null`: the permission this call needs, worked out
+  from its arguments, or `null` for none. The RPC route enforces access before
+  it reads the request body, so a plugin method's function is called with
+  `undefined`; gate on an argument inside the handler instead.
+
+`ctx` is the app context every service method in Astromech runs with, plus your
+plugin's own layer over it:
+
+- **The app context.** `db` (the query handle), `user` and `role` (who is
+  calling, both `null` outside a request), `clientAddress`, `config`
+  ([the projection above](#runtime-identity)), the content services `entries`,
+  `globals`, `media`, `users`, `settings` and `notifications`
+  ([reaching them](#reaching-the-content-services)), `notify`, `email` and
+  `database` ([capability ports](#capability-ports)), `logger`, `env`,
+  `runHook`, and `methods`
+  ([calling as the caller](#calling-as-the-caller-not-as-the-plugin)).
+- **The plugin layer.** `plugin` (your resolved identity), `storage` (your
+  prefixed blob handle, also a [capability port](#capability-ports)), and
+  `plugins` (the other plugins' services, keyed by service key).
+
+A handler also gets `ctx.method.name`, the dotted id it was assembled under, so
+an error message can name the method without repeating a string literal.
+
 ### More surfaces
 
-Plugins can also contribute **service methods** (`defineServiceMethod`,
-callable off `Astromech.plugins.<serviceKey>`), **hooks** (`defineHook`, e.g.
-`entry:afterUpdate`), **entry types**, **globals**, **cron jobs**, and **i18n** locale
-bundles. See the bundled `redirects` and `seo` plugins for each.
+Plugins can also contribute **service methods**
+([above](#service-methods)), **hooks** (`defineHook`, e.g. `entry:afterUpdate`),
+**entry types**, **globals**, **cron jobs**, and **i18n** locale bundles. See the
+bundled `redirects` and `seo` plugins for each.
 
 > Plugins can't register routes outside `${basePath}/api`. To integrate with the front end,
 > expose data through a service method and document a small middleware recipe —

@@ -378,6 +378,41 @@ only per-route `args` are hand-written, and a bespoke handler says so with
 Rejected: build-time client codegen, retiring REST in favour of RPC, and retiring
 the hand-written CLI commands.
 
+**A service method is one object: access, schemas, effect hints, capability and
+handler together.** `defineServiceMethod` declares a verb the same way in core
+and in plugins, and `access` is one union for both: `'public'`,
+`'authenticated'`, a permission string, `{ permission }` resolved under a
+plugin's permission namespace, or a function of the input answering a permission
+or `null`. Rejected: the contract-catalogue split, a verb in one file and its
+metadata in another keyed by the same name, which tied the two together by
+convention alone and let an input schema drift from the handler it described.
+It is oRPC's contract-first shape without oRPC's benefit, since nothing here
+ships a contract to a client package that has no server code. Prior art: tRPC
+and oRPC procedures, Convex `query`/`mutation`.
+
+**A handler receives an explicit `AppContext`; nothing below a method reads the
+request store.** The store is a transport detail that builds one context per
+request, and the CLI and cron get a system context instead. Rejected: ambient
+reads (`getCurrentUser()`, `getConfig()`), and Hono's `context-storage` hybrid
+of an ambient `getContext()` beside the explicit `c`, because an escape hatch is
+a second dialect, and because an ambient read cannot tell which plugin is
+asking. The transaction scope stays ambient, as the decision that a transaction
+is a scope rather than a handle passed by hand settles: `ctx.db` is a getter
+resolving through the open `transaction(fn)`, so what is explicit here is the
+caller's identity and the app's ports, not the transaction. Prior art:
+Keystone's `context`, Payload's `req`, Directus services built over
+`accountability`.
+
+**`defineService` takes a keyed record and stamps each method's name; a method
+never states its own name.** The key is a property access the language already
+checks, so a typo cannot mis-name a manifest entry. Rejected: an array of
+self-named methods, on the `defineGlobal` precedent. A global's key is data that
+lands in rows and URLs, so the object has to carry it, while a method's key is
+not. The hand-written service interfaces in `types/` stay and the record is
+checked against them rather than derived from them: deriving an interface from a
+record whose handlers take a context that itself carries that interface is
+self-referential.
+
 **A method whose subject is the caller declares `sessionScoped`.** `userId` is
 filled from the request context at the scoped handle
 (`policies/scoped-services.ts`), not at the dispatcher, and any caller-supplied

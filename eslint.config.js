@@ -76,7 +76,7 @@ const noAmbientRead = ['ImportDeclaration', 'ImportExpression'].map((node) => ({
         .map((m) => m.replaceAll('/', '\\/'))
         .join('|')})$/]`,
     message:
-        "Content modules take the user, config and hooks from the method's ctx — pass them in rather than reading the request store or the config registry (see roadmap/in-progress/unified-service-methods.md).",
+        "Content modules take the user, config and hooks from the method's ctx — pass them in rather than reading the request store or the config registry (see DECISIONS.md).",
 }));
 
 // The four files below a content module that legitimately read ambiently:

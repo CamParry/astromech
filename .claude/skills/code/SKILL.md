@@ -17,12 +17,12 @@ Names are not a place to be creative. Before naming anything, find what this exa
 - **A `defineX` factory returns an `X`.** `Descriptor` and `Definition` are not suffixes: `defineTable` returns a `Table`, `defineFieldType` a `FieldType`. Derived forms take an existing prefix — `ResolvedConfig`, `RegisteredPlugin`.
 - **One `validate` per layer.** A field type's own check and the author's whole-resource function are both `validate`. The Zod wrapper over request input is `parseInput` in `errors/validation.ts`; `parseFields` throws and `safeParseFields` returns reports. `parse` keeps its verb — not `validateFields`, not `prepareFields`.
 - **`[Astromech]` is a log device.** It lives in `utilities/log.ts` and never in an error message. A thrown error identifies itself by `AstromechError.name`, and a wire-mapped error carries a clean message, so the marker cannot leak into an HTTP body.
-- **The lookup verbs are fixed.** `get*` returns the thing and throws when it is absent (`getConfig`), with no `OrThrow` suffix — that suffix belongs to the `registry.ts` primitive, not to callers built on it. `resolve*` returns the thing or `undefined` (`resolveEntryType`). `assert*` returns `void`, matching TypeScript's own `asserts x is T`. `require*` is reserved for middleware (`requireAuth`). `operations/get.ts` `getEntry` returning `null` is the one exception, because a missing entry on the public read path is a 404 rather than a fault.
+- **The lookup verbs are fixed.** `get*` returns the thing and throws when it is absent (`getConfig`), with no `OrThrow` suffix — that suffix belongs to the `registry.ts` primitive, not to callers built on it. `resolve*` returns the thing or `undefined` (`resolveEntryType`). `assert*` returns `void`, matching TypeScript's own `asserts x is T`. `require*` is reserved for middleware (`requireAuth`). `methods/get.ts` `getEntry` returning `null` is the one exception, because a missing entry on the public read path is a 404 rather than a fault.
 - **Watch the generic suffixes, don't ban them.** `handler`, `engine`, `service`, `util`, `helper`, `manager` are real ecosystem words and this codebase already uses several — `handler` for a request handler, `@astromech/schema-engine` for a body of core machinery, `utilities/` and `support/` for genuinely miscellaneous small functions. Use them where they carry their normal meaning. Be wary only of reaching for one because the thing resists a more specific name; when a `Manager` or `Helper` would sit next to a name that actually describes the work, prefer the specific one.
 
-## Operation signatures
+## Method signatures
 
-The functions under `<module>/operations/` follow two rules, so any one of them
+The handlers under `<module>/methods/` follow two rules, so any one of them
 is guessable from any other.
 
 - **Verb plus noun, and the noun carries plurality.** `createEntry`, `getUser`,
@@ -74,9 +74,9 @@ A REST route keeps a flat body under this: the route spec declares
 
 - **The DB-access unit is a _repository_.** Name `createXRepository`, type `XRepository`, never `createXStorage`. `storage` means file/blob storage only.
 - **A `defineTable` / `definePluginTable` export is named `<noun>Table`** — `entriesTable`, `cronTable`, `submissionsTable`. The noun matches the SQL table name; the suffix keeps the table distinct from the module and its service. Row types stay `EntryRow` / `NewEntryRow`.
-- **A repository is the only place `getDb` or a Kysely query appears.** Services, operations, jobs, and helpers call a repository — never raw queries.
+- **A repository is the only place `getDb` or a Kysely query appears.** Services, methods, jobs, and helpers call a repository — never raw queries.
 - Repositories are **factory functions** closing over the db handle: `createUserRepository(db) => ({ … })`. The one class is `TableRepository`, the pluggable `EntryRepository` implementation.
-- Business logic is split **operations-per-file** (`operations/create.ts`, …) wrapping the repository; shared per-module helpers live in `<module>/internal/`.
+- Business logic is split **method-per-file** (`methods/create.ts`, …) wrapping the repository; shared per-module helpers live in `<module>/internal/`.
 - Module-local data → `<module>/repository/`. Cross-module subsystems (e.g. relationships, spanning entry/user/media) → `database/repository/`, composed by the services that need them.
 - `<module>/repository/` (DB access) is a different concept from top-level `storage/` (media binary/blob drivers), and the two words are kept apart deliberately.
 
