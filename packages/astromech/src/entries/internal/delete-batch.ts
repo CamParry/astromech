@@ -19,7 +19,7 @@ export async function deleteEntryBatch(
 ): Promise<void> {
     const { type, ids } = params;
     const repository = getEntryRepository(type);
-    const entries = await getEntryResources(repository, type, ids);
+    const entries = await getEntryResources(ctx.config, repository, type, ids);
     const user = ctx.user;
     const relationships = createRelationshipRepository();
 

@@ -30,11 +30,17 @@ export const createStagedEntry = defineServiceMethod({
         const { type, id } = params;
 
         const repository = getEntryRepository(type);
-        assertCapability(type, 'staging');
+        assertCapability(ctx.config, type, 'staging');
         const { staging } = repository;
         if (!staging) throw new CapabilityError(type, 'staging');
 
-        const canonical = await getEntryOfType(repository, type, id, params.locale);
+        const canonical = await getEntryOfType(
+            ctx.config,
+            repository,
+            type,
+            id,
+            params.locale
+        );
         const user = ctx.user;
 
         const existing = await staging.getByCanonical(id, canonical.locale);
@@ -61,7 +67,7 @@ export const createStagedEntry = defineServiceMethod({
                     updatedBy: user?.id ?? null,
                 }
             );
-            await indexEntryRelationships(row, canonical.fields, type);
+            await indexEntryRelationships(ctx.config, row, canonical.fields, type);
             return row;
         });
 

@@ -4,8 +4,9 @@
  */
 
 import type { RelationshipRow } from '@/database/tables';
-import type { MediaUsage } from '@/types/index';
+import type { MediaUsage, ResolvedConfig } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { defaultContentLocale } from '@/config/content-locale';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 // Peer domains, read only to name a source row. See the `listMediaUsage` docstring.
 import { getEntryResource } from '@/entries/internal/records';
@@ -25,9 +26,10 @@ export const listMediaUsage = defineServiceMethod({
     input: z.object({ id: z.string() }),
     access: 'media:read',
     mutates: false,
-    async handler(params: { id: string }): Promise<MediaUsage[]> {
+    async handler(params: { id: string }, ctx): Promise<MediaUsage[]> {
         const { id } = params;
-        const row = await createMediaRepository().get(id);
+        const defaultLocale = defaultContentLocale(ctx.config);
+        const row = await createMediaRepository({ defaultLocale }).get(id);
         if (!row) throw new MediaNotFoundError({ id });
 
         // Staged sources count: a pending merge that uses this file is a reason
@@ -36,7 +38,7 @@ export const listMediaUsage = defineServiceMethod({
             includeStaged: true,
         });
 
-        const titles = await resolveSourceTitles(rows);
+        const titles = await resolveSourceTitles(ctx.config, rows);
         return rows
             .map(
                 (edge): MediaUsage => ({
@@ -60,8 +62,10 @@ export const listMediaUsage = defineServiceMethod({
  * to load keeps an empty title.
  */
 async function resolveSourceTitles(
+    config: ResolvedConfig,
     rows: readonly RelationshipRow[]
 ): Promise<Map<string, string>> {
+    const defaultLocale = defaultContentLocale(config);
     const titles = new Map<string, string>();
 
     const entryIdsByType = new Map<string, Set<string>>();
@@ -88,7 +92,7 @@ async function resolveSourceTitles(
         const records = await Promise.all(
             Array.from(ids, async (entryId) => {
                 try {
-                    return await getEntryResource(repository, type, entryId);
+                    return await getEntryResource(config, repository, type, entryId);
                 } catch {
                     return null;
                 }
@@ -99,13 +103,13 @@ async function resolveSourceTitles(
         }
     }
 
-    const userRepository = createUserRepository();
+    const userRepository = createUserRepository({ defaultLocale });
     for (const userId of userIds) {
         const user = await userRepository.get(userId);
         if (user !== null) titles.set(`user ${userId}`, user.name || user.email);
     }
 
-    const mediaRepository = createMediaRepository();
+    const mediaRepository = createMediaRepository({ defaultLocale });
     for (const mediaId of mediaIds) {
         const item = await mediaRepository.get(mediaId);
         if (item !== null) titles.set(`media ${mediaId}`, item.filename);

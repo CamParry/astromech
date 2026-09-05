@@ -52,8 +52,8 @@ export const updateMedia = defineServiceMethod({
         ctx
     ): Promise<Media> {
         const { id } = params;
-        const locale = resolveMediaLocale(params.locale);
-        const repository = mediaRepository();
+        const locale = resolveMediaLocale(ctx.config, params.locale);
+        const repository = mediaRepository(ctx.config);
 
         // The row this write edits, or — when the locale has none — the
         // default-locale row the new one is copied from.
@@ -78,7 +78,7 @@ export const updateMedia = defineServiceMethod({
             const merged = mergePatch(base.fields, patch);
             const parsed = await parseFields(merged, definitions, {
                 operation: 'update',
-                resource: { kind: 'media', record: toMedia(base) },
+                resource: { kind: 'media', record: toMedia(config, base) },
                 user: ctx.user,
                 lookups: createMediaLookups(repository, { locale, excludeId: id }),
                 coerceOnly: new Set(patchedNames),
@@ -88,6 +88,7 @@ export const updateMedia = defineServiceMethod({
             // needs) and before the write, so the index derives from the pruned
             // values.
             const pruned = await pruneDanglingRelations(
+                config,
                 definitions,
                 projectToSchema(parsed, definitions) as JsonObject
             );
@@ -111,7 +112,7 @@ export const updateMedia = defineServiceMethod({
         // fields do not.
         const updated = await transaction(async () => {
             if (current && changesVersionedContent(current, next, VERSIONED_COLUMNS)) {
-                await snapshotVersion(repository.versions, current, {
+                await snapshotVersion(repository.versions, current, ctx.user, {
                     title: current.title,
                     alt: current.alt,
                     caption: current.caption,
@@ -141,12 +142,12 @@ export const updateMedia = defineServiceMethod({
                     fields,
                     patchedFieldNames: patchedNames,
                 });
-                await indexMediaRelationships(id);
+                await indexMediaRelationships(config, id);
             }
             return row;
         });
 
-        return toMedia(updated);
+        return toMedia(config, updated);
     },
 });
 

@@ -5,8 +5,8 @@
  */
 
 import type { ContentRowId, EntryRepository, EntryRow } from '../repository/types';
-import type { Entry } from '@/types/index';
-import { getDefaultContentLocale } from '@/config/content-locale';
+import type { Entry, ResolvedConfig } from '@/types/index';
+import { defaultContentLocale } from '@/config/content-locale';
 import { EntryNotFoundError, EntryTypeMismatchError } from '../errors';
 
 /**
@@ -36,13 +36,14 @@ export function asRecord(row: EntryRow): EntryRecord {
  * locale's content row is absent, and throws on a type mismatch.
  */
 export async function findEntryOfType(
+    config: ResolvedConfig,
     repository: EntryRepository,
     type: string,
     id: string,
     locale?: string
 ): Promise<EntryRecord | null> {
     const row = await repository.get(
-        { id, locale: locale ?? getDefaultContentLocale() },
+        { id, locale: locale ?? defaultContentLocale(config) },
         { includeTrashed: true }
     );
     if (!row) return null;
@@ -52,16 +53,17 @@ export async function findEntryOfType(
 
 /** `findEntryOfType`, throwing when the entry or that locale's row is missing. */
 export async function getEntryOfType(
+    config: ResolvedConfig,
     repository: EntryRepository,
     type: string,
     id: string,
     locale?: string
 ): Promise<EntryRecord> {
-    const record = await findEntryOfType(repository, type, id, locale);
+    const record = await findEntryOfType(config, repository, type, id, locale);
     if (!record) {
         throw new EntryNotFoundError({
             entryId: id,
-            locale: locale ?? getDefaultContentLocale(),
+            locale: locale ?? defaultContentLocale(config),
         });
     }
     return record;
@@ -74,11 +76,12 @@ export async function getEntryOfType(
  * default-locale row can still be restored and deleted.
  */
 export async function getEntryResource(
+    config: ResolvedConfig,
     repository: EntryRepository,
     type: string,
     id: string
 ): Promise<EntryRecord> {
-    const record = await findEntryOfType(repository, type, id);
+    const record = await findEntryOfType(config, repository, type, id);
     if (record) return record;
 
     const row = await repository.anyLocale?.(id, { includeTrashed: true });
@@ -92,11 +95,12 @@ export async function getEntryResource(
  * order. Shared by the delete, trash and restore operations.
  */
 export async function getEntryResources(
+    config: ResolvedConfig,
     repository: EntryRepository,
     type: string,
     ids: readonly string[]
 ): Promise<EntryRecord[]> {
-    return Promise.all(ids.map((id) => getEntryResource(repository, type, id)));
+    return Promise.all(ids.map((id) => getEntryResource(config, repository, type, id)));
 }
 
 /** A repository may answer for one type only, so a row of another is a fault. */

@@ -21,13 +21,17 @@ export const listEntryVersions = defineServiceMethod({
     access: entryGate('read'),
     requires: 'versioning',
     mutates: false,
-    async handler(params: {
-        type: string;
-        id: string;
-        locale?: string;
-    }): Promise<EntryVersion[]> {
+    async handler(
+        params: {
+            type: string;
+            id: string;
+            locale?: string;
+        },
+        ctx
+    ): Promise<EntryVersion[]> {
         const repository = getEntryRepository(params.type);
         const record = await getEntryOfType(
+            ctx.config,
             repository,
             params.type,
             params.id,

@@ -50,8 +50,8 @@ export const updateUser = defineServiceMethod({
         ctx
     ): Promise<User> {
         const { id } = params;
-        const locale = resolveUserLocale(params.locale);
-        const repository = userRepository();
+        const locale = resolveUserLocale(ctx.config, params.locale);
+        const repository = userRepository(ctx.config);
 
         // The row this write edits, or — when the locale has none — the
         // default-locale row the new one is copied from.
@@ -90,6 +90,7 @@ export const updateUser = defineServiceMethod({
             // needs) and before the write, so the index derives from the pruned
             // values.
             const pruned = await pruneDanglingRelations(
+                ctx.config,
                 definitions,
                 projectToSchema(parsed, definitions) as JsonObject
             );
@@ -104,7 +105,7 @@ export const updateUser = defineServiceMethod({
         // relations the stored fields do not.
         await transaction(async () => {
             if (current && changesVersionedContent(current, { fields }, [])) {
-                await snapshotVersion(repository.versions, current, {});
+                await snapshotVersion(repository.versions, current, ctx.user);
             }
             if (name !== undefined || email !== undefined || role !== undefined) {
                 await repository.updateAccount(id, { name, email, role });
@@ -132,7 +133,7 @@ export const updateUser = defineServiceMethod({
                     fields,
                     patchedFieldNames: patchedNames,
                 });
-                await indexUserRelationships(id);
+                await indexUserRelationships(ctx.config, id);
             }
         });
 

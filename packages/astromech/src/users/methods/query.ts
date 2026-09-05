@@ -14,9 +14,9 @@ export const queryUsers = defineServiceMethod({
     input: userQuerySchema,
     access: 'users:read',
     mutates: false,
-    async handler(params: UserQueryParams | undefined): Promise<QueryResult<User>> {
-        const locale = resolveUserLocale(params?.locale);
-        const repository = userRepository();
+    async handler(params: UserQueryParams | undefined, ctx): Promise<QueryResult<User>> {
+        const locale = resolveUserLocale(ctx.config, params?.locale);
+        const repository = userRepository(ctx.config);
         const page = params?.page ?? 1;
         const limit = params?.limit;
 

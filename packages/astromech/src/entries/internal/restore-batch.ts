@@ -19,10 +19,10 @@ export async function restoreEntryBatch(
 ): Promise<Entry[]> {
     const { type, ids } = params;
     const repository = getEntryRepository(type);
-    assertCapability(type, 'trash');
+    assertCapability(ctx.config, type, 'trash');
     const { trash } = repository;
     if (!trash) throw new CapabilityError(type, 'trash');
-    const entries = await getEntryResources(repository, type, ids);
+    const entries = await getEntryResources(ctx.config, repository, type, ids);
     const user = ctx.user;
 
     return transaction(async () => {

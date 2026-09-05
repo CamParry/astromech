@@ -6,6 +6,7 @@
 
 import type { GlobalAction } from '@/permissions/global-permission';
 import type { PermissionRule } from '@/types/index';
+import { getConfig } from '@/config/registry';
 import { globalPermission } from '@/permissions/global-permission';
 import { findGlobal } from './global';
 
@@ -39,6 +40,11 @@ export function gate(action: GlobalAction): PermissionRule {
  */
 export const readGate: PermissionRule = (input) => {
     const key = keyOf(input);
-    if (!wantsPrivateShape(input) && findGlobal(key)?.public === true) return null;
+    // The one config read left under `globals/`: an access rule is a function of
+    // the input alone, called before a method's handler and so before there is a
+    // `ctx` to take the config from.
+    if (!wantsPrivateShape(input) && findGlobal(getConfig(), key)?.public === true) {
+        return null;
+    }
     return globalPermission(key, 'read');
 };

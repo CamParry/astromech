@@ -22,14 +22,17 @@ export const restoreMediaVersion = defineServiceMethod({
     }),
     access: 'media:update',
     mutates: true,
-    async handler(params: {
-        id: string;
-        locale?: string;
-        versionId: string;
-    }): Promise<Media> {
+    async handler(
+        params: {
+            id: string;
+            locale?: string;
+            versionId: string;
+        },
+        ctx
+    ): Promise<Media> {
         const { id } = params;
-        const locale = resolveMediaLocale(params.locale);
-        const repository = mediaRepository();
+        const locale = resolveMediaLocale(ctx.config, params.locale);
+        const repository = mediaRepository(ctx.config);
         const current = await repository.getExact(id, locale);
         if (!current) throw new MediaNotFoundError({ id, locale });
 
@@ -41,7 +44,7 @@ export const restoreMediaVersion = defineServiceMethod({
             current.fields) as JsonObject;
 
         const updated = await transaction(async () => {
-            await snapshotVersion(repository.versions, current, {
+            await snapshotVersion(repository.versions, current, ctx.user, {
                 title: current.title,
                 alt: current.alt,
                 caption: current.caption,
@@ -55,10 +58,10 @@ export const restoreMediaVersion = defineServiceMethod({
                     fields,
                 }
             );
-            await indexMediaRelationships(id);
+            await indexMediaRelationships(ctx.config, id);
             return row;
         });
 
-        return toMedia(updated);
+        return toMedia(ctx.config, updated);
     },
 });

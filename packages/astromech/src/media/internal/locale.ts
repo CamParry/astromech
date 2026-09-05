@@ -6,8 +6,8 @@
  */
 
 import type { MediaRepository } from '../repository';
-import { getDefaultContentLocale } from '@/config/content-locale';
-import { getConfig } from '@/config/registry';
+import type { ResolvedConfig } from '@/types/index';
+import { defaultContentLocale } from '@/config/content-locale';
 import { MediaValidationError } from '../errors';
 import { createMediaRepository } from '../repository';
 
@@ -16,10 +16,10 @@ import { createMediaRepository } from '../repository';
  * content locale alone, so any other locale is a caller error rather than a
  * silent write to the wrong row.
  */
-export function resolveMediaLocale(locale?: string): string {
-    const defaultLocale = getDefaultContentLocale();
+export function resolveMediaLocale(config: ResolvedConfig, locale?: string): string {
+    const defaultLocale = defaultContentLocale(config);
     const resolved = locale ?? defaultLocale;
-    if (resolved !== defaultLocale && !getConfig().media.translatable) {
+    if (resolved !== defaultLocale && !config.media.translatable) {
         throw new MediaValidationError([
             `Media is not translatable, so only the '${defaultLocale}' locale ` +
                 `can be written.`,
@@ -29,6 +29,6 @@ export function resolveMediaLocale(locale?: string): string {
 }
 
 /** The media repository, bound to the configured default content locale. */
-export function mediaRepository(): MediaRepository {
-    return createMediaRepository({ defaultLocale: getDefaultContentLocale() });
+export function mediaRepository(config: ResolvedConfig): MediaRepository {
+    return createMediaRepository({ defaultLocale: defaultContentLocale(config) });
 }

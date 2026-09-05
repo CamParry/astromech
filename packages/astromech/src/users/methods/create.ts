@@ -57,6 +57,7 @@ export const createUser = defineServiceMethod({
         // After `parseFields` (its minted item ids are what the traversal
         // needs) and before the write, so the index derives from pruned values.
         const { values: fields } = await pruneDanglingRelations(
+            ctx.config,
             fieldDefs,
             parsedFields as JsonObject
         );
@@ -74,7 +75,7 @@ export const createUser = defineServiceMethod({
                 },
                 { fields, createdBy: userId, updatedBy: userId }
             );
-            await indexUserRelationships(row.id);
+            await indexUserRelationships(ctx.config, row.id);
             return row;
         });
         return toUser(created);

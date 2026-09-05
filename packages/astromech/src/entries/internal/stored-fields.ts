@@ -11,9 +11,11 @@ import type {
     Entry,
     EntryStatus,
     JsonObject,
+    ResolvedConfig,
     ResolvedEntryType,
     User,
 } from '@/types/index';
+import { defaultContentLocale } from '@/config/content-locale';
 import { flattenEntryFields } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
@@ -30,6 +32,8 @@ import { inheritSharedFields } from './translatable';
 export type StoredFieldsInput = {
     /** Who the write is attributed to; the field validators read it. */
     user: User | null;
+    /** The config the prune and the shared-field inheritance read. */
+    config: ResolvedConfig;
 } & (
     | {
           kind: 'create';
@@ -91,6 +95,7 @@ export async function toStoredFields(input: StoredFieldsInput): Promise<JsonObje
     // After `parseFields` (its minted item ids are what the traversal needs)
     // and before the write, so the index derives from pruned values.
     const pruned = await pruneDanglingRelations(
+        input.config,
         definitions,
         (input.kind === 'update'
             ? projectToSchema(values, definitions)
@@ -124,6 +129,7 @@ async function prepareWrite(
                 definitions,
                 entryId: input.entryId,
                 locale: input.locale,
+                defaultLocale: defaultContentLocale(input.config),
             }),
             type: entryType.id,
             locale: input.locale,

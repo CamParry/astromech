@@ -15,16 +15,20 @@ export const queryMedia = defineServiceMethod({
     access: 'media:read',
     mutates: false,
     async handler(
-        params?: (MediaQueryParams & { locale?: string }) | undefined
+        params: (MediaQueryParams & { locale?: string }) | undefined,
+        ctx
     ): Promise<QueryResult<Media>> {
-        const locale = resolveMediaLocale(params?.locale);
-        const repository = mediaRepository();
+        const locale = resolveMediaLocale(ctx.config, params?.locale);
+        const repository = mediaRepository(ctx.config);
         const page = params?.page ?? 1;
         const limit = params?.limit;
 
         if (limit === 'all') {
             const rows = await repository.list(params, undefined, locale);
-            return { data: rows.map(toMedia), pagination: null };
+            return {
+                data: rows.map((row) => toMedia(ctx.config, row)),
+                pagination: null,
+            };
         }
 
         const perPage = typeof limit === 'number' ? limit : 20;
@@ -36,7 +40,7 @@ export const queryMedia = defineServiceMethod({
         ]);
 
         return {
-            data: rows.map(toMedia),
+            data: rows.map((row) => toMedia(ctx.config, row)),
             pagination: {
                 page,
                 limit: perPage,

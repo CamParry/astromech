@@ -13,8 +13,8 @@ export const deleteStagedGlobal = defineServiceMethod({
     access: gate('update'),
     requires: 'staging',
     mutates: true,
-    async handler(params: { key: string; locale?: string }): Promise<void> {
-        const { repository, id, locale } = await requireCanonical({
+    async handler(params: { key: string; locale?: string }, ctx): Promise<void> {
+        const { repository, id, locale } = await requireCanonical(ctx.config, {
             ...params,
             capability: 'staging',
         });

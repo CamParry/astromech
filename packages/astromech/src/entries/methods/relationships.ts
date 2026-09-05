@@ -6,7 +6,7 @@
  */
 
 import type { EntryRepository, EntryRow } from '../repository/types';
-import type { IncomingRelationship } from '@/types/index';
+import type { IncomingRelationship, ResolvedConfig } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { defineServiceMethod } from '@/services/define-service-method';
@@ -20,9 +20,12 @@ export const listIncomingRelationships = defineServiceMethod({
     input: z.object({ type: z.string(), id: z.string() }),
     access: entryGate('read'),
     mutates: false,
-    async handler(params: { type: string; id: string }): Promise<IncomingRelationship[]> {
+    async handler(
+        params: { type: string; id: string },
+        ctx
+    ): Promise<IncomingRelationship[]> {
         const repository = getEntryRepository(params.type);
-        await getEntryResource(repository, params.type, params.id);
+        await getEntryResource(ctx.config, repository, params.type, params.id);
 
         // Staged sources count: a pending merge that references this entry is a
         // reason not to delete it.
@@ -40,7 +43,7 @@ export const listIncomingRelationships = defineServiceMethod({
         );
         if (sourceRows.length === 0) return [];
 
-        const sources = await loadSources(sourceRows);
+        const sources = await loadSources(ctx.config, sourceRows);
 
         return sourceRows.flatMap((row) => {
             const source = sources.get(row.sourceId);
@@ -63,6 +66,7 @@ export const listIncomingRelationships = defineServiceMethod({
  * which are exactly the sources a delete check has to surface.
  */
 async function loadSources(
+    config: ResolvedConfig,
     rows: { sourceId: string; sourceType: string }[]
 ): Promise<Map<string, EntryRow>> {
     const idsByType = new Map<string, Set<string>>();
@@ -79,7 +83,7 @@ async function loadSources(
         const records = await Promise.all(
             Array.from(ids, async (id) => {
                 try {
-                    return await getEntryResource(repository, type, id);
+                    return await getEntryResource(config, repository, type, id);
                 } catch {
                     return null;
                 }

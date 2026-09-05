@@ -6,7 +6,6 @@
 import type { EntryRepository } from '../repository/types';
 import type { Field } from '@/types/fields';
 import type { JsonObject, ResolvedEntryType } from '@/types/index';
-import { getDefaultContentLocale } from '@/config/content-locale';
 import {
     inheritSharedFields as inheritContentFields,
     propagateSharedFields as propagateContentFields,
@@ -26,6 +25,8 @@ export async function inheritSharedFields(params: {
     /** The entry being translated; absent when the entry is being created. */
     entryId: string | undefined;
     locale: string;
+    /** The locale a translatable entry inherits its shared fields from. */
+    defaultLocale: string;
 }): Promise<Record<string, unknown>> {
     return inheritContentFields({
         repository: params.repository,
@@ -34,7 +35,7 @@ export async function inheritSharedFields(params: {
         translatable: params.entryType.translatable === true,
         id: params.entryId,
         locale: params.locale,
-        defaultLocale: getDefaultContentLocale(),
+        defaultLocale: params.defaultLocale,
     });
 }
 

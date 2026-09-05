@@ -20,7 +20,7 @@ export async function publishEntryBatch(
     params: { type: string; ids: readonly string[]; locale?: string },
     ctx: AppContext
 ): Promise<Entry[]> {
-    assertCapability(params.type, 'statuses');
+    assertCapability(ctx.config, params.type, 'statuses');
     return updateEntryBatch(
         {
             type: params.type,
@@ -41,7 +41,7 @@ export async function unpublishEntryBatch(
     params: { type: string; ids: readonly string[]; locale?: string },
     ctx: AppContext
 ): Promise<Entry[]> {
-    assertCapability(params.type, 'statuses');
+    assertCapability(ctx.config, params.type, 'statuses');
     return updateEntryBatch(
         {
             type: params.type,
@@ -67,7 +67,7 @@ export async function scheduleEntryBatch(
     },
     ctx: AppContext
 ): Promise<Entry[]> {
-    assertCapability(params.type, 'statuses');
+    assertCapability(ctx.config, params.type, 'statuses');
     const validated = parseInput(scheduleEntrySchema, {
         publishedAt: params.publishedAt,
     });

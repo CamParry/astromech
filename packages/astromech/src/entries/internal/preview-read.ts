@@ -5,9 +5,8 @@
  * empty result.
  */
 
-import type { Entry, EntryQueryParams, QueryResult } from '@/types/index';
-import { getDefaultContentLocale } from '@/config/content-locale';
-import { getConfig } from '@/config/registry';
+import type { Entry, EntryQueryParams, QueryResult, ResolvedConfig } from '@/types/index';
+import { defaultContentLocale } from '@/config/content-locale';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { getEntryRepository } from '../repository/registry';
@@ -20,6 +19,7 @@ import { asEntry } from './records';
  * check; with `staged`, swaps each match for its staged change or skips it.
  */
 export async function queryPreviewEntries(
+    config: ResolvedConfig,
     params: EntryQueryParams & { type: string | readonly string[] }
 ): Promise<QueryResult<Entry>> {
     const perPage = typeof params.limit === 'number' ? params.limit : 20;
@@ -37,12 +37,12 @@ export async function queryPreviewEntries(
     if (!token || !type) return empty;
 
     const repository = getEntryRepository(type);
-    const entryTypeCfg = resolveEntryType(getConfig(), type);
+    const entryTypeCfg = resolveEntryType(config, type);
     const fields = entryTypeCfg ? flattenEntryFields(entryTypeCfg.fields) : [];
 
     const { data: rows } = await repository.list({
         type,
-        locale: params.locale ?? getDefaultContentLocale(),
+        locale: params.locale ?? defaultContentLocale(config),
         where: params.where,
         sort: params.sort,
         limit: params.limit ?? 1,
@@ -81,13 +81,16 @@ export async function queryPreviewEntries(
 }
 
 /** Preview single read by canonical id (see queryPreviewEntries). */
-export async function getPreviewEntry(params: {
-    type: string;
-    id: string;
-    locale?: string;
-    previewToken?: string;
-    staged?: boolean;
-}): Promise<Entry | null> {
+export async function getPreviewEntry(
+    config: ResolvedConfig,
+    params: {
+        type: string;
+        id: string;
+        locale?: string;
+        previewToken?: string;
+        staged?: boolean;
+    }
+): Promise<Entry | null> {
     const { type, id } = params;
     const token = params.previewToken;
     if (!token) return null;
@@ -97,7 +100,7 @@ export async function getPreviewEntry(params: {
     // one asked for and verifies against the entry.
     const record = await repository.get({
         id,
-        locale: params.locale ?? getDefaultContentLocale(),
+        locale: params.locale ?? defaultContentLocale(config),
     });
     if (!record) return null;
     if (record.type !== undefined && record.type !== type) return null;
@@ -115,7 +118,7 @@ export async function getPreviewEntry(params: {
         target = asEntry(staged);
     }
 
-    const entryTypeCfg = resolveEntryType(getConfig(), type);
+    const entryTypeCfg = resolveEntryType(config, type);
     const fields = entryTypeCfg ? flattenEntryFields(entryTypeCfg.fields) : [];
 
     return projectPreview(target, fields);

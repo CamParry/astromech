@@ -5,9 +5,8 @@
  */
 
 import type { GlobalRow, GlobalsRepository } from '../repository/globals-table';
-import type { Global, ResolvedGlobal } from '@/types/index';
-import { getDefaultContentLocale } from '@/config/content-locale';
-import { getConfig } from '@/config/registry';
+import type { Global, ResolvedConfig, ResolvedGlobal } from '@/types/index';
+import { defaultContentLocale } from '@/config/content-locale';
 import { QUALIFIED_SEPARATOR } from '@/entries/entry-types.shared';
 import { CapabilityError } from '@/entries/errors';
 import { GlobalNotFoundError, GlobalValidationError } from '../errors';
@@ -35,16 +34,18 @@ export function isGlobalCapability(value: string): value is GlobalCapability {
  * and resolves against that plugin's map alone, which is what stops a host
  * `settings` and a plugin's `seo/settings` reaching one another.
  */
-export function findGlobal(key: string): ResolvedGlobal | undefined {
-    const config = getConfig();
+export function findGlobal(
+    config: ResolvedConfig,
+    key: string
+): ResolvedGlobal | undefined {
     const index = key.indexOf(QUALIFIED_SEPARATOR);
     if (index === -1) return config.globals[key];
     return config.pluginGlobals[key.slice(0, index)]?.[key.slice(index + 1)];
 }
 
 /** {@link findGlobal}, throwing for a key nothing declares. */
-export function resolveGlobal(key: string): ResolvedGlobal {
-    const global = findGlobal(key);
+export function resolveGlobal(config: ResolvedConfig, key: string): ResolvedGlobal {
+    const global = findGlobal(config, key);
     if (!global) throw new GlobalNotFoundError({ key });
     return global;
 }
@@ -64,8 +65,12 @@ export function assertCapability(
  * content locale alone, so any other locale is a caller error rather than a
  * silent write to the wrong row.
  */
-export function resolveLocale(global: ResolvedGlobal, locale?: string): string {
-    const defaultLocale = getDefaultContentLocale();
+export function resolveLocale(
+    config: ResolvedConfig,
+    global: ResolvedGlobal,
+    locale?: string
+): string {
+    const defaultLocale = defaultContentLocale(config);
     const resolved = locale ?? defaultLocale;
     if (resolved !== defaultLocale && !global.capabilities.translatable) {
         throw new GlobalValidationError([
@@ -77,8 +82,8 @@ export function resolveLocale(global: ResolvedGlobal, locale?: string): string {
 }
 
 /** The globals repository, bound to the configured default content locale. */
-export function globalRepository(): GlobalsRepository {
-    return createGlobalsRepository({ defaultLocale: getDefaultContentLocale() });
+export function globalRepository(config: ResolvedConfig): GlobalsRepository {
+    return createGlobalsRepository({ defaultLocale: defaultContentLocale(config) });
 }
 
 /** What an operation on an already-saved locale of a global works from. */
@@ -96,16 +101,19 @@ export type CanonicalGlobal = {
  * asserting `capability` first. Every operation but `update` needs a row that
  * already exists: only a write may create one.
  */
-export async function requireCanonical(params: {
-    key: string;
-    locale?: string | undefined;
-    capability?: GlobalCapability;
-}): Promise<CanonicalGlobal> {
-    const global = resolveGlobal(params.key);
+export async function requireCanonical(
+    config: ResolvedConfig,
+    params: {
+        key: string;
+        locale?: string | undefined;
+        capability?: GlobalCapability;
+    }
+): Promise<CanonicalGlobal> {
+    const global = resolveGlobal(config, params.key);
     if (params.capability) assertCapability(global, params.capability);
-    const locale = resolveLocale(global, params.locale);
+    const locale = resolveLocale(config, global, params.locale);
 
-    const repository = globalRepository();
+    const repository = globalRepository(config);
     const id = await repository.idByKey(params.key);
     const current = id === null ? null : await repository.get({ id, locale });
     if (id === null || !current) {

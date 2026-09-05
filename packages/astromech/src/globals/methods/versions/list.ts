@@ -14,8 +14,11 @@ export const listGlobalVersions = defineServiceMethod({
     access: gate('read'),
     requires: 'versioning',
     mutates: false,
-    async handler(params: { key: string; locale?: string }): Promise<GlobalVersion[]> {
-        const { repository, current } = await requireCanonical({
+    async handler(
+        params: { key: string; locale?: string },
+        ctx
+    ): Promise<GlobalVersion[]> {
+        const { repository, current } = await requireCanonical(ctx.config, {
             ...params,
             capability: 'versioning',
         });

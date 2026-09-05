@@ -19,12 +19,15 @@ export const restoreGlobalVersion = defineServiceMethod({
     requires: 'versioning',
     mutates: true,
     idempotent: true,
-    async handler(params: {
-        key: string;
-        locale?: string;
-        versionId: string;
-    }): Promise<Global> {
-        const { repository, id, locale, current } = await requireCanonical({
+    async handler(
+        params: {
+            key: string;
+            locale?: string;
+            versionId: string;
+        },
+        ctx
+    ): Promise<Global> {
+        const { repository, id, locale, current } = await requireCanonical(ctx.config, {
             key: params.key,
             locale: params.locale,
             capability: 'versioning',
@@ -38,7 +41,7 @@ export const restoreGlobalVersion = defineServiceMethod({
             current.fields) as JsonObject;
 
         const updated = await transaction(async () => {
-            await snapshotVersion(repository.versions, current);
+            await snapshotVersion(repository.versions, current, ctx.user);
             return repository.update({ id, locale }, { fields: restoredFields });
         });
 

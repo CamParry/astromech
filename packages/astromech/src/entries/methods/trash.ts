@@ -50,10 +50,10 @@ export const emptyTrash = defineServiceMethod({
     mutates: true,
     destructive: true,
     idempotent: true,
-    async handler(params: { type: string }): Promise<void> {
+    async handler(params: { type: string }, ctx): Promise<void> {
         const { type } = params;
         const repository = getEntryRepository(type);
-        assertCapability(type, 'trash');
+        assertCapability(ctx.config, type, 'trash');
         const { trash } = repository;
         if (!trash) throw new CapabilityError(type, 'trash');
 

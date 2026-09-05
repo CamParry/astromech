@@ -14,6 +14,7 @@ import type { GlobalsService, GlobalUpdateData, ResolvedGlobal } from '@/types/i
 import type { Context } from 'hono';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { globalsService } from '@/app-context/services';
+import { getConfig } from '@/config/registry';
 import { StagedGlobalExistsError } from '@/globals/errors';
 import { findGlobal, isGlobalCapability } from '@/globals/internal/global';
 import { createStagedGlobalSchema } from '@/globals/schema';
@@ -160,7 +161,7 @@ function globalContracts(global: ResolvedGlobal): ContractCatalogue {
 
 /** Resolve the catalogue for one request — the global's key is a path param. */
 function contractsForRequest(c: Context<Env>): ContractCatalogue | undefined {
-    const global = findGlobal(param(c, 'key'));
+    const global = findGlobal(getConfig(), param(c, 'key'));
     return global ? globalContracts(global) : undefined;
 }
 
@@ -187,7 +188,7 @@ function globalPrecondition(c: Context<Env>, method: GlobalMethodName): Response
     const declared = globalsDefinition.catalogue[method];
     if (accessDenied(c, resolveAccess(declared.access, { key }))) return forbidden(c);
 
-    const global = findGlobal(key);
+    const global = findGlobal(getConfig(), key);
     if (!global) return notFound(c, `Global '${key}' not found`);
 
     const requires = capabilityRequired(declared.requires, method);
@@ -262,7 +263,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         const full = flag(c, 'full');
         const staged = flag(c, 'staged');
 
-        const global = findGlobal(key);
+        const global = findGlobal(getConfig(), key);
         // Permission before existence for every read but a public one: a 404 an
         // unpermitted caller can read is a global enumeration. A public global's
         // existence is not a secret, so its plain read skips the gate.

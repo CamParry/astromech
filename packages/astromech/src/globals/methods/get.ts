@@ -33,8 +33,8 @@ export const getGlobal = defineServiceMethod({
         params: { key: string; locale?: string; full?: boolean; staged?: boolean },
         ctx
     ): Promise<Global | null> {
-        const global = resolveGlobal(params.key);
-        const locale = resolveLocale(global, params.locale);
+        const global = resolveGlobal(ctx.config, params.key);
+        const locale = resolveLocale(ctx.config, global, params.locale);
 
         // A staged change is never published, so a public read of one would
         // answer null for every global; asking for it in the public shape is a
@@ -46,7 +46,7 @@ export const getGlobal = defineServiceMethod({
             ]);
         }
 
-        const repository = globalRepository();
+        const repository = globalRepository(ctx.config);
         const id = await repository.idByKey(params.key);
         if (id === null) return null;
 

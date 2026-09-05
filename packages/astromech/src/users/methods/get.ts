@@ -14,9 +14,9 @@ export const getUser = defineServiceMethod({
     input: z.object({ id: z.string(), locale: z.string().optional() }),
     access: 'users:read',
     mutates: false,
-    async handler(params: { id: string; locale?: string }): Promise<User | null> {
-        const locale = resolveUserLocale(params.locale);
-        const row = await userRepository().get(params.id, locale);
+    async handler(params: { id: string; locale?: string }, ctx): Promise<User | null> {
+        const locale = resolveUserLocale(ctx.config, params.locale);
+        const row = await userRepository(ctx.config).get(params.id, locale);
         return row ? toUser(row) : null;
     },
 });

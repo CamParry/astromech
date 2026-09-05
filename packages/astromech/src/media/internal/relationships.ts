@@ -6,8 +6,7 @@
 
 import type { RelationshipIndexSource } from '@/database/repository/relationships';
 import type { RelationshipEdge } from '@/fields/relationship-edges';
-import type { JsonObject } from '@/types/index';
-import { getConfig } from '@/config/registry';
+import type { JsonObject, ResolvedConfig } from '@/types/index';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { mediaContentTable, mediaTable } from '@/database/tables';
@@ -20,13 +19,16 @@ import { collectRelationshipEdges } from '@/fields/relationship-edges';
  * replacing their edges with its own. Call it inside the transaction that wrote
  * the row, after that write, so the re-read sees it.
  */
-export async function indexMediaRelationships(id: string): Promise<void> {
+export async function indexMediaRelationships(
+    config: ResolvedConfig,
+    id: string
+): Promise<void> {
     const rows = await createRepository(mediaContentTable).findMany({
         where: { mediaId: id },
     });
     await createRelationshipRepository().replaceForSource(
         { id, kind: 'media' },
-        mediaContentEdges(rows)
+        mediaContentEdges(config, rows)
     );
 }
 
@@ -37,9 +39,9 @@ export async function indexMediaRelationships(id: string): Promise<void> {
  * is pinned to the default locale. Stored data has already been through
  * `parseFields`, so the traversal mints no ids here.
  */
-export async function collectMediaRelationshipSources(): Promise<
-    RelationshipIndexSource[]
-> {
+export async function collectMediaRelationshipSources(
+    config: ResolvedConfig
+): Promise<RelationshipIndexSource[]> {
     const items = await createRepository(mediaTable).findMany({});
     const contents = await createRepository(mediaContentTable).findMany({});
 
@@ -52,7 +54,7 @@ export async function collectMediaRelationshipSources(): Promise<
 
     return items.map((item) => ({
         source: { id: item.id, kind: 'media' as const },
-        edges: mediaContentEdges(rowsByMedia.get(item.id) ?? []),
+        edges: mediaContentEdges(config, rowsByMedia.get(item.id) ?? []),
     }));
 }
 
@@ -63,8 +65,11 @@ export async function collectMediaRelationshipSources(): Promise<
  *
  * The one place the rule lives — the write seam and the rebuild both call it.
  */
-function mediaContentEdges(rows: readonly { fields: unknown }[]): RelationshipEdge[] {
-    const definitions = flattenFieldNodes(getConfig().media?.fields ?? []);
+function mediaContentEdges(
+    config: ResolvedConfig,
+    rows: readonly { fields: unknown }[]
+): RelationshipEdge[] {
+    const definitions = flattenFieldNodes(config.media?.fields ?? []);
     const byKey = new Map<string, RelationshipEdge>();
     for (const row of rows) {
         const fields = (row.fields ?? {}) as JsonObject;

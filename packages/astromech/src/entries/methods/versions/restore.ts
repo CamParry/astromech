@@ -26,12 +26,15 @@ export const restoreEntryVersion = defineServiceMethod({
     requires: 'versioning',
     mutates: true,
     idempotent: true,
-    async handler(params: {
-        type: string;
-        id: string;
-        versionId: string;
-        locale?: string;
-    }): Promise<Entry> {
+    async handler(
+        params: {
+            type: string;
+            id: string;
+            versionId: string;
+            locale?: string;
+        },
+        ctx
+    ): Promise<Entry> {
         const { type, id, versionId } = params;
 
         const repository = getEntryRepository(type);
@@ -39,7 +42,13 @@ export const restoreEntryVersion = defineServiceMethod({
         // The guard's narrowing does not survive into the transaction closure below.
         const versions = repository.versions;
 
-        const currentEntry = await getEntryOfType(repository, type, id, params.locale);
+        const currentEntry = await getEntryOfType(
+            ctx.config,
+            repository,
+            type,
+            id,
+            params.locale
+        );
 
         const version = await versions.get(versionId);
         if (!version || version.contentId !== currentEntry.contentId) {
@@ -58,7 +67,7 @@ export const restoreEntryVersion = defineServiceMethod({
         // atomically, so a restore is itself reversible and never leaves the row
         // and its relationship index out of step.
         const updated = await transaction(async () => {
-            await snapshotVersion(versions, currentEntry);
+            await snapshotVersion(versions, currentEntry, ctx.user);
             const row = await repository.update(
                 { id, locale: currentEntry.locale },
                 {
@@ -67,7 +76,7 @@ export const restoreEntryVersion = defineServiceMethod({
                     fields: restoredFields,
                 }
             );
-            await indexEntryRelationships(row, restoredFields, type);
+            await indexEntryRelationships(ctx.config, row, restoredFields, type);
             return row;
         });
 

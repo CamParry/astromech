@@ -21,17 +21,26 @@ export const deleteStagedEntry = defineServiceMethod({
     access: entryGate('update'),
     requires: 'staging',
     mutates: true,
-    async handler(params: { type: string; id: string; locale?: string }): Promise<void> {
+    async handler(
+        params: { type: string; id: string; locale?: string },
+        ctx
+    ): Promise<void> {
         const { type, id } = params;
         const repository = getEntryRepository(type);
-        assertCapability(type, 'staging');
+        assertCapability(ctx.config, type, 'staging');
         const { staging } = repository;
         if (!staging) throw new CapabilityError(type, 'staging');
-        const canonical = await getEntryOfType(repository, type, id, params.locale);
+        const canonical = await getEntryOfType(
+            ctx.config,
+            repository,
+            type,
+            id,
+            params.locale
+        );
         const staged = await staging.getByCanonical(id, canonical.locale);
         if (!staged) throw new Error(`No staged change for entry '${id}'`);
         await staging.delete({ id, locale: canonical.locale });
         // The entry keeps its other content, so this re-derives rather than deletes.
-        await indexEntryRelationships(canonical, canonical.fields, type);
+        await indexEntryRelationships(ctx.config, canonical, canonical.fields, type);
     },
 });

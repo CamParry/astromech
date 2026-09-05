@@ -35,11 +35,17 @@ export const mergeStagedEntry = defineServiceMethod({
         const { type, id } = params;
 
         const repository = getEntryRepository(type);
-        assertCapability(type, 'staging');
+        assertCapability(ctx.config, type, 'staging');
         const { staging } = repository;
         if (!staging) throw new CapabilityError(type, 'staging');
 
-        const canonical = await getEntryOfType(repository, type, id, params.locale);
+        const canonical = await getEntryOfType(
+            ctx.config,
+            repository,
+            type,
+            id,
+            params.locale
+        );
         const stagedRow = await staging.getByCanonical(id, canonical.locale);
         if (!stagedRow) throw new Error(`No staged change for entry '${id}'`);
         const staged = asRecord(stagedRow);
@@ -53,6 +59,7 @@ export const mergeStagedEntry = defineServiceMethod({
         // BEFORE the transaction opens so a rejection costs no backup version.
         const mergedFields = await toStoredFields({
             kind: 'merge',
+            config: ctx.config,
             repository,
             entryType,
             type,
@@ -61,7 +68,7 @@ export const mergeStagedEntry = defineServiceMethod({
             user: ctx.user,
         });
 
-        const versioningOn = isVersioningEnabled(type);
+        const versioningOn = isVersioningEnabled(ctx.config, type);
 
         // Backs up the canonical, overwrites it with the staged content, and
         // hard-deletes the staged row — all in one transaction so a partial
@@ -70,7 +77,7 @@ export const mergeStagedEntry = defineServiceMethod({
             // 1. Backup (conditional on versioning): snapshot the canonical first so
             //    a partial failure leaves a recoverable version.
             if (versioningOn && repository.versions) {
-                await snapshotVersion(repository.versions, canonical);
+                await snapshotVersion(repository.versions, canonical, ctx.user);
             }
 
             // 2. Update the canonical row in place (id + slug preserved → external
@@ -85,7 +92,7 @@ export const mergeStagedEntry = defineServiceMethod({
             // 3. Cleanup: discard the staged row before re-indexing, so the edges
             //    it held on its own do not survive the merge.
             await staging.delete({ id, locale: canonical.locale });
-            await indexEntryRelationships(updated, mergedFields, type);
+            await indexEntryRelationships(ctx.config, updated, mergedFields, type);
 
             return asEntry(updated);
         });

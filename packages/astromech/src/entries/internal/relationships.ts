@@ -9,8 +9,7 @@ import type {
     RelationshipIndexSource,
 } from '@/database/repository/relationships';
 import type { RelationshipEdge } from '@/fields/relationship-edges';
-import type { JsonObject } from '@/types/index';
-import { getConfig } from '@/config/registry';
+import type { JsonObject, ResolvedConfig } from '@/types/index';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { entriesTable, entryContentTable } from '@/database/tables';
@@ -25,16 +24,19 @@ import { getEntryRepository, hasCustomTable } from '../repository/registry';
  * their edges with its own.
  */
 export async function indexEntryRelationships(
+    config: ResolvedConfig,
     entry: { id: string },
     fields: JsonObject,
     type: string
 ): Promise<void> {
-    const edges = entryEdges(type, fields);
+    const edges = entryEdges(config, type, fields);
     if (edges === null) return;
 
     // A custom-table type has no `entry_content` rows: its single row is the
     // whole entry, so the fields just written are all there is to index.
-    const all = hasCustomTable(type) ? edges : await storedEntryEdges(entry.id, type);
+    const all = hasCustomTable(type)
+        ? edges
+        : await storedEntryEdges(config, entry.id, type);
 
     await createRelationshipRepository().replaceForSource(
         { id: entry.id, kind: 'entry', type, staged: false },
@@ -47,12 +49,13 @@ export async function indexEntryRelationships(
  * holds: all types, all locales, trashed rows included. Never re-derive from raw
  * input — item ids are minted by `parseFields`.
  */
-export async function collectEntryRelationshipSources(options?: {
-    type?: string;
-}): Promise<RelationshipIndexSource[]> {
+export async function collectEntryRelationshipSources(
+    config: ResolvedConfig,
+    options?: { type?: string }
+): Promise<RelationshipIndexSource[]> {
     return [
-        ...(await entriesTableEntrySources(options?.type)),
-        ...(await customTableEntrySources(options?.type)),
+        ...(await entriesTableEntrySources(config, options?.type)),
+        ...(await customTableEntrySources(config, options?.type)),
     ];
 }
 
@@ -61,8 +64,12 @@ export async function collectEntryRelationshipSources(options?: {
  * no such type is configured — the write seam skips those, the rebuild reports
  * them as a source holding nothing so their stale rows read as drift.
  */
-function entryEdges(type: string, fields: JsonObject): RelationshipEdge[] | null {
-    const entryType = resolveEntryType(getConfig(), type);
+function entryEdges(
+    config: ResolvedConfig,
+    type: string,
+    fields: JsonObject
+): RelationshipEdge[] | null {
+    const entryType = resolveEntryType(config, type);
     if (!entryType) return null;
     return collectRelationshipEdges(flattenEntryFields(entryType.fields), fields);
 }
@@ -71,11 +78,15 @@ function entryEdges(type: string, fields: JsonObject): RelationshipEdge[] | null
  * The edges every content row of one entry holds. Staged rows count: a pending
  * merge that references something is a reason not to delete it.
  */
-async function storedEntryEdges(entryId: string, type: string): Promise<IndexedEdge[]> {
+async function storedEntryEdges(
+    config: ResolvedConfig,
+    entryId: string,
+    type: string
+): Promise<IndexedEdge[]> {
     const rows = await createRepository(entryContentTable).findMany({
         where: { entryId },
     });
-    return entryContentEdges(type, rows);
+    return entryContentEdges(config, type, rows);
 }
 
 /**
@@ -88,13 +99,15 @@ async function storedEntryEdges(entryId: string, type: string): Promise<IndexedE
  * The one place the rule lives — the write seam and the rebuild both call it.
  */
 function entryContentEdges(
+    config: ResolvedConfig,
     type: string,
     rows: readonly { fields: unknown; stagedFor: string | null }[]
 ): IndexedEdge[] {
     const byKey = new Map<string, IndexedEdge>();
     for (const row of rows) {
         const staged = row.stagedFor !== null;
-        for (const edge of entryEdges(type, (row.fields ?? {}) as JsonObject) ?? []) {
+        for (const edge of entryEdges(config, type, (row.fields ?? {}) as JsonObject) ??
+            []) {
             const key = `${edge.instancePath}\0${edge.targetKind}\0${edge.targetId}`;
             const held = byKey.get(key);
             if (held === undefined) byKey.set(key, { ...edge, staged });
@@ -110,6 +123,7 @@ function entryContentEdges(
  * and trashed rows by default, and the rebuild needs both.
  */
 async function entriesTableEntrySources(
+    config: ResolvedConfig,
     type?: string
 ): Promise<RelationshipIndexSource[]> {
     const entries = await createRepository(entriesTable).findMany({
@@ -130,7 +144,7 @@ async function entriesTableEntrySources(
         // An entry with a staged content row is still a live entry, so an entry
         // source is never itself staged; the per-edge flag carries staging.
         source: { id: entry.id, kind: 'entry' as const, type: entry.type, staged: false },
-        edges: entryContentEdges(entry.type, rowsByEntry.get(entry.id) ?? []),
+        edges: entryContentEdges(config, entry.type, rowsByEntry.get(entry.id) ?? []),
     }));
 }
 
@@ -140,9 +154,10 @@ async function entriesTableEntrySources(
  * leaving them out would report every one of their edges as drift.
  */
 async function customTableEntrySources(
+    config: ResolvedConfig,
     onlyType?: string
 ): Promise<RelationshipIndexSource[]> {
-    const types = configuredEntryTypes()
+    const types = configuredEntryTypes(config)
         .filter(hasCustomTable)
         .filter((type) => onlyType === undefined || type === onlyType);
 
@@ -156,7 +171,7 @@ async function customTableEntrySources(
         for (const row of rows) {
             collected.push({
                 source: { id: row.id, kind: 'entry', type, staged: row.staged },
-                edges: entryEdges(type, row.fields) ?? [],
+                edges: entryEdges(config, type, row.fields) ?? [],
             });
         }
     }
@@ -164,8 +179,7 @@ async function customTableEntrySources(
 }
 
 /** Every entry type id in the resolved config; plugin types qualified. */
-function configuredEntryTypes(): string[] {
-    const config = getConfig();
+function configuredEntryTypes(config: ResolvedConfig): string[] {
     return [
         ...Object.keys(config.entries),
         ...Object.entries(config.pluginEntries).flatMap(([plugin, types]) =>

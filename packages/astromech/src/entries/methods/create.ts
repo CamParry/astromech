@@ -1,6 +1,6 @@
 import type { Entry, EntryCreateData } from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { getDefaultContentLocale } from '@/config/content-locale';
+import { defaultContentLocale } from '@/config/content-locale';
 import { isPublicBranded, PublicShapeWriteError } from '@/content/visibility';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types.shared';
@@ -61,7 +61,7 @@ export const createEntry = defineServiceMethod({
 
         const title = validated.title ?? '';
         const status = validated.status ?? 'unpublished';
-        const defaultLocale = getDefaultContentLocale();
+        const defaultLocale = defaultContentLocale(ctx.config);
         const locale = data.locale ?? defaultLocale;
         if (locale !== defaultLocale && !entryType.translatable) {
             throw ValidationError.fromFieldErrors({}, [
@@ -82,6 +82,7 @@ export const createEntry = defineServiceMethod({
 
         const fields = await toStoredFields({
             kind: 'create',
+            config: ctx.config,
             repository,
             entryType,
             values: validated.fields ?? {},
@@ -109,7 +110,7 @@ export const createEntry = defineServiceMethod({
         // Write the row and its relationship index atomically.
         const entry = await transaction(async () => {
             const created = asEntry(await repository.create({ type, ...row }));
-            await indexEntryRelationships(created, row.fields, type);
+            await indexEntryRelationships(ctx.config, created, row.fields, type);
             return created;
         });
 

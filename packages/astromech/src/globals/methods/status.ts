@@ -6,7 +6,7 @@
 
 import type { GlobalRow } from '../repository/globals-table';
 import type { ContentWrite } from '@/content/repository/types';
-import type { Global, User } from '@/types/index';
+import type { Global, ResolvedConfig, User } from '@/types/index';
 import { parseInput } from '@/errors/validation';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../internal/access';
@@ -22,7 +22,7 @@ export const publishGlobal = defineServiceMethod({
     mutates: true,
     idempotent: true,
     handler(params: { key: string; locale?: string }, ctx): Promise<Global> {
-        return writeStatus(params, ctx.user, (current) => ({
+        return writeStatus(ctx.config, params, ctx.user, (current) => ({
             status: 'published',
             publishedAt: current.publishedAt ?? new Date(),
         }));
@@ -41,7 +41,7 @@ export const unpublishGlobal = defineServiceMethod({
     destructive: true,
     idempotent: true,
     handler(params: { key: string; locale?: string }, ctx): Promise<Global> {
-        return writeStatus(params, ctx.user, () => ({
+        return writeStatus(ctx.config, params, ctx.user, () => ({
             status: 'unpublished',
             publishedAt: null,
         }));
@@ -63,7 +63,7 @@ export const scheduleGlobal = defineServiceMethod({
         const validated = parseInput(scheduleGlobalSchema, {
             publishedAt: params.publishedAt,
         });
-        return writeStatus(params, ctx.user, () => ({
+        return writeStatus(ctx.config, params, ctx.user, () => ({
             status: 'scheduled',
             publishedAt: validated.publishedAt,
         }));
@@ -75,11 +75,12 @@ export const scheduleGlobal = defineServiceMethod({
  * `statuses` capability and a row to move.
  */
 async function writeStatus(
+    config: ResolvedConfig,
     params: { key: string; locale?: string },
     user: User | null,
     write: (current: GlobalRow) => ContentWrite
 ): Promise<Global> {
-    const { repository, id, locale, current } = await requireCanonical({
+    const { repository, id, locale, current } = await requireCanonical(config, {
         ...params,
         capability: 'statuses',
     });

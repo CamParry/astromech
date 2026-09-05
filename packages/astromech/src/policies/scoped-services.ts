@@ -16,6 +16,7 @@ import type {
     SettingsService,
     UsersService,
 } from '@/types/index';
+import { currentAppContext } from '@/app-context/app-context';
 import {
     entriesService,
     globalsService,
@@ -32,7 +33,6 @@ import { notificationsDefinition } from '@/notifications/service';
 import { resolveAccess } from '@/permissions/access';
 import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/core-permissions';
 import { permissionsFor } from '@/permissions/permissions-for';
-import { getCurrentUser } from '@/request-context/request-context';
 import { settingsDefinition } from '@/settings/service';
 import { usersDefinition } from '@/users/service';
 
@@ -58,7 +58,7 @@ async function sessionInput(
     id: string,
     input: unknown
 ): Promise<Record<string, unknown>> {
-    const user = await getCurrentUser();
+    const { user } = await currentAppContext();
     if (user === null) {
         throw new PermissionDeniedError(
             id,

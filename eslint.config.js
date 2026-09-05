@@ -52,6 +52,44 @@ const noDeclareGlobal = {
         'Declare globals in packages/astromech/src/registry.ts only — add a key to `globalThis.__astromech` instead of a new global.',
 };
 
+// The content modules take their dependencies from the method's `ctx`. The
+// three modules a handler must not reach for are the request store, the config
+// registry and the hook bus.
+const contentModules = [
+    'entries',
+    'globals',
+    'media',
+    'users',
+    'settings',
+    'notifications',
+    'content',
+];
+
+const ambientSources = [
+    '@/request-context/request-context',
+    '@/config/registry',
+    '@/hooks/hooks',
+];
+
+const noAmbientRead = ['ImportDeclaration', 'ImportExpression'].map((node) => ({
+    selector: `${node}[source.value=/^(${ambientSources
+        .map((m) => m.replaceAll('/', '\\/'))
+        .join('|')})$/]`,
+    message:
+        "Content modules take the user, config and hooks from the method's ctx — pass them in rather than reading the request store or the config registry (see roadmap/in-progress/unified-service-methods.md).",
+}));
+
+// The four files below a content module that legitimately read ambiently:
+// `globals/internal/access.ts` (an access rule is a function of the input, so
+// it runs before there is a ctx), the two identity modules beneath the context
+// builder, and the media delivery handler.
+const ambientReadExceptions = [
+    'packages/astromech/src/globals/internal/access.ts',
+    'packages/astromech/src/users/auth.ts',
+    'packages/astromech/src/users/session.ts',
+    'packages/astromech/src/media/serving/handler.ts',
+];
+
 export default tseslint.config(
     eslint.configs.recommended,
     ...tseslint.configs.strict,
@@ -78,6 +116,29 @@ export default tseslint.config(
         // `no-restricted-syntax` options replace rather than merge, so each block
         // that narrows the set has to restate the ones it keeps.
         files: ['packages/astromech/src/**/*.ts', 'packages/astromech/src/**/*.tsx'],
+        rules: {
+            'no-restricted-syntax': [
+                'error',
+                ...noJsExtension,
+                noDeclareGlobal,
+                ...noBarrelImport,
+            ],
+        },
+    },
+    {
+        files: contentModules.map((m) => `packages/astromech/src/${m}/**/*.ts`),
+        rules: {
+            'no-restricted-syntax': [
+                'error',
+                ...noJsExtension,
+                noDeclareGlobal,
+                ...noBarrelImport,
+                ...noAmbientRead,
+            ],
+        },
+    },
+    {
+        files: ambientReadExceptions,
         rules: {
             'no-restricted-syntax': [
                 'error',

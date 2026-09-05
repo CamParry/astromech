@@ -7,8 +7,7 @@
 
 import type { RelationshipIndexSource } from '@/database/repository/relationships';
 import type { RelationshipEdge } from '@/fields/relationship-edges';
-import type { JsonObject } from '@/types/index';
-import { getConfig } from '@/config/registry';
+import type { JsonObject, ResolvedConfig } from '@/types/index';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { userContentTable, usersTable } from '@/database/tables';
@@ -21,13 +20,16 @@ import { collectRelationshipEdges } from '@/fields/relationship-edges';
  * their edges with its own. Call it inside the transaction that wrote the
  * row, after that write, so the re-read sees it.
  */
-export async function indexUserRelationships(id: string): Promise<void> {
+export async function indexUserRelationships(
+    config: ResolvedConfig,
+    id: string
+): Promise<void> {
     const rows = await createRepository(userContentTable).findMany({
         where: { userId: id },
     });
     await createRelationshipRepository().replaceForSource(
         { id, kind: 'user' },
-        userContentEdges(rows)
+        userContentEdges(config, rows)
     );
 }
 
@@ -38,9 +40,9 @@ export async function indexUserRelationships(id: string): Promise<void> {
  * is pinned to the default locale. Stored data has already been through
  * `parseFields`, so the traversal mints no ids here.
  */
-export async function collectUserRelationshipSources(): Promise<
-    RelationshipIndexSource[]
-> {
+export async function collectUserRelationshipSources(
+    config: ResolvedConfig
+): Promise<RelationshipIndexSource[]> {
     const users = await createRepository(usersTable).findMany({});
     const contents = await createRepository(userContentTable).findMany({});
 
@@ -53,7 +55,7 @@ export async function collectUserRelationshipSources(): Promise<
 
     return users.map((user) => ({
         source: { id: user.id, kind: 'user' as const },
-        edges: userContentEdges(rowsByUser.get(user.id) ?? []),
+        edges: userContentEdges(config, rowsByUser.get(user.id) ?? []),
     }));
 }
 
@@ -64,8 +66,11 @@ export async function collectUserRelationshipSources(): Promise<
  *
  * The one place the rule lives — the write seam and the rebuild both call it.
  */
-function userContentEdges(rows: readonly { fields: unknown }[]): RelationshipEdge[] {
-    const definitions = flattenFieldNodes(getConfig().users.fields);
+function userContentEdges(
+    config: ResolvedConfig,
+    rows: readonly { fields: unknown }[]
+): RelationshipEdge[] {
+    const definitions = flattenFieldNodes(config.users.fields);
     const byKey = new Map<string, RelationshipEdge>();
     for (const row of rows) {
         const fields = (row.fields ?? {}) as JsonObject;

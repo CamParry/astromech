@@ -7,7 +7,6 @@
 
 import type { GlobalRow, GlobalsRepository } from '../repository/globals-table';
 import type { Global, JsonObject, ResolvedGlobal, User } from '@/types/index';
-import { getDefaultContentLocale } from '@/config/content-locale';
 import { inheritSharedFields } from '@/content/translatable';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { entryValidationMode } from '@/entries/validation-mode.shared';
@@ -49,6 +48,8 @@ export async function toStoredFields(input: {
     current: GlobalRow | null;
     /** Who the write is attributed to; the field validators read it. */
     user: User | null;
+    /** The locale a translatable global inherits its shared fields from. */
+    defaultLocale: string;
 }): Promise<JsonObject> {
     const { global, current, patch } = input;
     const definitions = flattenEntryFields(global.fields);
@@ -65,7 +66,7 @@ export async function toStoredFields(input: {
               translatable: global.capabilities.translatable,
               id: input.id ?? undefined,
               locale: input.locale,
-              defaultLocale: getDefaultContentLocale(),
+              defaultLocale: input.defaultLocale,
           });
 
     const record: Global | null = current ? ({ ...current } as unknown as Global) : null;

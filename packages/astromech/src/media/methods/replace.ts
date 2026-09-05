@@ -1,5 +1,6 @@
 import type { Media } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { defaultContentLocale } from '@/config/content-locale';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { deletePrefix } from '@/storage/prefix';
 import { getStorageDriver } from '@/storage/registry';
@@ -20,7 +21,9 @@ export const replaceMedia = defineServiceMethod({
     destructive: true,
     async handler(params: { id: string; file: File }, ctx): Promise<Media> {
         const { id, file } = params;
-        const repository = createMediaRepository();
+        const repository = createMediaRepository({
+            defaultLocale: defaultContentLocale(ctx.config),
+        });
         const driver = getStorageDriver();
 
         const row = await repository.get(id);
@@ -41,6 +44,7 @@ export const replaceMedia = defineServiceMethod({
         // The file columns only: replacing the bytes changes no authored
         // content, so no content row and no version is written.
         return toMedia(
+            ctx.config,
             await repository.updateFile(id, {
                 filename: file.name,
                 mimeType: file.type,

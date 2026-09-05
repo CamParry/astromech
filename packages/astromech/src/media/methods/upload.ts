@@ -1,6 +1,7 @@
 import type { Media } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { ulid } from 'ulidx';
+import { defaultContentLocale } from '@/config/content-locale';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { getStorageDriver } from '@/storage/registry';
 import { originalKey } from '../internal/keys';
@@ -39,7 +40,10 @@ export const uploadMedia = defineServiceMethod({
         // The resource row and its default-locale content row are one insert
         // pair: the repository wraps both in a transaction.
         return toMedia(
-            await createMediaRepository().create(
+            ctx.config,
+            await createMediaRepository({
+                defaultLocale: defaultContentLocale(ctx.config),
+            }).create(
                 {
                     id,
                     filename: file.name,

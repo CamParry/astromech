@@ -1,7 +1,7 @@
 import type { VisibilityShape } from '@/content/visibility';
 import type { Entry } from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { getDefaultContentLocale } from '@/config/content-locale';
+import { defaultContentLocale } from '@/config/content-locale';
 import { applyVisibility, markPublic } from '@/content/visibility';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { ValidationError } from '@/errors/validation';
@@ -45,7 +45,7 @@ export const getEntry = defineServiceMethod({
         const { type, id } = params;
 
         // Preview (forward versioning): token-authorized, publish-gate-bypassed.
-        if (params.previewToken) return getPreviewEntry(params);
+        if (params.previewToken) return getPreviewEntry(ctx.config, params);
 
         // Without a token there is no staged read here: answering the canonical row
         // for `staged: true` would silently hand back the wrong content.
@@ -59,7 +59,7 @@ export const getEntry = defineServiceMethod({
         const repository = getEntryRepository(type);
         const record = await repository.get({
             id,
-            locale: params.locale ?? getDefaultContentLocale(),
+            locale: params.locale ?? defaultContentLocale(ctx.config),
         });
 
         if (!record) return null;

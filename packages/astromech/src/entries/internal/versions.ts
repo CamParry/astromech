@@ -8,7 +8,7 @@
 import type { EntryRepository } from '../repository/types';
 import type { EntryVersionRow } from '../tables';
 import type { EntryRecord } from './records';
-import type { EntryVersion, JsonObject } from '@/types/index';
+import type { EntryVersion, JsonObject, User } from '@/types/index';
 import {
     changesVersionedContent as changesContent,
     snapshotVersion as snapshotContentVersion,
@@ -24,9 +24,10 @@ const VERSIONED_COLUMNS = ['title', 'slug'] as const;
  */
 export async function snapshotVersion(
     versions: NonNullable<EntryRepository['versions']>,
-    record: EntryRecord
+    record: EntryRecord,
+    user: User | null
 ): Promise<void> {
-    await snapshotContentVersion(versions, record, {
+    await snapshotContentVersion(versions, record, user, {
         title: record.title,
         slug: record.slug,
     });

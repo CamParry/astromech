@@ -28,15 +28,18 @@ export const issuePreviewToken = defineServiceMethod({
     access: entryGate('update'),
     requires: 'staging',
     mutates: true,
-    async handler(params: {
-        type: string;
-        id: string;
-        expiresAt?: Date | null;
-    }): Promise<{ token: string }> {
+    async handler(
+        params: {
+            type: string;
+            id: string;
+            expiresAt?: Date | null;
+        },
+        ctx
+    ): Promise<{ token: string }> {
         const { type, id } = params;
-        assertCapability(type, 'staging');
+        assertCapability(ctx.config, type, 'staging');
         const repository = getEntryRepository(type);
-        const canonical = await getEntryResource(repository, type, id);
+        const canonical = await getEntryResource(ctx.config, repository, type, id);
         if (canonical.staged) {
             throw new Error(
                 `Entry '${id}' read as a staged change; issue the preview token on its canonical row.`
@@ -72,11 +75,11 @@ export const revokePreviewToken = defineServiceMethod({
     access: entryGate('update'),
     requires: 'staging',
     mutates: true,
-    async handler(params: { type: string; id: string }): Promise<void> {
+    async handler(params: { type: string; id: string }, ctx): Promise<void> {
         const { type, id } = params;
-        assertCapability(type, 'staging');
+        assertCapability(ctx.config, type, 'staging');
         const repository = getEntryRepository(type);
-        await getEntryResource(repository, type, id);
+        await getEntryResource(ctx.config, repository, type, id);
         await repository.previewToken?.clear(id);
     },
 });

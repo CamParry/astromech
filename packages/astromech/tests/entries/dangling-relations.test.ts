@@ -14,6 +14,7 @@ import type {
     Field,
     JsonObject,
     PluginDefinition,
+    ResolvedConfig,
 } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
@@ -129,9 +130,11 @@ function makeDanglingConfig(): AstromechConfig {
     };
 }
 
+let config: ResolvedConfig;
+
 beforeEach(async () => {
     const db = await createTestDb();
-    setupTestConfig(makeDanglingConfig());
+    config = setupTestConfig(makeDanglingConfig());
     await sql`CREATE TABLE test_links (
             id text PRIMARY KEY,
             label text NOT NULL,
@@ -352,7 +355,7 @@ describe('pruneDanglingRelations (directly)', () => {
         const values: JsonObject = { plain: 'nothing to prune' };
         setDb(explodingDb);
 
-        const result = await pruneDanglingRelations(docFields, values);
+        const result = await pruneDanglingRelations(config, docFields, values);
 
         expect(result).toEqual({ values, dropped: 0 });
         expect(result.values).toBe(values);
@@ -364,11 +367,15 @@ describe('pruneDanglingRelations (directly)', () => {
     it('keeps a custom-table reference when pruning inside a transaction', async () => {
         const missing = '01JQZZZZZZZZZZZZZZZZZZZZZZ';
 
-        const outside = await pruneDanglingRelations(docFields, { link: missing });
+        const outside = await pruneDanglingRelations(config, docFields, {
+            link: missing,
+        });
         expect(outside).toEqual({ values: { link: null }, dropped: 1 });
 
         await transaction(async () => {
-            const inside = await pruneDanglingRelations(docFields, { link: missing });
+            const inside = await pruneDanglingRelations(config, docFields, {
+                link: missing,
+            });
             expect(inside.dropped).toBe(0);
             expect(inside.values['link']).toBe(missing);
         });
@@ -377,7 +384,7 @@ describe('pruneDanglingRelations (directly)', () => {
     it('reports how many ids it dropped', async () => {
         const alive = await api.create({ type: 'post', data: { title: 'Alive' } });
 
-        const result = await pruneDanglingRelations(docFields, {
+        const result = await pruneDanglingRelations(config, docFields, {
             author: 'no-such-entry',
             related: [alive.id, 'also-gone'],
         });

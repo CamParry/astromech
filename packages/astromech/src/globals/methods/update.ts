@@ -1,6 +1,7 @@
 import type { GlobalRow, GlobalsRepository } from '../repository/globals-table';
 import type { Global, GlobalUpdateData, JsonObject, ResolvedGlobal } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { defaultContentLocale } from '@/config/content-locale';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { isPublicBranded, PublicShapeWriteError } from '@/content/visibility';
@@ -54,11 +55,11 @@ export const updateGlobal = defineServiceMethod({
     ): Promise<Global> {
         if (isPublicBranded(params.data.fields)) throw new PublicShapeWriteError();
 
-        const global = resolveGlobal(params.key);
+        const global = resolveGlobal(ctx.config, params.key);
         const staged = params.staged === true;
         if (staged) assertCapability(global, 'staging');
-        const locale = resolveLocale(global, params.locale);
-        const repository = globalRepository();
+        const locale = resolveLocale(ctx.config, global, params.locale);
+        const repository = globalRepository(ctx.config);
         const user = ctx.user;
 
         const id = await repository.idByKey(params.key);
@@ -100,6 +101,7 @@ export const updateGlobal = defineServiceMethod({
             patch,
             current,
             user,
+            defaultLocale: defaultContentLocale(ctx.config),
         });
 
         const saved = await transaction(async () => {
@@ -116,7 +118,7 @@ export const updateGlobal = defineServiceMethod({
             }
             if (current && global.capabilities.versioning) {
                 if (changesVersionedContent(current, { fields })) {
-                    await snapshotVersion(repository.versions, current);
+                    await snapshotVersion(repository.versions, current, user);
                 }
             }
             return writeRow({

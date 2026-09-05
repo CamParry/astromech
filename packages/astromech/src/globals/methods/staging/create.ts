@@ -22,7 +22,7 @@ export const createStagedGlobal = defineServiceMethod({
         params: { key: string; locale?: string; data?: GlobalUpdateData },
         ctx
     ): Promise<Global> {
-        const { repository, id, locale, current } = await requireCanonical({
+        const { repository, id, locale, current } = await requireCanonical(ctx.config, {
             key: params.key,
             locale: params.locale,
             capability: 'staging',

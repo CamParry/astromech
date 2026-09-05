@@ -7,7 +7,7 @@ import type {
     ResolvedConfig,
 } from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { getDefaultContentLocale } from '@/config/content-locale';
+import { defaultContentLocale } from '@/config/content-locale';
 import { applyVisibility, markPublic } from '@/content/visibility';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { flattenEntryFields } from '@/fields/flatten';
@@ -48,7 +48,7 @@ export const queryEntries = defineServiceMethod({
     ): Promise<QueryResult<Entry>> {
         // Preview (forward versioning): token-authorized read that bypasses the
         // publish gate. Public shape only; diverges enough to take its own path.
-        if (params.previewToken) return queryPreviewEntries(params);
+        if (params.previewToken) return queryPreviewEntries(ctx.config, params);
 
         const config = ctx.config;
         const typeParam = params.type;
@@ -98,7 +98,7 @@ export const queryEntries = defineServiceMethod({
 
         const { data: rows, total } = await repository.list({
             type: singleType ?? types,
-            locale: params.locale ?? getDefaultContentLocale(),
+            locale: params.locale ?? defaultContentLocale(config),
             trashed: params.trashed ?? false,
             search: params.search,
             ...(singleTypeCfg?.search ? { searchFields: singleTypeCfg.search } : {}),

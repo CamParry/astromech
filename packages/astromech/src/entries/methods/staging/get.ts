@@ -21,17 +21,26 @@ export const getStagedEntry = defineServiceMethod({
     access: entryGate('read'),
     requires: 'staging',
     mutates: false,
-    async handler(params: {
-        type: string;
-        id: string;
-        locale?: string;
-    }): Promise<Entry | null> {
+    async handler(
+        params: {
+            type: string;
+            id: string;
+            locale?: string;
+        },
+        ctx
+    ): Promise<Entry | null> {
         const { type, id } = params;
         const repository = getEntryRepository(type);
-        assertCapability(type, 'staging');
+        assertCapability(ctx.config, type, 'staging');
         const { staging } = repository;
         if (!staging) throw new CapabilityError(type, 'staging');
-        const canonical = await getEntryOfType(repository, type, id, params.locale);
+        const canonical = await getEntryOfType(
+            ctx.config,
+            repository,
+            type,
+            id,
+            params.locale
+        );
         const staged = await staging.getByCanonical(id, canonical.locale);
         return staged ? asEntry(staged) : null;
     },

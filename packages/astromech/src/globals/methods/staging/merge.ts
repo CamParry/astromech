@@ -1,4 +1,5 @@
 import type { Global } from '@/types/index';
+import { defaultContentLocale } from '@/config/content-locale';
 import { snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
@@ -21,10 +22,10 @@ export const mergeStagedGlobal = defineServiceMethod({
     requires: 'staging',
     mutates: true,
     async handler(params: { key: string; locale?: string }, ctx): Promise<Global> {
-        const { global, repository, id, locale, current } = await requireCanonical({
-            ...params,
-            capability: 'staging',
-        });
+        const { global, repository, id, locale, current } = await requireCanonical(
+            ctx.config,
+            { ...params, capability: 'staging' }
+        );
 
         const staged = await repository.staging.getByCanonical(id, locale);
         if (!staged) throw new Error(`No staged change for global '${params.key}'`);
@@ -42,13 +43,14 @@ export const mergeStagedGlobal = defineServiceMethod({
             patch: staged.fields,
             current,
             user: ctx.user,
+            defaultLocale: defaultContentLocale(ctx.config),
         });
 
         const merged = await transaction(async () => {
             // Snapshot the canonical first, so a partial failure leaves a
             // recoverable version.
             if (global.capabilities.versioning) {
-                await snapshotVersion(repository.versions, current);
+                await snapshotVersion(repository.versions, current, ctx.user);
             }
             const row = await repository.update({ id, locale }, { fields });
             await repository.staging.delete({ id, locale });

@@ -6,8 +6,8 @@
  */
 
 import type { UserRepository } from '../repository';
-import { getDefaultContentLocale } from '@/config/content-locale';
-import { getConfig } from '@/config/registry';
+import type { ResolvedConfig } from '@/types/index';
+import { defaultContentLocale } from '@/config/content-locale';
 import { UserValidationError } from '../errors';
 import { createUserRepository } from '../repository';
 
@@ -16,10 +16,10 @@ import { createUserRepository } from '../repository';
  * content locale alone, so any other locale is a caller error rather than a
  * silent write to the wrong row.
  */
-export function resolveUserLocale(locale?: string): string {
-    const defaultLocale = getDefaultContentLocale();
+export function resolveUserLocale(config: ResolvedConfig, locale?: string): string {
+    const defaultLocale = defaultContentLocale(config);
     const resolved = locale ?? defaultLocale;
-    if (resolved !== defaultLocale && !getConfig().users.translatable) {
+    if (resolved !== defaultLocale && !config.users.translatable) {
         throw new UserValidationError([
             `Users are not translatable, so only the '${defaultLocale}' locale ` +
                 `can be written.`,
@@ -29,6 +29,6 @@ export function resolveUserLocale(locale?: string): string {
 }
 
 /** The user repository, bound to the configured default content locale. */
-export function userRepository(): UserRepository {
-    return createUserRepository({ defaultLocale: getDefaultContentLocale() });
+export function userRepository(config: ResolvedConfig): UserRepository {
+    return createUserRepository({ defaultLocale: defaultContentLocale(config) });
 }

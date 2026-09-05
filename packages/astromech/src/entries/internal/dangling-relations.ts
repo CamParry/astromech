@@ -6,8 +6,7 @@
 
 import type { RelationshipDeclaration, TargetKind } from '@/fields/relationship-edges';
 import type { Field } from '@/types/fields';
-import type { JsonObject } from '@/types/index';
-import { getConfig } from '@/config/registry';
+import type { JsonObject, ResolvedConfig } from '@/types/index';
 import { existingResourceIds } from '@/database/repository/resource-existence';
 import { getTransactionScope } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types.shared';
@@ -30,13 +29,14 @@ type ExistingIds = (ids: string[]) => Promise<Set<string>>;
  * it invents ids and addresses nothing. Never logs; the caller reports the count.
  */
 export async function pruneDanglingRelations(
+    config: ResolvedConfig,
     definitions: Field[],
     values: JsonObject
 ): Promise<{ values: JsonObject; dropped: number }> {
     const edges = collectRelationshipEdges(definitions, values);
     if (edges.length === 0) return { values, dropped: 0 };
 
-    const prunable = prunableSchemaPaths(definitions);
+    const prunable = prunableSchemaPaths(config, definitions);
     const candidates = edges.filter((edge) => prunable.has(edge.schemaPath));
     if (candidates.length === 0) return { values, dropped: 0 };
 
@@ -104,11 +104,11 @@ export async function pruneDanglingRelations(
  * unless every declaration sharing it is prunable, because two block types can
  * declare the same field name against different targets.
  */
-function prunableSchemaPaths(definitions: Field[]): Set<string> {
+function prunableSchemaPaths(config: ResolvedConfig, definitions: Field[]): Set<string> {
     const verdicts = new Map<string, boolean>();
     for (const declaration of collectRelationshipDeclarations(definitions)) {
         const current = verdicts.get(declaration.schemaPath) ?? true;
-        verdicts.set(declaration.schemaPath, current && isPrunable(declaration));
+        verdicts.set(declaration.schemaPath, current && isPrunable(config, declaration));
     }
     return new Set(
         Array.from(verdicts)
@@ -122,11 +122,14 @@ function prunableSchemaPaths(definitions: Field[]): Set<string> {
  * it does only where the declaration is checkable at all. Every `false` here is a
  * guard against deleting live author data.
  */
-function isPrunable(declaration: RelationshipDeclaration): boolean {
+function isPrunable(
+    config: ResolvedConfig,
+    declaration: RelationshipDeclaration
+): boolean {
     if (declaration.targetKind !== 'entry') return true;
     const target = declaration.target;
     if (target === undefined || target === '') return false;
-    if (!resolveEntryType(getConfig(), target)) return false;
+    if (!resolveEntryType(config, target)) return false;
     if (!hasCustomTable(target)) return true;
     return getEntryRepository(target).existingIds !== undefined;
 }

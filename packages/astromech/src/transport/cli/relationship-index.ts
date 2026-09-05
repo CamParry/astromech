@@ -1,6 +1,7 @@
 import type { RelationshipIndexSource } from '@/database/repository/relationships';
 import type { RelationshipRow } from '@/database/tables';
 import type { TargetKind } from '@/fields/relationship-edges';
+import { getConfig } from '@/config/registry';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { collectEntryRelationshipSources } from '@/entries/internal/relationships';
 import { collectMediaRelationshipSources } from '@/media/internal/relationships';
@@ -126,13 +127,14 @@ export async function checkRelationshipIndex(
 async function collectSources(
     opts?: RelationshipIndexScope
 ): Promise<RelationshipIndexSource[]> {
+    const config = getConfig();
     if (opts?.type !== undefined) {
-        return collectEntryRelationshipSources({ type: opts.type });
+        return collectEntryRelationshipSources(config, { type: opts.type });
     }
     return [
-        ...(await collectEntryRelationshipSources()),
-        ...(await collectUserRelationshipSources()),
-        ...(await collectMediaRelationshipSources()),
+        ...(await collectEntryRelationshipSources(config)),
+        ...(await collectUserRelationshipSources(config)),
+        ...(await collectMediaRelationshipSources(config)),
     ];
 }
 

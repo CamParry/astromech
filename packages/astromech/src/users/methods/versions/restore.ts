@@ -23,14 +23,17 @@ export const restoreUserVersion = defineServiceMethod({
     }),
     access: 'users:update',
     mutates: true,
-    async handler(params: {
-        id: string;
-        locale?: string;
-        versionId: string;
-    }): Promise<User> {
+    async handler(
+        params: {
+            id: string;
+            locale?: string;
+            versionId: string;
+        },
+        ctx
+    ): Promise<User> {
         const { id } = params;
-        const locale = resolveUserLocale(params.locale);
-        const repository = userRepository();
+        const locale = resolveUserLocale(ctx.config, params.locale);
+        const repository = userRepository(ctx.config);
         const current = await repository.getExact(id, locale);
         if (!current) throw new UserNotFoundError({ id, locale });
 
@@ -42,9 +45,9 @@ export const restoreUserVersion = defineServiceMethod({
             current.fields) as JsonObject;
 
         const updated = await transaction(async () => {
-            await snapshotVersion(repository.versions, current, {});
+            await snapshotVersion(repository.versions, current, ctx.user);
             const row = await repository.update({ id, locale }, { fields });
-            await indexUserRelationships(id);
+            await indexUserRelationships(ctx.config, id);
             return row;
         });
 

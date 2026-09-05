@@ -14,9 +14,9 @@ export const listMediaVersions = defineServiceMethod({
     input: z.object({ id: z.string(), locale: z.string().optional() }),
     access: 'media:read',
     mutates: false,
-    async handler(params: { id: string; locale?: string }): Promise<MediaVersion[]> {
-        const locale = resolveMediaLocale(params.locale);
-        const repository = mediaRepository();
+    async handler(params: { id: string; locale?: string }, ctx): Promise<MediaVersion[]> {
+        const locale = resolveMediaLocale(ctx.config, params.locale);
+        const repository = mediaRepository(ctx.config);
         const current = await repository.getExact(params.id, locale);
         if (!current) throw new MediaNotFoundError({ id: params.id, locale });
 

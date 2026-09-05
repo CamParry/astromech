@@ -4,8 +4,7 @@
  */
 
 import type { ContentRowId, ContentVersions } from './repository/types';
-import type { JsonObject } from '@/types/index';
-import { getCurrentUser } from '@/request-context/request-context';
+import type { JsonObject, User } from '@/types/index';
 import { deepEqual } from '@/utilities/deep-equal';
 
 /**
@@ -17,10 +16,11 @@ import { deepEqual } from '@/utilities/deep-equal';
 export async function snapshotVersion(
     versions: ContentVersions<unknown>,
     record: { contentId: ContentRowId; fields: JsonObject },
+    /** Who the version is credited to; null outside a request. */
+    user: User | null,
     extra: Record<string, unknown> = {}
 ): Promise<void> {
     const latestNumber = await versions.latestNumber(record.contentId);
-    const user = await getCurrentUser();
     await versions.create({
         ...extra,
         contentId: record.contentId,
