@@ -177,7 +177,7 @@ objects instead, and if it lands second, it starts from them.
 
 **Stage 5 — close out**
 
-- [ ] `ARCHITECTURE.md`: the content-modules bullet describes one shape
+- [x] `ARCHITECTURE.md`: the content-modules bullet describes one shape
       (`methods/`, `defineService`, no contract catalogue) and names
       `AppContext` as what a method receives. `TERMINOLOGY.md`: the "Plugin
       context" entry says it extends the app context; an entry for
@@ -185,9 +185,9 @@ objects instead, and if it lands second, it starts from them.
       method object over the contract split, the explicit context over ambient
       reads, and the keyed record over self-named methods, each with what it
       beat as recorded above. The `sessionScoped` entry is unchanged.
-- [ ] `apps/docs/` plugin guide shows `defineServiceMethod` with the unified
+- [x] `apps/docs/` plugin guide shows `defineServiceMethod` with the unified
       `access` and the `AppContext` fields a plugin may rely on.
-- [ ] Delete the spec.
+- [x] Delete the spec.
 
 ## Not changing
 
