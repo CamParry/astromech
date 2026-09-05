@@ -19,7 +19,11 @@ import type {
 } from '@/types/index';
 import { buildAiModels } from '@/ai/models';
 import { setAiModels } from '@/ai/registry';
-import { settingsService, typedGlobalsService } from '@/app-context/services';
+import {
+    notificationsService,
+    settingsService,
+    typedGlobalsService,
+} from '@/app-context/services';
 import { setMethodManifest } from '@/codegen/manifest-registry';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { setConfig } from '@/config/registry';
@@ -42,7 +46,6 @@ import { AstromechError } from '@/errors/astromech-error';
 import { defaultImageWidths, normaliseWidths } from '@/media/image-widths.shared';
 import { mediaService } from '@/media/service';
 import { setImageConfig } from '@/media/serving/image/registry';
-import { currentUserNotificationsService } from '@/notifications/current-user-service';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { createRegistry } from '@/registry';
@@ -190,7 +193,7 @@ async function build(config: AstromechConfig): Promise<Astromech> {
         media: mediaService,
         users: usersService,
         settings: settingsService,
-        notifications: currentUserNotificationsService,
+        notifications: notificationsService,
         plugins: pluginServices,
         getCurrentUser,
         getCurrentRole,

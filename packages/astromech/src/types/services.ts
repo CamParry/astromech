@@ -429,10 +429,10 @@ export type UsersService = {
 };
 
 /**
- * The CLIENT's notifications API. No `userId` anywhere: every method acts on the
- * caller's own rows and each transport fills the subject from the session. The
- * server-side shape names it — `NotificationsDomainService` in
- * `notifications/service.ts` — so the two are deliberately different types.
+ * The notifications API. No `userId` anywhere: every method acts on the caller's
+ * own rows, and the subject comes from the context a method is bound to — a
+ * client's session, or the signed-in user of the request a server call is made
+ * in.
  */
 export type NotificationsService = {
     list(): Promise<Notification[]>;

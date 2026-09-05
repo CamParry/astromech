@@ -21,8 +21,7 @@ import {
 import { beforeEach, describe, expect, it } from 'vitest';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { resolveConfig } from '@/config/resolve';
-import { notificationsContract } from '@/notifications/contract';
-import { notify } from '@/notifications/service';
+import { notificationsDefinition, notify } from '@/notifications/service';
 import { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch';
 
 let db: Kysely<DB>;
@@ -71,7 +70,7 @@ describe('the manifest', () => {
             'notifications.dismissAll',
             'notifications.list',
         ]);
-        expect(Object.keys(notificationsContract).length).toBe(4);
+        expect(Object.keys(notificationsDefinition.catalogue).length).toBe(4);
     });
 
     it('marks every method session-scoped and gated by no permission', () => {

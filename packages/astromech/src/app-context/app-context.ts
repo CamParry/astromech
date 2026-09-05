@@ -31,8 +31,7 @@ import { AstromechError } from '@/errors/astromech-error';
 import { globalsDefinition } from '@/globals/service';
 import { runHook } from '@/hooks/hooks';
 import { mediaService } from '@/media/service';
-import { currentUserNotificationsService } from '@/notifications/current-user-service';
-import { notify } from '@/notifications/service';
+import { notificationsDefinition, notify } from '@/notifications/service';
 import {
     getCurrentRole,
     getCurrentUser,
@@ -58,6 +57,7 @@ export function createAppContext(input: AppContextInput): AppContext {
     const { user, role, clientAddress } = input;
     /** Bound once per context, so a handler reaching a sibling acts as this user. */
     let globals: GlobalsService | undefined;
+    let notifications: NotificationsService | undefined;
     let settings: SettingsService | undefined;
 
     const context: AppContext = {
@@ -88,7 +88,8 @@ export function createAppContext(input: AppContextInput): AppContext {
             return usersService;
         },
         get notifications(): NotificationsService {
-            return currentUserNotificationsService;
+            notifications ??= notificationsDefinition.bind(context);
+            return notifications;
         },
         email: { send: sendEmail },
         notify,

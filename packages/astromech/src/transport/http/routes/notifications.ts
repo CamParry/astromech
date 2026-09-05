@@ -8,8 +8,8 @@
 import type { RestRoute } from './rest-route';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { notificationsContract } from '@/notifications/contract';
-import { notificationsService } from '@/notifications/service';
+import { notificationsService } from '@/app-context/services';
+import { notificationsDefinition } from '@/notifications/service';
 import { NOTIFICATIONS_ROUTE_SPECS } from './http-routes.shared';
 import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 
@@ -26,15 +26,18 @@ export const NOTIFICATIONS_ROUTES: RestRoute[] = attachHandlers(
     }
 );
 
-mountRestRoutes(router, notificationsContract, NOTIFICATIONS_ROUTES);
-documentBespokeRoutes(router, notificationsContract, NOTIFICATIONS_ROUTE_SPECS);
+mountRestRoutes(router, notificationsDefinition.catalogue, NOTIFICATIONS_ROUTES);
+documentBespokeRoutes(
+    router,
+    notificationsDefinition.catalogue,
+    NOTIFICATIONS_ROUTE_SPECS
+);
 
 // GET /notifications/count — bespoke
 // Not in the table: the method returns a scalar, and the route wraps it as
 // `{ data: { count } }` rather than the `{ data }` envelope.
 router.get('/count', async (c) => {
-    const userId = c.var.user.id;
-    const count = await notificationsService.count({ userId });
+    const count = await notificationsService.count();
     return c.json({ data: { count } });
 });
 

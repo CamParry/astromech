@@ -7,11 +7,12 @@
  * envelope: `count`'s `{ data: { count } }` and the 204s.
  */
 
-import type { Notification, User } from '@/types/index';
+import type { Notification, NotificationsService, User } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { mountRouter, roleWith } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { notificationsService, notify } from '@/notifications/service';
+import { createAppContext } from '@/app-context/app-context';
+import { notificationsDefinition, notify } from '@/notifications/service';
 import { notificationsRouter } from '@/transport/http/routes/notifications';
 import { usersService } from '@/users/service';
 
@@ -20,6 +21,11 @@ const noPermissions = roleWith([]);
 
 function app(user: User) {
     return mountRouter('/notifications', notificationsRouter, noPermissions, user);
+}
+
+/** One user's inbox, read directly: the methods bound to a context acting as them. */
+function inbox(user: User): NotificationsService {
+    return notificationsDefinition.bind(createAppContext({ user, role: null }));
 }
 
 let owner: User;
@@ -87,22 +93,22 @@ describe('GET /notifications/count', () => {
 
 describe('DELETE /notifications/:id', () => {
     it('dismisses one and answers 204 with an empty body', async () => {
-        const [notification] = await notificationsService.list({ userId: owner.id });
+        const [notification] = await inbox(owner).list();
         const res = await app(owner).request(`/notifications/${notification?.id}`, {
             method: 'DELETE',
         });
         expect(res.status).toBe(204);
         expect(await res.text()).toBe('');
-        expect(await notificationsService.count({ userId: owner.id })).toBe(0);
+        expect(await inbox(owner).count()).toBe(0);
     });
 
     it('is a no-op 204 when the id belongs to somebody else', async () => {
-        const [notification] = await notificationsService.list({ userId: owner.id });
+        const [notification] = await inbox(owner).list();
         const res = await app(stranger).request(`/notifications/${notification?.id}`, {
             method: 'DELETE',
         });
         expect(res.status).toBe(204);
-        expect(await notificationsService.count({ userId: owner.id })).toBe(1);
+        expect(await inbox(owner).count()).toBe(1);
     });
 });
 
@@ -117,12 +123,12 @@ describe('DELETE /notifications', () => {
         const res = await app(owner).request('/notifications', { method: 'DELETE' });
         expect(res.status).toBe(204);
         expect(await res.text()).toBe('');
-        expect(await notificationsService.count({ userId: owner.id })).toBe(0);
+        expect(await inbox(owner).count()).toBe(0);
     });
 
     it('leaves other users’ rows alone', async () => {
         const res = await app(stranger).request('/notifications', { method: 'DELETE' });
         expect(res.status).toBe(204);
-        expect(await notificationsService.count({ userId: owner.id })).toBe(1);
+        expect(await inbox(owner).count()).toBe(1);
     });
 });

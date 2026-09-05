@@ -1,53 +1,31 @@
 /**
  * Notifications service — the per-user inbox verbs, plus the privileged
- * server-side `notify()` emit. Every verb names the user it acts for;
- * filtering on that `userId` is the authorization, not a permission.
+ * server-side `notify()` emit. A thin assembler: it wires `methods/**` into
+ * the `NotificationsService` definition, where every verb acts for the
+ * context's own user and filtering on that id is the authorization.
+ *
+ * `notify` sits beside the definition rather than in it: the caller chooses
+ * the recipients, so it is a privileged emit and not a method anyone may call.
  */
 
-import type { NotificationRow } from './tables';
-import type { Notification, NotifyInput } from '@/types/index';
+import type { NotificationsService, NotifyInput } from '@/types/index';
+import { defineService } from '@/services/define-service';
 import { createUserRepository } from '@/users/repository';
+import { countNotifications } from './methods/count';
+import { dismissNotification } from './methods/dismiss';
+import { dismissAllNotifications } from './methods/dismiss-all';
+import { listNotifications } from './methods/list';
 import { createNotificationRepository } from './repository';
 
-/** The verbs, with the user each acts for named. */
-export type NotificationsDomainService = {
-    list(params: { userId: string }): Promise<Notification[]>;
-    count(params: { userId: string }): Promise<number>;
-    dismiss(params: { userId: string; id: string }): Promise<void>;
-    dismissAll(params: { userId: string }): Promise<void>;
-};
-
-export const notificationsService: NotificationsDomainService = {
-    async list(params) {
-        const rows = await createNotificationRepository().listByUser(params.userId);
-        return rows.map(toNotification);
-    },
-
-    async count(params) {
-        return createNotificationRepository().countByUser(params.userId);
-    },
-
-    async dismiss(params) {
-        await createNotificationRepository().dismiss(params.userId, params.id);
-    },
-
-    async dismissAll(params) {
-        await createNotificationRepository().dismissAll(params.userId);
-    },
-};
-
-/** Row → wire shape. `createdAt` crosses as an ISO string, as every date does. */
-export function toNotification(row: NotificationRow): Notification {
-    return {
-        id: row.id,
-        userId: row.userId,
-        type: row.type,
-        title: row.title,
-        message: row.message,
-        href: row.href ?? null,
-        createdAt: row.createdAt.toISOString(),
-    };
-}
+export const notificationsDefinition = defineService<NotificationsService>(
+    'notifications',
+    {
+        list: listNotifications,
+        count: countNotifications,
+        dismiss: dismissNotification,
+        dismissAll: dismissAllNotifications,
+    }
+);
 
 /**
  * Deliver one notification to every user the target names. Privileged: the

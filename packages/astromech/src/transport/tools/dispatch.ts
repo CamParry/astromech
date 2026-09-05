@@ -53,7 +53,7 @@ const CORE_SERVICES: Record<string, () => Promise<ServiceObject>> = {
         (await import('@/app-context/services'))
             .globalsService as unknown as ServiceObject,
     notifications: async () =>
-        (await import('@/notifications/service')).notificationsService,
+        (await import('@/app-context/services')).notificationsService,
 };
 
 async function getEntriesService(): Promise<ServiceObject> {

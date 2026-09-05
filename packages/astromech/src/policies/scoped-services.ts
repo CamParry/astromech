@@ -4,27 +4,30 @@
  * of the handle, not of checks each caller remembered to write. Fails CLOSED.
  */
 import type { EntryMethodName } from '@/entries/methods';
-import type { NotificationsDomainService } from '@/notifications/service';
 import type { EntryAction } from '@/permissions/entry-permission';
 import type { Permissions } from '@/permissions/permissions-for';
 import type {
     EntriesService,
     GlobalsService,
     MediaService,
+    NotificationsService,
     Role,
     ServiceMethodContract,
     SettingsService,
     UsersService,
 } from '@/types/index';
-import { globalsService, settingsService } from '@/app-context/services';
+import {
+    globalsService,
+    notificationsService,
+    settingsService,
+} from '@/app-context/services';
 import { ENTRY_METHOD_ACTIONS } from '@/entries/methods';
 import { entriesService } from '@/entries/service';
 import { PermissionDeniedError } from '@/errors/permission';
 import { globalsDefinition } from '@/globals/service';
 import { mediaContract } from '@/media/contract';
 import { mediaService } from '@/media/service';
-import { notificationsContract } from '@/notifications/contract';
-import { notificationsService } from '@/notifications/service';
+import { notificationsDefinition } from '@/notifications/service';
 import { resolveAccess } from '@/permissions/access';
 import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/core-permissions';
 import { entryPermission } from '@/permissions/entry-permission';
@@ -199,19 +202,14 @@ export function scopeEntries(
     return scoped as unknown as EntriesService;
 }
 
-/**
- * The domains a caller can reach, each scoped to one role.
- *
- * `notifications` is the domain shape, not the client's `NotificationsService`:
- * its methods name the `userId` they act for, and this handle is what fills it.
- */
+/** The domains a caller can reach, each scoped to one role. */
 export type ScopedServices = {
     users: UsersService;
     media: MediaService;
     settings: SettingsService;
     entries: EntriesService;
     globals: GlobalsService;
-    notifications: NotificationsDomainService;
+    notifications: NotificationsService;
 };
 
 /**
@@ -243,7 +241,7 @@ export function scopedServices(role: Role | null | undefined): ScopedServices {
         ),
         notifications: scopeMethods(
             notificationsService,
-            notificationsContract,
+            notificationsDefinition.catalogue,
             permissions,
             'notifications'
         ),

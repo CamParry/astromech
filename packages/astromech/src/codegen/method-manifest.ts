@@ -25,7 +25,7 @@ import { qualifyEntryType } from '@/entries/entry-types.shared';
 import { entryMethodContracts } from '@/entries/methods';
 import { globalsDefinition } from '@/globals/service';
 import { mediaContract } from '@/media/contract';
-import { notificationsContract } from '@/notifications/contract';
+import { notificationsDefinition } from '@/notifications/service';
 import {
     resolvePluginIdentity,
     resolvePluginPermission,
@@ -88,7 +88,7 @@ function buildCoreMethods(): CoreManifestMethod[] {
         ['media', mediaContract],
         ['settings', settingsDefinition.catalogue],
         ['globals', globalsDefinition.catalogue],
-        ['notifications', notificationsContract],
+        ['notifications', notificationsDefinition.catalogue],
     ];
     const methods: CoreManifestMethod[] = [];
 

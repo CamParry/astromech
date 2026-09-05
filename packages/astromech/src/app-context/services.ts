@@ -6,12 +6,14 @@
 import type {
     AppContext,
     GlobalsService,
+    NotificationsService,
     ServiceDefinition,
     SettingsService,
     TypedGlobalsService,
 } from '@/types/index';
 import { currentAppContext } from '@/app-context/app-context';
 import { globalsDefinition } from '@/globals/service';
+import { notificationsDefinition } from '@/notifications/service';
 import { settingsDefinition } from '@/settings/service';
 
 /**
@@ -49,3 +51,8 @@ export const typedGlobalsService = globalsService as unknown as TypedGlobalsServ
 
 /** The settings service, acting as whoever the current request is. */
 export const settingsService: SettingsService = bindCurrent(settingsDefinition);
+
+/** The notifications service, acting for whoever the current request is. */
+export const notificationsService: NotificationsService = bindCurrent(
+    notificationsDefinition
+);
