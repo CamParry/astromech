@@ -146,11 +146,11 @@ objects instead, and if it lands second, it starts from them.
 
 **Stage 1 — globals**
 
-- [ ] `globals/operations/` to `globals/methods/`, each file exporting a
+- [x] `globals/operations/` to `globals/methods/`, each file exporting a
       `defineServiceMethod` object. `contract.ts`, `GLOBAL_METHOD_ACTIONS` and
       `GLOBAL_METHOD_REQUIRES` deleted; the HTTP route reads `requires` off
       the method. `service.ts` becomes `defineService('globals', ...)`.
-- [ ] Handlers take `ctx` and stop calling `getCurrentUser()` and
+- [x] Handlers take `ctx` and stop calling `getCurrentUser()` and
       `getConfig()` at the top level. Helpers in `globals/internal/` take
       `ctx` as they are touched.
 
