@@ -1,12 +1,15 @@
 /**
  * `defineService` assembly: a method's id comes from its position in the
  * catalogue, the catalogue holds the objects that were passed in, and binding
- * hands each handler the context without reading any of it.
+ * parses the call against the method's own schema before the handler runs.
  */
 
 import type { AppContext, MethodsFor } from '@/types/index';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
+import { ValidationError } from '@/errors/validation';
 import { defineService } from '@/services/define-service';
+import { noInput } from '@/services/define-service-method';
 
 type FakeService = {
     get(input: { id: string }): Promise<string>;
@@ -15,12 +18,14 @@ type FakeService = {
 
 const get: MethodsFor<FakeService>['get'] = {
     access: 'public',
+    input: z.object({ id: z.string() }),
     mutates: false,
     handler: async (input, ctx) => `${ctx.method.name}:${input.id}:${ctx.role?.slug}`,
 };
 
 const list: MethodsFor<FakeService>['list'] = {
     access: 'settings:read',
+    input: z.object({ limit: z.number() }),
     mutates: false,
     handler: async (input) => Array.from({ length: input.limit }, (_, i) => String(i)),
 };
@@ -77,6 +82,7 @@ describe('defineService', () => {
             get,
             list: {
                 access: 'public',
+                input: z.object({ limit: z.number() }),
                 mutates: false,
                 // @ts-expect-error the interface answers `string[]`, not `number`.
                 handler: async () => 42,
@@ -85,5 +91,66 @@ describe('defineService', () => {
 
         expect(Object.keys(missing.catalogue)).toEqual(['get']);
         expect(Object.keys(wrongOutput.catalogue)).toEqual(['get', 'list']);
+    });
+});
+
+/** A service of one method, bound over a context nothing reads. */
+function bindOne<Input, Output>(
+    method: MethodsFor<{ run(input: Input): Promise<Output> }>['run']
+): { run(input: Input): Promise<Output> } {
+    return defineService<{ run(input: Input): Promise<Output> }>('fake', {
+        run: method,
+    }).bind(unreadableContext());
+}
+
+describe('defineService input validation', () => {
+    it('throws a ValidationError before the handler runs', async () => {
+        const handler = vi.fn(async (input: { id: string }) => input.id);
+        const service = bindOne<{ id: string }, string>({
+            access: 'public',
+            input: z.object({ id: z.string() }),
+            mutates: false,
+            handler,
+        });
+
+        expect(() => service.run({ id: 42 } as unknown as { id: string })).toThrow(
+            ValidationError
+        );
+        expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('hands the handler the parsed value, defaults applied', async () => {
+        const service = bindOne<{ limit?: number }, number>({
+            access: 'public',
+            input: z.object({ limit: z.number().default(10) }),
+            mutates: false,
+            handler: async (input) => input.limit ?? 0,
+        });
+
+        expect(await service.run({})).toBe(10);
+    });
+
+    it('resolves `noInput()` to undefined rather than the empty object', async () => {
+        const service = bindOne<undefined, string>({
+            access: 'public',
+            input: noInput(),
+            mutates: false,
+            handler: async (input) => String(input),
+        });
+
+        expect(await service.run(undefined)).toBe('undefined');
+    });
+
+    it('strips a key the schema does not declare', async () => {
+        const service = bindOne<{ id: string }, Record<string, unknown>>({
+            access: 'public',
+            input: z.object({ id: z.string() }),
+            mutates: false,
+            handler: async (input) => input,
+        });
+
+        expect(
+            await service.run({ id: 'a', smuggled: true } as unknown as { id: string })
+        ).toEqual({ id: 'a' });
     });
 });

@@ -5,7 +5,6 @@ import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
-import { parseInput } from '@/errors/validation';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
@@ -51,7 +50,7 @@ export const updateMedia = defineServiceMethod({
         params: { id: string; locale?: string; data: MediaUpdateData },
         ctx
     ): Promise<Media> {
-        const { id } = params;
+        const { id, data } = params;
         const locale = resolveMediaLocale(ctx.config, params.locale);
         const repository = mediaRepository(ctx.config);
 
@@ -61,7 +60,6 @@ export const updateMedia = defineServiceMethod({
         const base = current ?? (await repository.get(id));
         if (!base) throw new MediaNotFoundError({ id });
 
-        const data = parseInput(updateMediaSchema, params.data);
         const config = ctx.config;
         const definitions = flattenFieldNodes(config.media.fields ?? []);
 

@@ -49,14 +49,6 @@ const testPlugin: PluginDefinition = {
             mutates: true,
             handler: async () => undefined,
         },
-        // No `input` — a method that does not describe its call cannot be
-        // dispatched, and is refused rather than given a synthesised schema.
-        undescribed: {
-            access: 'public',
-            summary: 'Undescribed.',
-            mutates: false,
-            handler: async () => undefined,
-        },
     },
 };
 
@@ -166,15 +158,11 @@ describe('manifest ↔ RPC route parity', () => {
             'media.replace',
             'media.upload',
             'plugins.testMyPlugin.doSomething',
-            'plugins.testMyPlugin.undescribed',
         ]);
         expect(refused.get('media.upload')).toContain('binary input');
         expect(refused.get('media.replace')).toContain('binary input');
         expect(refused.get('plugins.testMyPlugin.doSomething')).toContain(
             'plugin method'
-        );
-        expect(refused.get('plugins.testMyPlugin.undescribed')).toContain(
-            'no input schema'
         );
     });
 

@@ -9,11 +9,14 @@ import type {
     MethodContext,
     MethodsFor,
     ServiceDefinition,
+    ServiceMethodContract,
 } from '@/types/index';
+import { parseMethodInput } from '@/services/parse-method-input';
 
 /** A catalogue entry as this file walks it: any method, under any key. */
 type AssembledMethod = {
     name: string;
+    input: ServiceMethodContract['input'];
     handler: (input: unknown, ctx: AppContext & MethodContext) => unknown;
 };
 
@@ -42,7 +45,8 @@ export function defineService<S extends object>(
                 const withMethod = Object.create(ctx, {
                     method: { value: { name: method.name }, enumerable: true },
                 }) as AppContext & MethodContext;
-                bound[key] = (input) => method.handler(input, withMethod);
+                bound[key] = (input) =>
+                    method.handler(parseMethodInput(method, input), withMethod);
             }
             return bound as S;
         },

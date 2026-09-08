@@ -4,7 +4,6 @@ import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
-import { parseInput } from '@/errors/validation';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
@@ -49,7 +48,7 @@ export const updateUser = defineServiceMethod({
         params: { id: string; locale?: string; data: UserUpdateData },
         ctx
     ): Promise<User> {
-        const { id } = params;
+        const { id, data } = params;
         const locale = resolveUserLocale(ctx.config, params.locale);
         const repository = userRepository(ctx.config);
 
@@ -59,7 +58,6 @@ export const updateUser = defineServiceMethod({
         const base = current ?? (await repository.get(id));
         if (!base) throw new UserNotFoundError({ id });
 
-        const data = parseInput(updateUserSchema, params.data);
         const config = ctx.config;
         if (data.role !== undefined) requireRole(config, data.role);
 

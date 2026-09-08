@@ -74,12 +74,11 @@ export type ServiceMethod<Input = unknown, Output = unknown, Ctx = AppContext> =
     /** One-line summary for humans / the AI tool-loop. */
     summary?: string;
     /**
-     * Zod schema for the call input — the METHOD schema (how the method is
-     * called), NOT the HTTP body. A method whose transport puts part of the
-     * input in the path (`settings.set({ key, value })`) still declares the
-     * whole argument object here.
+     * Zod schema for the call input — the METHOD schema, not the HTTP body: a
+     * transport putting part of it in the path (`settings.set({ key, value })`)
+     * still declares the whole argument object. Parsed before the handler runs.
      */
-    input?: z.ZodType<ParsedInput<Input>>;
+    input: z.ZodType<ParsedInput<Input>>;
     /** Zod schema for the result, where worth declaring. */
     output?: z.ZodType<Output>;
     /** The capability the target must declare; absent ⇒ none. */
@@ -122,7 +121,7 @@ export type ServiceMethodContract = Omit<
     ServiceMethod<never, unknown>,
     'handler' | 'input'
 > & {
-    input?: z.ZodType;
+    input: z.ZodType;
 };
 
 /** The method record a hand-written service interface demands. */

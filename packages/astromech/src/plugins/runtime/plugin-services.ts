@@ -11,6 +11,7 @@ import {
     getPluginServiceMethods,
 } from '@/plugins/runtime/plugin-runtime';
 import { getCurrentRole, getCurrentUser } from '@/request-context/request-context';
+import { parseMethodInput } from '@/services/parse-method-input';
 
 type MethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
 
@@ -35,7 +36,7 @@ export const pluginServices: PluginServiceNamespace = new Proxy(
 
                     return async (input?: unknown): Promise<unknown> =>
                         (method.handler as (i: unknown, c: PluginContext) => unknown)(
-                            input,
+                            parseMethodInput(method, input),
                             createPluginContext(
                                 resolved,
                                 await getCurrentUser(),

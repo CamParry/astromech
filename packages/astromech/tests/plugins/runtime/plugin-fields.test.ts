@@ -1,5 +1,6 @@
 import type { PluginDefinition, ResolvedConfig } from '@/types/index';
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import { generateClientTypes } from '@/codegen/type-generator';
 import {
     assertNoFieldTypeCollisions,
@@ -129,6 +130,7 @@ describe('generateClientTypes with plugin field types', () => {
                 service: {
                     lookup: {
                         access: 'public',
+                        input: z.object({ path: z.string() }),
                         mutates: false,
                         handler: async () => null,
                     },

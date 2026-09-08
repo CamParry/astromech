@@ -6,7 +6,7 @@
 
 import type { MenuItem, MenusOptions } from './types';
 import type { ServiceInterface } from 'astromech';
-import { definePlugin, defineServiceMethod } from 'astromech';
+import { definePlugin, defineServiceMethod, z } from 'astromech';
 import { buildMenuGlobals } from './globals/menus';
 import { buildMenusService } from './service/menus';
 
@@ -18,6 +18,7 @@ const _menusServiceTyped = {
     >({
         access: 'public',
         summary: 'Resolve a configured menu into a nested tree of menu items.',
+        input: z.object({ key: z.string(), locale: z.string().optional() }),
         mutates: false,
         handler: async () => null,
     }),

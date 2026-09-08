@@ -165,7 +165,7 @@ export type AnyServiceMethod = Omit<
     ServiceMethod<never, unknown, PluginContext>,
     'input'
 > & {
-    input?: z.ZodType;
+    input: z.ZodType;
 };
 
 /**

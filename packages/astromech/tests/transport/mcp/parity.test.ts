@@ -88,14 +88,6 @@ const testPlugin: PluginDefinition = {
             mutates: true,
             handler: async () => undefined,
         },
-        // No `input` — the honest skip. A method that does not describe its call
-        // cannot be projected as a tool, and never gets a synthesised stand-in.
-        undescribed: {
-            access: 'public',
-            summary: 'Undescribed.',
-            mutates: false,
-            handler: async () => undefined,
-        },
     },
 };
 
@@ -215,7 +207,6 @@ describe('manifest ↔ MCP tool coverage', () => {
             'notifications.dismiss',
             'notifications.dismissAll',
             'notifications.list',
-            'plugins.testMyPlugin.undescribed',
         ]);
         expect(skipped.find((s) => s.id === 'media.upload')?.reason).toContain(
             'binary input'
@@ -230,9 +221,6 @@ describe('manifest ↔ MCP tool coverage', () => {
                 'session-scoped'
             );
         }
-        expect(
-            skipped.find((s) => s.id === 'plugins.testMyPlugin.undescribed')?.reason
-        ).toContain('no input schema');
     });
 
     it('projects a plugin service method that declares its input', () => {

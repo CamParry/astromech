@@ -6,7 +6,7 @@
 
 import type { Context, ErrorHandler, NotFoundHandler } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
-import type { ZodError } from 'zod';
+import type { ZodError, ZodIssue } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import { BulkOperationError, EntryNotFoundError } from '@/entries/errors';
 import { resolveEnv } from '@/env';
@@ -117,7 +117,8 @@ export function requestSchemaError(c: Context, err: ZodError): Response {
 }
 
 /**
- * Convert a ZodError into a validationFailed response.
+ * Convert a failed parse into a validationFailed response. Takes the issues
+ * themselves, so a `ZodError` and a `ValidationError` both fit.
  *
  * The failure is reported under the names the CALLER sent, not the names of the
  * method's argument object. `bodyKey` names the key the request body was
@@ -127,7 +128,7 @@ export function requestSchemaError(c: Context, err: ZodError): Response {
  */
 export function fromZodError(
     c: Context,
-    err: ZodError,
+    err: { issues: readonly ZodIssue[] },
     bodyKey?: string,
     wireNames?: Record<string, string>
 ): Response {

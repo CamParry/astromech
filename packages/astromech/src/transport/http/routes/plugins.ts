@@ -22,6 +22,7 @@ import {
     getPluginRawRoutes,
     getPluginServiceMethods,
 } from '@/plugins/runtime/plugin-runtime';
+import { parseMethodInput } from '@/services/parse-method-input';
 import { getClientAddress } from '@/transport/http/client-address';
 import { optionalAuth } from '@/transport/http/middleware/auth';
 import { forbidden, notFound, unauthorized } from '@/transport/http/middleware/errors';
@@ -93,11 +94,11 @@ pluginsRouter.post('/:name/:method', async (c) => {
     const denied = enforceAccess(c, serviceMethod.access, identity);
     if (denied) return denied;
 
-    const input = await c.req.json().catch(() => undefined);
+    const body = await c.req.json().catch(() => undefined);
     const result = await (
         serviceMethod.handler as (i: unknown, c: PluginContext) => unknown
     )(
-        input,
+        parseMethodInput(serviceMethod, body),
         createPluginContext(
             identity,
             c.var.user ?? null,

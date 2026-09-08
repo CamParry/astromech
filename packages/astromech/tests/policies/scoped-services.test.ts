@@ -19,6 +19,7 @@ import type {
 } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 import { PermissionDeniedError } from '@/errors/permission';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { annotateManifest } from '@/policies/annotate-manifest';
@@ -45,8 +46,8 @@ function makeService() {
 }
 
 const contracts = {
-    read: { access: 'settings:read', mutates: false },
-    write: { access: 'settings:update', mutates: true },
+    read: { access: 'settings:read', input: z.unknown(), mutates: false },
+    write: { access: 'settings:update', input: z.unknown(), mutates: true },
 } satisfies Record<string, ServiceMethodContract>;
 
 describe('scopeMethods', () => {
@@ -160,7 +161,7 @@ describe('scopeMethods', () => {
 });
 
 const sessionContracts = {
-    read: { access: 'public', sessionScoped: true, mutates: false },
+    read: { access: 'public', input: z.unknown(), sessionScoped: true, mutates: false },
 } satisfies Record<string, ServiceMethodContract>;
 
 /** A scoped handle over `makeService()`, with `read` declared session-scoped. */

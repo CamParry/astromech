@@ -936,9 +936,10 @@ describe('bulk', () => {
         expect(bAfter?.title).not.toBe('X');
     });
 
-    it('bulk update rejecting an empty array is a no-op (no error)', async () => {
-        const res = await api.update({ type: 'post', id: [], data: { title: 'X' } });
-        expect(res).toEqual([]);
+    it('refuses an empty id list, which the method’s schema declares non-empty', async () => {
+        await expect(
+            api.update({ type: 'post', id: [], data: { title: 'X' } })
+        ).rejects.toBeInstanceOf(ValidationError);
     });
 });
 

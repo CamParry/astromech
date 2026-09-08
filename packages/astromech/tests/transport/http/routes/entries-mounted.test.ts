@@ -17,12 +17,18 @@ import type { AstromechConfig, PluginDefinition, Role, User } from '@/types/inde
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { noInput } from '@/services/define-service-method';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
 
 const widgetsPlugin: PluginDefinition = {
     package: 'widgets',
     service: {
-        ping: { access: 'public', mutates: false, handler: () => 'pong' },
+        ping: {
+            access: 'public',
+            input: noInput(),
+            mutates: false,
+            handler: () => 'pong',
+        },
     },
     entries: [
         {

@@ -413,6 +413,16 @@ checked against them rather than derived from them: deriving an interface from a
 record whose handlers take a context that itself carries that interface is
 self-referential.
 
+**Input is validated at the method, not at the transport.** `defineService.bind()`
+parses the call against the method's own `input` schema before the handler runs,
+and the plugin service proxy and plugin RPC route do the same, so an in-process
+call, a hook, a job and an HTTP request all get one check. Rejected: parsing at
+each transport edge, which left in-process callers unchecked and led handlers to
+re-parse the slot the edge had already parsed. The cost is that a transport
+wanting wire-named errors maps the thrown `ValidationError` rather than parsing
+itself: the REST route rebases the field paths it reports under `bodyKey` and
+`wireNames` on the way out.
+
 **A method whose subject is the caller declares `sessionScoped`.** `userId` is
 filled from the request context at the scoped handle
 (`policies/scoped-services.ts`), not at the dispatcher, and any caller-supplied

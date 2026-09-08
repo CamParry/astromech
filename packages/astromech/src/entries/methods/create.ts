@@ -19,11 +19,11 @@ import { createEntrySchema } from '../schema';
  * The `data` slot, declared as what it describes rather than inferred: the
  * schema parses `fields` as `Record<string, unknown>`, which
  * `exactOptionalPropertyTypes` keeps distinct from `EntryCreateData`'s
- * `fields?: JsonObject`. The titled shape stands in for every type here — the
- * per-type catalogue declares the schema the type actually has.
+ * `fields?: JsonObject`. Titleless, since one schema covers every type here;
+ * the handler re-parses under the type's own, which is the stricter one.
  */
 const createData = createEntrySchema({
-    titled: true,
+    titled: false,
 }) as unknown as z.ZodType<EntryCreateData>;
 
 /**

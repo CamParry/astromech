@@ -3,7 +3,6 @@ import { z } from '@hono/zod-openapi';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { transaction } from '@/database/transaction';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
-import { parseInput } from '@/errors/validation';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
@@ -31,15 +30,18 @@ export const createUser = defineServiceMethod({
     access: 'users:create',
     mutates: true,
     async handler(params: { data: UserCreateData }, ctx): Promise<User> {
-        const validated = parseInput(createUserSchema, params.data);
+        // `createUserSchema` defaults `role`, and the method's `input` has
+        // already applied it. `UserCreateData` describes what a CALLER may
+        // pass, so it still reads the key as optional.
+        const data = params.data as z.infer<typeof createUserSchema>;
 
         const config = ctx.config;
-        requireRole(config, validated.role);
+        requireRole(config, data.role);
 
         const fieldDefs = flattenFieldNodes(config.users.fields);
         const validate = config.users.validate;
         const parsedFields = await parseFields(
-            (validated.fields ?? {}) as Record<string, unknown>,
+            (data.fields ?? {}) as Record<string, unknown>,
             fieldDefs,
             {
                 operation: 'create',
@@ -69,9 +71,9 @@ export const createUser = defineServiceMethod({
         const created = await transaction(async () => {
             const row = await createUserRepository().create(
                 {
-                    email: validated.email,
-                    name: validated.name,
-                    role: validated.role,
+                    email: data.email,
+                    name: data.name,
+                    role: data.role,
                 },
                 { fields, createdBy: userId, updatedBy: userId }
             );

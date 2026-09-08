@@ -6,6 +6,7 @@ import type { Context } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from '@hono/zod-openapi';
 import { PermissionDeniedError } from '@/errors/permission';
+import { ValidationError } from '@/errors/validation';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { scopedServices } from '@/policies/scoped-services';
 import {
@@ -139,9 +140,9 @@ async function handleRestRoute(
 
     const catalogue = isPerRequest(contracts) ? contracts.forRequest(c) : contracts;
     const contract = catalogue?.[methodName(route.id)];
-    if (contract?.input === undefined) {
+    if (contract === undefined) {
         throw new Error(
-            `Route ${route.verb.toUpperCase()} ${route.path} names '${route.id}', which declares no input schema.`
+            `Route ${route.verb.toUpperCase()} ${route.path} names '${route.id}', which this catalogue does not describe.`
         );
     }
 
@@ -159,13 +160,8 @@ async function handleRestRoute(
         throw error;
     }
 
-    const parsed = contract.input.safeParse(args);
-    if (!parsed.success) {
-        return fromZodError(c, parsed.error, route.bodyKey, route.wireNames);
-    }
-
     try {
-        const result = await invoke(c, route.id, parsed.data);
+        const result = await invoke(c, route.id, args);
         if (route.notFound !== undefined && (result === null || result === undefined)) {
             return notFound(c, route.notFound(c));
         }
@@ -173,6 +169,11 @@ async function handleRestRoute(
     } catch (error) {
         // The scoped handle refuses by throwing; every other error is onError's.
         if (error instanceof PermissionDeniedError) return forbidden(c);
+        // The method parses its own input, so its 422 arrives here rather than
+        // from an edge parse — rendered under the names the caller sent.
+        if (isMethodInputError(error)) {
+            return fromZodError(c, error, route.bodyKey, route.wireNames);
+        }
         return route.mapError?.(error, c) ?? raise(error);
     }
 }
@@ -289,7 +290,7 @@ function requestBody(
 ): z.ZodType | undefined {
     if (route.verb !== 'post' && route.verb !== 'put') return undefined;
     const input = contract.input;
-    if (input === undefined || !(input instanceof z.ZodObject)) return undefined;
+    if (!(input instanceof z.ZodObject)) return undefined;
 
     if (route.bodyKey !== undefined) return input.shape[route.bodyKey];
 
@@ -325,6 +326,15 @@ function renameShape(
 /** Does this mount resolve its catalogue per request? */
 function isPerRequest(contracts: RestContracts): contracts is PerRequestContracts {
     return typeof (contracts as PerRequestContracts).forRequest === 'function';
+}
+
+/**
+ * Is this the method's own input parse failing? A field-pipeline failure is a
+ * `ValidationError` too, but carries `fields`, and its names are already the
+ * caller's — so it goes to `onError` untouched.
+ */
+function isMethodInputError(error: unknown): error is ValidationError {
+    return error instanceof ValidationError && error.fields === undefined;
 }
 
 /** Re-throw, as an expression — `mapError` declining leaves the error to `onError`. */

@@ -9,8 +9,8 @@
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { ManifestMethod } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { z } from 'zod';
 import { PermissionDeniedError } from '@/errors/permission';
+import { ValidationError } from '@/errors/validation';
 import {
     badRequest,
     forbidden,
@@ -34,25 +34,25 @@ router.post('/:id', async (c) => {
         return badRequest(c, `Method '${id}' is not callable: ${dispatch.reason}`);
 
     const body = await c.req.json().catch(() => undefined);
-    // The manifest carries the contract's input as JSON Schema, so it is read
-    // back into Zod to parse with rather than restated here.
-    const schema = z.fromJSONSchema(dispatch.tool.inputSchema);
-    const parsed = schema.safeParse(callArgs(method, body));
-    if (!parsed.success) return fromZodError(c, parsed.error);
 
     try {
-        const result = await dispatch.tool.invoke(parsed.data as Record<string, unknown>);
+        const result = await dispatch.tool.invoke(callArgs(method, body));
         return c.json({ data: result ?? null });
     } catch (error) {
         // The scoped handle refuses by throwing, carrying the permission or the
         // session-scoped subject it wanted; every other error is left to onError.
         if (error instanceof PermissionDeniedError) return forbidden(c, error.message);
+        // The method parses its own input. The RPC body IS the argument object,
+        // so there is no body key to rebase the field paths against.
+        if (error instanceof ValidationError && error.fields === undefined) {
+            return fromZodError(c, error);
+        }
         throw error;
     }
 });
 
 /**
- * The argument object to validate: the JSON body, read through `dispatchArgs`
+ * The argument object to call with: the JSON body, read through `dispatchArgs`
  * so an entries method gets the type its id already names rather than asking
  * the caller to repeat it.
  */

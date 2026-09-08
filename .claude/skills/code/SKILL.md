@@ -36,6 +36,10 @@ is guessable from any other.
   object does, which is true of `duplicate`'s `overrides` and `settings.set`'s
   `value` and nowhere else.
 
+- **A handler never re-parses its own `input`.** `defineService.bind()` has
+  already parsed it, on every call path. Parse only a slot the method's schema
+  cannot express, such as an entry type's own create schema.
+
 A REST route keeps a flat body under this: the route spec declares
 `bodyKey: 'data'` and the generated client sends that key alone.
 

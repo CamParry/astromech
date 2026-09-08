@@ -880,11 +880,14 @@ export const ratingService = {
 };
 ```
 
-`summary` is the one line humans and the assistant read. `input` is a Zod schema
-for the whole argument object (`noInput()` for a method that takes none),
-`output` the same for the result where it is worth declaring, and `mutates` says
-whether the call changes stored state, with the optional `destructive` and
-`idempotent` refining it.
+`summary` is the one line humans and the assistant read. `input` is required: a
+Zod schema for the whole argument object (`noInput()` for a method that takes
+none). It is parsed before your handler runs, wherever the call came from, so
+the handler receives a validated value and must not re-parse it; a bad call
+throws a validation error in process and answers `422` over HTTP. `output` is
+the same for the result where it is worth declaring, and `mutates` says whether
+the call changes stored state, with the optional `destructive` and `idempotent`
+refining it.
 
 `access` says what a caller must hold, in one of four forms:
 

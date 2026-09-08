@@ -7,7 +7,6 @@
 import type { GlobalRow } from '../repository/globals-table';
 import type { ContentWrite } from '@/content/repository/types';
 import type { Global, ResolvedConfig, User } from '@/types/index';
-import { parseInput } from '@/errors/validation';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../internal/access';
 import { asGlobal, requireCanonical } from '../internal/global';
@@ -60,12 +59,9 @@ export const scheduleGlobal = defineServiceMethod({
         params: { key: string; locale?: string; publishedAt: Date },
         ctx
     ): Promise<Global> {
-        const validated = parseInput(scheduleGlobalSchema, {
-            publishedAt: params.publishedAt,
-        });
         return writeStatus(ctx.config, params, ctx.user, () => ({
             status: 'scheduled',
-            publishedAt: validated.publishedAt,
+            publishedAt: params.publishedAt,
         }));
     },
 });

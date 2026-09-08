@@ -113,9 +113,7 @@ function buildCoreMethods(): CoreManifestMethod[] {
                 method.permissionDynamic = true;
             }
 
-            if (contract.input) {
-                method.input = toJSONSchema(contract.input, 'input');
-            }
+            method.input = toJSONSchema(contract.input, 'input');
             if (contract.output) {
                 method.output = toJSONSchema(contract.output, 'output');
             }
@@ -234,9 +232,7 @@ function projectEntryMethod(
     if (placement.plugin !== undefined) {
         method.plugin = placement.plugin;
     }
-    if (contract.input) {
-        method.input = toJSONSchema(contract.input, 'input');
-    }
+    method.input = toJSONSchema(contract.input, 'input');
     return method;
 }
 
@@ -278,9 +274,7 @@ function buildPluginServiceMethods(plugins: PluginDefinition[]): PluginManifestM
                 idempotent: serviceMethod.idempotent ?? false,
             };
 
-            if (serviceMethod.input) {
-                method.input = toJSONSchema(serviceMethod.input, 'input');
-            }
+            method.input = toJSONSchema(serviceMethod.input, 'input');
             if (serviceMethod.output) {
                 method.output = toJSONSchema(serviceMethod.output, 'output');
             }

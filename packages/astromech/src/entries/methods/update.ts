@@ -10,11 +10,11 @@ import { updateEntrySchema } from '../schema';
  * The `data` slot, declared as what it describes rather than inferred: the
  * schema parses `fields` as `Record<string, unknown>`, which
  * `exactOptionalPropertyTypes` keeps distinct from `EntryUpdateData`'s
- * `fields?: JsonObject`. The titled shape stands in for every type here — the
- * per-type catalogue declares the schema the type actually has.
+ * `fields?: JsonObject`. Titleless, since one schema covers every type here;
+ * `update-batch.ts` re-parses under the type's own, which is the stricter one.
  */
 const updateData = updateEntrySchema({
-    titled: true,
+    titled: false,
 }) as unknown as z.ZodType<EntryUpdateData>;
 
 /** One id is a batch of one, and its result and errors are unwrapped. */

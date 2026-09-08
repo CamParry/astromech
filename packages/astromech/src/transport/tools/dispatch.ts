@@ -182,9 +182,9 @@ function buildDispatchWith(
         return { ok: false, reason: 'binary input — not expressible over JSON-RPC' };
     }
 
-    // A method with no serialisable input cannot be honestly described to a
-    // client, so it is skipped rather than given a hand-written stand-in that
-    // drifts. This is the rule the `users_update` schema literal broke.
+    // A method declares its `input`, so a null here is a schema that would not
+    // serialise. It cannot be honestly described to a client, so it is skipped
+    // rather than given a hand-written stand-in that drifts.
     const inputSchema = manifest.input ?? null;
     if (inputSchema === null) {
         return { ok: false, reason: 'no input schema declared on the descriptor' };

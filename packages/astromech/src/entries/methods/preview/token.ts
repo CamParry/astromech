@@ -1,5 +1,4 @@
 import { z } from '@hono/zod-openapi';
-import { parseInput } from '@/errors/validation';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
 import { assertCapability } from '../../internal/entry-type';
@@ -47,12 +46,9 @@ export const issuePreviewToken = defineServiceMethod({
         }
         const token = generatePreviewSecret();
         const hash = await hashPreviewToken(token);
-        // Coerced, not trusted: a JSON transport (MCP, the AI tool-loop) sends an
-        // ISO string, and this column is a date. `schedule` validates `publishedAt`
-        // the same way for the same reason.
-        const { expiresAt } = parseInput(previewTokenSchema, {
-            expiresAt: params.expiresAt,
-        });
+        // Already coerced by the method's `input` parse: a JSON transport sends an
+        // ISO string, and `previewTokenSchema` reads it as a date.
+        const { expiresAt } = params;
         // `null` is not the same as absent: an omitted `expiresAt` takes the default
         // TTL, an explicit `null` means "never expires". The repository's `isValid`
         // honours null.

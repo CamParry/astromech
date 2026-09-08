@@ -5,6 +5,7 @@ import type {
     StorageDriver,
 } from '@/types/index';
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import {
     generateMethodManifest,
     serialiseMethodManifest,
@@ -55,17 +56,20 @@ const testPlugin: PluginDefinition = {
         doSomething: {
             access: { permission: 'plugins:x:do' },
             summary: 'Do something.',
+            input: z.object({ thing: z.string() }),
             mutates: true,
             handler: async () => undefined,
         },
         readOnly: {
             access: 'public',
+            input: z.object({}),
             mutates: false,
             handler: async () => undefined,
         },
         scoped: {
             // Bare permission key — must be plugin-scoped to match route enforcement
             access: { permission: 'manage' },
+            input: z.object({}),
             mutates: true,
             handler: async () => undefined,
         },

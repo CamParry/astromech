@@ -15,6 +15,8 @@ import type { AstromechConfig, PluginDefinition, Role, User } from '@/types/inde
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
+import { noInput } from '@/services/define-service-method';
 import { getSession } from '@/users/session';
 
 vi.mock('@/users/session', () => ({ getSession: vi.fn() }));
@@ -24,18 +26,36 @@ const mockGetSession = vi.mocked(getSession);
 const probePlugin: PluginDefinition = {
     package: 'probe',
     service: {
-        ping: { access: 'public', mutates: false, handler: () => 'pong' },
+        ping: {
+            access: 'public',
+            input: noInput(),
+            mutates: false,
+            handler: () => 'pong',
+        },
         whoami: {
             access: 'authenticated',
+            input: noInput(),
             mutates: false,
             handler: (_input, ctx) => ({ user: ctx.user?.id ?? null }),
         },
         echo: {
             access: { permission: 'read' },
+            input: z.looseObject({}),
             mutates: false,
             handler: (input) => ({ echoed: input }),
         },
-        nothing: { access: 'public', mutates: true, handler: () => undefined },
+        nothing: {
+            access: 'public',
+            input: noInput(),
+            mutates: true,
+            handler: () => undefined,
+        },
+        strict: {
+            access: 'public',
+            input: z.object({ n: z.number() }),
+            mutates: false,
+            handler: (input) => input,
+        },
     },
     rawRoutes: [
         {
@@ -76,7 +96,9 @@ async function freshApp(): Promise<OpenAPIHono> {
     vi.resetModules();
     const { pluginsRouter } = await import('@/transport/http/routes/plugins');
     const { runWithRequest } = await import('@/request-context/request-context');
+    const { onError } = await import('@/transport/http/middleware/errors');
     const app = new OpenAPIHono();
+    app.onError(onError);
     app.use('*', (c, next) => runWithRequest(c.req.raw, () => next()));
     app.route('/plugins', pluginsRouter);
     return app;
@@ -159,12 +181,27 @@ describe('POST /plugins/:name/:method — access branches', () => {
         expect(await res.json()).toEqual({ echoed: { hello: 'world' } });
     });
 
-    it('treats an unparseable body as no input at all', async () => {
+    it('treats an unparseable body as the empty argument object', async () => {
         signIn(['plugin:probe:read']);
         const app = await freshApp();
         const res = await app.request('/plugins/probe/echo', { method: 'POST' });
         expect(res.status).toBe(200);
-        expect(await res.json()).toEqual({});
+        expect(await res.json()).toEqual({ echoed: {} });
+    });
+
+    it('422s a body the method’s own input schema rejects', async () => {
+        const app = await freshApp();
+        const res = await app.request('/plugins/probe/strict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ n: 'not a number' }),
+        });
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as {
+            error: { code: string; details: { fields: Record<string, string[]> } };
+        };
+        expect(body.error.code).toBe('VALIDATION_FAILED');
+        expect(Object.keys(body.error.details.fields)).toEqual(['n']);
     });
 });
 

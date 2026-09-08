@@ -10,6 +10,7 @@ import type {
 } from '@/types/index';
 import { createElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 import { getCronJobs } from '@/cron/registry';
 import { setEmailDriver } from '@/email/registry';
 import { runHook } from '@/hooks/hooks';
@@ -130,6 +131,7 @@ describe('registerPlugins indexing', () => {
                     service: {
                         lookup: {
                             access: 'public',
+                            input: z.object({ path: z.string() }),
                             mutates: false,
                             handler: async () => null,
                         },

@@ -10,6 +10,7 @@ import { bindCurrent } from '@/app-context/services';
 import { createPluginContext } from '@/plugins/runtime/plugin-runtime';
 import { runWithContext } from '@/request-context/request-context';
 import { defineService } from '@/services/define-service';
+import { noInput } from '@/services/define-service-method';
 
 const editor: Role = {
     slug: 'editor',
@@ -53,6 +54,7 @@ type WhoService = {
 
 const who: MethodsFor<WhoService>['who'] = {
     access: 'public',
+    input: noInput(),
     mutates: false,
     handler: async (_input, ctx) => ctx.user?.id ?? null,
 };

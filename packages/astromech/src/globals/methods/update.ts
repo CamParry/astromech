@@ -84,13 +84,12 @@ export const updateGlobal = defineServiceMethod({
             key: params.key,
             locale,
             global: current ? asGlobal(current) : null,
-            data: {
-                fields: parseInput(updateGlobalSchema, params.data).fields,
-            },
+            data: { fields: params.data.fields },
             user,
         });
-        // Re-parsed: a hook may have replaced `data` wholesale, and what it
-        // handed back is as unvalidated as what the caller sent.
+        // Parsed here, not on the way in: the method's own input schema already
+        // checked what the caller sent, and a hook may have replaced `data`
+        // wholesale with something it did not.
         const patch = parseInput(updateGlobalSchema, context.data).fields;
 
         const fields = await toStoredFields({

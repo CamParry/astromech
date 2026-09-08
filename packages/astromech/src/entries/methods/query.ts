@@ -28,7 +28,9 @@ import { entrySortSchema } from '../schema';
 export const queryEntries = defineServiceMethod({
     summary: 'List entries of one type.',
     input: z.object({
-        type: z.string(),
+        // One type or several: a cross-type listing names them all, and the
+        // permission is checked per type the call touches.
+        type: z.union([z.string(), z.array(z.string())]),
         search: z.string().optional(),
         where: z.record(z.string(), z.unknown()).optional(),
         trashed: z.boolean().optional(),

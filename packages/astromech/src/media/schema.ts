@@ -34,10 +34,13 @@ export const mediaQuerySchema = z.object({
     where: where.optional(),
     page: z.number().optional(),
     limit: z.union([z.number(), z.literal('all')]).optional(),
+    // A sort that does not parse is DROPPED rather than rejected, answering the
+    // default order — the rule `entrySortSchema` already states.
     sort: z
         .union([
             z.record(z.string(), sortDirection),
             z.array(z.record(z.string(), sortDirection)),
         ])
-        .optional(),
+        .optional()
+        .catch(undefined),
 });
