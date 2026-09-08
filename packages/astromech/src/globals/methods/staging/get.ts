@@ -14,7 +14,7 @@ export const getStagedGlobal = defineServiceMethod({
     access: gate('read'),
     requires: 'staging',
     mutates: false,
-    async handler(params: { key: string; locale?: string }, ctx): Promise<Global | null> {
+    async handler(params, ctx): Promise<Global | null> {
         const { repository, id, locale } = await requireCanonical(ctx.config, {
             ...params,
             capability: 'staging',

@@ -311,10 +311,10 @@ const entriesService: EntriesService = createEntriesService('/entries', 'full');
  * routes have always taken one field and one direction.
  */
 function listingArgs(params: {
-    search?: string;
-    page?: number;
-    limit?: number | 'all';
-    sort?: SortOption | SortOption[];
+    search?: string | undefined;
+    page?: number | undefined;
+    limit?: number | 'all' | undefined;
+    sort?: SortOption | SortOption[] | undefined;
 }): Args {
     const { sort, ...rest } = params;
     if (sort === undefined || Array.isArray(sort)) return { ...rest };

@@ -23,14 +23,7 @@ export const restoreUserVersion = defineServiceMethod({
     }),
     access: 'users:update',
     mutates: true,
-    async handler(
-        params: {
-            id: string;
-            locale?: string;
-            versionId: string;
-        },
-        ctx
-    ): Promise<User> {
+    async handler(params, ctx): Promise<User> {
         const { id } = params;
         const locale = resolveUserLocale(ctx.config, params.locale);
         const repository = userRepository(ctx.config);

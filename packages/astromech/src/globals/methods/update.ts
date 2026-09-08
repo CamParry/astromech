@@ -1,5 +1,5 @@
 import type { GlobalRow, GlobalsRepository } from '../repository/globals-table';
-import type { Global, GlobalUpdateData, JsonObject, ResolvedGlobal } from '@/types/index';
+import type { Global, JsonObject, ResolvedGlobal } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
 import { propagateSharedFields } from '@/content/translatable';
@@ -44,15 +44,7 @@ export const updateGlobal = defineServiceMethod({
     access: gate('update'),
     mutates: true,
     idempotent: true,
-    async handler(
-        params: {
-            key: string;
-            locale?: string;
-            staged?: boolean;
-            data: GlobalUpdateData;
-        },
-        ctx
-    ): Promise<Global> {
+    async handler(params, ctx): Promise<Global> {
         if (isPublicBranded(params.data.fields)) throw new PublicShapeWriteError();
 
         const global = resolveGlobal(ctx.config, params.key);

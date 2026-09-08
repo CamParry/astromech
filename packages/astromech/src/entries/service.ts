@@ -54,7 +54,7 @@ export type EntriesMethods = Omit<
     schedule(params: {
         type: string;
         id: string | readonly string[];
-        publishedAt: Date;
+        publishedAt: Date | string;
         locale?: string;
     }): Promise<Entry | Entry[]>;
 };

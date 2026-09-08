@@ -37,7 +37,7 @@ export type DeleteRunResult =
 /** The `listRuns` / `triggerRun` / `deleteRun` service methods, using `defaultKeep` as the fallback retention. */
 export function buildBackupsService(defaultKeep: number) {
     return {
-        listRuns: defineServiceMethod<undefined, ListRunsResult>({
+        listRuns: defineServiceMethod({
             access: { permission: 'read' },
             summary: 'List recent backup runs and the driver capabilities.',
             input: noInput(),
@@ -53,7 +53,7 @@ export function buildBackupsService(defaultKeep: number) {
             },
         }),
 
-        triggerRun: defineServiceMethod<undefined, TriggerRunResult>({
+        triggerRun: defineServiceMethod({
             access: { permission: 'run' },
             summary: 'Take a backup now.',
             input: noInput(),
@@ -65,7 +65,7 @@ export function buildBackupsService(defaultKeep: number) {
             },
         }),
 
-        deleteRun: defineServiceMethod<{ id: string }, DeleteRunResult>({
+        deleteRun: defineServiceMethod({
             access: { permission: 'delete' },
             summary: 'Delete a backup run and its stored artifact.',
             input: z.object({ id: z.string() }),

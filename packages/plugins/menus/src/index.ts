@@ -12,15 +12,12 @@ import { buildMenusService } from './service/menus';
 
 /** Typed service shape — used only for the module augmentation. */
 const _menusServiceTyped = {
-    get: defineServiceMethod<
-        { key: string; locale?: string | undefined },
-        MenuItem[] | null
-    >({
+    get: defineServiceMethod({
         access: 'public',
         summary: 'Resolve a configured menu into a nested tree of menu items.',
         input: z.object({ key: z.string(), locale: z.string().optional() }),
         mutates: false,
-        handler: async () => null,
+        handler: async (): Promise<MenuItem[] | null> => null,
     }),
 };
 

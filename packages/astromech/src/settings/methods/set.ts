@@ -1,4 +1,4 @@
-import type { JsonValue, Setting } from '@/types/index';
+import type { Setting } from '@/types/index';
 import { z } from 'zod';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { toSetting } from '../internal/to-setting';
@@ -16,7 +16,7 @@ export const setSetting = defineServiceMethod({
     access: 'settings:update',
     mutates: true,
     idempotent: true,
-    async handler(params: { key: string; value: JsonValue }): Promise<Setting> {
+    async handler(params): Promise<Setting> {
         return toSetting(await createSettingsRepository().set(params.key, params.value));
     },
 });

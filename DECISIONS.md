@@ -423,6 +423,21 @@ wanting wire-named errors maps the thrown `ValidationError` rather than parsing
 itself: the REST route rebases the field paths it reports under `bodyKey` and
 `wireNames` on the way out.
 
+**A method's input types come from its `input` schema.** `defineServiceMethod`
+reads both sides off it: the handler's parameter is `z.output` (defaults applied,
+ISO strings coerced to dates) and what a caller passes is `z.input`, which is
+what `MethodsFor` checks against the hand-written service interface and what the
+domain input types (`EntryCreateData`, `UserUpdateData`, and the rest) are
+declared as. A service interface therefore states what the schema really accepts,
+so `schedule` takes `publishedAt: Date | string`. Rejected: a hand-written type
+per payload with `as unknown as z.ZodType<T>` on the schema to reconcile the two,
+one per module, which drifted the moment they disagreed: `users.create` defaults
+`role`, and its handler read as optional a key the parse had already set. One
+cast survives, in `services/json.ts`, where `fields` is an open record at runtime
+and `JsonObject` to the type system: `z.json()` types it exactly but emits a
+recursive `anyOf` into the method manifest, and `z.custom<JsonValue>()` is a
+shape the OpenAPI document generator refuses to render.
+
 **A method whose subject is the caller declares `sessionScoped`.** `userId` is
 filled from the request context at the scoped handle
 (`policies/scoped-services.ts`), not at the dispatcher, and any caller-supplied

@@ -1,4 +1,5 @@
 import { z } from '@hono/zod-openapi';
+import { jsonObject } from '@/services/json';
 
 /** The three publication states an entry row may carry. */
 export const entryStatusEnum = z.enum(['unpublished', 'published', 'scheduled']);
@@ -24,40 +25,57 @@ const optionalDate = z
     .optional();
 
 /**
+ * The create payload a titleless type takes, and the shape `EntryCreateData`
+ * is read off. Every key is optional here; a titled type narrows `title` on
+ * top of it, which is the one difference between the two.
+ */
+export const createEntryPayloadSchema = z.object({
+    title: z.string().optional(),
+    slug: slugField,
+    locale: z.string().min(1).optional(),
+    fields: jsonObject.optional(),
+    status: entryStatusEnum.optional(),
+    publishedAt: optionalDate,
+});
+
+const titledCreateEntryPayloadSchema = z.object({
+    ...createEntryPayloadSchema.shape,
+    title: z.string().min(1, 'Title is required'),
+});
+
+/**
  * Per-type create schema. A titled type requires a title; a titleless one takes
  * it as optional, and `create` normalizes a missing title to `''` downstream.
  */
 export function createEntrySchema({ titled }: { titled: boolean }) {
-    const title = titled ? z.string().min(1, 'Title is required') : z.string().optional();
-    return z
-        .object({
-            title,
-            slug: slugField,
-            locale: z.string().min(1).optional(),
-            fields: z.record(z.string(), z.unknown()).optional(),
-            status: entryStatusEnum.optional(),
-            publishedAt: optionalDate,
-        })
-        .openapi('CreateEntry');
+    const schema = titled ? titledCreateEntryPayloadSchema : createEntryPayloadSchema;
+    return schema.openapi('CreateEntry');
 }
+
+/**
+ * The update payload a titleless type takes, and the shape `EntryUpdateData`
+ * is read off. A titled type narrows `title` on top of it.
+ */
+export const updateEntryPayloadSchema = z.object({
+    title: z.string().optional(),
+    slug: slugField,
+    fields: jsonObject.optional(),
+    status: entryStatusEnum.optional(),
+    publishedAt: optionalDate,
+});
+
+const titledUpdateEntryPayloadSchema = z.object({
+    ...updateEntryPayloadSchema.shape,
+    title: z.string().min(1, 'Title cannot be empty').optional(),
+});
 
 /**
  * Per-type update schema. Title is always optional; a titled type additionally
  * refuses an empty one ("Title cannot be empty").
  */
 export function updateEntrySchema({ titled }: { titled: boolean }) {
-    const title = titled
-        ? z.string().min(1, 'Title cannot be empty').optional()
-        : z.string().optional();
-    return z
-        .object({
-            title,
-            slug: slugField,
-            fields: z.record(z.string(), z.unknown()).optional(),
-            status: entryStatusEnum.optional(),
-            publishedAt: optionalDate,
-        })
-        .openapi('UpdateEntry');
+    const schema = titled ? titledUpdateEntryPayloadSchema : updateEntryPayloadSchema;
+    return schema.openapi('UpdateEntry');
 }
 
 /** Titled-type update schema, for the bulk paths that address no single type. */
@@ -105,7 +123,7 @@ export const duplicateOverridesSchema = z
         title: z.string().min(1).optional(),
         slug: slugField,
         locale: z.string().min(1).optional(),
-        fields: z.record(z.string(), z.unknown()).optional(),
+        fields: jsonObject.optional(),
         status: entryStatusEnum.optional(),
     })
     .partial();

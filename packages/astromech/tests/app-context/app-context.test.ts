@@ -3,14 +3,14 @@
  * store and cached on it, and the plugin layer assembled over the same object.
  */
 
-import type { AppContext, MethodsFor, Role, User } from '@/types/index';
+import type { AppContext, Role, User } from '@/types/index';
 import { describe, expect, it } from 'vitest';
 import { createAppContext, currentAppContext } from '@/app-context/app-context';
 import { bindCurrent } from '@/app-context/services';
 import { createPluginContext } from '@/plugins/runtime/plugin-runtime';
 import { runWithContext } from '@/request-context/request-context';
 import { defineService } from '@/services/define-service';
-import { noInput } from '@/services/define-service-method';
+import { defineServiceMethod, noInput } from '@/services/define-service-method';
 
 const editor: Role = {
     slug: 'editor',
@@ -49,15 +49,15 @@ const APP_CONTEXT_KEYS = [
 ];
 
 type WhoService = {
-    who(input: undefined): Promise<string | null>;
+    who(): Promise<string | null>;
 };
 
-const who: MethodsFor<WhoService>['who'] = {
+const who = defineServiceMethod({
     access: 'public',
     input: noInput(),
     mutates: false,
-    handler: async (_input, ctx) => ctx.user?.id ?? null,
-};
+    handler: async (_input, ctx): Promise<string | null> => ctx.user?.id ?? null,
+});
 
 const whoService = defineService<WhoService>('who', { who });
 
@@ -98,13 +98,13 @@ describe('bindCurrent', () => {
     it('binds each call to the context of the request it is made in', async () => {
         const service = bindCurrent(whoService);
 
-        expect(await asUser('user-1', () => service.who(undefined))).toBe('user-1');
+        expect(await asUser('user-1', () => service.who())).toBe('user-1');
     });
 
     it('binds to the system context outside a request', async () => {
         const service = bindCurrent(whoService);
 
-        expect(await service.who(undefined)).toBeNull();
+        expect(await service.who()).toBeNull();
     });
 });
 

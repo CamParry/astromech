@@ -51,7 +51,7 @@ export function buildFormsService(
     const { spam, storeMeta, rateLimit } = options;
 
     return {
-        get: defineServiceMethod<{ slug: string }, PublicForm | null>({
+        get: defineServiceMethod({
             access: 'public',
             summary: 'Fetch a published form’s public definition by slug.',
             input: z.object({ slug: z.string() }),
@@ -75,7 +75,7 @@ export function buildFormsService(
             },
         }),
 
-        submit: defineServiceMethod<SubmitInput, SubmitResult>({
+        submit: defineServiceMethod({
             access: 'public',
             summary: 'Validate and store a submission against a published form.',
             input: submitInputSchema,

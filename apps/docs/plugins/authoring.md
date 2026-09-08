@@ -866,7 +866,7 @@ import { RATING_FIELD_TYPE } from '../fields/rating';
 export type RatingDescription = { fieldType: string; usedBy: string[]; max: number };
 
 export const ratingService = {
-    describe: defineServiceMethod<undefined, RatingDescription>({
+    describe: defineServiceMethod({
         access: 'authenticated',
         summary: 'Describe the rating field type and where it is used.',
         input: noInput(),
@@ -888,6 +888,11 @@ throws a validation error in process and answers `422` over HTTP. `output` is
 the same for the result where it is worth declaring, and `mutates` says whether
 the call changes stored state, with the optional `destructive` and `idempotent`
 refining it.
+
+Both input types come from that schema, so the handler's parameter needs no
+annotation: it is the schema's parsed shape, with defaults applied and strings
+coerced, while a caller passes the schema's own input type. Annotate the
+handler's RETURN type instead, since that is what the method's callers see.
 
 `access` says what a caller must hold, in one of four forms:
 

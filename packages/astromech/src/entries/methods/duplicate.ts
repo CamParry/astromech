@@ -16,15 +16,6 @@ import { getEntryRepository } from '../repository/registry';
 import { duplicateOverridesSchema } from '../schema';
 
 /**
- * The `overrides` slot, declared as what it describes rather than inferred: the
- * schema's optional keys parse as `T | undefined`, which
- * `exactOptionalPropertyTypes` keeps distinct from `EntryDuplicateOverrides`'s
- * `Partial<...>`, and the same schema object is what the route validates with.
- */
-const duplicateOverrides =
-    duplicateOverridesSchema as unknown as z.ZodType<EntryDuplicateOverrides>;
-
-/**
  * Duplicates an entry: copies every locale of it into a new entry of the same
  * type, applying any overrides, and indexes the copy's relationships.
  * `overrides.locale` copies that locale alone. Throws if the source does not
@@ -35,14 +26,11 @@ export const duplicateEntry = defineServiceMethod({
     input: z.object({
         type: z.string(),
         id: z.string(),
-        overrides: duplicateOverrides.optional(),
+        overrides: duplicateOverridesSchema.optional(),
     }),
     access: entryGate('create'),
     mutates: true,
-    async handler(
-        params: { type: string; id: string; overrides?: EntryDuplicateOverrides },
-        ctx
-    ): Promise<Entry> {
+    async handler(params, ctx): Promise<Entry> {
         const { type, id, overrides } = params;
 
         const repository = getEntryRepository(type);

@@ -21,14 +21,7 @@ export const getStagedEntry = defineServiceMethod({
     access: entryGate('read'),
     requires: 'staging',
     mutates: false,
-    async handler(
-        params: {
-            type: string;
-            id: string;
-            locale?: string;
-        },
-        ctx
-    ): Promise<Entry | null> {
+    async handler(params, ctx): Promise<Entry | null> {
         const { type, id } = params;
         const repository = getEntryRepository(type);
         assertCapability(ctx.config, type, 'staging');

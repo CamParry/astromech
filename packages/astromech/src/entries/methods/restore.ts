@@ -23,10 +23,7 @@ export const restoreEntries = defineServiceMethod({
     requires: 'trash',
     mutates: true,
     idempotent: true,
-    handler(
-        params: { type: string; id: string | readonly string[] },
-        ctx
-    ): Promise<Entry | Entry[]> {
+    handler(params, ctx): Promise<Entry | Entry[]> {
         return restoreOne(params, ctx);
     },
 });

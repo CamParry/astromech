@@ -14,7 +14,7 @@ export const listUserVersions = defineServiceMethod({
     input: z.object({ id: z.string(), locale: z.string().optional() }),
     access: 'users:read',
     mutates: false,
-    async handler(params: { id: string; locale?: string }, ctx): Promise<UserVersion[]> {
+    async handler(params, ctx): Promise<UserVersion[]> {
         const locale = resolveUserLocale(ctx.config, params.locale);
         const repository = userRepository(ctx.config);
         const current = await repository.getExact(params.id, locale);

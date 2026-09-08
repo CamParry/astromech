@@ -1,11 +1,5 @@
 import type { VisibilityShape } from '@/content/visibility';
-import type {
-    Entry,
-    EntryQueryParams,
-    QueryResult,
-    ReferencesFilter,
-    ResolvedConfig,
-} from '@/types/index';
+import type { Entry, QueryResult, ReferencesFilter, ResolvedConfig } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
 import { applyVisibility, markPublic } from '@/content/visibility';
@@ -44,10 +38,7 @@ export const queryEntries = defineServiceMethod({
     }),
     access: entryGate('read'),
     mutates: false,
-    async handler(
-        params: EntryQueryParams & { type: string | readonly string[] },
-        ctx
-    ): Promise<QueryResult<Entry>> {
+    async handler(params, ctx): Promise<QueryResult<Entry>> {
         // Preview (forward versioning): token-authorized read that bypasses the
         // publish gate. Public shape only; diverges enough to take its own path.
         if (params.previewToken) return queryPreviewEntries(ctx.config, params);

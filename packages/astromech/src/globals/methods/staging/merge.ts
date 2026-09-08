@@ -21,7 +21,7 @@ export const mergeStagedGlobal = defineServiceMethod({
     access: gate('publish'),
     requires: 'staging',
     mutates: true,
-    async handler(params: { key: string; locale?: string }, ctx): Promise<Global> {
+    async handler(params, ctx): Promise<Global> {
         const { global, repository, id, locale, current } = await requireCanonical(
             ctx.config,
             { ...params, capability: 'staging' }

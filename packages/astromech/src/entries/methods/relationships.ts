@@ -20,10 +20,7 @@ export const listIncomingRelationships = defineServiceMethod({
     input: z.object({ type: z.string(), id: z.string() }),
     access: entryGate('read'),
     mutates: false,
-    async handler(
-        params: { type: string; id: string },
-        ctx
-    ): Promise<IncomingRelationship[]> {
+    async handler(params, ctx): Promise<IncomingRelationship[]> {
         const repository = getEntryRepository(params.type);
         await getEntryResource(ctx.config, repository, params.type, params.id);
 

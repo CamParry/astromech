@@ -1,4 +1,4 @@
-import type { JsonObject, User, UserUpdateData } from '@/types/index';
+import type { JsonObject, User } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
@@ -17,16 +17,6 @@ import { toUser } from '../internal/to-user';
 import { updateUserSchema } from '../schema';
 
 /**
- * The `data` slot, declared as what it describes rather than inferred.
- * `updateUserSchema`'s optional keys widen to `| undefined`, which
- * `exactOptionalPropertyTypes` keeps distinct from `UserUpdateData`'s
- * `email?: string`. `ParsedInput` reconciles that at the top level of an
- * argument object; it does not reach inside one, and the same schema object is
- * what parses the call.
- */
-const updateData = updateUserSchema as unknown as z.ZodType<UserUpdateData>;
-
-/**
  * Update a user's profile, role and custom fields. `name`, `email` and `role`
  * are the account row and are written whatever the locale; `fields` addresses
  * one locale's content row, and a locale with none gets one seeded from the
@@ -39,15 +29,12 @@ export const updateUser = defineServiceMethod({
     input: z.object({
         id: z.string(),
         locale: z.string().optional(),
-        data: updateData,
+        data: updateUserSchema,
     }),
     access: 'users:update',
     mutates: true,
     idempotent: true,
-    async handler(
-        params: { id: string; locale?: string; data: UserUpdateData },
-        ctx
-    ): Promise<User> {
+    async handler(params, ctx): Promise<User> {
         const { id, data } = params;
         const locale = resolveUserLocale(ctx.config, params.locale);
         const repository = userRepository(ctx.config);
@@ -62,7 +49,7 @@ export const updateUser = defineServiceMethod({
         if (data.role !== undefined) requireRole(config, data.role);
 
         const definitions = flattenFieldNodes(config.users.fields);
-        const patch = data.fields as Record<string, unknown> | undefined;
+        const patch = data.fields;
         const patchedNames =
             patch === undefined
                 ? []

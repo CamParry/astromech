@@ -5,30 +5,32 @@
  */
 
 import type { AppContext, MethodsFor } from '@/types/index';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 import { z } from 'zod';
 import { ValidationError } from '@/errors/validation';
 import { defineService } from '@/services/define-service';
-import { noInput } from '@/services/define-service-method';
+import { defineServiceMethod, noInput } from '@/services/define-service-method';
 
 type FakeService = {
     get(input: { id: string }): Promise<string>;
     list(input: { limit: number }): Promise<string[]>;
 };
 
-const get: MethodsFor<FakeService>['get'] = {
+const get = defineServiceMethod({
     access: 'public',
     input: z.object({ id: z.string() }),
     mutates: false,
-    handler: async (input, ctx) => `${ctx.method.name}:${input.id}:${ctx.role?.slug}`,
-};
+    handler: async (input, ctx): Promise<string> =>
+        `${ctx.method.name}:${input.id}:${ctx.role?.slug}`,
+});
 
-const list: MethodsFor<FakeService>['list'] = {
+const list = defineServiceMethod({
     access: 'settings:read',
     input: z.object({ limit: z.number() }),
     mutates: false,
-    handler: async (input) => Array.from({ length: input.limit }, (_, i) => String(i)),
-};
+    handler: async (input): Promise<string[]> =>
+        Array.from({ length: input.limit }, (_, i) => String(i)),
+});
 
 /**
  * A context whose lazy member throws on read, so a binding that evaluated the
@@ -106,12 +108,14 @@ function bindOne<Input, Output>(
 describe('defineService input validation', () => {
     it('throws a ValidationError before the handler runs', async () => {
         const handler = vi.fn(async (input: { id: string }) => input.id);
-        const service = bindOne<{ id: string }, string>({
-            access: 'public',
-            input: z.object({ id: z.string() }),
-            mutates: false,
-            handler,
-        });
+        const service = bindOne<{ id: string }, string>(
+            defineServiceMethod({
+                access: 'public',
+                input: z.object({ id: z.string() }),
+                mutates: false,
+                handler,
+            })
+        );
 
         expect(() => service.run({ id: 42 } as unknown as { id: string })).toThrow(
             ValidationError
@@ -120,37 +124,55 @@ describe('defineService input validation', () => {
     });
 
     it('hands the handler the parsed value, defaults applied', async () => {
-        const service = bindOne<{ limit?: number }, number>({
-            access: 'public',
-            input: z.object({ limit: z.number().default(10) }),
-            mutates: false,
-            handler: async (input) => input.limit ?? 0,
-        });
+        const service = bindOne<{ limit?: number | undefined }, number>(defaulted);
 
         expect(await service.run({})).toBe(10);
     });
 
     it('resolves `noInput()` to undefined rather than the empty object', async () => {
-        const service = bindOne<undefined, string>({
-            access: 'public',
-            input: noInput(),
-            mutates: false,
-            handler: async (input) => String(input),
-        });
+        const service = bindOne<unknown, string>(
+            defineServiceMethod({
+                access: 'public',
+                input: noInput(),
+                mutates: false,
+                handler: async (input): Promise<string> => String(input),
+            })
+        );
 
         expect(await service.run(undefined)).toBe('undefined');
     });
 
     it('strips a key the schema does not declare', async () => {
-        const service = bindOne<{ id: string }, Record<string, unknown>>({
-            access: 'public',
-            input: z.object({ id: z.string() }),
-            mutates: false,
-            handler: async (input) => input,
-        });
+        const service = bindOne<{ id: string }, Record<string, unknown>>(
+            defineServiceMethod({
+                access: 'public',
+                input: z.object({ id: z.string() }),
+                mutates: false,
+                handler: async (input): Promise<Record<string, unknown>> => input,
+            })
+        );
 
         expect(
             await service.run({ id: 'a', smuggled: true } as unknown as { id: string })
         ).toEqual({ id: 'a' });
+    });
+});
+
+/** A method whose schema defaults `limit`, so its two input types differ. */
+const defaulted = defineServiceMethod({
+    access: 'public',
+    input: z.object({ limit: z.number().default(10) }),
+    mutates: false,
+    handler: async (input): Promise<number> => input.limit,
+});
+
+describe('defineServiceMethod input types', () => {
+    it('reads a defaulted key as set for the handler and optional for the caller', () => {
+        // The handler runs after the parse, so the default is already applied.
+        expectTypeOf(defaulted.handler).parameter(0).toEqualTypeOf<{ limit: number }>();
+        // A caller passes what the schema accepts, where the key is optional.
+        expectTypeOf(defaulted.input).toExtend<
+            z.ZodType<unknown, { limit?: number | undefined }>
+        >();
     });
 });

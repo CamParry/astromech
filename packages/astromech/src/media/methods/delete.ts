@@ -13,7 +13,7 @@ export const deleteMedia = defineServiceMethod({
     access: 'media:delete',
     mutates: true,
     destructive: true,
-    async handler(params: { id: string }): Promise<void> {
+    async handler(params): Promise<void> {
         const { id } = params;
         const repository = createMediaRepository();
         const driver = getStorageDriver();

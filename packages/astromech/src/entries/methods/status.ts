@@ -36,10 +36,7 @@ export const publishEntries = defineServiceMethod({
     requires: 'statuses',
     mutates: true,
     idempotent: true,
-    handler(
-        params: { type: string; id: string | readonly string[]; locale?: string },
-        ctx
-    ): Promise<Entry | Entry[]> {
+    handler(params, ctx): Promise<Entry | Entry[]> {
         return publishOne(params, ctx);
     },
 });
@@ -55,10 +52,7 @@ export const unpublishEntries = defineServiceMethod({
     // served. `ServiceMethodEffect` names unpublish explicitly.
     destructive: true,
     idempotent: true,
-    handler(
-        params: { type: string; id: string | readonly string[]; locale?: string },
-        ctx
-    ): Promise<Entry | Entry[]> {
+    handler(params, ctx): Promise<Entry | Entry[]> {
         return unpublishOne(params, ctx);
     },
 });
@@ -71,15 +65,7 @@ export const scheduleEntries = defineServiceMethod({
     requires: 'statuses',
     mutates: true,
     idempotent: true,
-    handler(
-        params: {
-            type: string;
-            id: string | readonly string[];
-            publishedAt: Date;
-            locale?: string;
-        },
-        ctx
-    ): Promise<Entry | Entry[]> {
+    handler(params, ctx): Promise<Entry | Entry[]> {
         return scheduleOne(params, ctx);
     },
 });

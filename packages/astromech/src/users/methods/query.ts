@@ -1,4 +1,4 @@
-import type { QueryResult, User, UserQueryParams } from '@/types/index';
+import type { QueryResult, User } from '@/types/index';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { resolveUserLocale, userRepository } from '../internal/locale';
 import { toUser } from '../internal/to-user';
@@ -14,15 +14,15 @@ export const queryUsers = defineServiceMethod({
     input: userQuerySchema,
     access: 'users:read',
     mutates: false,
-    async handler(params: UserQueryParams | undefined, ctx): Promise<QueryResult<User>> {
-        const locale = resolveUserLocale(ctx.config, params?.locale);
+    async handler(params, ctx): Promise<QueryResult<User>> {
+        const locale = resolveUserLocale(ctx.config, params.locale);
         const repository = userRepository(ctx.config);
-        const page = params?.page ?? 1;
-        const limit = params?.limit;
+        const page = params.page ?? 1;
+        const limit = params.limit;
 
         if (limit === 'all') {
             const rows = await repository.list(
-                { search: params?.search, sort: params?.sort },
+                { search: params.search, sort: params.sort },
                 locale
             );
             return { data: rows.map(toUser), pagination: null };
@@ -34,14 +34,14 @@ export const queryUsers = defineServiceMethod({
         const [rows, total] = await Promise.all([
             repository.list(
                 {
-                    search: params?.search,
-                    sort: params?.sort,
+                    search: params.search,
+                    sort: params.sort,
                     limit: perPage,
                     offset,
                 },
                 locale
             ),
-            repository.count({ search: params?.search }),
+            repository.count({ search: params.search }),
         ]);
 
         return {

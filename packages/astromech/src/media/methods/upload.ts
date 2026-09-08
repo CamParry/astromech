@@ -21,7 +21,7 @@ export const uploadMedia = defineServiceMethod({
     binaryInput: true,
     access: 'media:upload',
     mutates: true,
-    async handler(params: { file: File }, ctx): Promise<Media> {
+    async handler(params, ctx): Promise<Media> {
         const { file } = params;
         const driver = getStorageDriver();
 

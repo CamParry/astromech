@@ -11,11 +11,9 @@
 
 import type {
     Entry,
-    EntryStatus,
     EntryVersion,
     Global,
     GlobalVersion,
-    JsonObject,
     JsonValue,
     Media,
     MediaVersion,
@@ -30,6 +28,15 @@ import type {
     QueryResult,
     UserQueryParams,
 } from './query';
+import type {
+    createEntryPayloadSchema,
+    duplicateOverridesSchema,
+    updateEntryPayloadSchema,
+} from '@/entries/schema';
+import type { updateGlobalSchema } from '@/globals/schema';
+import type { updateMediaSchema } from '@/media/schema';
+import type { createUserSchema, updateUserSchema } from '@/users/schema';
+import type { z } from 'zod';
 
 /**
  * Lightweight summary of an inbound relationship row — used by the delete
@@ -74,20 +81,14 @@ export type MediaUsage = {
 
 /**
  * The row `create` writes: the update patch plus the locale the first content
- * row is written for.
+ * row is written for. Read off the titleless schema, since one type is shared
+ * by every entry type.
  *
  * `title` is required for titled types, runtime-enforced by the per-type schema
  * with an identical 422. It stays optional here because `titleField: false`
  * types omit it; Phase 3 typegen restores per-type static strictness.
  */
-export type EntryCreateData = Partial<{
-    title: string;
-    slug: string;
-    locale: string;
-    fields: JsonObject;
-    status: EntryStatus;
-    publishedAt: Date | null;
-}>;
+export type EntryCreateData = z.input<typeof createEntryPayloadSchema>;
 
 /** Caller input for `create`: the type, and the row to write. */
 export type EntryCreateParams = {
@@ -95,14 +96,15 @@ export type EntryCreateParams = {
     data: EntryCreateData;
 };
 
-/** Update payload fragment — fields that can be modified after creation. */
-export type EntryUpdateData = Partial<{
-    title: string;
-    slug: string;
-    fields: JsonObject;
-    status: EntryStatus;
-    publishedAt: Date | null;
-}>;
+/** Update payload fragment: the fields that can be modified after creation. */
+export type EntryUpdateData = z.input<typeof updateEntryPayloadSchema>;
+
+/**
+ * The same patch once the method has parsed it: every coercion applied, so
+ * `publishedAt` is a `Date` and not the ISO string a JSON caller may send. What
+ * the internal writes and the entry update hooks are handed.
+ */
+export type ParsedEntryUpdateData = z.output<typeof updateEntryPayloadSchema>;
 
 /**
  * Caller input for `update`: which entries, which locale, and the patch to
@@ -119,13 +121,7 @@ export type EntryUpdateParams = {
 };
 
 /** Overrides accepted by `duplicate`; `locale` copies that locale alone. */
-export type EntryDuplicateOverrides = Partial<{
-    title: string;
-    slug: string;
-    locale: string;
-    fields: JsonObject;
-    status: EntryStatus;
-}>;
+export type EntryDuplicateOverrides = z.input<typeof duplicateOverridesSchema>;
 
 /** The entries domain's service contract — unified, type-scoped, options-object. */
 export type EntriesService = {
@@ -191,16 +187,17 @@ export type EntriesService = {
         locale?: string;
     }): Promise<Entry[]>;
 
+    /** `publishedAt` is a `Date`, or the offset ISO string one is coerced from. */
     schedule(params: {
         type: string;
         id: string;
-        publishedAt: Date;
+        publishedAt: Date | string;
         locale?: string;
     }): Promise<Entry>;
     schedule(params: {
         type: string;
         id: readonly string[];
-        publishedAt: Date;
+        publishedAt: Date | string;
         locale?: string;
     }): Promise<Entry[]>;
 
@@ -234,14 +231,15 @@ export type EntriesService = {
     issuePreviewToken(params: {
         type: string;
         id: string;
-        expiresAt?: Date | null;
+        /** A `Date`, or the offset ISO string one is coerced from. */
+        expiresAt?: Date | string | null;
     }): Promise<{ token: string }>;
     /** Revoke the entry's preview token. */
     revokePreviewToken(params: { type: string; id: string }): Promise<void>;
 };
 
 /** The patch one `globals.update` call writes. Omitted fields keep their value. */
-export type GlobalUpdateData = { fields: JsonObject };
+export type GlobalUpdateData = z.input<typeof updateGlobalSchema>;
 
 /**
  * The globals domain's service contract. Every method takes one options object
@@ -297,13 +295,14 @@ export type GlobalsService = {
      */
     unpublish(params: { key: string; locale?: string }): Promise<Global>;
     /**
-     * Schedule this locale to publish at `publishedAt`, which must be a date.
-     * Needs the `statuses` capability and an already-saved locale.
+     * Schedule this locale to publish at `publishedAt`: a `Date`, or the offset
+     * ISO string one is coerced from. Needs the `statuses` capability and an
+     * already-saved locale.
      */
     schedule(params: {
         key: string;
         locale?: string;
-        publishedAt: Date;
+        publishedAt: Date | string;
     }): Promise<Global>;
     /**
      * The saved versions of this locale, newest first. Needs the `versioning`
@@ -343,12 +342,7 @@ export type GlobalsService = {
 };
 
 /** What one `media.update` call may write. */
-export type MediaUpdateData = Partial<{
-    title: string | null;
-    alt: string | null;
-    caption: string | null;
-    fields: JsonObject;
-}>;
+export type MediaUpdateData = z.input<typeof updateMediaSchema>;
 
 /**
  * The media domain's service contract. A missing `locale` is the default content
@@ -357,7 +351,7 @@ export type MediaUpdateData = Partial<{
  * throw `MediaNotFoundError` when there is none.
  */
 export type MediaService = {
-    query(params?: MediaQueryParams & { locale?: string }): Promise<QueryResult<Media>>;
+    query(params?: MediaQueryParams): Promise<QueryResult<Media>>;
     get(params: { id: string; locale?: string }): Promise<Media | null>;
     upload(params: { file: File }): Promise<Media>;
     replace(params: { id: string; file: File }): Promise<Media>;
@@ -392,21 +386,11 @@ export type SettingsService = {
     set(params: { key: string; value: JsonValue }): Promise<Setting>;
 };
 
-/** The row `users.create` writes. */
-export type UserCreateData = {
-    email: string;
-    name: string;
-    fields?: JsonObject;
-    role?: string;
-};
+/** The row `users.create` writes. `role` defaults to the least-privileged built-in. */
+export type UserCreateData = z.input<typeof createUserSchema>;
 
 /** What one `users.update` call may write. */
-export type UserUpdateData = Partial<{
-    email: string;
-    name: string;
-    fields: JsonObject;
-    role: string;
-}>;
+export type UserUpdateData = z.input<typeof updateUserSchema>;
 
 /**
  * The users domain's service contract. A missing `locale` is the default content

@@ -17,7 +17,7 @@ import { updateEntryBatch } from './update-batch';
  * type does not support statuses.
  */
 export async function publishEntryBatch(
-    params: { type: string; ids: readonly string[]; locale?: string },
+    params: { type: string; ids: readonly string[]; locale?: string | undefined },
     ctx: AppContext
 ): Promise<Entry[]> {
     assertCapability(ctx.config, params.type, 'statuses');
@@ -38,7 +38,7 @@ export async function publishEntryBatch(
  * type does not support statuses.
  */
 export async function unpublishEntryBatch(
-    params: { type: string; ids: readonly string[]; locale?: string },
+    params: { type: string; ids: readonly string[]; locale?: string | undefined },
     ctx: AppContext
 ): Promise<Entry[]> {
     assertCapability(ctx.config, params.type, 'statuses');
@@ -63,7 +63,7 @@ export async function scheduleEntryBatch(
         type: string;
         ids: readonly string[];
         publishedAt: Date;
-        locale?: string;
+        locale?: string | undefined;
     },
     ctx: AppContext
 ): Promise<Entry[]> {

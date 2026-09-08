@@ -170,14 +170,18 @@ export type AnyServiceMethod = Omit<
 
 /**
  * Map a plugin's service object type to its caller-facing callable signatures.
- * A method declared with an `undefined` input takes no argument, so its
- * parameter is optional and `.method()` is a legal bare call.
+ * A method whose `input` schema is satisfied by no argument at all (`noInput()`,
+ * or an object of optional keys) takes an optional parameter, so `.method()` is
+ * a legal bare call.
  */
 export type ServiceInterface<T> = {
-    [K in keyof T]: T[K] extends ServiceMethod<infer I, infer O, PluginContext>
+    [K in keyof T]: T[K] extends ServiceMethod<infer I, infer O, PluginContext, infer _P>
         ? undefined extends I
             ? (input?: I) => Promise<O>
-            : (input: I) => Promise<O>
+            : // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+              {} extends I
+              ? (input?: I) => Promise<O>
+              : (input: I) => Promise<O>
         : (input?: unknown) => Promise<unknown>;
 };
 

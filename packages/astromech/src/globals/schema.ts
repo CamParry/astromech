@@ -1,19 +1,14 @@
-import type { JsonObject } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { scheduleEntrySchema } from '@/entries/schema';
-
-/**
- * A field patch. Typed as `JsonObject` to match `GlobalUpdateData`, while the
- * runtime schema stays an open record: whether a value fits its field is
- * `parseFields`' job, not this schema's.
- */
-const fields = z.record(z.string(), z.unknown()) as unknown as z.ZodType<JsonObject>;
+import { jsonObject } from '@/services/json';
 
 /**
  * The payload a `globals.update` call carries. A global has no title, slug or
  * status to write: status moves through `publish`/`unpublish`/`schedule`.
  */
-export const updateGlobalSchema = z.object({ fields }).openapi('UpdateGlobal');
+export const updateGlobalSchema = z
+    .object({ fields: jsonObject })
+    .openapi('UpdateGlobal');
 
 /**
  * `publishedAt` for `globals.schedule`. The entries schema, imported rather than

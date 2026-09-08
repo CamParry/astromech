@@ -4,7 +4,7 @@ import type {
     AppContext,
     Entry,
     EntryCreateContext,
-    EntryUpdateData,
+    ParsedEntryUpdateData,
     ResolvedConfig,
     ResolvedEntryType,
     User,
@@ -43,15 +43,16 @@ export async function updateEntryBatch(
     params: {
         type: string;
         ids: readonly string[];
-        locale?: string;
+        locale?: string | undefined;
         /** Write each entry's staged change for this locale instead of its canonical row. */
-        staged?: boolean;
+        staged?: boolean | undefined;
         /**
          * Write a locale with no content row yet, creating it. Only `update` sets
          * it: a status change addresses a row that must already exist.
          */
-        createMissingLocale?: boolean;
-        data: EntryUpdateData;
+        createMissingLocale?: boolean | undefined;
+        /** The patch, as `entries.update` parsed it. */
+        data: ParsedEntryUpdateData;
     },
     ctx: AppContext
 ): Promise<Entry[]> {
@@ -215,7 +216,7 @@ async function updateOne(params: {
     repository: EntryRepository;
     entryType: ResolvedEntryType;
     currentEntry: EntryRecord;
-    data: EntryUpdateData;
+    data: ParsedEntryUpdateData;
     user: User | null;
     /** Present when the write targets the staged change rather than the canonical. */
     staging: NonNullable<EntryRepository['staging']> | undefined;
@@ -309,7 +310,7 @@ async function planTranslation(params: {
     entryType: ResolvedEntryType;
     id: string;
     locale: string;
-    data: EntryUpdateData;
+    data: ParsedEntryUpdateData;
     user: User | null;
 }): Promise<TranslationWrite> {
     const { config, repository, entryType, id, locale, data, user } = params;

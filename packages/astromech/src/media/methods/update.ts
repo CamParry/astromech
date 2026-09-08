@@ -1,5 +1,5 @@
 import type { MediaRow } from '../repository';
-import type { JsonObject, Media, MediaUpdateData } from '@/types/index';
+import type { JsonObject, Media } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
@@ -20,16 +20,6 @@ import { updateMediaSchema } from '../schema';
 const VERSIONED_COLUMNS = ['title', 'alt', 'caption'] as const;
 
 /**
- * The `data` slot, declared as what it describes rather than inferred.
- * `updateMediaSchema`'s optional keys widen to `| undefined`, which
- * `exactOptionalPropertyTypes` keeps distinct from `MediaUpdateData`'s
- * `title?: string | null`. `ParsedInput` reconciles that at the top level of an
- * argument object; it does not reach inside one, and the same schema object is
- * what parses the call.
- */
-const updateData = updateMediaSchema as unknown as z.ZodType<MediaUpdateData>;
-
-/**
  * Update one locale of a media item's authored content. A locale with no row yet
  * gets one seeded from the default-locale row with the patch applied over it, so
  * a read does not change shape when the translation is created.
@@ -41,15 +31,12 @@ export const updateMedia = defineServiceMethod({
     input: z.object({
         id: z.string(),
         locale: z.string().optional(),
-        data: updateData,
+        data: updateMediaSchema,
     }),
     access: 'media:update',
     mutates: true,
     idempotent: true,
-    async handler(
-        params: { id: string; locale?: string; data: MediaUpdateData },
-        ctx
-    ): Promise<Media> {
+    async handler(params, ctx): Promise<Media> {
         const { id, data } = params;
         const locale = resolveMediaLocale(ctx.config, params.locale);
         const repository = mediaRepository(ctx.config);
@@ -63,7 +50,7 @@ export const updateMedia = defineServiceMethod({
         const config = ctx.config;
         const definitions = flattenFieldNodes(config.media.fields ?? []);
 
-        const patch = data.fields as Record<string, unknown> | undefined;
+        const patch = data.fields;
         const patchedNames =
             patch === undefined
                 ? []

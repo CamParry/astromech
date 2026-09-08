@@ -31,17 +31,7 @@ export const getEntry = defineServiceMethod({
     }),
     access: entryGate('read'),
     mutates: false,
-    async handler(
-        params: {
-            type: string;
-            id: string;
-            locale?: string;
-            full?: boolean;
-            previewToken?: string;
-            staged?: boolean;
-        },
-        ctx
-    ): Promise<Entry | null> {
+    async handler(params, ctx): Promise<Entry | null> {
         const { type, id } = params;
 
         // Preview (forward versioning): token-authorized, publish-gate-bypassed.

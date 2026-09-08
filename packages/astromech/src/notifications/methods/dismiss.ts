@@ -16,7 +16,7 @@ export const dismissNotification = defineServiceMethod({
     mutates: true,
     destructive: true,
     idempotent: true,
-    async handler(params: { id: string }, ctx): Promise<void> {
+    async handler(params, ctx): Promise<void> {
         await createNotificationRepository().dismiss(subjectId(ctx.user), params.id);
     },
 });

@@ -19,14 +19,7 @@ export const restoreGlobalVersion = defineServiceMethod({
     requires: 'versioning',
     mutates: true,
     idempotent: true,
-    async handler(
-        params: {
-            key: string;
-            locale?: string;
-            versionId: string;
-        },
-        ctx
-    ): Promise<Global> {
+    async handler(params, ctx): Promise<Global> {
         const { repository, id, locale, current } = await requireCanonical(ctx.config, {
             key: params.key,
             locale: params.locale,

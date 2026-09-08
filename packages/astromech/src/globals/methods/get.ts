@@ -29,10 +29,7 @@ export const getGlobal = defineServiceMethod({
     }),
     access: readGate,
     mutates: false,
-    async handler(
-        params: { key: string; locale?: string; full?: boolean; staged?: boolean },
-        ctx
-    ): Promise<Global | null> {
+    async handler(params, ctx): Promise<Global | null> {
         const global = resolveGlobal(ctx.config, params.key);
         const locale = resolveLocale(ctx.config, global, params.locale);
 

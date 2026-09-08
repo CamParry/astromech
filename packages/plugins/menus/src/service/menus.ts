@@ -97,10 +97,7 @@ export function buildMenusService(
     const configuredKeys = new Set(configs.map((c) => c.key));
 
     return {
-        get: defineServiceMethod<
-            { key: string; locale?: string | undefined },
-            MenuItem[] | null
-        >({
+        get: defineServiceMethod({
             access: 'public',
             summary: 'Resolve a configured menu into a nested tree of menu items.',
             input: z.object({ key: z.string(), locale: z.string().optional() }),

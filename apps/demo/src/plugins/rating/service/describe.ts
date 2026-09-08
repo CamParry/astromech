@@ -15,7 +15,7 @@ export type RatingDescription = {
 };
 
 export const ratingService = {
-    describe: defineServiceMethod<undefined, RatingDescription>({
+    describe: defineServiceMethod({
         access: 'authenticated',
         summary: 'Describe the rating field type and where it is used.',
         input: noInput(),

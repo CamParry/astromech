@@ -25,7 +25,7 @@ export type ChatSession = {
 /** The `getSession` / `clearSession` service methods for the signed-in user's chat. */
 export function buildSessionsService(options: ResolvedAssistantOptions) {
     return {
-        getSession: defineServiceMethod<undefined, ChatSession>({
+        getSession: defineServiceMethod({
             access: { permission: 'use' },
             summary: 'Read back the signed-in user’s conversation with the assistant.',
             input: noInput(),
@@ -49,7 +49,7 @@ export function buildSessionsService(options: ResolvedAssistantOptions) {
 
         // Answers `null`: there is no result, and that is what RPC puts on the
         // wire for a handler that returns nothing.
-        clearSession: defineServiceMethod<undefined, null>({
+        clearSession: defineServiceMethod({
             access: { permission: 'use' },
             summary: 'Discard the conversation and start a new one.',
             input: noInput(),

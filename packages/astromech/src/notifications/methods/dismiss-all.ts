@@ -12,7 +12,7 @@ export const dismissAllNotifications = defineServiceMethod({
     mutates: true,
     destructive: true,
     idempotent: true,
-    async handler(_params: unknown, ctx): Promise<void> {
+    async handler(_params, ctx): Promise<void> {
         await createNotificationRepository().dismissAll(subjectId(ctx.user));
     },
 });

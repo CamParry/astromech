@@ -10,7 +10,7 @@ export const countNotifications = defineServiceMethod({
     access: 'public',
     sessionScoped: true,
     mutates: false,
-    async handler(_params: unknown, ctx): Promise<number> {
+    async handler(_params, ctx): Promise<number> {
         return createNotificationRepository().countByUser(subjectId(ctx.user));
     },
 });

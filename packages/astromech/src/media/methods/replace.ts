@@ -19,7 +19,7 @@ export const replaceMedia = defineServiceMethod({
     access: 'media:upload',
     mutates: true,
     destructive: true,
-    async handler(params: { id: string; file: File }, ctx): Promise<Media> {
+    async handler(params, ctx): Promise<Media> {
         const { id, file } = params;
         const repository = createMediaRepository({
             defaultLocale: defaultContentLocale(ctx.config),

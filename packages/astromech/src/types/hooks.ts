@@ -6,6 +6,7 @@
 
 import type { Entry, EntryStatus, Global, JsonObject, User } from './domain';
 import type { PluginContext } from './plugins';
+import type { ParsedEntryUpdateData } from './services';
 
 /**
  * `data` is the row about to be written, not a copy of it: a `beforeCreate`
@@ -32,14 +33,8 @@ export type EntryAfterCreateContext = EntryCreateContext & {
 export type EntryUpdateContext = {
     type: string;
     entry: Entry;
-    data: Partial<{
-        title: string;
-        slug: string;
-        locale: string;
-        fields: JsonObject;
-        status: EntryStatus;
-        publishedAt: Date | null;
-    }>;
+    /** The patch being written, as `entries.update` parsed it. */
+    data: ParsedEntryUpdateData;
     user: User | null;
 };
 

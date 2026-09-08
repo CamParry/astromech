@@ -40,6 +40,11 @@ is guessable from any other.
   already parsed it, on every call path. Parse only a slot the method's schema
   cannot express, such as an entry type's own create schema.
 
+- **A handler's parameter is inferred from `input`, never annotated.** The
+  schema is the source of both input types: the handler receives `z.output`,
+  and `z.input` is what a caller passes and what the domain input types in
+  `types/services.ts` are declared as. Annotate the return type only.
+
 A REST route keeps a flat body under this: the route spec declares
 `bodyKey: 'data'` and the generated client sends that key alone.
 

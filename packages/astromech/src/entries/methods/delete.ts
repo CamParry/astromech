@@ -21,10 +21,7 @@ export const deleteEntries = defineServiceMethod({
     access: entryGate('delete'),
     mutates: true,
     destructive: true,
-    handler(
-        params: { type: string; id: string | readonly string[] },
-        ctx
-    ): Promise<void> {
+    handler(params, ctx): Promise<void> {
         return deleteOne(params, ctx);
     },
 });

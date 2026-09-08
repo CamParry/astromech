@@ -1,4 +1,4 @@
-import type { Media, MediaQueryParams, QueryResult } from '@/types/index';
+import type { Media, QueryResult } from '@/types/index';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { mediaRepository, resolveMediaLocale } from '../internal/locale';
 import { toMedia } from '../internal/to-media';
@@ -14,14 +14,11 @@ export const queryMedia = defineServiceMethod({
     input: mediaQuerySchema,
     access: 'media:read',
     mutates: false,
-    async handler(
-        params: (MediaQueryParams & { locale?: string }) | undefined,
-        ctx
-    ): Promise<QueryResult<Media>> {
-        const locale = resolveMediaLocale(ctx.config, params?.locale);
+    async handler(params, ctx): Promise<QueryResult<Media>> {
+        const locale = resolveMediaLocale(ctx.config, params.locale);
         const repository = mediaRepository(ctx.config);
-        const page = params?.page ?? 1;
-        const limit = params?.limit;
+        const page = params.page ?? 1;
+        const limit = params.limit;
 
         if (limit === 'all') {
             const rows = await repository.list(params, undefined, locale);

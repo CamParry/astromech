@@ -14,7 +14,7 @@ export const getMedia = defineServiceMethod({
     input: z.object({ id: z.string(), locale: z.string().optional() }),
     access: 'media:read',
     mutates: false,
-    async handler(params: { id: string; locale?: string }, ctx): Promise<Media | null> {
+    async handler(params, ctx): Promise<Media | null> {
         const locale = resolveMediaLocale(ctx.config, params.locale);
         const row = await mediaRepository(ctx.config).get(params.id, locale);
         return row ? toMedia(ctx.config, row) : null;

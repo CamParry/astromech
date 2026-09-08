@@ -1,4 +1,4 @@
-import type { Entry, EntryCreateData } from '@/types/index';
+import type { Entry } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
 import { isPublicBranded, PublicShapeWriteError } from '@/content/visibility';
@@ -13,18 +13,7 @@ import { indexEntryRelationships } from '../internal/relationships';
 import { deriveSlug } from '../internal/slug';
 import { toStoredFields } from '../internal/stored-fields';
 import { getEntryRepository } from '../repository/registry';
-import { createEntrySchema } from '../schema';
-
-/**
- * The `data` slot, declared as what it describes rather than inferred: the
- * schema parses `fields` as `Record<string, unknown>`, which
- * `exactOptionalPropertyTypes` keeps distinct from `EntryCreateData`'s
- * `fields?: JsonObject`. Titleless, since one schema covers every type here;
- * the handler re-parses under the type's own, which is the stricter one.
- */
-const createData = createEntrySchema({
-    titled: false,
-}) as unknown as z.ZodType<EntryCreateData>;
+import { createEntryPayloadSchema, createEntrySchema } from '../schema';
 
 /**
  * Creates an entry of the given type: validates input, fills defaults, runs
@@ -32,10 +21,12 @@ const createData = createEntrySchema({
  */
 export const createEntry = defineServiceMethod({
     summary: 'Create an entry.',
-    input: z.object({ type: z.string(), data: createData }),
+    // The titleless payload, since one schema covers every type here; the
+    // handler re-parses under the type's own, which is the stricter one.
+    input: z.object({ type: z.string(), data: createEntryPayloadSchema }),
     access: entryGate('create'),
     mutates: true,
-    async handler(params: { type: string; data: EntryCreateData }, ctx): Promise<Entry> {
+    async handler(params, ctx): Promise<Entry> {
         const { type, data } = params;
 
         if (data.fields !== undefined && isPublicBranded(data.fields)) {

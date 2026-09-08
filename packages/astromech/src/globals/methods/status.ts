@@ -20,7 +20,7 @@ export const publishGlobal = defineServiceMethod({
     requires: 'statuses',
     mutates: true,
     idempotent: true,
-    handler(params: { key: string; locale?: string }, ctx): Promise<Global> {
+    handler(params, ctx): Promise<Global> {
         return writeStatus(ctx.config, params, ctx.user, (current) => ({
             status: 'published',
             publishedAt: current.publishedAt ?? new Date(),
@@ -39,7 +39,7 @@ export const unpublishGlobal = defineServiceMethod({
     // served. `ServiceMethodEffect` names unpublish explicitly.
     destructive: true,
     idempotent: true,
-    handler(params: { key: string; locale?: string }, ctx): Promise<Global> {
+    handler(params, ctx): Promise<Global> {
         return writeStatus(ctx.config, params, ctx.user, () => ({
             status: 'unpublished',
             publishedAt: null,
@@ -55,10 +55,7 @@ export const scheduleGlobal = defineServiceMethod({
     requires: 'statuses',
     mutates: true,
     idempotent: true,
-    handler(
-        params: { key: string; locale?: string; publishedAt: Date },
-        ctx
-    ): Promise<Global> {
+    handler(params, ctx): Promise<Global> {
         return writeStatus(ctx.config, params, ctx.user, () => ({
             status: 'scheduled',
             publishedAt: params.publishedAt,
@@ -72,7 +69,7 @@ export const scheduleGlobal = defineServiceMethod({
  */
 async function writeStatus(
     config: ResolvedConfig,
-    params: { key: string; locale?: string },
+    params: { key: string; locale?: string | undefined },
     user: User | null,
     write: (current: GlobalRow) => ContentWrite
 ): Promise<Global> {

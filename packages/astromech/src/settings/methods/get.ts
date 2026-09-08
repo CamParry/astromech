@@ -13,10 +13,7 @@ export const getSetting = defineServiceMethod({
     }),
     access: 'settings:read',
     mutates: false,
-    async handler(
-        params: { key: string; full?: boolean },
-        ctx
-    ): Promise<JsonValue | null> {
+    async handler(params, ctx): Promise<JsonValue | null> {
         const { key } = params;
         const full = params.full ?? false;
 

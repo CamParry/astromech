@@ -14,9 +14,9 @@ export const allSettings = defineServiceMethod({
     input: z.object({ full: z.boolean().optional() }),
     access: 'settings:read',
     mutates: false,
-    async handler(params: { full?: boolean } | undefined, ctx): Promise<Setting[]> {
+    async handler(params, ctx): Promise<Setting[]> {
         const rows = await createSettingsRepository().all();
-        const full = params?.full ?? false;
+        const full = params.full ?? false;
         const publicKeys = ctx.config.publicSettingKeys;
         return rows
             .filter((row) => full || isPublicSettingKey(row.key, publicKeys))

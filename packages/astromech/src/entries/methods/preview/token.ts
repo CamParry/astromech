@@ -27,14 +27,7 @@ export const issuePreviewToken = defineServiceMethod({
     access: entryGate('update'),
     requires: 'staging',
     mutates: true,
-    async handler(
-        params: {
-            type: string;
-            id: string;
-            expiresAt?: Date | null;
-        },
-        ctx
-    ): Promise<{ token: string }> {
+    async handler(params, ctx): Promise<{ token: string }> {
         const { type, id } = params;
         assertCapability(ctx.config, type, 'staging');
         const repository = getEntryRepository(type);
@@ -71,7 +64,7 @@ export const revokePreviewToken = defineServiceMethod({
     access: entryGate('update'),
     requires: 'staging',
     mutates: true,
-    async handler(params: { type: string; id: string }, ctx): Promise<void> {
+    async handler(params, ctx): Promise<void> {
         const { type, id } = params;
         assertCapability(ctx.config, type, 'staging');
         const repository = getEntryRepository(type);

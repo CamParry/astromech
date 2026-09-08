@@ -86,9 +86,9 @@ export async function getPreviewEntry(
     params: {
         type: string;
         id: string;
-        locale?: string;
-        previewToken?: string;
-        staged?: boolean;
+        locale?: string | undefined;
+        previewToken?: string | undefined;
+        staged?: boolean | undefined;
     }
 ): Promise<Entry | null> {
     const { type, id } = params;

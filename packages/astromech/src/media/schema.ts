@@ -1,27 +1,21 @@
-import type { MediaQueryParams } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { jsonObject } from '@/services/json';
 
 export const updateMediaSchema = z
     .object({
         alt: z.string().nullable().optional(),
         title: z.string().nullable().optional(),
         caption: z.string().nullable().optional(),
-        fields: z.record(z.string(), z.unknown()).optional(),
+        fields: jsonObject.optional(),
     })
     .openapi('UpdateMedia');
 
 const sortDirection = z.enum(['asc', 'desc']);
 
-/**
- * The `where` filter, declared as what it describes rather than inferred. Its
- * `mimeType` key widens to `| undefined`, which `exactOptionalPropertyTypes`
- * keeps distinct from `MediaQueryParams`' `mimeType?: MediaMimeTypeFilter`.
- * `ParsedInput` reconciles that at the top level of an argument object; it does
- * not reach inside one.
- */
+/** The `where` filter a media query accepts: one mime-type class. */
 const where = z.object({
     mimeType: z.enum(['images', 'videos', 'documents', 'other']).optional(),
-}) as unknown as z.ZodType<NonNullable<MediaQueryParams['where']>>;
+});
 
 /**
  * Call schema for `media.query` — mirrors `MediaQueryParams`. Not a request body:

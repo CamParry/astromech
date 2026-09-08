@@ -22,14 +22,7 @@ export const restoreMediaVersion = defineServiceMethod({
     }),
     access: 'media:update',
     mutates: true,
-    async handler(
-        params: {
-            id: string;
-            locale?: string;
-            versionId: string;
-        },
-        ctx
-    ): Promise<Media> {
+    async handler(params, ctx): Promise<Media> {
         const { id } = params;
         const locale = resolveMediaLocale(ctx.config, params.locale);
         const repository = mediaRepository(ctx.config);

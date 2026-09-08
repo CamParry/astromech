@@ -21,10 +21,7 @@ export const deleteStagedEntry = defineServiceMethod({
     access: entryGate('update'),
     requires: 'staging',
     mutates: true,
-    async handler(
-        params: { type: string; id: string; locale?: string },
-        ctx
-    ): Promise<void> {
+    async handler(params, ctx): Promise<void> {
         const { type, id } = params;
         const repository = getEntryRepository(type);
         assertCapability(ctx.config, type, 'staging');

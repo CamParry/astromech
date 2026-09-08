@@ -12,7 +12,7 @@ export const listNotifications = defineServiceMethod({
     access: 'public',
     sessionScoped: true,
     mutates: false,
-    async handler(_params: unknown, ctx): Promise<Notification[]> {
+    async handler(_params, ctx): Promise<Notification[]> {
         const rows = await createNotificationRepository().listByUser(subjectId(ctx.user));
         return rows.map(toNotification);
     },

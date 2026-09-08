@@ -26,7 +26,7 @@ export const listMediaUsage = defineServiceMethod({
     input: z.object({ id: z.string() }),
     access: 'media:read',
     mutates: false,
-    async handler(params: { id: string }, ctx): Promise<MediaUsage[]> {
+    async handler(params, ctx): Promise<MediaUsage[]> {
         const { id } = params;
         const defaultLocale = defaultContentLocale(ctx.config);
         const row = await createMediaRepository({ defaultLocale }).get(id);

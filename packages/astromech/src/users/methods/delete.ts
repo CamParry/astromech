@@ -11,7 +11,7 @@ export const deleteUser = defineServiceMethod({
     access: 'users:delete',
     mutates: true,
     destructive: true,
-    async handler(params: { id: string }): Promise<void> {
+    async handler(params): Promise<void> {
         // One transaction: author columns pointing at a row that is gone, or a
         // row gone with its authorship intact, are both states nothing repairs.
         await transaction(async () => {

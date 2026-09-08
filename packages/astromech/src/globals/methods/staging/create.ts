@@ -1,4 +1,4 @@
-import type { Global, GlobalUpdateData, JsonObject } from '@/types/index';
+import type { Global, JsonObject } from '@/types/index';
 import { mergePatch } from '@/fields/values';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { StagedGlobalExistsError } from '../../errors';
@@ -18,10 +18,7 @@ export const createStagedGlobal = defineServiceMethod({
     access: gate('update'),
     requires: 'staging',
     mutates: true,
-    async handler(
-        params: { key: string; locale?: string; data?: GlobalUpdateData },
-        ctx
-    ): Promise<Global> {
+    async handler(params, ctx): Promise<Global> {
         const { repository, id, locale, current } = await requireCanonical(ctx.config, {
             key: params.key,
             locale: params.locale,

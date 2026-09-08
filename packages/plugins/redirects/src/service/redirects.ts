@@ -13,7 +13,7 @@ export const redirectsService = {
      * Resolve a request path to its redirect target. Public so a frontend
      * middleware can call it without a session.
      */
-    lookup: defineServiceMethod<{ from: string }, RedirectMatch | null>({
+    lookup: defineServiceMethod({
         access: 'public',
         summary: 'Look up the redirect target for an incoming path.',
         input: z.object({ from: z.string() }),

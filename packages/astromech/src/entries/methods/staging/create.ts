@@ -23,10 +23,7 @@ export const createStagedEntry = defineServiceMethod({
     access: entryGate('update'),
     requires: 'staging',
     mutates: true,
-    async handler(
-        params: { type: string; id: string; locale?: string },
-        ctx
-    ): Promise<Entry> {
+    async handler(params, ctx): Promise<Entry> {
         const { type, id } = params;
 
         const repository = getEntryRepository(type);

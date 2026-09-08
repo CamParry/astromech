@@ -49,12 +49,12 @@ export type MethodContext = {
 };
 
 /**
- * `Input` as Zod types a parse of it: an optional property reads `T | undefined`,
- * which `exactOptionalPropertyTypes` keeps distinct from the `T` a hand-written
- * service interface declares. A conditional, so `input` is never an inference
- * site — a method's `Input` comes from its handler's parameter alone.
+ * A service interface's parameter as a Zod schema's call side expresses it: an
+ * optional property reads `T | undefined`, which `exactOptionalPropertyTypes`
+ * keeps distinct from the `T` a hand-written interface declares. Used to
+ * compare the two in {@link MethodsFor}, and nowhere else.
  */
-export type ParsedInput<Input> = Input extends object
+type CallInput<Input> = Input extends object
     ? { [K in keyof Input]: undefined extends Input[K] ? Input[K] | undefined : Input[K] }
     : Input;
 
@@ -66,19 +66,31 @@ export type ParsedInput<Input> = Input extends object
  *
  * `Ctx` is unbounded because the plugin layer narrows `config`, `entries` and
  * `globals`, so `PluginContext` is not a subtype of `AppContext`.
+ *
+ * `Input` and `Parsed` are the two sides of the `input` schema: a defaulted or
+ * coercing key is optional to the caller and set by the time the handler reads
+ * it. They are the same type for a schema that neither defaults nor transforms,
+ * which is why `Parsed` defaults to `Input`.
  */
-export type ServiceMethod<Input = unknown, Output = unknown, Ctx = AppContext> = {
+export type ServiceMethod<
+    Input = unknown,
+    Output = unknown,
+    Ctx = AppContext,
+    Parsed = Input,
+> = {
     /** What the caller must hold to call this method. */
     access: ServiceMethodAccess<Input>;
-    handler: (input: Input, ctx: Ctx & MethodContext) => Promise<Output> | Output;
+    handler: (input: Parsed, ctx: Ctx & MethodContext) => Promise<Output> | Output;
     /** One-line summary for humans / the AI tool-loop. */
     summary?: string;
     /**
      * Zod schema for the call input — the METHOD schema, not the HTTP body: a
      * transport putting part of it in the path (`settings.set({ key, value })`)
-     * still declares the whole argument object. Parsed before the handler runs.
+     * still declares the whole argument object. Parsed before the handler runs,
+     * so it is the source of both input types: `Input` is what a caller passes
+     * (`z.input`), `Parsed` what the handler receives (`z.output`).
      */
-    input: z.ZodType<ParsedInput<Input>>;
+    input: z.ZodType<Parsed, Input>;
     /** Zod schema for the result, where worth declaring. */
     output?: z.ZodType<Output>;
     /** The capability the target must declare; absent ⇒ none. */
@@ -109,6 +121,21 @@ export type ServiceMethod<Input = unknown, Output = unknown, Ctx = AppContext> =
 } & ServiceMethodEffect;
 
 /**
+ * A method as it is AUTHORED. `input` stays the concrete schema, so both input
+ * types are read off it and the handler's parameter needs no annotation. The
+ * two are separate positions for a reason: `z.input<S>` and `z.output<S>` are
+ * not inference sites, so the schema alone decides them, where a bare
+ * `ServiceMethod` would let `access` decide `Input` instead.
+ */
+export type ServiceMethodDefinition<S extends z.ZodType, Output, Ctx = AppContext> = Omit<
+    ServiceMethod<z.input<S>, Output, Ctx, z.output<S>>,
+    'handler' | 'input'
+> & {
+    input: S;
+    handler: (input: z.output<S>, ctx: Ctx & MethodContext) => Promise<Output> | Output;
+};
+
+/**
  * The interim handler-less form the readers (the manifest generator,
  * `permissionsFor`, `scopedServices`, the REST mount) are typed over while the
  * core catalogues still declare no handlers. Deleted when they all do.
@@ -124,10 +151,34 @@ export type ServiceMethodContract = Omit<
     input: z.ZodType;
 };
 
-/** The method record a hand-written service interface demands. */
+/**
+ * One method as the interface it is assembled under checks it. The comparison
+ * is the CALL side alone: the schema must accept what the interface declares,
+ * and answer what it promises.
+ *
+ * The handler's parameter and the schema's parsed type are the method's own
+ * business (a schema that defaults a key hands the handler a shape no interface
+ * states), so both are widened out of the comparison the way `AnyServiceMethod`
+ * widens them: `never` where the position is contravariant, `unknown` where it
+ * is covariant. `access` is not part of an interface's contract at all.
+ */
+type ServiceMethodFor<Input, Output, Ctx> = Omit<
+    ServiceMethod<never, Output, Ctx>,
+    'handler' | 'input'
+> & {
+    handler: (input: never, ctx: Ctx & MethodContext) => Promise<Output> | Output;
+    input: z.ZodType<unknown, CallInput<Input>>;
+};
+
+/**
+ * The method record a hand-written service interface demands. A method the
+ * interface declares with no parameter reads `Input = unknown`, which every
+ * schema's call type satisfies, so `ctx.notifications.count()` stays a legal
+ * bare call whatever its schema.
+ */
 export type MethodsFor<S, Ctx = AppContext> = {
     [K in keyof S]: S[K] extends (input: infer I) => infer R
-        ? ServiceMethod<I, Awaited<R>, Ctx>
+        ? ServiceMethodFor<I, Awaited<R>, Ctx>
         : never;
 };
 

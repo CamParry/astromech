@@ -30,10 +30,7 @@ export const trashEntries = defineServiceMethod({
     // `restore` undoes it. `emptyTrash` and `delete` are the ones that lose
     // data, and both declare the flag.
     idempotent: true,
-    handler(
-        params: { type: string; id: string | readonly string[] },
-        ctx
-    ): Promise<void> {
+    handler(params, ctx): Promise<void> {
         return trashOne(params, ctx);
     },
 });
@@ -50,7 +47,7 @@ export const emptyTrash = defineServiceMethod({
     mutates: true,
     destructive: true,
     idempotent: true,
-    async handler(params: { type: string }, ctx): Promise<void> {
+    async handler(params, ctx): Promise<void> {
         const { type } = params;
         const repository = getEntryRepository(type);
         assertCapability(ctx.config, type, 'trash');

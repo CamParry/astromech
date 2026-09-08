@@ -26,15 +26,7 @@ export const restoreEntryVersion = defineServiceMethod({
     requires: 'versioning',
     mutates: true,
     idempotent: true,
-    async handler(
-        params: {
-            type: string;
-            id: string;
-            versionId: string;
-            locale?: string;
-        },
-        ctx
-    ): Promise<Entry> {
+    async handler(params, ctx): Promise<Entry> {
         const { type, id, versionId } = params;
 
         const repository = getEntryRepository(type);
