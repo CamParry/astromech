@@ -5,7 +5,7 @@
 
 import type { AudienceContext } from '@/content/visibility';
 import type { Entry, Field } from '@/types/index';
-import { applyVisibility, markPublic } from '@/content/visibility';
+import { applyVisibility } from '@/content/visibility';
 import { createEntriesTableRepository } from '../repository/entries-table';
 
 /** SHA-256 hex of a token (crypto.subtle — Workers-safe). */
@@ -43,11 +43,10 @@ export function previewAudience(): AudienceContext {
 
 /** Apply the preview projection (public shape, publish-gate bypassed). */
 export function projectPreview(entry: Entry, fields: Field[]): Entry | null {
-    const filtered = applyVisibility(entry, {
+    return applyVisibility(entry, {
         shape: 'public',
         preview: true,
         fields,
         audience: previewAudience(),
     });
-    return filtered ? markPublic(filtered) : null;
 }

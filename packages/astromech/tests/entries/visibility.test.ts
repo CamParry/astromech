@@ -7,12 +7,7 @@
 import type { AudienceContext, VisibilityOptions } from '@/content/visibility';
 import type { Entry, Field } from '@/types/index';
 import { describe, expect, it } from 'vitest';
-import {
-    applyVisibility,
-    isPublicBranded,
-    markPublic,
-    PublicShapeWriteError,
-} from '@/content/visibility';
+import { applyVisibility } from '@/content/visibility';
 
 const NOW = new Date('2026-06-15T12:00:00Z');
 
@@ -303,74 +298,5 @@ describe('relation values', () => {
         const entry = publishedEntry({ fields: { author: 'author-1' } });
         const result = applyVisibility(entry, publicOpts(privateRel));
         expect(result?.fields).not.toHaveProperty('author');
-    });
-});
-
-describe('public brand helpers', () => {
-    it('markPublic stamps a non-enumerable brand', () => {
-        const obj = { foo: 'bar' };
-        markPublic(obj);
-        expect(isPublicBranded(obj)).toBe(true);
-        // non-enumerable — should not appear in JSON or Object.keys
-        expect(Object.keys(obj)).toEqual(['foo']);
-        expect(JSON.stringify(obj)).toBe('{"foo":"bar"}');
-    });
-
-    it('isPublicBranded returns false for plain objects', () => {
-        expect(isPublicBranded({ foo: 'bar' })).toBe(false);
-    });
-
-    it('isPublicBranded returns false for null/primitives', () => {
-        expect(isPublicBranded(null)).toBe(false);
-        expect(isPublicBranded('string')).toBe(false);
-        expect(isPublicBranded(42)).toBe(false);
-    });
-});
-
-describe('PublicShapeWriteError', () => {
-    it('is an instance of Error', () => {
-        const err = new PublicShapeWriteError();
-        expect(err).toBeInstanceOf(Error);
-        expect(err.name).toBe('PublicShapeWriteError');
-        expect(err.message).toContain('public');
-    });
-});
-
-describe('write-back guard via isPublicBranded', () => {
-    it('throws PublicShapeWriteError when branded fields passed to update', () => {
-        // Simulate receiving fields from a public read:
-        const fields = markPublic({ title: 'Hello', public_body: 'world' });
-        expect(isPublicBranded(fields)).toBe(true);
-        // A caller writing these branded fields back would trigger the guard:
-        expect(() => {
-            if (isPublicBranded(fields)) throw new PublicShapeWriteError();
-        }).toThrow(PublicShapeWriteError);
-    });
-
-    it('does NOT throw for a freshly constructed fields object', () => {
-        const fields = { title: 'Hello', public_body: 'world' };
-        expect(isPublicBranded(fields)).toBe(false);
-        expect(() => {
-            if (isPublicBranded(fields)) throw new PublicShapeWriteError();
-        }).not.toThrow();
-    });
-
-    it('does NOT throw for a fields object from a full-shape read (no markPublic)', () => {
-        // Full-shape reads return the entry unchanged — no brand is applied.
-        const fields = { title: 'Hello', secret: 'internal', public_body: 'world' };
-        expect(isPublicBranded(fields)).toBe(false);
-        expect(() => {
-            if (isPublicBranded(fields)) throw new PublicShapeWriteError();
-        }).not.toThrow();
-    });
-
-    it('brand survives object spread only if manually copied (guard is per-object)', () => {
-        // The symbol brand is non-enumerable — a spread creates an unbranded copy.
-        // This means spreading a public entry and writing the spread back is safe
-        // (the brand is lost, the spread is a new object). This is by design.
-        const branded = markPublic({ foo: 'bar' });
-        const copy = { ...branded };
-        expect(isPublicBranded(branded)).toBe(true);
-        expect(isPublicBranded(copy)).toBe(false);
     });
 });

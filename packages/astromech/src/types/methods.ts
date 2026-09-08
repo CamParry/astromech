@@ -96,15 +96,13 @@ export type ServiceMethod<
     /** The capability the target must declare; absent ⇒ none. */
     requires?: string;
     /**
-     * The method acts on the CALLER'S OWN rows. Its `userId` argument is filled
-     * from the request context by `policies/scoped-services.ts`, and a
-     * caller-supplied one is overwritten rather than trusted — such a method
-     * carries no permission (you may always reach your own rows), so an input
-     * `userId` would be an impersonation hole with nothing to gate it.
+     * The method acts on the CALLER'S OWN rows, and the handler reads that
+     * subject from `ctx.user` rather than from its input. No permission is
+     * declared, since you may always reach your own rows.
      *
-     * The `input` schema therefore omits `userId`: it is not the caller's to
-     * pass. A transport with no signed-in user cannot call the method at all and
-     * refuses it with a declared reason, the way `binaryInput` is refused.
+     * A transport with no signed-in user cannot call the method at all: the
+     * scoped handle refuses it with a declared reason, the way `binaryInput`
+     * is refused.
      */
     sessionScoped?: boolean;
     /**
@@ -247,9 +245,9 @@ type ManifestMethodBase = {
      */
     binaryInput?: true;
     /**
-     * The method acts on the caller's own rows and takes its `userId` from the
-     * session — see `ServiceMethodContract['sessionScoped']`. A transport with
-     * no signed-in user refuses it. Emitted only when true.
+     * The method acts on the caller's own rows, read from the session — see
+     * `ServiceMethodContract['sessionScoped']`. A transport with no signed-in
+     * user refuses it. Emitted only when true.
      */
     sessionScoped?: true;
 };

@@ -1,7 +1,7 @@
 import type { VisibilityShape } from '@/content/visibility';
 import type { Global } from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { applyVisibility, markPublic } from '@/content/visibility';
+import { applyVisibility } from '@/content/visibility';
 import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { GlobalValidationError } from '../errors';
@@ -77,6 +77,6 @@ export const getGlobal = defineServiceMethod({
         if (filtered === null) return null;
 
         const result: Global = { ...record, fields: filtered.fields };
-        return shape === 'public' ? markPublic(result) : result;
+        return result;
     },
 });

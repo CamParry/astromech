@@ -61,39 +61,6 @@ export type VisibilityOptions = {
 };
 
 /**
- * Thrown when a caller tries to save a record that was read in `public` shape,
- * where writing it back would drop the private fields the read stripped.
- */
-export class PublicShapeWriteError extends Error {
-    constructor() {
-        super(
-            "record was read in 'public' shape; re-read with { full: true } before" +
-                ' saving — saving it would drop private/internal fields'
-        );
-        this.name = 'PublicShapeWriteError';
-    }
-}
-
-const PUBLIC_BRAND = Symbol('astromech.publicShape');
-
-/** Stamp a non-enumerable Symbol brand on a value to mark it as public-shape. */
-export function markPublic<T extends object>(value: T): T {
-    Object.defineProperty(value, PUBLIC_BRAND, {
-        value: true,
-        enumerable: false,
-        configurable: true,
-        writable: false,
-    });
-    return value;
-}
-
-/** Returns true if the value carries the public-shape brand. */
-export function isPublicBranded(value: unknown): boolean {
-    if (value === null || typeof value !== 'object') return false;
-    return Object.prototype.hasOwnProperty.call(value, PUBLIC_BRAND);
-}
-
-/**
  * True when the row passes the public audience filter: status is 'published' or
  * absent, publishedAt is null/absent or past, and deletedAt is null/absent. An
  * absent column counts as null — tableRepository-backed entries omit all three.

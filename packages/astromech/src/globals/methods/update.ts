@@ -4,7 +4,6 @@ import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
-import { isPublicBranded, PublicShapeWriteError } from '@/content/visibility';
 import { transaction } from '@/database/transaction';
 import { parseInput } from '@/errors/validation';
 import { flattenEntryFields } from '@/fields/flatten';
@@ -45,8 +44,6 @@ export const updateGlobal = defineServiceMethod({
     mutates: true,
     idempotent: true,
     async handler(params, ctx): Promise<Global> {
-        if (isPublicBranded(params.data.fields)) throw new PublicShapeWriteError();
-
         const global = resolveGlobal(ctx.config, params.key);
         const staged = params.staged === true;
         if (staged) assertCapability(global, 'staging');

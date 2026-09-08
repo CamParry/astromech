@@ -178,24 +178,16 @@ function asUser<T>(id: string, fn: () => T): T {
 }
 
 describe('scopeMethods — session-scoped', () => {
-    it('fills userId from the request context, with no permission held', async () => {
+    it('passes the input through unchanged, with no permission held', async () => {
         const service = makeService();
         const scoped = scopeSession(service);
 
-        await asUser('user-1', () => scoped.read({}));
-        expect(service.read).toHaveBeenCalledWith({ userId: 'user-1' });
+        await asUser('user-1', () => scoped.read({ before: 'yesterday' }));
+        expect(service.read).toHaveBeenCalledWith({ before: 'yesterday' });
     });
 
-    it('overwrites a caller-supplied userId rather than trusting it', async () => {
-        const service = makeService();
-        const scoped = scopeSession(service);
-
-        await asUser('user-1', () => scoped.read({ userId: 'someone-else' }));
-        expect(service.read).toHaveBeenCalledWith({ userId: 'user-1' });
-    });
-
-    // Rejects rather than throws: resolving the subject needs an await, so only
-    // this branch of the wrapper is async. The permission check still throws.
+    // Rejects rather than throws: reading the request context needs an await, so
+    // only this branch of the wrapper is async. The permission check still throws.
     it('refuses when nobody is signed in, without entering the service', async () => {
         const service = makeService();
         const scoped = scopeSession(service);

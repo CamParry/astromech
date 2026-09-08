@@ -7,7 +7,6 @@
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { globalsService as api } from '@/app-context/services';
-import { isPublicBranded, markPublic, PublicShapeWriteError } from '@/content/visibility';
 import { makeGlobalsConfig } from './globals-config';
 
 beforeEach(async () => {
@@ -71,25 +70,5 @@ describe('the shape', () => {
 
         const read = await api.get({ key: 'site', full: true });
         expect(read?.fields['secret']).toBe('shh');
-    });
-
-    it('brands a public read', async () => {
-        await saveSite();
-        await api.publish({ key: 'site' });
-        const read = await api.get({ key: 'site' });
-
-        expect(isPublicBranded(read)).toBe(true);
-        expect(isPublicBranded(await api.get({ key: 'site', full: true }))).toBe(false);
-    });
-
-    it('refuses a write of public-shape fields, which would drop the private ones', () => {
-        // The brand is a non-enumerable symbol, so it does not survive the
-        // method's own input parse. The rule is exercised where it still holds:
-        // a handler reached with a branded value refuses it.
-        const fields = markPublic({ title: 'x' });
-        expect(isPublicBranded(fields)).toBe(true);
-        expect(() => {
-            if (isPublicBranded(fields)) throw new PublicShapeWriteError();
-        }).toThrow(PublicShapeWriteError);
     });
 });

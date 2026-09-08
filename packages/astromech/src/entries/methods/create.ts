@@ -1,7 +1,6 @@
 import type { Entry } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
-import { isPublicBranded, PublicShapeWriteError } from '@/content/visibility';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { parseInput, ValidationError } from '@/errors/validation';
@@ -28,10 +27,6 @@ export const createEntry = defineServiceMethod({
     mutates: true,
     async handler(params, ctx): Promise<Entry> {
         const { type, data } = params;
-
-        if (data.fields !== undefined && isPublicBranded(data.fields)) {
-            throw new PublicShapeWriteError();
-        }
 
         const entryType = resolveEntryType(ctx.config, type);
         if (!entryType) {

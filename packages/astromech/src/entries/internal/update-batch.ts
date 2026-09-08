@@ -10,7 +10,6 @@ import type {
     User,
 } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
-import { isPublicBranded, PublicShapeWriteError } from '@/content/visibility';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { parseInput, ValidationError } from '@/errors/validation';
@@ -56,9 +55,6 @@ export async function updateEntryBatch(
     },
     ctx: AppContext
 ): Promise<Entry[]> {
-    if (params.data.fields !== undefined && isPublicBranded(params.data.fields)) {
-        throw new PublicShapeWriteError();
-    }
     const entryType = resolveEntryType(ctx.config, params.type);
     if (!entryType) {
         throw new UnknownEntryTypeError(params.type);

@@ -438,11 +438,13 @@ and `JsonObject` to the type system: `z.json()` types it exactly but emits a
 recursive `anyOf` into the method manifest, and `z.custom<JsonValue>()` is a
 shape the OpenAPI document generator refuses to render.
 
-**A method whose subject is the caller declares `sessionScoped`.** `userId` is
-filled from the request context at the scoped handle
-(`policies/scoped-services.ts`), not at the dispatcher, and any caller-supplied
-value is overwritten. No permission is declared, because any signed-in caller may
-act on their own rows. Rejected: a general `sessionArgument: 'userId'` field.
+**A method whose subject is the caller declares `sessionScoped`.** The subject
+is `ctx.user`, read by the handler; the scoped handle
+(`policies/scoped-services.ts`) refuses the call when nobody is signed in. No
+permission is declared, because any signed-in caller may act on their own rows.
+Rejected: a general `sessionArgument: 'userId'` field; and injecting `userId`
+into the input, which the method's own parse strips and which put a key the
+schema does not declare onto the call.
 
 **The browser-safe surface will be declared, through an `exports/shared.ts`
 entrypoint plus a `browser` condition.** The `*.shared.ts` suffix has enforced

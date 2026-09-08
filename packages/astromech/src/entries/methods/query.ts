@@ -2,7 +2,7 @@ import type { VisibilityShape } from '@/content/visibility';
 import type { Entry, QueryResult, ReferencesFilter, ResolvedConfig } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
-import { applyVisibility, markPublic } from '@/content/visibility';
+import { applyVisibility } from '@/content/visibility';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { collectRelationshipSchemaPaths } from '@/fields/relationship-edges';
@@ -123,7 +123,7 @@ export const queryEntries = defineServiceMethod({
             });
 
             if (filtered !== null) {
-                visibleData.push(shape === 'public' ? markPublic(filtered) : filtered);
+                visibleData.push(filtered);
             }
         }
 

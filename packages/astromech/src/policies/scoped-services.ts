@@ -50,14 +50,11 @@ type ServiceRecord = Record<string, unknown>;
 type ServiceFn = (...args: unknown[]) => unknown;
 
 /**
- * The input a session-scoped method is called with: the caller's own
- * `userId`, pinned LAST so a caller-supplied one is overwritten. Refused
- * outright when nobody is signed in, since there is no subject to act as.
+ * Refuse a session-scoped call when nobody is signed in, since there is no
+ * subject to act as. The handler reads the subject from `ctx.user` itself, so
+ * the caller's input needs nothing added to it.
  */
-async function sessionInput(
-    id: string,
-    input: unknown
-): Promise<Record<string, unknown>> {
+async function requireSubject(id: string): Promise<void> {
     const { user } = await currentAppContext();
     if (user === null) {
         throw new PermissionDeniedError(
@@ -66,8 +63,6 @@ async function sessionInput(
             'is session-scoped, and this caller has no signed-in user to act as.'
         );
     }
-    const base = typeof input === 'object' && input !== null ? input : {};
-    return { ...base, userId: user.id };
 }
 
 /** The permission a contract demands for `input`, or null if it demands none. */
@@ -110,10 +105,12 @@ export function scopeMethods<S extends object>(
             }
             // Called on the service so a method reaching for a sibling through
             // `this` keeps working. Only the session-scoped branch is async,
-            // since resolving the subject needs an await.
+            // since reading the request context needs an await.
             if (contract.sessionScoped === true) {
-                return (async (): Promise<unknown> =>
-                    fn.apply(service, [await sessionInput(id, input)]))();
+                return (async (): Promise<unknown> => {
+                    await requireSubject(id);
+                    return fn.apply(service, args);
+                })();
             }
             return fn.apply(service, args);
         };

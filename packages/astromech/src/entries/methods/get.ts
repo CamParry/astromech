@@ -2,7 +2,7 @@ import type { VisibilityShape } from '@/content/visibility';
 import type { Entry } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
-import { applyVisibility, markPublic } from '@/content/visibility';
+import { applyVisibility } from '@/content/visibility';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { ValidationError } from '@/errors/validation';
 import { flattenEntryFields } from '@/fields/flatten';
@@ -65,10 +65,6 @@ export const getEntry = defineServiceMethod({
         const entryType = resolveEntryType(ctx.config, type);
         const fields = entryType ? flattenEntryFields(entryType.fields) : [];
 
-        const filtered = applyVisibility(result, { shape, fields, audience });
-
-        if (filtered === null) return null;
-
-        return shape === 'public' ? markPublic(filtered) : filtered;
+        return applyVisibility(result, { shape, fields, audience });
     },
 });
