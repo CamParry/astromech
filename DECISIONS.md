@@ -415,7 +415,7 @@ self-referential.
 
 **Input is validated at the method, not at the transport.** `defineService.bind()`
 parses the call against the method's own `input` schema before the handler runs,
-and the plugin service proxy and plugin RPC route do the same, so an in-process
+and the plugin service proxy does the same for a plugin method, so an in-process
 call, a hook, a job and an HTTP request all get one check. Rejected: parsing at
 each transport edge, which left in-process callers unchecked and led handlers to
 re-parse the slot the edge had already parsed. The cost is that a transport
@@ -445,6 +445,19 @@ permission is declared, because any signed-in caller may act on their own rows.
 Rejected: a general `sessionArgument: 'userId'` field; and injecting `userId`
 into the input, which the method's own parse strips and which put a key the
 schema does not declare onto the call.
+
+**An untrusted call reaches a service only through the scoped handle, plugin
+methods included.** `scopedServices(role)` checks a method's declared `access`
+against the role before the call, for core and plugin methods alike.
+`callMethod` (`policies/call-method.ts`) maps a manifest method onto that
+handle, or onto the raw services for a trusted caller, and is what RPC, the AI
+tool-loop, MCP and the CLI call through. Rejected: plugin RPC checking `access`
+in a function of its own, which left the AI tool-loop no way to scope a plugin
+method and so no plugin methods at all. Rejected too: a runtime catalogue of
+Zod input schemas per transport, since each method already parses its own
+input; and a REST catalogue resolved per request so the mount could check an
+entry type's or a global's permission before reading the body, which each of
+those routes' `precondition` already does.
 
 **The browser-safe surface will be declared, through an `exports/shared.ts`
 entrypoint plus a `browser` condition.** The `*.shared.ts` suffix has enforced

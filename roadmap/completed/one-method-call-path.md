@@ -122,7 +122,7 @@ The manifest JSON and the OpenAPI document stay byte-identical at every stage.
 
 **Stage 3: one REST catalogue**
 
-- [ ] Delete `PerRequestContracts`, `RestContracts` and `isPerRequest`;
+- [x] Delete `PerRequestContracts`, `RestContracts` and `isPerRequest`;
       `mountRestRoutes` and `documentBespokeRoutes` take one catalogue.
       Entries' and globals' `contractsForRequest` go. The catalogue check runs
       only for a route with no `precondition`. `rest-route.test.ts` and
@@ -130,7 +130,7 @@ The manifest JSON and the OpenAPI document stay byte-identical at every stage.
 
 **Stage 4: close out**
 
-- [ ] `ARCHITECTURE.md` transport and policies bullets name the scoped handle
+- [x] `ARCHITECTURE.md` transport and policies bullets name the scoped handle
       as the one way an untrusted caller reaches a service and `callMethod` as
       how a manifest id becomes a call. `DECISIONS.md` gains an entry for
       plugin methods on the scoped handle and for dropping the runtime

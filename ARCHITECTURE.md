@@ -84,11 +84,17 @@ types · services · utilities · env · errors ·        pure leaves
   MCP server and the AI tool-loop share. `cli/` and `mcp/` are process entry
   points of their own, each booting the application through `astromech.ts`, so
   they sit above the composition root; `http/` and `tools/` are what it calls.
-  Transports dispatch to the content services through the method manifest; they hold no business logic.
+  A transport that names a method by manifest id (RPC, the AI tool-loop, MCP,
+  the CLI) calls it through `callMethod`; REST and plugin RPC name the domain
+  and method in the URL and call the scoped handle directly. Transports hold
+  no business logic.
 - **`policies/`** decides what a role may call. `scopedServices(role)` wraps the
-  services and refuses a method the role lacks; every untrusted path (HTTP, RPC,
-  the AI tool-loop) composes it. Trusted paths (the application instance used in
-  SSR and hooks, the CLI, the MCP server) do not.
+  core services and every plugin method, and refuses a call the role lacks; it
+  is the one way an untrusted caller (REST, RPC, plugin RPC, the AI tool-loop)
+  reaches a service. `callMethod` turns a manifest method into a call on that
+  handle, or on the raw services for a trusted caller. Trusted paths (the
+  application instance used in SSR and hooks, `ctx.plugins`, the CLI, the MCP
+  server) skip the handle.
 - **The content modules** (`entries`, `globals`, `media`, `users`, `settings`, `notifications`) own the business verbs. Each has a `service.ts` that assembles its `methods/` into a `defineService` definition, a `tables.ts` (its `defineTable` tables and row types), and a `schema.ts` of Zod request schemas where it validates input. Those schemas are also where the module's input types come from: a method's handler parameter is the parsed shape (`z.output`) and the domain input types in `types/services.ts` are the call shape (`z.input`) of the same schema. A method file exports one `defineServiceMethod` object holding that verb's access rule, its input and output schemas, its effect hints, the capability its target must declare, and the handler. The definition's catalogue is what the method manifest, `policies/scoped-services.ts` and the REST mount read; `entries/catalogue.ts` fixes that catalogue per entry type, since an entry method's permission and schemas vary with the type. `app-context/services.ts` binds each definition to the current request's context to make the callable service (`app.globals`, the raw trusted form), so a content module never imports the composition root. A handler receives an `AppContext` and reaches the user, the config, the hooks and its sibling services through it, and its input has already been parsed against the method's own `input` schema by `defineService.bind()`, whatever called it; helpers in `internal/` take the config, the user or the context as parameters, and a lint rule refuses a content module reading the request store or the config registry. They are siblings: one may call another's service, but reaches tables through `database/tables.ts`. `entries`, `globals`, `media` and `users` build on a shelf module of their own, `content/`, which holds the shared content repository over `{ table, contentTable, versionsTable }` plus the translatable, versioning and visibility helpers both need.
 - **The modules below them** (`database`, `storage`, `fields`, `config`, `permissions`, `hooks`, `request-context`, `email`, `ai`, `cron`, and `plugins` — the `define*` authoring API and every `runtime/` file except `plugin-runtime.ts`) are what the content modules build on. Each does one thing and holds no business logic.
 - **Leaves** import only other leaves and third-party packages. A small pure file (a constant, a type, a function over its arguments) may sit inside any module and still be imported from any layer.

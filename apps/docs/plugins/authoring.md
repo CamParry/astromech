@@ -767,8 +767,8 @@ returns the question to put to a human before running that method with those
 arguments; core owns the wording so a plugin pausing on a mutating call doesn't
 invent its own. `@astromech/assistant` builds its approve/reject panel from it.
 
-Plugin-declared methods are absent from the list: their `access` is enforced by
-the HTTP RPC route, so there is nothing to scope them with.
+Plugin-declared methods are in the list too, each checked against its declared
+`access` for that role.
 
 > **A plugin imports `astromech`, `astromech/ui` and `astromech/ui/app`, and
 > nothing else from core.** Everything else arrives on `ctx`. Your config is loaded twice: in the
@@ -835,9 +835,8 @@ export const exportRoutes: PluginRawRoute[] = [
 ];
 ```
 
-Raw routes mount under the **service key**, alongside RPC, and go through the
-same `access` enforcement — `enforceAccess` runs before the handler either way,
-so a bare permission key is namespaced identically.
+Raw routes mount under the **service key**, alongside RPC, and their `access`
+resolves the same way, so a bare permission key is namespaced identically.
 
 Two things to hold onto:
 
@@ -901,9 +900,9 @@ handler's RETURN type instead, since that is what the method's callers see.
 - `{ permission: 'export' }`: resolved to `plugin:<namespace>:export`, so you
   write the bare key you declared with `definePermissions` and never a prefix.
 - `(input) => Permission | null`: the permission this call needs, worked out
-  from its arguments, or `null` for none. The RPC route enforces access before
-  it reads the request body, so a plugin method's function is called with
-  `undefined`; gate on an argument inside the handler instead.
+  from its arguments, or `null` for none. It sees the arguments as the caller
+  sent them, before the method parses its input, so check a value's type
+  before trusting it.
 
 `ctx` is the app context every service method in Astromech runs with, plus your
 plugin's own layer over it:
