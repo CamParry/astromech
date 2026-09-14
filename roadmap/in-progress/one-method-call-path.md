@@ -107,17 +107,17 @@ The manifest JSON and the OpenAPI document stay byte-identical at every stage.
 
 **Stage 2: `callMethod` and the tool dispatcher**
 
-- [ ] `callMethod` in `policies/call-method.ts`, with tests: a denied role
+- [x] `callMethod` in `policies/call-method.ts`, with tests: a denied role
       throws `PermissionDeniedError` before the handler runs; an entries call
       cannot redirect its own `type`; a `sessionScoped` method is refused for
       `'trusted'`; a plugin method runs through its access check.
-- [ ] `dispatch.ts` down to the projection and the build-time refusals
+- [x] `dispatch.ts` down to the projection and the build-time refusals
       (binary input, no schema, session-scoped for a trusted caller). Delete
       `CORE_SERVICES`, `invokePluginMethod`, the resolve strategies and
       `dispatchArgs`.
-- [ ] `buildScopedTools` stops dropping plugin methods; `annotateManifest`
+- [x] `buildScopedTools` stops dropping plugin methods; `annotateManifest`
       marks an `authenticated` plugin method as denied with no role.
-- [ ] `rpc.ts` and `cli/commands/call.ts` lose their argument shaping; the CLI
+- [x] `rpc.ts` and `cli/commands/call.ts` lose their argument shaping; the CLI
       prints a `ValidationError`'s issues.
 
 **Stage 3: one REST catalogue**

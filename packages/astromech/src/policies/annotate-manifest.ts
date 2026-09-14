@@ -22,6 +22,10 @@ function allowedFor(
     role: Role | null | undefined
 ): boolean | null {
     if (method.permissionDynamic === true) return null;
+    // A plugin's `authenticated` access carries no permission but still needs a role.
+    if (method.source === 'plugin' && method.access === 'authenticated') {
+        return role !== null && role !== undefined;
+    }
     if (method.permission === null) return true; // ungated
     if (!role) return false;
     return can(role, method.permission as Permission);

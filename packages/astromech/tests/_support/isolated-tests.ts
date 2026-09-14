@@ -34,6 +34,7 @@ export const isolatedTests = [
     'tests/cron/scheduled-boot.test.ts',
     'tests/cron/scheduled-handler.test.ts',
     'tests/plugins/runtime/plugin-runtime.test.ts',
+    'tests/policies/call-method.test.ts',
     'tests/registry.test.ts',
     'tests/request-context/request-context.test.ts',
     'tests/entries/create-atomicity.test.ts',

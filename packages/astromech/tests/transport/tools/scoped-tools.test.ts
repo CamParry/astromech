@@ -34,7 +34,7 @@ function coreMethod(id: string): ManifestMethod {
     };
 }
 
-/** A plugin manifest method — dispatch refuses every one of these. */
+/** A plugin manifest method. */
 function pluginMethod(id: string): ManifestMethod {
     return {
         id,
@@ -92,7 +92,7 @@ describe('buildScopedTools', () => {
         expect(() => buildScopedTools(role)).toThrow(/populated at runtime boot/);
     });
 
-    it('drops plugin methods before filtering', () => {
+    it('passes plugin methods through to filtering', () => {
         vi.mocked(getMethodManifest).mockReturnValue({
             version: 1,
             methods: [
@@ -106,9 +106,14 @@ describe('buildScopedTools', () => {
 
         expect(ids(vi.mocked(filterMethods).mock.calls[0]?.[0] ?? [])).toEqual([
             'users.query',
+            'plugins.backups.list',
             'media.query',
         ]);
-        expect(tools.map((tool) => tool.name)).toEqual(['users_query', 'media_query']);
+        expect(tools.map((tool) => tool.id)).toEqual([
+            'users.query',
+            'plugins.backups.list',
+            'media.query',
+        ]);
     });
 
     it('passes readOnly through to the method filter', () => {

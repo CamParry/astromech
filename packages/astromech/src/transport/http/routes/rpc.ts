@@ -7,7 +7,6 @@
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { ManifestMethod } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { PermissionDeniedError } from '@/errors/permission';
 import { ValidationError } from '@/errors/validation';
@@ -17,7 +16,6 @@ import {
     fromZodError,
     notFound,
 } from '@/transport/http/middleware/errors';
-import { dispatchArgs } from '@/transport/tools/dispatch';
 import { resolveScopedMethod } from '@/transport/tools/scoped-tools';
 
 type Env = { Variables: AuthVariables };
@@ -29,14 +27,14 @@ router.post('/:id', async (c) => {
     const resolved = resolveScopedMethod(id, c.var.role);
     if (resolved === undefined) return notFound(c, `Method '${id}' not found`);
 
-    const { method, dispatch } = resolved;
+    const { dispatch } = resolved;
     if (!dispatch.ok)
         return badRequest(c, `Method '${id}' is not callable: ${dispatch.reason}`);
 
     const body = await c.req.json().catch(() => undefined);
 
     try {
-        const result = await dispatch.tool.invoke(callArgs(method, body));
+        const result = await dispatch.tool.invoke(callArgs(body));
         return c.json({ data: result ?? null });
     } catch (error) {
         // The scoped handle refuses by throwing, carrying the permission or the
@@ -52,16 +50,13 @@ router.post('/:id', async (c) => {
 });
 
 /**
- * The argument object to call with: the JSON body, read through `dispatchArgs`
- * so an entries method gets the type its id already names rather than asking
- * the caller to repeat it.
+ * The argument object to call with: the JSON body when it is an object, else
+ * none. An entries method takes its type from the id, which `callMethod` pins.
  */
-function callArgs(method: ManifestMethod, body: unknown): Record<string, unknown> {
-    const args =
-        typeof body === 'object' && body !== null && !Array.isArray(body)
-            ? (body as Record<string, unknown>)
-            : {};
-    return dispatchArgs(method, args);
+function callArgs(body: unknown): Record<string, unknown> {
+    return typeof body === 'object' && body !== null && !Array.isArray(body)
+        ? (body as Record<string, unknown>)
+        : {};
 }
 
 export { router as rpcRouter };

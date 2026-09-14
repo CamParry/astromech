@@ -10,11 +10,13 @@ import type {
     JsonSchemaObject,
     ManifestMethod,
     Permission,
+    PluginDefinition,
     PluginManifestMethod,
     Role,
 } from '@/types/index';
-import { setupTestConfig } from '@tests/harness';
+import { makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 import { usersService } from '@/app-context/services';
 import { PermissionDeniedError } from '@/errors/permission';
 import { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch';
@@ -55,6 +57,20 @@ const usersQuery: CoreManifestMethod = {
     input: objectSchema,
 };
 
+const barHandler = vi.fn(() => 'ran');
+
+const fooPlugin: PluginDefinition = {
+    package: 'foo',
+    service: {
+        bar: {
+            access: { permission: 'bar' },
+            input: z.looseObject({}),
+            mutates: true,
+            handler: barHandler,
+        },
+    },
+};
+
 const pluginMethod: PluginManifestMethod = {
     id: 'plugins.foo.bar',
     name: 'plugins.foo.bar',
@@ -63,8 +79,8 @@ const pluginMethod: PluginManifestMethod = {
     plugin: 'foo',
     serviceKey: 'foo',
     method: 'bar',
-    access: 'authenticated',
-    permission: null,
+    access: 'permission',
+    permission: 'plugin:foo:bar',
     mutates: true,
     destructive: false,
     idempotent: false,
@@ -103,6 +119,7 @@ function scopedTool(
 beforeEach(() => {
     setupTestConfig();
     vi.mocked(usersService.query).mockClear();
+    barHandler.mockClear();
 });
 
 describe('buildScopedDispatch', () => {
@@ -130,12 +147,12 @@ describe('buildScopedDispatch', () => {
         expect(usersService.query).not.toHaveBeenCalled();
     });
 
-    it('refuses a plugin method that buildDispatch dispatches', () => {
-        const scoped = buildScopedDispatch(pluginMethod, role('*'));
+    it('gives a plugin method a tool the scoped handle refuses without its access', async () => {
+        setupTestConfig({ ...makeTestConfig(), plugins: [fooPlugin] });
+        const tool = scopedTool(pluginMethod, role('users:read'));
 
-        expect(scoped.ok).toBe(false);
-        expect(scoped.ok === false && scoped.reason).toMatch(/plugin/);
-        expect(buildDispatch(pluginMethod).ok).toBe(true);
+        await expect(tool.invoke({})).rejects.toThrow(PermissionDeniedError);
+        expect(barHandler).not.toHaveBeenCalled();
     });
 
     it('skips exactly what buildDispatch skips, with the same reason', () => {

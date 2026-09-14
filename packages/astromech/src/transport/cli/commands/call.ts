@@ -1,14 +1,15 @@
 /**
  * `astromech call <method-id> --args <json|@file>` — one command over the
  * whole service surface, resolved through the manifest and `buildDispatch`.
- * Unscoped: the CLI has no role, so a `sessionScoped` method is refused.
+ * Unscoped, so a `sessionScoped` method is refused; the method parses its own arguments.
  */
 
 import type { ManifestMethod, ToolDefinition } from '@/types/index';
 import { defineCommand } from 'citty';
 import { z } from 'zod';
 import { generateMethodManifest } from '@/codegen/method-manifest';
-import { buildDispatch, dispatchArgs } from '@/transport/tools/dispatch';
+import { ValidationError } from '@/errors/validation';
+import { buildDispatch } from '@/transport/tools/dispatch';
 import { loadConfig, loadRawConfig } from '../config';
 import { parseJsonArg, printError } from '../output';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
@@ -32,22 +33,13 @@ export default defineCommand({
             const resolved = await loadConfig(args.config, toAllowRemoteOption(args));
             const manifest = generateMethodManifest(resolved, rawConfig.plugins ?? []);
 
-            const { method, tool } = resolveCallable(manifest.methods, args.id);
-            const input = dispatchArgs(method, await callArguments(args.args));
-
-            // The manifest carries the contract's input as JSON Schema, so it is
-            // read back into Zod to parse with rather than restated here.
-            const parsed = z.fromJSONSchema(tool.inputSchema).safeParse(input);
-            if (!parsed.success) {
-                throw new Error(`Invalid arguments:\n${z.prettifyError(parsed.error)}`);
-            }
-
-            const result = await tool.invoke(parsed.data as Record<string, unknown>);
+            const { tool } = resolveCallable(manifest.methods, args.id);
+            const result = await tool.invoke(await callArguments(args.args));
             // Always JSON: an arbitrary method's result has no human shape to
             // render it in.
             console.log(JSON.stringify(result ?? null, null, 2));
         } catch (e) {
-            printError(e, { json: args.json });
+            printError(describeCallError(e), { json: args.json });
         }
     },
 });
@@ -72,6 +64,19 @@ export function resolveCallable(
         throw new Error(`Method "${id}" is not callable: ${dispatch.reason}`);
     }
     return { method, tool: dispatch.tool };
+}
+
+/**
+ * The error to print for a failed call. The method's own input parse throws a
+ * `ValidationError`, which prints as its issues rather than "Validation failed".
+ */
+export function describeCallError(error: unknown): unknown {
+    if (error instanceof ValidationError && error.fields === undefined) {
+        return new Error(
+            `Invalid arguments:\n${z.prettifyError(new z.ZodError(error.issues))}`
+        );
+    }
+    return error;
 }
 
 /** The argument object off the command line — inline JSON, `@file`, or none. */

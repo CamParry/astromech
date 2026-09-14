@@ -154,16 +154,9 @@ describe('manifest ↔ RPC route parity', () => {
             refused.set(method.id, body.error.message);
         }
 
-        expect([...refused.keys()].sort()).toEqual([
-            'media.replace',
-            'media.upload',
-            'plugins.testMyPlugin.doSomething',
-        ]);
+        expect([...refused.keys()].sort()).toEqual(['media.replace', 'media.upload']);
         expect(refused.get('media.upload')).toContain('binary input');
         expect(refused.get('media.replace')).toContain('binary input');
-        expect(refused.get('plugins.testMyPlugin.doSomething')).toContain(
-            'plugin method'
-        );
     });
 
     it('reaches a session-scoped method — the transport has a signed-in user', async () => {
@@ -245,5 +238,23 @@ describe('POST /rpc/:id', () => {
         const body = (await res.json()) as ErrorBody;
         expect(body.error.code).toBe('FORBIDDEN');
         expect(body.error.message).toContain('users:create');
+    });
+
+    it('403s a plugin method the role lacks the access for', async () => {
+        const app = await freshApp(roleWith([]));
+        const res = await call(app, 'plugins.testMyPlugin.doSomething', { thing: 'x' });
+        expect(res.status).toBe(403);
+        const body = (await res.json()) as ErrorBody;
+        expect(body.error.code).toBe('FORBIDDEN');
+        expect(body.error.message).toContain('plugins:x:do');
+    });
+
+    it('reaches a plugin method the role holds the access for', async () => {
+        const app = await freshApp();
+        expect((await call(app, 'plugins.testMyPlugin.doSomething')).status).toBe(422);
+
+        const res = await call(app, 'plugins.testMyPlugin.doSomething', { thing: 'x' });
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({ data: null });
     });
 });

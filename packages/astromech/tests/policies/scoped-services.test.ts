@@ -613,4 +613,23 @@ describe('annotateManifest', () => {
 
         expect(annotated.map((m) => m.allowed)).toEqual([false, false, true, null]);
     });
+
+    it('denies an authenticated plugin method with no role, and allows it for any role', () => {
+        const whoami: ManifestMethod = {
+            id: 'plugins.probe.whoami',
+            name: 'plugins.probe.whoami',
+            source: 'plugin',
+            plugin: 'probe',
+            serviceKey: 'probe',
+            method: 'whoami',
+            access: 'authenticated',
+            permission: null,
+            mutates: false,
+            destructive: false,
+            idempotent: false,
+        };
+
+        expect(annotateManifest([whoami], undefined)[0]?.allowed).toBe(false);
+        expect(annotateManifest([whoami], role())[0]?.allowed).toBe(true);
+    });
 });

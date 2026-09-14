@@ -22,12 +22,7 @@ export function buildScopedTools(
         );
     }
 
-    // `buildScopedDispatch` refuses every plugin method — a plugin's declared
-    // `access` is enforced by the HTTP RPC route, not by dispatch — so they are
-    // dropped here rather than built into a list of refusals.
-    const dispatchable = manifest.methods.filter((method) => method.source !== 'plugin');
-
-    const filtered = filterMethods(dispatchable, { readOnly: options?.readOnly });
+    const filtered = filterMethods(manifest.methods, { readOnly: options?.readOnly });
 
     // A size reduction, NOT a security measure: the annotation is advisory and
     // `buildScopedDispatch` is what actually refuses. `allowed === null` is an

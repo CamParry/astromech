@@ -8,7 +8,9 @@
 
 import type { ManifestMethod } from '@/types/index';
 import { describe, expect, it } from 'vitest';
-import { resolveCallable } from '@/transport/cli/commands/call';
+import { z } from 'zod';
+import { ValidationError } from '@/errors/validation';
+import { describeCallError, resolveCallable } from '@/transport/cli/commands/call';
 
 function coreMethod(overrides: Partial<ManifestMethod> = {}): ManifestMethod {
     return {
@@ -85,5 +87,22 @@ describe('resolveCallable', () => {
         expect(() => resolveCallable(METHODS, 'settings.all')).toThrow(
             'Method "settings.all" is not callable: no input schema declared on the descriptor'
         );
+    });
+});
+
+describe('describeCallError', () => {
+    it('prints a method input failure as its issues', () => {
+        const parsed = z.object({ id: z.string() }).safeParse({ id: 42 });
+        if (parsed.success) expect.unreachable('expected the parse to fail');
+
+        const error = describeCallError(new ValidationError(parsed.error.issues));
+        expect(error).toBeInstanceOf(Error);
+        expect((error as Error).message).toMatch(/^Invalid arguments:\n/);
+        expect((error as Error).message).toContain('at id');
+    });
+
+    it('passes any other error through', () => {
+        const error = new Error('boom');
+        expect(describeCallError(error)).toBe(error);
     });
 });
