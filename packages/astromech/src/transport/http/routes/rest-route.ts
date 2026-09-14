@@ -30,20 +30,6 @@ type Env = { Variables: AuthVariables };
 /** A domain's contract catalogue, keyed by service method name. */
 export type ContractCatalogue = Record<string, ServiceMethodContract>;
 
-/**
- * A catalogue resolved per request, for a domain whose contracts are not
- * constant. Entries is the case: the entry type is a path param, so which
- * contract a route runs under is only known once the request arrives, while the
- * document still has to be written from something static.
- */
-export type PerRequestContracts = {
-    forRequest: (c: Context<Env>) => ContractCatalogue | undefined;
-    documented: ContractCatalogue;
-};
-
-/** What a mount validates and documents against. */
-export type RestContracts = ContractCatalogue | PerRequestContracts;
-
 /** Anything callable through a string key — a scoped domain handle. */
 type ServiceRecord = Record<string, (args: unknown) => unknown>;
 
@@ -55,7 +41,11 @@ export type RestHandlers = {
     notFound?: (c: Context<Env>) => string;
     /** The query string this route accepts. Documented, and validated first. */
     query?: z.ZodObject;
-    /** Checks run before the body is read; a Response short-circuits the route. */
+    /**
+     * Checks run before the body is read, in place of the catalogue's permission
+     * check, so a route that declares one makes its own access check. A Response
+     * short-circuits the route.
+     */
     precondition?: (c: Context<Env>, route: RestRoute) => Response | null;
     /** Turn a declared domain error into a response; anything else is `onError`'s. */
     mapError?: (error: unknown, c: Context<Env>) => Response | null;
@@ -92,16 +82,26 @@ export function attachHandlers<const T extends readonly HttpRouteSpec[]>(
         });
 }
 
-/** Mount every route in `routes`, validating against `contracts`. */
+/**
+ * Mount every route in `routes`, validating against `contracts`. A route that
+ * names a method the catalogue does not describe is a wiring mistake, so it
+ * fails here, at boot, rather than on the first request.
+ */
 export function mountRestRoutes(
     router: OpenAPIHono<Env>,
-    contracts: RestContracts,
+    contracts: ContractCatalogue,
     routes: RestRoute[]
 ): void {
     for (const route of routes) {
+        const contract = contracts[methodName(route.id)];
+        if (contract === undefined) {
+            throw new Error(
+                `Route ${route.verb.toUpperCase()} ${route.path} names '${route.id}', which this catalogue does not describe.`
+            );
+        }
         documentRoute(router, contracts, route);
         router.on(route.verb.toUpperCase(), route.path, (c) =>
-            handleRestRoute(c, route, contracts)
+            handleRestRoute(c, route, contract)
         );
     }
 }
@@ -114,7 +114,7 @@ export function mountRestRoutes(
  */
 export function documentBespokeRoutes(
     router: OpenAPIHono<Env>,
-    contracts: RestContracts,
+    contracts: ContractCatalogue,
     specs: readonly (HttpRouteSpec & { query?: z.ZodObject })[]
 ): void {
     for (const spec of specs) {
@@ -126,7 +126,7 @@ export function documentBespokeRoutes(
 async function handleRestRoute(
     c: Context<Env>,
     route: RestRoute,
-    contracts: RestContracts
+    contract: ServiceMethodContract
 ): Promise<Response> {
     // First, as OpenAPIHono's own request validator was: a query string outside
     // the documented operation never reaches the handler.
@@ -135,21 +135,16 @@ async function handleRestRoute(
         if (!query.success) return requestSchemaError(c, query.error);
     }
 
-    const denied = route.precondition?.(c, route);
-    if (denied) return denied;
-
-    const catalogue = isPerRequest(contracts) ? contracts.forRequest(c) : contracts;
-    const contract = catalogue?.[methodName(route.id)];
-    if (contract === undefined) {
-        throw new Error(
-            `Route ${route.verb.toUpperCase()} ${route.path} names '${route.id}', which this catalogue does not describe.`
-        );
-    }
-
     // Checked before the body is read, so a caller that may not call this method
-    // learns nothing about the request it sent. The scoped handle below is still
-    // what enforces; this only decides when the refusal arrives.
-    if (!permissionsFor(c.var.role).allowsMethod(contract)) return forbidden(c);
+    // learns nothing about the request it sent. A precondition replaces the
+    // catalogue check: it makes its own. The scoped handle below is still what
+    // enforces; this only decides when the refusal arrives.
+    if (route.precondition !== undefined) {
+        const denied = route.precondition(c, route);
+        if (denied) return denied;
+    } else if (!permissionsFor(c.var.role).allowsMethod(contract)) {
+        return forbidden(c);
+    }
 
     let args: unknown;
     try {
@@ -208,16 +203,15 @@ function respond(c: Context<Env>, route: HttpRouteSpec, result: unknown): Respon
 
 /**
  * Register one row in the router's OpenAPI document, if a contract describes it.
- * A row whose method has no contract in this catalogue is silently absent, which
- * is what a per-request catalogue does for a type it cannot resolve.
+ * A row whose method has no contract in this catalogue is silently absent. Only
+ * a bespoke row can be, since `mountRestRoutes` refuses a generic one at boot.
  */
 function documentRoute(
     router: OpenAPIHono<Env>,
-    contracts: RestContracts,
+    contracts: ContractCatalogue,
     route: HttpRouteSpec & { query?: z.ZodObject }
 ): void {
-    const documented = isPerRequest(contracts) ? contracts.documented : contracts;
-    const contract = documented[methodName(route.id)];
+    const contract = contracts[methodName(route.id)];
     if (contract === undefined) return;
 
     const params = pathParams(route.path);
@@ -321,11 +315,6 @@ function renameShape(
             ])
         )
     );
-}
-
-/** Does this mount resolve its catalogue per request? */
-function isPerRequest(contracts: RestContracts): contracts is PerRequestContracts {
-    return typeof (contracts as PerRequestContracts).forRequest === 'function';
 }
 
 /**

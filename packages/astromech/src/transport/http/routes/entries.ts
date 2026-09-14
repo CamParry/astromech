@@ -56,12 +56,8 @@ type Env = { Variables: AuthVariables };
  */
 export function createEntriesRouter(): OpenAPIHono<Env> {
     const router = new OpenAPIHono<Env>();
-    const contracts = {
-        forRequest: contractsForRequest,
-        documented: DOCUMENTED_CONTRACTS,
-    };
-    mountRestRoutes(router, contracts, ENTRIES_ROUTES);
-    documentBespokeRoutes(router, contracts, ENTRIES_ROUTE_SPECS);
+    mountRestRoutes(router, DOCUMENTED_CONTRACTS, ENTRIES_ROUTES);
+    documentBespokeRoutes(router, DOCUMENTED_CONTRACTS, ENTRIES_ROUTE_SPECS);
     mountBespokeRoutes(router);
     return router;
 }
@@ -282,13 +278,6 @@ function entryContracts(resolved: ResolvedEntryType, typeId: string): EntryContr
     });
     CONTRACTS_BY_TYPE.set(resolved, catalogue);
     return catalogue;
-}
-
-/** Resolve the catalogue for one request — the entry type is a path param. */
-function contractsForRequest(c: Context<Env>): ContractCatalogue | undefined {
-    const type = param(c, 'type');
-    const resolved = resolveEntryType(getConfig(), type);
-    return resolved ? entryContracts(resolved, type) : undefined;
 }
 
 /**

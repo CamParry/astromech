@@ -6,13 +6,17 @@
  * converted route where the argument shape could leak into the response.
  */
 
-import type { Role, StorageDriver } from '@/types/index';
+import type { RestRoute } from '@/transport/http/routes/rest-route';
+import type { Role, ServiceMethodContract, StorageDriver } from '@/types/index';
+import type { RouteEnv } from '@tests/mount-router';
+import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { mountRouter, roleWith } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
+import { mountRestRoutes } from '@/transport/http/routes/rest-route';
 
 const noopStorage: StorageDriver = {
     name: 'noop',
@@ -92,5 +96,55 @@ describe('permission is answered before the body is read', () => {
         expect(res.status).toBe(400);
         const body = (await res.json()) as { error: { code: string } };
         expect(body.error.code).toBe('BAD_REQUEST');
+    });
+});
+
+/** A one-method catalogue whose only method demands `media:update`. */
+const catalogue: Record<string, ServiceMethodContract> = {
+    present: { access: 'media:update', input: z.object({}), mutates: false },
+};
+
+/**
+ * `GET /probe/x` naming `probe.present`. Its args throw a `SyntaxError`, which
+ * the mount answers 400, so a 400 means the route got as far as reading args.
+ */
+function probeRoute(precondition?: RestRoute['precondition']): RestRoute {
+    return {
+        verb: 'get',
+        path: '/x',
+        id: 'probe.present',
+        args: () => {
+            throw new SyntaxError('reached args');
+        },
+        ...(precondition !== undefined ? { precondition } : {}),
+    };
+}
+
+/** Mount `route` against {@link catalogue} and request it under `role`. */
+function probe(route: RestRoute, role: Role): Promise<Response> | Response {
+    const router = new OpenAPIHono<RouteEnv>();
+    mountRestRoutes(router, catalogue, [route]);
+    return mountRouter('/probe', router, role).request('/probe/x');
+}
+
+describe('mountRestRoutes', () => {
+    it('throws at mount when a route names a method the catalogue lacks', () => {
+        const route = { ...probeRoute(), id: 'probe.missing' };
+        expect(() => mountRestRoutes(new OpenAPIHono(), catalogue, [route])).toThrow(
+            "names 'probe.missing', which this catalogue does not describe"
+        );
+    });
+
+    it('403s a role the catalogue refuses when the route has no precondition', async () => {
+        const res = await probe(probeRoute(), denied);
+        expect(res.status).toBe(403);
+    });
+
+    it('skips the catalogue check when the route declares a precondition', async () => {
+        const res = await probe(
+            probeRoute(() => null),
+            denied
+        );
+        expect(res.status).toBe(400);
     });
 });

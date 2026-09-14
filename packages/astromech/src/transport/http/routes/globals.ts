@@ -6,7 +6,7 @@
  * live in `http-routes.shared.ts`; two get a bespoke handler.
  */
 import type { HttpRouteSpec } from './http-routes.shared';
-import type { ContractCatalogue, RestRoute } from './rest-route';
+import type { RestRoute } from './rest-route';
 import type { GlobalCapability } from '@/globals/internal/global';
 import type { ResolvedAccess } from '@/permissions/access';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
@@ -36,12 +36,8 @@ type GlobalMethodName = keyof GlobalsService;
  */
 export function createGlobalsRouter(): OpenAPIHono<Env> {
     const router = new OpenAPIHono<Env>();
-    const contracts = {
-        forRequest: contractsForRequest,
-        documented: globalsDefinition.catalogue,
-    };
-    mountRestRoutes(router, contracts, GLOBALS_ROUTES);
-    documentBespokeRoutes(router, contracts, DOCUMENTED_SPECS);
+    mountRestRoutes(router, globalsDefinition.catalogue, GLOBALS_ROUTES);
+    documentBespokeRoutes(router, globalsDefinition.catalogue, DOCUMENTED_SPECS);
     mountBespokeRoutes(router);
     return router;
 }
@@ -122,47 +118,6 @@ function contentArgs(c: Context<Env>): { key: string; locale?: string } {
 function flag(c: Context<Env>, name: string): boolean {
     const value = c.req.query(name);
     return value === 'true' || value === '1';
-}
-
-/**
- * One global's method catalogue, built once per resolved global. The declaration
- * object is the key, so a config reload drops the whole set with it.
- */
-const CONTRACTS_BY_GLOBAL = new WeakMap<ResolvedGlobal, ContractCatalogue>();
-
-/**
- * The catalogue with each method's `access` resolved to the fixed form this
- * global checks. The shared catalogue states it as a function of the call's
- * `key`, which the generic mount cannot evaluate — it guards before the body is
- * read, and so before any argument object exists.
- */
-function globalContracts(global: ResolvedGlobal): ContractCatalogue {
-    const cached = CONTRACTS_BY_GLOBAL.get(global);
-    if (cached) return cached;
-
-    const catalogue: ContractCatalogue = Object.fromEntries(
-        Object.entries(globalsDefinition.catalogue).map(([name, method]) => {
-            const resolved = resolveAccess(method.access, { key: global.id });
-            return [
-                name,
-                {
-                    ...method,
-                    access:
-                        resolved.kind === 'permission'
-                            ? resolved.permission
-                            : resolved.kind,
-                },
-            ];
-        })
-    );
-    CONTRACTS_BY_GLOBAL.set(global, catalogue);
-    return catalogue;
-}
-
-/** Resolve the catalogue for one request — the global's key is a path param. */
-function contractsForRequest(c: Context<Env>): ContractCatalogue | undefined {
-    const global = findGlobal(getConfig(), param(c, 'key'));
-    return global ? globalContracts(global) : undefined;
 }
 
 /**
