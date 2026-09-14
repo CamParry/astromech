@@ -141,7 +141,11 @@ export async function currentAppContext(): Promise<AppContext> {
     if (requestContext.app !== undefined) return requestContext.app;
 
     const [user, role] = await Promise.all([getCurrentUser(), getCurrentRole()]);
-    const app = createAppContext({ user, role });
+    const app = createAppContext({
+        user,
+        role,
+        clientAddress: requestContext.clientAddress,
+    });
     requestContext.app = app;
     return app;
 }

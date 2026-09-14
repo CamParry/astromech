@@ -13,6 +13,7 @@ import type {
     EntriesService,
     ManifestMethod,
     Permission,
+    PluginDefinition,
     Role,
     ServiceMethodContract,
     User,
@@ -25,6 +26,7 @@ import { permissionsFor } from '@/permissions/permissions-for';
 import { annotateManifest } from '@/policies/annotate-manifest';
 import { scopedServices, scopeEntries, scopeMethods } from '@/policies/scoped-services';
 import { runWithContext } from '@/request-context/request-context';
+import { noInput } from '@/services/define-service-method';
 
 beforeEach(() => {
     setupTestConfig();
@@ -481,6 +483,88 @@ describe('scopedServices', () => {
         const scoped = scopedServices(null);
 
         expect(() => scoped.users.query()).toThrow(PermissionDeniedError);
+    });
+});
+
+const probePlugin: PluginDefinition = {
+    package: 'probe',
+    service: {
+        ping: {
+            access: 'public',
+            input: noInput(),
+            mutates: false,
+            handler: () => 'pong',
+        },
+        whoami: {
+            access: 'authenticated',
+            input: noInput(),
+            mutates: false,
+            handler: () => 'signed in',
+        },
+        echo: {
+            access: { permission: 'read' },
+            input: z.looseObject({}),
+            mutates: false,
+            handler: (input) => input,
+        },
+        address: {
+            access: 'public',
+            input: noInput(),
+            mutates: false,
+            handler: (_input, ctx) => ctx.clientAddress ?? null,
+        },
+    },
+};
+
+/** The probe plugin's method `key` on a handle scoped to `actingRole`. */
+function probeMethod(
+    actingRole: Role | null,
+    key: string
+): (input?: unknown) => Promise<unknown> {
+    const method = scopedServices(actingRole).plugins.probe?.[key];
+    if (method === undefined) throw new Error(`probe.${key} is missing from the handle`);
+    return method;
+}
+
+describe('scopedServices — plugins', () => {
+    beforeEach(() => {
+        setupTestConfig({ ...makeTestConfig(), plugins: [probePlugin] });
+    });
+
+    it('runs a public method with no role', async () => {
+        await expect(probeMethod(null, 'ping')()).resolves.toBe('pong');
+    });
+
+    it('refuses an authenticated method with no role, and runs it for any role', async () => {
+        await expect(probeMethod(null, 'whoami')()).rejects.toThrow(
+            PermissionDeniedError
+        );
+        await expect(probeMethod(role(), 'whoami')()).resolves.toBe('signed in');
+    });
+
+    it('gates a permission method on the plugin permission form', async () => {
+        await expect(
+            probeMethod(role(), 'echo')({ hello: 'world' })
+        ).rejects.toMatchObject({
+            name: 'PermissionDeniedError',
+            method: 'plugins.probe.echo',
+            permission: 'plugin:probe:read',
+        });
+        await expect(
+            probeMethod(role('plugin:probe:read'), 'echo')({ hello: 'world' })
+        ).resolves.toEqual({ hello: 'world' });
+    });
+
+    it('keeps a denied method on the handle', () => {
+        expect(scopedServices(null).plugins.probe?.whoami).toBeTypeOf('function');
+    });
+
+    it('hands the plugin context the client address on the request store', async () => {
+        const seen = await runWithContext(
+            { request: new Request('http://localhost/'), clientAddress: '203.0.113.9' },
+            () => probeMethod(null, 'address')()
+        );
+        expect(seen).toBe('203.0.113.9');
     });
 });
 

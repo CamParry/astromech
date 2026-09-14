@@ -1,7 +1,7 @@
 /**
- * The plugin service namespace — `plugins.<serviceKey>.<method>(input)`,
- * matching the HTTP transport's route segment. In-process calls bypass
- * `access` checks by design; the HTTP API is the enforcement boundary.
+ * The plugin service namespace, `plugins.<serviceKey>.<method>(input)`. Calls
+ * through `ctx.plugins` are trusted server code and skip `access`; an untrusted
+ * caller goes through `scopedServices(role).plugins`, which enforces it.
  */
 
 import type { PluginContext, PluginServiceNamespace } from '@/types/index';
@@ -10,7 +10,11 @@ import {
     getPluginIdentity,
     getPluginServiceMethods,
 } from '@/plugins/runtime/plugin-runtime';
-import { getCurrentRole, getCurrentUser } from '@/request-context/request-context';
+import {
+    getCurrentClientAddress,
+    getCurrentRole,
+    getCurrentUser,
+} from '@/request-context/request-context';
 import { parseMethodInput } from '@/services/parse-method-input';
 
 type MethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
@@ -40,7 +44,8 @@ export const pluginServices: PluginServiceNamespace = new Proxy(
                             createPluginContext(
                                 resolved,
                                 await getCurrentUser(),
-                                await getCurrentRole()
+                                await getCurrentRole(),
+                                getCurrentClientAddress()
                             )
                         );
                 },

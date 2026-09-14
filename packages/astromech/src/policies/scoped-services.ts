@@ -10,6 +10,7 @@ import type {
     GlobalsService,
     MediaService,
     NotificationsService,
+    PluginServiceNamespace,
     Role,
     ServiceMethodAccess,
     ServiceMethodContract,
@@ -33,6 +34,11 @@ import { notificationsDefinition } from '@/notifications/service';
 import { resolveAccess } from '@/permissions/access';
 import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/core-permissions';
 import { permissionsFor } from '@/permissions/permissions-for';
+import {
+    getPluginIdentities,
+    getPluginServiceMethods,
+} from '@/plugins/runtime/plugin-runtime';
+import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { settingsDefinition } from '@/settings/service';
 import { usersDefinition } from '@/users/service';
 
@@ -206,6 +212,50 @@ export function scopeEntries(
     return scoped as unknown as EntriesService;
 }
 
+/** A plugin's methods as the scoped handle exposes them. */
+type PluginMethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
+
+/**
+ * Wrap every registered plugin's service methods in their declared `access`,
+ * resolved under the plugin's permission namespace. A denied method still
+ * exists on the returned object and rejects, as `scopeMethods` does.
+ */
+export function scopePlugins(permissions: Permissions): PluginServiceNamespace {
+    const scoped: Record<string, PluginMethodMap> = {};
+
+    for (const identity of getPluginIdentities()) {
+        const methods = getPluginServiceMethods().get(identity.namespace) ?? {};
+        const wrapped: PluginMethodMap = {};
+
+        for (const [key, method] of Object.entries(methods)) {
+            const id = `plugins.${identity.serviceKey}.${key}`;
+
+            wrapped[key] = async (input?: unknown): Promise<unknown> => {
+                // Decided on the raw input, before the invoker parses it, as
+                // `scopeMethods` does for a core method.
+                const resolved = resolveAccess(
+                    method.access,
+                    input,
+                    identity.permissionNamespace
+                );
+                if (!permissions.allowsAccess(resolved)) {
+                    throw new PermissionDeniedError(
+                        id,
+                        resolved.kind === 'permission' ? resolved.permission : null
+                    );
+                }
+                const invoke = pluginServices[identity.serviceKey]?.[key];
+                if (invoke === undefined) throw new PermissionDeniedError(id, null);
+                return invoke(input);
+            };
+        }
+
+        scoped[identity.serviceKey] = wrapped;
+    }
+
+    return scoped as PluginServiceNamespace;
+}
+
 /** The domains a caller can reach, each scoped to one role. */
 export type ScopedServices = {
     users: UsersService;
@@ -214,6 +264,7 @@ export type ScopedServices = {
     entries: EntriesService;
     globals: GlobalsService;
     notifications: NotificationsService;
+    plugins: PluginServiceNamespace;
 };
 
 /**
@@ -259,5 +310,6 @@ export function scopedServices(role: Role | null | undefined): ScopedServices {
             permissions,
             'notifications'
         ),
+        plugins: scopePlugins(permissions),
     };
 }

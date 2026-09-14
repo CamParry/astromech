@@ -87,22 +87,21 @@ method, and the handle already holds the contract.
 
 ## The work
 
-One branch, `one-method-call-path`, in a worktree at
-`../Astromech-worktrees/one-method-call-path`; one commit per stage, each
-written by a `coder` sub-agent from this file, reviewed and gated by the main
-thread, and merged to main when it passes. The manifest JSON and the OpenAPI
-document stay byte-identical at every stage.
+One branch, `one-method-call-path`, in a sibling worktree as `AGENTS.md`
+describes; one commit per stage, each written by a `coder` sub-agent from this
+file, reviewed and gated by the main thread, and merged to main when it passes.
+The manifest JSON and the OpenAPI document stay byte-identical at every stage.
 
 **Stage 1: plugin methods on the scoped handle**
 
-- [ ] `RequestContext` carries `clientAddress`, set by the Hono app's request
+- [x] `RequestContext` carries `clientAddress`, set by the Hono app's request
       middleware. `currentAppContext()` and the plugin service proxy pass it to
       the context they build.
-- [ ] `ScopedServices.plugins`, built by a `scopePlugins` in
+- [x] `ScopedServices.plugins`, built by a `scopePlugins` in
       `policies/scoped-services.ts`. Tests: a public method runs with no role;
       an authenticated one is refused with no role; a permission-gated one is
       refused for a role without it and runs for a role with it.
-- [ ] The plugin RPC route calls the scoped handle. A refusal answers 401 when
+- [x] The plugin RPC route calls the scoped handle. A refusal answers 401 when
       nobody is signed in and 403 otherwise, as it does now.
       `plugins-contract.test.ts` passes unchanged.
 

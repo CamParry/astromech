@@ -4,6 +4,7 @@
  * for SSR/hooks, the CLI) compose nothing and never check.
  */
 
+import type { ResolvedAccess } from '@/permissions/access';
 import type { Permission, Role, ServiceMethodContract } from '@/types/index';
 import { resolveAccess } from '@/permissions/access';
 import { can } from '@/permissions/roles';
@@ -11,6 +12,11 @@ import { can } from '@/permissions/roles';
 export type Permissions = {
     /** True if the role holds `permission`. A missing role holds nothing. */
     allows(permission: Permission): boolean;
+    /**
+     * True if the role meets `access`, already resolved for one call: public is
+     * always met, authenticated needs a role, and a permission needs that permission.
+     */
+    allowsAccess(access: ResolvedAccess): boolean;
     /**
      * True if the role may call `method` with `input`. Reads the method's
      * declared `access`: a public method is always allowed, an authenticated
@@ -27,13 +33,16 @@ export function permissionsFor(role: Role | null | undefined): Permissions {
     const allows = (permission: Permission): boolean =>
         role != null ? can(role, permission) : false;
 
+    const allowsAccess = (access: ResolvedAccess): boolean => {
+        if (access.kind === 'public') return true;
+        if (access.kind === 'authenticated') return role != null;
+        return allows(access.permission);
+    };
+
     return {
         allows,
-        allowsMethod(method, input) {
-            const resolved = resolveAccess(method.access, input);
-            if (resolved.kind === 'public') return true;
-            if (resolved.kind === 'authenticated') return role != null;
-            return allows(resolved.permission);
-        },
+        allowsAccess,
+        allowsMethod: (method, input) =>
+            allowsAccess(resolveAccess(method.access, input)),
     };
 }

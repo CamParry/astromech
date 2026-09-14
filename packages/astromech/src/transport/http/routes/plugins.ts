@@ -1,19 +1,14 @@
 /**
- * Plugin RPC + raw routes — mounted at `/api/plugins/*`.
- *
- * RPC calls a plugin's declared service method (JSON in/out); raw routes are
- * a binary/multipart/streaming escape hatch. Mounts before the app-wide
- * `requireAuth`, since every method/route enforces its own declared `access`.
+ * Plugin RPC and raw routes at `/api/plugins/*`, mounted before `requireAuth`.
+ * RPC calls a service method through the scoped handle, which enforces its
+ * `access`; a raw route (binary, multipart, streaming) goes through `enforceAccess`.
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type {
-    PluginContext,
-    ResolvedPluginIdentity,
-    ServiceMethodAccess,
-} from '@/types/index';
+import type { ResolvedPluginIdentity, ServiceMethodAccess } from '@/types/index';
 import type { Context } from 'hono';
 import { Hono } from 'hono';
+import { PermissionDeniedError } from '@/errors/permission';
 import { resolveAccess } from '@/permissions/access';
 import { permissionsFor } from '@/permissions/permissions-for';
 import {
@@ -22,7 +17,7 @@ import {
     getPluginRawRoutes,
     getPluginServiceMethods,
 } from '@/plugins/runtime/plugin-runtime';
-import { parseMethodInput } from '@/services/parse-method-input';
+import { scopedServices } from '@/policies/scoped-services';
 import { getClientAddress } from '@/transport/http/client-address';
 import { optionalAuth } from '@/transport/http/middleware/auth';
 import { forbidden, notFound, unauthorized } from '@/transport/http/middleware/errors';
@@ -33,7 +28,10 @@ export const pluginsRouter = new Hono<PluginEnv>();
 
 pluginsRouter.use('*', optionalAuth);
 
-/** Enforce a method/route's declared access. Returns a denial Response, or null to proceed. */
+/**
+ * Enforce a raw route's declared access. Returns a denial Response, or null to
+ * proceed. RPC methods are checked by `scopedServices(role).plugins` instead.
+ */
 function enforceAccess(
     c: Context<PluginEnv>,
     access: ServiceMethodAccess<never>,
@@ -75,8 +73,8 @@ for (const { identity, route } of getPluginRawRoutes()) {
 
 // RPC: POST /plugins/{serviceKey}/{method}
 // Not in a route table: the method id is two path params resolved at request
-// time against the plugin service registry, access is `PluginAccess`, and the
-// handler's result is returned unenveloped.
+// time against the plugin service registry, and the handler's result is
+// returned unenveloped. Access is checked by the scoped handle.
 pluginsRouter.post('/:name/:method', async (c) => {
     const name = c.req.param('name');
     const method = c.req.param('method');
@@ -91,21 +89,14 @@ pluginsRouter.post('/:name/:method', async (c) => {
         return notFound(c, `Plugin method "${name}.${method}" not found`);
     }
 
-    const denied = enforceAccess(c, serviceMethod.access, identity);
-    if (denied) return denied;
-
     const body = await c.req.json().catch(() => undefined);
-    const result = await (
-        serviceMethod.handler as (i: unknown, c: PluginContext) => unknown
-    )(
-        parseMethodInput(serviceMethod, body),
-        createPluginContext(
-            identity,
-            c.var.user ?? null,
-            c.var.role ?? null,
-            getClientAddress(c)
-        )
-    );
+    let result: unknown;
+    try {
+        result = await scopedServices(c.var.role ?? null).plugins[name]?.[method]?.(body);
+    } catch (error) {
+        if (!(error instanceof PermissionDeniedError)) throw error;
+        return c.var.user ? forbidden(c) : unauthorized(c);
+    }
     // Build the JSON Response directly: c.json's generic chokes on the
     // recursive JsonValue type. RPC returns the raw handler result.
     return new Response(JSON.stringify(result ?? null), {

@@ -14,7 +14,8 @@ import { secureHeaders } from 'hono/secure-headers';
 import { usersService } from '@/app-context/services';
 import { resolveEnv } from '@/env';
 import { handleMediaRequest } from '@/media/serving/handler';
-import { runWithRequest } from '@/request-context/request-context';
+import { runWithContext } from '@/request-context/request-context';
+import { getClientAddress } from '@/transport/http/client-address';
 import { getAuth } from '@/users/auth';
 import { requireAuth } from './middleware/auth';
 import { onError, onNotFound } from './middleware/errors';
@@ -45,8 +46,13 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
 
     // `app.fetch` is a public entry point, so the app establishes its own scope
     // rather than requiring an ambient one. Nesting inside the Astro
-    // middleware's is free: a request nobody asks about resolves nothing.
-    app.use('*', (c, next) => runWithRequest(c.req.raw, () => next()));
+    // middleware's is free: a request nobody asks about resolves nothing. The
+    // client address goes on the store so every context built below carries it.
+    app.use('*', (c, next) =>
+        runWithContext({ request: c.req.raw, clientAddress: getClientAddress(c) }, () =>
+            next()
+        )
+    );
 
     // Security headers, applied to all responses.
     const headers = config.security?.headers;

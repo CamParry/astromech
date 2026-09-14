@@ -18,6 +18,11 @@ export type RequestContext = {
     role?: Role | null;
     /** The request's `AppContext`, built once by `currentAppContext()`. */
     app?: AppContext;
+    /**
+     * The connecting address the Hono app reads for an API request. Absent for
+     * Astro page requests and trusted callers.
+     */
+    clientAddress?: string | undefined;
 };
 
 const requestContext = createRegistry<AsyncLocalStorage<RequestContext>>(
@@ -51,6 +56,11 @@ export function runWithRequest<T>(request: Request, fn: () => Promise<T>): Promi
 /** The active request context, or undefined when no context is established. */
 export function getRequestContext(): RequestContext | undefined {
     return store().getStore();
+}
+
+/** The connecting address of the current API request, or undefined when none was read. */
+export function getCurrentClientAddress(): string | undefined {
+    return store().getStore()?.clientAddress;
 }
 
 /** The acting user, or null outside a request context. */
