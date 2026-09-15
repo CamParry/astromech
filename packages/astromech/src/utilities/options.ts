@@ -5,7 +5,7 @@
  */
 export function withDefaults<T extends object>(
     defaults: Required<T>,
-    options?: Partial<T>
+    options?: { [K in keyof T]?: T[K] | undefined }
 ): Required<T> {
     const result = { ...defaults };
     if (!options) return result;

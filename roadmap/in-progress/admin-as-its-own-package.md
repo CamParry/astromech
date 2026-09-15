@@ -44,7 +44,7 @@ Decisions:
 
 Stages, each one commit that passes `pnpm run verify`:
 
-- [ ]   1. Declare the browser surface: `astromech/shared`, aliases for it and
+- [x]   1. Declare the browser surface: `astromech/shared`, aliases for it and
        `astromech/fetch`, the four admin-only modules moved under `src/admin/`, a
        codemod pointing every admin import of core at those entries, the bundle
        test, and a lint rule refusing any other `@/` import from `src/admin/`.
