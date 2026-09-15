@@ -7,10 +7,5 @@
         "incremental": true,
         "tsBuildInfoFile": "./node_modules/.cache/tsc/tsconfig.test.tsbuildinfo"
     },
-    "include": [
-        "src/**/*",
-        "tests/**/*",
-        "../admin/src/virtual-modules.d.ts",
-        "../admin/src/routeTree.gen.ts"
-    ]
+    "include": ["src/**/*", "tests/**/*", "../admin/src/virtual-modules.d.ts"]
 }

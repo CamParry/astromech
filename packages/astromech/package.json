@@ -266,7 +266,6 @@
         "dev": "tsup --watch",
         "build": "tsup",
         "build:js": "ASTROMECH_NO_DTS=1 tsup",
-        "pretypecheck": "pnpm -F @astromech/admin routes:generate",
         "typecheck": "tsc -p tsconfig.test.json",
         "lint": "eslint src tests scripts",
         "check:node-imports": "node scripts/check-node-imports.mjs",

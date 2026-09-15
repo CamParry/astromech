@@ -59,14 +59,15 @@ Stages, each one commit that passes `pnpm run verify`:
 - [x]   4. Move the admin tests, with their own vitest config, isolation list and
        coverage thresholds.
 - [x]   5. Retire the `*.shared.ts` suffix. Six files carried it, not seven;
-       the bundle test's allowlist now names them by path. The browser-boundary
-       item stays in `roadmap/planned/` until stage 6 settles its last item,
-       the `@/` alias.
-- [ ]   6. Scope the `@/` alias in the site's Vite build to files inside core's
-       `src`.
-- [ ] Core's `tsconfig.test.json` stops including the admin's route tree, and
-      core's `pretypecheck` stops generating it. Both remain because core
-      type-checks admin source through its `astromech/ui` re-exports.
+       the bundle test's allowlist now names them by path.
+- [x]   6. Scope the `@/` alias in the site's Vite build to files inside core's
+       `src`. A Vite plugin resolves `@/` only for importers there, and the
+       demo aliases `@/` to its own `src`, which failed `check:boot` under the
+       global alias. Closed `roadmap/completed/browser-boundary-enforcement.md`.
+- [x] Core's `tsconfig.test.json` stops including the admin's route tree, and
+      core's `pretypecheck` stops generating it. Core type-checks the admin's
+      kit through its `astromech/ui` re-exports, but nothing the kit imports
+      reaches the route tree, so core needs neither.
 - [ ] After stage 3, try nested `optimizeDeps.include` entries so
       `publicHoistPattern` can shrink.
 
