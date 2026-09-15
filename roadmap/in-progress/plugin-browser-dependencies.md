@@ -31,6 +31,12 @@ from the site root at all.
 
 ## The work
 
-- [ ] Choose between the options above.
+- [x] Choose between the options above. A plugin declares
+      `admin.optimizeDeps.include`, Vite's own name, as bare specifiers, and
+      core renders each as `<package> > <name>` from the definition's
+      `package`, or bare for a plugin with a `file:` root, which resolves from
+      the site. It matches the admin's list and stays explicit. Rejected:
+      deriving the list, which has core parse plugin source at config time,
+      and accepting the reload.
 - [ ] Apply it to the assistant, and add a check like the admin's that fails
       when a component imports a package the list misses.
