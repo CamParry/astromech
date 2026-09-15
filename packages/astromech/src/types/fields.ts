@@ -242,10 +242,10 @@ export type ContainerScope = {
 };
 
 /**
- * The single source of truth for a field type. Core and plugin field types
- * register the same shape; the pipeline dispatches to it. Replaces the ~6
- * drifting surfaces (union, builder, component registry, type-gen switch,
- * defaults, coercion) with one record per type.
+ * The single source of truth for a core field type; the pipeline dispatches to
+ * it. One record per type replaces the drifting surfaces (union, builder,
+ * type-gen switch, defaults, coercion). A plugin field type registers a
+ * `PluginFieldTypeRegistration` instead, which also names its admin component.
  */
 export type FieldType = {
     type: string;
@@ -253,8 +253,6 @@ export type FieldType = {
     // `any` — heterogeneous factory option types; a registry can't hold a single precise signature.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     build: (name: string, options?: any) => Field;
-    /** Import specifier for the admin (browser) component. */
-    component: string;
     /** TS type emitted by codegen for this field, or `null` to omit. */
     tsType: (field: Field, shape: 'full' | 'public') => string | null;
     defaultValue?: unknown;

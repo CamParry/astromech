@@ -48,12 +48,14 @@ Stages, each one commit that passes `pnpm run verify`:
        `astromech/fetch`, the four admin-only modules moved under `src/admin/`, a
        codemod pointing every admin import of core at those entries, the bundle
        test, and a lint rule refusing any other `@/` import from `src/admin/`.
-- [ ]   2. Remove core's references to admin paths: the unread `component`
+- [x]   2. Remove core's references to admin paths: the unread `component`
        strings in the core field types, the instance guard's slot in the
        registry, and the unused `@fontsource-variable/inter`.
 - [ ]   3. Move the source into packages/admin, with relative imports, its own
        package manifest, tsconfig, tsup config and Vite helper, and core's
-       `astromech/ui*` re-exports.
+       `astromech/ui*` re-exports. The UI instance guard keeps its own
+       `__astromechAdmin` global, and the admin loads Inter, which its styles
+       name but nothing has ever loaded.
 - [ ]   4. Move the admin tests, with their own vitest config, isolation list and
        coverage thresholds.
 - [ ]   5. Retire the `*.shared.ts` suffix and close
@@ -108,7 +110,7 @@ integration registers points at package source: the four `injectRoute` calls,
 the `@/` alias, the three `astromech/ui*` aliases, and
 `TanStackRouterVite({ routesDirectory: pkgSrc + '/admin/pages' })`. The alias
 comment states the reason — plugin components must share module identity (React
-context, hooks) with the admin, and `admin/support/ui-instance-guard.ts` exists
+context, hooks) with the admin, and `admin/components/ui/instance-guard.ts` exists
 to detect the failure when they do not.
 
 The decisive case is not core's own code. **Consumer-authored admin components
@@ -148,7 +150,7 @@ second one cheap, and it is worth doing whether or not the split ever happens.
 Two files, one component, rendered behind `import.meta.env.DEV` in
 `app-shell.tsx`. `import.meta.env.DEV` appears in three other admin files
 anyway — `main.tsx`, `ComponentErrorBoundary.tsx` and
-`admin/support/ui-instance-guard.ts`, which the `astromech/ui` barrel itself
+`admin/components/ui/instance-guard.ts`, which the `astromech/ui` barrel itself
 imports on its first line. The directory constrains nothing.
 
 ### Is the cost worth paying before v1? — not until the prerequisites land

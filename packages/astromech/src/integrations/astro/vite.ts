@@ -58,9 +58,6 @@ export function createViteConfig({
                 '@/': packageSource + '/',
             },
         },
-        ssr: {
-            noExternal: ['@fontsource-variable/inter'],
-        },
         optimizeDeps: {
             include: [
                 'react',

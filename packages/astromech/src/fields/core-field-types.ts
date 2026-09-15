@@ -193,21 +193,18 @@ export const coreFieldTypes: FieldType[] = [
     {
         type: 'text',
         build: text,
-        component: '@/admin/components/fields/text-field',
         validate: validateText,
         tsType: () => 'string',
     },
     {
         type: 'textarea',
         build: textarea,
-        component: '@/admin/components/fields/textarea-field',
         validate: validateText,
         tsType: () => 'string',
     },
     {
         type: 'richtext',
         build: richtext,
-        component: '@/admin/components/fields/richtext-field',
         coerce: coerceRichText,
         validate: validateRichText,
         tsType: (_field, shape) =>
@@ -216,7 +213,6 @@ export const coreFieldTypes: FieldType[] = [
     {
         type: 'number',
         build: number,
-        component: '@/admin/components/fields/number-field',
         coerce: coerceNumber,
         validate: validateNumber,
         tsType: () => 'number',
@@ -224,7 +220,6 @@ export const coreFieldTypes: FieldType[] = [
     {
         type: 'boolean',
         build: boolean,
-        component: '@/admin/components/fields/boolean-field',
         validate: validateBoolean,
         tsType: () => 'boolean',
         defaultValue: false,
@@ -232,7 +227,6 @@ export const coreFieldTypes: FieldType[] = [
     {
         type: 'date',
         build: date,
-        component: '@/admin/components/fields/date-field',
         coerce: coerceDate,
         validate: validateDate,
         tsType: () => 'string',
@@ -240,7 +234,6 @@ export const coreFieldTypes: FieldType[] = [
     {
         type: 'datetime',
         build: datetime,
-        component: '@/admin/components/fields/datetime-field',
         coerce: coerceDate,
         validate: validateDate,
         tsType: () => 'string',
@@ -248,14 +241,12 @@ export const coreFieldTypes: FieldType[] = [
     {
         type: 'select',
         build: select,
-        component: '@/admin/components/fields/select-field',
         validate: validateChoice,
         tsType: () => 'string',
     },
     {
         type: 'multiselect',
         build: multiselect,
-        component: '@/admin/components/fields/multiselect-field',
         validate: validateMultiChoice,
         tsType: () => 'string[]',
         defaultValue: [],
@@ -263,7 +254,6 @@ export const coreFieldTypes: FieldType[] = [
     {
         type: 'media',
         build: media,
-        component: '@/admin/components/fields/media-field',
         validate: validateReference,
         tsType: (field) => (field.multiple === true ? 'string[]' : 'string'),
         isRelation: true,
@@ -271,7 +261,6 @@ export const coreFieldTypes: FieldType[] = [
     {
         type: 'relationship',
         build: relationship,
-        component: '@/admin/components/fields/relationship-field',
         validate: validateReference,
         tsType: (field) => (field.multiple === true ? 'string[]' : 'string'),
         isRelation: true,
@@ -279,14 +268,12 @@ export const coreFieldTypes: FieldType[] = [
     {
         type: 'json',
         build: json,
-        component: '@/admin/components/fields/json-field',
         tsType: () => "import('astromech').JsonValue",
         validate: validateJson,
     },
     {
         type: 'group',
         build: (name, options) => group(name, options as Parameters<typeof group>[1]),
-        component: '@/admin/components/fields/group-field',
         validate: validateGroup,
         tsType: () => null,
         children: (field, value) => {
@@ -307,7 +294,6 @@ export const coreFieldTypes: FieldType[] = [
         type: 'repeater',
         build: (name, options) =>
             repeater(name, options as Parameters<typeof repeater>[1]),
-        component: '@/admin/components/fields/repeater-field',
         validate: validateItemList,
         tsType: () => null,
         defaultValue: [],
@@ -317,7 +303,6 @@ export const coreFieldTypes: FieldType[] = [
     {
         type: 'blocks',
         build: (name, options) => blocks(name, options as Parameters<typeof blocks>[1]),
-        component: '@/admin/components/fields/blocks-field',
         tsType: () => null,
         defaultValue: [],
         reservedKeys: [
@@ -338,7 +323,6 @@ export const coreFieldTypes: FieldType[] = [
     {
         type: 'tree',
         build: (name, options) => tree(name, options as Parameters<typeof tree>[1]),
-        component: '@/admin/components/fields/tree-field',
         validate: validateItemList,
         tsType: () => null,
         defaultValue: [],
@@ -348,7 +332,6 @@ export const coreFieldTypes: FieldType[] = [
     {
         type: 'email',
         build: email,
-        component: '@/admin/components/fields/email-field',
         tsType: () => 'string',
         coerce: coerceEmail,
         validate: validateEmail,
@@ -356,7 +339,6 @@ export const coreFieldTypes: FieldType[] = [
     {
         type: 'url',
         build: url,
-        component: '@/admin/components/fields/url-field',
         tsType: () => 'string',
         coerce: coerceUrl,
         validate: validateUrl,
@@ -364,21 +346,18 @@ export const coreFieldTypes: FieldType[] = [
     {
         type: 'color',
         build: color,
-        component: '@/admin/components/fields/color-field',
         validate: validateColor,
         tsType: () => 'string',
     },
     {
         type: 'slug',
         build: slug,
-        component: '@/admin/components/fields/slug-field',
         validate: validateSlug,
         tsType: () => 'string',
     },
     {
         type: 'range',
         build: range,
-        component: '@/admin/components/fields/range-field',
         coerce: coerceNumber,
         validate: validateNumber,
         tsType: () => 'number',
@@ -386,7 +365,6 @@ export const coreFieldTypes: FieldType[] = [
     {
         type: 'checkbox-group',
         build: checkboxGroup,
-        component: '@/admin/components/fields/checkbox-group-field',
         validate: validateMultiChoice,
         tsType: () => 'string[]',
         defaultValue: [],
@@ -394,21 +372,18 @@ export const coreFieldTypes: FieldType[] = [
     {
         type: 'radio-group',
         build: radioGroup,
-        component: '@/admin/components/fields/radio-group-field',
         validate: validateChoice,
         tsType: () => 'string',
     },
     {
         type: 'link',
         build: link,
-        component: '@/admin/components/fields/link-field',
         validate: validateLink,
         tsType: () => '{ url: string; label: string; target?: string }',
     },
     {
         type: 'key-value',
         build: keyValue,
-        component: '@/admin/components/fields/key-value-field',
         tsType: () => 'Record<string, string>',
         coerce: coerceKeyValue,
         validate: validateKeyValue,

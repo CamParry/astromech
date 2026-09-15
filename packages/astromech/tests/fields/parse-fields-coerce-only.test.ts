@@ -34,7 +34,6 @@ function field(def: Partial<Field> & { name: string; type: string }): Field {
 registerFieldType({
     type: 'stamped',
     build: (() => ({})) as never,
-    component: '',
     tsType: () => 'string',
     coerce: (v) => (typeof v === 'string' ? `${v}!` : v),
     validate: async () => true,

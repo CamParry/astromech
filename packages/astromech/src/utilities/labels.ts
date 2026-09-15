@@ -1,7 +1,7 @@
 /**
  * Config-time `Label` helpers — runtime-agnostic, no i18next dependency.
- * Config never translates; it captures keys via `t(key)` → `{ $t }`. The
- * admin-side resolver lives separately in `@/admin/i18n/labels.ts`.
+ * Config never translates; it captures keys via `t(key)` → `{ $t }`, and the
+ * admin resolves them with its own resolver.
  */
 
 import type { Label, MessageRef } from '@/types/fields';

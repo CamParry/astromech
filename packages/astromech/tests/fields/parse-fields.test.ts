@@ -304,7 +304,6 @@ describe('coerce', () => {
     registerFieldType({
         type: 't-coerce',
         build: (() => ({})) as never,
-        component: '',
         tsType: () => 'string',
         coerce: (x) => String(x).trim(),
         validate: async () => true,
