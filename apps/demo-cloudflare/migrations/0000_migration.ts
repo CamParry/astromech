@@ -291,6 +291,50 @@ export async function up(db: Kysely<unknown>): Promise<void> {
         db
     );
     await sql`
+        CREATE TABLE \`accounts\` (
+            \`id\` text PRIMARY KEY NOT NULL,
+            \`account_id\` text NOT NULL,
+            \`provider_id\` text NOT NULL,
+            \`user_id\` text NOT NULL,
+            \`access_token\` text,
+            \`refresh_token\` text,
+            \`id_token\` text,
+            \`access_token_expires_at\` text,
+            \`refresh_token_expires_at\` text,
+            \`scope\` text,
+            \`password\` text,
+            \`created_at\` text NOT NULL,
+            \`updated_at\` text NOT NULL,
+            CONSTRAINT \`accounts_user_id_fkey\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE cascade
+        )
+    `.execute(db);
+    await sql`
+        CREATE TABLE \`sessions\` (
+            \`id\` text PRIMARY KEY NOT NULL,
+            \`expires_at\` text NOT NULL,
+            \`token\` text NOT NULL,
+            \`created_at\` text NOT NULL,
+            \`updated_at\` text NOT NULL,
+            \`ip_address\` text,
+            \`user_agent\` text,
+            \`user_id\` text NOT NULL,
+            CONSTRAINT \`sessions_user_id_fkey\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE cascade
+        )
+    `.execute(db);
+    await sql`CREATE UNIQUE INDEX \`sessions_token_unique\` ON \`sessions\` (\`token\`)`.execute(
+        db
+    );
+    await sql`
+        CREATE TABLE \`verifications\` (
+            \`id\` text PRIMARY KEY NOT NULL,
+            \`identifier\` text NOT NULL,
+            \`value\` text NOT NULL,
+            \`expires_at\` text NOT NULL,
+            \`created_at\` text,
+            \`updated_at\` text
+        )
+    `.execute(db);
+    await sql`
         CREATE TABLE \`user_content\` (
             \`id\` text PRIMARY KEY NOT NULL,
             \`user_id\` text NOT NULL,

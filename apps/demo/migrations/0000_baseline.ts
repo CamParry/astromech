@@ -44,10 +44,10 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     await sql`
         CREATE TABLE \`sessions\` (
             \`id\` text PRIMARY KEY NOT NULL,
-            \`expires_at\` integer NOT NULL,
+            \`expires_at\` text NOT NULL,
             \`token\` text NOT NULL,
-            \`created_at\` integer NOT NULL,
-            \`updated_at\` integer NOT NULL,
+            \`created_at\` text NOT NULL,
+            \`updated_at\` text NOT NULL,
             \`ip_address\` text,
             \`user_agent\` text,
             \`user_id\` text NOT NULL,
@@ -68,12 +68,12 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`access_token\` text,
             \`refresh_token\` text,
             \`id_token\` text,
-            \`access_token_expires_at\` integer,
-            \`refresh_token_expires_at\` integer,
+            \`access_token_expires_at\` text,
+            \`refresh_token_expires_at\` text,
             \`scope\` text,
             \`password\` text,
-            \`created_at\` integer NOT NULL,
-            \`updated_at\` integer NOT NULL,
+            \`created_at\` text NOT NULL,
+            \`updated_at\` text NOT NULL,
             CONSTRAINT \`accounts_user_id_fkey\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE cascade
         )
     `.execute(db);
@@ -84,9 +84,9 @@ export async function up(db: Kysely<unknown>): Promise<void> {
             \`id\` text PRIMARY KEY NOT NULL,
             \`identifier\` text NOT NULL,
             \`value\` text NOT NULL,
-            \`expires_at\` integer NOT NULL,
-            \`created_at\` integer,
-            \`updated_at\` integer
+            \`expires_at\` text NOT NULL,
+            \`created_at\` text,
+            \`updated_at\` text
         )
     `.execute(db);
 

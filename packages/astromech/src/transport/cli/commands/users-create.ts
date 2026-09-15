@@ -1,8 +1,7 @@
-import type { DB } from '@/database/types';
-import type { Insertable } from 'kysely';
 import { defineCommand } from 'citty';
-import { encode } from '@/database/codec';
+import { encodeWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
+import { accountsTable } from '@/database/tables';
 import { createUserRepository } from '@/users/repository';
 import { loadConfig } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
@@ -60,7 +59,7 @@ export default defineCommand({
         await db
             .insertInto('accounts')
             .values(
-                encode('accounts', {
+                encodeWith(accountsTable, {
                     id: accountId,
                     accountId: userId,
                     providerId: 'credential',
@@ -68,7 +67,7 @@ export default defineCommand({
                     password: hashedPassword,
                     createdAt: now,
                     updatedAt: now,
-                }) as unknown as Insertable<DB['accounts']>
+                })
             )
             .execute();
 

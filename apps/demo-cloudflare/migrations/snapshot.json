@@ -103,6 +103,124 @@
                 }
             ]
         },
+        "accounts": {
+            "name": "accounts",
+            "columns": [
+                {
+                    "key": "id",
+                    "name": "id",
+                    "kind": "id",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": true
+                },
+                {
+                    "key": "accountId",
+                    "name": "account_id",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "providerId",
+                    "name": "provider_id",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "userId",
+                    "name": "user_id",
+                    "kind": "reference",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "accessToken",
+                    "name": "access_token",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "refreshToken",
+                    "name": "refresh_token",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "idToken",
+                    "name": "id_token",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "accessTokenExpiresAt",
+                    "name": "access_token_expires_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "refreshTokenExpiresAt",
+                    "name": "refresh_token_expires_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "scope",
+                    "name": "scope",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "password",
+                    "name": "password",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "createdAt",
+                    "name": "created_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "updatedAt",
+                    "name": "updated_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                }
+            ],
+            "fks": [
+                {
+                    "column": "user_id",
+                    "targetTable": "users",
+                    "targetColumn": "id",
+                    "onDelete": "cascade"
+                }
+            ],
+            "indexes": []
+        },
         "entries": {
             "name": "entries",
             "columns": [
@@ -1346,6 +1464,90 @@
             "fks": [],
             "indexes": []
         },
+        "sessions": {
+            "name": "sessions",
+            "columns": [
+                {
+                    "key": "id",
+                    "name": "id",
+                    "kind": "id",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": true
+                },
+                {
+                    "key": "expiresAt",
+                    "name": "expires_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "token",
+                    "name": "token",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "createdAt",
+                    "name": "created_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "updatedAt",
+                    "name": "updated_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "ipAddress",
+                    "name": "ip_address",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "userAgent",
+                    "name": "user_agent",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "userId",
+                    "name": "user_id",
+                    "kind": "reference",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                }
+            ],
+            "fks": [
+                {
+                    "column": "user_id",
+                    "targetTable": "users",
+                    "targetColumn": "id",
+                    "onDelete": "cascade"
+                }
+            ],
+            "indexes": [
+                {
+                    "name": "sessions_token_unique",
+                    "columns": ["token"],
+                    "unique": true
+                }
+            ]
+        },
         "settings": {
             "name": "settings",
             "columns": [
@@ -1644,6 +1846,61 @@
                     "unique": true
                 }
             ]
+        },
+        "verifications": {
+            "name": "verifications",
+            "columns": [
+                {
+                    "key": "id",
+                    "name": "id",
+                    "kind": "id",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": true
+                },
+                {
+                    "key": "identifier",
+                    "name": "identifier",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "value",
+                    "name": "value",
+                    "kind": "text",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "expiresAt",
+                    "name": "expires_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": true,
+                    "primaryKey": false
+                },
+                {
+                    "key": "createdAt",
+                    "name": "created_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                },
+                {
+                    "key": "updatedAt",
+                    "name": "updated_at",
+                    "kind": "timestamp",
+                    "type": "text",
+                    "notNull": false,
+                    "primaryKey": false
+                }
+            ],
+            "fks": [],
+            "indexes": []
         }
     }
 }

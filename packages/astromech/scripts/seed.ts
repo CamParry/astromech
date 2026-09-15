@@ -654,7 +654,7 @@ async function upsertUser(email: string, name: string, role: string): Promise<st
     await db
         .insertInto('accounts')
         .values(
-            schema.encode('accounts', {
+            schema.encodeWith(schema.accountsTable, {
                 id: crypto.randomUUID(),
                 accountId: userId,
                 providerId: 'credential',

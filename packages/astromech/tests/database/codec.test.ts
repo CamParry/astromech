@@ -1,25 +1,21 @@
 /**
- * Row codec — the table-name-keyed tier.
- *
- * Since the `Table`-keyed `*With` functions became the only path for the tables
- * we own, `decode`/`encode`/`encodePatch` exist for exactly two things:
- * `sessions`/`accounts`/`verifications` (no descriptor, because nothing of ours
- * writes them) and plugin tables reached by name. `accounts` stands in for the
- * three here, and better-auth's format is the point: ISO-8601 TEXT timestamps,
- * the format its own adapter writes. Getting that wrong breaks login, so the
- * assertions go down to the stored cells rather than stopping at the round trip.
+ * Row codec for better-auth's tables. better-auth writes `sessions`, `accounts`
+ * and `verifications` through its own Kysely instance, and on SQLite it stores
+ * every timestamp as ISO-8601 TEXT. Their descriptors declare that format, and
+ * getting it wrong breaks login, so the assertions go down to the stored cells
+ * rather than stopping at the round trip. `accounts` stands in for the three.
  *
  * Asserted against a real row (temp-file libsql via the harness) so the DDL
- * participates — a pure-function round trip would pass even if the codec and
+ * participates: a pure-function round trip would pass even if the codec and
  * the baseline migration disagreed.
  */
 
-import type { DB, Db } from '@/database/types';
-import type { Insertable } from 'kysely';
+import type { Db } from '@/database/types';
 import { createTestDb, createTestUser } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { decode, encode, encodePatch } from '@/database/codec';
+import { decodeWith, encode, encodePatchWith, encodeWith } from '@/database/codec';
+import { accountsTable } from '@/database/tables';
 
 const CREATED = new Date('2024-03-04T05:06:07.000Z');
 const EXPIRES = new Date('2024-04-05T06:07:08.000Z');
@@ -45,14 +41,12 @@ async function storedAccount(id: string): Promise<Record<string, unknown>> {
 }
 
 /** `accounts.user_id` is a FK, so every row here needs a user to point at. */
-async function insertAccount(
-    values: Record<string, unknown>
-): Promise<Record<string, unknown>> {
+async function insertAccount(values: Record<string, unknown>) {
     const user = await createTestUser(db);
     return db
         .insertInto('accounts')
         .values(
-            encode('accounts', {
+            encodeWith(accountsTable, {
                 id: crypto.randomUUID(),
                 accountId: user.id,
                 providerId: 'credential',
@@ -60,7 +54,7 @@ async function insertAccount(
                 createdAt: CREATED,
                 updatedAt: CREATED,
                 ...values,
-            }) as unknown as Insertable<DB['accounts']>
+            })
         )
         .returningAll()
         .executeTakeFirstOrThrow();
@@ -69,11 +63,11 @@ async function insertAccount(
 describe('better-auth tables – encode/decode round trip', () => {
     it('round-trips an accounts row: Date timestamps in, Date timestamps out', async () => {
         const inserted = await insertAccount({ accessTokenExpiresAt: EXPIRES });
-        const account = decode('accounts', inserted);
+        const account = decodeWith(accountsTable, inserted);
 
         expect(account.createdAt).toBeInstanceOf(Date);
-        expect((account.createdAt as Date).getTime()).toBe(CREATED.getTime());
-        expect((account.accessTokenExpiresAt as Date).getTime()).toBe(EXPIRES.getTime());
+        expect(account.createdAt.getTime()).toBe(CREATED.getTime());
+        expect(account.accessTokenExpiresAt?.getTime()).toBe(EXPIRES.getTime());
         // Nothing invents a value for a column the write left out.
         expect(account.refreshTokenExpiresAt).toBeNull();
     });
@@ -88,14 +82,16 @@ describe('better-auth tables – encode/decode round trip', () => {
 
     // Rows predating that understanding hold unix seconds; they still decode.
     it('decodes a unix-seconds timestamp left by an older writer', () => {
-        const decoded = decode('accounts', {
+        const decoded = decodeWith(accountsTable, {
             createdAt: Math.floor(CREATED.getTime() / 1000),
         });
         expect(decoded.createdAt).toEqual(CREATED);
     });
 
     it('encodePatch serializes what it is given and injects nothing', () => {
-        expect(encodePatch('accounts', { scope: 'read', updatedAt: CREATED })).toEqual({
+        expect(
+            encodePatchWith(accountsTable, { scope: 'read', updatedAt: CREATED })
+        ).toEqual({
             scope: 'read',
             updatedAt: CREATED.toISOString(),
         });

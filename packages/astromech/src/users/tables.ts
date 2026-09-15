@@ -1,10 +1,10 @@
 /**
  * The users tables. `users` is better-auth's account row — it writes it through
  * its own Kysely instance, so the descriptor describes its on-disk format
- * rather than defining it. `user_content` and `user_versions` are ours: one row
- * per locale of what the site's own fields say about a user, and snapshots of
- * one of those rows. `sessions`, `accounts` and `verifications` have no
- * descriptor and stay hand-authored.
+ * rather than defining it. `sessions`, `accounts` and `verifications` are
+ * better-auth's in the same way. `user_content` and `user_versions` are ours: one
+ * row per locale of what the site's own fields say about a user, and snapshots of
+ * one of those rows.
  */
 
 import type { TableInsert, TableSelect } from '@/database/define-table';
@@ -22,6 +22,47 @@ export const usersTable = defineTable('users', ({ col }) => ({
     role: col.text({ notNull: true }),
     createdAt: col.timestamp({ notNull: true, defaultNow: true }),
     updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
+}));
+
+/**
+ * better-auth's sessions, accounts and verifications. Like `users`, these
+ * describe what its adapter writes: on SQLite it stores every timestamp as
+ * ISO-8601 TEXT, and it mints its own ids.
+ */
+export const sessionsTable = defineTable('sessions', ({ col }) => ({
+    id: col.id({ format: 'uuid' }),
+    expiresAt: col.timestamp({ notNull: true }),
+    token: col.text({ notNull: true, unique: true }),
+    createdAt: col.timestamp({ notNull: true }),
+    updatedAt: col.timestamp({ notNull: true }),
+    ipAddress: col.text(),
+    userAgent: col.text(),
+    userId: col.reference(() => usersTable, { notNull: true, onDelete: 'cascade' }),
+}));
+
+export const accountsTable = defineTable('accounts', ({ col }) => ({
+    id: col.id({ format: 'uuid' }),
+    accountId: col.text({ notNull: true }),
+    providerId: col.text({ notNull: true }),
+    userId: col.reference(() => usersTable, { notNull: true, onDelete: 'cascade' }),
+    accessToken: col.text(),
+    refreshToken: col.text(),
+    idToken: col.text(),
+    accessTokenExpiresAt: col.timestamp(),
+    refreshTokenExpiresAt: col.timestamp(),
+    scope: col.text(),
+    password: col.text(),
+    createdAt: col.timestamp({ notNull: true }),
+    updatedAt: col.timestamp({ notNull: true }),
+}));
+
+export const verificationsTable = defineTable('verifications', ({ col }) => ({
+    id: col.id({ format: 'uuid' }),
+    identifier: col.text({ notNull: true }),
+    value: col.text({ notNull: true }),
+    expiresAt: col.timestamp({ notNull: true }),
+    createdAt: col.timestamp(),
+    updatedAt: col.timestamp(),
 }));
 
 export const userContentTable = defineTable(

@@ -10,21 +10,27 @@ import { settingsTable } from '@/settings/tables';
 // reference the tables; the `export {...} from` blocks stay the public
 // re-export surface.
 import {
+    accountsTable,
     rolesTable,
+    sessionsTable,
     userContentTable,
     usersTable,
     userVersionsTable,
+    verificationsTable,
 } from '@/users/tables';
 
 /**
- * Aggregate schema surface for Astromech — re-exports every table's
- * `defineTable` descriptor and row types. `sessions`/`accounts`/`verifications`
- * have no descriptor here; better-auth's adapter owns them via the app baseline.
+ * Aggregate schema surface for Astromech: re-exports every table's
+ * `defineTable` descriptor and row types, better-auth's `sessions`, `accounts`
+ * and `verifications` included.
  */
 
 export {
     rolesTable,
     usersTable,
+    sessionsTable,
+    accountsTable,
+    verificationsTable,
     userContentTable,
     userVersionsTable,
     type RoleRow,
@@ -146,13 +152,16 @@ export type PluginTrackingRow = TableSelect<typeof pluginsTable>;
 export type NewPluginTrackingRow = TableInsert<typeof pluginsTable>;
 
 /**
- * The `defineTable`-backed tables the CMS itself owns, in one place — consumed
- * by the DDL-parity test, the migration generator and `db:generate`. Excludes
- * `sessions`/`accounts`/`verifications` (hand-authored) and plugin tables.
+ * The `defineTable`-backed tables of every site, in one place: consumed by the
+ * DDL-parity test, the migration generator and `db:generate`. Includes the
+ * better-auth tables a site signs in through; excludes plugin tables.
  */
 export const CORE_TABLES: Table[] = [
     rolesTable,
     usersTable,
+    sessionsTable,
+    accountsTable,
+    verificationsTable,
     userContentTable,
     userVersionsTable,
     entriesTable,

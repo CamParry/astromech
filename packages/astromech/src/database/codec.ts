@@ -2,7 +2,7 @@
  * Row codec — bridges domain values (Date, parsed object, boolean) and encoded
  * values for Kysely, reproducing the conversions Drizzle did silently.
  * Table-keyed (`*With`) functions are the primary path; name-keyed ones cover
- * better-auth's tables and plugin tables reached by name.
+ * plugin tables reached by name.
  */
 
 import type { KyselyOf, Table, TableSelect } from '@/database/define-table';
@@ -57,77 +57,28 @@ function sameTable(a: Table, b: Table): boolean {
     return aKeys.length === bKeys.length && aKeys.every((key, i) => key === bKeys[i]);
 }
 
-// Tables with no descriptor (better-auth) — its adapter writes ISO-8601 TEXT
-// timestamps, so `ts` parses/serializes ISO; a numeric legacy value (assumed
-// unix seconds) is tolerated but nothing writes one now.
-type LegacyKind = 'ts' | 'json' | 'bool';
-type LegacyCodec = Record<string, LegacyKind>;
+// Table-name-keyed API: plugin tables reached by name. A name that is not a
+// registered plugin table passes through untouched; for a table of ours, the
+// caller wants `*With` below.
 
-const LEGACY_CODECS: Record<string, LegacyCodec> = {
-    sessions: { expiresAt: 'ts', createdAt: 'ts', updatedAt: 'ts' },
-    accounts: {
-        accessTokenExpiresAt: 'ts',
-        refreshTokenExpiresAt: 'ts',
-        createdAt: 'ts',
-        updatedAt: 'ts',
-    },
-    verifications: { expiresAt: 'ts', createdAt: 'ts', updatedAt: 'ts' },
-};
-
-// Table-name-keyed API — the better-auth tables with no `Table`, plus any
-// plugin table reached by name. A name matching neither passes through
-// untouched; if it's one of ours, the caller wants `*With` below.
-
-/** Encoded → JS for one row of a better-auth or plugin table, keyed by name. */
+/** Encoded → JS for one row of a plugin table, keyed by name. */
 export function decode<T extends Record<string, unknown>>(tableName: string, row: T): T {
     if (!row) return row;
     const table = PLUGIN_TABLES.get(tableName);
     // The name-keyed tier has no `Table` type to derive a row shape from, so a
     // plugin table's decoded row is returned in the shape the caller passed in.
     if (table) return decodeWith(table, row) as unknown as T;
-    const legacy = LEGACY_CODECS[tableName];
-    if (!legacy) return row;
-    const out: Record<string, unknown> = { ...row };
-    for (const [col, kind] of Object.entries(legacy)) {
-        const v = out[col];
-        if (v === null || v === undefined) continue;
-        if (kind === 'ts') out[col] = parseTimestamp(v);
-        else if (kind === 'json') out[col] = typeof v === 'string' ? JSON.parse(v) : v;
-        else if (kind === 'bool') out[col] = Number(v) === 1;
-    }
-    return out as T;
+    return row;
 }
 
-/**
- * JS → encoded for INSERTs, keyed by name. The tables reached this way have no
- * app-side defaults — better-auth supplies every column it writes — so this is
- * serialization only.
- */
+/** JS → encoded for an INSERT into a plugin table, keyed by name. */
 export function encode(
     tableName: string,
     values: Record<string, unknown>
 ): Record<string, unknown> {
     const table = PLUGIN_TABLES.get(tableName);
     if (table) return encodeWith(table, values);
-    const legacy = LEGACY_CODECS[tableName];
-    if (!legacy) return stripUndefined(values);
-    return serializeLegacy(legacy, values);
-}
-
-/**
- * JS → encoded for UPDATEs, keyed by name. Serializes provided columns and drops
- * `undefined` keys (Drizzle `.set()` skips them). Never injects app defaults —
- * `updatedAt` is stamped explicitly by callers, exactly as before.
- */
-export function encodePatch(
-    tableName: string,
-    values: Record<string, unknown>
-): Record<string, unknown> {
-    const table = PLUGIN_TABLES.get(tableName);
-    if (table) return encodePatchWith(table, values);
-    const legacy = LEGACY_CODECS[tableName];
-    if (!legacy) return stripUndefined(values);
-    return serializeLegacy(legacy, values);
+    return stripUndefined(values);
 }
 
 // Table-keyed API — the primary path. The caller passes the `Table` it
@@ -205,28 +156,6 @@ function serializeTable(
         out[key] = col.serialize(v);
     }
     return stripUndefined(out);
-}
-
-function serializeLegacy(
-    kinds: LegacyCodec,
-    values: Record<string, unknown>
-): Record<string, unknown> {
-    const out: Record<string, unknown> = { ...values };
-    for (const [col, kind] of Object.entries(kinds)) {
-        const v = out[col];
-        if (v === null || v === undefined) continue;
-        if (kind === 'ts') out[col] = v instanceof Date ? v.toISOString() : v;
-        else if (kind === 'json')
-            out[col] = typeof v === 'string' ? v : JSON.stringify(v);
-        else if (kind === 'bool') out[col] = v ? 1 : 0;
-    }
-    return stripUndefined(out);
-}
-
-/** Encoded → `Date` for a better-auth timestamp: ISO text, or a unix-seconds
- *  number left by a writer that assumed seconds. */
-function parseTimestamp(value: unknown): Date {
-    return typeof value === 'number' ? new Date(value * 1000) : new Date(String(value));
 }
 
 function stripUndefined(values: Record<string, unknown>): Record<string, unknown> {
