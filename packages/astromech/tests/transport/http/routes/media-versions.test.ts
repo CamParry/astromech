@@ -7,37 +7,15 @@
  * version give, and the grant a restore demands.
  */
 
-import type { StorageDriver } from '@/types/index';
+import { adminRole, noopStorage, roleWith } from '@tests/fixtures';
 import { createTestDb, setupTestConfig } from '@tests/harness';
-import { adminRole, mountRouter, roleWith, seedTestUser } from '@tests/mount-router';
+import { mountRouter, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mediaService } from '@/app-context/services';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
 import { makeTranslatableMediaConfig } from '../../../media/media-config';
-
-const noopStorage: StorageDriver = {
-    name: 'noop',
-    async put(): Promise<void> {
-        return undefined;
-    },
-    async get(): Promise<null> {
-        return null;
-    },
-    async stat(): Promise<null> {
-        return null;
-    },
-    async delete(): Promise<void> {
-        return undefined;
-    },
-    async list(): Promise<{ keys: string[] }> {
-        return { keys: [] };
-    },
-    getPublicUrl(key: string): string {
-        return `/${key}`;
-    },
-};
 
 /** The media router mounted in isolation, acting as `role`. */
 function app(role = adminRole) {

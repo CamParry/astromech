@@ -11,8 +11,9 @@
 
 import type { EntryAction } from '@/permissions/entry-permission';
 import type { AstromechConfig } from '@/types/index';
+import { roleWith } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { mountRouter, roleWith, seedTestUser } from '@tests/mount-router';
+import { mountRouter, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService as api } from '@/app-context/services';
 import { createEntriesRouter } from '@/transport/http/routes/entries';

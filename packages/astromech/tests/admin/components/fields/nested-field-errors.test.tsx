@@ -5,12 +5,11 @@
  *
  * The error map the API returns is flat and keyed by full field path
  * (`blocks[6f1e2a].heading`), so a container's sub-field only renders its error
- * if it rebuilds exactly that path. `FormField` used to look the error up by the
- * bare `field.name` (`heading`), which can never match a nested key — the error
- * existed and was silently invisible.
+ * if it rebuilds exactly that path. A lookup by the bare `field.name` (`heading`)
+ * can never match a nested key, so the error would exist and stay invisible.
  *
  * There is no `@testing-library/react` here, so this drives a real React root
- * directly (same approach as container-field-seeding.test.tsx).
+ * directly (same approach as container-field-editing.test.tsx).
  */
 
 import type { Field } from '@/types/index';

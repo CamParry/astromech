@@ -4,7 +4,7 @@
  * the default. Non-translatable media refuses any locale but the default.
  */
 
-import type { StorageDriver } from '@/types/index';
+import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mediaService as api } from '@/app-context/services';
@@ -12,28 +12,6 @@ import { MediaValidationError } from '@/media/errors';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { makeTranslatableMediaConfig } from './media-config';
-
-const noopStorage: StorageDriver = {
-    name: 'noop',
-    async put(): Promise<void> {
-        return undefined;
-    },
-    async get(): Promise<null> {
-        return null;
-    },
-    async stat(): Promise<null> {
-        return null;
-    },
-    async delete(): Promise<void> {
-        return undefined;
-    },
-    async list(): Promise<{ keys: string[] }> {
-        return { keys: [] };
-    },
-    getPublicUrl(key: string): string {
-        return `/${key}`;
-    },
-};
 
 let id: string;
 

@@ -146,7 +146,7 @@ const sampleManifest: MethodManifest = {
             mutates: true,
             input: idSchema(),
         }),
-        // plugin — dispatched like anything else since P1
+        // plugin, dispatched like any other method
         pluginMethod,
         // plugin with no declared input — skipped
         undescribedPluginMethod,

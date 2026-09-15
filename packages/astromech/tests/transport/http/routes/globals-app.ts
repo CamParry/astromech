@@ -10,7 +10,8 @@
 import type { AstromechConfig, PluginDefinition, Role } from '@/types/index';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import type { RouteEnv } from '@tests/mount-router';
-import { adminRole, mountRouter } from '@tests/mount-router';
+import { adminRole } from '@tests/fixtures';
+import { mountRouter } from '@tests/mount-router';
 import { createGlobalsRouter } from '@/transport/http/routes/globals';
 import { makeGlobalsConfig } from '../../../globals/globals-config';
 

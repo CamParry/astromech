@@ -1,13 +1,7 @@
 /**
- * Characterization tests for the entry data layer (`entriesService.*`).
- *
- * These pin down CURRENT behavior — not desired behavior — to act as the
- * regression net for the EntryRepository extraction (Phase 2, slice 2b). Where a
- * behavior looks surprising it is asserted anyway and flagged in a comment.
- *
- * Each `describe` block gets a fresh in-memory database (`beforeEach`), keeping
- * tests isolated; migrating a `:memory:` db is cheap (~sub-ms), so the full
- * suite stays well under the runtime budget.
+ * Characterization tests for the entry data layer (`entriesService.*`): they pin
+ * current behavior, and a surprising one is asserted anyway and flagged in a
+ * comment. Each test gets a fresh file-backed database with the real migrations.
  */
 
 import type { EntryRepository } from '@/entries/repository/types';
@@ -18,7 +12,7 @@ import {
     registerTestPlugins,
     setupTestConfig,
 } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { entriesService } from '@/app-context/services';
 import { decodeWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
@@ -37,6 +31,10 @@ const api = entriesService;
 beforeEach(async () => {
     await createTestDb();
     setupTestConfig();
+});
+
+afterEach(() => {
+    vi.useRealTimers();
 });
 
 describe('create', () => {
@@ -290,12 +288,14 @@ describe('query', () => {
 
 describe('update', () => {
     it('updates title/fields and bumps updatedAt', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
         const e = await api.create({
             type: 'post',
             data: { title: 'Old', fields: { body: 'a' } },
         });
         const before = e.updatedAt.getTime();
-        await new Promise((r) => setTimeout(r, 5));
+        vi.setSystemTime(new Date('2026-01-01T00:00:01.000Z'));
 
         const updated = await api.update({
             type: 'post',
@@ -304,7 +304,7 @@ describe('update', () => {
         });
         expect(updated.title).toBe('New');
         expect(updated.fields).toEqual({ body: 'b' });
-        expect(updated.updatedAt.getTime()).toBeGreaterThanOrEqual(before);
+        expect(updated.updatedAt.getTime()).toBeGreaterThan(before);
     });
 
     // CHARACTERIZED: publishedAt is set on the FIRST transition to published
@@ -1175,9 +1175,8 @@ describe('hooks', () => {
         expect(rows).toHaveLength(0);
     });
 
-    // `DECISIONS.md`: a throw now
-    // propagates from an after* handler instead of being swallowed and logged,
-    // and the write it followed stays committed.
+    // A throw from an after* handler propagates rather than being logged, and
+    // the write it followed stays committed (see `DECISIONS.md`).
     it('a throwing afterDelete propagates, but the row is still gone', async () => {
         const entry = await api.create({ type: 'post', data: { title: 'Doomed' } });
         const resolved = setupTestConfig();

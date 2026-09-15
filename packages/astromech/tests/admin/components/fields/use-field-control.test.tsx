@@ -4,7 +4,7 @@
  * `useFieldControl` is the way IN for a plugin field type that renders its own
  * control rather than composing from the `astromech/ui` atoms. The atoms call it
  * themselves (see field-error-aria.test.tsx); this pins the hook's own contract,
- * because it is now public surface on `astromech/ui/fields`.
+ * because it is public surface on `astromech/ui/fields`.
  *
  * Two halves: inside a `FieldWrapper` that has an error the hook hands back the
  * association pointing at the message the wrapper rendered, and outside one it

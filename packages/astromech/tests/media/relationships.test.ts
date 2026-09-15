@@ -7,7 +7,8 @@
  */
 
 import type { RelationshipRow } from '@/database/tables';
-import type { AstromechConfig, StorageDriver } from '@/types/index';
+import type { AstromechConfig } from '@/types/index';
+import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService, mediaService } from '@/app-context/services';
@@ -15,28 +16,6 @@ import { createRelationshipRepository } from '@/database/repository/relationship
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { rebuildRelationshipIndex } from '@/transport/cli/relationship-index';
-
-const noopStorage: StorageDriver = {
-    name: 'noop',
-    async put(): Promise<void> {
-        return undefined;
-    },
-    async get(): Promise<null> {
-        return null;
-    },
-    async stat(): Promise<null> {
-        return null;
-    },
-    async delete(): Promise<void> {
-        return undefined;
-    },
-    async list(): Promise<{ keys: string[] }> {
-        return { keys: [] };
-    },
-    getPublicUrl(key: string): string {
-        return `/${key}`;
-    },
-};
 
 /** Two locales, and one per-locale relationship field on media. */
 function makeConfig(): AstromechConfig {

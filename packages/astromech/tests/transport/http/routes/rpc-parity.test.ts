@@ -16,8 +16,8 @@ import type {
     User,
 } from '@/types/index';
 import type { OpenAPIHono } from '@hono/zod-openapi';
+import { adminRole, roleWith } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { adminRole, roleWith } from '@tests/mount-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { entriesService, usersService } from '@/app-context/services';

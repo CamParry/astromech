@@ -7,8 +7,9 @@
  * do.
  */
 
+import { adminRole, roleWith } from '@tests/fixtures';
 import { createTestDb, setupTestConfig } from '@tests/harness';
-import { adminRole, roleWith, seedTestUser } from '@tests/mount-router';
+import { seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { app, configWithGlobals, json, put, SEO } from './globals-app';
 

@@ -14,7 +14,7 @@ import {
     createRouter,
     RouterProvider,
 } from '@tanstack/react-router';
-import { act, cleanup, render } from '@testing-library/react';
+import { cleanup, render, waitFor } from '@testing-library/react';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -85,33 +85,35 @@ function globalLinks(): { label: string; href: string | null }[] {
     }));
 }
 
-async function settle(): Promise<void> {
-    await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-    });
-}
-
 describe('the sidebar globals block', () => {
     it('lists the nav-visible globals the user may read', async () => {
         mountSidebar(['global:site:read', 'global:footer:read', 'global:hidden:read']);
-        await settle();
 
-        expect(globalLinks()).toEqual([
-            { label: 'Site', href: '/globals/site' },
-            { label: 'Footer', href: '/globals/footer' },
-        ]);
+        await waitFor(() => {
+            expect(globalLinks()).toEqual([
+                { label: 'Site', href: '/globals/site' },
+                { label: 'Footer', href: '/globals/footer' },
+            ]);
+        });
     });
 
     it('drops a global the user cannot read', async () => {
         mountSidebar(['global:site:read']);
-        await settle();
 
-        expect(globalLinks().map((link) => link.label)).toEqual(['Site']);
+        await waitFor(() => {
+            expect(globalLinks().map((link) => link.label)).toEqual(['Site']);
+        });
     });
 
     it('renders no block at all when nothing is readable', async () => {
         mountSidebar(['entry:post:read']);
-        await settle();
+        // The globals block renders in the same pass as the primary nav, so once
+        // the nav is up an absent block stays absent.
+        await waitFor(() => {
+            expect(
+                document.querySelector('nav[aria-label="nav.primary"]')
+            ).not.toBeNull();
+        });
 
         expect(document.querySelector('nav[aria-label="nav.globals"]')).toBeNull();
     });

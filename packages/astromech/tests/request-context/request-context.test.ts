@@ -7,7 +7,8 @@
  * the caller is resolves no session at all.
  */
 
-import type { Role, User } from '@/types/index';
+import type { User } from '@/types/index';
+import { adminRole } from '@tests/fixtures';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     getCurrentRole,
@@ -37,13 +38,6 @@ function makeUser(id: string): User {
         updatedAt: new Date(0),
     };
 }
-
-const adminRole: Role = {
-    slug: 'admin',
-    name: 'Administrator',
-    permissions: ['*'],
-    isBuiltIn: true,
-};
 
 /** A promise plus its resolver, so tests can order the interleaving by hand. */
 function deferred(): { promise: Promise<void>; resolve: () => void } {

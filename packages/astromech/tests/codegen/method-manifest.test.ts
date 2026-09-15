@@ -334,10 +334,10 @@ describe('generateMethodManifest — root entries', () => {
     });
 
     it('should emit entries.publish for non-versioned type pages too', () => {
-        // Publish is gated on `statuses`, which is what `operations/status.ts`
-        // asserts — not on `versioning`, which it was gated on until P1. Under
-        // the old gate the manifest hid publish/unpublish/schedule from every
-        // unversioned type while the service accepted the call perfectly well.
+        // Publish requires `statuses` (`entries/methods/status.ts`), not
+        // `versioning`. Gating it on versioning would hide publish, unpublish
+        // and schedule from every unversioned type while the service accepts
+        // the call.
         const { methods } = parseManifest([]);
         const m = findMethod(methods, 'entries.publish', 'pages');
         expect(m).toBeDefined();

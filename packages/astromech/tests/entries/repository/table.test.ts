@@ -12,7 +12,7 @@
 import type { AstromechConfig, PluginDefinition } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { entriesService } from '@/app-context/services';
 import { defineTable } from '@/database/define-table';
 import { transaction } from '@/database/transaction';
@@ -50,6 +50,10 @@ beforeEach(async () => {
             created_at text NOT NULL,
             updated_at text NOT NULL
         )`.execute(db);
+});
+
+afterEach(() => {
+    vi.useRealTimers();
 });
 
 describe('supports', () => {
@@ -141,14 +145,14 @@ describe('get', () => {
 
 describe('update', () => {
     it('merges fields and bumps updatedAt; createdAt unchanged', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
         const created = await repository.create({
             type: 'link',
             fields: { from: '/a', to: '/b', status: '301' },
         });
 
-        // ISO-8601 TEXT keeps milliseconds, so a few ms is enough for updatedAt
-        // to move.
-        await new Promise((r) => setTimeout(r, 5));
+        vi.setSystemTime(new Date('2026-01-01T00:00:01.000Z'));
 
         const updated = await repository.update(
             { id: created.id },
@@ -254,11 +258,13 @@ describe('list – sort', () => {
     });
 
     it('sorts on createdAt', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
         const a = await repository.create({
             type: 'link',
             fields: { from: '/a', to: '/x' },
         });
-        await new Promise((r) => setTimeout(r, 5));
+        vi.setSystemTime(new Date('2026-01-01T00:00:01.000Z'));
         const b = await repository.create({
             type: 'link',
             fields: { from: '/b', to: '/y' },
@@ -450,7 +456,7 @@ describe('uniqueSlug', () => {
 });
 
 describe('transaction', () => {
-    // `EntryRepository` no longer carries its own `transaction`; the repository
+    // `EntryRepository` carries no `transaction` of its own; the repository
     // joins whatever scope `database/transaction.ts`'s `transaction()` opens,
     // since every operation resolves its handle per call through `getDb()`.
 

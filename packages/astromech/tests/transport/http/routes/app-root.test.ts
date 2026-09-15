@@ -9,6 +9,7 @@
 
 import type { Role, User } from '@/types/index';
 import type { OpenAPIHono } from '@hono/zod-openapi';
+import { adminRole } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usersService } from '@/app-context/services';
@@ -18,13 +19,6 @@ import { getSession } from '@/users/session';
 vi.mock('@/users/session', () => ({ getSession: vi.fn() }));
 
 const mockGetSession = vi.mocked(getSession);
-
-const adminRole: Role = {
-    slug: 'admin',
-    name: 'Administrator',
-    permissions: ['*'] as Role['permissions'],
-    isBuiltIn: true,
-};
 
 /** Answer `requireAuth` with a session, or with none. */
 function signIn(user: User | null): void {

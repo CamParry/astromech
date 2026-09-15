@@ -4,7 +4,8 @@
  * play.
  */
 
-import type { Role, StorageDriver } from '@/types/index';
+import type { Role } from '@/types/index';
+import { noopStorage } from '@tests/fixtures';
 import {
     createTestDb,
     createTestUser,
@@ -22,28 +23,6 @@ const admin: Role = {
     name: 'Admin',
     permissions: ['*'],
     isBuiltIn: true,
-};
-
-const noopStorage: StorageDriver = {
-    name: 'noop',
-    async put(): Promise<void> {
-        return undefined;
-    },
-    async get(): Promise<null> {
-        return null;
-    },
-    async stat(): Promise<null> {
-        return null;
-    },
-    async delete(): Promise<void> {
-        return undefined;
-    },
-    async list(): Promise<{ keys: string[] }> {
-        return { keys: [] };
-    },
-    getPublicUrl(key: string): string {
-        return `/${key}`;
-    },
 };
 
 /** The permission each method demands. */

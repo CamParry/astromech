@@ -11,7 +11,7 @@ import type { PluginTrackingRow } from '@/database/tables';
 import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
 import { createTestDb } from '@tests/harness';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { decodeWith } from '@/database/codec';
 import { pluginsTable } from '@/database/tables';
 import { bootPlugins } from '@/plugins/runtime/plugin-runtime';
@@ -32,6 +32,10 @@ let db: Db;
 
 beforeEach(async () => {
     db = await createTestDb();
+});
+
+afterEach(() => {
+    vi.useRealTimers();
 });
 
 describe('bootPlugins – plugin tracking', () => {
@@ -80,11 +84,13 @@ describe('bootPlugins – plugin tracking', () => {
     // Pins `trackPlugin`'s documented contract: "a conflict only refreshes
     // `version`, so the original install time survives".
     it('updates version on a bump while keeping the original installedAt', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
         await bootPlugins([{ package: '@astromech/backups', version: '1.0.0' }]);
         const [first] = await trackedRows(db);
         expect(first).toBeDefined();
 
-        await new Promise((r) => setTimeout(r, 5));
+        vi.setSystemTime(new Date('2026-01-01T00:00:01.000Z'));
         await bootPlugins([{ package: '@astromech/backups', version: '2.0.0' }]);
 
         const rows = await trackedRows(db);

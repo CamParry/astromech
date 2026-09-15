@@ -33,7 +33,7 @@ import {
     Outlet,
     RouterProvider,
 } from '@tanstack/react-router';
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -154,10 +154,14 @@ function mountEditPage(queryClient: QueryClient) {
     return { update };
 }
 
-/** Let a submit (and the mutation it fires) settle. */
-async function settle(): Promise<void> {
-    await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 0));
+/**
+ * Wait for the `count`th save to finish: its success toast is up and the Update
+ * button has left its loading state, which it does on a render after `onSuccess`.
+ */
+async function waitForSave(button: HTMLElement, count: number): Promise<void> {
+    await waitFor(() => {
+        expect(screen.getAllByText('entries.updated')).toHaveLength(count);
+        expect(button.querySelector('.am-spinner')).toBeNull();
     });
 }
 
@@ -197,14 +201,11 @@ describe('the entry edit page after a save', () => {
         await user.type(input, 'Lumenflow International');
         const updateButton = await screen.findByRole('button', { name: 'common.update' });
         await user.click(updateButton);
-        await settle();
+        await waitForSave(updateButton, 1);
 
         expect(page.update).toHaveBeenCalledTimes(1);
-        expect(input.value).toBe('Lumenflow International');
-
-        // A second render tick — the same kind `form.reset` triggers — must
-        // not copy a stale cached value back over the display.
-        await settle();
+        // The renders the save triggers, `form.reset`'s among them, have all
+        // committed by now, and none may copy the stale cached value back.
         expect(input.value).toBe('Lumenflow International');
 
         // Second edit + save: this is the case the live bug regressed on —
@@ -212,12 +213,9 @@ describe('the entry edit page after a save', () => {
         await user.clear(input);
         await user.type(input, 'Zephyr Labs');
         await user.click(updateButton);
-        await settle();
+        await waitForSave(updateButton, 2);
 
         expect(page.update).toHaveBeenCalledTimes(2);
-        expect(input.value).toBe('Zephyr Labs');
-
-        await settle();
         expect(input.value).toBe('Zephyr Labs');
     });
 });

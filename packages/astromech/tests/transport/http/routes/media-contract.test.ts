@@ -5,36 +5,15 @@
  * and the permission each enforces.
  */
 
-import type { Media, MediaVersion, Role, StorageDriver } from '@/types/index';
+import type { Media, MediaVersion, Role } from '@/types/index';
+import { adminRole, noopStorage, roleWith } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { adminRole, mountRouter, roleWith, seedTestUser } from '@tests/mount-router';
+import { mountRouter, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mediaService } from '@/app-context/services';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
-
-const noopStorage: StorageDriver = {
-    name: 'noop',
-    async put(): Promise<void> {
-        return undefined;
-    },
-    async get(): Promise<null> {
-        return null;
-    },
-    async stat(): Promise<null> {
-        return null;
-    },
-    async delete(): Promise<void> {
-        return undefined;
-    },
-    async list(): Promise<{ keys: string[] }> {
-        return { keys: [] };
-    },
-    getPublicUrl(key: string): string {
-        return `/${key}`;
-    },
-};
 
 function app(role: Role = adminRole) {
     return mountRouter('/media', mediaRouter, role);

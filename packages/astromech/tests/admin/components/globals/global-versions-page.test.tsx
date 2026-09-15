@@ -18,7 +18,7 @@ import {
     Outlet,
     RouterProvider,
 } from '@tanstack/react-router';
-import { act, cleanup, render, waitFor } from '@testing-library/react';
+import { cleanup, render, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -121,17 +121,9 @@ function mountPage() {
     return { restoreVersion };
 }
 
-async function settle(): Promise<void> {
-    await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-    });
-}
-
 describe('the global versions page', () => {
     it('lists the locale’s versions newest first', async () => {
         mountPage();
-        await settle();
-        await settle();
 
         const numbers = await waitFor(() => {
             const found = [...document.querySelectorAll('.am-versions-item-number')].map(
@@ -146,8 +138,6 @@ describe('the global versions page', () => {
     it('restores the selected version by key and locale', async () => {
         const user = userEvent.setup({ delay: null });
         const { restoreVersion } = mountPage();
-        await settle();
-        await settle();
 
         const restoreButton = await waitFor(() => {
             const found = [...document.querySelectorAll('button')].find(
@@ -166,13 +156,14 @@ describe('the global versions page', () => {
         });
         const buttons = [...footer.querySelectorAll('button')];
         await user.click(buttons[buttons.length - 1] as HTMLButtonElement);
-        await settle();
 
-        expect(restoreVersion).toHaveBeenCalledWith({
-            key: KEY,
-            locale: 'en',
-            // The newest version is selected on load.
-            versionId: 'v3',
+        await waitFor(() => {
+            expect(restoreVersion).toHaveBeenCalledWith({
+                key: KEY,
+                locale: 'en',
+                // The newest version is selected on load.
+                versionId: 'v3',
+            });
         });
     });
 });

@@ -35,24 +35,6 @@ export async function seedTestUser(db: Kysely<DB>): Promise<void> {
     await createTestUser(db, { id: testUser.id, email: testUser.email });
 }
 
-/** A role holding exactly `permissions`. */
-export function roleWith(permissions: string[]): Role {
-    return {
-        slug: 'test',
-        name: 'Test',
-        permissions: permissions as Role['permissions'],
-        isBuiltIn: false,
-    };
-}
-
-/** An admin role — the `*` matcher, so every permission check passes. */
-export const adminRole: Role = {
-    slug: 'admin',
-    name: 'Administrator',
-    permissions: ['*'] as Role['permissions'],
-    isBuiltIn: true,
-};
-
 /**
  * Mount `router` at `basePath` behind a stub that injects `role` (and `user`,
  * defaulting to {@link testUser}).

@@ -7,7 +7,8 @@
  * row, a bogus row, staying idempotent, and staying inside a `--type` scope.
  */
 import type { RelationshipRow } from '@/database/tables';
-import type { AstromechConfig, PluginDefinition, StorageDriver } from '@/types/index';
+import type { AstromechConfig, PluginDefinition } from '@/types/index';
+import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -27,29 +28,6 @@ import {
     checkRelationshipIndex,
     rebuildRelationshipIndex,
 } from '@/transport/cli/relationship-index';
-
-/** Media reads resolve a public URL through the driver; nothing here needs bytes. */
-const noopStorage: StorageDriver = {
-    name: 'noop',
-    async put(): Promise<void> {
-        return undefined;
-    },
-    async get(): Promise<null> {
-        return null;
-    },
-    async stat(): Promise<null> {
-        return null;
-    },
-    async delete(): Promise<void> {
-        return undefined;
-    },
-    async list(): Promise<{ keys: string[] }> {
-        return { keys: [] };
-    },
-    getPublicUrl(key: string): string {
-        return `/${key}`;
-    },
-};
 
 const linksTable = defineTable('test_links', ({ col }) => ({
     id: col.id(),

@@ -1,9 +1,7 @@
 /**
- * What `resolveRole` answers for a slug the config does not define.
- *
- * The answer used to be the admin role, which meant a typo on a user row, or an
- * ordinary config edit that removed a role, granted `*` to everyone holding it.
- * These pin that there is no fallback at all.
+ * What `resolveRole` answers for a slug the config does not define: nothing. A
+ * fallback role would let a typo on a user row, or a config edit that removed a
+ * role, grant the fallback's permissions to everyone holding the slug.
  */
 
 import { describe, expect, it } from 'vitest';

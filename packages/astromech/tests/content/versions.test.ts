@@ -1,7 +1,6 @@
 /**
  * `snapshotVersion` credits the user it is handed, and nothing else. The author
- * used to come from the request store; it is now a parameter, so these run with
- * no request, no database and no config.
+ * is a parameter, so these run with no request, no database and no config.
  */
 
 import type {

@@ -7,10 +7,10 @@
  */
 
 import type * as RelationshipRepositoryModule from '@/database/repository/relationships';
-import type { StorageDriver } from '@/types/index';
 import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { noopStorage } from '@tests/fixtures';
 import { createFileTestDb, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mediaService as api } from '@/app-context/services';
@@ -42,28 +42,6 @@ vi.mock('@/database/repository/relationships', async (importOriginal) => {
         },
     };
 });
-
-const noopStorage: StorageDriver = {
-    name: 'noop',
-    async put(): Promise<void> {
-        return undefined;
-    },
-    async get(): Promise<null> {
-        return null;
-    },
-    async stat(): Promise<null> {
-        return null;
-    },
-    async delete(): Promise<void> {
-        return undefined;
-    },
-    async list(): Promise<{ keys: string[] }> {
-        return { keys: [] };
-    },
-    getPublicUrl(key: string): string {
-        return `/${key}`;
-    },
-};
 
 let dbCounter = 0;
 let dbPath = '';

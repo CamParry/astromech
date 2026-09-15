@@ -1,12 +1,9 @@
 /**
  * @vitest-environment happy-dom
  *
- * `LinkField` must commit the shape the contract describes.
- *
- * It used to read and write `href` while the descriptor and `validateLink` both
- * required `url`, so every entry holding a link failed client-side validation on
- * save. It also rebuilt the value from a fixed key list, silently dropping any
- * other key the value carried. Both are checked here against the real validator.
+ * `LinkField` must commit the shape the contract describes: it reads and writes
+ * `url`, the key the descriptor and `validateLink` require, and keeps any other
+ * key the value carries. Both are checked here against the real validator.
  *
  * There is no `@testing-library/react` here, so this drives a real React root
  * and real inputs directly (same approach as container-field-editing.test.tsx).

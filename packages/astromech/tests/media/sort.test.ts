@@ -1,40 +1,16 @@
 /**
- * `mediaService.query` sorting.
- *
- * `sort` was declared on `MediaQueryParams` but dropped by the fetch client, the
- * route and `repository.list` alike, so the media library was always createdAt DESC
- * while the type advertised otherwise. The allowlist matters as much as the
- * ordering: an unknown column must fall back, never reach the query builder.
+ * `mediaService.query` sorting: `sort` on `MediaQueryParams` orders the result.
+ * The allowlist matters as much as the ordering: an unknown column must fall
+ * back, never reach the query builder.
  */
 
-import type { SortOption, StorageDriver } from '@/types/index';
+import type { SortOption } from '@/types/index';
+import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mediaService } from '@/app-context/services';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
-
-const noopStorage: StorageDriver = {
-    name: 'noop',
-    async put(): Promise<void> {
-        return undefined;
-    },
-    async get(): Promise<null> {
-        return null;
-    },
-    async stat(): Promise<null> {
-        return null;
-    },
-    async delete(): Promise<void> {
-        return undefined;
-    },
-    async list(): Promise<{ keys: string[] }> {
-        return { keys: [] };
-    },
-    getPublicUrl(key: string): string {
-        return `/${key}`;
-    },
-};
 
 // Inserted out of every natural order so no assertion can pass by accident.
 const FIXTURES = [

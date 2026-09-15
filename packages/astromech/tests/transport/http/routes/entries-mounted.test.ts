@@ -1,15 +1,15 @@
 /**
  * Plugin entry types over the SINGLE entries router.
  *
- * There is no per-plugin entries mount any more: a plugin entry type is served
+ * There is no per-plugin entries mount: a plugin entry type is served
  * by `/entries` like any other, addressed by its QUALIFIED id
  * (`widgets/widget`), URL-encoded into the `:type` segment. Two surfaces:
  *  1. Auth/permission matrix + CRUD. A stub middleware injects `user`/`role`
  *     (Better Auth sessions are out of scope), so the test focuses on the
  *     permission DERIVED from the qualified id, end-to-end against the real DB.
  *     `entry:*` must not reach a plugin entry — that would be an escalation.
- *  2. The composed `pluginsRouter` no longer serves an entries subtree, while
- *     its `public` RPC method stays reachable.
+ *  2. The composed `pluginsRouter` serves no entries subtree, while its
+ *     `public` RPC method stays reachable.
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';

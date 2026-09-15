@@ -1,39 +1,15 @@
 /**
- * `mediaService.usedBy` — reverse lookup for the media "used by" panel.
- *
- * Media only became a real relationship TARGET in this workstream: the old
- * subsystem recorded a media field as an entry edge and dropped it, so no row
- * pointing at a media item was ever written and this panel could not exist.
+ * `mediaService.usedBy`, the reverse lookup for the media "used by" panel. A
+ * media field records a relationship row targeting media, which the panel reads.
  */
 
-import type { AstromechConfig, StorageDriver } from '@/types/index';
+import type { AstromechConfig } from '@/types/index';
+import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService, mediaService, usersService } from '@/app-context/services';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
-
-const noopStorage: StorageDriver = {
-    name: 'noop',
-    async put(): Promise<void> {
-        return undefined;
-    },
-    async get(): Promise<null> {
-        return null;
-    },
-    async stat(): Promise<null> {
-        return null;
-    },
-    async delete(): Promise<void> {
-        return undefined;
-    },
-    async list(): Promise<{ keys: string[] }> {
-        return { keys: [] };
-    },
-    getPublicUrl(key: string): string {
-        return `/${key}`;
-    },
-};
 
 /**
  * `article` holds a media field flat and another inside a repeater; users hold

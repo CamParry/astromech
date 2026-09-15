@@ -1,5 +1,5 @@
 /**
- * Slice 5 validator: the redirects plugin runs on its OWN table
+ * The redirects plugin runs on its own table
  * (`plugin_redirects_redirects`) via `tableRepository`, exercised end-to-end
  * through the entries service, the plugin service, and the slug-change hook.
  *

@@ -1,5 +1,5 @@
 /**
- * Behavior tests for `titleField: false` entry types (Phase 2, slice 4).
+ * Behavior tests for `titleField: false` entry types.
  *
  * The harness (`makeTestConfig`) provides:
  * - `snippet` — titleless, statuses off, slug off

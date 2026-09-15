@@ -11,8 +11,9 @@
  * (`seo/settings`) URL-encoded into the `:key` segment.
  */
 
+import { adminRole } from '@tests/fixtures';
 import { createTestDb, setupTestConfig } from '@tests/harness';
-import { adminRole, seedTestUser } from '@tests/mount-router';
+import { seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { globalsService } from '@/app-context/services';
 import { GLOBALS_ROUTE_SPECS } from '@/transport/http/routes/http-routes.shared';

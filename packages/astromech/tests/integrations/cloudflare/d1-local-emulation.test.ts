@@ -7,7 +7,7 @@
  * it asks for. This is the one file where the answers come back from D1 itself:
  * its result and `meta` shapes, and whether a migration chain really applies
  * without a transaction. It is also the only test that exercises the wrangler
- * branch of `resolveBinding()` — `tests/cloudflare/bindings.test.ts` routes
+ * branch of `resolveBinding()`; `tests/integrations/cloudflare/bindings.test.ts` routes
  * every case through `setEnvSource` and says so at the top.
  *
  * Bindings come from `packages/astromech/wrangler.jsonc`, discovered from the

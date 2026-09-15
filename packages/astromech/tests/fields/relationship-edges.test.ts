@@ -26,8 +26,7 @@ describe('collectRelationshipEdges — top-level fields', () => {
         ]);
     });
 
-    // The old subsystem only looked at `relationship`, so no media row was ever
-    // written.
+    // A media field is a relation too, targeting media rather than an entry.
     it('treats a media field as a relation targeting media', () => {
         const defs: Field[] = [{ name: 'hero', type: 'media' }];
         expect(collectRelationshipEdges(defs, { hero: 'm1' })).toEqual([

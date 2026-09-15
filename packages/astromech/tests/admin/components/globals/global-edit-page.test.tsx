@@ -20,7 +20,7 @@ import {
     RouterProvider,
     useSearch,
 } from '@tanstack/react-router';
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -216,12 +216,6 @@ function mountPage(options: {
     return router as unknown as { state: { location: { href: string } } };
 }
 
-async function settle(): Promise<void> {
-    await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-    });
-}
-
 function control(selector: string): HTMLInputElement {
     const el = document.querySelector<HTMLInputElement>(selector);
     if (el === null) throw new Error(`no ${selector}`);
@@ -278,8 +272,6 @@ describe('the global edit page', () => {
     it('renders an empty form for a global that has never been saved', async () => {
         const { api } = makeApi({ canonical: null });
         mountPage({ api, config: config() });
-        await settle();
-        await settle();
 
         await waitFor(() => {
             expect(control('input[name="tagline"]').value).toBe('');
@@ -292,16 +284,15 @@ describe('the global edit page', () => {
         const user = userEvent.setup({ delay: null });
         const { api, update } = makeApi({ canonical: makeGlobal() });
         mountPage({ api, config: config() });
-        await settle();
-        await settle();
 
         const field = await waitFor(() => control('input[name="tagline"]'));
         await user.clear(field);
         await user.type(field, 'A new tagline');
         await user.click(await screen.findByRole('button', { name: 'common.update' }));
-        await settle();
 
-        expect(update).toHaveBeenCalledTimes(1);
+        await waitFor(() => {
+            expect(update).toHaveBeenCalledTimes(1);
+        });
         expect(update.mock.calls[0]?.[0]).toEqual({
             key: KEY,
             locale: 'en',
@@ -314,25 +305,22 @@ describe('the global edit page', () => {
         const user = userEvent.setup({ delay: null });
         const { api, update, publish } = makeApi({ canonical: makeGlobal() });
         mountPage({ api, config: config() });
-        await settle();
-        await settle();
 
         await waitFor(() => control('input[name="tagline"]'));
         // The publish panel's status select is the only combobox on the page.
         await pickOption(0, 'entries.published');
         await user.click(await screen.findByRole('button', { name: 'common.update' }));
-        await settle();
 
+        await waitFor(() => {
+            expect(publish).toHaveBeenCalledTimes(1);
+        });
         expect(update).toHaveBeenCalledTimes(1);
-        expect(publish).toHaveBeenCalledTimes(1);
         expect(publish.mock.calls[0]?.[0]).toEqual({ key: KEY, locale: 'en' });
     });
 
     it('shows no locale switcher on a global that is not translatable', async () => {
         const { api } = makeApi({ canonical: makeGlobal() });
         mountPage({ api, config: config() });
-        await settle();
-        await settle();
 
         await waitFor(() => control('input[name="tagline"]'));
         // Only the publish panel's status select.
@@ -354,8 +342,6 @@ describe('the global edit page', () => {
                 },
             }),
         });
-        await settle();
-        await settle();
 
         await waitFor(() => control('input[name="tagline"]'));
         // Statuses are off here, so the switcher is the only combobox.
@@ -375,8 +361,6 @@ describe('the global edit page', () => {
             config: config(),
             permissions: [`global:${KEY}:read`],
         });
-        await settle();
-        await settle();
 
         await waitFor(() => control('input[name="tagline"]'));
         expect(screen.queryByRole('button', { name: 'common.update' })).toBeNull();
@@ -401,8 +385,6 @@ describe('the global edit page', () => {
             }),
             initialUrl: `${BASE_PATH}?locale=en&staged=true`,
         });
-        await settle();
-        await settle();
         await waitFor(() => {
             expect(control('input[name="tagline"]').value).toBe('Staged');
         });
@@ -414,9 +396,10 @@ describe('the global edit page', () => {
 
         await clickHeaderButton('staging.merge');
         await confirmDialog();
-        await settle();
 
-        expect(mergeStaged).toHaveBeenCalledWith({ key: KEY, locale: 'en' });
+        await waitFor(() => {
+            expect(mergeStaged).toHaveBeenCalledWith({ key: KEY, locale: 'en' });
+        });
     });
 
     it('saves the staged row itself, not the canonical one', async () => {
@@ -427,8 +410,10 @@ describe('the global edit page', () => {
         await user.clear(field);
         await user.type(field, 'Staged edit');
         await clickHeaderButton('common.update');
-        await settle();
 
+        await waitFor(() => {
+            expect(update).toHaveBeenCalledTimes(1);
+        });
         expect(update.mock.calls[0]?.[0]).toEqual({
             key: KEY,
             locale: 'en',
@@ -442,8 +427,9 @@ describe('the global edit page', () => {
 
         await clickHeaderButton('staging.discard');
         await confirmDialog();
-        await settle();
 
-        expect(deleteStaged).toHaveBeenCalledWith({ key: KEY, locale: 'en' });
+        await waitFor(() => {
+            expect(deleteStaged).toHaveBeenCalledWith({ key: KEY, locale: 'en' });
+        });
     });
 });

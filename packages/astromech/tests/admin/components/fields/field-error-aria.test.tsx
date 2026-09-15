@@ -3,11 +3,10 @@
  *
  * A field error is announced by ASSOCIATION, never by a live region.
  *
- * `FieldWrapper` used to render its message as `<p role="alert">`. An assertive
- * live region clips the name of the field the author just tabbed to, a polite
- * one appends the previous field's error after the new field's name, and either
- * way the region was mounted with its text already inside it — which several AT
- * and browser combinations never announce at all.
+ * A live region is the wrong tool: an assertive one clips the name of the field
+ * the author just tabbed to, a polite one appends the previous field's error
+ * after the new field's name, and a region mounted with its text already inside
+ * goes unannounced in several AT and browser combinations.
  *
  * What has to hold instead: the message carries an `id`, and the field's control
  * carries `aria-invalid="true"` plus an `aria-describedby` pointing at that `id`.

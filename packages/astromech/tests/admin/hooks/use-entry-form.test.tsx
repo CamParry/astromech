@@ -1,16 +1,9 @@
 /**
  * @vitest-environment happy-dom
  *
- * Save and publish must be the SAME submit path.
- *
- * `handleSave` always went through `form.handleSubmit()`, so TanStack's own
- * per-field validators ran — including the "title is required" one the entry
- * pages register on `form.Field name="title"`. `handlePublish` used to call the
- * publish mutation directly, so an entry could be published with an empty title
- * even though saving one was refused.
- *
- * There is no `@testing-library/react` here, so this drives a real React root
- * directly (same approach as use-field-validation.test.tsx).
+ * Save and publish share one submit path, so both run TanStack's own field
+ * validators (the entry pages' required-title check among them) before a
+ * mutation fires. It drives a real React root, as use-field-validation does.
  */
 
 import type { UseEntryFormResult } from '@/admin/hooks/use-entry-form';
@@ -111,10 +104,27 @@ function mountForm(defaults: {
     };
 }
 
-/** Let the submit (and the mutation it fires) settle. */
-async function settle(): Promise<void> {
-    await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 0));
+/**
+ * Retry `assertion`, flushing React's pending work inside `act` before each try,
+ * so the updates a submit makes land inside a scope React knows about.
+ */
+async function waitUntil(assertion: () => void): Promise<void> {
+    await vi.waitFor(async () => {
+        await act(async () => undefined);
+        assertion();
+    });
+}
+
+/**
+ * Wait for a submit to settle: it fired a mutation, or it finished without one.
+ * A success resets the form's attempt count, so a fired mutation is the signal.
+ */
+async function waitForSubmit(mounted: Mounted): Promise<void> {
+    await waitUntil(() => {
+        const fired =
+            mounted.saveFn.mock.calls.length + mounted.publishFn.mock.calls.length;
+        const { submissionAttempts, isSubmitting } = mounted.handle().form.state;
+        expect(fired > 0 || (submissionAttempts > 0 && !isSubmitting)).toBe(true);
     });
 }
 
@@ -123,7 +133,7 @@ describe('handlePublish', () => {
         const mounted = mountForm({ title: '', fields: { body: 'written' } });
 
         act(() => mounted.handle().handlePublish());
-        await settle();
+        await waitForSubmit(mounted);
 
         expect(mounted.publishFn).not.toHaveBeenCalled();
         expect(mounted.saveFn).not.toHaveBeenCalled();
@@ -135,9 +145,8 @@ describe('handlePublish', () => {
         const mounted = mountForm({ title: 'Ready', fields: { body: 'written' } });
 
         act(() => mounted.handle().handlePublish());
-        await settle();
+        await waitUntil(() => expect(mounted.publishFn).toHaveBeenCalledTimes(1));
 
-        expect(mounted.publishFn).toHaveBeenCalledTimes(1);
         expect(mounted.publishFn.mock.calls[0]?.[0]).toMatchObject({
             title: 'Ready',
             status: 'published',
@@ -151,7 +160,7 @@ describe('handlePublish', () => {
         const mounted = mountForm({ title: 'Ready', fields: { body: '' } });
 
         act(() => mounted.handle().handlePublish());
-        await settle();
+        await waitForSubmit(mounted);
 
         expect(mounted.publishFn).not.toHaveBeenCalled();
 
@@ -162,9 +171,9 @@ describe('handlePublish', () => {
         const mounted = mountForm({ title: 'Ready', fields: { body: 'written' } });
 
         act(() => mounted.handle().handlePublish());
-        await settle();
+        await waitForSubmit(mounted);
         act(() => mounted.handle().handleSave());
-        await settle();
+        await waitUntil(() => expect(mounted.saveFn).toHaveBeenCalledTimes(1));
 
         expect(mounted.publishFn).toHaveBeenCalledTimes(1);
         expect(mounted.saveFn).toHaveBeenCalledTimes(1);
@@ -181,7 +190,7 @@ describe('handleSave', () => {
         const mounted = mountForm({ title: '', fields: { body: 'written' } });
 
         act(() => mounted.handle().handleSave());
-        await settle();
+        await waitForSubmit(mounted);
 
         expect(mounted.saveFn).not.toHaveBeenCalled();
 
@@ -192,9 +201,8 @@ describe('handleSave', () => {
         const mounted = mountForm({ title: 'Draft', fields: { body: '' } });
 
         act(() => mounted.handle().handleSave());
-        await settle();
+        await waitUntil(() => expect(mounted.saveFn).toHaveBeenCalledTimes(1));
 
-        expect(mounted.saveFn).toHaveBeenCalledTimes(1);
         expect(mounted.publishFn).not.toHaveBeenCalled();
 
         mounted.unmount();

@@ -1,14 +1,13 @@
 /**
- * `POST /media/:id/replace` over the real router.
- *
- * `mediaService.replace` shipped fully implemented and reachable from nothing.
- * Service-level tests never touch a route, so only these assert that the file
- * arrives, the permission is enforced, and a missing item answers 404 not 500.
+ * `POST /media/:id/replace` over the real router. Service-level tests never touch
+ * a route, so only these assert that the file arrives, the permission is
+ * enforced, and a missing item answers 404 not 500.
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { Role, StorageDriver, User } from '@/types/index';
+import type { Role, User } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { adminRole, noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mediaService } from '@/app-context/services';
@@ -16,36 +15,7 @@ import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
 
-const noopStorage: StorageDriver = {
-    name: 'noop',
-    async put(): Promise<void> {
-        return undefined;
-    },
-    async get(): Promise<null> {
-        return null;
-    },
-    async stat(): Promise<null> {
-        return null;
-    },
-    async delete(): Promise<void> {
-        return undefined;
-    },
-    async list(): Promise<{ keys: string[] }> {
-        return { keys: [] };
-    },
-    getPublicUrl(key: string): string {
-        return `/${key}`;
-    },
-};
-
 const fakeUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;
-
-const adminRole: Role = {
-    slug: 'admin',
-    name: 'Admin',
-    permissions: ['*'] as Role['permissions'],
-    isBuiltIn: true,
-};
 
 /** Reads media but may not upload — the role `media:upload` must keep out. */
 const viewerRole: Role = {

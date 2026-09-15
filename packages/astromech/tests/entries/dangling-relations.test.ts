@@ -256,8 +256,8 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
         expect(updated.fields.link).toBe(link.id);
     });
 
-    // The false-negative guard, now on the hook rather than on the repository
-    // override: a repository that cannot answer is never asked, and its ids stand.
+    // The false-negative guard lives on the hook, not the repository override: a
+    // repository that cannot answer is never asked, and its ids stand.
     it('keeps a reference whose repository implements no existence check', async () => {
         const doc = await api.create({
             type: 'doc',

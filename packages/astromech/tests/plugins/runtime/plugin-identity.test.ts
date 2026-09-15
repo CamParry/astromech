@@ -16,7 +16,7 @@ const def = (
 });
 
 describe('pluginNamespace', () => {
-    // The derivation table from specs/plugin-identity.md §2 — the contract a
+    // The derivation table in apps/docs/plugins/authoring.md, the contract a
     // plugin author reads to know what namespace their package will get.
     it.each([
         ['@astromech/redirects', 'redirects'],

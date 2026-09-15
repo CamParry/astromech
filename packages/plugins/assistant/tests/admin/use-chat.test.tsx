@@ -77,7 +77,7 @@ describe('useChat approvals', () => {
         answerWith(HELD);
         const mounted = mountChat();
 
-        await drain(() => {
+        await drain(mounted, () => {
             mounted.chat().send('update home');
         });
 
@@ -90,12 +90,12 @@ describe('useChat approvals', () => {
     it('posts the transcript as it stands, with the decisions', async () => {
         answerWith(HELD);
         const mounted = mountChat();
-        await drain(() => {
+        await drain(mounted, () => {
             mounted.chat().send('update home');
         });
 
         answerWith([{ type: 'done' }]);
-        await drain(() => {
+        await drain(mounted, () => {
             mounted.chat().respond([{ approvalId: 'ap_1', action: 'approve' }]);
         });
 
@@ -114,12 +114,12 @@ describe('useChat approvals', () => {
     it('records a rejected call so the transcript can say so', async () => {
         answerWith(HELD);
         const mounted = mountChat();
-        await drain(() => {
+        await drain(mounted, () => {
             mounted.chat().send('update home');
         });
 
         answerWith([{ type: 'done' }]);
-        await drain(() => {
+        await drain(mounted, () => {
             mounted.chat().respond([{ approvalId: 'ap_1', action: 'reject' }]);
         });
 
@@ -130,12 +130,12 @@ describe('useChat approvals', () => {
     it('declines the held calls when the user sends a new message instead', async () => {
         answerWith(HELD);
         const mounted = mountChat();
-        await drain(() => {
+        await drain(mounted, () => {
             mounted.chat().send('update home');
         });
 
         answerWith([{ type: 'done' }]);
-        await drain(() => {
+        await drain(mounted, () => {
             mounted.chat().send('never mind, list them');
         });
 
@@ -177,7 +177,7 @@ describe('useChat session', () => {
         });
         const mounted = mountChat();
 
-        await settle();
+        await waitForRestore(mounted);
 
         expect(mounted.chat().entries).toEqual([
             { kind: 'message', message: PAUSED_TURN },
@@ -191,7 +191,7 @@ describe('useChat session', () => {
         sessionsService.getSession.mockRejectedValueOnce(new Error('offline'));
         const mounted = mountChat();
 
-        await settle();
+        await waitForRestore(mounted);
 
         expect(mounted.chat().entries).toEqual([]);
         expect(mounted.chat().isRestoring).toBe(false);
@@ -208,10 +208,11 @@ describe('useChat session', () => {
         answerWith([{ type: 'done' }]);
         const mounted = mountChat();
 
-        await drain(() => {
+        await drain(mounted, () => {
             mounted.chat().send('update home');
             land({ messages: [PAUSED_TURN], pending: [REQUEST] });
         });
+        await waitForRestore(mounted);
 
         expect(mounted.chat().entries).toEqual([
             {
@@ -232,9 +233,9 @@ describe('useChat session', () => {
             pending: [REQUEST],
         });
         const mounted = mountChat();
-        await settle();
+        await waitForRestore(mounted);
 
-        await drain(() => {
+        await drain(mounted, () => {
             mounted.chat().newChat();
         });
 
@@ -277,17 +278,28 @@ function mountChat(): Mounted {
     };
 }
 
-/** Run `action`, then let the stream it starts drain before asserting. */
-async function drain(action: () => void): Promise<void> {
+/**
+ * Run `action`, then wait until the turn it may start has stopped streaming.
+ * Starting a turn sets `isStreaming` at once, so `false` here means it ended.
+ */
+async function drain(mounted: Mounted, action: () => void): Promise<void> {
     await act(async () => {
         action();
-        await new Promise((resolve) => setTimeout(resolve, 0));
     });
+    await waitUntil(() => expect(mounted.chat().isStreaming).toBe(false));
 }
 
-/** Let the mount's session request land before asserting. */
-async function settle(): Promise<void> {
-    await drain(() => undefined);
+/** Wait until the mount's session request has landed. */
+async function waitForRestore(mounted: Mounted): Promise<void> {
+    await waitUntil(() => expect(mounted.chat().isRestoring).toBe(false));
+}
+
+/** Retry `assertion`, flushing React's pending work inside `act` before each try. */
+async function waitUntil(assertion: () => void): Promise<void> {
+    await vi.waitFor(async () => {
+        await act(async () => undefined);
+        assertion();
+    });
 }
 
 /** Make the next request answer with these events, one SSE frame each. */

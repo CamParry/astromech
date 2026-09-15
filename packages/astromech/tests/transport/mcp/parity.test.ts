@@ -3,12 +3,8 @@
  *
  * Every MCP tool's `inputSchema` must be exactly the manifest method's `input`.
  *
- * The absence of this test is why MCP's `users.update` tool drifted from its
- * contract and shipped: the adapter carried a hand-written schema literal that
- * dropped `fields` and the email format, and declared `additionalProperties:
- * false`, so setting a custom user field through MCP was rejected outright. The
- * correct schema sat in the manifest, unread, with nothing asserting the two
- * agreed.
+ * A hand-written schema literal in an adapter can drift from its contract with
+ * nothing noticing, and then rejects input the contract accepts.
  *
  * This runs against a REAL generated manifest rather than a fixture, so a
  * contract change that an adapter fails to follow fails here.
@@ -198,8 +194,8 @@ describe('manifest ↔ MCP tool coverage', () => {
     });
 
     it('skips only methods that declared themselves uncallable', () => {
-        // The P1 acceptance condition: with one generic dispatcher, what is
-        // left out is left out because the CONTRACT said so.
+        // With one generic dispatcher, a method is left out only because its
+        // own declaration says it cannot be called.
         expect(skipped.map((s) => s.id).sort()).toEqual([
             'media.replace',
             'media.upload',
@@ -224,8 +220,8 @@ describe('manifest ↔ MCP tool coverage', () => {
     });
 
     it('projects a plugin service method that declares its input', () => {
-        // Plugin methods returned null from every previous dispatcher, which is
-        // the backlog item P1 closes.
+        // A plugin method is a tool like any core method once it declares its
+        // input.
         const tool = tools.find((t) => t.name === 'plugins_testMyPlugin_doSomething');
         expect(tool).toBeDefined();
         expect(tool?.inputSchema).toEqual(
@@ -274,9 +270,9 @@ describe('manifest ↔ MCP tool coverage', () => {
     it('gates a capability-bound method on the capability the SERVICE asserts', () => {
         // `pages` declares no versioning and no staging, so it has no version
         // history and no staged-entry methods — but it DOES have statuses, and
-        // `operations/status.ts` gates publish on statuses. Gating publish on
-        // versioning (as the contract did before P1) hid it from every
-        // unversioned type while the service happily accepted the call.
+        // `entries/methods/status.ts` gates publish on statuses. Gating publish
+        // on versioning would hide it from every unversioned type while the
+        // service accepts the call.
         const pages = tools.map((t) => t.name);
         expect(pages).toContain('entries_pages_publish');
         expect(pages).toContain('entries_pages_unpublish');

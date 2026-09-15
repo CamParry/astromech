@@ -229,12 +229,6 @@ function mountApp(queryClient: QueryClient, api: EntriesService) {
     return router as unknown as { navigate: (opts: { to: string }) => Promise<void> };
 }
 
-async function settle(): Promise<void> {
-    await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-    });
-}
-
 function control(selector: string): HTMLInputElement {
     const el = document.querySelector<HTMLInputElement>(selector);
     if (el === null) {
@@ -287,8 +281,6 @@ describe('the entry edit page across a locale switch', () => {
         const queryClient = makeClient();
         const { api, update } = makeApi();
         const router = mountApp(queryClient, api);
-        await settle();
-        await settle();
 
         // Edit the meta title alone, leaving the sibling untouched.
         const title = await findControl('input[name="seo.title"]');
@@ -300,8 +292,9 @@ describe('the entry edit page across a locale switch', () => {
         await act(async () => {
             await router.navigate({ to: `/entries/${TYPE}/${ID}?locale=fr` });
         });
-        await settle();
-        await settle();
+        await waitFor(() => {
+            expect(control('input[name="seo.title"]').value).toBe('FR title');
+        });
         assertNoPartialGroup();
 
         // Edit on the other locale, then come back.
@@ -311,15 +304,17 @@ describe('the entry edit page across a locale switch', () => {
         await act(async () => {
             await router.navigate({ to: `/entries/${TYPE}/${ID}?locale=en` });
         });
-        await settle();
-        await settle();
+        await waitFor(() => {
+            expect(control('input[name="seo.title"]').value).toBe('EN title');
+        });
         assertNoPartialGroup();
 
         const back = await findControl('input[name="seo.title"]');
         await user.clear(back);
         await user.type(back, 'EN edited again');
         await user.click(await screen.findByRole('button', { name: 'common.update' }));
-        await settle();
+        // The success toast comes from `onSuccess`, after `form.reset` has run.
+        await screen.findByText('entries.updated');
 
         assertNoPartialGroup();
         expect(update).toHaveBeenCalledTimes(1);
@@ -343,8 +338,6 @@ describe('the entry edit page across a locale switch', () => {
         const queryClient = makeClient();
         const { api } = makeApi();
         const router = mountApp(queryClient, api);
-        await settle();
-        await settle();
 
         await waitFor(() => {
             expect(control('input[name="seo.title"]').value).toBe('EN title');
@@ -353,8 +346,6 @@ describe('the entry edit page across a locale switch', () => {
         await act(async () => {
             await router.navigate({ to: `/entries/${TYPE}/${ID}?locale=fr` });
         });
-        await settle();
-        await settle();
 
         // The route component is not remounted; the page keys its body on the
         // locale, so the new row arrives through a fresh form.
@@ -369,8 +360,6 @@ describe('the entry edit page across a locale switch', () => {
         const queryClient = makeClient();
         const { api, update } = makeApi();
         const router = mountApp(queryClient, api);
-        await settle();
-        await settle();
 
         // Touch the form. From here TanStack Form stops copying `defaultValues`
         // in, so only the remount can show the other locale's row.
@@ -384,8 +373,6 @@ describe('the entry edit page across a locale switch', () => {
         await act(async () => {
             await router.navigate({ to: `/entries/${TYPE}/${ID}?locale=fr` });
         });
-        await settle();
-        await settle();
 
         await waitFor(() => {
             expect(control('input[name="seo.title"]').value).toBe('FR title');
@@ -397,8 +384,6 @@ describe('the entry edit page across a locale switch', () => {
         await act(async () => {
             await router.navigate({ to: `/entries/${TYPE}/${ID}?locale=en` });
         });
-        await settle();
-        await settle();
 
         await waitFor(() => {
             expect(control('input[name="seo.title"]').value).toBe('EN title');

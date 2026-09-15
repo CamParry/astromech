@@ -98,10 +98,17 @@ function mountField(field: Field, value: unknown): Mounted {
     };
 }
 
-/** Let the field's own fetch resolve. */
-async function settle(): Promise<void> {
+/**
+ * Await, inside `act`, the option lookup the field started on mount. Called
+ * before any other await, so the field's own handler runs in the same scope.
+ */
+async function waitForOptions(): Promise<void> {
+    const lookup = entriesQuery.mock.results.at(-1)?.value as
+        | Promise<unknown>
+        | undefined;
+    if (lookup === undefined) throw new Error('the field never looked its options up');
     await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 0));
+        await lookup.catch(() => undefined);
     });
 }
 
@@ -131,15 +138,15 @@ describe('media on a fetched entry', () => {
             item(id, `${id}.png`)
         );
         const f = mountField(cover, undefined);
-        await settle();
+        // `render` flushes effects and the lookup is called from one, so a
+        // lookup on mount would already be recorded.
         expect(mediaGet).not.toHaveBeenCalled();
 
         f.rerender('m1');
-        await settle();
 
+        expect(await screen.findByAltText('m1.png')).toBeDefined();
         expect(mediaGet).toHaveBeenCalledWith({ id: 'm1' });
         expect(hidden('cover').value).toBe('m1');
-        expect(screen.getByAltText('m1.png')).toBeDefined();
     });
 
     it('commits null when the author clears the selection', async () => {
@@ -149,9 +156,8 @@ describe('media on a fetched entry', () => {
         );
         const f = mountField(cover, undefined);
         f.rerender('m1');
-        await settle();
 
-        await user.click(screen.getByLabelText('fields.mediaRemoveLabel'));
+        await user.click(await screen.findByLabelText('fields.mediaRemoveLabel'));
 
         expect(f.commits.at(-1)).toEqual({ name: 'cover', value: null });
     });
@@ -163,9 +169,10 @@ describe('media on a fetched entry', () => {
         );
         const f = mountField(gallery, undefined);
         f.rerender(['m1', 'm2', 'm3']);
-        await settle();
 
-        const removeFirst = screen.getAllByLabelText('fields.mediaRemoveItemLabel')[0];
+        const removeFirst = (
+            await screen.findAllByLabelText('fields.mediaRemoveItemLabel')
+        )[0];
         if (removeFirst === undefined) throw new Error('no remove button rendered');
         await user.click(removeFirst);
 
@@ -179,9 +186,8 @@ describe('media on a fetched entry', () => {
         const f = mountField(cover, undefined);
 
         f.rerender('m1');
-        await settle();
 
-        expect(screen.getByText('fields.mediaLoadFailed')).toBeDefined();
+        expect(await screen.findByText('fields.mediaLoadFailed')).toBeDefined();
         expect(f.commits).toEqual([]);
     });
 });
@@ -206,7 +212,7 @@ describe('relationship on a fetched entry', () => {
     it('labels the stored id once the option list lands', async () => {
         entriesQuery.mockResolvedValue({ data: OPTIONS });
         mountField(author, 'a1');
-        await settle();
+        await waitForOptions();
 
         expect(entriesQuery).toHaveBeenCalledWith({ type: 'author', limit: 'all' });
         expect(selectionLabel()).toBe('Ada Lovelace');
@@ -215,7 +221,7 @@ describe('relationship on a fetched entry', () => {
     it('labels an id that arrives after the option list', async () => {
         entriesQuery.mockResolvedValue({ data: OPTIONS });
         const f = mountField(author, undefined);
-        await settle();
+        await waitForOptions();
 
         f.rerender('a2');
 
@@ -226,7 +232,7 @@ describe('relationship on a fetched entry', () => {
         const user = userEvent.setup();
         entriesQuery.mockResolvedValue({ data: OPTIONS });
         const f = mountField(author, undefined);
-        await settle();
+        await waitForOptions();
 
         await user.click(document.querySelector('[role="combobox"]') as HTMLElement);
         const option = [...document.querySelectorAll('[role="option"]')].find((el) =>
@@ -243,7 +249,7 @@ describe('relationship on a fetched entry', () => {
     it('commits nothing when the lookup fails', async () => {
         entriesQuery.mockRejectedValue(new Error('offline'));
         const f = mountField(author, 'a1');
-        await settle();
+        await waitForOptions();
 
         expect(selectionLabel()).toBe('');
         expect(f.commits).toEqual([]);

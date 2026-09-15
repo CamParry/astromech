@@ -2,32 +2,30 @@
  * Field-validation status codes over the real routers + `onError`.
  *
  * The field pipeline raises `ValidationError.fromFieldErrors`, which `onError`
- * maps to a 422 carrying `details.fields`. Every route handler used to wrap its
- * body in a blanket `try/catch` returning `internalError(...)`, so that
- * `ValidationError` was flattened to a 500 ("Internal server error: Validation
- * failed") before `onError` could see it — for every domain, since the CMS
- * shipped. These tests pin the 422 at the HTTP boundary for all four domains
- * that run the pipeline (entries, users, media).
+ * maps to a 422 carrying `details.fields`. A route handler that caught errors
+ * itself would flatten that to a 500 before `onError` saw it, so these pin the
+ * 422 at the HTTP boundary for every domain that runs the pipeline (entries,
+ * users, media).
  *
- * Two things beyond the bare status:
+ * Beyond the bare status:
  *  - a NESTED error key (`socials[<id>].url`, produced by the repeater's
- *    `_id`-based path grammar) must survive verbatim into the response body —
- *    that is the key the admin's `useFieldError(path)` looks up;
- *  - a non-`ValidationError` failure must still be a 500 with a `console.error`,
- *    so removing the blanket catches is pinned as behaviour-preserving rather
- *    than "everything is 422 now";
+ *    `_id`-based path grammar) must survive verbatim into the response body,
+ *    since that is the key the admin's `useFieldError(path)` looks up;
+ *  - a non-`ValidationError` failure is still a 500 with a `console.error`, so
+ *    the 422 answers validation failures only;
  *  - a resource validator's form-level message rides in `details.form`, which is
- *    absent entirely when only fields reported — the per-field response body is
- *    unchanged.
+ *    absent entirely when only fields reported, so the per-field body keeps its
+ *    shape.
  *
  * Zod envelope errors (a malformed request body) are a separate path handled by
- * the routes' own `fromZodError`/`zodValidationError` helpers and already
- * worked; they are not what is under test here.
+ * the routes' own `fromZodError`/`zodValidationError` helpers, and are not under
+ * test here.
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { AstromechConfig, Role, StorageDriver, User } from '@/types/index';
+import type { AstromechConfig, StorageDriver, User } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { adminRole } from '@tests/fixtures';
 import {
     createTestDb,
     createTestUser,
@@ -53,13 +51,6 @@ type ErrorBody = {
 };
 
 const fakeUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;
-
-const adminRole: Role = {
-    slug: 'admin',
-    name: 'Admin',
-    permissions: ['*'] as Role['permissions'],
-    isBuiltIn: true,
-};
 
 /** In-memory storage so `media.upload` can persist a record to update. */
 function memoryStorage(): StorageDriver {

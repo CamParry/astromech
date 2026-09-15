@@ -1,10 +1,7 @@
 /**
- * `usersService` CRUD + list behaviour, pinned across the move onto the users repository.
- *
- * `users` repository is hand-rolled (better-auth owns the table, so there is no
- * `Table` for `createRepository` to wrap), which means its sort
- * whitelist, its name/email search OR, its count and its `updatedAt` stamp are
- * all local code rather than shared wrapper code — and none of it was covered.
+ * `usersService` CRUD and list behaviour. The users repository is hand-rolled
+ * (better-auth owns the table, so there is no `Table` to wrap), so its sort
+ * whitelist, search, count and `updatedAt` stamp are local code tested here.
  */
 
 import type { DB } from '@/database/types';

@@ -7,38 +7,17 @@
  */
 
 import type { RestRoute } from '@/transport/http/routes/rest-route';
-import type { Role, ServiceMethodContract, StorageDriver } from '@/types/index';
+import type { Role, ServiceMethodContract } from '@/types/index';
 import type { RouteEnv } from '@tests/mount-router';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
+import { noopStorage, roleWith } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { mountRouter, roleWith } from '@tests/mount-router';
+import { mountRouter } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
 import { mountRestRoutes } from '@/transport/http/routes/rest-route';
-
-const noopStorage: StorageDriver = {
-    name: 'noop',
-    async put(): Promise<void> {
-        return undefined;
-    },
-    async get(): Promise<null> {
-        return null;
-    },
-    async stat(): Promise<null> {
-        return null;
-    },
-    async delete(): Promise<void> {
-        return undefined;
-    },
-    async list(): Promise<{ keys: string[] }> {
-        return { keys: [] };
-    },
-    getPublicUrl(key: string): string {
-        return `/${key}`;
-    },
-};
 
 let id: string;
 

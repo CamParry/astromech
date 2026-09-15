@@ -4,8 +4,9 @@
  * The suite runs with `isolate: false` so a worker imports the module graph
  * once and reuses it across files, which is where most of the run time went.
  * A file listed here opts back into per-file isolation because it mocks a
- * module other files import, stubs a global, or writes `globalThis.__astromech`
- * (all of which leak across files in a shared graph).
+ * module other files import, resets the module registry, stubs a global, or
+ * writes `globalThis.__astromech` (all of which leak across files in a shared
+ * graph).
  *
  * `tests/isolation-list.test.ts` fails if this list and the files that actually
  * do those things disagree, so it cannot drift.
@@ -46,6 +47,7 @@ export const isolatedTests = [
     'tests/users/auth-base-path.test.ts',
     'tests/users/auth-signup.test.ts',
     'tests/users/role-validation.test.ts',
+    'tests/users/session.test.ts',
     'tests/storage/drivers/s3.test.ts',
     'tests/transport/http/client-address.test.ts',
     'tests/transport/http/client/entries-service.test.ts',
@@ -54,6 +56,7 @@ export const isolatedTests = [
     'tests/transport/http/client/methods.test.ts',
     'tests/transport/http/routes/app-root.test.ts',
     'tests/transport/http/routes/cron.test.ts',
+    'tests/transport/http/routes/entries-mounted.test.ts',
     'tests/transport/http/routes/plugins-contract.test.ts',
     'tests/transport/http/routes/rpc-parity.test.ts',
     'tests/transport/mcp/parity.test.ts',

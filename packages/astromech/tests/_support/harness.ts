@@ -36,8 +36,6 @@ import type {
     JsonObject,
     PluginDefinition,
     ResolvedConfig,
-    StorageDriver,
-    StorageList,
     User,
 } from '@/types/index';
 import type { Dialect, MigrationProvider } from 'kysely';
@@ -47,6 +45,7 @@ import * as path from 'node:path';
 import { mergeMigrationProviders, migrateToLatest } from '@astromech/schema-engine';
 import { createClient } from '@libsql/client';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
+import { noopStorage } from '@tests/fixtures';
 import { CamelCasePlugin, Kysely } from 'kysely';
 import { setConfig } from '@/config/registry';
 import { resolveConfig } from '@/config/resolve';
@@ -88,9 +87,9 @@ async function buildTestDb(url: string): Promise<Db> {
     const { migrationProvider } = await import(
         new URL('../../../../apps/demo/migrations/index.ts', import.meta.url).href
     );
-    // The first-party plugins own their tables now, so the app chain alone no
-    // longer creates them. Apply exactly what a real boot applies: the merged
-    // provider. `allowUnorderedMigrations` mirrors `boot/boot.ts` — plugin
+    // The first-party plugins own their tables, so the app chain alone does not
+    // create them. Apply exactly what a real boot applies: the merged provider.
+    // `allowUnorderedMigrations` mirrors `database/migrations.ts`, because plugin
     // migrations interleave with the app's in one `kysely_migration` table.
     const plugins = await Promise.all(
         FIRST_PARTY_PLUGIN_MIGRATIONS.map(async (alias) => {
@@ -130,28 +129,6 @@ export async function createTestDb(): Promise<Db> {
 export async function createFileTestDb(url: string): Promise<Db> {
     return buildTestDb(url);
 }
-
-const noopStorage: StorageDriver = {
-    name: 'test-noop',
-    async put(): Promise<void> {
-        return undefined;
-    },
-    async get(): Promise<null> {
-        return null;
-    },
-    async stat(): Promise<null> {
-        return null;
-    },
-    async delete(): Promise<void> {
-        return undefined;
-    },
-    async list(): Promise<StorageList> {
-        return { keys: [] };
-    },
-    getPublicUrl(key: string): string | null {
-        return `/${key}`;
-    },
-};
 
 // `makeTestConfig()`'s `db` field is never actually resolved: tests wire the
 // active driver themselves via `createTestDb()` → `setDatabaseDriver`, and

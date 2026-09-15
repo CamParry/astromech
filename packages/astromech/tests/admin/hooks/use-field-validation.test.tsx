@@ -25,7 +25,7 @@ import type { FieldValidationHandle } from '@/admin/hooks/use-field-validation';
 import type { Field, FieldErrors, ValidationRule } from '@/types/index';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { useFieldValidation } from '@/admin/hooks/use-field-validation';
 
 type Mounted = {
@@ -82,11 +82,23 @@ function mountValidation(
     };
 }
 
-/** Let every in-flight validation run settle and its state land. */
-async function settle(): Promise<void> {
-    await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 0));
+/**
+ * Retry `assertion`, flushing React's pending work inside `act` before each try,
+ * so the state a validation run sets lands inside a scope React knows about.
+ */
+async function waitUntil(assertion: () => void): Promise<void> {
+    await vi.waitFor(async () => {
+        await act(async () => undefined);
+        assertion();
     });
+}
+
+/**
+ * Settle every in-flight validation run. A run is promise-only (the browser's
+ * lookups resolve at once and nothing waits on a timer), so one flush drains it.
+ */
+async function flush(): Promise<void> {
+    await act(async () => undefined);
 }
 
 /** Run `validateAll` inside `act` so the reveal it performs is flushed. */
@@ -114,7 +126,7 @@ describe('reveal on blur', () => {
         const m = mountValidation([linkField], { link: INVALID_URL });
 
         act(() => m.handle().reportBlur('link'));
-        await settle();
+        await flush();
 
         expect(m.errors()).toEqual({});
         m.unmount();
@@ -127,9 +139,9 @@ describe('reveal on blur', () => {
             m.handle().markDirty('link');
             m.handle().reportBlur('link');
         });
-        await settle();
-
-        expect(m.errors()).toEqual({ link: ['Must be a valid URL'] });
+        await waitUntil(() => {
+            expect(m.errors()).toEqual({ link: ['Must be a valid URL'] });
+        });
         m.unmount();
     });
 
@@ -143,9 +155,9 @@ describe('reveal on blur', () => {
             m.handle().markDirty('link');
             m.handle().reportBlur('link');
         });
-        await settle();
-
-        expect(Object.keys(m.errors())).toEqual(['link']);
+        await waitUntil(() => {
+            expect(Object.keys(m.errors())).toEqual(['link']);
+        });
         m.unmount();
     });
 });
@@ -159,13 +171,14 @@ describe('re-validation while showing an error', () => {
             m.handle().markDirty('link');
             m.handle().reportBlur('link');
         });
-        await settle();
-        expect(m.errors()).toEqual({ link: ['Must be a valid URL'] });
+        await waitUntil(() => {
+            expect(m.errors()).toEqual({ link: ['Must be a valid URL'] });
+        });
 
         m.setValues({ link: 'https://example.com' });
-        await settle();
-
-        expect(m.errors()).toEqual({});
+        await waitUntil(() => {
+            expect(m.errors()).toEqual({});
+        });
         m.unmount();
     });
 
@@ -174,7 +187,7 @@ describe('re-validation while showing an error', () => {
 
         act(() => m.handle().markDirty('link'));
         m.setValues({ link: 'no' });
-        await settle();
+        await flush();
 
         expect(m.errors()).toEqual({});
         m.unmount();
@@ -191,7 +204,7 @@ describe('required', () => {
             m.handle().markDirty('title');
             m.handle().reportBlur('title');
         });
-        await settle();
+        await flush();
 
         expect(m.errors()).toEqual({});
         m.unmount();
@@ -270,9 +283,9 @@ describe('nested fields', () => {
             m.handle().markDirty('items[i2].link');
             m.handle().reportBlur('items[i2].link');
         });
-        await settle();
-
-        expect(m.errors()).toEqual({ 'items[i2].link': ['Must be a valid URL'] });
+        await waitUntil(() => {
+            expect(m.errors()).toEqual({ 'items[i2].link': ['Must be a valid URL'] });
+        });
         m.unmount();
     });
 
@@ -285,7 +298,7 @@ describe('nested fields', () => {
             m.handle().markDirty('link');
             m.handle().reportBlur('link');
         });
-        await settle();
+        await flush();
 
         expect(m.errors()).toEqual({});
         m.unmount();
@@ -327,9 +340,9 @@ describe('warnings', () => {
             m.handle().markDirty('summary');
             m.handle().reportBlur('summary');
         });
-        await settle();
-
-        expect(m.warnings()).toEqual({ summary: ['Must be at most 10 characters'] });
+        await waitUntil(() => {
+            expect(m.warnings()).toEqual({ summary: ['Must be at most 10 characters'] });
+        });
         m.unmount();
     });
 
@@ -337,7 +350,7 @@ describe('warnings', () => {
         const m = mountValidation([summary], { summary: TOO_LONG });
 
         act(() => m.handle().reportBlur('summary'));
-        await settle();
+        await flush();
 
         expect(m.warnings()).toEqual({});
         m.unmount();

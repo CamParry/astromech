@@ -6,17 +6,17 @@
  * `FormField` hands a sub-field two different strings: `field.name` (the bare
  * key, `url`) and `name` (the FULL path, `socials[<id>].url`, used for error
  * lookup and sibling reads). Leaf components report the FULL path back through
- * `onChange(name, value)` — so a container that uses the reported name as an
+ * `onChange(name, value)`, so a container that uses the reported name as an
  * object key writes a junk key literally called `socials[<id>].url` and never
- * touches `url`. In the browser that looked like typing doing nothing at all.
+ * touches `url`. In the browser that looks like typing doing nothing at all.
  *
  * Every assertion here therefore checks two things: the bare key holds the new
- * value, AND no key is path-shaped. The second is the one that pins the bug —
- * the junk key was written *alongside* the untouched bare key, so a test that
- * only looked for `url` would have passed while the field was broken.
+ * value, AND no key is path-shaped. The second is the one that pins the bug: the
+ * junk key lands *alongside* the untouched bare key, so a check for `url` alone
+ * passes while the field is broken.
  *
  * There is no `@testing-library/react` here, so this drives a real React root
- * and real inputs directly (same approach as container-field-seeding.test.tsx).
+ * and real inputs directly (same approach as nested-field-errors.test.tsx).
  */
 
 import type { Field } from '@/types/index';

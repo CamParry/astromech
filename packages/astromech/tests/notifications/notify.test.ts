@@ -1,14 +1,13 @@
 /**
- * `notify` and the four inbox methods, pinned across the move onto the
- * notification repository.
+ * `notify` and the four inbox methods, over the notification repository.
  *
- * Two things here are worth a test beyond "it still runs". The `users` lookups
- * that resolve a broadcast/per-role target moved to the `users` repository, so
- * each target arm needs to be shown to reach the right people. And the fan-out insert
- * is a hand-written multi-row statement (`createRepository`'s `create` is
- * single-row), so it is the one write in this domain not covered by the wrapper.
+ * Two things here are worth a test beyond "it runs". The `users` lookups that
+ * resolve a broadcast/per-role target go through the `users` repository, so each
+ * target arm is shown to reach the right people. And the fan-out insert is a
+ * hand-written multi-row statement (`createRepository`'s `create` is single-row),
+ * so it is the one write in this domain not covered by the wrapper.
  *
- * `dismiss` filters on `userId` as well as `id` — that pairing is the
+ * `dismiss` filters on `userId` as well as `id`; that pairing is the
  * authorization check, so it gets its own assertion.
  */
 

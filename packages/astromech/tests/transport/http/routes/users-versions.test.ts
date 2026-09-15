@@ -8,8 +8,9 @@
  */
 
 import type { User, UserVersion } from '@/types/index';
+import { adminRole, roleWith } from '@tests/fixtures';
 import { createTestDb, setupTestConfig } from '@tests/harness';
-import { adminRole, mountRouter, roleWith, seedTestUser } from '@tests/mount-router';
+import { mountRouter, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { usersService } from '@/app-context/services';
 import { usersRouter } from '@/transport/http/routes/users';

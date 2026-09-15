@@ -18,7 +18,7 @@ import {
     Outlet,
     RouterProvider,
 } from '@tanstack/react-router';
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -149,10 +149,12 @@ function mountPage(): void {
     );
 }
 
-async function settle(): Promise<void> {
-    await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+/**
+ * Wait for the page body, read from its read-only email input. The locale
+ * switcher renders in the same pass, so an absent one stays absent.
+ */
+async function findPage(): Promise<void> {
+    await screen.findByDisplayValue('user@example.com');
 }
 
 /** Open the locale listbox and pick the option with this label. */
@@ -172,7 +174,7 @@ async function pickLocale(label: string): Promise<void> {
 describe('UserEditPage locales', () => {
     it('renders no locale select when users are not translatable', async () => {
         mountPage();
-        await settle();
+        await findPage();
 
         expect(screen.queryByRole('combobox')).toBeNull();
     });
@@ -180,7 +182,7 @@ describe('UserEditPage locales', () => {
     it('renders no locale select with one configured locale even if translatable', async () => {
         adminConfig.users.translatable = true;
         mountPage();
-        await settle();
+        await findPage();
 
         expect(screen.queryByRole('combobox')).toBeNull();
     });
@@ -189,24 +191,22 @@ describe('UserEditPage locales', () => {
         adminConfig.users.translatable = true;
         adminConfig.locales = ['en', 'fr'];
         mountPage();
-        await settle();
 
-        expect(screen.getByRole('combobox')).not.toBeNull();
+        expect(await screen.findByRole('combobox')).not.toBeNull();
     });
 
     it('reads the chosen locale, shows the fallback hint, and sends it on save', async () => {
         adminConfig.users.translatable = true;
         adminConfig.locales = ['en', 'fr'];
         mountPage();
-        await settle();
+        await screen.findByRole('combobox');
 
         await pickLocale('Add FR');
-        await settle();
 
-        expect(requestedLocale.current).toBe('fr');
         expect(
-            screen.getByText('Showing the EN content until this locale is saved.')
+            await screen.findByText('Showing the EN content until this locale is saved.')
         ).not.toBeNull();
+        expect(requestedLocale.current).toBe('fr');
         expect(updateOptions.current?.locale).toBe('fr');
     });
 });

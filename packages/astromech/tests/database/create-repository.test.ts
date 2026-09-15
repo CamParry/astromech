@@ -10,7 +10,7 @@
 import type { Where } from '@/database/repository/create-repository';
 import { createTestDb } from '@tests/harness';
 import { sql } from 'kysely';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineTable } from '@/database/define-table';
 import { createRepository } from '@/database/repository/create-repository';
 import { emitTableStatements } from '@/database/table-snapshot';
@@ -52,6 +52,10 @@ beforeEach(async () => {
     for (const statement of emitTableStatements(entriesProbe, 'sqlite')) {
         await sql.raw(statement).execute(db);
     }
+});
+
+afterEach(() => {
+    vi.useRealTimers();
 });
 
 describe('createRepository – round trip', () => {
@@ -660,13 +664,15 @@ describe('createRepository – update', () => {
 
     it('auto-stamps an onUpdate column the caller did not supply', async () => {
         const repository = entryRepository();
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
         const created = await repository.create({
             type: 'post',
             locale: 'en',
             title: 'Before',
         });
 
-        await new Promise((resolve) => setTimeout(resolve, 5));
+        vi.setSystemTime(new Date('2026-01-01T00:00:01.000Z'));
         const updated = await repository.update(created.id, { title: 'After' });
 
         expect(updated.updatedAt.getTime()).toBeGreaterThan(created.updatedAt.getTime());
@@ -710,6 +716,8 @@ describe('createRepository – delete', () => {
 describe('createRepository – bulk writes', () => {
     it('updateMany returns the affected count and stamps onUpdate', async () => {
         const repository = entryRepository();
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
         const first = await repository.create({
             type: 'post',
             locale: 'en',
@@ -725,7 +733,7 @@ describe('createRepository – bulk writes', () => {
             publishedAt: LATE,
         });
 
-        await new Promise((resolve) => setTimeout(resolve, 5));
+        vi.setSystemTime(new Date('2026-01-01T00:00:01.000Z'));
         const affected = await repository.updateMany(
             { status: 'scheduled', publishedAt: { lte: new Date() } },
             { status: 'published' }

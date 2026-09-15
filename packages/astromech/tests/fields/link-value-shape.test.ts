@@ -1,11 +1,7 @@
 /**
- * A link value is keyed by `url`, and every side of the contract must say so.
- *
- * The admin's `LinkField` used to write `href`, so the field type's generated
- * type and the validator described a shape the editor could never produce and
- * every save failed on "A link needs a url". These assertions pin the key on
- * the two halves that can be checked without rendering; the editor half is
- * pinned by tests/admin/components/fields/link-field-value.test.tsx.
+ * A link value is keyed by `url` on every side of the contract. These pin the key
+ * on the generated type and the validator, the halves checkable without
+ * rendering; tests/admin/components/fields/link-field-value.test.tsx pins the editor.
  */
 
 import type { FieldValidationContext } from '@/types/fields';

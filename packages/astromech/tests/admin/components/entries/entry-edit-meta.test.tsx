@@ -18,7 +18,7 @@ import {
     RouterProvider,
     useParams,
 } from '@tanstack/react-router';
-import { act, cleanup, render, waitFor } from '@testing-library/react';
+import { cleanup, render, waitFor } from '@testing-library/react';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -149,12 +149,6 @@ function mountPage(entry: Entry): void {
     );
 }
 
-async function settle(): Promise<void> {
-    await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-    });
-}
-
 /** The rendered metadata line, once the entry and the users have loaded. */
 async function findMetaLine(): Promise<string> {
     return waitFor(() => {
@@ -173,7 +167,6 @@ describe('the entry edit page metadata line', () => {
             ],
         });
         mountPage(makeEntry({ createdBy: 'g1', updatedBy: 'a1' }));
-        await settle();
 
         await waitFor(async () => {
             const line = await findMetaLine();
@@ -187,7 +180,6 @@ describe('the entry edit page metadata line', () => {
             data: [{ id: 'g1', name: 'Grace', email: 'grace@example.com' }],
         });
         mountPage(makeEntry({ createdBy: 'g1', updatedBy: 'gone' }));
-        await settle();
 
         await waitFor(async () => {
             const [updated, created] = (await findMetaLine()).split(' · ');

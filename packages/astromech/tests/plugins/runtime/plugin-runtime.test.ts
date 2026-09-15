@@ -5,9 +5,9 @@ import type {
     PluginContext,
     PluginDefinition,
     ResolvedConfig,
-    Role,
     User,
 } from '@/types/index';
+import { adminRole } from '@tests/fixtures';
 import { createElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
@@ -106,13 +106,6 @@ const user: User = {
     role: 'admin',
     createdAt: new Date(),
     updatedAt: new Date(),
-};
-
-const adminRole: Role = {
-    slug: 'admin',
-    name: 'Administrator',
-    permissions: ['*'],
-    isBuiltIn: true,
 };
 
 beforeEach(() => {

@@ -9,8 +9,9 @@
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { Role, StorageDriver, User } from '@/types/index';
+import type { User } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { adminRole, noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mediaService } from '@/app-context/services';
@@ -18,36 +19,7 @@ import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
 
-const noopStorage: StorageDriver = {
-    name: 'noop',
-    async put(): Promise<void> {
-        return undefined;
-    },
-    async get(): Promise<null> {
-        return null;
-    },
-    async stat(): Promise<null> {
-        return null;
-    },
-    async delete(): Promise<void> {
-        return undefined;
-    },
-    async list(): Promise<{ keys: string[] }> {
-        return { keys: [] };
-    },
-    getPublicUrl(key: string): string {
-        return `/${key}`;
-    },
-};
-
 const fakeUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;
-
-const adminRole: Role = {
-    slug: 'admin',
-    name: 'Admin',
-    permissions: ['*'] as Role['permissions'],
-    isBuiltIn: true,
-};
 
 function mountedApp(): OpenAPIHono<{ Variables: AuthVariables }> {
     const app = new OpenAPIHono<{ Variables: AuthVariables }>();

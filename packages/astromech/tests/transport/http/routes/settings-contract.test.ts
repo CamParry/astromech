@@ -8,8 +8,9 @@
  */
 
 import type { Role } from '@/types/index';
+import { adminRole, roleWith } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { adminRole, mountRouter, roleWith } from '@tests/mount-router';
+import { mountRouter } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { settingsService } from '@/app-context/services';
 import { settingsRouter } from '@/transport/http/routes/settings';

@@ -114,13 +114,6 @@ function mountField(field: Field, value: unknown): Mounted {
     return { commits, rerender: (next) => act(() => push(next)) };
 }
 
-/** Let the lazy module resolve and Suspense re-render. */
-async function settle(): Promise<void> {
-    await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-    });
-}
-
 describe('a plugin field type', () => {
     it('shows a spinner until its module lands', async () => {
         const { type, resolve } = registerFieldType();
@@ -129,17 +122,16 @@ describe('a plugin field type', () => {
         expect(document.querySelector('.am-spinner')).not.toBeNull();
 
         resolve();
-        await settle();
 
+        expect(await screen.findByRole('textbox')).toHaveProperty('value', 'Stored');
         expect(document.querySelector('.am-spinner')).toBeNull();
-        expect(screen.getByRole('textbox')).toHaveProperty('value', 'Stored');
     });
 
     it('renders a value that arrives after the module', async () => {
         const { type, resolve } = registerFieldType();
         const f = mountField({ name: 'preview', type }, undefined);
         resolve();
-        await settle();
+        await screen.findByRole('textbox');
 
         f.rerender('Stored');
 
@@ -151,9 +143,8 @@ describe('a plugin field type', () => {
         const { type, resolve } = registerFieldType();
         const f = mountField({ name: 'preview', type }, '');
         resolve();
-        await settle();
 
-        await user.type(screen.getByRole('textbox'), 'x');
+        await user.type(await screen.findByRole('textbox'), 'x');
 
         expect(f.commits.at(-1)).toEqual({ name: 'preview', value: 'x' });
     });
@@ -162,15 +153,16 @@ describe('a plugin field type', () => {
         const withDefault = registerFieldType({ defaultValue: 'From the plugin' });
         mountField({ name: 'preview', type: withDefault.type }, undefined);
         withDefault.resolve();
-        await settle();
-        expect(screen.getByRole('textbox')).toHaveProperty('value', 'From the plugin');
+        expect(await screen.findByRole('textbox')).toHaveProperty(
+            'value',
+            'From the plugin'
+        );
 
         cleanup();
         const stored = registerFieldType({ defaultValue: 'From the plugin' });
         mountField({ name: 'preview', type: stored.type }, 'Stored');
         stored.resolve();
-        await settle();
-        expect(screen.getByRole('textbox')).toHaveProperty('value', 'Stored');
+        expect(await screen.findByRole('textbox')).toHaveProperty('value', 'Stored');
     });
 
     it('renders the registration’s validation message inline', async () => {
@@ -180,9 +172,8 @@ describe('a plugin field type', () => {
         });
         mountField({ name: 'preview', type }, '');
         resolve();
-        await settle();
 
-        await user.type(screen.getByRole('textbox'), 'x');
+        await user.type(await screen.findByRole('textbox'), 'x');
 
         expect(screen.getByText('Not allowed')).toBeDefined();
     });

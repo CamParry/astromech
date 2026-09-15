@@ -35,8 +35,8 @@ The problems sit at the edges and in the conventions:
   `tests/` directory, a `test:run` script and a place in the gate; seo has the
   script and the config and no test files behind them.
 - **A handful of tests cannot fail**, most clearly
-  `packages/plugins/redirects/tests/schema.test.ts` (asserts only that the
-  harness created tables) and the no-throw assertions in
+  the redirects plugin's `schema.test.ts` (asserts only that the harness
+  created tables) and the no-throw assertions in
   `tests/admin/components/fields/richtext-field.test.ts`.
 - **Wall-clock sleeps are the flake surface**: ~15 places use `setTimeout`
   where `waitFor`/`findBy*` (admin components) or `vi.setSystemTime` (timestamp
@@ -59,25 +59,25 @@ is the measurement and the pass behind login.
 
 ### Stage 1
 
-- [ ] Test `getSession()` against the harness database: a valid session resolves
+- [x] Test `getSession()` against the harness database: a valid session resolves
       the user and role, a deleted user resolves to nothing, and a role missing
       from the config refuses the session, which is what
       [role-resolution-fails-open](../completed/role-resolution-fails-open.md)
       settled on. The route tests keep mocking the session boundary.
-- [ ] Replace the 21 `setTimeout` sleeps (14 admin and assistant component
+- [x] Replace the 21 `setTimeout` sleeps (14 admin and assistant component
       files, 7 in DB and runtime tests) with `waitFor`/`findBy*` and
       `vi.setSystemTime`.
-- [ ] Delete `packages/plugins/redirects/tests/schema.test.ts`, rewrite the weak
+- [x] Delete the redirects plugin's `schema.test.ts`, rewrite the weak
       assertions in `richtext-field.test.ts`, and add real redirects coverage:
       `service/redirects.ts` matching and `hooks/slug-change.ts`.
-- [ ] Sweep the stale docblocks. The tree itself now mirrors `src/`
+- [x] Sweep the stale docblocks. The tree itself now mirrors `src/`
       ([test-tree-mirrors-src](../completed/test-tree-mirrors-src.md)).
-- [ ] Export the shared fixtures (the no-op storage driver, the role helpers)
+- [x] Export the shared fixtures (the no-op storage driver, the role helpers)
       from `_support/` and replace the local copies.
-- [ ] Write the seo plugin's first tests (`utilities/length.ts`,
+- [x] Write the seo plugin's first tests (`utilities/length.ts`,
       `utilities/meta-value.ts`, `service/seo.ts`) and drop its
       `passWithNoTests`.
-- [ ] Write a `testing` skill: present-tense test names, one React rendering
+- [x] Write a `testing` skill: present-tense test names, one React rendering
       approach (`@testing-library/react`), mock leaves not barrels, no wall-clock
       sleeps, where a new test file goes, and the per-file-isolation dependency
       the registry-wiping tests rely on.

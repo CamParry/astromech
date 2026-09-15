@@ -1,44 +1,20 @@
 /**
- * `mediaService.query` filters, pinned across the move onto the media repository.
- *
- * The mime-bucket predicate is the one part of the migration whose SQL is
- * genuinely different in kind: it moved from a `DB`-typed expression builder onto
- * the generic one `createRepository.kysely()` hands out, and the `other` bucket is a
- * raw `sql` fragment naming snake_case columns (CamelCasePlugin does not
- * transform raw fragments). Nothing else in the suite exercises it.
+ * `mediaService.query` filters. The mime-bucket predicate runs on the generic
+ * builder `createRepository.kysely()` hands out, and its `other` bucket is a raw
+ * `sql` fragment naming snake_case columns (CamelCasePlugin does not transform
+ * raw fragments); nothing else in the suite exercises it.
  *
  * Rows are inserted through the repository rather than `mediaService.upload` so
  * no storage driver, image decoding or real bytes are involved.
  */
 
-import type { MediaMimeTypeFilter, StorageDriver } from '@/types/index';
+import type { MediaMimeTypeFilter } from '@/types/index';
+import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mediaService } from '@/app-context/services';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
-
-const noopStorage: StorageDriver = {
-    name: 'noop',
-    async put(): Promise<void> {
-        return undefined;
-    },
-    async get(): Promise<null> {
-        return null;
-    },
-    async stat(): Promise<null> {
-        return null;
-    },
-    async delete(): Promise<void> {
-        return undefined;
-    },
-    async list(): Promise<{ keys: string[] }> {
-        return { keys: [] };
-    },
-    getPublicUrl(key: string): string {
-        return `/${key}`;
-    },
-};
 
 const FIXTURES = [
     ['a.png', 'image/png'],

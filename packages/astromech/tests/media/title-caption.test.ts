@@ -1,39 +1,15 @@
 /**
- * `title` and `caption` round-trip through `mediaService.update`.
- *
- * The modal shipped a Title input for a column that did not exist: the field
- * validated, the service dropped it, and the value vanished with no error. The
- * point of these is that a write is READ BACK, not merely accepted.
+ * `title` and `caption` round-trip through `mediaService.update`. A write is READ
+ * BACK, not merely accepted, because a field that validates but has no column
+ * would otherwise vanish with no error.
  */
 
-import type { StorageDriver } from '@/types/index';
+import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mediaService } from '@/app-context/services';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
-
-const noopStorage: StorageDriver = {
-    name: 'noop',
-    async put(): Promise<void> {
-        return undefined;
-    },
-    async get(): Promise<null> {
-        return null;
-    },
-    async stat(): Promise<null> {
-        return null;
-    },
-    async delete(): Promise<void> {
-        return undefined;
-    },
-    async list(): Promise<{ keys: string[] }> {
-        return { keys: [] };
-    },
-    getPublicUrl(key: string): string {
-        return `/${key}`;
-    },
-};
 
 let id: string;
 

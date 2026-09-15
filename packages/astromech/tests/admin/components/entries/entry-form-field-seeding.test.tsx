@@ -12,12 +12,12 @@
  *
  * Any field that snapshots its value into `useState` on that first render is
  * therefore seeded from nothing, and then destroys the stored value the moment
- * the author touches it. That is why `useBlocksField`, `useTreeField` and
- * `RepeaterField` all carry a re-seed guard. `KeyValueEditor` does not.
+ * the author touches it. That is why `useBlocksField`, `useTreeField`,
+ * `RepeaterField` and `KeyValueEditor` all carry a re-seed guard.
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, cleanup, render } from '@testing-library/react';
+import { act, cleanup, render, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import React from 'react';
@@ -149,13 +149,6 @@ function mountEditPage({ main, sidebar = [], fields }: MountOptions): Harness {
     };
 }
 
-/** Let a submit (and the mutation it fires) settle. */
-async function settle(): Promise<void> {
-    await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-    });
-}
-
 function control(selector: string): HTMLElement {
     const el = document.querySelector<HTMLElement>(selector);
     if (el === null) {
@@ -188,7 +181,7 @@ describe('the field tree and the TanStack default-value copy', () => {
     });
 });
 
-// key-value — snapshots its pairs with no re-seed guard
+// key-value, which snapshots its pairs behind a re-seed guard
 
 describe('key-value on a fetched entry', () => {
     const META: Field = { name: 'meta', type: 'key-value', label: 'Meta' };
@@ -217,7 +210,9 @@ describe('key-value on a fetched entry', () => {
             fields: { meta: { alpha: '1', beta: '2' } },
         });
         h.load();
-        await settle();
+        await waitFor(() => {
+            expect(document.querySelectorAll('.am-kv-editor-row')).toHaveLength(2);
+        });
 
         const add = [...document.querySelectorAll('button')].find((b) =>
             (b.textContent ?? '').toLowerCase().includes('add')
@@ -257,7 +252,12 @@ describe('group on a fetched entry', () => {
             },
         });
         h.load();
-        await settle();
+        await waitFor(() => {
+            expect(control('input[name="seo.title"]')).toHaveProperty(
+                'value',
+                'Stored title'
+            );
+        });
 
         await user.clear(control('input[name="seo.title"]'));
         await user.type(control('input[name="seo.title"]'), 'Edited');
@@ -268,7 +268,9 @@ describe('group on a fetched entry', () => {
         });
 
         act(() => h.handle().handleSave());
-        await settle();
+        await waitFor(() => {
+            expect(h.saveFn).toHaveBeenCalledTimes(1);
+        });
 
         expect(h.saveFn.mock.calls[0]?.[0]).toMatchObject({
             fields: {

@@ -8,8 +8,9 @@
  */
 
 import type { Notification, NotificationsService, User } from '@/types/index';
+import { roleWith } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { mountRouter, roleWith } from '@tests/mount-router';
+import { mountRouter } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
 import { usersService } from '@/app-context/services';

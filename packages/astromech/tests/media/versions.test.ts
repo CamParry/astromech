@@ -4,36 +4,14 @@
  * no content row — writes none.
  */
 
-import type { StorageDriver } from '@/types/index';
+import { noopStorage } from '@tests/fixtures';
 import { createTestDb, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mediaService as api } from '@/app-context/services';
 import { MediaNotFoundError } from '@/media/errors';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { makeTranslatableMediaConfig } from './media-config';
-
-const noopStorage: StorageDriver = {
-    name: 'noop',
-    async put(): Promise<void> {
-        return undefined;
-    },
-    async get(): Promise<null> {
-        return null;
-    },
-    async stat(): Promise<null> {
-        return null;
-    },
-    async delete(): Promise<void> {
-        return undefined;
-    },
-    async list(): Promise<{ keys: string[] }> {
-        return { keys: [] };
-    },
-    getPublicUrl(key: string): string {
-        return `/${key}`;
-    },
-};
 
 let id: string;
 
@@ -48,6 +26,10 @@ beforeEach(async () => {
         { alt: 'first alt' }
     );
     id = row.id;
+});
+
+afterEach(() => {
+    vi.useRealTimers();
 });
 
 describe('versions', () => {
@@ -130,7 +112,9 @@ describe('restoreVersion', () => {
 describe('replace', () => {
     it('writes no version and moves the file timestamps alone', async () => {
         const before = await api.get({ id });
-        await new Promise((resolve) => setTimeout(resolve, 10));
+        if (!before) throw new Error('expected the item');
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(before.updatedAt.getTime() + 1000);
 
         const replaced = await api.replace({
             id,
@@ -140,8 +124,6 @@ describe('replace', () => {
         expect(await api.versions({ id })).toEqual([]);
         expect(replaced.filename).toBe('new.png');
         expect(replaced.alt).toBe('first alt');
-        expect(replaced.updatedAt.getTime()).toBeGreaterThan(
-            before?.updatedAt.getTime() ?? 0
-        );
+        expect(replaced.updatedAt.getTime()).toBeGreaterThan(before.updatedAt.getTime());
     });
 });

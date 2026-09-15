@@ -16,7 +16,7 @@
  */
 
 import type { Field } from '@/types/index';
-import { act, cleanup, render } from '@testing-library/react';
+import { act, cleanup, render, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -212,7 +212,7 @@ describe('tree on a fetched entry', () => {
     });
 });
 
-// json — snapshots its text with no re-seed guard (open defect)
+// json, which snapshots its text behind its own re-seed guard
 
 describe('json on a fetched entry', () => {
     const data: Field = { name: 'data', type: 'json' };
@@ -243,7 +243,7 @@ describe('json on a fetched entry', () => {
     });
 });
 
-// richtext — TipTap applies `content` only when it builds the editor (open defect)
+// richtext, which seeds the TipTap document from an effect
 
 describe('richtext on a fetched entry', () => {
     const body: Field = { name: 'body', type: 'richtext' };
@@ -258,27 +258,32 @@ describe('richtext on a fetched entry', () => {
         return document.querySelector('.am-richtext-content')?.textContent ?? '';
     }
 
-    async function settle(): Promise<void> {
-        await act(async () => {
-            await new Promise((resolve) => setTimeout(resolve, 50));
+    /** Wait for TipTap to mount its editor, which it does after the first render. */
+    async function waitForEditor(): Promise<HTMLElement> {
+        return waitFor(() => {
+            const content = document.querySelector<HTMLElement>('.am-richtext-content');
+            if (content === null) throw new Error('no editor content');
+            return content;
         });
     }
 
     it('renders the stored document when the value is already there', async () => {
         mountField(body, doc);
-        await settle();
 
-        expect(prose()).toBe('Stored prose');
+        await waitFor(() => {
+            expect(prose()).toBe('Stored prose');
+        });
     });
 
     it('renders the stored document when the value arrives late', async () => {
         const f = mountField(body, undefined);
-        await settle();
+        await waitForEditor();
 
         f.rerender(doc);
-        await settle();
 
-        expect(prose()).toBe('Stored prose');
+        await waitFor(() => {
+            expect(prose()).toBe('Stored prose');
+        });
         // The programmatic seed must not fire `onUpdate`.
         expect(f.commits).toEqual([]);
     });
@@ -286,21 +291,25 @@ describe('richtext on a fetched entry', () => {
     it('does not resync afterwards, so an in-progress edit survives', async () => {
         const user = userEvent.setup();
         const f = mountField(body, undefined);
-        await settle();
+        const content = await waitForEditor();
         f.rerender(doc);
-        await settle();
+        await waitFor(() => {
+            expect(prose()).toBe('Stored prose');
+        });
 
-        const content = document.querySelector<HTMLElement>('.am-richtext-content');
-        if (content === null) throw new Error('no editor content');
         await user.click(content);
         await user.type(content, 'Edited');
-        await settle();
+        // The edit has reached the editor's state once it commits.
+        await waitFor(() => {
+            expect(f.commits.length).toBeGreaterThan(0);
+        });
         const edited = prose();
         expect(edited).not.toBe('Stored prose');
 
-        // The last-saved value arriving again must not undo the edit.
+        // The last-saved value arriving again must not undo the edit. The re-seed
+        // effect runs inside the rerender's `act` and `setContent` is synchronous,
+        // so a resync would already show here.
         f.rerender(structuredClone(doc));
-        await settle();
 
         expect(prose()).toBe(edited);
     });

@@ -1,11 +1,7 @@
 /**
- * `create` honours the `slug` capability.
- *
- * The capability was previously enforced only at the HTTP edge
- * (`transport/http/routes/entries.ts`), so a create called from a plugin, the
- * local transport or MCP still derived a slug from the title on a `slug: false`
- * type, and still stored an explicit one. The operation now decides: a slug
- * needs both the capability and a source.
+ * `create` honours the `slug` capability on every path, not only over HTTP: a
+ * plugin, the local transport or MCP creating a `slug: false` entry gets no slug,
+ * derived or explicit. A slug needs both the capability and a source.
  */
 
 import type { AstromechConfig } from '@/types/index';

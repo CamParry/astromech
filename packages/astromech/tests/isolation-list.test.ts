@@ -14,7 +14,10 @@ import { describe, expect, it } from 'vitest';
 
 // This file names the patterns it looks for, so it excludes itself below.
 const leaks = new RegExp(
-    ['vi\\.(mock|doMock|stubGlobal|stubEnv)\\(', 'globalThis\\.__astromech'].join('|')
+    [
+        'vi\\.(mock|doMock|stubGlobal|stubEnv|resetModules)\\(',
+        'globalThis\\.__astromech',
+    ].join('|')
 );
 
 const testsDir = fileURLToPath(new URL('.', import.meta.url));

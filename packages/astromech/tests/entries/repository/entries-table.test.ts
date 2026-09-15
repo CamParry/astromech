@@ -487,7 +487,7 @@ describe('previewToken', () => {
 });
 
 describe('transaction', () => {
-    // `EntryRepository` no longer carries its own `transaction`; the repository
+    // `EntryRepository` carries no `transaction` of its own; the repository
     // joins whatever scope `database/transaction.ts`'s `transaction()` opens,
     // since every operation resolves its handle per call through `getDb()`.
 
