@@ -10,8 +10,7 @@
  * status codes, the 409 duplicate-stage envelope (carrying `locale`), the
  * capability 409, and the permission matrix (merge = publish; the rest = update).
  *
- * Uses a per-test temp FILE db: `mergeStaged` runs in a database transaction,
- * which poisons the harness `:memory:` base connection on later reads.
+ * Each test gets its own named database file, which `afterEach` deletes.
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';

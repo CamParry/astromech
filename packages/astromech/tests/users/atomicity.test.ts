@@ -54,9 +54,7 @@ let dbPath = '';
 let id: string;
 
 beforeEach(async () => {
-    // A rolled-back transaction poisons the harness's `:memory:` base connection
-    // (post-rollback reads throw "no such table"), so read the result back off a
-    // per-test temp FILE db.
+    // Each test gets its own named database file, which `afterEach` deletes.
     dbCounter += 1;
     dbPath = join(tmpdir(), `astromech-users-atomicity-${process.pid}-${dbCounter}.db`);
     await createFileTestDb(`file:${dbPath}`);

@@ -1,9 +1,8 @@
 /**
  * Tests the D1 dialect/driver against a fake `D1DatabaseLike` backed by a real
  * libsql file database, so the generated SQL genuinely executes rather than
- * being mocked away. File-backed rather than `:memory:` — see the comment at
- * the top of `tests/_support/harness.ts` for why `:memory:` poisons anything
- * that reopens a connection.
+ * being mocked away. File-backed rather than `:memory:`, for the reason the
+ * comment at the top of `tests/_support/harness.ts` gives.
  */
 
 import type {

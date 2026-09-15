@@ -3,9 +3,9 @@
  * issuePreviewToken / revokePreviewToken + the previewToken/staged read params
  * on query() and get().
  *
- * The preview read path uses no transactions, so the harness `:memory:` db is
- * fine here (unlike the staging merge tests). Front-end preview resolves entries
- * by slug via query({ where: { slug } }), which is the path exercised below.
+ * Runs on the harness's default temp-file database from `createTestDb`.
+ * Front-end preview resolves entries by slug via query({ where: { slug } }),
+ * which is the path exercised below.
  */
 
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';

@@ -3,9 +3,9 @@
  *
  * Applies a two-migration provider to a real libsql db (plain DDL, so
  * `:memory:` is fine) and checks that a failing migration surfaces its name.
- * The merged app+plugin chain runs against a temp FILE db instead: Kysely's
- * migrator commits in a transaction, and a `:memory:` db is poisoned for reads
- * afterwards.
+ * The merged app+plugin chain runs against a temp FILE db instead: each
+ * `open()` there makes a new client, and two clients on `:memory:` would be two
+ * separate databases.
  */
 import type { MigrationProvider } from 'kysely';
 import { mkdtemp, rm } from 'node:fs/promises';

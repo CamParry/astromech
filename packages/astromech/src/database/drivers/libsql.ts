@@ -6,7 +6,7 @@
 
 import type { DB } from '@/database/types';
 import type { DbDump } from '@/types/config';
-import type { Client, Row } from '@libsql/client';
+import type { Client, Config, Row } from '@libsql/client';
 import { randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { unlink } from 'node:fs/promises';
@@ -34,13 +34,13 @@ export function libsql(options?: LibsqlOptions) {
     let client: Client | null = null;
     let instance: Kysely<DB> | null = null;
 
+    function clientConfig(): Config {
+        const authToken = options?.authToken ?? resolveEnv('DATABASE_AUTH_TOKEN');
+        return { url: resolveUrl(), ...(authToken && { authToken }) };
+    }
+
     function getClient(): Client {
-        if (!client) {
-            const url =
-                options?.url ?? resolveEnv('DATABASE_URL') ?? 'file:./database.db';
-            const authToken = options?.authToken ?? resolveEnv('DATABASE_AUTH_TOKEN');
-            client = createClient({ url, ...(authToken && { authToken }) });
-        }
+        if (!client) client = createClient(clientConfig());
         return client;
     }
 
@@ -110,7 +110,6 @@ export function libsql(options?: LibsqlOptions) {
             { preserve }: { preserve: string[] }
         ): Promise<void> {
             assertFileUrl();
-            const c = getClient();
             const tmp = join(tmpdir(), `astromech-restore-${randomUUID()}.sqlite`);
             await pipeline(
                 Readable.fromWeb(
@@ -120,8 +119,18 @@ export function libsql(options?: LibsqlOptions) {
             );
             const esc = tmp.replace(/'/g, "''");
             try {
-                await c.execute(`ATTACH '${esc}' AS restore_src`);
+                // `ATTACH` and `PRAGMA foreign_keys` change a single connection,
+                // and neither works inside a transaction. The driver's client
+                // keeps a pool of connections, so separate calls on it can land
+                // on different ones, and whichever connection gets this state
+                // keeps it for later queries. A client of its own with one
+                // connection keeps every statement on that connection, and
+                // closing it drops the state. The copy goes through
+                // `transaction()`, because the pool rolls back a `BEGIN` sent
+                // through `execute()` as soon as that call returns.
+                const c = createClient({ ...clientConfig(), concurrency: 1 });
                 try {
+                    await c.execute(`ATTACH '${esc}' AS restore_src`);
                     const checkResult = await c.execute(`PRAGMA restore_src.quick_check`);
                     const checkRows = checkResult.rows ?? [];
                     const firstRow = checkRows[0];
@@ -144,25 +153,23 @@ export function libsql(options?: LibsqlOptions) {
                         ),
                     }));
                     await c.execute('PRAGMA foreign_keys=OFF');
-                    await c.execute('BEGIN');
+                    const tx = await c.transaction('write');
                     try {
                         for (const { name } of tables) {
                             if (preserve.includes(name)) continue;
                             const q = name.replace(/"/g, '""');
-                            await c.execute(`DELETE FROM main."${q}"`);
-                            await c.execute(
+                            await tx.execute(`DELETE FROM main."${q}"`);
+                            await tx.execute(
                                 `INSERT INTO main."${q}" SELECT * FROM restore_src."${q}"`
                             );
                         }
-                        await c.execute('COMMIT');
-                    } catch (e) {
-                        await c.execute('ROLLBACK');
-                        throw e;
+                        await tx.commit();
                     } finally {
-                        await c.execute('PRAGMA foreign_keys=ON');
+                        // Rolls the copy back unless the commit went through.
+                        tx.close();
                     }
                 } finally {
-                    await c.execute('DETACH restore_src');
+                    c.close();
                 }
             } finally {
                 await unlink(tmp).catch(() => undefined);

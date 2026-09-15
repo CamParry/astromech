@@ -29,10 +29,7 @@ let dbCounter = 0;
 let dbPath = '';
 
 beforeEach(async () => {
-    // `mergeStaged` runs inside a database transaction. On the harness's plain
-    // `:memory:` db a transaction poisons the base connection (post-commit reads
-    // throw "no such table"), so use a per-test temp FILE db here: transactions
-    // commit to disk and the base connection can read the result back.
+    // Each test gets its own named database file, which `afterEach` deletes.
     dbCounter += 1;
     dbPath = join(tmpdir(), `astromech-staging-${process.pid}-${dbCounter}.db`);
     await createFileTestDb(`file:${dbPath}`);

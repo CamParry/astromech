@@ -185,6 +185,49 @@ describe('libsql.dump / restore', () => {
         ).toEqual(['alpha', 'beta']);
     });
 
+    it('should roll back every table when one table fails to copy', async () => {
+        const { db, driver } = await makeFileDb(dbPath);
+
+        await sql.raw(`CREATE TABLE items (id TEXT PRIMARY KEY, name TEXT)`).execute(db);
+        await sql.raw(`CREATE TABLE things (id TEXT PRIMARY KEY, val TEXT)`).execute(db);
+        await sql.raw(`INSERT INTO items VALUES ('1','alpha')`).execute(db);
+        await sql.raw(`INSERT INTO things VALUES ('t1','original-thing')`).execute(db);
+        const dump = await driver.dump();
+
+        // `items` copies back cleanly, then `things` fails: the backup has two
+        // columns and the live table now has three.
+        await sql.raw(`UPDATE items SET name = 'post-dump'`).execute(db);
+        await sql.raw(`ALTER TABLE things ADD COLUMN extra TEXT`).execute(db);
+
+        await expect(driver.restore(dump.stream, { preserve: [] })).rejects.toThrow(
+            'columns'
+        );
+        await dump.cleanup();
+
+        // The copy runs in one transaction, so `items` is not left restored and
+        // `things` is not left empty.
+        const { rows: items } = await sql.raw(`SELECT name FROM items`).execute(db);
+        expect(items).toEqual([{ name: 'post-dump' }]);
+        const { rows: things } = await sql.raw(`SELECT val FROM things`).execute(db);
+        expect(things).toEqual([{ val: 'original-thing' }]);
+    });
+
+    it('should leave foreign keys on and nothing attached on the driver client', async () => {
+        const { db, driver } = await makeFileDb(dbPath);
+        await sql.raw(`CREATE TABLE items (id TEXT PRIMARY KEY, name TEXT)`).execute(db);
+
+        const dump = await driver.dump();
+        await driver.restore(dump.stream, { preserve: [] });
+        await dump.cleanup();
+
+        const { rows: foreignKeys } = await sql.raw(`PRAGMA foreign_keys`).execute(db);
+        expect(foreignKeys.map((row) => Object.values(row as object)[0])).toEqual([1]);
+        const { rows: databases } = await sql.raw(`PRAGMA database_list`).execute(db);
+        expect(databases.map((row) => (row as Record<string, unknown>)['name'])).toEqual([
+            'main',
+        ]);
+    });
+
     it('should throw a clear error for a non-file: URL on dump', async () => {
         const remoteDriver = libsql({ url: 'libsql://example.turso.io' });
         await expect(remoteDriver.dump()).rejects.toThrow('file:');

@@ -303,7 +303,7 @@
         "zod": "^4.3.6"
     },
     "peerDependencies": {
-        "@libsql/client": "^0.17.2",
+        "@libsql/client": "^0.18.0",
         "@libsql/kysely-libsql": "^0.4.1",
         "@modelcontextprotocol/sdk": "*",
         "astro": "^6.0.8",
@@ -340,7 +340,7 @@
         }
     },
     "devDependencies": {
-        "@libsql/client": "^0.17.2",
+        "@libsql/client": "^0.18.0",
         "@libsql/kysely-libsql": "^0.4.1",
         "@modelcontextprotocol/sdk": "^1.29.0",
         "@types/lodash-es": "^4.17.12",
