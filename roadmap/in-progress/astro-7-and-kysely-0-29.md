@@ -25,14 +25,16 @@ lands.
 - [x] Read the Kysely 0.29 and `@libsql/client` 0.18 changelogs against the
       dialects and `@libsql/kysely-libsql`, which pins its own Kysely range.
 - [x] Move to `@libsql/client` 0.18 and Kysely 0.29 (steps 1 and 2 below).
-- [ ] Move to Astro 7 and its adapters, upgrade both demo apps, and run the
+- [x] Move to Astro 7 and its adapters, upgrade both demo apps, and run the
       gate with both boot checks.
 - [ ] On a local file database, check whether a better-auth write and an app
       write at the same moment can fail with `SQLITE_BUSY`. The driver sets no
       busy timeout. If they can, set one, or give better-auth the app's Kysely
       instance.
-- [ ] Remove the pins from `apps/docs/installation.md` and
+- [x] Remove the pins from `apps/docs/installation.md` and
       `packages/astromech/README.md`.
+- [ ] Follow `apps/docs/installation.md` on a new site installed from packed
+      tarballs, since generated sites gain the new migration import.
 
 ## Decisions
 
