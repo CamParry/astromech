@@ -97,14 +97,20 @@ type Camelize<S extends string> = S extends `${infer Head}_${infer Rest}`
 export type KyselyTableKey<S extends string> = S extends `_${string}` ? S : Camelize<S>;
 
 /**
- * Kysely table types for a plugin's schema, keyed the way the shared `DB`
- * handle sees them — so a plugin can query its own tables with full typing:
+ * Kysely table types for a plugin's tables, keyed the way the shared `DB`
+ * handle sees them. It takes the same array the plugin passes as its
+ * definition's `tables`, so the tables are listed once. A plugin package
+ * extends `AstromechPluginTables` with it, which puts its tables on every
+ * `Kysely<DB>` in a program that includes it:
  *
  * ```ts
- * const db = getDb() as unknown as Kysely<PluginDB<typeof tables>>;
- * await db.selectFrom('pluginBackupsRuns').selectAll().execute();
+ * const tables = [backupRunsTable] as const;
+ *
+ * declare module 'astromech' {
+ *     interface AstromechPluginTables extends PluginDB<typeof tables> {}
+ * }
  * ```
  */
-export type PluginDB<T extends Record<string, Table>> = {
-    [K in keyof T as KyselyTableKey<NameOf<T[K]>>]: KyselyOf<T[K]>;
+export type PluginDB<T extends readonly Table[]> = {
+    [D in T[number] as KyselyTableKey<NameOf<D>>]: KyselyOf<D>;
 };

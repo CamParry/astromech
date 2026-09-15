@@ -24,5 +24,5 @@ is too small to carry a workstream alone. One commit per fix.
       table's insert shape so callers stop casting the rows they hand to
       `.values()` — `apps/demo/seed.ts` carries the cast today. A signature
       change on one function; moved here from
-      `roadmap/planned/plugin-tables-on-the-site-handle.md`, where it was the
+      `roadmap/completed/plugin-tables-on-the-site-handle.md`, where it was the
       independent third item.

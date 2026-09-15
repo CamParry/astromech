@@ -483,7 +483,7 @@ export const widgetsTable = definePluginTable(
     }),
     ({ index }) => [index('idx_status', ['status'])]
 );
-// widgetsTable.name === 'plugin_my_plugin_widgets'
+// widgetsTable.name === 'plugin_acme_my_plugin_widgets'
 
 export type WidgetRow = TableSelect<typeof widgetsTable>;
 ```
@@ -554,6 +554,38 @@ the orphan, and `npx astromech plugin:purge <package>` drops its tables,
 migration rows and tracking row once you are sure. Purge takes the package name
 (`@acme/seo`), not the namespace — at a destructive call site the canonical
 identifier is the unambiguous one.
+
+#### Typing the table on a site's handle
+
+A site that queries your table through its own `db` handle, in a seed script
+for example, sees it only if your package adds it. Add your tables to
+`AstromechPluginTables` in `index.ts`, from the same array you pass to the
+definition, so the tables are listed once:
+
+```ts
+// index.ts
+import type { PluginDB } from 'astromech';
+import { widgetsTable } from './tables/widgets.js';
+
+const tables = [widgetsTable] as const;
+
+declare module 'astromech' {
+    interface AstromechPluginTables extends PluginDB<typeof tables> {}
+}
+
+export const myPlugin = definePlugin({
+    package: MY_PLUGIN_PACKAGE,
+    tables,
+    // ...
+});
+```
+
+`as const` keeps each table's type, name included. `PluginDB` keys each table
+by its Kysely name, the camel-cased table name (`pluginAcmeMyPluginWidgets`),
+which is why the package name has to be a literal type. Keep the block in
+`index.ts`, or in a module it imports, so it ends up in your package's
+published `.d.ts`. It applies wherever your package is in a site's program,
+even if the site's config doesn't install the plugin.
 
 #### Reading and writing the table
 

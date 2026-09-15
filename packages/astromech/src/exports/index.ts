@@ -51,6 +51,8 @@ export type {
 /** Plugin schema authoring surface. */
 export { definePluginTable } from '@/database/define-plugin-table';
 export type { KyselyTableKey, PluginDB } from '@/database/define-plugin-table';
+/** A plugin package augments this to put its tables on a site's `db` handle. */
+export type { AstromechPluginTables } from '@/database/types';
 /**
  * The whole `Table` type vocabulary, not just the headline types: a plugin's
  * emitted `.d.ts` must be able to *name* the type `definePluginTable` infers,

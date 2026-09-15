@@ -360,8 +360,10 @@ export type PluginDefinition = PluginIdentity & {
     /**
      * Tables shipped by the plugin (create via
      * `definePluginTable`; names are `plugin_<namespace>_` prefixed).
+     * Readonly so the plugin can pass the `as const` array it also hands to
+     * `PluginDB`.
      */
-    tables?: Table[];
+    tables?: readonly Table[];
     /**
      * The plugin's own migration provider — the `migrations/index.ts` generated
      * by `astromech plugin:generate`. Merged into the app's migration chain at

@@ -300,6 +300,15 @@ transform an image.
 type gets an implicit index signature and satisfies `Entry['fields']`. Rejected:
 a hand-added `[k: string]: unknown`, which reopens the type to typos.
 
+**A plugin types its own tables onto the site's handle.** Each plugin package
+extends `AstromechPluginTables` with `PluginDB` in a `declare module 'astromech'`
+block in its own source, and `DB` extends that interface, so `db` on a site
+carries every plugin's tables without the site naming them. Rejected: generating
+the declarations into `.astro/` from the installed plugins, which buys nothing
+because a plugin's tables are fixed by its package, not by the site's config.
+Accepted cost: a plugin package in the program but not installed in the config
+still adds its table types.
+
 **Every environment read goes through `src/env/`** (`resolveEnv`, `getEnv`,
 `getEnvRecord`, `setEnvSource`). Unset `NODE_ENV` means production, and a Worker
 with no named scheduler throws. `integrations/` holds framework and runtime

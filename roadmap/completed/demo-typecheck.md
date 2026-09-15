@@ -45,7 +45,7 @@ does, so it is the only place these can surface at all.
       parameter mandatory.
 
 Two things this surfaced are generator work rather than typecheck fixes, and
-moved to `roadmap/planned/plugin-tables-on-the-site-handle.md`: a site still has
+moved to `roadmap/completed/plugin-tables-on-the-site-handle.md`: a site still has
 to name a plugin's table module to reach its tables, and `encodeWith` returns
 `Record<string, unknown>` rather than its table's insert shape.
 

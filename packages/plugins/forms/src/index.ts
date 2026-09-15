@@ -5,7 +5,7 @@
  */
 
 import type { FormsOptions } from './types';
-import type { ServiceInterface } from 'astromech';
+import type { PluginDB, ServiceInterface } from 'astromech';
 import { definePlugin, withDefaults } from 'astromech';
 import { migrationProvider } from '../migrations/index';
 import { formEntryType } from './entries/form';
@@ -15,11 +15,18 @@ import { spamHook } from './spam/hook';
 import { submissionsTable } from './tables/submissions';
 import { FORMS_PACKAGE } from './types';
 
+/** Listed once: the definition and the `AstromechPluginTables` augmentation both read it. */
+const tables = [submissionsTable] as const;
+
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
     interface AstromechPluginServices {
         forms: ServiceInterface<ReturnType<typeof buildFormsService>>;
     }
+
+    // Puts this plugin's tables on a site's `db` handle.
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
+    interface AstromechPluginTables extends PluginDB<typeof tables> {}
 }
 
 export type { FormFieldKind, FormsOptions, SubmissionMeta } from './types';
@@ -52,7 +59,7 @@ export const forms = definePlugin((options?: FormsOptions) => {
         version: '0.1.0',
         label: 'Forms',
         icon: 'ClipboardList',
-        tables: [submissionsTable],
+        tables,
         migrations: migrationProvider,
         entries: [formEntryType, submissionEntryType],
         service: buildFormsService({ storeMeta, rateLimit, spam }),

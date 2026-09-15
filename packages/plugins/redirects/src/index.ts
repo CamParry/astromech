@@ -6,7 +6,7 @@
  */
 
 import type { RedirectsOptions } from './types';
-import type { ServiceInterface } from 'astromech';
+import type { PluginDB, ServiceInterface } from 'astromech';
 import { definePlugin, withDefaults } from 'astromech';
 import { migrationProvider } from '../migrations/index';
 import { redirectEntryType } from './entries/redirect';
@@ -15,11 +15,18 @@ import { redirectsService } from './service/redirects';
 import { redirectsTable } from './tables/redirects';
 import { REDIRECTS_PACKAGE } from './types';
 
+/** Listed once: the definition and the `AstromechPluginTables` augmentation both read it. */
+const tables = [redirectsTable] as const;
+
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
     interface AstromechPluginServices {
         redirects: ServiceInterface<typeof redirectsService>;
     }
+
+    // Puts this plugin's tables on a site's `db` handle.
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
+    interface AstromechPluginTables extends PluginDB<typeof tables> {}
 }
 
 export type { RedirectMatch, RedirectStatus, RedirectsOptions } from './types';
@@ -39,7 +46,7 @@ export const redirects = definePlugin((options?: RedirectsOptions) => {
         // No `permissions` declaration: the only service method is public, and
         // the redirect entry type's permissions are derived by core. A site
         // grants them with `entryPermissions('redirects/redirect', …)`.
-        tables: [redirectsTable],
+        tables,
         migrations: migrationProvider,
         entries: [redirectEntryType],
         service: redirectsService,

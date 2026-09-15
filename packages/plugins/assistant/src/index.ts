@@ -5,6 +5,7 @@
  */
 
 import type { AssistantOptions, ResolvedAssistantOptions } from './types';
+import type { PluginDB } from 'astromech';
 import { definePlugin, withDefaults } from 'astromech';
 import { migrationProvider } from '../migrations/index';
 import { assistantPermissions } from './permissions/assistant';
@@ -13,6 +14,15 @@ import { buildSessionsService } from './service/sessions';
 import { approvalsTable } from './tables/approvals';
 import { sessionsTable } from './tables/sessions';
 import { ASSISTANT_PACKAGE } from './types';
+
+/** Listed once: the definition and the `AstromechPluginTables` augmentation both read it. */
+const tables = [approvalsTable, sessionsTable] as const;
+
+declare module 'astromech' {
+    // Puts this plugin's tables on a site's `db` handle.
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
+    interface AstromechPluginTables extends PluginDB<typeof tables> {}
+}
 
 export type { AssistantOptions };
 
@@ -34,7 +44,7 @@ export const assistant = definePlugin((options?: AssistantOptions) => {
         version: '0.1.0',
         label: 'Assistant',
         icon: 'Sparkles',
-        tables: [approvalsTable, sessionsTable],
+        tables,
         migrations: migrationProvider,
         permissions: assistantPermissions,
         service: buildSessionsService(resolved),

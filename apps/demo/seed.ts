@@ -4,7 +4,7 @@
  * admin@astromech.dev / password if missing. Run with `tsx demo/seed.ts`.
  */
 
-import type { Field, JsonObject, PluginDB } from 'astromech';
+import type { Field, JsonObject } from 'astromech';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { redirectsTable } from '@astromech/redirects/tables';
 import { collectRelationshipEdges, createAstromech, encodeWith } from 'astromech';
@@ -61,14 +61,6 @@ const DB_PATH = new URL('./database.db', import.meta.url).pathname;
 const dbDriver = libsql({ url: `file:${DB_PATH}` });
 
 const db = dbDriver.getInstance();
-
-/**
- * The same handle, widened with the redirects plugin's own table. Core's `DB`
- * names core's tables only, so a plugin's have to be added by the caller;
- * `PluginDB` derives them from the plugin's `Table` objects, and the key it
- * derives is the CamelCasePlugin one, not the SQL name.
- */
-const pluginDb = db.withTables<PluginDB<{ redirects: typeof redirectsTable }>>();
 
 const now = new Date();
 const PUBLISHED_AT = now;
@@ -280,7 +272,7 @@ async function seed(): Promise<void> {
     // cascades to its content and versions.
     await db.deleteFrom('globals').execute();
     await db.deleteFrom('settings').execute();
-    await pluginDb.deleteFrom('pluginRedirectsRedirects').execute();
+    await db.deleteFrom('pluginRedirectsRedirects').execute();
 
     // Clear leftover media rows (no files on disk referenced). Content rows go
     // first: SQLite only cascades when `foreign_keys` is on.
@@ -1877,7 +1869,7 @@ async function seed(): Promise<void> {
     // plugin's own table codec rather than being hand-built: `encodeWith` mints
     // the ULID id and the ISO-TEXT createdAt/updatedAt from the table's
     // defaults, exactly as `tableRepository` does at runtime.
-    await pluginDb
+    await db
         .insertInto('pluginRedirectsRedirects')
         .values(
             [

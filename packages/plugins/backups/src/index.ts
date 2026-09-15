@@ -5,7 +5,7 @@
  */
 
 import type { BackupsOptions } from './types';
-import type { PluginContext, ServiceInterface } from 'astromech';
+import type { PluginContext, PluginDB, ServiceInterface } from 'astromech';
 import { definePlugin, withDefaults } from 'astromech';
 import { migrationProvider } from '../migrations/index';
 import { performBackup, resolveKeep } from './backup';
@@ -17,11 +17,18 @@ import { buildBackupsService } from './service/backups';
 import { backupRunsTable } from './tables/runs';
 import { BACKUPS_PACKAGE } from './types';
 
+/** Listed once: the definition and the `AstromechPluginTables` augmentation both read it. */
+const tables = [backupRunsTable] as const;
+
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
     interface AstromechPluginServices {
         backups: ServiceInterface<ReturnType<typeof buildBackupsService>>;
     }
+
+    // Puts this plugin's tables on a site's `db` handle.
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
+    interface AstromechPluginTables extends PluginDB<typeof tables> {}
 }
 
 export type { BackupsOptions } from './types';
@@ -45,7 +52,7 @@ export const backups = definePlugin((options?: BackupsOptions) => {
         version: '0.1.0',
         label: 'Backups',
         icon: 'DatabaseBackup',
-        tables: [backupRunsTable],
+        tables,
         migrations: migrationProvider,
         permissions: backupsPermissions,
         i18n: ['en'],

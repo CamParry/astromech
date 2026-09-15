@@ -30,7 +30,30 @@ import type {
 } from '@/database/tables';
 import type { Kysely, Transaction } from 'kysely';
 
-export type DB = {
+/**
+ * Plugin tables on the shared handle, empty in core. A plugin package adds its
+ * own tables from its own source, so a site's `db` is typed with them without
+ * naming them:
+ *
+ * ```ts
+ * const tables = [widgetsTable] as const;
+ *
+ * declare module 'astromech' {
+ *     interface AstromechPluginTables extends PluginDB<typeof tables> {}
+ * }
+ * ```
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
+export interface AstromechPluginTables {}
+
+/**
+ * Core's tables plus every plugin's. An interface extending
+ * `AstromechPluginTables` rather than an intersection with it: augmentations
+ * reach it either way, but an interface stays one named type, so Kysely's
+ * errors and hovers print `DB` instead of spelling out every table.
+ */
+// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+export interface DB extends AstromechPluginTables {
     // Ours — derived from defineTable tables
     roles: KyselyOf<typeof rolesTable>;
     users: KyselyOf<typeof usersTable>;
@@ -57,7 +80,7 @@ export type DB = {
     sessions: SessionsTable;
     accounts: AccountsTable;
     verifications: VerificationsTable;
-};
+}
 
 /** The shared DB handle accepted by every repository factory (base or tx-bound). */
 export type Db = Kysely<DB> | Transaction<DB>;
