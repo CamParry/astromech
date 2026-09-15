@@ -1,11 +1,17 @@
 #!/usr/bin/env node
-// Fails when a markdown link or a backticked path in the repo's documentation
-// no longer resolves. Catches renames that nobody propagated.
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { dirname, extname, join, relative, resolve } from 'node:path';
+/**
+ * Fails when a markdown link or a backticked path in the repo's documentation no longer resolves.
+ * A path resolves only if git tracks it, so a local-only file (a gitignored .env, a build output)
+ * cannot hide a broken reference, and a local run gives the same result as CI's fresh checkout.
+ */
+import { execFileSync } from 'node:child_process';
+import { readdirSync, readFileSync } from 'node:fs';
+import { dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+const { trackedFiles, trackedDirs } = readTrackedPaths();
 
 const SKIP_DIRS = new Set([
     'node_modules',
@@ -144,13 +150,38 @@ function isPathCandidate(file, token) {
 
     const [head] = token.replace(/^\.\//, '').split('/');
     if (!head) return false;
-    return (
-        existsSync(resolve(dirname(file), head)) || existsSync(resolve(repoRoot, head))
-    );
+    return isTracked(resolve(dirname(file), head)) || isTracked(resolve(repoRoot, head));
 }
 
 function resolvesFrom(file, target) {
     const clean = target.replace(/\/$/, '');
     const candidates = [resolve(dirname(file), clean), resolve(repoRoot, clean)];
-    return candidates.some((candidate) => existsSync(candidate));
+    return candidates.some((candidate) => isTracked(candidate));
+}
+
+// Every path in the git index, which includes files staged but not yet committed,
+// so the pre-commit hook sees the files a commit adds. A directory counts when it
+// holds at least one tracked file.
+function readTrackedPaths() {
+    const output = execFileSync('git', ['ls-files', '-z'], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+        maxBuffer: 64 * 1024 * 1024,
+    });
+    const files = new Set(output.split('\0').filter(Boolean));
+    const dirs = new Set();
+    for (const file of files) {
+        const segments = file.split('/');
+        for (let end = 1; end < segments.length; end++) {
+            dirs.add(segments.slice(0, end).join('/'));
+        }
+    }
+    return { trackedFiles: files, trackedDirs: dirs };
+}
+
+function isTracked(absolute) {
+    const local = relative(repoRoot, absolute).split(sep).join('/');
+    if (local === '') return true;
+    if (local === '..' || local.startsWith('../')) return false;
+    return trackedFiles.has(local) || trackedDirs.has(local);
 }
