@@ -63,7 +63,7 @@ are cheap once it lands.
       through a declared entrypoint. Until this lands, an `exports` map binds
       nothing, because admin imports never reach it. The alias exists so plugin
       components share module identity with the admin, which
-      `roadmap/planned/admin-as-its-own-package.md` records as surviving the
+      `roadmap/in-progress/admin-as-its-own-package.md` records as surviving the
       split, so this is a question about _what_ the alias covers rather than
       whether it exists. Belongs with the admin split.
 - [ ] **Add `exports/shared.ts` and a `"browser"` condition**, following Payload

@@ -1,16 +1,67 @@
 # Admin as its own package
 
-`src/admin/` is 257 of the 577 source files in `packages/astromech`. It is the
+`src/admin/` is 271 of the 661 source files in `packages/astromech`. It is the
 single largest directory in core by a factor of five over the next one
 (`entries/`, at 50), and it is a React SPA living inside the package that ships
-the server. No comparable project does this: Payload has `packages/ui` and
-`packages/next`, Directus a top-level `app/`, Strapi `packages/core/admin`,
+the server. No comparable project does this: Payload has packages/ui and
+packages/next, Directus a top-level `app/`, Strapi packages/core/admin,
 Sanity a separately packaged studio.
 
-The move is now designed, and the design says **not yet**. Two prerequisites
-have to land first, and of the three costs the move was going to pay down, two
-have already been paid down by other work. This file holds the reasoning, the
-measurements and what is left to do.
+Both prerequisites have landed, and the plan below is the current design. The
+sections after it hold the original reasoning and measurements.
+
+## The plan
+
+Measured on 2026-09-15: `src/admin/` is 271 of 661 source files, and 66 runtime
+and 100 type-only imports leave it, reaching 22 core modules. Where the counts
+in the sections below differ, these are current. The answer to question 2 no
+longer holds: `astromech/astro` injects the admin shell for every site, so core
+depends on the admin package anyway, and keeping the `astromech/ui` specifiers
+as re-exports is the cheap option.
+
+Decisions:
+
+- The package is `@astromech/admin`, in packages/admin, beside
+  `packages/schema-engine`.
+- Core keeps the Astro integration and depends on the admin, as Strapi and
+  Directus do. The admin publishes a Node-side Vite helper returning its
+  aliases, its share of `optimizeDeps.include`, the TanStack Router plugin and
+  the shell entrypoint.
+- `astromech/ui`, `astromech/ui/app`, `astromech/ui/layout` and
+  `astromech/ui/fields` stay, as one-line re-exports from the admin package, so
+  no plugin import changes.
+- The admin reaches core through `astromech/fetch`, a new `astromech/shared`
+  entry of named re-exports of the browser-safe modules, and type-only imports
+  from `astromech`. Four modules only the admin uses move into it: the dates
+  and bytes utilities and the field defaults and formatters.
+- Imports inside the admin are relative, and lint refuses `@/` there.
+- No `browser` export condition. On `./shared` it changes nothing, and on `.`
+  the Cloudflare server build may resolve it and get the browser subset. A test
+  bundles `astromech/shared` and `astromech/fetch` for the browser and fails on
+  a `node:` import or an unexpected input, which is the check the Directus 26613
+  case asks for.
+- The `*.shared.ts` suffix retires once that test exists.
+
+Stages, each one commit that passes `pnpm run verify`:
+
+- [ ]   1. Declare the browser surface: `astromech/shared`, aliases for it and
+       `astromech/fetch`, the four admin-only modules moved under `src/admin/`, a
+       codemod pointing every admin import of core at those entries, the bundle
+       test, and a lint rule refusing any other `@/` import from `src/admin/`.
+- [ ]   2. Remove core's references to admin paths: the unread `component`
+       strings in the core field types, the instance guard's slot in the
+       registry, and the unused `@fontsource-variable/inter`.
+- [ ]   3. Move the source into packages/admin, with relative imports, its own
+       package manifest, tsconfig, tsup config and Vite helper, and core's
+       `astromech/ui*` re-exports.
+- [ ]   4. Move the admin tests, with their own vitest config, isolation list and
+       coverage thresholds.
+- [ ]   5. Retire the `*.shared.ts` suffix and close
+       `roadmap/planned/browser-boundary-enforcement.md`.
+- [ ]   6. Scope the `@/` alias in the site's Vite build to files inside core's
+       `src`.
+- [ ] After stage 3, try nested `optimizeDeps.include` entries so
+      `publicHoistPattern` can shrink.
 
 ## The seam, re-measured
 
@@ -66,7 +117,7 @@ exist**: `apps/demo/astromech.config.ts` declares
 `codegen/plugin-client-manifest.ts` resolves that against the Astro project root
 into an absolute path, code-genned as a lazy `import()`. The admin's module
 graph is not closed until the consumer builds, so there is no artifact to
-pre-build. Payload's split does not face this: its `packages/ui` ships built
+pre-build. Payload's split does not face this: its packages/ui ships built
 because nothing a consumer writes lands inside it.
 
 ### Does `astromech/ui` move with it? — it has to, and that is the expensive part
@@ -160,7 +211,7 @@ code it does not declare.
 
 ## Notes / caveats
 
-- `roadmap/planned/domain-owned-service-contracts.md` would shrink the seam
+- `roadmap/completed/domain-owned-service-contracts.md` would shrink the seam
   further, but its step 2 stopped on a measurement: the domain service contracts
   stay in the `types/` leaf, because they have cross-layer fan-in. Not a
   prerequisite either way.
