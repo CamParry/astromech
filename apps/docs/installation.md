@@ -21,13 +21,13 @@ shows what this means for the database path.
 ## 1. Install the packages
 
 ```sh
-npm install astromech astro@6 react react-dom better-auth kysely@0.28 @astrojs/react@5 @astrojs/node@10 @libsql/client@0.18 @libsql/kysely-libsql
+npm install astromech astro@6 react react-dom better-auth kysely@0.29 @astrojs/react@5 @astrojs/node@10 @libsql/client@0.18 @libsql/kysely-libsql
 ```
 
-- `astro@6`, `kysely@0.28`, `@astrojs/react@5`, `@astrojs/node@10` and
+- `astro@6`, `kysely@0.29`, `@astrojs/react@5`, `@astrojs/node@10` and
   `@libsql/client@0.18` pin the versions Astromech supports. Without the pins,
-  npm takes the newest releases (Astro 7 and Kysely 0.29), which fall outside
-  Astromech's peer ranges, and stops with an `ERESOLVE` error.
+  npm takes the newest releases (Astro 7 and the adapters that need it), which
+  fall outside Astromech's peer ranges, and stops with an `ERESOLVE` error.
 - `react`, `react-dom`, `better-auth` and `kysely` are peer dependencies. Your
   site and Astromech share one copy of each.
 - `@astrojs/react` renders the admin, which is a React app.

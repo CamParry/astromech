@@ -9,7 +9,7 @@
  */
 
 import type { PluginDefinition } from '@/types/index';
-import type { MigrationProvider } from 'kysely';
+import type { MigrationProvider } from 'kysely/migration';
 import { describe, expect, it } from 'vitest';
 import { collectPluginMigrations } from '@/database/plugin-migrations';
 

@@ -1,8 +1,9 @@
 import type { DB } from '@/database/types';
 import type { PluginDefinition } from '@/types/index';
-import type { Kysely, MigrationProvider } from 'kysely';
+import type { Kysely } from 'kysely';
+import type { MigrationProvider } from 'kysely/migration';
 import { mergeMigrationProviders, migrateToLatest } from '@astromech/schema-engine';
-import { Migrator } from 'kysely';
+import { Migrator } from 'kysely/migration';
 import { loadAppMigrations } from '@/database/app-migrations';
 import { collectPluginMigrations } from '@/database/plugin-migrations';
 import { log } from '@/utilities/log';

@@ -1,7 +1,7 @@
 /**
  * The libsql driver's local/remote classification, which the CLI reads to
- * decide whether a command needs `--allow-remote`. Construction only — no
- * connection is opened.
+ * decide whether a command needs `--allow-remote`, and the Kysely adapter
+ * each kind of database gets. No test sends a query.
  */
 
 import { afterEach, describe, expect, it } from 'vitest';
@@ -38,5 +38,19 @@ describe('libsql isRemote', () => {
 
         process.env.DATABASE_URL = ':memory:';
         expect(libsql().isRemote()).toBe(false);
+    });
+});
+
+describe('libsql adapter', () => {
+    it('runs one query at a time on a local database', () => {
+        const adapter = libsql({ url: ':memory:' }).createDialect().createAdapter();
+        expect(adapter.supportsMultipleConnections).toBe(false);
+    });
+
+    it('lets Kysely run queries side by side on a remote database', () => {
+        const adapter = libsql({ url: 'https://db.turso.io' })
+            .createDialect()
+            .createAdapter();
+        expect(adapter.supportsMultipleConnections).toBe(true);
     });
 });

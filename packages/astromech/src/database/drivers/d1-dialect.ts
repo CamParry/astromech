@@ -63,11 +63,21 @@ export class D1Dialect implements Dialect {
     }
 
     createAdapter(): SqliteAdapter {
-        return new SqliteAdapter();
+        return new D1Adapter();
     }
 
     createIntrospector(db: Kysely<unknown>): DatabaseIntrospector {
         return new D1Introspector(db);
+    }
+}
+
+/**
+ * `SqliteAdapter` without Kysely's one-query-at-a-time lock. A D1 connection
+ * holds no state and D1 has no interactive transactions, so nothing needs it.
+ */
+class D1Adapter extends SqliteAdapter {
+    override get supportsMultipleConnections(): boolean {
+        return true;
     }
 }
 

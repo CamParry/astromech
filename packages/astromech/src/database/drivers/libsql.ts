@@ -7,6 +7,7 @@
 import type { DB } from '@/database/types';
 import type { DbDump } from '@/types/config';
 import type { Client, Config, Row } from '@libsql/client';
+import type { DialectAdapter } from 'kysely';
 import { randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { unlink } from 'node:fs/promises';
@@ -16,7 +17,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { createClient } from '@libsql/client';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
-import { CamelCasePlugin, Kysely } from 'kysely';
+import { CamelCasePlugin, Kysely, SqliteAdapter } from 'kysely';
 import { resolveEnv } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
 
@@ -48,7 +49,8 @@ export function libsql(options?: LibsqlOptions) {
         // `@libsql/kysely-libsql` pins an older `@libsql/core` whose `Client`
         // type differs from `@libsql/client`'s by an unrelated `sync()` return
         // type; the runtime client is fully compatible.
-        return new LibsqlDialect({ client: getClient() as never });
+        const config = { client: getClient() as never };
+        return isRemote() ? new RemoteLibsqlDialect(config) : new LibsqlDialect(config);
     }
 
     function getInstance(): Kysely<DB> {
@@ -78,6 +80,13 @@ export function libsql(options?: LibsqlOptions) {
         if (!url.startsWith('file:')) {
             throw new AstromechError(
                 'libsql dump/restore is only supported for local file databases (file:...), not remote libsql/Turso.'
+            );
+        }
+        // `restore()` opens a client of its own, and a second client on an
+        // in-memory database gets a new, empty database, not the site's.
+        if (url.slice('file:'.length).startsWith(':memory:')) {
+            throw new AstromechError(
+                'libsql dump/restore is only supported for local file databases, not in-memory ones (file::memory:).'
             );
         }
     }
@@ -176,4 +185,21 @@ export function libsql(options?: LibsqlOptions) {
             }
         },
     };
+}
+
+/**
+ * Kysely's `SqliteAdapter` makes Kysely run one query at a time per instance,
+ * which a local file database keeps. A remote database answers each query on
+ * its own request or stream, so its dialect lifts that lock.
+ */
+class RemoteLibsqlDialect extends LibsqlDialect {
+    override createAdapter(): DialectAdapter {
+        return new RemoteSqliteAdapter();
+    }
+}
+
+class RemoteSqliteAdapter extends SqliteAdapter {
+    override get supportsMultipleConnections(): boolean {
+        return true;
+    }
 }

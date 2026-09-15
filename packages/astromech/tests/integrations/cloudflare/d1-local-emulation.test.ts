@@ -15,7 +15,8 @@
  */
 
 import type { D1DatabaseLike } from '@/database/drivers/d1-dialect';
-import type { Kysely, MigrationProvider } from 'kysely';
+import type { Kysely } from 'kysely';
+import type { MigrationProvider } from 'kysely/migration';
 import { migrateToLatest } from '@astromech/schema-engine';
 import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';

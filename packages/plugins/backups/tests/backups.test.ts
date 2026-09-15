@@ -244,6 +244,21 @@ describe('libsql.dump / restore', () => {
             'file:'
         );
     });
+
+    it('should refuse an in-memory database on dump and restore', async () => {
+        for (const url of ['file::memory:', 'file::memory:?cache=shared']) {
+            const memoryDriver = libsql({ url });
+            const emptyStream = new ReadableStream<Uint8Array>({
+                start(c) {
+                    c.close();
+                },
+            });
+            await expect(memoryDriver.dump()).rejects.toThrow('in-memory');
+            await expect(
+                memoryDriver.restore(emptyStream, { preserve: [] })
+            ).rejects.toThrow('in-memory');
+        }
+    });
 });
 
 describe('libsql.restore — preserve', () => {

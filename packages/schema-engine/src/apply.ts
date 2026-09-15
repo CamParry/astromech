@@ -1,5 +1,6 @@
-import type { Kysely, Migration, MigrationProvider } from 'kysely';
-import { Migrator } from 'kysely';
+import type { Kysely } from 'kysely';
+import type { Migration, MigrationProvider } from 'kysely/migration';
+import { Migrator } from 'kysely/migration';
 
 /**
  * Kysely migration runner — a thin wrapper over `Migrator` that runs a

@@ -7,7 +7,7 @@
  * `open()` there makes a new client, and two clients on `:memory:` would be two
  * separate databases.
  */
-import type { MigrationProvider } from 'kysely';
+import type { MigrationProvider } from 'kysely/migration';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';

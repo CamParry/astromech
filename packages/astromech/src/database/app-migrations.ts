@@ -4,7 +4,7 @@
  * are TypeScript, which plain Node cannot load.
  */
 
-import type { MigrationProvider } from 'kysely';
+import type { MigrationProvider } from 'kysely/migration';
 import { resolve } from 'node:path';
 
 /** Import `<cwd>/migrations/index.ts`. Throws if it is missing or malformed. */

@@ -11,7 +11,8 @@ import type {
     D1ResultLike,
 } from '@/database/drivers/d1-dialect';
 import type { Client, InValue } from '@libsql/client';
-import type { Kysely, MigrationProvider } from 'kysely';
+import type { Kysely } from 'kysely';
+import type { MigrationProvider } from 'kysely/migration';
 import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
@@ -103,6 +104,11 @@ describe('d1()', () => {
         clearEnvSource();
         resetBindings();
         expect(() => d1({ binding: 'NOPE' }).getInstance()).not.toThrow();
+    });
+
+    it('lets Kysely run queries side by side, since a D1 connection holds no state', () => {
+        const adapter = d1({ database: fakeDb }).createDialect().createAdapter();
+        expect(adapter.supportsMultipleConnections).toBe(true);
     });
 
     it('declares supportsTransactions: false and omits dump/restore', () => {

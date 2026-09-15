@@ -1,13 +1,13 @@
 import type {
     ColumnMetadata,
     DatabaseIntrospector,
-    DatabaseMetadata,
     DatabaseMetadataOptions,
     Kysely,
     SchemaMetadata,
     TableMetadata,
 } from 'kysely';
-import { DEFAULT_MIGRATION_LOCK_TABLE, DEFAULT_MIGRATION_TABLE, sql } from 'kysely';
+import { sql } from 'kysely';
+import { DEFAULT_MIGRATION_LOCK_TABLE, DEFAULT_MIGRATION_TABLE } from 'kysely/migration';
 
 /**
  * Kysely introspector for Cloudflare D1. `SqliteIntrospector`'s joined
@@ -45,11 +45,6 @@ export class D1Introspector implements DatabaseIntrospector {
         return Promise.all(tables.map((table) => this.describeTable(table)));
     }
 
-    /** @deprecated Kysely keeps this on the interface; `getTables` is the real one. */
-    async getMetadata(options?: DatabaseMetadataOptions): Promise<DatabaseMetadata> {
-        return { tables: await this.getTables(options) };
-    }
-
     /** Tables and views, minus SQLite's, D1's, and optionally Kysely's own. */
     private async listTables(options: DatabaseMetadataOptions): Promise<MasterRow[]> {
         const { rows } = await sql<MasterRow>`
@@ -85,7 +80,12 @@ export class D1Introspector implements DatabaseIntrospector {
             hasDefaultValue: column.dflt_value != null,
         }));
 
-        return { name: table.name, isView: table.type === 'view', columns };
+        return {
+            name: table.name,
+            isView: table.type === 'view',
+            isForeign: false,
+            columns,
+        };
     }
 }
 

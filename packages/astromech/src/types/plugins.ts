@@ -25,7 +25,7 @@ import type { TypedGlobalsService } from './typed-globals';
 import type { Table } from '@/database/define-table';
 import type { PermissionDeclarations } from '@/permissions/define';
 import type { z } from '@hono/zod-openapi';
-import type { MigrationProvider } from 'kysely';
+import type { MigrationProvider } from 'kysely/migration';
 import type { ComponentType, ReactElement } from 'react';
 
 export type EmailTemplateOverride = {

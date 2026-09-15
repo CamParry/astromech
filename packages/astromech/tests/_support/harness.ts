@@ -36,7 +36,8 @@ import type {
     ResolvedConfig,
     User,
 } from '@/types/index';
-import type { Dialect, MigrationProvider } from 'kysely';
+import type { Dialect } from 'kysely';
+import type { MigrationProvider } from 'kysely/migration';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';

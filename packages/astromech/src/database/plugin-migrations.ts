@@ -5,7 +5,7 @@
  */
 
 import type { PluginDefinition } from '@/types/index';
-import type { MigrationProvider } from 'kysely';
+import type { MigrationProvider } from 'kysely/migration';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 
 /**
