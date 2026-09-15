@@ -74,6 +74,9 @@ function configWithSeo(postUrl = '/blog/{slug}'): AstromechConfig {
     if (!post || !note || !bookmark) {
         throw new Error('test harness is missing an entry type');
     }
+    if (!Array.isArray(post.fields) || !Array.isArray(note.fields)) {
+        throw new Error('test harness post and note fields are not flat lists');
+    }
     return {
         ...base,
         entries: {

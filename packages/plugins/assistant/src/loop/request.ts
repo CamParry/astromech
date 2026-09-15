@@ -9,9 +9,16 @@ import type { AiContextItem } from 'astromech';
 import { formatAiContextMessage } from 'astromech';
 
 /**
- * The system prompt and turns to send. AI context goes after the final user
- * turn to stay past the last cache breakpoint; with no user turn to follow,
- * it rides in the system prompt instead.
+ * The system prompt and turns to send. AI context goes after the final turn,
+ * past the last cache breakpoint, so the system prompt stays the same from one
+ * request to the next and the cached prefix holds.
+ *
+ * The context is a mid-conversation system message, and the API accepts one
+ * only after a user message. A `user` turn is one. So is a `tool` turn, which
+ * the Anthropic provider converts to a user message of tool results; that is
+ * the last turn after an approval. With no turns, or with an assistant turn
+ * last (a request that adds no new turn), the context rides in the system
+ * prompt instead.
  */
 export function buildRequest(
     messages: ChatMessage[],
@@ -21,7 +28,8 @@ export function buildRequest(
     const context = formatAiContextMessage(aiContext);
     if (context === null) return { system: SYSTEM_PROMPT, messages: turns };
 
-    if (turns[turns.length - 1]?.role !== 'user') {
+    const lastRole = turns[turns.length - 1]?.role;
+    if (lastRole !== 'user' && lastRole !== 'tool') {
         return { system: `${SYSTEM_PROMPT}\n\n${context.content}`, messages: turns };
     }
 

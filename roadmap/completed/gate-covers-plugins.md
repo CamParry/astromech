@@ -19,9 +19,18 @@ there reach a commit or sit on main unnoticed.
 
 ## The work
 
-- [ ] Typecheck each plugin's tests, the way core's `tsconfig.test.json` does,
+- [x] Typecheck each plugin's tests, the way core's `tsconfig.test.json` does,
       and fix what that surfaces.
-- [ ] `pnpm run lint` covers every published package's sources and tests, and
+- [x] `pnpm run lint` covers every published package's sources and tests, and
       `scripts/`.
-- [ ] Drop the `.js` extensions from the plugin migration indexes and from the
-      generator that writes them.
+- [x] Drop the `.js` extensions from the plugin migration indexes. The generator
+      already wrote none; the four files had not been regenerated since.
+
+## Found on the way
+
+Typechecking the assistant's tests showed they still used Anthropic's raw
+message formats, which the loop stopped sending when `ChatMessage` moved to the
+`ai` SDK's types. Rewriting them showed that after an approval the AI context
+moved into the system prompt, changing the head of the cached prefix on every
+later request. `buildRequest` now appends it after a tool turn as it does after
+a user turn, and a test checks the request body the Anthropic provider sends.

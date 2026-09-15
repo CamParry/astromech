@@ -47,9 +47,9 @@ const PAUSED_TURN: ChatMessage = {
     content: [
         { type: 'text', text: 'I can do that.' },
         {
-            type: 'tool_use',
-            id: 'toolu_1',
-            name: 'entries_page_update',
+            type: 'tool-call',
+            toolCallId: 'toolu_1',
+            toolName: 'entries_page_update',
             input: { id: 'page_1' },
         },
     ],

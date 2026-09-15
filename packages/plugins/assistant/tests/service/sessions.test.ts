@@ -7,7 +7,7 @@ import type { ChatSession } from '../../src/service/sessions';
 import type { ChatMessage, ResolvedAssistantOptions } from '../../src/types';
 import type { FakeApprovals } from '../loop/fake-approvals';
 import type { FakeSessions } from '../sessions/fake-sessions';
-import type { PluginContext, ToolDefinition } from 'astromech';
+import type { ToolDefinition } from 'astromech';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildSessionsService } from '../../src/service/sessions';
 import { approvalRow, fakeApprovals } from '../loop/fake-approvals';
@@ -27,8 +27,6 @@ vi.mock('../../src/approvals/repository', () => ({
 }));
 
 const OPTIONS: ResolvedAssistantOptions = {
-    model: 'claude-opus-5',
-    apiKeyEnv: 'ANTHROPIC_API_KEY',
     effort: 'medium',
     readOnly: false,
 };
@@ -53,13 +51,18 @@ const UPDATE: ToolDefinition = {
 let sessions: FakeSessions;
 let approvals: FakeApprovals;
 
+/** What a session method's handler is called with. */
+type HandlerContext = Parameters<
+    ReturnType<typeof buildSessionsService>['getSession']['handler']
+>[1];
+
 /** A request context for `user`, carrying the one tool the fixtures name. */
-function context(user: { id: string } | null): PluginContext {
+function context(user: { id: string } | null): HandlerContext {
     return {
         db: {},
         user,
         methods: { tools: () => [UPDATE] },
-    } as unknown as PluginContext;
+    } as unknown as HandlerContext;
 }
 
 /** Call one of the two methods with no input. */

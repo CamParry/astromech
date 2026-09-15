@@ -41,7 +41,8 @@
     "scripts": {
         "build": "tsup",
         "build:js": "ASTROMECH_NO_DTS=1 tsup",
-        "typecheck": "tsc -p tsconfig.json",
+        "typecheck": "tsc -p tsconfig.test.json",
+        "lint": "eslint src tests migrations",
         "test": "vitest",
         "test:run": "vitest run"
     },
@@ -62,6 +63,7 @@
         "@types/react": "^19.2.18",
         "@types/react-dom": "^19.2.4",
         "astromech": "workspace:*",
+        "eslint": "^10.8.1",
         "kysely": "^0.28.17",
         "react-dom": "^19.2.8",
         "tsup": "^8.5.1",

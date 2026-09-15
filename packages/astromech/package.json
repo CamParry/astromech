@@ -271,7 +271,7 @@
         "routes:generate": "tsr generate",
         "pretypecheck": "npm run routes:generate",
         "typecheck": "tsc -p tsconfig.test.json",
-        "lint": "eslint src",
+        "lint": "eslint src tests scripts",
         "check:node-imports": "node scripts/check-node-imports.mjs",
         "check:exports": "node scripts/check-exports-parity.mjs",
         "format": "prettier --write src",

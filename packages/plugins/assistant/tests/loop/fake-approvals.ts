@@ -37,13 +37,17 @@ export type FakeApprovals = {
     rows: ApprovalRow[];
 };
 
-/** Storage backed by `rows`, which the caller reads back to assert on writes. */
+/**
+ * Storage backed by `rows`, which the caller reads back to assert on writes. A
+ * write replaces the row rather than changing it, so read results from `rows`,
+ * not from a row passed in as `seed`.
+ */
 export function fakeApprovals(seed: ApprovalRow[] = []): FakeApprovals {
     const rows = [...seed];
     let minted = 0;
 
     const storage: ApprovalsRepository = {
-        mint: vi.fn(async (drafts) =>
+        mint: vi.fn<ApprovalsRepository['mint']>(async (drafts) =>
             drafts.map((draft) => {
                 minted += 1;
                 const row = approvalRow({
@@ -55,18 +59,22 @@ export function fakeApprovals(seed: ApprovalRow[] = []): FakeApprovals {
                 return row;
             })
         ),
-        claim: vi.fn(async (decisions, userId) => {
+        claim: vi.fn<ApprovalsRepository['claim']>(async (decisions, userId) => {
             const won: ClaimedApproval[] = [];
             for (const { approvalId, action } of decisions) {
-                const row = rows.find((candidate) => candidate.id === approvalId);
+                const index = rows.findIndex((candidate) => candidate.id === approvalId);
+                const row = rows[index];
                 if (row === undefined) continue;
                 if (row.userId !== userId || row.status !== 'pending') continue;
                 if (row.expiresAt.getTime() <= Date.now()) continue;
 
                 const args = row.arguments ?? {};
-                row.status = action === 'approve' ? 'approved' : 'rejected';
-                row.resolvedAt = new Date();
-                row.arguments = null;
+                rows[index] = {
+                    ...row,
+                    status: action === 'approve' ? 'approved' : 'rejected',
+                    resolvedAt: new Date(),
+                    arguments: null,
+                };
                 won.push({
                     id: row.id,
                     toolCallId: row.toolCallId,
@@ -77,23 +85,25 @@ export function fakeApprovals(seed: ApprovalRow[] = []): FakeApprovals {
             }
             return won;
         }),
-        expireStale: vi.fn(async (userId) => {
-            for (const row of rows) {
+        expireStale: vi.fn<ApprovalsRepository['expireStale']>(async (userId) => {
+            for (const [index, row] of rows.entries()) {
                 if (row.userId !== userId || row.status !== 'pending') continue;
                 if (row.expiresAt.getTime() > Date.now()) continue;
-                row.status = 'expired';
-                row.arguments = null;
+                rows[index] = { ...row, status: 'expired', arguments: null };
             }
         }),
-        findPending: vi.fn(async (userId) =>
+        findPending: vi.fn<ApprovalsRepository['findPending']>(async (userId) =>
             rows.filter((row) => answerable(row, userId))
         ),
-        rejectPending: vi.fn(async (userId) => {
-            for (const row of rows) {
+        rejectPending: vi.fn<ApprovalsRepository['rejectPending']>(async (userId) => {
+            for (const [index, row] of rows.entries()) {
                 if (!answerable(row, userId)) continue;
-                row.status = 'rejected';
-                row.resolvedAt = new Date();
-                row.arguments = null;
+                rows[index] = {
+                    ...row,
+                    status: 'rejected',
+                    resolvedAt: new Date(),
+                    arguments: null,
+                };
             }
         }),
     };

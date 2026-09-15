@@ -6,6 +6,7 @@
 
 import type { RedirectMatch } from '../../src/index';
 import type { DB } from '@/database/types';
+import type { JsonValue } from '@/types/domain';
 import type { EntriesService } from '@/types/index';
 import type { Kysely } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
@@ -30,7 +31,7 @@ function lookup(input: unknown): Promise<RedirectMatch | null> {
 /** The one entries service, typed to the wide API for these round-trips. */
 const entries = (): EntriesService => localEntries as unknown as EntriesService;
 
-async function addRule(fields: Record<string, unknown>): Promise<void> {
+async function addRule(fields: Record<string, JsonValue>): Promise<void> {
     await entries().create({ type: 'redirects/redirect', data: { fields } });
 }
 

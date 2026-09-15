@@ -1,12 +1,14 @@
 /**
- * Where the AI context message lands in a request. The API requires a
- * `role: 'system'` message to follow a user turn and to be last or followed by
- * an assistant turn, so with no user turn to follow it rides in the system
- * prompt instead.
+ * Where the AI context message lands in a request. The API accepts a
+ * mid-conversation `role: 'system'` message only after a user message, so the
+ * context follows a user turn or a tool turn, which the provider converts to a
+ * user message. With neither last, it rides in the system prompt instead.
  */
 
 import type { ChatMessage } from '../../src/types';
 import type { AiContextItem } from 'astromech';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { generateText } from 'ai';
 import { formatAiContextMessage } from 'astromech';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildRequest, SYSTEM_PROMPT } from '../../src/loop/request';
@@ -55,18 +57,23 @@ describe('buildRequest', () => {
     });
 
     /**
-     * The API rejects a turn whose `thinking` blocks come back altered or
-     * reordered ahead of a `tool_use`, and a `tool_use` id cannot be minted
-     * client-side — so nothing may be filtered, rewritten or resorted.
+     * The API rejects a turn whose reasoning comes back altered or reordered
+     * ahead of a tool call (a reasoning part's `providerOptions` carry its
+     * signature), and a tool-call id cannot be minted client-side. So nothing
+     * may be filtered, rewritten or resorted.
      */
-    it('round-trips thinking and tool_use blocks unchanged and in order', () => {
+    it('round-trips reasoning and tool-call parts unchanged and in order', () => {
         const blocks = [
-            { type: 'thinking' as const, thinking: '', signature: 'sig-1' },
+            {
+                type: 'reasoning' as const,
+                text: '',
+                providerOptions: { anthropic: { signature: 'sig-1' } },
+            },
             { type: 'text' as const, text: 'Looking that up.' },
             {
-                type: 'tool_use' as const,
-                id: 'toolu_01ABC',
-                name: 'entries_page_query',
+                type: 'tool-call' as const,
+                toolCallId: 'toolu_01ABC',
+                toolName: 'entries_page_query',
                 input: { limit: 5 },
             },
         ];
@@ -78,23 +85,27 @@ describe('buildRequest', () => {
         expect(messages[1]?.content).toBe(turn.content);
     });
 
-    it('carries a user turn of tool_result blocks through untouched', () => {
+    it('appends the context after a tool turn and leaves the system prompt alone', () => {
         const result: ChatMessage = {
-            role: 'user',
+            role: 'tool',
             content: [
                 {
-                    type: 'tool_result',
-                    tool_use_id: 'toolu_01ABC',
-                    content: '{"items":[]}',
+                    type: 'tool-result',
+                    toolCallId: 'toolu_01ABC',
+                    toolName: 'entries_page_query',
+                    output: { type: 'text', value: '{"items":[]}' },
                 },
             ],
         };
 
-        const { messages } = buildRequest([text('user', 'find pages'), result], items);
+        const { system, messages } = buildRequest(
+            [text('user', 'find pages'), result],
+            items
+        );
 
-        expect(messages[1]).toEqual(result);
-        // Still a user turn, so the context message follows it.
-        expect(messages[2]).toEqual(CONTEXT);
+        expect(messages).toEqual([text('user', 'find pages'), result, CONTEXT]);
+        expect(messages[1]).toBe(result);
+        expect(system).toBe(SYSTEM_PROMPT);
     });
 
     it('leaves the prompt and turns alone when there is no context', () => {
@@ -106,7 +117,7 @@ describe('buildRequest', () => {
         expect(messages).toEqual(conversation);
     });
 
-    it('falls back to the system prompt when the last turn is not a user turn', () => {
+    it('falls back to the system prompt when an assistant turn is last', () => {
         const { system, messages } = buildRequest(
             [text('user', 'first'), text('assistant', 'reply')],
             items
@@ -122,5 +133,99 @@ describe('buildRequest', () => {
 
         expect(messages).toEqual([]);
         expect(system).toContain('<<context>>');
+    });
+});
+
+/**
+ * Appending after a tool turn is valid only because of the provider's
+ * conversion: it sends the tool turn as a user message of tool results and the
+ * context as a mid-conversation system message after it, the same shape as
+ * after a typed message. So the built request goes through the real provider
+ * here, with `fetch` stubbed, rather than trusting the shape.
+ */
+describe('buildRequest through the Anthropic provider', () => {
+    /** The two parts of the Messages API body these assertions read. */
+    type MessagesBody = {
+        system: unknown;
+        messages: { role: string; content: unknown }[];
+    };
+
+    /** A minimal finished reply, so the call resolves. */
+    const REPLY = {
+        id: 'msg_1',
+        type: 'message',
+        role: 'assistant',
+        model: 'claude-opus-4-5',
+        content: [{ type: 'text', text: 'Done.' }],
+        stop_reason: 'end_turn',
+        stop_sequence: null,
+        usage: { input_tokens: 1, output_tokens: 1 },
+    };
+
+    it('after an approval, keeps the system prompt and sends the context after the tool results', async () => {
+        let body: MessagesBody | undefined;
+        const anthropic = createAnthropic({
+            apiKey: 'test-key',
+            fetch: async (_url, init) => {
+                body = JSON.parse(String(init?.body));
+                return new Response(JSON.stringify(REPLY), {
+                    status: 200,
+                    headers: { 'content-type': 'application/json' },
+                });
+            },
+        });
+
+        // The transcript as the loop holds it once an approved call has run.
+        const approved: ChatMessage[] = [
+            text('user', 'update home'),
+            {
+                role: 'assistant',
+                content: [
+                    {
+                        type: 'tool-call',
+                        toolCallId: 'toolu_1',
+                        toolName: 'entries_page_update',
+                        input: { id: 'page_1' },
+                    },
+                ],
+            },
+            {
+                role: 'tool',
+                content: [
+                    {
+                        type: 'tool-result',
+                        toolCallId: 'toolu_1',
+                        toolName: 'entries_page_update',
+                        output: { type: 'text', value: '{"id":"page_1"}' },
+                    },
+                ],
+            },
+        ];
+        const { system, messages } = buildRequest(approved, items);
+
+        await generateText({
+            model: anthropic('claude-opus-4-5'),
+            system,
+            messages,
+            allowSystemInMessages: true,
+            maxRetries: 0,
+        });
+
+        expect(body?.system).toEqual([expect.objectContaining({ text: SYSTEM_PROMPT })]);
+        expect(body?.messages.slice(-2)).toEqual([
+            {
+                role: 'user',
+                content: [
+                    expect.objectContaining({
+                        type: 'tool_result',
+                        tool_use_id: 'toolu_1',
+                    }),
+                ],
+            },
+            {
+                role: 'system',
+                content: [expect.objectContaining({ type: 'text', text: '<<context>>' })],
+            },
+        ]);
     });
 });
