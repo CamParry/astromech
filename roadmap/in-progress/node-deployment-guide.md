@@ -10,7 +10,12 @@ build with `node dist/server/entry.mjs`, `HOST`, `PORT` and
 
 ## The work
 
-- [ ] `apps/docs/deployment/node.md`: build, the environment it needs
+- [ ] A Node page in `apps/docs/deployment/`: build, the environment it needs
       (`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, the database URL), running
       migrations before start, and serving `dist/server/entry.mjs`.
 - [ ] Link it from the end of `apps/docs/installation.md`.
+- [ ] Check whether a built Node server serves files uploaded after the build
+      to `./public/uploads`, the `filesystem()` pairing the installation guide
+      and `apps/docs/configuration/storage.md` recommend with
+      `urlPrefix: '/uploads'`. The standalone adapter serves `dist/client`, so
+      those files may 404. If they do, fix the recommendation.
