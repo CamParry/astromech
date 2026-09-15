@@ -28,10 +28,16 @@ the site's own `@libsql/client` and hands it to the dialect.
       with whatever React Email now publishes in its place. React Email 6 moved
       every component and `render` into `react-email`, which since 6.7 marks
       itself side-effect free, so a Worker bundles only the components core
-      imports. It installs React Email's CLI dependencies with it.
+      imports. It installs React Email's CLI dependencies with it, 53 more
+      packages in a new site.
 - [x] Skip the `defaultLocale` warning when the site declares no locales.
 - [x] Split the admin bundle by route, or decide the size is acceptable for an
       admin app and raise Vite's `chunkSizeWarningLimit` for it. Split with
       `autoCodeSplitting`, which needs `astromech()` before `react()`, and
       bundle only the Lucide icons the config names, which were 475 kB of the
       largest chunk.
+
+A site installed from packed tarballs on 2026-09-15 showed none of the three.
+Its install printed only `node-domexception`'s deprecation, which comes through
+`@libsql/kysely-libsql`, and its largest admin chunk was Tiptap's, at 397 kB.
+It also found no Node deployment page, now `roadmap/planned/node-deployment-guide.md`.
