@@ -110,6 +110,20 @@ function buildListWhere(
             conditions.push(eb('entryContent.locale', '=', localeVal ?? defaultLocale));
         }
 
+        // `publishedAt` is stored as ISO text, so a string comparison orders by time.
+        if (params.publishedAsOf !== undefined) {
+            conditions.push(
+                eb.or([
+                    eb('entryContent.publishedAt', 'is', null),
+                    eb(
+                        'entryContent.publishedAt',
+                        '<=',
+                        params.publishedAsOf.toISOString()
+                    ),
+                ])
+            );
+        }
+
         // search
         if (params.search) {
             const term = `%${params.search}%`;

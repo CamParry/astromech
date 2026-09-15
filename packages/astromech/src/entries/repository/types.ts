@@ -60,6 +60,11 @@ export type ListParams = {
      */
     searchFields?: readonly string[] | undefined;
     where?: WhereFilters | undefined;
+    /**
+     * Only rows whose `publishedAt` is null or not after this time. `entries.query`
+     * sets it for a public read, with the same time it gives `applyVisibility`.
+     */
+    publishedAsOf?: Date | undefined;
     sort?: SortOption | SortOption[] | undefined;
     page?: number | undefined;
     limit?: number | 'all' | undefined;

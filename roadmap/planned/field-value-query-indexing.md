@@ -75,4 +75,4 @@ expressions anywhere.
 
 A public entry list must count in SQL exactly the rows it returns, or any new
 filter makes a miscount more visible. The scheduled-content miscount is
-`roadmap/in-progress/scheduled-entries-in-list-counts.md`.
+`roadmap/completed/scheduled-entries-in-list-counts.md`.

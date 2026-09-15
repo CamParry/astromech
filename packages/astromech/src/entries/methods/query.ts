@@ -81,20 +81,17 @@ export const queryEntries = defineServiceMethod({
             ? resolveEntryType(config, singleType)
             : undefined;
 
-        // For the public shape, push the status predicate into the repository
-        // where-clause so DB counts are correct. WhereFilters supports
-        // `status: 'published'` (eq) but not `publishedAt <= now` (no lte operator),
-        // so that check stays in applyVisibility — scheduled rows with
-        // `publishedAt <= now` are counted here and filtered there, slightly
-        // inflating total/pages when such rows exist. Only push for types with the
-        // statuses capability; tableRepository-backed types have no status column.
+        // The public row filter's status and publish time go into the SQL, so the
+        // count matches the rows; `applyVisibility` still projects the fields and
+        // repeats the check. A type without statuses has neither column.
         const hasStatuses = singleTypeCfg
             ? singleTypeCfg.capabilities.statuses !== false
             : true;
-        const effectiveWhere =
-            shape === 'public' && hasStatuses
-                ? { ...params.where, status: 'published' }
-                : params.where;
+        const filtersPublished = shape === 'public' && hasStatuses;
+        const effectiveWhere = filtersPublished
+            ? { ...params.where, status: 'published' }
+            : params.where;
+        const now = new Date();
 
         const references = params.where?.['references'];
         if (references !== undefined) {
@@ -108,6 +105,7 @@ export const queryEntries = defineServiceMethod({
             search: params.search,
             ...(singleTypeCfg?.search ? { searchFields: singleTypeCfg.search } : {}),
             where: effectiveWhere,
+            ...(filtersPublished ? { publishedAsOf: now } : {}),
             sort: params.sort,
             page: params.page ?? 1,
             limit: params.limit,
@@ -115,7 +113,7 @@ export const queryEntries = defineServiceMethod({
 
         const data = rows.map(asEntry);
 
-        const audience = { role: ctx.user?.role ?? null, now: new Date() };
+        const audience = { role: ctx.user?.role ?? null, now };
 
         const visibleData: Entry[] = [];
         for (const entry of data) {

@@ -13,10 +13,13 @@ where it was the prerequisite that section shares with relationships.
 
 ## The work
 
-- [ ] The entries-table repository takes the time a public list is read at and
+- [x] The entries-table repository takes the time a public list is read at and
       adds `publishedAt IS NULL OR publishedAt <= now` to the predicate that
       both the rows and the count share.
-- [ ] `entries.query` passes the same `now` it gives `applyVisibility`, so the
+- [x] `entries.query` passes the same `now` it gives `applyVisibility`, so the
       two cannot disagree, and the comment describing the miscount goes.
-- [ ] A test: a public list with a future-scheduled published entry reports a
+- [x] A test: a public list with a future-scheduled published entry reports a
       `total` and `pages` that exclude it, and a full page holds `limit` rows.
+
+The time goes to the repository as `ListParams.publishedAsOf`, and
+`entries.query` is the only paginated public list that needed it.

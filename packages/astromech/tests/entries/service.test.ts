@@ -284,6 +284,29 @@ describe('query', () => {
         const full = await api.query({ type: 'post', full: true });
         expect(full.data.map((e) => e.title).sort()).toEqual(['Draft', 'Published']);
     });
+
+    it('leaves a published entry with a future publishedAt out of the public count', async () => {
+        const later = await api.create({
+            type: 'post',
+            data: { title: 'Later', status: 'published' },
+        });
+        await api.create({ type: 'post', data: { title: 'A', status: 'published' } });
+        await api.create({ type: 'post', data: { title: 'B', status: 'published' } });
+        // Keeps the status: an update to a published entry stores the caller's
+        // publishedAt once the entry already has one.
+        const future = new Date(Date.now() + 60 * 60_000);
+        await api.update({ type: 'post', id: later.id, data: { publishedAt: future } });
+
+        const pub = await api.query({ type: 'post', limit: 2, page: 1 });
+        expect(pub.data.map((e) => e.title).sort()).toEqual(['A', 'B']);
+        expect(pub.pagination).toEqual({ page: 1, limit: 2, total: 2, pages: 1 });
+
+        const full = await api.query({ type: 'post', full: true, limit: 10 });
+        expect(full.pagination?.total).toBe(3);
+        const stored = full.data.find((e) => e.id === later.id);
+        expect(stored?.status).toBe('published');
+        expect(stored?.publishedAt?.getTime()).toBe(future.getTime());
+    });
 });
 
 describe('update', () => {

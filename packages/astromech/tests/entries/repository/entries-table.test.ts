@@ -269,6 +269,39 @@ describe('list', () => {
         });
         expect(trashed.data.map((e) => e.title)).toEqual(['A']);
     });
+
+    it('leaves rows published after publishedAsOf out of the rows and the count', async () => {
+        const asOf = new Date();
+        const published = { type: 'post', status: 'published' } as const;
+        await repository.create({
+            ...published,
+            title: 'Past',
+            slug: 'past',
+            publishedAt: new Date(asOf.getTime() - 60_000),
+        });
+        await repository.create({
+            ...published,
+            title: 'At',
+            slug: 'at',
+            publishedAt: asOf,
+        });
+        await repository.create({ type: 'post', title: 'Unset', slug: 'unset' });
+        await repository.create({
+            ...published,
+            title: 'Future',
+            slug: 'future',
+            publishedAt: new Date(asOf.getTime() + 60_000),
+        });
+
+        const res = await repository.list({
+            type: 'post',
+            publishedAsOf: asOf,
+            sort: { title: 'asc' },
+            limit: 10,
+        });
+        expect(res.data.map((e) => e.title)).toEqual(['At', 'Past', 'Unset']);
+        expect(res.total).toBe(3);
+    });
 });
 
 describe('staging (forward versioning)', () => {
