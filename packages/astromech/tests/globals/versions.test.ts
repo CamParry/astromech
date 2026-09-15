@@ -8,6 +8,7 @@ import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { globalsService as api } from '@/app-context/services';
 import { CapabilityError } from '@/entries/errors';
+import { GlobalNotFoundError } from '@/globals/errors';
 import { makeGlobalsConfig } from './globals-config';
 
 beforeEach(async () => {
@@ -100,7 +101,7 @@ describe('restoreVersion', () => {
 
         await expect(
             api.restoreVersion({ key: 'site', locale: 'de', versionId: version.id })
-        ).rejects.toThrow(/Version not found/);
+        ).rejects.toBeInstanceOf(GlobalNotFoundError);
     });
 });
 

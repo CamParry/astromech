@@ -2,6 +2,7 @@ import type { Entry, JsonObject } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
+import { CapabilityError, EntryNotFoundError } from '../../errors';
 import { entryGate } from '../../internal/access';
 import { asEntry, getEntryOfType } from '../../internal/records';
 import { indexEntryRelationships } from '../../internal/relationships';
@@ -30,7 +31,7 @@ export const restoreEntryVersion = defineServiceMethod({
         const { type, id, versionId } = params;
 
         const repository = getEntryRepository(type);
-        if (!repository.versions) throw new Error('Version not found');
+        if (!repository.versions) throw new CapabilityError(type, 'versioning');
         // The guard's narrowing does not survive into the transaction closure below.
         const versions = repository.versions;
 
@@ -44,7 +45,7 @@ export const restoreEntryVersion = defineServiceMethod({
 
         const version = await versions.get(versionId);
         if (!version || version.contentId !== currentEntry.contentId) {
-            throw new Error('Version not found');
+            throw new EntryNotFoundError({ entryId: id, locale: currentEntry.locale });
         }
 
         const slug = await uniqueSlugIfChanged({

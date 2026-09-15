@@ -124,7 +124,7 @@ describe('create', () => {
 
 describe('get', () => {
     it('returns null for missing id', async () => {
-        const result = await repository.get({ id: 'no-such-id' });
+        const result = await repository.get({ type: 'link', id: 'no-such-id' });
         expect(result).toBeNull();
     });
 
@@ -133,7 +133,7 @@ describe('get', () => {
             type: 'link',
             fields: { from: '/a', to: '/b' },
         });
-        const got = await repository.get({ id: created.id });
+        const got = await repository.get({ type: 'link', id: created.id });
         expect(got?.id).toBe(created.id);
         expect(got?.fields['from']).toBe('/a');
     });
@@ -178,7 +178,7 @@ describe('delete', () => {
             fields: { from: '/a', to: '/b' },
         });
         await repository.delete(created.id);
-        const gone = await repository.get({ id: created.id });
+        const gone = await repository.get({ type: 'link', id: created.id });
         expect(gone).toBeNull();
     });
 });
@@ -464,7 +464,7 @@ describe('transaction', () => {
                     fields: { from: '/tx1', to: '/ok' },
                 });
                 // Write is visible inside the transaction callback.
-                const found = await repository.get({ id: rec.id });
+                const found = await repository.get({ type: 'link', id: rec.id });
                 expect(found?.id).toBe(rec.id);
                 createdInsideTx = true;
                 throw new Error('simulated failure');

@@ -62,6 +62,16 @@ describe('POST /globals/:key/versions/:versionId/restore', () => {
         const global = ((await res.json()) as { data: Global }).data;
         expect(global.fields).toEqual({ email: 'one@b.dev' });
     });
+
+    it('404s a version that does not exist', async () => {
+        await save('one@b.dev');
+
+        const res = await app().request(
+            '/globals/contact/versions/missing/restore',
+            json({})
+        );
+        expect(res.status).toBe(404);
+    });
 });
 
 describe('a global with versioning off', () => {

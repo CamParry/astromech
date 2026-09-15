@@ -111,6 +111,31 @@ describe('GET /entries/:type/:id', () => {
     });
 });
 
+describe('an entry addressed under another type', () => {
+    it.each(['GET', 'PUT', 'DELETE'])('404s %s', async (method) => {
+        const created = await api.create({
+            type: 'post',
+            data: { title: 'Post', slug: 'post' },
+        });
+
+        const res = await app().request(
+            `/entries/note/${created.id}`,
+            method === 'PUT'
+                ? {
+                      method,
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ title: 'Changed' }),
+                  }
+                : { method }
+        );
+        expect(res.status).toBe(404);
+
+        const after = await api.get({ type: 'post', id: created.id, full: true });
+        expect(after?.title).toBe('Post');
+        expect(after?.deletedAt).toBeNull();
+    });
+});
+
 describe('POST /entries/:type', () => {
     it('creates and returns { data: entry } with 201', async () => {
         const res = await app().request('/entries/post', {

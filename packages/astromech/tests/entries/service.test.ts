@@ -12,12 +12,18 @@
 
 import type { EntryRepository } from '@/entries/repository/types';
 import type { Entry, PluginDefinition } from '@/types/index';
-import { createTestDb, registerTestPlugins, setupTestConfig } from '@tests/harness';
+import {
+    createTestDb,
+    makeTestConfig,
+    registerTestPlugins,
+    setupTestConfig,
+} from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { entriesService } from '@/app-context/services';
 import { decodeWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { entriesTable } from '@/database/tables';
+import { EntryNotFoundError } from '@/entries/errors';
 import {
     getEntryRepository,
     resetEntryRepositoryOverrides,
@@ -432,7 +438,7 @@ describe('versioning (on)', () => {
                 versionId: version.id,
                 locale: 'de',
             })
-        ).rejects.toThrow(/Version not found/);
+        ).rejects.toBeInstanceOf(EntryNotFoundError);
     });
 
     it('creates no version when nothing changes', async () => {
@@ -722,6 +728,67 @@ describe('trash and delete are resource-level', () => {
             .execute();
         expect(entries).toHaveLength(0);
         expect(contents).toHaveLength(0);
+    });
+});
+
+describe('an entry addressed as another type', () => {
+    let noteId: string;
+
+    beforeEach(async () => {
+        // The staging and preview token methods need staging on the type they address.
+        const config = makeTestConfig();
+        if (config.entries['post']) config.entries['post'].staging = true;
+        setupTestConfig(config);
+
+        const note = await api.create({
+            type: 'note',
+            data: { title: 'Note', fields: { body: 'kept' } },
+        });
+        noteId = note.id;
+    });
+
+    it('get answers null', async () => {
+        expect(await api.get({ type: 'post', id: noteId, full: true })).toBeNull();
+    });
+
+    it.each<[string, (id: string) => Promise<unknown>]>([
+        ['update', (id) => api.update({ type: 'post', id, data: { title: 'Changed' } })],
+        ['delete', (id) => api.delete({ type: 'post', id })],
+        ['trash', (id) => api.trash({ type: 'post', id })],
+        ['restore', (id) => api.restore({ type: 'post', id })],
+        ['duplicate', (id) => api.duplicate({ type: 'post', id })],
+        ['publish', (id) => api.publish({ type: 'post', id })],
+        ['unpublish', (id) => api.unpublish({ type: 'post', id })],
+        [
+            'schedule',
+            (id) =>
+                api.schedule({
+                    type: 'post',
+                    id,
+                    publishedAt: new Date(Date.now() + 60_000),
+                }),
+        ],
+        ['versions', (id) => api.versions({ type: 'post', id })],
+        [
+            'restoreVersion',
+            (id) => api.restoreVersion({ type: 'post', id, versionId: 'any' }),
+        ],
+        ['createStaged', (id) => api.createStaged({ type: 'post', id })],
+        ['getStaged', (id) => api.getStaged({ type: 'post', id })],
+        ['mergeStaged', (id) => api.mergeStaged({ type: 'post', id })],
+        ['deleteStaged', (id) => api.deleteStaged({ type: 'post', id })],
+        ['issuePreviewToken', (id) => api.issuePreviewToken({ type: 'post', id })],
+        ['revokePreviewToken', (id) => api.revokePreviewToken({ type: 'post', id })],
+        [
+            'incomingRelationships',
+            (id) => api.incomingRelationships({ type: 'post', id }),
+        ],
+    ])('%s rejects with EntryNotFoundError', async (_name, call) => {
+        const before = await api.get({ type: 'note', id: noteId, full: true });
+
+        await expect(call(noteId)).rejects.toBeInstanceOf(EntryNotFoundError);
+
+        expect(await api.get({ type: 'note', id: noteId, full: true })).toEqual(before);
     });
 });
 

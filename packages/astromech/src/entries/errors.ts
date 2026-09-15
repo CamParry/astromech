@@ -1,26 +1,6 @@
 import type { Capability } from '@/entries/capabilities';
 
 /**
- * Thrown when an entry mutation is called with a `type` that doesn't match the
- * stored `type` of the row identified by `id`.
- */
-export class EntryTypeMismatchError extends Error {
-    public readonly entryId: string;
-    public readonly expectedType: string;
-    public readonly actualType: string;
-
-    constructor(args: { entryId: string; expectedType: string; actualType: string }) {
-        super(
-            `Entry '${args.entryId}' has type '${args.actualType}', not '${args.expectedType}'`
-        );
-        this.name = 'EntryTypeMismatchError';
-        this.entryId = args.entryId;
-        this.expectedType = args.expectedType;
-        this.actualType = args.actualType;
-    }
-}
-
-/**
  * Thrown when a write addresses an entry type that no root or plugin declaration
  * resolves to. Without it the row is written as a ghost stamped with a type
  * nothing can render or query. Reads already return empty, so only writes guard.

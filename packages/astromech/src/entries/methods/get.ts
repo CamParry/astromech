@@ -48,12 +48,12 @@ export const getEntry = defineServiceMethod({
 
         const repository = getEntryRepository(type);
         const record = await repository.get({
+            type,
             id,
             locale: params.locale ?? defaultContentLocale(ctx.config),
         });
 
         if (!record) return null;
-        if (record.type !== undefined && record.type !== type) return null;
 
         const result = asEntry(record);
         // tableRepository-backed records carry no `type` column — stamp it so the

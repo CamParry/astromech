@@ -45,14 +45,14 @@ describe('base CRUD', () => {
         expect(created.locales).toEqual(['en']);
         expect(created.staged).toBe(false);
 
-        const got = await repository.get({ id: created.id });
+        const got = await repository.get({ type: 'post', id: created.id });
         expect(got?.id).toBe(created.id);
 
         const updated = await repository.update({ id: created.id }, { title: 'Changed' });
         expect(updated.title).toBe('Changed');
 
         await repository.delete(created.id);
-        expect(await repository.get({ id: created.id })).toBeNull();
+        expect(await repository.get({ type: 'post', id: created.id })).toBeNull();
     });
 
     it('writes an entries row and a content row, with distinct ids', async () => {
@@ -84,7 +84,9 @@ describe('base CRUD', () => {
 
     it('returns null for a locale with no content row', async () => {
         const created = await repository.create({ type: 'post', title: 'EN only' });
-        expect(await repository.get({ id: created.id, locale: 'de' })).toBeNull();
+        expect(
+            await repository.get({ type: 'post', id: created.id, locale: 'de' })
+        ).toBeNull();
     });
 
     it('lists every locale that has a content row, sorted', async () => {
@@ -98,8 +100,8 @@ describe('base CRUD', () => {
             { title: 'DE', slug: 'de' }
         );
 
-        const en = await repository.get({ id: created.id });
-        const de = await repository.get({ id: created.id, locale: 'de' });
+        const en = await repository.get({ type: 'post', id: created.id });
+        const de = await repository.get({ type: 'post', id: created.id, locale: 'de' });
         expect(en?.locales).toEqual(['de', 'en']);
         expect(de?.locales).toEqual(['de', 'en']);
         // One entry, one id, whichever locale is read.
@@ -109,10 +111,41 @@ describe('base CRUD', () => {
     it('get filters trashed rows unless includeTrashed is set', async () => {
         const e = await repository.create({ type: 'post', title: 'T', slug: 't' });
         await repository.trash.trash(e.id);
-        expect(await repository.get({ id: e.id })).toBeNull();
+        expect(await repository.get({ type: 'post', id: e.id })).toBeNull();
         expect(
-            await repository.get({ id: e.id }, { includeTrashed: true })
+            await repository.get({ type: 'post', id: e.id }, { includeTrashed: true })
         ).not.toBeNull();
+    });
+});
+
+describe('get and anyLocale address by type', () => {
+    it('answer the row under its own type', async () => {
+        const created = await repository.create({
+            type: 'post',
+            title: 'DE',
+            slug: 'de',
+            locale: 'de',
+        });
+
+        const got = await repository.get({ type: 'post', id: created.id, locale: 'de' });
+        expect(got?.id).toBe(created.id);
+        expect((await repository.anyLocale({ type: 'post', id: created.id }))?.id).toBe(
+            created.id
+        );
+    });
+
+    it('answer null for an existing id asked for under another type', async () => {
+        const created = await repository.create({
+            type: 'post',
+            title: 'DE',
+            slug: 'de',
+            locale: 'de',
+        });
+
+        expect(
+            await repository.get({ type: 'note', id: created.id, locale: 'de' })
+        ).toBeNull();
+        expect(await repository.anyLocale({ type: 'note', id: created.id })).toBeNull();
     });
 });
 
@@ -290,7 +323,9 @@ describe('staging (forward versioning)', () => {
         // The canonical still occupies its own slug.
         expect(await repository.uniqueSlug('post', 'en', 'live')).toBe('live-2');
 
-        expect((await repository.get({ id: canonical.id }))?.locales).toEqual(['en']);
+        expect(
+            (await repository.get({ type: 'post', id: canonical.id }))?.locales
+        ).toEqual(['en']);
     });
 
     it('discards the staged row on delete', async () => {
@@ -304,7 +339,7 @@ describe('staging (forward versioning)', () => {
         await repository.staging.delete({ id: canonical.id });
 
         expect(await repository.staging.getByCanonical(canonical.id)).toBeNull();
-        expect(await repository.get({ id: canonical.id })).not.toBeNull();
+        expect(await repository.get({ type: 'post', id: canonical.id })).not.toBeNull();
     });
 });
 
@@ -313,7 +348,8 @@ describe('trash sub-surface', () => {
         const e = await repository.create({ type: 'post', title: 'T', slug: 't' });
         await repository.trash.trash(e.id);
         expect(
-            (await repository.get({ id: e.id }, { includeTrashed: true }))?.deletedAt
+            (await repository.get({ type: 'post', id: e.id }, { includeTrashed: true }))
+                ?.deletedAt
         ).toBeInstanceOf(Date);
 
         const restored = await repository.trash.restore(e.id);
@@ -321,7 +357,9 @@ describe('trash sub-surface', () => {
 
         await repository.trash.trash(e.id);
         await repository.trash.emptyTrash('post');
-        expect(await repository.get({ id: e.id }, { includeTrashed: true })).toBeNull();
+        expect(
+            await repository.get({ type: 'post', id: e.id }, { includeTrashed: true })
+        ).toBeNull();
     });
 
     it('hides every locale of a trashed entry', async () => {
@@ -330,8 +368,8 @@ describe('trash sub-surface', () => {
 
         await repository.trash.trash(e.id);
 
-        expect(await repository.get({ id: e.id })).toBeNull();
-        expect(await repository.get({ id: e.id, locale: 'de' })).toBeNull();
+        expect(await repository.get({ type: 'post', id: e.id })).toBeNull();
+        expect(await repository.get({ type: 'post', id: e.id, locale: 'de' })).toBeNull();
         const trashedList = await repository.list({
             type: 'post',
             trashed: true,
@@ -421,10 +459,10 @@ describe('translatable sub-surface', () => {
         await repository.translatable.propagateFields(en.id, 'en', {
             category: 'updated',
         });
-        const deAfter = await repository.get({ id: en.id, locale: 'de' });
+        const deAfter = await repository.get({ type: 'post', id: en.id, locale: 'de' });
         expect(deAfter?.fields).toEqual({ body: 'debody', category: 'updated' });
         // The excluded locale is untouched.
-        const enAfter = await repository.get({ id: en.id });
+        const enAfter = await repository.get({ type: 'post', id: en.id });
         expect(enAfter?.fields).toEqual({ body: 'enbody', category: 'news' });
     });
 });
@@ -462,7 +500,7 @@ describe('transaction', () => {
             })
         ).rejects.toThrow('boom');
 
-        const after = await repository.get({ id: e.id });
+        const after = await repository.get({ type: 'post', id: e.id });
         expect(after?.title).toBe('Keep');
     });
 
@@ -488,7 +526,7 @@ describe('transaction', () => {
         );
         expect(result.title).toBe('After');
 
-        const after = await repository.get({ id: e.id });
+        const after = await repository.get({ type: 'post', id: e.id });
         expect(after?.title).toBe('After');
     });
 
@@ -508,7 +546,7 @@ describe('transaction', () => {
             return outer;
         });
 
-        const after = await repository.get({ id: created.id });
+        const after = await repository.get({ type: 'post', id: created.id });
         expect(after?.title).toBe('Inner');
     });
 });

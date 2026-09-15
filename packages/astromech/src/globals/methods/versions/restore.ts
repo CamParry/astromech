@@ -3,6 +3,7 @@ import { z } from '@hono/zod-openapi';
 import { snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
+import { GlobalNotFoundError } from '../../errors';
 import { gate } from '../../internal/access';
 import { asGlobal, requireCanonical } from '../../internal/global';
 import { localised } from '../../schema';
@@ -28,7 +29,7 @@ export const restoreGlobalVersion = defineServiceMethod({
 
         const version = await repository.versions.get(params.versionId);
         if (!version || version.contentId !== current.contentId) {
-            throw new Error('Version not found');
+            throw new GlobalNotFoundError({ key: params.key, locale });
         }
         const restoredFields = ((version.fields as JsonObject | null) ??
             current.fields) as JsonObject;

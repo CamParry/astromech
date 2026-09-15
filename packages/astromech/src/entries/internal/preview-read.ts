@@ -99,11 +99,11 @@ export async function getPreviewEntry(
     // Excludes trashed. The token authorizes every locale, so this reads the
     // one asked for and verifies against the entry.
     const record = await repository.get({
+        type,
         id,
         locale: params.locale ?? defaultContentLocale(config),
     });
     if (!record) return null;
-    if (record.type !== undefined && record.type !== type) return null;
 
     const canonical = asEntry(record);
     if (!(await verifyPreviewToken(canonical.id, token))) return null;

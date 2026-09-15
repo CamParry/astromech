@@ -4,7 +4,7 @@
 caller asked for, so every by-id operation re-checks that itself after the read.
 This file moves the type into the read.
 
-## What is true at the start
+## What was true at the start
 
 - `get(ref, opts)` and `anyLocale(id, opts)` in
   `packages/astromech/src/entries/repository/types.ts` take no type. The
@@ -40,14 +40,14 @@ This file moves the type into the read.
 
 ## The work
 
-- [ ] `get` and `anyLocale` take the type. The entries-table repository answers
+- [x] `get` and `anyLocale` take the type. The entries-table repository answers
       null on a mismatch; `tableRepository` ignores the type.
-- [ ] The records helpers, `get`, the preview read and the shared-fields read
+- [x] The records helpers, `get`, the preview read and the shared-fields read
       pass the type and drop their own checks. `EntryTypeMismatchError` is
       deleted.
-- [ ] Entry and global restore throw their resource's not-found error for a
+- [x] Entry and global restore throw their resource's not-found error for a
       missing version, and `CapabilityError` when the repository keeps no
       versions.
-- [ ] Tests cover a wrong-type id through the repository, the service and REST,
+- [x] Tests cover a wrong-type id through the repository, the service and REST,
       and a missing version through REST.
-- [ ] `DECISIONS.md` records the choice.
+- [x] `DECISIONS.md` records the choice.

@@ -28,8 +28,12 @@ export async function inheritSharedFields(params: {
     /** The locale a translatable entry inherits its shared fields from. */
     defaultLocale: string;
 }): Promise<Record<string, unknown>> {
+    const { repository, entryType } = params;
     return inheritContentFields({
-        repository: params.repository,
+        // The shared helper reads by id and locale; an entry read also names its type.
+        repository: {
+            get: (ref, opts) => repository.get({ ...ref, type: entryType.id }, opts),
+        },
         values: params.values,
         definitions: params.definitions,
         translatable: params.entryType.translatable === true,

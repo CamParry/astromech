@@ -485,6 +485,17 @@ longer type-checks. Rejected: publishing `EntryRepository` as a public adapter
 surface — a compatibility promise on an internal contract, for a use case nothing
 needs.
 
+**An entry's type is part of its address.** `EntryRepository.get` and
+`anyLocale` take the type with the id, and the entries-table repository answers
+null for a row of another type, so a by-id operation addressed at the wrong type
+throws `EntryNotFoundError` and REST answers 404. Payload and Strapi answer the
+same way for an id from another collection, since each collection is its own
+table. `tableRepository` holds one type, so it ignores the field. Rejected:
+checking the type after the read and throwing a mismatch error, which put the
+check in every by-id operation, answered REST with a 500, and told the caller
+which type the id belongs to; and making `type` optional, which only mattered
+while `EntryRepository` was expected to have implementors outside core.
+
 ## AI and the assistant
 
 **AI is an optional core capability that hands out a model.** `src/ai/` sits

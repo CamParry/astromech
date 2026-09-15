@@ -453,10 +453,14 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
         existingIds,
         uniqueSlug,
         list,
-        get: (ref: EntryRef, options?: { includeTrashed?: boolean }) =>
-            content.get(ref, options),
-        anyLocale: (id: string, options?: { includeTrashed?: boolean }) =>
-            content.anyLocale(id, options),
+        get: async (
+            { type, ...ref }: EntryRef & { type: string },
+            options?: { includeTrashed?: boolean }
+        ) => ofType(await content.get(ref, options), type),
+        anyLocale: async (
+            ref: { type: string; id: string },
+            options?: { includeTrashed?: boolean }
+        ) => ofType(await content.anyLocale(ref.id, options), ref.type),
         create,
         update: content.update,
         delete: content.delete,
@@ -466,4 +470,9 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
         translatable: content.translatable,
         previewToken,
     } satisfies EntryRepository<EntryRow>;
+}
+
+/** The row when it is of the addressed type, else null. */
+function ofType<R extends { type?: string }>(row: R | null, type: string): R | null {
+    return row?.type === type ? row : null;
 }

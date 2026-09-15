@@ -97,20 +97,25 @@ export type EntryRepository<R extends EntryRow = EntryRow> = {
 
     list(params: ListParams): Promise<{ data: R[]; total: number }>;
     /**
-     * Fetch one locale of one entry; filters trashed entries unless
-     * `includeTrashed`. Null when the entry or that locale's content row is
-     * absent — there is no fallback to another locale. The caller asserts the
-     * row's `type` matches the type it asked for, though a repository may throw
-     * the canonical mismatch error itself instead.
+     * Fetch one locale of one entry of the given type; filters trashed entries
+     * unless `includeTrashed`. Null when the entry, that locale's content row, or
+     * an entry of that type is absent, so a row of another type answers null.
      */
-    get(ref: EntryRef, opts?: { includeTrashed?: boolean }): Promise<R | null>;
+    get(
+        ref: EntryRef & { type: string },
+        opts?: { includeTrashed?: boolean }
+    ): Promise<R | null>;
     /**
-     * Fetch the entry in any one locale — the default content locale when it has
-     * a row, else whichever comes first. Resource-level operations read through
-     * it, so it must admit trashed entries under `includeTrashed`. Optional: a
-     * repository whose rows are single-locale is never asked.
+     * Fetch an entry of the given type in any one locale: the default content
+     * locale when it has a row, else whichever comes first. A row of another type
+     * answers null. Resource-level operations read through it, so it must admit
+     * trashed entries under `includeTrashed`. Optional: a repository whose rows
+     * are single-locale is never asked.
      */
-    anyLocale?(id: string, opts?: { includeTrashed?: boolean }): Promise<R | null>;
+    anyLocale?(
+        ref: { type: string; id: string },
+        opts?: { includeTrashed?: boolean }
+    ): Promise<R | null>;
     /** Create an entry and its first content row. */
     create(data: EntryWrite & { type: string }): Promise<R>;
     /** Write one locale's content row, creating it when it does not exist. */

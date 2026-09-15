@@ -63,12 +63,18 @@ describe('publishDueScheduled', () => {
         const count = await maintenance.publishDueScheduled(new Date());
         expect(count).toBe(2);
 
-        expect((await entryRepository.get({ id: due1.id }))?.status).toBe('published');
-        expect((await entryRepository.get({ id: due2.id }))?.status).toBe('published');
-        expect((await entryRepository.get({ id: notDue.id }))?.status).toBe('scheduled');
-        expect((await entryRepository.get({ id: alreadyPublished.id }))?.status).toBe(
+        expect((await entryRepository.get({ type: 'post', id: due1.id }))?.status).toBe(
             'published'
         );
+        expect((await entryRepository.get({ type: 'post', id: due2.id }))?.status).toBe(
+            'published'
+        );
+        expect((await entryRepository.get({ type: 'post', id: notDue.id }))?.status).toBe(
+            'scheduled'
+        );
+        expect(
+            (await entryRepository.get({ type: 'post', id: alreadyPublished.id }))?.status
+        ).toBe('published');
     });
 
     it('publishes each due locale independently', async () => {
@@ -87,10 +93,13 @@ describe('publishDueScheduled', () => {
 
         expect(await maintenance.publishDueScheduled(new Date())).toBe(1);
 
-        expect((await entryRepository.get({ id: entry.id }))?.status).toBe('published');
-        expect((await entryRepository.get({ id: entry.id, locale: 'de' }))?.status).toBe(
-            'unpublished'
+        expect((await entryRepository.get({ type: 'post', id: entry.id }))?.status).toBe(
+            'published'
         );
+        expect(
+            (await entryRepository.get({ type: 'post', id: entry.id, locale: 'de' }))
+                ?.status
+        ).toBe('unpublished');
     });
 
     it('leaves a due staged row scheduled: it publishes at its merge', async () => {
@@ -110,7 +119,9 @@ describe('publishDueScheduled', () => {
 
         const staged = await entryRepository.staging.getByCanonical(entry.id);
         expect(staged?.status).toBe('scheduled');
-        expect((await entryRepository.get({ id: entry.id }))?.status).toBe('unpublished');
+        expect((await entryRepository.get({ type: 'post', id: entry.id }))?.status).toBe(
+            'unpublished'
+        );
     });
 
     it('excludes trashed entries even if their publish time has passed', async () => {
@@ -154,10 +165,16 @@ describe('purgeTrashedBefore', () => {
         expect(purged).toEqual([old.id]);
 
         expect(
-            await entryRepository.get({ id: old.id }, { includeTrashed: true })
+            await entryRepository.get(
+                { type: 'post', id: old.id },
+                { includeTrashed: true }
+            )
         ).toBeNull();
         expect(
-            await entryRepository.get({ id: recent.id }, { includeTrashed: true })
+            await entryRepository.get(
+                { type: 'post', id: recent.id },
+                { includeTrashed: true }
+            )
         ).not.toBeNull();
     });
 
@@ -169,7 +186,7 @@ describe('purgeTrashedBefore', () => {
         });
         const purged = await maintenance.purgeTrashedBefore(new Date());
         expect(purged).toEqual([]);
-        expect(await entryRepository.get({ id: live.id })).not.toBeNull();
+        expect(await entryRepository.get({ type: 'post', id: live.id })).not.toBeNull();
     });
 });
 
@@ -226,7 +243,10 @@ describe('trashPurgeJob', () => {
         await trashPurgeJob.handler({ db, config });
 
         expect(
-            await entryRepository.get({ id: doomed.id }, { includeTrashed: true })
+            await entryRepository.get(
+                { type: 'post', id: doomed.id },
+                { includeTrashed: true }
+            )
         ).toBeNull();
         expect(await relationships.findBySource(doomed.id, 'entry')).toEqual([]);
         expect(await relationships.findByTarget(doomed.id, 'entry')).toEqual([]);

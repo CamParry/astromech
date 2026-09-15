@@ -187,6 +187,13 @@ describe('POST /entries/:type/:id/versions/:versionId/restore', () => {
         expect(body.data.id).toBe(id);
     });
 
+    it('404s a version that does not exist', async () => {
+        const res = await app().request(`/entries/post/${id}/versions/missing/restore`, {
+            method: 'POST',
+        });
+        expect(res.status).toBe(404);
+    });
+
     it('409s an unversioned type on the capability its contract requires', async () => {
         const note = await api.create({
             type: 'note',

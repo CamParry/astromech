@@ -204,13 +204,18 @@ class TableRepository implements EntryRepository<EntryRow> {
         if (affected === 0)
             throw new Error(`tableRepository: no row found for id "${id}"`);
 
-        const row = await this.get({ id });
+        const row = await this.findById(id);
         if (!row) throw new Error(`tableRepository: no row found for id "${id}"`);
         return row;
     }
 
-    async get(ref: EntryRef): Promise<EntryRow | null> {
-        const row = await this.repository.findOne({ [this.idCol]: ref.id });
+    async get(ref: EntryRef & { type: string }): Promise<EntryRow | null> {
+        // The table holds one type, so the registry has already routed by it.
+        return this.findById(ref.id);
+    }
+
+    private async findById(id: string): Promise<EntryRow | null> {
+        const row = await this.repository.findOne({ [this.idCol]: id });
         return row ? this.toRecord(row) : null;
     }
 
