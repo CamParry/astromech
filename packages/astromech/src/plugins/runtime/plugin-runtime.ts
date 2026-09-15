@@ -25,6 +25,7 @@ import type {
 import { createAppContext } from '@/app-context/app-context';
 import { registerCronJob } from '@/cron/registry';
 import { kyselyTableKey, registerTableCodec } from '@/database/codec';
+import { clearEmailOverrides, registerEmailOverride } from '@/email/email-overrides';
 import { qualifyEntryType } from '@/entries/entry-types';
 import {
     resetEntryRepositoryOverrides,
@@ -84,7 +85,7 @@ function state(): PluginRuntimeState {
 
 /**
  * Index all installed plugins into the runtime registry. Called once from
- * `initRuntime`, which the injected middleware runs on the first request.
+ * `build` in `astromech.ts`, which the injected middleware runs on the first request.
  * Identity collisions and dependencies are validated earlier in `resolveConfig`.
  */
 export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig): void {
@@ -93,9 +94,11 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
     s.identities = [];
     s.service = new Map();
     s.rawRoutes = [];
-    // Drop stale plugin repositories and hooks before re-registering (test setups re-run this).
+    // Drop stale plugin repositories, hooks and email overrides before
+    // re-registering (test setups re-run this).
     resetEntryRepositoryOverrides();
     clearHooks();
+    clearEmailOverrides();
 
     for (const def of defs) {
         const identity = resolvePluginIdentity(def);
@@ -122,6 +125,8 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
                 );
             });
         }
+
+        for (const override of def.emails ?? []) registerEmailOverride(override);
 
         if (def.service) s.service.set(identity.namespace, def.service);
 

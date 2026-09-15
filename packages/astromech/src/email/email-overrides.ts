@@ -1,7 +1,7 @@
 /**
- * Per-template email component overrides, keyed by template name. Held in the
- * shared `globalThis` namespace so a registration made through one bundle entry
- * chunk is visible from the chunk that renders.
+ * Per-template email component overrides, keyed by template name and filled
+ * from each plugin's `emails` by `registerPlugins`. Held on `globalThis` so a
+ * registration made in one bundle chunk is visible from the chunk that renders.
  */
 
 import type { ComponentType } from 'react';
@@ -25,4 +25,9 @@ export function getEmailOverride(
     name: string
 ): ComponentType<Record<string, unknown>> | undefined {
     return overrides.get(name) ?? undefined;
+}
+
+/** Drop every override. Plugin re-registration starts from empty. */
+export function clearEmailOverrides(): void {
+    overrides.clear();
 }

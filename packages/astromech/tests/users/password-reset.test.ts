@@ -3,11 +3,14 @@
  * it has no password until a reset sets one, and can then sign in.
  */
 
-import type { EmailDriver } from '@/types/index';
+import type { EmailDriver, PluginDefinition } from '@/types/index';
 import type { OpenAPIHono } from '@hono/zod-openapi';
+import type { ReactElement } from 'react';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { createElement } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { usersService } from '@/app-context/services';
+import { getEmailOverride } from '@/email/email-overrides';
 import { setEmailDriver } from '@/email/registry';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { createHttpApp } from '@/transport/http/app';
@@ -94,5 +97,42 @@ describe('password reset for an admin-created user', () => {
         expect(signIn.status).toBe(200);
         const body = (await signIn.json()) as { user: { id: string } };
         expect(body.user.id).toBe(user.id);
+    });
+});
+
+/** Stands in for the built-in reset email, so the sent HTML shows which one rendered. */
+function CustomResetEmail({ url }: Record<string, unknown>): ReactElement {
+    return createElement('p', null, `Custom reset: ${String(url)}`);
+}
+
+const overridingPlugin: PluginDefinition = {
+    package: 'test-reset-email',
+    emails: [{ name: 'password-reset', component: CustomResetEmail }],
+};
+
+describe('a plugin email override', () => {
+    it('is registered with the plugins and renders the password reset email', async () => {
+        const resolved = setupTestConfig({
+            ...makeTestConfig(),
+            plugins: [overridingPlugin],
+        });
+        app = createHttpApp(resolved) as unknown as OpenAPIHono;
+        expect(getEmailOverride('password-reset')).toBe(CustomResetEmail);
+
+        await usersService.create({
+            data: { email: EMAIL, name: 'Invited', role: DEFAULT_ROLE_SLUG },
+        });
+        const requested = await postAuth('request-password-reset', {
+            email: EMAIL,
+            redirectTo: `${basePath}/reset-password`,
+        });
+        expect(requested.status).toBe(200);
+        expect(sent[0]?.html).toContain('Custom reset: ');
+    });
+
+    it('is dropped when the plugins are registered again without it', () => {
+        setupTestConfig({ ...makeTestConfig(), plugins: [overridingPlugin] });
+        setupTestConfig(makeTestConfig());
+        expect(getEmailOverride('password-reset')).toBeUndefined();
     });
 });
