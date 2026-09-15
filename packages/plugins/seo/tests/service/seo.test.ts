@@ -64,11 +64,11 @@ const storage: StorageDriver = {
 };
 
 /**
- * The harness config with the seo section on `post` (url `/blog/{slug}`) and
- * on `note` (no url template). `bookmark` gets a url template but no seo
- * field, so it sits outside the plugin's footprint.
+ * The harness config with the seo section on `post` (url `postUrl`) and on
+ * `note` (no url template). `bookmark` gets a url template but no seo field,
+ * so it sits outside the plugin's footprint.
  */
-function configWithSeo(): AstromechConfig {
+function configWithSeo(postUrl = '/blog/{slug}'): AstromechConfig {
     const base = makeTestConfig();
     const { post, note, bookmark } = base.entries;
     if (!post || !note || !bookmark) {
@@ -80,7 +80,7 @@ function configWithSeo(): AstromechConfig {
             ...base.entries,
             post: {
                 ...post,
-                url: '/blog/{slug}',
+                url: postUrl,
                 fields: [...post.fields, seoSection()],
             },
             note: { ...note, fields: [...note.fields, seoSection()] },
@@ -138,6 +138,13 @@ describe('seo sitemap', () => {
 
     it('leaves out a type with no url template', async () => {
         await createEntry('note', { title: 'Note', status: 'published' });
+
+        expect((await sitemap()).urls).toEqual([]);
+    });
+
+    it('leaves out an entry whose url template names an empty field', async () => {
+        setupTestConfig(configWithSeo('/{category}/{slug}'));
+        await createEntry('post', { title: 'Hello', status: 'published' });
 
         expect((await sitemap()).urls).toEqual([]);
     });
@@ -207,6 +214,13 @@ describe('seo meta', () => {
         await createEntry('note', { title: 'Note', status: 'published' });
 
         expect(await meta('note', 'note')).toMatchObject({ title: 'Note', path: null });
+    });
+
+    it('resolves a null path for an entry whose url template names an empty field', async () => {
+        setupTestConfig(configWithSeo('/{category}/{slug}'));
+        await createEntry('post', { title: 'Hello', status: 'published' });
+
+        expect(await meta('post', 'hello')).toMatchObject({ title: 'Hello', path: null });
     });
 
     it('resolves null for an unpublished entry, an unknown slug, or a type outside the footprint', async () => {

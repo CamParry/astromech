@@ -18,22 +18,23 @@ export const redirectsService = {
         summary: 'Look up the redirect target for an incoming path.',
         input: z.object({ from: z.string() }),
         mutates: false,
-        handler: async (input, ctx): Promise<RedirectMatch | null> => {
-            const from = typeof input?.from === 'string' ? input.from : null;
-            if (!from) return null;
+        handler: async ({ from }, ctx): Promise<RedirectMatch | null> => {
+            if (from === '') return null;
 
             // `ctx.entries` is the global entries service, so this plugin's own
-            // type is addressed by its qualified id — built from context, never
+            // type is addressed by its qualified id, built from context, never
             // from an identity import.
             const { data } = await ctx.entries.query({
                 type: `${ctx.plugin.namespace}/${REDIRECT_TYPE}`,
+                where: { from },
                 limit: 'all',
             });
 
-            const match = (data as Entry[]).find((entry) => {
-                const fields = (entry.fields ?? {}) as RedirectFields;
-                return fields.enabled !== false && fields.from === from;
-            });
+            // An enabled rule wins over a disabled one for the same path; a rule
+            // with no `enabled` value counts as enabled.
+            const match = (data as Entry[]).find(
+                (entry) => (entry.fields as RedirectFields).enabled !== false
+            );
             if (!match) return null;
 
             const fields = (match.fields ?? {}) as RedirectFields;

@@ -29,13 +29,18 @@ they turned up two defects in the slug-change hook and two smaller ones in
 - **Recording `from` to `to` keeps the rule set loop-free and one hop deep**, as
   WordPress's Redirection plugin and Yoast do: an enabled rule whose `from` is
   the new `to` is deleted (that path is live again), and an enabled rule whose
-  `to` is the old `from` is repointed to the new `to`.
+  `to` is the old `from` is repointed to the new `to`. No rule is recorded when
+  an enabled rule already redirects the old `from`, so each path has at most
+  one enabled rule and a hand-made one is kept.
+- **The hook's writes are separate calls.** `entry:afterUpdate` runs after the
+  update's transaction commits and a plugin context offers no transaction, so a
+  failure partway through can leave the delete done without the create.
 
 ## The work
 
-- [ ] `resolveEntryUrl` and `resolveEntryPath` answer null for an empty token,
+- [x] `resolveEntryUrl` and `resolveEntryPath` answer null for an empty token,
       with tests, and their callers handle it.
-- [ ] The hook deletes the rule the new path would loop through and repoints
+- [x] The hook deletes the rule the new path would loop through and repoints
       chains, with tests.
-- [ ] `lookup` filters on `from` in the query and stops re-parsing its input.
-- [ ] The redirects README describes the loop and chain handling.
+- [x] `lookup` filters on `from` in the query and stops re-parsing its input.
+- [x] The redirects README describes the loop and chain handling.

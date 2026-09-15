@@ -1,7 +1,8 @@
 /**
  * The `entry:afterUpdate` hook that records a 301 when an update moves an
- * entry's front-end path. The basic slug change and the unchanged-slug case
- * sit in the end-to-end suite beside this folder; these cover the rest.
+ * entry's front-end path, keeping the rules free of loops and one hop deep.
+ * The basic slug change and the unchanged-slug case sit in the end-to-end
+ * suite beside this folder; these cover the rest.
  */
 
 import type { RedirectMatch, RedirectsOptions } from '../../src/index';
@@ -52,6 +53,17 @@ async function rules(): Promise<[string, string][]> {
     return rows.map((row) => [row.from, row.to]);
 }
 
+/** Every stored disabled rule as `[from, to]`, in insertion order. */
+async function disabledRules(): Promise<[string, string][]> {
+    const { rows } = await sql<{
+        from: string;
+        to: string;
+    }>`SELECT "from", "to" FROM plugin_redirects_redirects WHERE enabled = 0 ORDER BY rowid`.execute(
+        db
+    );
+    return rows.map((row) => [row.from, row.to]);
+}
+
 describe('slug-change hook on a slug url template', () => {
     beforeEach(async () => {
         db = await createTestDb();
@@ -70,15 +82,78 @@ describe('slug-change hook on a slug url template', () => {
         });
     });
 
-    it('records one rule per change, each from the path it replaced', async () => {
-        const post = await entries().create({ type: 'post', data: { title: 'First' } });
+    it('points every earlier path straight at the newest one', async () => {
+        const post = await entries().create({ type: 'post', data: { title: 'A' } });
 
-        await entries().update({ type: 'post', id: post.id, data: { slug: 'second' } });
-        await entries().update({ type: 'post', id: post.id, data: { slug: 'third' } });
+        await entries().update({ type: 'post', id: post.id, data: { slug: 'b' } });
+        await entries().update({ type: 'post', id: post.id, data: { slug: 'c' } });
 
+        // Exactly two rules: repointing a rule records nothing for the rule itself.
         expect(await rules()).toEqual([
-            ['/blog/first', '/blog/second'],
-            ['/blog/second', '/blog/third'],
+            ['/blog/a', '/blog/c'],
+            ['/blog/b', '/blog/c'],
+        ]);
+        expect(await lookup('/blog/a')).toEqual({ to: '/blog/c', status: '301' });
+        expect(await lookup('/blog/b')).toEqual({ to: '/blog/c', status: '301' });
+    });
+
+    it('leaves no loop when a slug changes back, so the live path answers nothing', async () => {
+        const post = await entries().create({ type: 'post', data: { title: 'A' } });
+
+        await entries().update({ type: 'post', id: post.id, data: { slug: 'b' } });
+        await entries().update({ type: 'post', id: post.id, data: { slug: 'a' } });
+
+        expect(await rules()).toEqual([['/blog/b', '/blog/a']]);
+        expect(await lookup('/blog/a')).toBeNull();
+        expect(await lookup('/blog/b')).toEqual({ to: '/blog/a', status: '301' });
+    });
+
+    it('records no second copy of an enabled rule that already exists', async () => {
+        const post = await entries().create({ type: 'post', data: { title: 'A' } });
+        await entries().create({
+            type: 'redirects/redirect',
+            data: { fields: { from: '/blog/a', to: '/blog/b', enabled: true } },
+        });
+
+        await entries().update({ type: 'post', id: post.id, data: { slug: 'b' } });
+
+        expect(await rules()).toEqual([['/blog/a', '/blog/b']]);
+    });
+
+    it('keeps an enabled rule that already redirects the old path elsewhere', async () => {
+        const post = await entries().create({ type: 'post', data: { title: 'A' } });
+        await entries().create({
+            type: 'redirects/redirect',
+            data: { fields: { from: '/blog/a', to: '/elsewhere', enabled: true } },
+        });
+
+        await entries().update({ type: 'post', id: post.id, data: { slug: 'b' } });
+
+        expect(await rules()).toEqual([['/blog/a', '/elsewhere']]);
+        expect(await lookup('/blog/a')).toEqual({ to: '/elsewhere', status: '301' });
+    });
+
+    it('leaves a disabled rule alone', async () => {
+        const post = await entries().create({ type: 'post', data: { title: 'A' } });
+        await entries().create({
+            type: 'redirects/redirect',
+            data: { fields: { from: '/blog/b', to: '/elsewhere', enabled: false } },
+        });
+        await entries().create({
+            type: 'redirects/redirect',
+            data: { fields: { from: '/older', to: '/blog/a', enabled: false } },
+        });
+
+        await entries().update({ type: 'post', id: post.id, data: { slug: 'b' } });
+
+        expect(await disabledRules()).toEqual([
+            ['/blog/b', '/elsewhere'],
+            ['/older', '/blog/a'],
+        ]);
+        expect(await rules()).toEqual([
+            ['/blog/b', '/elsewhere'],
+            ['/older', '/blog/a'],
+            ['/blog/a', '/blog/b'],
         ]);
     });
 
@@ -140,5 +215,18 @@ describe('slug-change hook on a url template that names a field', () => {
         });
 
         expect(await rules()).toEqual([['/news/hello', '/guides/hello']]);
+    });
+
+    it('records nothing when the field was empty, since the old path does not exist', async () => {
+        const post = await entries().create({ type: 'post', data: { title: 'Hello' } });
+
+        await entries().update({
+            type: 'post',
+            id: post.id,
+            data: { fields: { category: 'news' } },
+        });
+
+        expect(await rules()).toEqual([]);
+        expect(await lookup('/')).toBeNull();
     });
 });

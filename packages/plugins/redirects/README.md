@@ -75,6 +75,21 @@ the updated entry type's `url` template (e.g. `url: '/blog/{slug}'`) — the sam
 template that powers the admin **View** link. Entry types without a `url`
 template are skipped, so the plugin never guesses a path.
 
+An entry whose template names a value it doesn't have (an empty slug, or a
+missing field in `/{category}/{slug}`) has no URL, so no redirect is recorded
+for it.
+
+Recording a redirect keeps the rules loop-free and one hop deep:
+
+- A rule whose **from** is the new path is deleted, because that path is live
+  again. Changing a slug from `a` to `b` and back to `a` leaves no rule for
+  `/blog/a`.
+- A rule that pointed at the old path is repointed at the new one. After `a` to
+  `b` to `c`, both `/blog/a` and `/blog/b` redirect straight to `/blog/c`.
+- An enabled rule that already redirects the old path is kept, so no second
+  rule is recorded for that path.
+- Disabled rules are left alone.
+
 This adds a **Redirects** entry type to the admin (managed like any other) with
 `from`, `to`, `status` (301/302), and `enabled` fields. The list lives at
 `/admin/plugin/redirects/entries/redirect`.
