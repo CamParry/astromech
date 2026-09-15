@@ -15,21 +15,23 @@ outgrows the shared table.
 ## The state today (all verified)
 
 - `where` on entries is a hardcoded allow-list — `locale`, `_search`, `status`,
-  `slug`, `title`, `id`, `references` (`entries/repository/built-in.ts`). Anything
+  `slug`, `title`, `id`, `references` (`buildListWhere` in
+  `packages/astromech/src/entries/repository/entries-table.ts`). Anything
   else throws `UnknownWhereKeyError`
   (`DECISIONS.md`), and that stays: querying a
   field with no declared index must throw naming the field path and the
   remediation, never silently full-scan. On D1 an unindexed scan is billed per
   row read against a single-threaded database, so a silent slow success is
   materially worse than an error.
-- Sorting is a six-name allow-list, `SORTABLE_FIELDS` (`built-in.ts`); anything
+- Sorting is a six-name allow-list, `SORTABLE_FIELDS` (`entries-table.ts`); anything
   else throws `UnknownSortKeyError`, on the same reasoning as the unknown
   `where` key. Ordering by
   an indexed field is part of this item.
 - No JSON path handling exists anywhere — a repo-wide grep for `json_extract` /
   `->>` / `jsonb` / `json_each` returns zero hits outside `node_modules`.
 - Table-backed entry types forward `where` into the repository's full
-  operator DSL and throw on unknown keys (`entries/repository/table.ts:289-302`).
+  operator DSL and throw on unknown keys
+  (`packages/astromech/src/entries/repository/table.ts`).
 
 ## The shape
 
