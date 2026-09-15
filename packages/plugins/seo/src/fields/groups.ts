@@ -6,20 +6,19 @@
  */
 
 import type { Field, Label, MessageRef } from 'astromech';
-import { t } from 'astromech';
+import { pluginNamespace, t } from 'astromech';
 import { group, section, text, textarea } from 'astromech/fields';
-import { SEO_FIELD_NAME } from '../types';
+import { SEO_FIELD_NAME, SEO_PACKAGE } from '../types';
 import { SEO_DESCRIPTION_RANGE, SEO_TITLE_RANGE } from '../utilities/length';
 
 export type SeoSectionOptions = { label?: Label };
 
 /**
- * `seoSection()` is host-facing: a site calls it from its own entry-type
- * config, before any plugin runtime exists, so there is no `PluginContext` to
- * read the namespace from. Prefixing keys with it pins message resolution to
- * this plugin's bundle regardless of which entry type the section is mounted on.
+ * A site builds this section in its config, before any plugin runtime exists,
+ * so the namespace comes from the package name, derived the way the runtime
+ * derives it. It pins message keys to this plugin's bundle.
  */
-const NAMESPACE = 'seo';
+const NAMESPACE = pluginNamespace(SEO_PACKAGE);
 
 function tKey(key: string): MessageRef {
     return t(`${NAMESPACE}:${key}`);

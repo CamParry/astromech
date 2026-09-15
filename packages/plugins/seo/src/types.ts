@@ -7,6 +7,12 @@
 import type { LengthStatus } from './utilities/length';
 
 /**
+ * The package name, as a literal. `seoSection()` derives its message namespace
+ * from it, because it runs in a site's config where no plugin context exists.
+ */
+export const SEO_PACKAGE = '@astromech/seo';
+
+/**
  * The field name `seoSection()` attaches — also the footprint anchor:
  * `ctx.config.entryTypesWithField(SEO_FIELD_NAME)`.
  */

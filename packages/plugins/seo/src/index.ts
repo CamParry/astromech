@@ -11,6 +11,7 @@ import { settingsGlobal } from './globals/settings';
 import { overviewPage } from './pages/overview';
 import { seoPermissions } from './permissions/seo';
 import { seoService } from './service/seo';
+import { SEO_PACKAGE } from './types';
 
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
@@ -36,7 +37,7 @@ export { parseSeoMetaValue } from './utilities/meta-value';
 export type { SeoMetaValue } from './utilities/meta-value';
 
 export const seo = definePlugin({
-    package: '@astromech/seo',
+    package: SEO_PACKAGE,
     version: '0.1.0',
     label: 'SEO',
     icon: 'Search',

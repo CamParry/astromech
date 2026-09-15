@@ -12,21 +12,20 @@ plugin factory can carry helpers a **site** calls, with identity already
 applied, so the site never writes a namespace and the plugin never imports its
 own. Nothing generalises that to plugin-declared helpers.
 
-The concrete victim is seo. `seoSection()` is called from the site's config, so
-there is no assembly moment and no `PluginContext` to read identity from —
-`packages/plugins/seo/src/fields/groups.ts` therefore hardcodes
-`const NAMESPACE = 'seo'`. That is the last hand-written namespace literal in
-any first-party plugin, and it is a stand-in that has now survived three
-phases.
+The concrete case is seo. `seoSection()` is called from the site's config, so
+there is no assembly moment and no `PluginContext` to read identity from.
+`packages/plugins/seo/src/fields/groups.ts` derives its message namespace from
+`SEO_PACKAGE` with `pluginNamespace`, the function the runtime uses, so no
+first-party plugin writes a namespace by hand and a package rename cannot
+desync it.
 
-The fix is `seo.section()` — a plugin-declared extra hung off the factory, the
-way `permissions()` already is. What is undesigned is the mechanism: how a
-definition declares an extra, how the extra receives resolved identity, and how
-it stays literal-typed through `definePlugin<const Def>`.
+The design this section describes is still `seo.section()`: a plugin-declared
+extra hung off the factory with identity applied, the way `permissions()`
+already is. It is still undesigned: how a definition declares an extra, how the
+extra receives resolved identity, and how it stays literal-typed through
+`definePlugin<const Def>`.
 
-Low urgency: seo has no tables, so nothing derives an identifier from that
-literal. A rename of the seo package would silently desync it, which is the
-only real failure mode.
+Low urgency: until then, a host-facing helper imports its own package constant.
 
 ## `astromech plugin:new` scaffolding
 
