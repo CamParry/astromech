@@ -57,7 +57,7 @@ rather than silently producing a broken backup.
 
 Relative paths in your config resolve against the **working directory**, so run
 `astro` and the `astromech` CLI from your project root. Every path in the config
-works this way, `filesystem({ dir: './public/uploads' })` included.
+works this way, `filesystem({ dir: './uploads' })` included.
 
 Don't derive the path from `import.meta.url`. Your config is loaded into the
 server that Astro builds, and there `import.meta.url` points at the emitted

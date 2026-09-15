@@ -54,7 +54,7 @@ import { filesystem } from 'astromech/storage/filesystem';
 
 export default defineConfig({
     db: libsql(),
-    storage: filesystem({ dir: './public/uploads', urlPrefix: '/uploads' }),
+    storage: filesystem({ dir: './uploads' }),
     entries: {
         post: {
             single: 'Post',

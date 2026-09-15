@@ -40,4 +40,4 @@ the site's own `@libsql/client` and hands it to the dialect.
 A site installed from packed tarballs on 2026-09-15 showed none of the three.
 Its install printed only `node-domexception`'s deprecation, which comes through
 `@libsql/kysely-libsql`, and its largest admin chunk was Tiptap's, at 397 kB.
-It also found no Node deployment page, now `roadmap/in-progress/node-deployment-guide.md`.
+It also found no Node deployment page, now `roadmap/completed/node-deployment-guide.md`.

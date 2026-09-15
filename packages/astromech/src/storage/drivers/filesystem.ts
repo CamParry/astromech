@@ -17,12 +17,14 @@ import { dirname, join, relative, sep } from 'node:path';
 import { Readable } from 'node:stream';
 
 type FilesystemOptions = {
-    /** Absolute or cwd-relative path to write files, e.g. `'./public/uploads'` */
+    /** Absolute or cwd-relative path to write files, e.g. `'./uploads'` */
     dir: string;
     /**
-     * Public URL prefix at which `dir` is already served — e.g. `'/uploads'`
-     * for `dir: './public/uploads'`. Opt-in: omit it and media is served
-     * through the media route instead.
+     * Public URL prefix at which something else, such as a reverse proxy,
+     * already serves `dir`. Pointing `dir` into `public/` does not count: a
+     * built Node server serves `dist/client`, so a file uploaded after the
+     * build is not there. Opt-in: omit it and media is served through the
+     * media route instead.
      */
     urlPrefix?: string;
 };

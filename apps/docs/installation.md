@@ -12,7 +12,7 @@ which step 1 installs.
 
 Astromech resolves relative paths against the working directory. That covers
 the config file the CLI loads, every path inside the config (such as
-`file:./database.db` and `./public/uploads`), and the `migrations` folder. Run a
+`file:./database.db` and `./uploads`), and the `migrations` folder. Run a
 command from anywhere else and the CLI cannot find your config, and the server
 opens a database file in the wrong place.
 [configuration/database.md](configuration/database.md#where-filedatabasedb-points)
@@ -83,7 +83,7 @@ import { filesystem } from 'astromech/storage/filesystem';
 
 export default defineConfig({
     db: libsql({ url: 'file:./database.db' }),
-    storage: filesystem({ dir: './public/uploads', urlPrefix: '/uploads' }),
+    storage: filesystem({ dir: './uploads' }),
     entries: {
         post: {
             single: 'Post',
@@ -102,6 +102,9 @@ them:
 - [configuration/storage.md](configuration/storage.md) for where media files
   go.
 - [content/entry-types.md](content/entry-types.md) for declaring your content.
+
+With this config, files uploaded in the admin are written to `./uploads` and
+served through Astromech's media route. Add `uploads/` to your `.gitignore`.
 
 ## 4. Set the environment
 
@@ -160,6 +163,11 @@ with `astromech users:create`.
 
 Finish setup before the site is public. Until the first account exists, anyone
 who can reach `/cms` can create it.
+
+## Deploying
+
+[deployment/node.md](deployment/node.md) covers building the site and running
+it as a production Node server.
 
 ## Optional packages
 

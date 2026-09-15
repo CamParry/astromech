@@ -25,6 +25,11 @@ This is a living reference; it grows as the project does.
   how a frequent tick and database-stored cadence fit together, the three
   scheduler drivers (`interval`, `cloudflareCron`, `webhook`), and wiring a
   Cloudflare Worker's `scheduled()` handler.
+- [deployment/node.md](deployment/node.md): running the build as a production
+  Node server: what `astro build` migrates, the environment the server reads
+  (`HOST`, `PORT`, the database URL), applying migrations before start,
+  starting `dist/server/entry.mjs`, scheduled jobs, a reverse proxy, uploads,
+  and what to keep between deploys.
 - [deployment/cloudflare.md](deployment/cloudflare.md) — deploying to Cloudflare
   Workers: the drivers that name bindings, the `createWorkerEntry` entry file
   that supplies the Worker's environment and its `scheduled()` handler, the

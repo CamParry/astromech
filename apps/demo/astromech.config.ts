@@ -133,7 +133,9 @@ export default defineConfig({
     // relative SQLite URL silently creates an empty database there instead.
     // Bare `libsql()` reads DATABASE_URL, falling back to file:./database.db.
     db: libsql(),
-    storage: filesystem({ dir: './public/uploads', urlPrefix: '/uploads' }),
+    // No `urlPrefix`: the built server serves `dist/client`, not `public/`, so
+    // a file uploaded after the build is served through the media route.
+    storage: filesystem({ dir: './public/uploads' }),
     // The demo sends nothing real — the console driver prints each message so
     // form notifications (and anything else that emails) are visible in the dev
     // server output. With no `email` driver at all, `ctx.email.send` throws and

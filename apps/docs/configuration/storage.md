@@ -9,7 +9,7 @@ import { defineConfig } from 'astromech';
 import { filesystem } from 'astromech/storage/filesystem';
 
 export default defineConfig({
-    storage: filesystem({ dir: './public/uploads', urlPrefix: '/uploads' }),
+    storage: filesystem({ dir: './uploads' }),
     // …
 });
 ```
@@ -28,7 +28,7 @@ Each driver has its own subpath. There is no root barrel export, so importing
 ## `filesystem()`
 
 ```ts
-filesystem({ dir: './public/uploads', urlPrefix: '/uploads' });
+filesystem({ dir: './uploads' });
 ```
 
 | Option      | Required | What it is                                         |
@@ -43,8 +43,13 @@ already being served at this path" — and nothing can verify that for you. Poin
 it at a directory your web server doesn't serve and you get 404s for every
 image.
 
-The demo's pairing is the safe shape: `dir: './public/uploads'` with
-`urlPrefix: '/uploads'`, because Astro serves `public/` at the site root.
+Pointing `dir` into `public/` does not make that assertion true on a built
+site. `astro dev` serves `public/` as it is, but `astro build` copies it into
+`dist/client`, and a Node server built with `@astrojs/node` in standalone mode
+serves `dist/client`, not `public/`. A file uploaded after the build is written
+to `public/` and never reaches `dist/client`, so a request for its `urlPrefix`
+URL gets a 404. Leave `urlPrefix` unset unless something else, such as a reverse
+proxy, serves `dir` at that path.
 
 `filesystem()` cannot sign URLs; `getSignedUploadUrl` / `getSignedDownloadUrl`
 are absent from it entirely.
