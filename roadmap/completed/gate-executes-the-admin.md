@@ -13,7 +13,7 @@ build never compiles `admin/` at all (it is consumer-Vite territory —
 Vitest suite does not mount the app, and `check:boot` sees a live shell. Only
 opening a browser catches it.
 
-This is the defect `roadmap/in-progress/admin-as-its-own-package.md` wants to fix by
+This is the defect `roadmap/completed/admin-as-its-own-package.md` wants to fix by
 moving 196 files into a package with its own build. A headless check that
 executes the mounted admin fixes it directly, without moving anything.
 
@@ -44,7 +44,7 @@ executes the mounted admin fixes it directly, without moving anything.
 
 ## What this does to the case for the split
 
-It weakens it. `roadmap/in-progress/admin-as-its-own-package.md` had three
+It weakens it. `roadmap/completed/admin-as-its-own-package.md` had three
 justifications; `roadmap/completed/module-boundary-enforcement.md` paid down two
 of them, and this item pays down the third. If this lands, the argument for
 moving the admin into its own package is prior art and file count, with no
@@ -61,5 +61,5 @@ after the split is half-done.
 - The same check would catch the `ui-instance-guard` failure
   (`admin/support/ui-instance-guard.ts` throws when two copies of the UI barrel
   load), which today also only shows up in a browser.
-- Prerequisite two for `roadmap/in-progress/admin-as-its-own-package.md`, and
+- Prerequisite two for `roadmap/completed/admin-as-its-own-package.md`, and
   independently worth having whatever happens to that item.

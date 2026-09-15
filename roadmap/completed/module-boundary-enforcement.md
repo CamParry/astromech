@@ -141,7 +141,7 @@ record.
 ## Notes / caveats
 
 - Steps 1 and 2 are independent and can land in either order. Step 2 is the
-  prerequisite for `roadmap/in-progress/admin-as-its-own-package.md` either way,
+  prerequisite for `roadmap/completed/admin-as-its-own-package.md` either way,
   since the same set of shared leaves has to be identified before the admin can
   move.
 - Step 1's `directory-must-be-in-a-layer` rule and

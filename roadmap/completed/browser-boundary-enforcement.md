@@ -41,7 +41,7 @@ existed for five residual exceptions.
 ## Two files thought to carry the marker wrongly
 
 This section is wrong. Stage 1 of
-`roadmap/in-progress/admin-as-its-own-package.md` found both files in the
+`roadmap/completed/admin-as-its-own-package.md` found both files in the
 browser bundle: `media/serving/image/url.ts`, which `astromech/shared`
 re-exports, imports `image-widths.ts`, and the fetch client, which is
 `astromech/fetch`, imports `http-routes.ts`. Both belonged in the set, and both
@@ -64,10 +64,10 @@ are cheap once it lands.
       through a declared entrypoint. Until this lands, an `exports` map binds
       nothing, because admin imports never reach it. The alias exists so plugin
       components share module identity with the admin, which
-      `roadmap/in-progress/admin-as-its-own-package.md` records as surviving the
+      `roadmap/completed/admin-as-its-own-package.md` records as surviving the
       split, so this is a question about _what_ the alias covers rather than
       whether it exists. Belongs with the admin split. Stage 6 of
-      `roadmap/in-progress/admin-as-its-own-package.md` scoped it: the site's
+      `roadmap/completed/admin-as-its-own-package.md` scoped it: the site's
       Vite resolves `@/` only for importers inside core's `src`.
 - [x] **Add `exports/shared.ts` and a `"browser"` condition**, following Payload
       (`DECISIONS.md` has the

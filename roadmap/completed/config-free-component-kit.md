@@ -76,7 +76,7 @@ instance-free, and the `pkgSrc` alias stays in play either way.
   describable in one sentence, and it removes the surprise that a component
   import fails under Node.
 - It is also prerequisite one for
-  `roadmap/in-progress/admin-as-its-own-package.md`, which cannot decide where
+  `roadmap/completed/admin-as-its-own-package.md`, which cannot decide where
   `astromech/ui` lives until the barrel stops being two things.
 - Landable and verifiable while the admin is still in-package, which is the
   whole point of doing it first. Verify in `apps/demo` on port 4323; a barrel
