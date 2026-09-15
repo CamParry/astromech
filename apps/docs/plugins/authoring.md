@@ -386,6 +386,30 @@ components. An empty slot renders nothing. Cross-slot coordination (e.g. a
 toolbar button toggling an overlay) is the plugin's own concern — share state
 through a module both contributions import.
 
+### Packages your admin components import
+
+List every package your pages, slots and field components import under
+`admin.optimizeDeps.include`, so the site's Vite pre-bundles it when the dev
+server starts. Without the list, the dev server finds the package on first
+load and reloads the page, and in a site installed from npm the import may not
+resolve at all.
+
+```ts
+// in the plugin definition
+admin: {
+    slots: [
+        { slot: 'right-drawer', component: './admin/slots/chat-drawer.tsx' },
+    ],
+    optimizeDeps: { include: ['react-markdown', 'remark-gfm'] },
+},
+```
+
+Each entry must be in your package's `dependencies` or `peerDependencies`,
+because Astromech resolves it through your package. A plugin with a `file:`
+root resolves it from the site instead. Leave out `astromech` and its
+subpaths, and `react`, `react-dom` and `react/jsx-runtime`, which the site
+already provides.
+
 ### Permissions
 
 Declare the permissions your plugin makes grantable with `definePermissions` —

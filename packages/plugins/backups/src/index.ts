@@ -59,6 +59,7 @@ export const backups = definePlugin((options?: BackupsOptions) => {
         globals: [settingsGlobal],
         admin: {
             pages: [backupsPage],
+            optimizeDeps: { include: ['@tanstack/react-query'] },
         },
         service: buildBackupsService(keep),
         // Streaming only — the JSON endpoints live on the service above.

@@ -1,13 +1,14 @@
 /**
  * `createViteConfig()` with the admin's share merged in: the aliases, the `@/`
  * resolver scoped to core's `src`, the base-path define, the virtual modules,
- * and that each pre-bundled package resolves from the site root.
+ * the plugins' pre-bundled packages, and that each resolves from the site root.
  */
 import type {
     CoreSourceAliasPlugin,
     ResolveContext,
 } from '@/integrations/astro/core-source-alias';
 import type { VirtualModulePlugin } from '@/integrations/astro/virtual-module';
+import type { PluginDefinition } from '@/types/index';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
@@ -88,6 +89,34 @@ describe('createViteConfig()', () => {
         expect(problems).toEqual([]);
     });
 
+    describe('plugin optimizeDeps', () => {
+        it("names a published plugin's packages through the plugin package", () => {
+            expect(includeWith([charts()])).toContain('@acme/charts > chart.js');
+        });
+
+        it("names a plugin with a file: root's packages bare, as the site resolves them", () => {
+            const include = includeWith([
+                charts('file:///site/src/plugins/charts/index.ts'),
+            ]);
+
+            expect(include).toContain('chart.js');
+            expect(include).not.toContain('@acme/charts > chart.js');
+        });
+
+        it('lists each entry once', () => {
+            const include = includeWith([
+                charts('file:///site/src/plugins/charts/index.ts', ['chart.js', 'react']),
+                {
+                    ...charts('file:///site/src/plugins/graphs/index.ts'),
+                    package: 'graphs',
+                },
+            ]);
+
+            expect(include.filter((entry) => entry === 'chart.js')).toHaveLength(1);
+            expect(include.filter((entry) => entry === 'react')).toHaveLength(1);
+        });
+    });
+
     describe('astromech:core-source-alias', () => {
         it('resolves an @/ import from a file inside core src against core src', async () => {
             const importer = packageSource + '/exports/shared.ts';
@@ -142,6 +171,29 @@ describe('createViteConfig()', () => {
         });
     });
 });
+
+/** A plugin whose admin components import `include`, with `root` if given. */
+function charts(root?: string, include = ['chart.js']): PluginDefinition {
+    return {
+        package: '@acme/charts',
+        ...(root !== undefined ? { root } : {}),
+        admin: { optimizeDeps: { include } },
+    };
+}
+
+/** The `optimizeDeps.include` of a site that installs `plugins`. */
+function includeWith(plugins: PluginDefinition[]): string[] {
+    const config = { ...makeTestConfig(), plugins };
+    const vite = createViteConfig({
+        packageSource,
+        admin: createAdminViteConfig(),
+        root: new URL('file:///site/'),
+        configFile: './site.config.ts',
+        config,
+        resolvedConfig: resolveConfig(config),
+    });
+    return (vite.optimizeDeps?.include ?? []).filter((entry) => entry !== undefined);
+}
 
 function loadVirtualModule(vite: ViteConfig, id: string): string | undefined {
     const plugin = findPlugin<VirtualModulePlugin>(vite, id);

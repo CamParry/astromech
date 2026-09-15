@@ -63,6 +63,7 @@ export const assistant = definePlugin((options?: AssistantOptions) => {
                     permission: 'use',
                 },
             ],
+            optimizeDeps: { include: ['react-markdown', 'remark-gfm'] },
         },
     };
 });

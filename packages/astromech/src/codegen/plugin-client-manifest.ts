@@ -21,13 +21,22 @@ import {
 function resolveAssetSpecifier(def: PluginDefinition, specifier: string): string {
     if (!specifier.startsWith('./') && !specifier.startsWith('../')) return specifier;
 
-    const root = def.root;
-    if (root !== undefined && root.startsWith('file:')) {
-        return fileURLToPath(new URL(specifier, root));
+    if (hasFileRoot(def)) {
+        return fileURLToPath(new URL(specifier, def.root));
     }
     // Strip only a leading `./`; `../` has no meaning against a bare specifier
     // root, so it is left in place to fail loudly rather than resolve wrongly.
-    return `${root ?? def.package}/${specifier.replace(/^\.\//, '')}`;
+    return `${def.root ?? def.package}/${specifier.replace(/^\.\//, '')}`;
+}
+
+/**
+ * Whether the plugin's `root` is a `file:` URL: an unpublished plugin, whose
+ * files and imports resolve from the site rather than through a package.
+ */
+export function hasFileRoot(
+    def: PluginDefinition
+): def is PluginDefinition & { root: string } {
+    return def.root !== undefined && def.root.startsWith('file:');
 }
 
 /**

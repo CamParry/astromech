@@ -111,7 +111,8 @@ so plugin components and the admin share one copy of the kit and one React.
 `createAdminViteConfig()` in `packages/admin/src/vite.ts` returns what core's
 Vite config merges: the `astromech/ui` aliases onto admin source, the packages
 the admin imports in the browser (core renders them into
-`optimizeDeps.include`), the TanStack Router plugin, and the absolute path of
+`optimizeDeps.include`, with the packages each plugin lists in
+`admin.optimizeDeps.include`), the TanStack Router plugin, and the absolute path of
 `packages/admin/src/shell.astro`, which the admin route serves under the
 configured `basePath`. tsup builds only what plain Node loads: that helper and
 the four `astromech/ui` entries.

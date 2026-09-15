@@ -46,6 +46,7 @@ export const seo = definePlugin({
     globals: [settingsGlobal],
     admin: {
         pages: [overviewPage],
+        optimizeDeps: { include: ['@tanstack/react-query'] },
     },
     service: seoService,
 });

@@ -243,6 +243,12 @@ export type PluginNavItem = {
 export type PluginAdmin = {
     pages?: AdminPage[];
     slots?: AdminSlotContribution[];
+    /**
+     * Bare specifiers the plugin's admin components import in the browser, for
+     * Vite to pre-bundle. Each is a dependency or peer of the plugin package, and
+     * core resolves it through that package.
+     */
+    optimizeDeps?: { include: string[] };
 };
 
 /**

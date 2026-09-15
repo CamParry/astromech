@@ -4,11 +4,14 @@
  * virtual modules. The admin package supplies its own share, which this merges.
  */
 
-import type { AstromechConfig, ResolvedConfig } from '@/types/index';
+import type { AstromechConfig, PluginDefinition, ResolvedConfig } from '@/types/index';
 import type { AdminViteConfig } from '@astromech/admin/vite';
 import type { HookParameters } from 'astro';
 import { fileURLToPath } from 'node:url';
-import { generatePluginClientManifest } from '@/codegen/plugin-client-manifest';
+import {
+    generatePluginClientManifest,
+    hasFileRoot,
+} from '@/codegen/plugin-client-manifest';
 import { buildAdminConfig } from '@/config/admin-config';
 import { resolveConfigPath } from '@/config/load';
 import { coreSourceAlias } from '@/integrations/astro/core-source-alias';
@@ -62,13 +65,16 @@ export function createViteConfig({
             // them and shares one copy. The rest go through the packages that depend
             // on them: Vite finds `c` in `a > b > c` from `b`, found from `a`.
             include: [
-                ...admin.optimizeDeps.peerDependencies,
-                ...admin.optimizeDeps.dependencies.map(
-                    (specifier) => `astromech > @astromech/admin > ${specifier}`
-                ),
-                // Reached in the browser by `astromech/shared`, not by the admin.
-                'astromech > @tiptap/starter-kit',
-                'astromech > lodash-es',
+                ...new Set([
+                    ...admin.optimizeDeps.peerDependencies,
+                    ...admin.optimizeDeps.dependencies.map(
+                        (specifier) => `astromech > @astromech/admin > ${specifier}`
+                    ),
+                    // Reached in the browser by `astromech/shared`, not by the admin.
+                    'astromech > @tiptap/starter-kit',
+                    'astromech > lodash-es',
+                    ...plugins.flatMap(pluginOptimizeDeps),
+                ]),
             ],
         },
         define: {
@@ -96,6 +102,17 @@ export function createViteConfig({
             ),
         ],
     };
+}
+
+/**
+ * A plugin's browser packages, named from the site's root: through the plugin's
+ * package, or bare for a plugin with a `file:` root, whose imports resolve from
+ * the site.
+ */
+function pluginOptimizeDeps(def: PluginDefinition): string[] {
+    const include = def.admin?.optimizeDeps?.include ?? [];
+    if (hasFileRoot(def)) return include;
+    return include.map((specifier) => `${def.package} > ${specifier}`);
 }
 
 /**

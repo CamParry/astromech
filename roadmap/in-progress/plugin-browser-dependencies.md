@@ -38,5 +38,6 @@ from the site root at all.
       the site. It matches the admin's list and stays explicit. Rejected:
       deriving the list, which has core parse plugin source at config time,
       and accepting the reload.
-- [ ] Apply it to the assistant, and add a check like the admin's that fails
-      when a component imports a package the list misses.
+- [x] Apply it to the assistant, and add a check like the admin's that fails
+      when a component imports a package the list misses. Done for the
+      assistant, backups and seo, each checked by its own test.
