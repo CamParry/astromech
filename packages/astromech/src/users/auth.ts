@@ -16,6 +16,10 @@ import { resolveEnv, resolveNodeEnv } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { createRegistry } from '@/registry';
+import {
+    claimFirstAdmin,
+    releaseFirstAdminClaim,
+} from '@/users/internal/first-admin-claim';
 import { log } from '@/utilities/log';
 
 const authRegistry = createRegistry<Auth<BetterAuthOptions>>('auth', {
@@ -75,19 +79,11 @@ function buildAuth(): Auth<BetterAuthOptions> {
                     // Better Auth sign-up is refused. Admins create the rest
                     // through the users service, which does not run this hook.
                     before: async (user, context) => {
-                        // The adapter Better Auth's own insert uses next. It runs no
-                        // transaction, so two sign-ups racing on an empty install
-                        // can both count zero and both get `admin`.
+                        // The adapter Better Auth's own insert uses next.
                         const { adapter } =
                             context?.context ?? (await getAuth().$context);
                         const current = await getCurrentAdapter(adapter);
-                        if ((await current.count({ model: 'user' })) > 0) {
-                            throw new APIError('FORBIDDEN', {
-                                code: 'SIGN_UP_CLOSED',
-                                message:
-                                    'Sign-up is closed. Ask an administrator to create your account.',
-                            });
-                        }
+                        await assertFirstSignUp(() => current.count({ model: 'user' }));
                         return {
                             data: { ...user, role: 'admin' satisfies BuiltInRoleSlug },
                         };
@@ -102,6 +98,9 @@ function buildAuth(): Auth<BetterAuthOptions> {
                             locale: getDefaultContentLocale(),
                             fields: {},
                         });
+                        // A user exists now, so the count refuses every later
+                        // sign-up and the claim is no longer needed.
+                        await releaseFirstAdminClaim();
                     },
                 },
             },
@@ -191,4 +190,28 @@ function buildAuth(): Auth<BetterAuthOptions> {
             },
         },
     }) as unknown as Auth<BetterAuthOptions>;
+}
+
+/**
+ * Refuse a sign-up unless it is the first account. Better Auth runs no
+ * transaction, so two sign-ups on an empty install can both count zero; only
+ * the one holding the first-admin claim goes on.
+ */
+async function assertFirstSignUp(countUsers: () => Promise<number>): Promise<void> {
+    if ((await countUsers()) > 0) throw signUpClosed();
+    if (!(await claimFirstAdmin(new Date()))) throw signUpClosed();
+    // Another sign-up may have finished and released its claim between the
+    // first count and ours. Releasing is safe: a user exists, so every later
+    // sign-up is refused at its first count, and one already past it re-counts.
+    if ((await countUsers()) > 0) {
+        await releaseFirstAdminClaim();
+        throw signUpClosed();
+    }
+}
+
+function signUpClosed(): APIError {
+    return new APIError('FORBIDDEN', {
+        code: 'SIGN_UP_CLOSED',
+        message: 'Sign-up is closed. Ask an administrator to create your account.',
+    });
 }

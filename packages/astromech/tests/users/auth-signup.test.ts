@@ -5,14 +5,19 @@
 
 import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
-import { createTestDb, setupTestConfig } from '@tests/harness';
+import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { usersService } from '@/app-context/services';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { decodeWith } from '@/database/codec';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { getAuth } from '@/users/auth';
+import {
+    claimFirstAdmin,
+    FIRST_ADMIN_CLAIM_KEY,
+    FIRST_ADMIN_CLAIM_LEASE_MS,
+} from '@/users/internal/first-admin-claim';
 import { createUserRepository } from '@/users/repository';
 import { usersTable } from '@/users/tables';
 
@@ -24,6 +29,10 @@ beforeEach(async () => {
     delete globalThis.__astromech?.auth;
     db = await createTestDb();
     setupTestConfig();
+});
+
+afterEach(() => {
+    vi.restoreAllMocks();
 });
 
 type SignUpEmail = ReturnType<typeof getAuth>['api']['signUpEmail'];
@@ -63,11 +72,112 @@ async function rowCount(table: 'users' | 'accounts'): Promise<number> {
     return Number(rows[0]?.count);
 }
 
+async function claimRow(): Promise<unknown> {
+    const row = await db
+        .selectFrom('settings')
+        .select('value')
+        .where('key', '=', FIRST_ADMIN_CLAIM_KEY)
+        .executeTakeFirst();
+    return row?.value;
+}
+
+/**
+ * Hold each of the first `callers` user counts until all of them have returned,
+ * so racing sign-ups all read an empty table before any of them inserts.
+ */
+async function holdUserCounts(callers: number): Promise<void> {
+    const { adapter } = await getAuth().$context;
+    const count = adapter.count.bind(adapter);
+    let held = 0;
+    let releaseAll: (() => void) | undefined;
+    const allCounted = new Promise<void>((resolve) => {
+        releaseAll = resolve;
+    });
+    vi.spyOn(adapter, 'count').mockImplementation(async (query) => {
+        const result = await count(query);
+        if (query.model !== 'user' || held === callers) return result;
+        held += 1;
+        if (held === callers) releaseAll?.();
+        await allCounted;
+        return result;
+    });
+}
+
 describe('better-auth email sign-up', () => {
     it('gives the first sign-up the admin role', async () => {
         await signUp('first@test.dev');
 
         expect(await roleOf('first@test.dev')).toBe('admin');
+    });
+
+    it('gives admin to one of two racing sign-ups and refuses the other', async () => {
+        await holdUserCounts(2);
+
+        const results = await Promise.all([
+            refusal('racer-a@test.dev'),
+            refusal('racer-b@test.dev'),
+        ]);
+
+        const refused = results.filter((error) => error !== null);
+        expect(refused).toHaveLength(1);
+        expect(refused[0]?.statusCode).toBe(403);
+        expect(refused[0]?.body?.code).toBe('SIGN_UP_CLOSED');
+        const roles = [
+            await roleOf('racer-a@test.dev'),
+            await roleOf('racer-b@test.dev'),
+        ];
+        expect(roles.filter((role) => role === 'admin')).toHaveLength(1);
+        expect(roles.filter((role) => role === undefined)).toHaveLength(1);
+        expect(await rowCount('users')).toBe(1);
+        expect(await rowCount('accounts')).toBe(1);
+    });
+
+    it('deletes the first-admin claim once the first sign-up finishes', async () => {
+        await signUp('first@test.dev');
+
+        expect(await claimRow()).toBeUndefined();
+    });
+
+    it('refuses a sign-up while another sign-up holds the first-admin claim', async () => {
+        await claimFirstAdmin(new Date());
+
+        const error = await refusal('first@test.dev');
+
+        expect(error?.statusCode).toBe(403);
+        expect(error?.body?.code).toBe('SIGN_UP_CLOSED');
+        expect(await rowCount('users')).toBe(0);
+        expect(await rowCount('accounts')).toBe(0);
+    });
+
+    it('releases its claim when a user appears between its two counts', async () => {
+        const { adapter } = await getAuth().$context;
+        const count = adapter.count.bind(adapter);
+        let userCounts = 0;
+        vi.spyOn(adapter, 'count').mockImplementation(async (query) => {
+            const result = await count(query);
+            if (query.model !== 'user') return result;
+            userCounts += 1;
+            // Another sign-up finishes after this one's first count.
+            if (userCounts === 1) await createTestUser(db);
+            return result;
+        });
+
+        const error = await refusal('late@test.dev');
+
+        expect(userCounts).toBe(2);
+        expect(error?.statusCode).toBe(403);
+        expect(error?.body?.code).toBe('SIGN_UP_CLOSED');
+        expect(await roleOf('late@test.dev')).toBeUndefined();
+        expect(await claimRow()).toBeUndefined();
+    });
+
+    it('takes over a first-admin claim older than the lease', async () => {
+        await claimFirstAdmin(new Date(Date.now() - FIRST_ADMIN_CLAIM_LEASE_MS - 1_000));
+
+        await signUp('first@test.dev');
+
+        expect(await roleOf('first@test.dev')).toBe('admin');
+        expect(await claimRow()).toBeUndefined();
     });
 
     it('refuses a sign-up once a user exists, writing no user or account row', async () => {

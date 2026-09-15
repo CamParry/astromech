@@ -15,6 +15,7 @@
  */
 
 import type { D1DatabaseLike } from '@/database/drivers/d1-dialect';
+import type { Db } from '@/database/types';
 import type { Kysely } from 'kysely';
 import type { MigrationProvider } from 'kysely/migration';
 import { migrateToLatest } from '@astromech/schema-engine';
@@ -27,6 +28,11 @@ import {
     resetBindings,
     resolveBinding,
 } from '@/integrations/cloudflare/bindings';
+import {
+    claimFirstAdmin,
+    FIRST_ADMIN_CLAIM_LEASE_MS,
+    releaseFirstAdminClaim,
+} from '@/users/internal/first-admin-claim';
 
 /** Test-only schema; deliberately unrelated to the app's `DB` type. */
 type TestSchema = {
@@ -41,6 +47,7 @@ const OWNED_TABLES = [
     'round_trip',
     'migrated',
     'introspected',
+    'settings',
     'kysely_migration',
     'kysely_migration_lock',
 ];
@@ -139,6 +146,30 @@ describe('d1() against local emulation', () => {
             .where('title', '=', 'meta')
             .executeTakeFirst();
         expect(deleteResult?.numDeletedRows).toBe(2n);
+    });
+
+    // The first-admin claim reads D1's `meta.changes` as the row count of an
+    // ignored insert and of a compare-and-set update.
+    it('takes the first-admin claim once, and takes over an expired one', async () => {
+        // The app's `settings` DDL, less the foreign key to a `users` table
+        // this file does not create.
+        await sql`CREATE TABLE settings (
+            key TEXT PRIMARY KEY NOT NULL,
+            value TEXT,
+            updated_at TEXT NOT NULL,
+            updated_by TEXT
+        )`.execute(db);
+        const appDb = db as unknown as Db;
+        const now = new Date();
+        const expired = new Date(now.getTime() + FIRST_ADMIN_CLAIM_LEASE_MS);
+
+        expect(await claimFirstAdmin(now, appDb)).toBe(true);
+        expect(await claimFirstAdmin(now, appDb)).toBe(false);
+        expect(await claimFirstAdmin(expired, appDb)).toBe(true);
+        expect(await claimFirstAdmin(expired, appDb)).toBe(false);
+
+        await releaseFirstAdminClaim(appDb);
+        expect(await claimFirstAdmin(now, appDb)).toBe(true);
     });
 
     it("introspects columns, which Kysely's own SQLite introspector cannot do here", async () => {

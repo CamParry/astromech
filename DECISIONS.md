@@ -175,13 +175,22 @@ account as `admin`, and every later account is created by an admin through the
 users service, as Payload's `first-register` and Strapi's `register-admin` do.
 The guard is Better Auth's `databaseHooks.user.create.before`, which every
 Better Auth sign-up path runs through and the users service does not. Its count
-and the insert share Better Auth's adapter but no transaction, so two sign-ups
-racing on an empty install can both get `admin`; anyone who can reach an
-install with no users can finish setup first anyway. Rejected: open sign-up
-with a least-privileged default role (the built-in `editor` still grants
-content access to anyone with the URL), and Better Auth's `disableSignUp` plus
-a setup endpoint of our own (setup would have to write the credential account
-itself).
+and Better Auth's insert are separate statements with no transaction between
+them, so a sign-up on an empty install first takes a claim row in `settings`
+with one conflict-ignoring insert, then counts again while holding it; two
+racing sign-ups get one `admin` and one `SIGN_UP_CLOSED`. The claim is deleted
+once the user exists, and one older than a minute can be taken over, so a
+sign-up that dies between the claim and the insert does not close setup for
+good. Anyone who can reach an install with no users can still finish setup
+first. Rejected: open sign-up with a least-privileged default role (the
+built-in `editor` still grants content access to anyone with the URL); Better
+Auth's `disableSignUp` plus a setup endpoint of our own (setup would have to
+write the credential account itself); Strapi's row lock (`FOR UPDATE`), which
+SQLite and D1 do not have; a fixed id, a unique marker column or a role the
+insert computes, each of which fails the losing insert with Better Auth's
+generic 422 rather than `SIGN_UP_CLOSED`; and deleting the later admin in the
+`after` hook, which runs once the session exists and leaves two admins if the
+process dies first.
 
 **Author clearing enumerates columns from the table descriptors.** The
 hand-kept list under `entries/internal/` was three tables when nine carried the
