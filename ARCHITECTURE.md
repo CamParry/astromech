@@ -254,7 +254,9 @@ the client bundle, so a lint rule refuses any `@/` import and any other
 `astromech/*` subpath from `packages/admin/src/`. Code only the admin uses
 lives in the admin package, not in core's leaves. The site's Vite build aliases `astromech/shared` and
 `astromech/fetch` to source, as it does `astromech/ui`, so the admin and every
-other browser caller share one instance of each.
+other browser caller share one instance of each. It resolves core's own `@/`
+specifiers only for files inside core's `src`, so a site's own `@/` paths reach
+the site.
 
 Two checks cover it. `packages/astromech/tests/exports/shared-browser.test.ts`
 bundles the two entries for the browser and fails on a Node builtin or on a core

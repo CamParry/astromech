@@ -45,7 +45,7 @@ cross-layer change rather than a rename, and out of scope here.
 ## Handed on
 
 The three `.shared` stems in `entries/` still disagree. That question moved to
-`roadmap/planned/browser-boundary-enforcement.md`, because it cannot be settled
+`roadmap/completed/browser-boundary-enforcement.md`, because it cannot be settled
 before that item decides whether the suffix survives at all.
 
 ## Checked and left alone

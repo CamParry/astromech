@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { generatePluginClientManifest } from '@/codegen/plugin-client-manifest';
 import { buildAdminConfig } from '@/config/admin-config';
 import { resolveConfigPath } from '@/config/load';
+import { coreSourceAlias } from '@/integrations/astro/core-source-alias';
 import { virtualModule } from '@/integrations/astro/virtual-module';
 
 /** The `vite` field of the config update Astro accepts. */
@@ -54,7 +55,6 @@ export function createViteConfig({
                 ...admin.alias,
                 'astromech/shared': packageSource + '/exports/shared.ts',
                 'astromech/fetch': packageSource + '/exports/fetch.ts',
-                '@/': packageSource + '/',
             },
         },
         optimizeDeps: {
@@ -66,6 +66,7 @@ export function createViteConfig({
             __ASTROMECH_BASE_PATH__: JSON.stringify(resolvedConfig.basePath),
         },
         plugins: [
+            coreSourceAlias(packageSource),
             ...admin.plugins,
             virtualModule('virtual:astromech/config', () =>
                 liveConfigModule(resolveConfigPath(rootDir, configFile))

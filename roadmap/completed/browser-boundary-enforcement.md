@@ -14,15 +14,11 @@ bundles the two entries for the browser and fails on a Node builtin or on a core
 file outside its allowlist. No filename marker remains: the allowlist names each
 browser-safe domain file by path, which is where a reader finds the set.
 
-`packages/astromech/src/integrations/astro/vite.ts` aliases `'@/'` to the whole
-of the package's `src/` inside the consuming project's Vite graph. So the admin
-can reach any core module, including a domain service, and the only backstop is
-`pnpm run check:boot` loading the admin in a headless browser.
-
-Nothing currently walks through that door. Every runtime import `admin/` makes
-outside itself lands in `fields/`, `utilities/`, `types/`, `errors/`,
-`registry.ts`, `transport/http/client/`, or one of five domain leaves. This is
-structural risk, not a live defect.
+The site's Vite build resolves `@/` only for importers inside core's `src`
+(`packages/astromech/src/integrations/astro/core-source-alias.ts`), so neither
+the admin nor a site's own files can reach core through it. The sections below
+are the measurements taken before that work, kept as the record of why it was
+done.
 
 ## The seam, by where browser-safety comes from
 
@@ -64,13 +60,15 @@ are on the bundle test's allowlist. The original claim follows.
 Ordered by what unblocks what. The first item is the one that matters; the rest
 are cheap once it lands.
 
-- [ ] **Narrow the `'@/'` alias**, or give the admin a specifier that goes
+- [x] **Narrow the `'@/'` alias**, or give the admin a specifier that goes
       through a declared entrypoint. Until this lands, an `exports` map binds
       nothing, because admin imports never reach it. The alias exists so plugin
       components share module identity with the admin, which
       `roadmap/in-progress/admin-as-its-own-package.md` records as surviving the
       split, so this is a question about _what_ the alias covers rather than
-      whether it exists. Belongs with the admin split.
+      whether it exists. Belongs with the admin split. Stage 6 of
+      `roadmap/in-progress/admin-as-its-own-package.md` scoped it: the site's
+      Vite resolves `@/` only for importers inside core's `src`.
 - [x] **Add `exports/shared.ts` and a `"browser"` condition**, following Payload
       (`DECISIONS.md` has the
       shape). One re-export file for the five domain leaves, one `exports` entry

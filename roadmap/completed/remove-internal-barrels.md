@@ -94,4 +94,4 @@ compile time. Rewriting them buys nothing at runtime; whether the type surface
 should be one file is a separate question.
 
 **The `'@/'` Vite alias and the browser boundary.** That seam belongs to
-`roadmap/planned/browser-boundary-enforcement.md`.
+`roadmap/completed/browser-boundary-enforcement.md`.

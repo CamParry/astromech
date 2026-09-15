@@ -81,7 +81,9 @@ describe('astromech()', () => {
 
             expect(recorded.updateConfig).toHaveLength(1);
             const vite = recorded.updateConfig[0]?.vite;
-            expect(vite?.resolve.alias['@/']).toBe(`${packageSource}/`);
+            expect(vite?.resolve.alias['astromech/shared']).toBe(
+                `${packageSource}/exports/shared.ts`
+            );
             expect(vite?.define.__ASTROMECH_BASE_PATH__).toBe('"/admin"');
         });
 

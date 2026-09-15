@@ -292,7 +292,11 @@ entry, `types` and `default` must resolve into the same tree, enforced by
 `check:exports`; never compare targets across the two maps. Only Vite-loaded
 subpaths can move, because the config half loads in plain Node with no alias and
 no TypeScript. Rejected: pointing `types` at `src` with relative specifiers,
-de-aliasing 825 `@/` specifiers, and Node `#src/*` subpath imports.
+de-aliasing 825 `@/` specifiers, and Node `#src/*` subpath imports. The site's
+Vite resolves core's `@/` only for importers inside core's `src`, because a
+global alias collides with a site that aliases `@/` to its own `src`: Vite's
+alias plugin stops at the first entry that matches, so one side's imports fail
+to resolve. Rejected: the global alias.
 
 **A dependency reached only through an opt-in subpath is an optional peer, and
 one the site already instantiates is a required peer.** `sharp`,

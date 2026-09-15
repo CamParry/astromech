@@ -1,8 +1,12 @@
 /**
  * `createViteConfig()` with the admin package's share merged in: the aliases,
- * the base-path define, the three virtual modules, and that the pre-bundled
- * packages match the workspace hoist list.
+ * the `@/` resolver scoped to core's `src`, the base-path define, the three
+ * virtual modules, and that the pre-bundled packages match the hoist list.
  */
+import type {
+    CoreSourceAliasPlugin,
+    ResolveContext,
+} from '@/integrations/astro/core-source-alias';
 import type { VirtualModulePlugin } from '@/integrations/astro/virtual-module';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -14,6 +18,8 @@ import { resolveConfig } from '@/config/resolve';
 import { createViteConfig } from '@/integrations/astro/vite';
 
 type ViteConfig = ReturnType<typeof createViteConfig>;
+
+type ResolveCall = Parameters<ResolveContext['resolve']>;
 
 const packageSource = fileURLToPath(new URL('../../../src', import.meta.url));
 const workspaceFile = fileURLToPath(
@@ -100,21 +106,97 @@ describe('createViteConfig()', () => {
         expect(included.size).toBeGreaterThan(0);
         expect(problems).toEqual([]);
     });
+
+    describe('astromech:core-source-alias', () => {
+        it('resolves an @/ import from a file inside core src against core src', async () => {
+            const importer = packageSource + '/exports/shared.ts';
+            const { result, calls } = await resolveCoreSourceAlias(
+                vite,
+                '@/entries/entry-url',
+                importer
+            );
+
+            expect(result).toEqual({ id: packageSource + '/entries/entry-url' });
+            expect(calls).toEqual([
+                [
+                    packageSource + '/entries/entry-url',
+                    importer,
+                    expect.objectContaining({ skipSelf: true }),
+                ],
+            ]);
+        });
+
+        it('leaves an @/ import from a site file to the site', async () => {
+            const { result, calls } = await resolveCoreSourceAlias(
+                vite,
+                '@/entries/entry-url',
+                '/site/src/pages/index.astro'
+            );
+
+            expect(result).toBeNull();
+            expect(calls).toEqual([]);
+        });
+
+        it('ignores an id that does not start with @/', async () => {
+            const { result, calls } = await resolveCoreSourceAlias(
+                vite,
+                'astromech/shared',
+                packageSource + '/exports/fetch.ts'
+            );
+
+            expect(result).toBeNull();
+            expect(calls).toEqual([]);
+        });
+
+        it('resolves from a core importer that carries a query string', async () => {
+            const importer = packageSource + '/exports/shared.ts?v=abc123';
+            const { result, calls } = await resolveCoreSourceAlias(
+                vite,
+                '@/entries/entry-url',
+                importer
+            );
+
+            expect(result).toEqual({ id: packageSource + '/entries/entry-url' });
+            expect(calls).toHaveLength(1);
+        });
+    });
 });
 
 function loadVirtualModule(vite: ViteConfig, id: string): string | undefined {
+    const plugin = findPlugin<VirtualModulePlugin>(vite, id);
+    const resolvedId = plugin.resolveId(id);
+    return resolvedId === undefined ? undefined : plugin.load(resolvedId);
+}
+
+/** Call the core source alias with a fake context that records each `resolve` call. */
+async function resolveCoreSourceAlias(vite: ViteConfig, id: string, importer: string) {
+    const plugin = findPlugin<CoreSourceAliasPlugin>(vite, 'astromech:core-source-alias');
+    const calls: ResolveCall[] = [];
+    const context: ResolveContext = {
+        resolve: (...args) => {
+            calls.push(args);
+            return Promise.resolve({ id: args[0] });
+        },
+    };
+    const result = await plugin.resolveId.call(context, id, importer, {
+        isEntry: false,
+        attributes: {},
+    });
+    return { result, calls };
+}
+
+function findPlugin<T extends { name: string }>(vite: ViteConfig, name: string): T {
     const plugin = ((vite.plugins ?? []) as unknown[])
         .flat(Infinity)
         .find(
-            (candidate): candidate is VirtualModulePlugin =>
+            (candidate): candidate is T =>
                 typeof candidate === 'object' &&
                 candidate !== null &&
                 'name' in candidate &&
-                candidate.name === id
+                candidate.name === name
         );
-    if (plugin === undefined) throw new Error(`No Vite plugin named ${id}`);
-    const resolvedId = plugin.resolveId(id);
-    return resolvedId === undefined ? undefined : plugin.load(resolvedId);
+    if (plugin === undefined) throw new Error(`No Vite plugin named ${name}`);
+    return plugin;
 }
 
 /** `react/jsx-runtime` is the `react` package; `@scope/name/sub` is `@scope/name`. */
