@@ -11,7 +11,7 @@ import type {
 } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
 import { transaction } from '@/database/transaction';
-import { resolveEntryType } from '@/entries/entry-types.shared';
+import { resolveEntryType } from '@/entries/entry-types';
 import { parseInput, ValidationError } from '@/errors/validation';
 import {
     BulkOperationError,

@@ -11,14 +11,14 @@
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { MountedRoute } from '@/transport/http/routes/http-routes.shared';
+import type { MountedRoute } from '@/transport/http/routes/http-routes';
 import type { RestRoute } from '@/transport/http/routes/rest-route';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createEntriesRouter, ENTRIES_ROUTES } from '@/transport/http/routes/entries';
 import { createGlobalsRouter, GLOBALS_ROUTES } from '@/transport/http/routes/globals';
-import { HTTP_ROUTES } from '@/transport/http/routes/http-routes.shared';
+import { HTTP_ROUTES } from '@/transport/http/routes/http-routes';
 import { MEDIA_ROUTES, mediaRouter } from '@/transport/http/routes/media';
 import {
     NOTIFICATIONS_ROUTES,

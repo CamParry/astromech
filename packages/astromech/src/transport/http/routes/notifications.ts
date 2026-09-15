@@ -10,7 +10,7 @@ import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { notificationsService } from '@/app-context/services';
 import { notificationsDefinition } from '@/notifications/service';
-import { NOTIFICATIONS_ROUTE_SPECS } from './http-routes.shared';
+import { NOTIFICATIONS_ROUTE_SPECS } from './http-routes';
 import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 
 type Env = { Variables: AuthVariables };

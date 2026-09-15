@@ -1,4 +1,4 @@
-import type { ImageFormat } from './image/url.shared';
+import type { ImageFormat } from './image/url';
 import type { ImageSource, StorageDriver } from '@/types/index';
 import { mediaService } from '@/app-context/services';
 import { getConfig } from '@/config/registry';
@@ -11,7 +11,7 @@ import {
     isAllowedWidth,
     parseImageParams,
     variantStorageKey,
-} from './image/url.shared';
+} from './image/url';
 
 export type MediaRequestInfo = {
     id: string;

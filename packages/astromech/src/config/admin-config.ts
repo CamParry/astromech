@@ -12,7 +12,7 @@ import type {
     ResolvedGlobal,
 } from '@/types/config';
 import type { AstromechConfig, ResolvedConfig } from '@/types/index';
-import { defaultImageWidths, normaliseWidths } from '@/media/image-widths.shared';
+import { defaultImageWidths, normaliseWidths } from '@/media/image-widths';
 import {
     derivePluginNav,
     derivePluginPages,

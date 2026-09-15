@@ -10,7 +10,7 @@ import { settingsService } from '@/app-context/services';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { settingsDefinition } from '@/settings/service';
 import { forbidden, notFound } from '@/transport/http/middleware/errors';
-import { SETTINGS_ROUTE_SPECS } from './http-routes.shared';
+import { SETTINGS_ROUTE_SPECS } from './http-routes';
 import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 
 type Env = { Variables: AuthVariables };

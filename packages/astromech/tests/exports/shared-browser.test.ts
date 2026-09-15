@@ -20,7 +20,12 @@ const allowlist = [
     /^src\/utilities\//,
     /^src\/errors\//,
     /^src\/types\//,
-    /\.shared\.tsx?$/,
+    /^src\/entries\/entry-types\.ts$/,
+    /^src\/entries\/entry-url\.ts$/,
+    /^src\/entries\/validation-mode\.ts$/,
+    /^src\/media\/image-widths\.ts$/,
+    /^src\/media\/serving\/image\/url\.ts$/,
+    /^src\/transport\/http\/routes\/http-routes\.ts$/,
     /^src\/transport\/http\/client\.ts$/,
 ];
 

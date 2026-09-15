@@ -15,7 +15,7 @@ import type { PluginDefinition, PluginNavItem } from './plugins';
 import type { CellKind } from './resolved';
 import type { DB } from '@/database/types';
 import type { CustomTableRepository } from '@/entries/repository/table';
-import type { ImageFormat } from '@/media/serving/image/url.shared';
+import type { ImageFormat } from '@/media/serving/image/url';
 import type { Dialect, Kysely } from 'kysely';
 
 export type DbDump = {

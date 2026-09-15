@@ -7,7 +7,7 @@
 
 import type { Entry, EntryQueryParams, QueryResult, ResolvedConfig } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
-import { resolveEntryType } from '@/entries/entry-types.shared';
+import { resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
 import { getEntryRepository } from '../repository/registry';
 import { projectPreview, verifyPreviewToken } from './preview';

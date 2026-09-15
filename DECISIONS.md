@@ -541,16 +541,21 @@ the admin reaches core only through it, `astromech/fetch` and type-only imports
 from `astromech`; a lint rule refuses any `@/` import and any other
 `astromech/*` subpath from `packages/admin/src/`. `packages/astromech/tests/exports/shared-browser.test.ts`
 bundles the two entries for the browser and fails on a Node builtin, or on a
-core file outside `fields/`, `utilities/`, `errors/`, `types/`, the
-`*.shared.ts` files and the fetch client. A package boundary does not give that
+core file outside `fields/`, `utilities/`, `errors/`, `types/` and the files it
+lists by path. The declared entry and this test replaced the `*.shared.ts`
+filename suffix, which marked a domain file as browser-safe and which nothing
+checked: the entry says which files the browser reaches, the test fails on
+what they import, and a file an entry newly reaches fails the test until it is
+listed, so the suffix carries nothing the test does not.
+A package boundary does not give that
 check by itself: in Directus issue 26613, subpath exports did not stop
 `node:assert` reaching the browser, because nothing checked what was added to
 the shared package. There is no `browser` export condition. On `./shared` it
 changes nothing, and on `.` the Cloudflare server build may resolve it and get
 the browser subset. Rejected: a `@astromech/shared` package, which adds a third
 publishable unit and, as Directus shows, does not enforce itself; a `browser`
-condition, for the reason above; and lint rules policing the `*.shared.ts`
-suffix, which check a filename rather than what the bundle reaches.
+condition, for the reason above; and keeping the suffix, with or without a lint
+rule to police it, which checks a filename rather than what the bundle reaches.
 
 **Every entry type persists through a repository, and the default is named for
 its storage.** The default backend is `createEntriesTableRepository` in

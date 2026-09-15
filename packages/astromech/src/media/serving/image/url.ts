@@ -1,4 +1,4 @@
-import { normaliseWidths } from '@/media/image-widths.shared';
+import { normaliseWidths } from '@/media/image-widths';
 
 export type ImageFormat = 'avif' | 'webp';
 

@@ -1,4 +1,4 @@
-import type { HttpRouteSpec } from './http-routes.shared';
+import type { HttpRouteSpec } from './http-routes';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { ServiceMethodContract } from '@/types/index';
 import type { OpenAPIHono } from '@hono/zod-openapi';
@@ -20,7 +20,7 @@ import {
 /**
  * The server half of the REST route table.
  *
- * The rows are data, in `http-routes.shared.ts`; this file attaches the
+ * The rows are data, in `http-routes.ts`; this file attaches the
  * per-route server code — `args` — and `mountRestRoutes` validates, dispatches
  * through `scopedServices` and wraps the result in the envelope.
  */

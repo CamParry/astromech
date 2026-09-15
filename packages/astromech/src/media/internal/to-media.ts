@@ -6,7 +6,7 @@
 import type { MediaRow } from '../repository';
 import type { Media, ResolvedConfig } from '@/types/index';
 import { getStorageDriver } from '@/storage/registry';
-import { buildMediaUrl } from '../serving/image/url.shared';
+import { buildMediaUrl } from '../serving/image/url';
 import { extOf, originalKey } from './keys';
 
 /**

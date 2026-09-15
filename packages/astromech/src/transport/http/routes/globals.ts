@@ -3,9 +3,9 @@
  *
  * Every global is served here, addressed by the key the globals service itself
  * uses — bare for a host global, qualified for a plugin's. The eleven routes
- * live in `http-routes.shared.ts`; two get a bespoke handler.
+ * live in `http-routes.ts`; two get a bespoke handler.
  */
-import type { HttpRouteSpec } from './http-routes.shared';
+import type { HttpRouteSpec } from './http-routes';
 import type { RestRoute } from './rest-route';
 import type { GlobalCapability } from '@/globals/internal/global';
 import type { ResolvedAccess } from '@/permissions/access';
@@ -22,7 +22,7 @@ import { globalsDefinition } from '@/globals/service';
 import { resolveAccess } from '@/permissions/access';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { forbidden, fromZodError, notFound } from '@/transport/http/middleware/errors';
-import { GLOBALS_ROUTE_SPECS } from './http-routes.shared';
+import { GLOBALS_ROUTE_SPECS } from './http-routes';
 import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 
 type Env = { Variables: AuthVariables };

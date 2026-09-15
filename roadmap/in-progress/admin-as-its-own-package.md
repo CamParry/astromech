@@ -58,8 +58,10 @@ Stages, each one commit that passes `pnpm run verify`:
        name but nothing has ever loaded.
 - [x]   4. Move the admin tests, with their own vitest config, isolation list and
        coverage thresholds.
-- [ ]   5. Retire the `*.shared.ts` suffix and close
-       `roadmap/planned/browser-boundary-enforcement.md`.
+- [x]   5. Retire the `*.shared.ts` suffix. Six files carried it, not seven;
+       the bundle test's allowlist now names them by path. The browser-boundary
+       item stays in `roadmap/planned/` until stage 6 settles its last item,
+       the `@/` alias.
 - [ ]   6. Scope the `@/` alias in the site's Vite build to files inside core's
        `src`.
 - [ ] Core's `tsconfig.test.json` stops including the admin's route tree, and

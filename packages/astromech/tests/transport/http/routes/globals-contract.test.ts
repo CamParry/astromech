@@ -14,10 +14,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { globalsService } from '@/app-context/services';
 import { globalsDefinition } from '@/globals/service';
 import { createGlobalsRouter } from '@/transport/http/routes/globals';
-import {
-    GLOBALS_ROUTE_SPECS,
-    HTTP_ROUTES,
-} from '@/transport/http/routes/http-routes.shared';
+import { GLOBALS_ROUTE_SPECS, HTTP_ROUTES } from '@/transport/http/routes/http-routes';
 import { configWithGlobals } from './globals-app';
 
 type Document = { paths: Record<string, Record<string, unknown>> };

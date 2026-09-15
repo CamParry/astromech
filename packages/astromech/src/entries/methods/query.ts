@@ -3,7 +3,7 @@ import type { Entry, QueryResult, ReferencesFilter, ResolvedConfig } from '@/typ
 import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
 import { applyVisibility } from '@/content/visibility';
-import { resolveEntryType } from '@/entries/entry-types.shared';
+import { resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
 import { collectRelationshipSchemaPaths } from '@/fields/relationship-edges';
 import { defineServiceMethod } from '@/services/define-service-method';

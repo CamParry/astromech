@@ -25,7 +25,7 @@ import type {
 import { createAppContext } from '@/app-context/app-context';
 import { registerCronJob } from '@/cron/registry';
 import { kyselyTableKey, registerTableCodec } from '@/database/codec';
-import { qualifyEntryType } from '@/entries/entry-types.shared';
+import { qualifyEntryType } from '@/entries/entry-types';
 import {
     resetEntryRepositoryOverrides,
     setEntryRepository,

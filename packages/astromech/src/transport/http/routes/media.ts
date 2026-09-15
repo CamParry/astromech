@@ -12,7 +12,7 @@ import { mediaService } from '@/app-context/services';
 import { mediaDefinition } from '@/media/service';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { badRequest, forbidden, notFound } from '@/transport/http/middleware/errors';
-import { MEDIA_ROUTE_SPECS } from './http-routes.shared';
+import { MEDIA_ROUTE_SPECS } from './http-routes';
 import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 
 type Env = { Variables: AuthVariables };

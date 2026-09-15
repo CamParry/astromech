@@ -4,7 +4,7 @@
  * route mounts and the method manifest so the two can never drift.
  */
 
-import { QUALIFIED_SEPARATOR } from '@/entries/entry-types.shared';
+import { QUALIFIED_SEPARATOR } from '@/entries/entry-types';
 
 /** The actions a global permission gates. A global is never created or deleted. */
 export type GlobalAction = 'read' | 'update' | 'publish';

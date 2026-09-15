@@ -4,7 +4,7 @@ import {
     parseEntryTypeId,
     qualifyEntryType,
     resolveEntryType,
-} from '@/entries/entry-types.shared';
+} from '@/entries/entry-types';
 
 const entryType = (id: string, single: string): ResolvedEntryType => ({
     id,

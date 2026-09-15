@@ -1,7 +1,7 @@
 import type { Entry } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { transaction } from '@/database/transaction';
-import { resolveEntryType } from '@/entries/entry-types.shared';
+import { resolveEntryType } from '@/entries/entry-types';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { CapabilityError } from '../../errors';
 import { entryGate } from '../../internal/access';

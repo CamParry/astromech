@@ -20,7 +20,7 @@ import { flattenEntryFields } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { createEntryLookups } from '../lookups';
-import { entryValidationMode } from '../validation-mode.shared';
+import { entryValidationMode } from '../validation-mode';
 import { pruneDanglingRelations } from './dangling-relations';
 import { inheritSharedFields } from './translatable';
 

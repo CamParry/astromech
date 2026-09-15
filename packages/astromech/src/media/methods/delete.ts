@@ -4,7 +4,7 @@ import { deletePrefix } from '@/storage/prefix';
 import { getStorageDriver } from '@/storage/registry';
 import { originalKey } from '../internal/keys';
 import { createMediaRepository } from '../repository';
-import { variantPrefix } from '../serving/image/url.shared';
+import { variantPrefix } from '../serving/image/url';
 
 /** Delete a media row along with its original bytes and every derived variant. */
 export const deleteMedia = defineServiceMethod({

@@ -8,7 +8,7 @@ import type { RelationshipDeclaration, TargetKind } from '@/fields/relationship-
 import type { Field } from '@/types/fields';
 import type { JsonObject, ResolvedConfig } from '@/types/index';
 import { existingResourceIds } from '@/database/repository/resource-existence';
-import { resolveEntryType } from '@/entries/entry-types.shared';
+import { resolveEntryType } from '@/entries/entry-types';
 import { parseInstancePath } from '@/fields/field-path';
 import {
     collectRelationshipDeclarations,

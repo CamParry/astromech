@@ -8,7 +8,7 @@ import type { Capability } from '@/entries/capabilities';
 import type { ServiceMethodContract } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { isCapability } from '@/entries/capabilities';
-import { parseEntryTypeId } from '@/entries/entry-types.shared';
+import { parseEntryTypeId } from '@/entries/entry-types';
 import { resolveAccess } from '@/permissions/access';
 import {
     createEntrySchema,

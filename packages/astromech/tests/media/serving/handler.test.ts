@@ -1,4 +1,4 @@
-import type { ImageFormat } from '@/media/serving/image/url.shared';
+import type { ImageFormat } from '@/media/serving/image/url';
 import type { ImageDriver, ImageSource, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

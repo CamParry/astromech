@@ -13,7 +13,7 @@ import type { JsonObject, ResolvedConfig } from '@/types/index';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { entriesTable, entryContentTable } from '@/database/tables';
-import { qualifyEntryType, resolveEntryType } from '@/entries/entry-types.shared';
+import { qualifyEntryType, resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
 import { collectRelationshipEdges } from '@/fields/relationship-edges';
 import { getEntryRepository, hasCustomTable } from '../repository/registry';

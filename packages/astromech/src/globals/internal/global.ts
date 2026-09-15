@@ -7,7 +7,7 @@
 import type { GlobalRow, GlobalsRepository } from '../repository/globals-table';
 import type { Global, ResolvedConfig, ResolvedGlobal } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
-import { QUALIFIED_SEPARATOR } from '@/entries/entry-types.shared';
+import { QUALIFIED_SEPARATOR } from '@/entries/entry-types';
 import { CapabilityError } from '@/entries/errors';
 import { GlobalNotFoundError, GlobalValidationError } from '../errors';
 import { createGlobalsRepository } from '../repository/globals-table';

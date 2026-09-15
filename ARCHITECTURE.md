@@ -247,7 +247,7 @@ hook runner. A hook handler's throw propagates to the caller.
 
 The admin runs in the browser, and reaches core through three entries and
 nothing else: `astromech/shared`, named re-exports of the browser-safe values
-it uses from `fields/`, `utilities/` and the `*.shared.ts` files;
+it uses from `fields/`, `utilities/` and a few files in `entries/` and `media/`;
 `astromech/fetch`, the fetch client; and type-only imports from `astromech`,
 which erase. A service or a driver would pull the config and every backend into
 the client bundle, so a lint rule refuses any `@/` import and any other
@@ -258,8 +258,9 @@ other browser caller share one instance of each.
 
 Two checks cover it. `packages/astromech/tests/exports/shared-browser.test.ts`
 bundles the two entries for the browser and fails on a Node builtin or on a core
-file outside its allowlist, and `pnpm run check:boot` loads the built admin in
-a headless browser.
+file outside its allowlist, which names by path each file it permits outside
+`fields/`, `utilities/`, `errors/` and `types/`. `pnpm run check:boot` loads the
+built admin in a headless browser.
 
 ## Scheduler
 

@@ -45,7 +45,7 @@ import { setEmailDriver } from '@/email/registry';
 import { entryJobs } from '@/entries/jobs/entry-jobs';
 import { setEntryRepository } from '@/entries/repository/registry';
 import { AstromechError } from '@/errors/astromech-error';
-import { defaultImageWidths, normaliseWidths } from '@/media/image-widths.shared';
+import { defaultImageWidths, normaliseWidths } from '@/media/image-widths';
 import { setImageConfig } from '@/media/serving/image/registry';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { pluginServices } from '@/plugins/runtime/plugin-services';

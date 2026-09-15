@@ -4,10 +4,10 @@
  * Returns plain data; framework renderers (Image.astro, future React) consume it.
  */
 
-import type { ImageFormat } from './url.shared';
-import { normaliseWidths } from '@/media/image-widths.shared';
+import type { ImageFormat } from './url';
+import { normaliseWidths } from '@/media/image-widths';
 import { isOptimisableImage } from './dimensions';
-import { buildMediaUrl, buildVariantUrl } from './url.shared';
+import { buildMediaUrl, buildVariantUrl } from './url';
 
 export type ImageAttrsInput = {
     id: string;

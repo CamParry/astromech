@@ -21,11 +21,11 @@ import {
     QUALIFIED_SEPARATOR,
     qualifyEntryType,
     resolveEntryType,
-} from '@/entries/entry-types.shared';
+} from '@/entries/entry-types';
 import { createEntryLookups } from '@/entries/lookups';
 import { getEntryRepository, hasCustomTable } from '@/entries/repository/registry';
 import { entriesTable, entryContentTable } from '@/entries/tables';
-import { entryValidationMode } from '@/entries/validation-mode.shared';
+import { entryValidationMode } from '@/entries/validation-mode';
 import { flattenEntryFields, flattenFieldNodes } from '@/fields/flatten';
 import { safeParseFields } from '@/fields/parse-fields';
 import { globalLookups } from '@/globals/internal/stored-fields';

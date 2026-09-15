@@ -3,7 +3,7 @@
  *
  * Every entry type is served here, addressed by the type id the entries
  * service itself uses — bare for a root type, qualified for a plugin type.
- * The 30 routes live in `http-routes.shared.ts`; six get a bespoke handler.
+ * The 30 routes live in `http-routes.ts`; six get a bespoke handler.
  */
 import type { ContractCatalogue, RestRoute } from './rest-route';
 import type { Capability } from '@/entries/capabilities';
@@ -22,7 +22,7 @@ import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { entriesService } from '@/app-context/services';
 import { getConfig } from '@/config/registry';
 import { entryCatalogue } from '@/entries/catalogue';
-import { resolveEntryType } from '@/entries/entry-types.shared';
+import { resolveEntryType } from '@/entries/entry-types';
 import { StagedEntryExistsError } from '@/entries/errors';
 import {
     createEntrySchema,
@@ -42,7 +42,7 @@ import {
     notFound,
     requestSchemaError,
 } from '@/transport/http/middleware/errors';
-import { ENTRIES_ROUTE_SPECS } from './http-routes.shared';
+import { ENTRIES_ROUTE_SPECS } from './http-routes';
 import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 
 type Env = { Variables: AuthVariables };

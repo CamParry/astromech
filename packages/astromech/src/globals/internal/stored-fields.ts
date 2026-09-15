@@ -9,7 +9,7 @@ import type { GlobalRow, GlobalsRepository } from '../repository/globals-table';
 import type { Global, JsonObject, ResolvedGlobal, User } from '@/types/index';
 import { inheritSharedFields } from '@/content/translatable';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
-import { entryValidationMode } from '@/entries/validation-mode.shared';
+import { entryValidationMode } from '@/entries/validation-mode';
 import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenEntryFields } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';

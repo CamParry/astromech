@@ -19,7 +19,7 @@ import {
 import { createUserRepository } from '@/users/repository';
 import { updateUserSchema } from '@/users/schema';
 import { usersDefinition } from '@/users/service';
-import { USERS_ROUTE_SPECS } from './http-routes.shared';
+import { USERS_ROUTE_SPECS } from './http-routes';
 import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 
 type Env = { Variables: AuthVariables };

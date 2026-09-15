@@ -7,14 +7,12 @@ measurements and the work.
 
 ## What is actually true today
 
-Nothing checks the suffix and nothing documents it either. The rules that
-enforced it — `admin-only-client-and-pure-leaves` and
-`shared-files-stay-browser-safe` — went with dependency-cruiser, and the
-`ARCHITECTURE.md` rewrite
-in commit `5dd4a8ce` dropped the paragraph that described it. Seven files carry
-a marker that now has no stated meaning anywhere in the repo, which strengthens
-the case below rather than weakening it: whatever replaces it has to be
-something a reader can find.
+The admin reaches core only through `astromech/shared`, `astromech/fetch` and
+type-only imports from `astromech`, and a lint rule refuses any `@/` import from
+`packages/admin/src/`. `packages/astromech/tests/exports/shared-browser.test.ts`
+bundles the two entries for the browser and fails on a Node builtin or on a core
+file outside its allowlist. No filename marker remains: the allowlist names each
+browser-safe domain file by path, which is where a reader finds the set.
 
 `packages/astromech/src/integrations/astro/vite.ts` aliases `'@/'` to the whole
 of the package's `src/` inside the consuming project's Vite graph. So the admin
@@ -42,15 +40,22 @@ The unmarked twenty are browser-safe because of the directory they live in, and
 those directories are closed: `fields/` reaches only `types/`, `utilities/`,
 `errors/` and itself; `utilities/` reaches only `types/`; `registry.ts` reaches
 only `errors/`. So the boundary is already directory-shaped, and the suffix
-exists for five residual exceptions.
+existed for five residual exceptions.
 
-## Two files carry the marker and should not
+## Two files thought to carry the marker wrongly
 
-- `packages/astromech/src/media/image-widths.shared.ts` has no importer in
+This section is wrong. Stage 1 of
+`roadmap/in-progress/admin-as-its-own-package.md` found both files in the
+browser bundle: `media/serving/image/url.ts`, which `astromech/shared`
+re-exports, imports `image-widths.ts`, and the fetch client, which is
+`astromech/fetch`, imports `http-routes.ts`. Both belonged in the set, and both
+are on the bundle test's allowlist. The original claim follows.
+
+- `packages/astromech/src/media/image-widths.ts` has no importer in
   `admin/`. Its consumers are `packages/astromech/src/astromech.ts`,
   `packages/astromech/src/config/admin-config.ts`,
   `packages/astromech/src/exports/index.ts` and two `media/` files.
-- `packages/astromech/src/transport/http/routes/http-routes.shared.ts` is read
+- `packages/astromech/src/transport/http/routes/http-routes.ts` is read
   only by `packages/astromech/src/transport/http/client/index.ts`. That is the
   fetch client's boundary, not the admin's.
 
@@ -66,28 +71,31 @@ are cheap once it lands.
       `roadmap/in-progress/admin-as-its-own-package.md` records as surviving the
       split, so this is a question about _what_ the alias covers rather than
       whether it exists. Belongs with the admin split.
-- [ ] **Add `exports/shared.ts` and a `"browser"` condition**, following Payload
+- [x] **Add `exports/shared.ts` and a `"browser"` condition**, following Payload
       (`DECISIONS.md` has the
       shape). One re-export file for the five domain leaves, one `exports` entry
       in `packages/astromech/package.json` and its `publishConfig`. Moves no
-      source files.
-- [ ] **Retire the `*.shared.ts` suffix** once the entrypoint exists and the
-      admin reaches it. Seven files. Not before: a marker that enforces nothing
-      is still better than no marker and no entrypoint.
-- [ ] **Settle the three `.shared` stems in `entries/`**, handed on from
-      `roadmap/completed/entries-naming-consistency.md`. `entry-url.shared.ts`
-      and `entry-types.shared.ts` prefix with `entry-`;
-      `validation-mode.shared.ts` does not, though it exports
-      `entryValidationMode`. Inside `entries/` the prefix is arguably redundant,
-      which argues for `url.shared.ts`; `entry-url` reads better at the import
-      site. Moot if the suffix retires.
-- [ ] **Fix the two mislabelled files** above. Independent of everything else —
-      whether the suffix survives or not, these two do not belong in the set.
-- [ ] **Decide what checks the entrypoint's contents.** Directus issue 26613 is
+      source files. Stage 1 added `packages/astromech/src/exports/shared.ts` and
+      its `exports` entries. It added no `browser` condition, which
+      `DECISIONS.md` rejects: on `./shared` it changes nothing, and on `.` the
+      Cloudflare server build may resolve it.
+- [x] **Retire the `*.shared.ts` suffix** once the entrypoint exists and the
+      admin reaches it. Stage 5 renamed the six files that carried it and
+      listed them by path in the bundle test's allowlist.
+- [x] **Settle the three stems in `entries/`**, handed on from
+      `roadmap/completed/entries-naming-consistency.md`. Stage 5 kept
+      `entry-url.ts` and `entry-types.ts`, which read better at the import site
+      than `url.ts` would, and `validation-mode.ts` kept its name.
+- [x] **Fix the two mislabelled files** above. Stage 1 showed they were not
+      mislabelled: both are in the browser bundle (see the correction above).
+- [x] **Decide what checks the entrypoint's contents.** Directus issue 26613 is
       the case: a package boundary and subpath exports did not stop `node:assert`
       reaching the browser, because nothing checked what was added to `shared/`.
       Options are a test that imports the entrypoint under a browser condition,
-      or accepting `check:boot` as the check and saying so.
+      or accepting `check:boot` as the check and saying so. Stage 1 chose the
+      test: `packages/astromech/tests/exports/shared-browser.test.ts` bundles
+      `astromech/shared` and `astromech/fetch` for the browser and fails on a
+      Node builtin or an unlisted core file.
 
 ## Not in scope
 

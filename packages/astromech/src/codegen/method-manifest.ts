@@ -21,7 +21,7 @@ import type {
 } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { entryCatalogue } from '@/entries/catalogue';
-import { qualifyEntryType } from '@/entries/entry-types.shared';
+import { qualifyEntryType } from '@/entries/entry-types';
 import { globalsDefinition } from '@/globals/service';
 import { mediaDefinition } from '@/media/service';
 import { notificationsDefinition } from '@/notifications/service';

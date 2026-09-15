@@ -4,9 +4,9 @@
  * an empty token.
  */
 
-import type { UrlEntry } from '@/entries/entry-url.shared';
+import type { UrlEntry } from '@/entries/entry-url';
 import { describe, expect, it } from 'vitest';
-import { resolveEntryPath, resolveEntryUrl } from '@/entries/entry-url.shared';
+import { resolveEntryPath, resolveEntryUrl } from '@/entries/entry-url';
 
 function entry(slug: string | null, fields: Record<string, unknown> = {}): UrlEntry {
     return { slug, fields };

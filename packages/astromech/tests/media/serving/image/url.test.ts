@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normaliseWidths } from '@/media/image-widths.shared';
+import { normaliseWidths } from '@/media/image-widths';
 import {
     buildMediaUrl,
     buildVariantUrl,
@@ -9,7 +9,7 @@ import {
     variantPrefix,
     variantStorageKey,
     widthLadder,
-} from '@/media/serving/image/url.shared';
+} from '@/media/serving/image/url';
 
 describe('buildMediaUrl', () => {
     it('produces the canonical original URL', () => {

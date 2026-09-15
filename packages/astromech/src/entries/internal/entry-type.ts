@@ -6,7 +6,7 @@
 
 import type { Capability } from '@/entries/capabilities';
 import type { Field, ResolvedConfig } from '@/types/index';
-import { resolveEntryType } from '@/entries/entry-types.shared';
+import { resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
 import { CapabilityError } from '../errors';
 import { getEntryRepository } from '../repository/registry';

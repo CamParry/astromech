@@ -7,7 +7,7 @@
 import type { ResolvedGlobal } from '@/types/index';
 import type { PluginDefinition } from '@/types/plugins';
 import { assertUniqueGlobalKeys, toResolvedGlobal } from '@/config/globals';
-import { QUALIFIED_SEPARATOR } from '@/entries/entry-types.shared';
+import { QUALIFIED_SEPARATOR } from '@/entries/entry-types';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 
 /** Resolve every plugin's globals into the namespaced map. */

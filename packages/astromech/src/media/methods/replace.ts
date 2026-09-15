@@ -9,7 +9,7 @@ import { originalKey } from '../internal/keys';
 import { storeFile } from '../internal/store-file';
 import { toMedia } from '../internal/to-media';
 import { createMediaRepository } from '../repository';
-import { variantPrefix } from '../serving/image/url.shared';
+import { variantPrefix } from '../serving/image/url';
 
 /** Swap a media item's file, keeping its id, URL shape and metadata row. */
 export const replaceMedia = defineServiceMethod({
