@@ -13,9 +13,9 @@
         "db:init": "tsx --tsconfig ../../packages/astromech/tsconfig.json ../../packages/astromech/src/transport/cli/index.ts db:init --allow-remote"
     },
     "dependencies": {
-        "@astrojs/cloudflare": "^13.5.0",
-        "@astrojs/react": "^5.0.1",
-        "astro": "^6.0.8",
+        "@astrojs/cloudflare": "^14.3.1",
+        "@astrojs/react": "^6.0.5",
+        "astro": "^7.2.1",
         "astromech": "workspace:*",
         "better-auth": "^1.6.28",
         "kysely": "^0.29.1",

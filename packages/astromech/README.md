@@ -9,7 +9,7 @@ client.
 ## Install
 
 ```sh
-npm install astromech astro@6 react react-dom better-auth kysely@0.29 @astrojs/react@5 @astrojs/node@10 @libsql/client@0.18 @libsql/kysely-libsql
+npm install astromech astro react react-dom better-auth kysely @astrojs/react @astrojs/node @libsql/client @libsql/kysely-libsql
 ```
 
 Add the integration to `astro.config.mjs`:

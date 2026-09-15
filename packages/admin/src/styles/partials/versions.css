@@ -90,7 +90,6 @@
 .am-versions-item-number {
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--am-versions-item-selected &) var(--am-color-primary-emphasis);
     color: var(--am-color-text-default);
 
     .am-versions-item-selected & {

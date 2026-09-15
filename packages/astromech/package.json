@@ -306,7 +306,7 @@
         "@libsql/client": "^0.18.0",
         "@libsql/kysely-libsql": "^0.4.1",
         "@modelcontextprotocol/sdk": "*",
-        "astro": "^6.0.8",
+        "astro": "^7.2.1",
         "aws4fetch": "^1.0.20",
         "better-auth": "^1.6.28",
         "kysely": "^0.29.1",
@@ -314,7 +314,7 @@
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
         "sharp": "^0.35.1",
-        "wrangler": "^4.0.0"
+        "wrangler": "^4.125.0"
     },
     "peerDependenciesMeta": {
         "@libsql/client": {
@@ -348,7 +348,7 @@
         "@types/react": "^19.0.0",
         "@types/react-dom": "^19.0.0",
         "@vitest/coverage-v8": "4.1.10",
-        "astro": "^6.0.8",
+        "astro": "^7.2.1",
         "aws4fetch": "^1.0.20",
         "better-auth": "^1.5.5",
         "esbuild": "0.28.2",
@@ -363,7 +363,7 @@
         "tsx": "^4.21.0",
         "typescript": "^5.9.3",
         "vitest": "^4.1.0",
-        "wrangler": "^4.119.0"
+        "wrangler": "^4.125.0"
     },
     "engines": {
         "node": ">=22.13.0"

@@ -124,7 +124,7 @@
         "@types/react": "^19.0.0",
         "@types/react-dom": "^19.0.0",
         "@vitest/coverage-v8": "4.1.10",
-        "astro": "^6.0.8",
+        "astro": "^7.2.1",
         "astromech": "workspace:*",
         "eslint": "^10.8.1",
         "happy-dom": "^20.10.4",

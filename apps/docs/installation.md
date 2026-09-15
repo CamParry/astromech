@@ -5,7 +5,7 @@ up a Node server with a local SQLite file. For Cloudflare Workers, follow the
 same steps and make the changes in
 [deployment/cloudflare.md](deployment/cloudflare.md) as you go.
 
-You need Node 22.13 or later and an Astro project. Astromech supports Astro 6,
+You need Node 22.13 or later and an Astro project. Astromech supports Astro 7,
 which step 1 installs.
 
 ## Run every command from the project root
@@ -21,13 +21,9 @@ shows what this means for the database path.
 ## 1. Install the packages
 
 ```sh
-npm install astromech astro@6 react react-dom better-auth kysely@0.29 @astrojs/react@5 @astrojs/node@10 @libsql/client@0.18 @libsql/kysely-libsql
+npm install astromech astro react react-dom better-auth kysely @astrojs/react @astrojs/node @libsql/client @libsql/kysely-libsql
 ```
 
-- `astro@6`, `kysely@0.29`, `@astrojs/react@5`, `@astrojs/node@10` and
-  `@libsql/client@0.18` pin the versions Astromech supports. Without the pins,
-  npm takes the newest releases (Astro 7 and the adapters that need it), which
-  fall outside Astromech's peer ranges, and stops with an `ERESOLVE` error.
 - `react`, `react-dom`, `better-auth` and `kysely` are peer dependencies. Your
   site and Astromech share one copy of each.
 - `@astrojs/react` renders the admin, which is a React app.
