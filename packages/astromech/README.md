@@ -9,27 +9,8 @@ client.
 ## Install
 
 ```sh
-pnpm add astromech astro
+npm install astromech astro@6 react react-dom better-auth kysely@0.28 @astrojs/react@5 @astrojs/node@10 @libsql/client@0.17 @libsql/kysely-libsql
 ```
-
-The admin is a React app served from your site, and a site owns the copies of
-the packages the runtime shares with it. Install these alongside:
-
-```sh
-pnpm add react react-dom better-auth kysely
-```
-
-Some drivers need a package of their own, as an optional peer dependency you
-install only with the subpath that loads it:
-
-| Subpath                       | Install                                |
-| ----------------------------- | -------------------------------------- |
-| `astromech/database/libsql`   | `@libsql/client @libsql/kysely-libsql` |
-| `astromech/storage/s3`        | `aws4fetch`                            |
-| `astromech/media/image/sharp` | `sharp`                                |
-| `astromech/email/smtp`        | `nodemailer`                           |
-
-## Setup
 
 Add the integration to `astro.config.mjs`:
 
@@ -46,41 +27,9 @@ export default defineConfig({
 });
 ```
 
-Then `astromech.config.ts`:
-
-```ts
-import { defineConfig } from 'astromech';
-import { libsql } from 'astromech/database/libsql';
-import * as fields from 'astromech/fields';
-import { filesystem } from 'astromech/storage/filesystem';
-
-export default defineConfig({
-    db: libsql(),
-    storage: filesystem({ dir: './public/uploads', urlPrefix: '/uploads' }),
-    entries: {
-        post: {
-            single: 'Post',
-            plural: 'Posts',
-            fields: [fields.richtext('body', { required: true })],
-        },
-    },
-});
-```
-
-Every driver is its own export subpath, so a site installs and bundles only what
-it uses: `astromech/database/libsql` and `astromech/storage/filesystem` on Node,
-`astromech/database/d1` and `astromech/storage/r2` on Cloudflare Workers. See
-[apps/docs/configuration/database.md](https://github.com/CamParry/astromech/blob/main/apps/docs/configuration/database.md)
-and
-[apps/docs/configuration/storage.md](https://github.com/CamParry/astromech/blob/main/apps/docs/configuration/storage.md).
-
-Generate and apply the migrations for your tables with the bundled CLI, then
-open `/cms`, which shows a setup screen while no users exist:
-
-```sh
-npx astromech db:generate
-npx astromech db:init
-```
+The installation guide in the repository's `apps/docs` covers the rest: the
+config file, the environment, creating the tables, first-run setup, and the
+optional packages each driver needs.
 
 ## Reading content from your site
 

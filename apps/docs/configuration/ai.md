@@ -46,7 +46,11 @@ SDK providers read `process.env`. So a key that works everywhere else in your
 site is missing by the time the provider is constructed, and the first chat
 request fails with `LoadAPIKeyError`.
 
-Load it at the top of the config:
+Install `dotenv` and load it at the top of the config:
+
+```sh
+npm install dotenv
+```
 
 ```ts
 import 'dotenv/config';
