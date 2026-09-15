@@ -15,9 +15,12 @@
 // headless chromium and waits for markup that only exists once React has
 // painted. A broken import under `src/admin/` reaches nothing else in the gate.
 //
-// The browser step stops BEFORE login: it asserts the unauthenticated screen
-// rendered and nothing more. Everything behind login — the app shell, the
-// entries list, every page under `pages/_protected` — is untested here.
+// The same page then goes past login. The scratch database has no users, so
+// it completes first-run setup at `/cms/setup`, which signs the new admin in.
+// It asserts the app shell's navigation, opens the `post` entries list from the
+// sidebar, creates a post through the REST API with the page's session cookie,
+// and opens that post's edit page. That covers the app shell, one list and one
+// edit form. The other pages under `pages/_protected` are not loaded here.
 //
 // Slow (a full Astro build plus a browser), so it is run on demand and in CI,
 // never from the pre-commit hook. It is not skippable: a check that can be
@@ -50,12 +53,27 @@ const REQUEST_TIMEOUT_MS = 10_000;
 // the mounted-app selector arrives a round trip after navigation, not with it.
 const MOUNT_TIMEOUT_MS = 30_000;
 
+// Every screen after the first waits on at least one API round trip of its
+// own (the sign-up and sign-in, the list query, the entry loader), so each
+// gets the same allowance as the mount.
+const SCREEN_TIMEOUT_MS = 30_000;
+
 // `#am-app` is the router root (`admin/pages/__root.tsx`) and the password
-// field belongs to the unauthenticated screen — login, or the first-run setup
-// form on an empty database. Neither can exist in the served shell, and the
-// pair distinguishes a painted screen from the pending placeholder the auth
-// layout renders while the session query is in flight.
+// field belongs to the unauthenticated screen. On the scratch database that is
+// the login form: `/cms` redirects an anonymous visitor to `/login`, and
+// nothing redirects to `/setup`. Neither can exist in the served shell, and
+// the pair distinguishes a painted screen from the pending placeholder the
+// auth layout renders while the session query is in flight.
 const MOUNTED_SELECTOR = '#am-app form input[type="password"]';
+
+// The first user, created through the setup form on the empty database.
+const FIRST_ADMIN = {
+    name: 'Check Boot',
+    email: 'check-boot@example.com',
+    password: 'check-boot-password-0123',
+};
+
+const POST_TITLE = 'Check boot post';
 
 let scratchDir = null;
 let server = null;
@@ -92,10 +110,17 @@ async function main() {
     await run('pnpm', ['build'], { cwd: demoDir, env });
 
     const port = await freePort();
-    step(`starting dist/server/entry.mjs on port ${port}`);
-    server = startServer({ ...env, HOST: '127.0.0.1', PORT: String(port) });
-
     const base = `http://127.0.0.1:${port}`;
+    step(`starting dist/server/entry.mjs on port ${port}`);
+    // Better Auth refuses a sign-up or sign-in whose `Origin` is not its base
+    // URL. The demo's `.env` names the dev server's origin, so the served one
+    // is passed in for the browser step to sign up against.
+    server = startServer({
+        ...env,
+        HOST: '127.0.0.1',
+        PORT: String(port),
+        BETTER_AUTH_URL: base,
+    });
     await waitForServer(base);
 
     await expectStatus(`${base}/`, 200, 'the site renders');
@@ -116,16 +141,18 @@ async function main() {
     }
     console.log('  ok  the config is evaluated once per serving process');
 
-    await expectAdminMounts(`${base}/cms`);
+    await expectAdminWorks(`${base}/cms`);
 }
 
 /**
- * Load `/cms` in headless chromium and assert the React app rendered.
+ * Load `/cms` in headless chromium, assert the React app rendered, then sign
+ * in through first-run setup and load the app shell, the `post` list and one
+ * post's edit page.
  *
  * Runs against the server already started above — a second one would double
  * the slowest part of the check and prove nothing extra.
  */
-async function expectAdminMounts(url) {
+async function expectAdminWorks(admin) {
     step('loading /cms in headless chromium');
     const { chromium } = await import('playwright');
 
@@ -134,7 +161,8 @@ async function expectAdminMounts(url) {
     } catch (error) {
         // The npm install brings the driver, not the browser binary.
         throw new Error(
-            `could not launch chromium — run \`pnpm exec playwright install chromium\` (${error.message})`
+            `could not launch chromium: run \`pnpm exec playwright install chromium\` (${error.message})`,
+            { cause: error }
         );
     }
 
@@ -142,36 +170,113 @@ async function expectAdminMounts(url) {
 
     // A broken import surfaces as a console error or an uncaught page error,
     // not as a missing element, so both are collected from before navigation
-    // and reported after the mount assertion — the mount failure is the more
-    // useful message when they happen together.
+    // and reported after the last screen. A timeout prints them too, because
+    // the missing element is the more useful message when both happen.
     //
-    // The unauthenticated admin asks `/cms/api/me` who it is and is answered 401,
-    // by design, and chromium logs every failed response as a console error.
-    // Those messages carry no JavaScript arguments because no script emitted
-    // them; anything `console.error` produced does. So argument-less messages
-    // are recorded for the diagnostics but do not fail the check on their own —
-    // a resource that genuinely failed to load takes the mount assertion with
-    // it, which is where they get printed.
+    // Until sign-in, the admin asks `/cms/api/me` who it is and is answered
+    // 401, by design, and chromium logs every failed response as a console
+    // error. Those messages carry no JavaScript arguments because no script
+    // emitted them; anything `console.error` produced does. So before sign-in,
+    // argument-less messages are recorded for the diagnostics but do not fail
+    // the check on their own. After sign-in nothing should answer 401, so every
+    // console error fails the check.
     const errors = [];
     const notes = [];
+    let signedIn = false;
     page.on('console', (message) => {
         if (message.type() !== 'error') return;
         const line = `console: ${message.text()} (${message.location().url})`;
-        if (message.args().length === 0) notes.push(line);
+        if (!signedIn && message.args().length === 0) notes.push(line);
         else errors.push(line);
     });
     page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
 
-    await page.goto(url, { waitUntil: 'commit', timeout: REQUEST_TIMEOUT_MS });
+    /** Wait for `locator` to be visible, naming what it stands for on timeout. */
+    async function waitFor(locator, description, timeout = SCREEN_TIMEOUT_MS) {
+        try {
+            await locator.waitFor({ state: 'visible', timeout });
+        } catch {
+            throw new Error(
+                `timed out after ${timeout} ms waiting for ${description} at ${page.url()}${formatLines([...errors, ...notes])}`
+            );
+        }
+    }
 
-    try {
-        await page.waitForSelector(MOUNTED_SELECTOR, { timeout: MOUNT_TIMEOUT_MS });
-    } catch {
+    await page.goto(admin, { waitUntil: 'commit', timeout: REQUEST_TIMEOUT_MS });
+    await waitFor(
+        page.locator(MOUNTED_SELECTOR),
+        `the unauthenticated screen (\`${MOUNTED_SELECTOR}\`)`,
+        MOUNT_TIMEOUT_MS
+    );
+    console.log('  ok  the admin app mounts and renders its unauthenticated screen');
+
+    step('completing first-run setup');
+    await page.goto(`${admin}/setup`, {
+        waitUntil: 'commit',
+        timeout: REQUEST_TIMEOUT_MS,
+    });
+    await waitFor(page.getByLabel('Name', { exact: true }), 'the first-run setup form');
+    await page.getByLabel('Name', { exact: true }).fill(FIRST_ADMIN.name);
+    await page.getByLabel('Email', { exact: true }).fill(FIRST_ADMIN.email);
+    await page.getByLabel('Password', { exact: true }).fill(FIRST_ADMIN.password);
+    await page.getByLabel('Confirm password', { exact: true }).fill(FIRST_ADMIN.password);
+    await page.getByRole('button', { name: 'Create account' }).click();
+
+    // The sidebar's primary navigation is rendered by `AppShell`, which only
+    // `pages/_protected/route.tsx` mounts, and only for a signed-in admin.
+    await waitFor(
+        page.getByRole('navigation', { name: 'Primary' }),
+        'the app shell after first-run setup'
+    );
+    signedIn = true;
+    console.log('  ok  first-run setup signs the new admin in and renders the app shell');
+
+    step('opening the post entries list');
+    const postsLink = page
+        .getByRole('navigation', { name: 'Entry types' })
+        .getByRole('link', { name: 'Posts', exact: true });
+    await waitFor(postsLink, 'the Posts link in the sidebar');
+    await postsLink.click();
+    // The empty state renders in both the list and the grid view, and only once
+    // the list query has answered.
+    await waitFor(
+        page.getByText('No posts found', { exact: true }),
+        'the empty post entries list'
+    );
+    console.log('  ok  the post entries list renders its empty state');
+
+    step('creating a post and opening its edit page');
+    // `page.request` shares the page's cookies, so this write is made with the
+    // session first-run setup created.
+    const createUrl = `${admin}/api/entries/post`;
+    const response = await page.request.post(createUrl, {
+        data: { title: POST_TITLE },
+        timeout: REQUEST_TIMEOUT_MS,
+    });
+    if (response.status() !== 201) {
         throw new Error(
-            `the admin never rendered \`${MOUNTED_SELECTOR}\` at ${url}${formatLines([...errors, ...notes])}`
+            `POST ${createUrl} returned ${response.status()}, expected 201: ${await response.text()}`
         );
     }
-    console.log('  ok  the admin app mounts and renders its unauthenticated screen');
+    const { data: post } = await response.json();
+    console.log(`  ok  201 POST ${createUrl} (the session cookie authorises a write)`);
+
+    await page.goto(`${admin}/entries/post/${post.id}`, {
+        waitUntil: 'commit',
+        timeout: REQUEST_TIMEOUT_MS,
+    });
+    // The label reads "Title *": the asterisk marks the field required.
+    const titleInput = page.getByLabel('Title *', { exact: true });
+    await waitFor(titleInput, 'the post edit form');
+    const title = await titleInput.inputValue();
+    if (title !== POST_TITLE) {
+        throw new Error(
+            `the edit form's title input holds "${title}", expected "${POST_TITLE}"`
+        );
+    }
+    console.log(
+        '  ok  the edit page renders the new post with its title in the title input'
+    );
 
     if (errors.length > 0) {
         throw new Error(`the admin reported errors in the browser${formatLines(errors)}`);

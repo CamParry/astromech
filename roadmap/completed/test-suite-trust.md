@@ -90,7 +90,7 @@ is the measurement and the pass behind login.
       discover.
 - [x] Turn on coverage (`@vitest/coverage-v8`) with per-directory thresholds,
       not one global number.
-- [ ] Extend verification past login: either grow the `check:boot` browser
+- [x] Extend verification past login: either grow the `check:boot` browser
       step or add an authenticated pass covering the entries list and one entry
       edit. Largest item here, and the one both this review and
       `scripts/check-boot.mjs`'s own comments name as the biggest gap.
