@@ -12,20 +12,25 @@ install now fails with `ERESOLVE`:
   `^0.17.2`.
 
 Found on 2026-09-15 while testing `apps/docs/installation.md` against the
-registry. The page pins `astro@6 kysely@0.28 @astrojs/react@5 @astrojs/node@10 @libsql/client@0.17`
-until this lands.
+registry. The page pins `astro@6 @astrojs/react@5 @astrojs/node@10` until this
+lands.
 
 ## The work
 
-- [ ] Read the Astro 7 upgrade guide and the Vite 8 changes against what core
+- [x] Read the Astro 7 upgrade guide and the Vite 8 changes against what core
       relies on: `injectRoute`, `addMiddleware`, `updateConfig`, the dev
       server's `optimizeDeps` (including the nested `a > b > c` entries in
       `packages/astromech/src/integrations/astro/vite.ts`), `astro sync`, and
       the Cloudflare adapter.
-- [ ] Read the Kysely 0.29 and `@libsql/client` 0.18 changelogs against the
+- [x] Read the Kysely 0.29 and `@libsql/client` 0.18 changelogs against the
       dialects and `@libsql/kysely-libsql`, which pins its own Kysely range.
-- [ ] Widen or move each peer range, upgrade both demo apps, and run the gate
-      with both boot checks.
+- [x] Move to `@libsql/client` 0.18 and Kysely 0.29 (steps 1 and 2 below).
+- [ ] Move to Astro 7 and its adapters, upgrade both demo apps, and run the
+      gate with both boot checks.
+- [ ] On a local file database, check whether a better-auth write and an app
+      write at the same moment can fail with `SQLITE_BUSY`. The driver sets no
+      busy timeout. If they can, set one, or give better-auth the app's Kysely
+      instance.
 - [ ] Remove the pins from `apps/docs/installation.md` and
       `packages/astromech/README.md`.
 
@@ -50,6 +55,9 @@ integration uses.
   overrides `supportsMultipleConnections` to `true`, since a D1 connection holds
   no state and has no transactions. libsql keeps the lock for a local file,
   matching 0.17's one connection, and overrides it for a remote database.
+  better-auth builds its own Kysely instance from the same dialect, with its
+  own lock, so on a local file an auth query and an app query can still run at
+  once. Whether that can raise `SQLITE_BUSY` is open (see the work list).
 - **`@libsql/client` `^0.18.0`.** 0.18 gives a local client a connection pool,
   so `restore()`, which sends `ATTACH`, `PRAGMA` and `BEGIN` as separate calls,
   moves to a dedicated single-connection client.
