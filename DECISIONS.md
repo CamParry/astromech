@@ -764,6 +764,19 @@ better-auth do. Its first run found a live bug beside the dead code: plugin emai
 overrides were typed and read but never registered. Rejected: `ts-prune`, which
 is unmaintained, and no check at all.
 
+**`check:install` follows the installation guide on packed tarballs, and its
+fixture is the guide itself.** Every other check runs against workspace links,
+which Vite never pre-bundles, beside a demo whose old baseline migration carried
+tables a new site's `db:generate` did not create. A hand-run packed install found
+both defects that way. The script takes the files, the install command and the
+CLI commands from the fenced blocks in `apps/docs/installation.md`, so the page
+cannot drift from what is tested, and it fails on a warning from the install,
+`astro dev`, `astro build` or the browser console beyond a short commented
+allowlist, since a new user sees each one. It runs in CI under npm and pnpm,
+on every push and weekly, and stays out of `verify` because it needs the npm
+registry. Rejected: a fixture site in the repo, which drifts from the guide; and
+a stage in `verify`, which would stop the gate running offline.
+
 ## Reserved words
 
 These words are taken. Using one for something else costs a reader more than a

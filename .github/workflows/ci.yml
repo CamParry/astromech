@@ -5,9 +5,16 @@ on:
         branches: [main]
     pull_request:
         branches: [main]
+    # The schedule catches a new upstream release breaking the install guide's
+    # unpinned install command while nothing is being pushed.
+    schedule:
+        - cron: '0 6 * * 1'
+    workflow_dispatch:
 
+# The event is in the group so a scheduled run and a push do not cancel each
+# other.
 concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}
+    group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
     cancel-in-progress: true
 
 # The gate is one script, scripts/verify.mjs, so CI and a developer run the same
@@ -15,9 +22,11 @@ concurrency:
 # Active LTS; `verify:runtime` runs only the version-sensitive subset — the test
 # suites and the two boot checks — on the floor Node version, so those run on
 # both while lint, typecheck and the build, whose output no Node version
-# changes, run once. Two jobs sit outside verify: the relationships-index parity
-# check (CI-only, needs a seeded database) and a backstop for the two checks
-# verify leaves to the pre-commit hook.
+# changes, run once. Three jobs sit outside verify: the relationships-index
+# parity check (CI-only, needs a seeded database), a backstop for the two checks
+# verify leaves to the pre-commit hook, and the install guide check, which
+# installs the packed packages into a new site with npm and with pnpm and needs
+# the npm registry.
 #
 # `pnpm/action-setup` takes its version from `packageManager` in the root
 # package.json, so the toolchain is pinned in one place. It runs before
@@ -120,3 +129,24 @@ jobs:
             # covers the whole repo, lint:css the admin styles.
             - run: pnpm run format:check
             - run: pnpm run lint:css
+
+    install:
+        name: Install guide (${{ matrix.package-manager }}, Node 24)
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        strategy:
+            fail-fast: false
+            matrix:
+                package-manager: [npm, pnpm]
+        steps:
+            - uses: actions/checkout@v7
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: ${{ env.ACTIVE_LTS }}
+                  cache: pnpm
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm exec playwright install --with-deps chromium
+            # check:install packs each package from its `dist`.
+            - run: pnpm run build
+            - run: pnpm run check:install -- --package-manager ${{ matrix.package-manager }}

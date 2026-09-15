@@ -25,10 +25,10 @@
 // Without it the Worker refuses every request and `/` answers 500.
 import { spawn } from 'node:child_process';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { createServer } from 'node:net';
 import { constants, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { expectStatus, freePort, request, sleep } from './check-helpers.mjs';
 import { stopProcessGroup } from './process-group.mjs';
 import { requireFreshDist } from './require-fresh-dist.mjs';
 
@@ -38,7 +38,6 @@ const stateDir = join(demoDir, '.wrangler', 'state');
 
 const READY_ATTEMPTS = 60;
 const READY_INTERVAL_MS = 500;
-const REQUEST_TIMEOUT_MS = 10_000;
 
 // A whole run takes under half a minute on a laptop, the build most of it.
 // These leave room for a slow CI runner, and turn a hang into a failure that
@@ -149,18 +148,6 @@ function minutes(ms) {
     return `${ms / 60_000} minutes`;
 }
 
-/** A port the OS just told us is free. Raced in principle, never in practice. */
-function freePort() {
-    return new Promise((fulfil, reject) => {
-        const probe = createServer();
-        probe.on('error', reject);
-        probe.listen(0, '127.0.0.1', () => {
-            const { port } = probe.address();
-            probe.close(() => fulfil(port));
-        });
-    });
-}
-
 /**
  * `wrangler dev` over the config the Astro build emitted, which names the
  * built entry and carries the bindings across from `wrangler.jsonc`, with the
@@ -218,28 +205,6 @@ async function waitForServer(base) {
             ? `the Worker accepted connections but never answered one (${base}) — see the output above`
             : `wrangler never opened its port (${base})`
     );
-}
-
-/** `fetch` with a deadline. See REQUEST_TIMEOUT_MS. */
-function request(url) {
-    return fetch(url, {
-        redirect: 'manual',
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-}
-
-async function expectStatus(url, expected, description) {
-    const response = await request(url);
-    if (response.status !== expected) {
-        throw new Error(
-            `${url} returned ${response.status}, expected ${expected} — ${description}`
-        );
-    }
-    console.log(`  ok  ${expected} ${url} — ${description}`);
-}
-
-function sleep(ms) {
-    return new Promise((fulfil) => setTimeout(fulfil, ms));
 }
 
 /**

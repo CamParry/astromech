@@ -26,64 +26,26 @@
 // component reads the admin's React context, which only works when the plugin
 // and the admin share one copy of the kit. That covers the app shell, one list,
 // one edit form and one plugin page. The other pages under `pages/_protected`
-// are not loaded here.
+// are not loaded here. The browser steps are `scripts/admin-browser-check.mjs`,
+// which `check:install` runs too.
 //
 // Slow (a full Astro build plus a browser), so it is run on demand and in CI,
 // never from the pre-commit hook. It is not skippable: a check that can be
 // turned off stops being evidence.
 import { spawn } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
-import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath, URL } from 'node:url';
+import { fileURLToPath } from 'node:url';
+import { closeAdminBrowser, expectAdminWorks } from './admin-browser-check.mjs';
+import { expectStatus, freePort, run, step, waitForServer } from './check-helpers.mjs';
 import { requireFreshDist } from './require-fresh-dist.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const demoDir = join(repoRoot, 'apps', 'demo');
 
-/** Requests to give the server to open its port before giving up. */
-const READY_ATTEMPTS = 60;
-const READY_INTERVAL_MS = 500;
-
-// Every request is given a deadline because `fetch` has none of its own. A
-// server that accepts the connection and then never answers would otherwise
-// hang this check forever: the retry loop below is bounded, but it only gets
-// to count an attempt once the request settles. That is not hypothetical — the
-// node adapter responds to an unhandled rejection during render by logging it
-// and leaving the socket open, so a boot defect presents as a hang rather than
-// as the failure this check exists to report.
-const REQUEST_TIMEOUT_MS = 10_000;
-
-// The admin fetches its session before it can decide which screen to show, so
-// the mounted-app selector arrives a round trip after navigation, not with it.
-const MOUNT_TIMEOUT_MS = 30_000;
-
-// Every screen after the first waits on at least one API round trip of its
-// own (the sign-up and sign-in, the list query, the entry loader), so each
-// gets the same allowance as the mount.
-const SCREEN_TIMEOUT_MS = 30_000;
-
-// `#am-app` is the router root (`packages/admin/src/pages/__root.tsx`) and the password
-// field belongs to the unauthenticated screen. On the scratch database that is
-// the setup form: `/cms` redirects an anonymous visitor to `/login`, which
-// sends them on to `/setup` while no user exists. Neither can exist in the served shell, and
-// the pair distinguishes a painted screen from the pending placeholder the
-// auth layout renders while the session query is in flight.
-const MOUNTED_SELECTOR = '#am-app form input[type="password"]';
-
-// The first user, created through the setup form on the empty database.
-const FIRST_ADMIN = {
-    name: 'Check Boot',
-    email: 'check-boot@example.com',
-    password: 'check-boot-password-0123',
-};
-
-const POST_TITLE = 'Check boot post';
-
 let scratchDir = null;
 let server = null;
-let browser = null;
 
 async function main() {
     // This check builds only `apps/demo`, so a package `src` edit would
@@ -127,7 +89,7 @@ async function main() {
         PORT: String(port),
         BETTER_AUTH_URL: base,
     });
-    await waitForServer(base);
+    await waitForServer(base, server);
 
     await expectStatus(`${base}/`, 200, 'the site renders');
     await expectStatus(`${base}/cms`, 200, 'the admin route is mounted');
@@ -147,257 +109,9 @@ async function main() {
     }
     console.log('  ok  the config is evaluated once per serving process');
 
-    await expectAdminWorks(`${base}/cms`);
-}
-
-/**
- * Load `/cms` in headless chromium, assert the React app rendered and landed on
- * first-run setup, sign in through it, check the first account and closed
- * sign-up, then load the app shell, the `post` list and one post's edit page.
- *
- * Runs against the server already started above — a second one would double
- * the slowest part of the check and prove nothing extra.
- */
-async function expectAdminWorks(admin) {
-    step('loading /cms in headless chromium');
-    const { chromium } = await import('playwright');
-
-    try {
-        browser = await chromium.launch();
-    } catch (error) {
-        // The npm install brings the driver, not the browser binary.
-        throw new Error(
-            `could not launch chromium: run \`pnpm exec playwright install chromium\` (${error.message})`,
-            { cause: error }
-        );
-    }
-
-    const page = await browser.newPage();
-
-    // A broken import surfaces as a console error or an uncaught page error,
-    // not as a missing element, so both are collected from before navigation
-    // and reported after the last screen. A timeout prints them too, because
-    // the missing element is the more useful message when both happen.
-    //
-    // Until sign-in, the admin asks `/cms/api/me` who it is and is answered
-    // 401, by design, and chromium logs every failed response as a console
-    // error. Those messages carry no JavaScript arguments because no script
-    // emitted them; anything `console.error` produced does. So before sign-in,
-    // argument-less messages are recorded for the diagnostics but do not fail
-    // the check on their own. After sign-in nothing should answer 401, so every
-    // console error fails the check.
-    const errors = [];
-    const notes = [];
-    let signedIn = false;
-    page.on('console', (message) => {
-        if (message.type() !== 'error') return;
-        const line = `console: ${message.text()} (${message.location().url})`;
-        if (!signedIn && message.args().length === 0) notes.push(line);
-        else errors.push(line);
-    });
-    page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
-
-    /** Wait for `locator` to be visible, naming what it stands for if that fails. */
-    async function waitFor(locator, description, timeout = SCREEN_TIMEOUT_MS) {
-        try {
-            await locator.waitFor({ state: 'visible', timeout });
-        } catch (error) {
-            // Playwright's first line says what went wrong: a timeout, or
-            // something else such as a strict-mode violation.
-            const reason = error.message.split('\n')[0];
-            throw new Error(
-                `waiting for ${description} at ${page.url()} failed: ${reason}${formatLines([...errors, ...notes])}`,
-                { cause: error }
-            );
-        }
-    }
-
-    await page.goto(admin, { waitUntil: 'commit', timeout: REQUEST_TIMEOUT_MS });
-    // `.first()` because the setup form has two password fields, and a locator
-    // matching more than one element fails Playwright's strict mode.
-    await waitFor(
-        page.locator(MOUNTED_SELECTOR).first(),
-        `the unauthenticated screen (\`${MOUNTED_SELECTOR}\`)`,
-        MOUNT_TIMEOUT_MS
-    );
-    console.log('  ok  the admin app mounts and renders its unauthenticated screen');
-
-    step('completing first-run setup');
-    // Nothing navigates here: landing on the setup form from `/cms` is what
-    // proves the login route sends a first-time visitor to setup.
-    await waitFor(
-        page.getByLabel('Name', { exact: true }),
-        'the first-run setup form, reached from /cms'
-    );
-    if (!page.url().startsWith(`${admin}/setup`)) {
-        throw new Error(
-            `expected /cms to land on ${admin}/setup, landed on ${page.url()}`
-        );
-    }
-    console.log('  ok  /cms sends a first-time visitor to first-run setup');
-    await page.getByLabel('Name', { exact: true }).fill(FIRST_ADMIN.name);
-    await page.getByLabel('Email', { exact: true }).fill(FIRST_ADMIN.email);
-    await page.getByLabel('Password', { exact: true }).fill(FIRST_ADMIN.password);
-    await page.getByLabel('Confirm password', { exact: true }).fill(FIRST_ADMIN.password);
-    await page.getByRole('button', { name: 'Create account' }).click();
-
-    // The sidebar's primary navigation is rendered by `AppShell`, which only
-    // `pages/_protected/route.tsx` mounts, and only for a signed-in admin.
-    await waitFor(
-        page.getByRole('navigation', { name: 'Primary' }),
-        'the app shell after first-run setup'
-    );
-    signedIn = true;
-    console.log('  ok  first-run setup signs the new admin in and renders the app shell');
-
-    step('checking the first account and closed sign-up');
-    // `page.request` shares the page's cookies, so this reads the session
-    // first-run setup created.
-    const meUrl = `${admin}/api/me`;
-    const me = await page.request.get(meUrl, { timeout: REQUEST_TIMEOUT_MS });
-    if (me.status() !== 200) {
-        throw new Error(
-            `GET ${meUrl} returned ${me.status()}, expected 200: ${await me.text()}`
-        );
-    }
-    const { data: session } = await me.json();
-    if (session.role.slug !== 'admin') {
-        throw new Error(
-            `the first account holds role "${session.role.slug}", expected "admin"`
-        );
-    }
-    console.log('  ok  the first account holds the admin role');
-
-    // A plain fetch carries none of the page's cookies: an anonymous visitor
-    // trying to open a second account. It sends the trusted origin, as any
-    // script can, so Better Auth's origin check passes and the sign-up guard
-    // answers. The code tells that refusal apart from Better Auth's own 403s.
-    const signUpUrl = `${admin}/api/auth/sign-up/email`;
-    const signUp = await fetch(signUpUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Origin: new URL(admin).origin,
-        },
-        body: JSON.stringify({
-            name: 'Second Account',
-            email: 'second-account@example.com',
-            password: FIRST_ADMIN.password,
-        }),
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-    const refusal = await signUp.json().catch(() => ({}));
-    if (signUp.status !== 403 || refusal.code !== 'SIGN_UP_CLOSED') {
-        throw new Error(
-            `POST ${signUpUrl} returned ${signUp.status} ${JSON.stringify(refusal)}, expected 403 SIGN_UP_CLOSED`
-        );
-    }
-    console.log(`  ok  403 POST ${signUpUrl} (sign-up is closed once a user exists)`);
-
-    step('opening the post entries list');
-    const postsLink = page
-        .getByRole('navigation', { name: 'Entry types' })
-        .getByRole('link', { name: 'Posts', exact: true });
-    await waitFor(postsLink, 'the Posts link in the sidebar');
-    await postsLink.click();
-    // The empty state renders in both the list and the grid view, and only once
-    // the list query has answered.
-    await waitFor(
-        page.getByText('No posts found', { exact: true }),
-        'the empty post entries list'
-    );
-    console.log('  ok  the post entries list renders its empty state');
-
-    step('creating a post and opening its edit page');
-    // `page.request` shares the page's cookies, so this write is made with the
-    // session first-run setup created.
-    const createUrl = `${admin}/api/entries/post`;
-    const response = await page.request.post(createUrl, {
-        data: { title: POST_TITLE },
-        timeout: REQUEST_TIMEOUT_MS,
-    });
-    if (response.status() !== 201) {
-        throw new Error(
-            `POST ${createUrl} returned ${response.status()}, expected 201: ${await response.text()}`
-        );
-    }
-    const { data: post } = await response.json();
-    console.log(`  ok  201 POST ${createUrl} (the session cookie authorises a write)`);
-
-    await page.goto(`${admin}/entries/post/${post.id}`, {
-        waitUntil: 'commit',
-        timeout: REQUEST_TIMEOUT_MS,
-    });
-    // The label reads "Title *": the asterisk marks the field required.
-    const titleInput = page.getByLabel('Title *', { exact: true });
-    await waitFor(titleInput, 'the post edit form');
-    const title = await titleInput.inputValue();
-    if (title !== POST_TITLE) {
-        throw new Error(
-            `the edit form's title input holds "${title}", expected "${POST_TITLE}"`
-        );
-    }
-    console.log(
-        '  ok  the edit page renders the new post with its title in the title input'
-    );
-
-    step('opening a plugin admin page');
-    // The backups page is the plugin's own component. It calls
-    // `useAstromechPlugin()` from `astromech/ui/app`, which throws unless the
-    // plugin resolved the same copy of the kit as the admin, so the admin's
-    // React context is visible to it. "Run now" renders once that call has
-    // worked and the plugin's own `listRuns` method has answered.
-    await page.goto(`${admin}/plugin/backups`, {
-        waitUntil: 'commit',
-        timeout: REQUEST_TIMEOUT_MS,
-    });
-    await waitFor(
-        page.getByRole('button', { name: 'Run now', exact: true }),
-        'the backups plugin page'
-    );
-    await waitFor(
-        page.getByText('No backups yet. Run one to get started.', { exact: true }),
-        'the backups plugin page empty state'
-    );
-    console.log('  ok  the backups plugin page renders its own component in the admin');
-
-    if (errors.length > 0) {
-        throw new Error(`the admin reported errors in the browser${formatLines(errors)}`);
-    }
-    console.log('  ok  the admin logs no console or page errors');
-}
-
-function formatLines(lines) {
-    if (lines.length === 0) return '';
-    return `\n${lines.map((line) => `      ${line}`).join('\n')}`;
-}
-
-function step(message) {
-    console.log(`\n> ${message}`);
-}
-
-/** Run a command to completion, failing the check on a non-zero exit. */
-function run(command, args, options) {
-    return new Promise((fulfil, reject) => {
-        const child = spawn(command, args, { stdio: 'inherit', ...options });
-        child.on('error', reject);
-        child.on('exit', (code) => {
-            if (code === 0) fulfil();
-            else reject(new Error(`${command} ${args.join(' ')} exited with ${code}`));
-        });
-    });
-}
-
-/** A port the OS just told us is free. Raced in principle, never in practice. */
-function freePort() {
-    return new Promise((fulfil, reject) => {
-        const probe = createServer();
-        probe.on('error', reject);
-        probe.listen(0, '127.0.0.1', () => {
-            const { port } = probe.address();
-            probe.close(() => fulfil(port));
-        });
-    });
+    // Runs against the server already started above. A second one would double
+    // the slowest part of the check and prove nothing extra.
+    await expectAdminWorks(`${base}/cms`, { pluginPage: true });
 }
 
 /**
@@ -416,52 +130,6 @@ function startServer(env) {
     return handle;
 }
 
-async function waitForServer(base) {
-    // Distinguishes the two ways this loop runs out: nothing ever listened, or
-    // something listened and would not answer. They have different causes and
-    // the same symptom, so the message has to say which one happened.
-    let connected = false;
-    for (let attempt = 0; attempt < READY_ATTEMPTS; attempt += 1) {
-        if (server.exited !== undefined) {
-            throw new Error(`the server exited with ${server.exited} before serving`);
-        }
-        try {
-            await request(base);
-            return;
-        } catch (error) {
-            if (error.name === 'TimeoutError') connected = true;
-            await sleep(READY_INTERVAL_MS);
-        }
-    }
-    throw new Error(
-        connected
-            ? `the server accepted connections but never answered one (${base}) — see the server output above`
-            : `the server never opened its port (${base})`
-    );
-}
-
-/** `fetch` with a deadline. See REQUEST_TIMEOUT_MS. */
-function request(url) {
-    return fetch(url, {
-        redirect: 'manual',
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-}
-
-async function expectStatus(url, expected, description) {
-    const response = await request(url);
-    if (response.status !== expected) {
-        throw new Error(
-            `${url} returned ${response.status}, expected ${expected} — ${description}`
-        );
-    }
-    console.log(`  ok  ${expected} ${url} — ${description}`);
-}
-
-function sleep(ms) {
-    return new Promise((fulfil) => setTimeout(fulfil, ms));
-}
-
 /**
  * Close the browser, kill the server and remove the scratch database on every
  * exit path. A live
@@ -469,9 +137,7 @@ function sleep(ms) {
  * fired and forgotten, and escalated if the server ignores SIGTERM.
  */
 async function cleanUp() {
-    if (browser) {
-        await browser.close();
-    }
+    await closeAdminBrowser();
     if (server && server.exited === undefined) {
         const stopped = new Promise((fulfil) => server.child.once('exit', fulfil));
         server.child.kill('SIGTERM');

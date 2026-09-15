@@ -21,6 +21,7 @@
         "check:unused": "knip",
         "check:boot": "node scripts/check-boot.mjs",
         "check:boot:cloudflare": "node scripts/check-boot-cloudflare.mjs",
+        "check:install": "node scripts/check-install.mjs",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "lint:css": "pnpm -F @astromech/admin lint:css",
