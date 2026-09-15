@@ -36,10 +36,15 @@ env:
     ACTIVE_LTS: 24
     BETTER_AUTH_SECRET: ci-boot-check-secret-0123456789abcdef
 
+# Each job's `timeout-minutes` is more than twice its normal duration. Without
+# one, a hung step runs until GitHub's six-hour limit. verify gives each check a
+# shorter deadline of its own, so a hang fails there first and prints the
+# check's output before the job is cancelled.
 jobs:
     gate:
         name: Gate (Node 24)
         runs-on: ubuntu-latest
+        timeout-minutes: 35
         steps:
             - uses: actions/checkout@v7
             - uses: pnpm/action-setup@v6
@@ -56,6 +61,7 @@ jobs:
     runtime:
         name: Runtime (Node 22)
         runs-on: ubuntu-latest
+        timeout-minutes: 30
         steps:
             - uses: actions/checkout@v7
             - uses: pnpm/action-setup@v6
@@ -73,6 +79,7 @@ jobs:
     index:
         name: Relationships Index (Node 24)
         runs-on: ubuntu-latest
+        timeout-minutes: 5
         steps:
             - uses: actions/checkout@v7
             - uses: pnpm/action-setup@v6
@@ -99,6 +106,7 @@ jobs:
     backstop:
         name: Format and CSS (Node 24)
         runs-on: ubuntu-latest
+        timeout-minutes: 5
         steps:
             - uses: actions/checkout@v7
             - uses: pnpm/action-setup@v6

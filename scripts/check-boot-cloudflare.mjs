@@ -26,9 +26,10 @@
 import { spawn } from 'node:child_process';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
-import { tmpdir } from 'node:os';
+import { constants, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { stopProcessGroup } from './process-group.mjs';
 import { requireFreshDist } from './require-fresh-dist.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -39,8 +40,19 @@ const READY_ATTEMPTS = 60;
 const READY_INTERVAL_MS = 500;
 const REQUEST_TIMEOUT_MS = 10_000;
 
+// A whole run takes under half a minute on a laptop, the build most of it.
+// These leave room for a slow CI runner, and turn a hang into a failure that
+// prints where it stopped.
+const BUILD_TIMEOUT_MS = 4 * 60_000;
+const CHECK_TIMEOUT_MS = 6 * 60_000;
+
+/** How long a stopped process group gets to exit before SIGKILL. */
+const STOP_GRACE_MS = 5000;
+
 let scratchDir = null;
 let server = null;
+let runningCommand = null;
+let currentStep = 'checking the package builds are current';
 
 async function main() {
     // This check builds only `apps/demo-cloudflare`, so a package `src` edit
@@ -52,10 +64,16 @@ async function main() {
         // `run` spawns with stdio: 'inherit', so any prompt a child package
         // manager raises reads a stdin that may not be a terminal and hangs.
         CI: 'true',
+        // The check needs no network, so wrangler sends no usage data.
+        WRANGLER_SEND_METRICS: 'false',
     };
 
     step('building apps/demo-cloudflare');
-    await run('pnpm', ['build'], { cwd: demoDir, env });
+    await withDeadline(
+        run('pnpm', ['build'], { cwd: demoDir, env }),
+        BUILD_TIMEOUT_MS,
+        () => `the build did not finish within ${minutes(BUILD_TIMEOUT_MS)}`
+    );
 
     scratchDir = await mkdtemp(join(tmpdir(), 'astromech-check-boot-cloudflare-'));
     const envFile = join(scratchDir, 'secrets.env');
@@ -89,19 +107,46 @@ async function main() {
 }
 
 function step(message) {
+    currentStep = message;
     console.log(`\n> ${message}`);
 }
 
-/** Run a command to completion, failing the check on a non-zero exit. */
-function run(command, args, options) {
+/**
+ * Run a command to completion, failing the check on a non-zero exit. It leads
+ * its own process group, so `cleanUp` can stop everything it started.
+ */
+function run(file, args, options) {
     return new Promise((fulfil, reject) => {
-        const child = spawn(command, args, { stdio: 'inherit', ...options });
-        child.on('error', reject);
-        child.on('exit', (code) => {
+        runningCommand = spawn(file, args, {
+            stdio: 'inherit',
+            detached: true,
+            ...options,
+        });
+        runningCommand.on('error', reject);
+        runningCommand.on('exit', (code) => {
             if (code === 0) fulfil();
-            else reject(new Error(`${command} ${args.join(' ')} exited with ${code}`));
+            else reject(new Error(`${file} ${args.join(' ')} exited with ${code}`));
         });
     });
+}
+
+/**
+ * Reject with the message `describe()` returns if `promise` has not settled
+ * within `ms`. The error is marked `timedOut`.
+ */
+function withDeadline(promise, ms, describe) {
+    let timer;
+    const deadline = new Promise((_, reject) => {
+        timer = setTimeout(
+            () => reject(Object.assign(new Error(describe()), { timedOut: true })),
+            ms
+        );
+    });
+    return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
+}
+
+function minutes(ms) {
+    return `${ms / 60_000} minutes`;
 }
 
 /** A port the OS just told us is free. Raced in principle, never in practice. */
@@ -120,7 +165,8 @@ function freePort() {
  * `wrangler dev` over the config the Astro build emitted, which names the
  * built entry and carries the bindings across from `wrangler.jsonc`, with the
  * secrets from `envFile`. Output is captured rather than inherited, and printed
- * only if the check fails.
+ * only if the check fails. `npx` starts wrangler and wrangler starts workerd,
+ * so the child leads its own process group and `cleanUp` stops all three.
  */
 function startWorker(port, env, envFile) {
     const child = spawn(
@@ -140,7 +186,7 @@ function startWorker(port, env, envFile) {
             '--env-file',
             envFile,
         ],
-        { cwd: demoDir, env }
+        { cwd: demoDir, env, detached: true }
     );
     const handle = { child, output: '' };
     child.stdout.on('data', (chunk) => (handle.output += chunk));
@@ -197,23 +243,31 @@ function sleep(ms) {
 }
 
 /**
- * Kill wrangler on every exit path. A live child's pipes hold the event loop
- * open, so the kill is waited on rather than fired and forgotten, and
- * escalated if it ignores SIGTERM.
+ * Stop the build and wrangler, with everything they started, on every exit
+ * path. A live process holding this script's pipes keeps its event loop open,
+ * so the stop is waited on rather than fired and forgotten.
  */
 async function cleanUp() {
-    if (server && server.exited === undefined) {
-        const stopped = new Promise((fulfil) => server.child.once('exit', fulfil));
-        server.child.kill('SIGTERM');
-        const escalate = setTimeout(() => server.child.kill('SIGKILL'), 5000);
-        await stopped;
-        clearTimeout(escalate);
-    }
+    if (runningCommand) await stopProcessGroup(runningCommand, STOP_GRACE_MS);
+    if (server) await stopProcessGroup(server.child, STOP_GRACE_MS);
     if (scratchDir) await rm(scratchDir, { recursive: true, force: true });
 }
 
+// The build and wrangler run in process groups of their own, so neither a
+// Ctrl-C nor `verify` stopping this check reaches them. Stop them here.
+for (const signal of ['SIGINT', 'SIGTERM']) {
+    process.once(signal, () => {
+        void cleanUp().finally(() => process.exit(128 + constants.signals[signal]));
+    });
+}
+
+let timedOut = false;
 try {
-    await main();
+    await withDeadline(
+        main(),
+        CHECK_TIMEOUT_MS,
+        () => `timed out after ${minutes(CHECK_TIMEOUT_MS)}, at step: ${currentStep}`
+    );
     console.log('\ncheck:boot:cloudflare passed');
 } catch (error) {
     if (server) {
@@ -222,6 +276,12 @@ try {
     }
     console.error(`\ncheck:boot:cloudflare failed: ${error.message}`);
     process.exitCode = 1;
+    timedOut = error.timedOut === true;
 } finally {
     await cleanUp();
 }
+
+// A deadline leaves `main` mid-step, and whatever it was waiting on may still
+// hold the event loop open. The exit waits so the output above can reach a
+// piped stderr first; `unref` lets a process with nothing left exit sooner.
+if (timedOut) setTimeout(() => process.exit(), 10_000).unref();
