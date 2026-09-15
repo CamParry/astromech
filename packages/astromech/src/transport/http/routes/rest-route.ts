@@ -47,8 +47,6 @@ export type RestHandlers = {
      * short-circuits the route.
      */
     precondition?: (c: Context<Env>, route: RestRoute) => Response | null;
-    /** Turn a declared domain error into a response; anything else is `onError`'s. */
-    mapError?: (error: unknown, c: Context<Env>) => Response | null;
 };
 
 /** One mountable REST route: its shared row, plus this file's half. */
@@ -169,7 +167,7 @@ async function handleRestRoute(
         if (isMethodInputError(error)) {
             return fromZodError(c, error, route.bodyKey, route.wireNames);
         }
-        return route.mapError?.(error, c) ?? raise(error);
+        throw error;
     }
 }
 
@@ -324,11 +322,6 @@ function renameShape(
  */
 function isMethodInputError(error: unknown): error is ValidationError {
     return error instanceof ValidationError && error.fields === undefined;
-}
-
-/** Re-throw, as an expression — `mapError` declining leaves the error to `onError`. */
-function raise(error: unknown): never {
-    throw error;
 }
 
 /** The domain half of a method id — `settings.set` → `settings`. */

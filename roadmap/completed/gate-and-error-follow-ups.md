@@ -14,7 +14,10 @@ Two gaps found while the gate was being widened to the plugins.
 
 ## The work
 
-- [ ] `check:node-imports` imports each published plugin's built entry in plain
+- [x] `check:node-imports` imports each published plugin's built entry in plain
       Node and checks what it exports.
-- [ ] The central error handler answers 400 for `PublicTrashedReadError`, and
+- [x] The central error handler answers 400 for `PublicTrashedReadError`, and
       the per-route mapping goes.
+
+The per-route `mapError` hook had no other user, so it went too: a route's
+domain errors are the central handler's.

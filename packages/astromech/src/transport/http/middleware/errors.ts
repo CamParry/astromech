@@ -13,6 +13,7 @@ import {
     CustomTableCrossTypeQueryError,
     EntryNotFoundError,
     InvalidReferencesFilterError,
+    PublicTrashedReadError,
     UnknownSortKeyError,
     UnknownWhereKeyError,
 } from '@/entries/errors';
@@ -193,12 +194,14 @@ export const onError: ErrorHandler = (err, c) => {
     }
 
     // A malformed `entries.query` is the caller's to fix, whether it arrived over
-    // REST or over RPC, so it answers 400 rather than the catch-all 500.
+    // REST or over RPC, so it answers 400 rather than the catch-all 500. A public
+    // read of trashed entries is one: a public read never returns trashed rows.
     if (
         err instanceof UnknownWhereKeyError ||
         err instanceof UnknownSortKeyError ||
         err instanceof InvalidReferencesFilterError ||
-        err instanceof CustomTableCrossTypeQueryError
+        err instanceof CustomTableCrossTypeQueryError ||
+        err instanceof PublicTrashedReadError
     ) {
         return badRequest(c, err.message);
     }

@@ -23,7 +23,7 @@ import { entriesService } from '@/app-context/services';
 import { getConfig } from '@/config/registry';
 import { entryCatalogue } from '@/entries/catalogue';
 import { resolveEntryType } from '@/entries/entry-types.shared';
-import { PublicTrashedReadError, StagedEntryExistsError } from '@/entries/errors';
+import { StagedEntryExistsError } from '@/entries/errors';
 import {
     createEntrySchema,
     entrySortSchema,
@@ -91,7 +91,6 @@ export const ENTRIES_ROUTES: RestRoute[] = attachHandlers(ENTRIES_ROUTE_SPECS, {
         args: listArgs,
         query: listQuery,
         precondition: entryAccess(),
-        mapError: publicTrashedRead,
     },
     'get /:type/:id': {
         args: getArgs,
@@ -102,7 +101,6 @@ export const ENTRIES_ROUTES: RestRoute[] = attachHandlers(ENTRIES_ROUTE_SPECS, {
     'post /:type/query': {
         args: queryBodyArgs,
         precondition: entryAccess(),
-        mapError: publicTrashedRead,
     },
     'post /:type/bulk-trash': { args: bulkArgs, precondition: entryAccess() },
     'post /:type/bulk-delete': { args: bulkArgs, precondition: entryAccess() },
@@ -322,15 +320,6 @@ function accessDenied(c: Context<Env>, access: ResolvedAccess): boolean {
     return !permissionsFor(c.var.role).allows(access.permission);
 }
 
-/**
- * A public `trashed` read is a caller bug — a public read never returns trashed
- * rows — so it answers 400 rather than the catch-all 500. Every other failure is
- * left to `onError`, which would otherwise turn a `ValidationError` into a 500.
- */
-function publicTrashedRead(error: unknown, c: Context<Env>): Response | null {
-    return error instanceof PublicTrashedReadError ? badRequest(c, error.message) : null;
-}
-
 /** The 409 a method gated on a capability the entry type lacks answers with. */
 function capabilityDenied(c: Context<Env>, type: string, capability: string): Response {
     return c.json(
@@ -408,18 +397,14 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         }
 
         const sort = entrySortSchema.parse(body.sort);
-        try {
-            return c.json(
-                await entriesService.query({
-                    ...body,
-                    type: types,
-                    full: wantsFull,
-                    ...(sort !== undefined ? { sort } : {}),
-                })
-            );
-        } catch (error) {
-            return publicTrashedRead(error, c) ?? raise(error);
-        }
+        return c.json(
+            await entriesService.query({
+                ...body,
+                type: types,
+                full: wantsFull,
+                ...(sort !== undefined ? { sort } : {}),
+            })
+        );
     });
 
     // POST /entries/:type

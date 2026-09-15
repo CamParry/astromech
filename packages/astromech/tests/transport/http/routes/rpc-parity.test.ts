@@ -232,6 +232,15 @@ describe('POST /rpc/:id', () => {
         expect(body.error.message).toContain("unrecognized where key 'category'");
     });
 
+    it('400s a public entries.query that asks for trashed entries', async () => {
+        const app = await freshApp();
+        const res = await call(app, 'entries.post.query', { trashed: true });
+        expect(res.status).toBe(400);
+        const body = (await res.json()) as ErrorBody;
+        expect(body.error.code).toBe('BAD_REQUEST');
+        expect(body.error.message).toContain('trashed reads require the full shape');
+    });
+
     it('401s without a session', async () => {
         const app = await freshApp();
         signIn(null, adminRole);
