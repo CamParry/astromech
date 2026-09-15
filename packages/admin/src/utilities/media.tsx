@@ -1,22 +1,6 @@
-import type { TypeFilter } from '../types/media';
 import type { Media } from 'astromech';
 import { File, FileText, Music, Video } from 'lucide-react';
 import React from 'react';
-
-export function matchesTypeFilter(mimeType: string, filter: TypeFilter): boolean {
-    if (filter === 'all') return true;
-    if (filter === 'images') return mimeType.startsWith('image/');
-    if (filter === 'videos') return mimeType.startsWith('video/');
-    if (filter === 'documents')
-        return mimeType.startsWith('application/') || mimeType.startsWith('text/');
-    // 'other'
-    return (
-        !mimeType.startsWith('image/') &&
-        !mimeType.startsWith('video/') &&
-        !mimeType.startsWith('application/') &&
-        !mimeType.startsWith('text/')
-    );
-}
 
 /**
  * A media original's URL tagged with the record's `updatedAt`. Replacing a file

@@ -23,7 +23,7 @@ import { GlobalNotFoundError } from '@/globals/errors';
 import { MediaNotFoundError } from '@/media/errors';
 import { UserNotFoundError } from '@/users/errors';
 
-export type ApiErrorCode =
+type ApiErrorCode =
     | 'NOT_FOUND'
     | 'UNAUTHORIZED'
     | 'FORBIDDEN'
@@ -45,7 +45,7 @@ function generateErrorId(): string {
 }
 
 /** Build the canonical `{ error }` envelope every error response shares. */
-export function apiError(
+function apiError(
     c: Context,
     status: number,
     code: ApiErrorCode,
@@ -91,7 +91,7 @@ export function badRequest(
  * per-field failure keeps the response body it has always had. `extra` adds
  * further keys to `details` (a batch write's `failedId`).
  */
-export function validationFailed(
+function validationFailed(
     c: Context,
     fields: Record<string, string[]>,
     form?: string[],
@@ -102,17 +102,6 @@ export function validationFailed(
         fields,
         ...(form && form.length > 0 ? { form } : {}),
     });
-}
-
-export function conflict(c: Context, message: string): Response {
-    return apiError(c, 409, 'CONFLICT', message);
-}
-
-export function internalError(
-    c: Context,
-    message = 'An unexpected error occurred'
-): Response {
-    return apiError(c, 500, 'INTERNAL_ERROR', message);
 }
 
 /**

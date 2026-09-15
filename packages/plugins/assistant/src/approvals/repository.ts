@@ -16,7 +16,7 @@ import { approvalsTable } from '../tables/approvals';
  * How long an approval stays answerable. A pause the user never answers is
  * dead within the session rather than overnight.
  */
-export const APPROVAL_TTL_MS = 60 * 60 * 1000;
+const APPROVAL_TTL_MS = 60 * 60 * 1000;
 
 /** What a caller supplies; the repository fills the status and the deadline. */
 export type ApprovalDraft = Omit<NewApprovalRow, 'status' | 'expiresAt'>;

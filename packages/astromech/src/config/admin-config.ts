@@ -53,7 +53,7 @@ export function toAdminEntryType(entryType: ResolvedEntryType): AdminEntryType {
  * Project a resolved global into the serializable admin shape. Shared by host
  * and plugin globals so the two never drift.
  */
-export function toAdminGlobal(global: ResolvedGlobal): AdminGlobal {
+function toAdminGlobal(global: ResolvedGlobal): AdminGlobal {
     return {
         label: global.label,
         fields: global.fields,

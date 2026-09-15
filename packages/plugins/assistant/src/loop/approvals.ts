@@ -181,7 +181,7 @@ export function pausedToolCalls(messages: ChatMessage[]): ToolCallPart[] | null 
  * One result per call, in order — the model is never left with a dangling call.
  * Nothing else goes in the array: a tool message carries results and no more.
  */
-export async function buildToolResults(input: {
+async function buildToolResults(input: {
     calls: ToolCallPart[];
     tools: ToolDefinition[];
     claimed: ClaimedApproval[];

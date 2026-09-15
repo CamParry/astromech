@@ -27,7 +27,7 @@ type FieldPropagator = {
  * The subset of `names` whose definitions are marked `translatable: false`.
  * Empty when the resource itself is not translatable.
  */
-export function sharedFieldNames(
+function sharedFieldNames(
     definitions: readonly Field[],
     names: readonly string[],
     translatable: boolean

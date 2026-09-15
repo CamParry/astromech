@@ -5,7 +5,7 @@
  */
 
 /** RFC 4647 lookup chain: `'en-GB'` → `['en-GB','en']`. */
-export function localeFallbackChain(tag: string): string[] {
+function localeFallbackChain(tag: string): string[] {
     const parts = tag.split('-').filter(Boolean);
     const chain: string[] = [];
     for (let i = parts.length; i > 0; i--) {

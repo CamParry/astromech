@@ -220,7 +220,7 @@ type PluginMethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
  * resolved under the plugin's permission namespace. A denied method still
  * exists on the returned object and rejects, as `scopeMethods` does.
  */
-export function scopePlugins(permissions: Permissions): PluginServiceNamespace {
+function scopePlugins(permissions: Permissions): PluginServiceNamespace {
     const scoped: Record<string, PluginMethodMap> = {};
 
     for (const identity of getPluginIdentities()) {

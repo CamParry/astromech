@@ -96,7 +96,7 @@ export function toResolvedFields(fields: EntryFields | undefined): ResolvedEntry
  * fields (their children are top-level data) but not nested fields
  * (`group`/`repeater`/`blocks`), whose child names are not top-level keys.
  */
-export function collectSearchable(nodes: Field[], out: string[]): void {
+function collectSearchable(nodes: Field[], out: string[]): void {
     for (const node of nodes) {
         if (LAYOUT_TYPES.has(node.type)) {
             collectSearchable(node.fields ?? [], out);

@@ -29,7 +29,7 @@ export function EntryNamespaceProvider({
 }
 
 /** Reads the active i18n namespace from `EntryNamespaceProvider`. */
-export function useEntryNamespace(): string {
+function useEntryNamespace(): string {
     return React.useContext(EntryNamespaceContext);
 }
 

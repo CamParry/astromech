@@ -70,17 +70,16 @@ export default defineConfig({
             // One entry per top-level directory of src/ that holds TypeScript,
             // plus the files at its root, each set one point below what it
             // measured. Raise an entry as coverage rises; never lower one to
-            // pass. The root files and config/ measure 0: `src/vite.ts` is
-            // exercised by core's integration tests, not these.
+            // pass. The root files measure low: only `src/vite.ts` is tested
+            // here, and the rest boot the app in the browser.
             thresholds: {
-                'src/*.{ts,tsx}': { lines: 0, functions: 0, branches: 0, statements: 0 },
+                'src/*.{ts,tsx}': { lines: 7, functions: 13, branches: 0, statements: 7 },
                 'src/components/**': {
                     lines: 45,
                     functions: 42,
                     branches: 42,
                     statements: 44,
                 },
-                'src/config/**': { lines: 0, functions: 0, branches: 0, statements: 0 },
                 'src/context/**': {
                     lines: 60,
                     functions: 59,

@@ -27,7 +27,7 @@ export const TYPE_FILTER_KEYS: Record<TypeFilter, string> = {
 /** Columns the media list can be ordered by; must match the repository allowlist. */
 export type MediaSortKey = 'filename' | 'mimeType' | 'size' | 'createdAt';
 
-export const MEDIA_SORT_KEYS = [
+const MEDIA_SORT_KEYS = [
     'filename',
     'mimeType',
     'size',

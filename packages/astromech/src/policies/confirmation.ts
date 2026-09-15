@@ -7,10 +7,10 @@
 import type { ManifestMethod } from '@/types/index';
 
 /** Elicitation's three actions. */
-export type ConfirmAction = 'accept' | 'decline' | 'cancel';
+type ConfirmAction = 'accept' | 'decline' | 'cancel';
 
 /** What a caller sends back on the second invocation. */
-export type ConfirmAnswer = { action: ConfirmAction };
+type ConfirmAnswer = { action: ConfirmAction };
 
 /** What confirmation asks for. MRTR-shaped, so a transport swap stays mechanical. */
 export type ConfirmRequest = {

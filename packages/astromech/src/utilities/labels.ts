@@ -4,22 +4,12 @@
  * admin resolves them with its own resolver.
  */
 
-import type { Label, MessageRef } from '@/types/fields';
+import type { MessageRef } from '@/types/fields';
 import { startCase } from 'lodash-es';
-import { slugify } from './strings';
 
 /** Capture an i18n key as a serializable `MessageRef` (`resolveLabel` resolves it). */
 export function t(key: string): MessageRef {
     return { $t: key };
-}
-
-/**
- * Derive a machine-name slug from a `Label` (a literal string or a `{ $t }`
- * message reference). Falls back to `fallback` when the source slugifies to empty.
- */
-export function labelToSlug(label: Label, fallback = 'section'): string {
-    const source = typeof label === 'string' ? label : label.$t;
-    return slugify(source) || fallback;
 }
 
 /**

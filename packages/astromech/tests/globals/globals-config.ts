@@ -16,7 +16,7 @@ import { makeTestConfig } from '@tests/harness';
  * - `legal`: public, with the same defaults as `contact`.
  * - `announcement`: staging on, with a required field, for the merge gate.
  */
-export function testGlobals(): GlobalConfig[] {
+function testGlobals(): GlobalConfig[] {
     return [
         {
             key: 'site',

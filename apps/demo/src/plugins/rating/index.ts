@@ -11,8 +11,6 @@ import { overviewPage } from './pages/overview';
 import { ratingPermissions } from './permissions/rating';
 import { ratingService } from './service/describe';
 
-export { RATING_FIELD_TYPE } from './fields/rating';
-
 export const rating = definePlugin({
     package: 'demo-rating',
     version: '1.0.0',
@@ -28,5 +26,3 @@ export const rating = definePlugin({
         pages: [overviewPage],
     },
 });
-
-export default rating;

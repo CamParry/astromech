@@ -34,18 +34,6 @@ export function defaultLocale(): Locale {
 }
 
 /**
- * Resolve the active locale from a URL pathname.
- * The default locale is unprefixed; others live under `/<locale>/...`.
- */
-export function localeFromPath(pathname: string): Locale {
-    const seg = pathname.split('/')[1];
-    if (seg && locales().includes(seg) && seg !== defaultLocale()) {
-        return seg;
-    }
-    return defaultLocale();
-}
-
-/**
  * Strip a locale prefix from a path, returning the un-localised path.
  * e.g. `/fr/blog/foo` → `/blog/foo`, `/blog/foo` → `/blog/foo`
  */
@@ -66,17 +54,6 @@ export function localizedPath(path: string, locale: Locale): string {
     if (locale === defaultLocale()) return path;
     const clean = path.startsWith('/') ? path : `/${path}`;
     return `/${locale}${clean}`;
-}
-
-/**
- * The sibling entry id for `locale` from an entry's `locales` map, or `null`.
- * Returns an id, not a slug — the caller fetches that entry for the slug.
- */
-export function siblingEntryId(
-    localesMap: Record<string, string>,
-    locale: Locale
-): string | null {
-    return localesMap[locale] ?? null;
 }
 
 type UiKey =

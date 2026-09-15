@@ -17,10 +17,10 @@ export const updateGlobalSchema = z
 export const scheduleGlobalSchema = scheduleEntrySchema;
 
 /** The global a call addresses. */
-export const key = z.string();
+const key = z.string();
 
 /** The locale a call addresses; absent means the default content locale. */
-export const locale = z.string().optional();
+const locale = z.string().optional();
 
 /** A content-level method addresses one locale of the global. */
 export const localised = z.object({ key, locale });

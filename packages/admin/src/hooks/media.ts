@@ -27,7 +27,7 @@ export function useMediaQuery(params?: MediaQueryParams) {
  * One media item, in `locale` when given. A locale with no content row reads
  * back the default locale's content, so every locale is its own cache entry.
  */
-export function mediaItemQueryOptions(id: string, locale?: string) {
+function mediaItemQueryOptions(id: string, locale?: string) {
     return queryOptions({
         queryKey: queryKeys.media.detail(id, locale),
         queryFn: () =>
@@ -43,7 +43,7 @@ export function useMediaItem(id: string, enabled = true, locale?: string) {
 }
 
 /** One locale's saved versions of a media item, newest last. */
-export function mediaVersionsQueryOptions(id: string, locale: string) {
+function mediaVersionsQueryOptions(id: string, locale: string) {
     return queryOptions({
         queryKey: queryKeys.media.versions(id, locale),
         queryFn: () => astromechClient.media.versions({ id, locale }),

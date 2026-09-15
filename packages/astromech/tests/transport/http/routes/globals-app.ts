@@ -16,7 +16,7 @@ import { createGlobalsRouter } from '@/transport/http/routes/globals';
 import { makeGlobalsConfig } from '../../../globals/globals-config';
 
 /** A plugin declaring one global, reached as `seo/settings`. */
-export const seoPlugin: PluginDefinition = {
+const seoPlugin: PluginDefinition = {
     package: '@astromech/seo',
     globals: [
         {

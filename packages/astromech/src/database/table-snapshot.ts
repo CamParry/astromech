@@ -27,14 +27,7 @@ import { AstromechError } from '@/errors/astromech-error';
  * the thin, pure, browser-safe layer that turns a live `Table` into one.
  */
 
-export type {
-    Snapshot,
-    SnapshotColumn,
-    SnapshotForeignKey,
-    SnapshotIndex,
-    SnapshotTable,
-    SqlDialect,
-};
+export type { Snapshot, SnapshotTable, SqlDialect };
 
 /** camelCase column key → snake_case DDL identifier. */
 export function toSnakeCase(key: string): string {
@@ -106,7 +99,7 @@ function synthesizedIndexes(table: Table): IndexSpec[] {
  * the differ compares snapshots, so a capped render against an uncapped
  * snapshot would diff on every run and churn a migration each time.
  */
-export function allIndexes(table: Table): IndexSpec[] {
+function allIndexes(table: Table): IndexSpec[] {
     return [...table.indexes, ...synthesizedIndexes(table)].map((spec) => ({
         ...spec,
         name: capIdentifier(spec.name),

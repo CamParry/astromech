@@ -4,7 +4,7 @@
  * boot via {@link setDateLocale}; unset falls back to the runtime default.
  */
 
-import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
+import { isValid, parseISO } from 'date-fns';
 
 let displayLocale: string | undefined;
 const formatterCache = new Map<string, Intl.DateTimeFormat>();
@@ -63,11 +63,4 @@ export function formatDatetime(date: Date | string | null | undefined): string {
     const d = toDate(date);
     if (!d) return '—';
     return getFormatter('datetime', DATETIME_OPTIONS).format(d);
-}
-
-/** Format a date as a relative string (e.g. '3 days ago'). */
-export function formatRelative(date: Date | string | null | undefined): string {
-    const d = toDate(date);
-    if (!d) return '—';
-    return formatDistanceToNow(d, { addSuffix: true });
 }

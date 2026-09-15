@@ -125,8 +125,3 @@ export function useAuth(): AuthContextValue {
     }
     return ctx;
 }
-
-/** Same as `useAuth`, for call sites within a route already guarded by an auth check. */
-export function useRequireAuth(): AuthContextValue {
-    return useAuth();
-}

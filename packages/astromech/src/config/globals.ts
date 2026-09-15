@@ -12,15 +12,13 @@ import { toResolvedFields } from '@/config/entry-types';
 import { assertUniqueDataNames, validateFieldTree } from '@/config/validate/field-tree';
 
 /** Characters a global key may not contain: both are id separators. */
-export const GLOBAL_KEY_FORBIDDEN = /[/:]/;
+const GLOBAL_KEY_FORBIDDEN = /[/:]/;
 
 /**
  * Resolve a global's capability set. Globals have one repository, so unlike
  * entry types nothing narrows the defaults.
  */
-export function toResolvedGlobalCapabilities(
-    config: GlobalConfig
-): ResolvedGlobalCapabilities {
+function toResolvedGlobalCapabilities(config: GlobalConfig): ResolvedGlobalCapabilities {
     return {
         statuses: config.statuses ?? true,
         translatable: config.translatable ?? false,
@@ -30,7 +28,7 @@ export function toResolvedGlobalCapabilities(
 }
 
 /** Crash-loud validation of one global's key and capability combination. */
-export function assertGlobalValid(id: string, config: GlobalConfig): void {
+function assertGlobalValid(id: string, config: GlobalConfig): void {
     if (config.key === undefined || config.key === '') {
         throw new Error(
             `Astromech global "${id}": every global needs a non-empty \`key\`.`

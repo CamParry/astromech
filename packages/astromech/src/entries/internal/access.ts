@@ -15,7 +15,7 @@ import { entryPermission } from '@/permissions/entry-permission';
  * list of types resolves to the empty type too — one permission cannot cover a
  * cross-type query, and `scopeEntries` checks each of them instead.
  */
-export function typeOf(input: unknown): string {
+function typeOf(input: unknown): string {
     if (typeof input !== 'object' || input === null) return '';
     const { type } = input as { type?: unknown };
     return typeof type === 'string' ? type : '';

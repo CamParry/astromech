@@ -14,7 +14,7 @@ import {
 import { AstromechApiError, astromechClient } from 'astromech/fetch';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../components/ui/toast';
-import { queryKeys, scopedEntryKeys } from './use-query-keys';
+import { scopedEntryKeys } from './use-query-keys';
 
 /**
  * Optional mount binding: root callers omit both (root client, unprefixed
@@ -229,101 +229,6 @@ export function useRestoreEntry(
         onError: (err) => {
             toast({
                 message: err instanceof Error ? err.message : t('entries.restoreFailed'),
-                variant: 'error',
-            });
-        },
-    });
-}
-
-export function usePublishEntry(
-    type: string,
-    id: string,
-    locale: string,
-    options?: { onSuccess?: (entry: Entry) => void }
-) {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-
-    return useMutation({
-        mutationFn: () => astromechClient.entries.publish({ type, id, locale }),
-        onSuccess: (entry) => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.get(type, id, locale),
-            });
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(type),
-            });
-            toast({ message: t('entries.published'), variant: 'success' });
-            options?.onSuccess?.(entry);
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('entries.publishFailed'),
-                variant: 'error',
-            });
-        },
-    });
-}
-
-export function useUnpublishEntry(
-    type: string,
-    id: string,
-    locale: string,
-    options?: { onSuccess?: (entry: Entry) => void }
-) {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-
-    return useMutation({
-        mutationFn: () => astromechClient.entries.unpublish({ type, id, locale }),
-        onSuccess: (entry) => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.get(type, id, locale),
-            });
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(type),
-            });
-            toast({ message: t('entries.unpublished'), variant: 'success' });
-            options?.onSuccess?.(entry);
-        },
-        onError: (err) => {
-            toast({
-                message:
-                    err instanceof Error ? err.message : t('entries.unpublishFailed'),
-                variant: 'error',
-            });
-        },
-    });
-}
-
-export function useScheduleEntry(
-    type: string,
-    id: string,
-    locale: string,
-    options?: { onSuccess?: (entry: Entry) => void }
-) {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-
-    return useMutation({
-        mutationFn: (publishedAt: Date) =>
-            astromechClient.entries.schedule({ type, id, publishedAt, locale }),
-        onSuccess: (entry) => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.get(type, id, locale),
-            });
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.entries.all(type),
-            });
-            toast({ message: t('entries.scheduled'), variant: 'success' });
-            options?.onSuccess?.(entry);
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('entries.scheduleFailed'),
                 variant: 'error',
             });
         },

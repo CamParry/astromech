@@ -42,7 +42,7 @@ export function useUser(id: string, locale?: string) {
 }
 
 /** One locale's saved versions of a user, newest last. */
-export function userVersionsQueryOptions(id: string, locale: string) {
+function userVersionsQueryOptions(id: string, locale: string) {
     return queryOptions({
         queryKey: queryKeys.users.versions(id, locale),
         queryFn: () => astromechClient.users.versions({ id, locale }),

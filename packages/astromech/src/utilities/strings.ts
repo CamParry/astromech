@@ -15,19 +15,3 @@ export function slugify(s: string): string {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
 }
-
-/**
- * Truncate a string to maxLength, appending suffix (default '…') if cut.
- */
-export function truncate(str: string, maxLength: number, suffix = '…'): string {
-    if (str.length <= maxLength) return str;
-    return str.slice(0, maxLength - suffix.length) + suffix;
-}
-
-/**
- * Capitalise the first letter of a string.
- */
-export function capitalize(str: string): string {
-    if (!str) return str;
-    return str.charAt(0).toUpperCase() + str.slice(1);
-}

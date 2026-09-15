@@ -4,7 +4,7 @@
  * types (`KyselyOf`), plus the per-column codec `database/codec.ts` drives.
  */
 
-import type { ColumnType, Generated } from 'kysely';
+import type { Generated } from 'kysely';
 import { ulid } from 'ulidx';
 
 export type ColumnKind =
@@ -501,6 +501,3 @@ export type TableUpdate<D> = Partial<TableInsert<D>>;
 export type KyselyOf<D> = {
     [K in keyof ColsOf<D>]: KyselyCell<ColsOf<D>[K]>;
 };
-
-// Re-export ColumnType for assemblers that need it (kept for parity / future use).
-export type { ColumnType };

@@ -8,7 +8,7 @@ import type { FieldTypeName } from 'astromech';
 /**
  * Format a date value for date input (YYYY-MM-DD)
  */
-export function formatDateForInput(value: unknown): string {
+function formatDateForInput(value: unknown): string {
     if (!value) return '';
 
     const date = value instanceof Date ? value : new Date(value as string);
@@ -24,7 +24,7 @@ export function formatDateForInput(value: unknown): string {
 /**
  * Format a datetime value for datetime-local input (YYYY-MM-DDTHH:MM)
  */
-export function formatDatetimeForInput(value: unknown): string {
+function formatDatetimeForInput(value: unknown): string {
     if (!value) return '';
 
     const date = value instanceof Date ? value : new Date(value as string);
@@ -58,29 +58,5 @@ export function formatValueForInput(value: unknown, fieldType: FieldTypeName): s
             return value ? String(value) : '#000000';
         default:
             return String(value);
-    }
-}
-
-/**
- * Parse a value from form input to proper type
- */
-export function parseValueFromInput(value: unknown, fieldType: FieldTypeName): unknown {
-    if (value === null || value === '') {
-        if (fieldType === 'boolean') return false;
-        return null;
-    }
-
-    const stringValue = String(value);
-
-    switch (fieldType) {
-        case 'number':
-            return Number(stringValue);
-        case 'boolean':
-            return stringValue === 'true' || stringValue === 'on';
-        case 'date':
-        case 'datetime':
-            return new Date(stringValue);
-        default:
-            return stringValue;
     }
 }

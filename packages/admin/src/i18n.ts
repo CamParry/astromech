@@ -48,5 +48,3 @@ void loadPluginBundles('en');
 i18n.on('languageChanged', (language) => {
     void loadPluginBundles(language);
 });
-
-export default i18n;

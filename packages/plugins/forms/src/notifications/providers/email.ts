@@ -10,7 +10,7 @@ import * as fields from 'astromech/fields';
 import { applyMergeTags, applyMergeTagsInRichText } from '../merge-tags';
 import { SubmissionEmail } from '../templates/submission-email';
 
-export const EMAIL_NOTIFICATION = 'email';
+const EMAIL_NOTIFICATION = 'email';
 
 const MERGE_TAG_MESSAGE =
     'Supports {{fieldName}}, {{formTitle}} and {{submittedAt}} merge tags.';

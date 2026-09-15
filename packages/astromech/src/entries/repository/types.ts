@@ -5,12 +5,9 @@
  */
 
 import type { ContentRef, ContentRow, ContentRowId } from '@/content/repository/types';
-import type { Db } from '@/database/types';
 import type { Capability } from '@/entries/capabilities';
 import type { EntryVersionRow } from '@/entries/tables';
 import type { EntryStatus, JsonObject, SortOption, WhereFilters } from '@/types/index';
-
-export type RepositoryDb = Db;
 
 export type { Capability } from '@/entries/capabilities';
 

@@ -37,7 +37,7 @@ export async function verifyPreviewToken(
 }
 
 /** The audience a preview is filtered for: anonymous, as of now. */
-export function previewAudience(): AudienceContext {
+function previewAudience(): AudienceContext {
     return { role: null, now: new Date() };
 }
 

@@ -15,14 +15,14 @@ import { findGlobal } from './global';
  * the empty key, whose permission (`global::read`) no role holds, so the guard
  * fails closed and the service throws the error that names the real problem.
  */
-export function keyOf(input: unknown): string {
+function keyOf(input: unknown): string {
     if (typeof input !== 'object' || input === null) return '';
     const { key } = input as { key?: unknown };
     return typeof key === 'string' ? key : '';
 }
 
 /** True when the call asks for a shape only an authenticated read may have. */
-export function wantsPrivateShape(input: unknown): boolean {
+function wantsPrivateShape(input: unknown): boolean {
     if (typeof input !== 'object' || input === null) return false;
     const { full, staged } = input as { full?: unknown; staged?: unknown };
     return full === true || staged === true;

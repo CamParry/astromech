@@ -18,8 +18,6 @@ export const RESERVED_KEY = {
     children: '_children',
 } as const;
 
-export type ReservedKey = (typeof RESERVED_KEY)[keyof typeof RESERVED_KEY];
-
 /**
  * TS emission + public visibility for each metadata reserved key. `_children` is
  * excluded: it is a structural recursive array emitted directly by codegen, not a

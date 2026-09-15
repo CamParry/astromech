@@ -10,7 +10,7 @@ export type BlockWithId = {
     [fieldName: string]: unknown;
 };
 
-export type SerializedBlock = {
+type SerializedBlock = {
     _type: string;
     _disabled?: boolean;
     _title?: string;

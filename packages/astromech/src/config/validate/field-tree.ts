@@ -8,7 +8,7 @@ import type { Field, ResolvedEntryFields } from '@/types/fields';
 /** Layout fields — presentational, flat data. Their children stay top-level. */
 export const LAYOUT_TYPES = new Set(['section', 'tabs', 'tab', 'accordion']);
 
-export type DataFieldPath = { field: Field; path: string };
+type DataFieldPath = { field: Field; path: string };
 
 /**
  * Structural-rule validation (spec §3.3), crash-loud naming the entry type:
@@ -60,7 +60,7 @@ export function assertUniqueDataNames(
 }
 
 /** The data fields one value namespace holds, each with where it was authored. */
-export function dataFieldsWithPath(nodes: Field[], path: string): DataFieldPath[] {
+function dataFieldsWithPath(nodes: Field[], path: string): DataFieldPath[] {
     const out: DataFieldPath[] = [];
     for (const node of nodes) {
         const nodePath = `${path}.${node.name}`;
@@ -74,7 +74,7 @@ export function dataFieldsWithPath(nodes: Field[], path: string): DataFieldPath[
 }
 
 /** Throw on a repeated name, naming both paths, then check each nested namespace. */
-export function assertUniqueInNamespace(typeKey: string, fields: DataFieldPath[]): void {
+function assertUniqueInNamespace(typeKey: string, fields: DataFieldPath[]): void {
     const seen = new Map<string, string>();
     for (const { field, path } of fields) {
         const first = seen.get(field.name);

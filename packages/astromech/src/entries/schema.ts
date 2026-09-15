@@ -2,7 +2,7 @@ import { z } from '@hono/zod-openapi';
 import { jsonObject } from '@/services/json';
 
 /** The three publication states an entry row may carry. */
-export const entryStatusEnum = z.enum(['unpublished', 'published', 'scheduled']);
+const entryStatusEnum = z.enum(['unpublished', 'published', 'scheduled']);
 
 const slugField = z
     .string()

@@ -1,5 +1,4 @@
 import type { EntryType, PluginDefinition, ResolvedPluginIdentity } from '@/types/index';
-import type { PluginNamespace } from '@/utilities/plugin-namespace';
 import { pluginNamespace, pluginServiceKey } from '@/utilities/plugin-namespace';
 
 /**
@@ -9,25 +8,15 @@ import { pluginNamespace, pluginServiceKey } from '@/utilities/plugin-namespace'
  */
 
 /**
- * Re-exported from `database/define-plugin-table`, which needs the same
- * string and type to build a plugin's table prefix without importing the
- * plugin runtime. Not part of the public surface.
+ * Re-exported from `utilities/plugin-namespace`, which `database/define-plugin-table`
+ * also imports to build a plugin's table prefix without importing the plugin
+ * runtime. Not part of the public surface.
  */
 export { pluginNamespace, pluginServiceKey };
-export type { PluginNamespace };
 
 /** Table-name prefix for a plugin's own tables: `plugin_{namespace}_`. */
 export function pluginTablePrefix(namespace: string): string {
     return `plugin_${namespace}_`;
-}
-
-/**
- * In-tree module-specifier root for a plugin's admin assets —
- * `@/plugins/{namespace}`. Becomes `{package}` once a plugin graduates to its
- * own package, swapped here in one place rather than at every asset site.
- */
-export function pluginAssetRoot(namespace: string): string {
-    return `@/plugins/${namespace}`;
 }
 
 /** `redirects` → `Redirects`, `acme_seo` → `Acme Seo`. Fallback admin label. */
