@@ -27,10 +27,16 @@ lands.
 - [x] Move to `@libsql/client` 0.18 and Kysely 0.29 (steps 1 and 2 below).
 - [x] Move to Astro 7 and its adapters, upgrade both demo apps, and run the
       gate with both boot checks.
-- [ ] On a local file database, check whether a better-auth write and an app
-      write at the same moment can fail with `SQLITE_BUSY`. The driver sets no
-      busy timeout. If they can, set one, or give better-auth the app's Kysely
-      instance.
+- [ ] On a local file database, stop a better-auth write failing with
+      `SQLITE_BUSY` while an app transaction is open. Found on 2026-09-15: with
+      5 app transactions held open, all 200 sign-ins beside them failed. A busy
+      timeout does not help, since the wait blocks the thread the lock holder
+      needs. The fix is to pass better-auth the app's instance,
+      `getInstance().withoutPlugins()`, in `packages/astromech/src/users/auth.ts`,
+      so one Kysely lock covers both. The regression test is on branch
+      `astro-7-and-kysely-0-29` (commit 71bc228c, not yet run against the old
+      code). Then update `apps/docs/configuration/database.md` and
+      `ARCHITECTURE.md`, which name `createDialect()` as better-auth's way in.
 - [x] Remove the pins from `apps/docs/installation.md` and
       `packages/astromech/README.md`.
 - [ ] Follow `apps/docs/installation.md` on a new site installed from packed
