@@ -391,6 +391,19 @@ only per-route `args` are hand-written, and a bespoke handler says so with
 Rejected: build-time client codegen, retiring REST in favour of RPC, and retiring
 the hand-written CLI commands.
 
+**Multi-id writes over REST are `POST` action routes.** Update, trash, delete,
+restore, publish, unpublish and schedule each have a
+`POST /entries/:type/bulk-<action>` route taking the ids as `ids` in the JSON
+body, as Strapi's admin API does (`POST .../actions/bulkDelete`) and Google's
+AIP-235 recommends for batch deletes. Four of the seven have no HTTP method of
+their own, so collection verbs would still need `POST` for most of them, and a
+`DELETE` body has no defined meaning under RFC 9110. Rejected: Directus's
+`PATCH` and `DELETE` on the collection with a body; Payload's `where` in the
+query string, which addresses a filter rather than a list of ids; AIP's
+`:batchDelete` suffix, which few web APIs outside Google use; and one
+JSON:API-style batch endpoint, which moves the per-action permission checks out
+of the route table into a handler.
+
 **A service method is one object: access, schemas, effect hints, capability and
 handler together.** `defineServiceMethod` declares a verb the same way in core
 and in plugins, and `access` is one union for both: `'public'`,
