@@ -220,6 +220,18 @@ describe('POST /rpc/:id', () => {
         expect(Object.keys(body.error.details.fields)).toContain('data.email');
     });
 
+    it('400s an entries.query whose where names an unknown key', async () => {
+        const app = await freshApp();
+        const res = await call(app, 'entries.post.query', {
+            full: true,
+            where: { category: 'some-id' },
+        });
+        expect(res.status).toBe(400);
+        const body = (await res.json()) as ErrorBody;
+        expect(body.error.code).toBe('BAD_REQUEST');
+        expect(body.error.message).toContain("unrecognized where key 'category'");
+    });
+
     it('401s without a session', async () => {
         const app = await freshApp();
         signIn(null, adminRole);

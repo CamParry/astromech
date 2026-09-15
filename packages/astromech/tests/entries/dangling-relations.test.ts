@@ -237,10 +237,9 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
         expect(await api.get({ type: 'links/link', id: link.id })).not.toBeNull();
     });
 
-    // The entry write path is transactional — a single update is a batch of one
-    // (0077) — and a custom-table target cannot be read from another snapshot
-    // inside that transaction, so its reference stands even once the row is gone.
-    it('keeps a reference to a deleted tableRepository-backed row — the write is transactional', async () => {
+    // An update prunes inside its transaction, and the repository's read joins
+    // that transaction, so a deleted row's id is dropped like any other.
+    it('drops a reference to a deleted tableRepository-backed row on update', async () => {
         const link = await api.create({
             type: 'links/link',
             data: { fields: { label: 'One' } },
@@ -253,7 +252,7 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
         await api.delete({ type: 'links/link', id: link.id });
         const updated = await touch(doc.id);
 
-        expect(updated.fields.link).toBe(link.id);
+        expect(updated.fields.link).toBeNull();
     });
 
     // The false-negative guard lives on the hook, not the repository override: a
@@ -361,23 +360,26 @@ describe('pruneDanglingRelations (directly)', () => {
         expect(result.values).toBe(values);
     });
 
-    // Inside a transaction the registered repository reads a different snapshot,
-    // where a row written in this transaction is missing — so it is not read at
-    // all and the reference stands.
-    it('keeps a custom-table reference when pruning inside a transaction', async () => {
+    // The repository's read joins the open transaction, so a row written earlier
+    // in it exists and only the missing id is dropped.
+    it('keeps a custom-table row created earlier in the same transaction', async () => {
         const missing = '01JQZZZZZZZZZZZZZZZZZZZZZZ';
 
-        const outside = await pruneDanglingRelations(config, docFields, {
-            link: missing,
-        });
-        expect(outside).toEqual({ values: { link: null }, dropped: 1 });
-
         await transaction(async () => {
-            const inside = await pruneDanglingRelations(config, docFields, {
+            const link = await api.create({
+                type: 'links/link',
+                data: { fields: { label: 'New' } },
+            });
+
+            const kept = await pruneDanglingRelations(config, docFields, {
+                link: link.id,
+            });
+            const dropped = await pruneDanglingRelations(config, docFields, {
                 link: missing,
             });
-            expect(inside.dropped).toBe(0);
-            expect(inside.values['link']).toBe(missing);
+
+            expect(kept).toEqual({ values: { link: link.id }, dropped: 0 });
+            expect(dropped).toEqual({ values: { link: null }, dropped: 1 });
         });
     });
 

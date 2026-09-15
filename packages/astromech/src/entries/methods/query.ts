@@ -7,11 +7,15 @@ import { resolveEntryType } from '@/entries/entry-types.shared';
 import { flattenEntryFields } from '@/fields/flatten';
 import { collectRelationshipSchemaPaths } from '@/fields/relationship-edges';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { InvalidReferencesFilterError, PublicTrashedReadError } from '../errors';
+import {
+    CustomTableCrossTypeQueryError,
+    InvalidReferencesFilterError,
+    PublicTrashedReadError,
+} from '../errors';
 import { entryGate } from '../internal/access';
 import { queryPreviewEntries } from '../internal/preview-read';
 import { asEntry } from '../internal/records';
-import { getEntryRepository } from '../repository/registry';
+import { getEntryRepository, hasCustomTable } from '../repository/registry';
 import { entrySortSchema } from '../schema';
 
 /**
@@ -48,6 +52,14 @@ export const queryEntries = defineServiceMethod({
         const types = Array.isArray(typeParam)
             ? Array.from(typeParam)
             : [typeParam as string];
+
+        // The query goes to the first type's repository, and a custom table
+        // holds its own type alone, so a list mixing one with other types would
+        // drop the rows of one side without an error.
+        const customTableTypes = types.filter((type) => hasCustomTable(type));
+        if (types.length > 1 && customTableTypes.length > 0) {
+            throw new CustomTableCrossTypeQueryError(types, customTableTypes);
+        }
 
         // Absent `full` ⇒ public.
         const shape: VisibilityShape = params.full ? 'full' : 'public';

@@ -127,21 +127,24 @@ export class InvalidReferencesFilterError extends Error {
 }
 
 /**
- * Thrown when `where: { references }` reaches a `tableRepository`-backed entry
- * type. That repository lists an arbitrary table and cannot compile the index
- * subquery, so the filter is refused rather than returning unfiltered rows.
+ * Thrown when `entries.query` names several types and at least one of them is
+ * stored in its own table. The whole query goes to one repository, and a custom
+ * table holds its own type alone, so the rows of one side would go missing
+ * without an error.
  */
-export class RelationshipFilterUnsupportedError extends Error {
-    public readonly entryType: string;
+export class CustomTableCrossTypeQueryError extends Error {
+    public readonly entryTypes: string[];
+    public readonly customTableTypes: string[];
 
-    constructor(entryType: string) {
+    constructor(entryTypes: string[], customTableTypes: string[]) {
         super(
-            `Entry type '${entryType}' is backed by tableRepository, which cannot ` +
-                `filter on the relationships index. \`where: { references }\` ` +
-                `requires the entries-table repository.`
+            `entries.query: a type stored in its own table cannot be queried ` +
+                `together with other types. Query ${customTableTypes.join(', ')} on ` +
+                `its own. Queried types: ${entryTypes.join(', ')}.`
         );
-        this.name = 'RelationshipFilterUnsupportedError';
-        this.entryType = entryType;
+        this.name = 'CustomTableCrossTypeQueryError';
+        this.entryTypes = entryTypes;
+        this.customTableTypes = customTableTypes;
     }
 }
 

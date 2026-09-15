@@ -269,6 +269,8 @@ export type ResolvedEntryType = Omit<EntryType, 'repository' | 'fields' | 'type'
     capabilities: ResolvedEntryCapabilities;
     titleField: 'title' | false;
     fields: ResolvedEntryFields;
+    /** Present when the type is stored in its own table (`tableRepository`). */
+    customTable?: true;
 };
 
 /**
@@ -663,4 +665,9 @@ export type AdminEntryType = {
     titleField: 'title' | false;
     /** Field names a multi-type repository indexes for free-text search. */
     search?: string[];
+    /**
+     * Present when the type is stored in its own table. `entries.query` refuses
+     * such a type alongside other types, so it is queried on its own.
+     */
+    customTable?: true;
 };

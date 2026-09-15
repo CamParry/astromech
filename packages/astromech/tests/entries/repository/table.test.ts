@@ -15,6 +15,7 @@ import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { entriesService } from '@/app-context/services';
 import { defineTable } from '@/database/define-table';
+import { createRelationshipRepository } from '@/database/repository/relationships';
 import { transaction } from '@/database/transaction';
 import { UnknownSortKeyError } from '@/entries/errors';
 import { tableRepository } from '@/entries/repository/table';
@@ -54,6 +55,25 @@ beforeEach(async () => {
 
 afterEach(() => {
     vi.useRealTimers();
+});
+
+describe('construction', () => {
+    it('refuses an id column not declared with col.id()', () => {
+        const integerIds = defineTable('test_pins', ({ col }) => ({
+            id: col.integer({ primaryKey: true }),
+            label: col.text({ notNull: true }),
+        }));
+
+        expect(() => tableRepository(integerIds)).toThrow(
+            /id column "id" of table "test_pins" must be declared with col\.id\(\)/
+        );
+    });
+
+    it('refuses an idColumn naming an ordinary column', () => {
+        expect(() => tableRepository(testLinksTable, { idColumn: 'from' })).toThrow(
+            /id column "from" of table "test_links"/
+        );
+    });
 });
 
 describe('supports', () => {
@@ -375,6 +395,82 @@ describe('list – where filters', () => {
             where: { locale: 'en' },
         });
         expect(res.data).toHaveLength(1);
+    });
+});
+
+describe('list – references', () => {
+    /** Record `sourceId` as referencing `targetId` at `to`, as the write path does. */
+    async function indexEdge(
+        sourceId: string,
+        sourceType: string,
+        targetId: string
+    ): Promise<void> {
+        await createRelationshipRepository().replaceForSource(
+            { id: sourceId, kind: 'entry', type: sourceType, staged: false },
+            [{ schemaPath: 'to', instancePath: 'to', targetId, targetKind: 'entry' }]
+        );
+    }
+
+    it('returns only the rows the index links to the target, and counts only those', async () => {
+        const hit = await repository.create({
+            type: 'link',
+            fields: { from: '/a', to: '/x' },
+        });
+        const miss = await repository.create({
+            type: 'link',
+            fields: { from: '/b', to: '/y' },
+        });
+        await repository.create({ type: 'link', fields: { from: '/c', to: '/z' } });
+        await indexEdge(hit.id, 'link', 'T1');
+        await indexEdge(miss.id, 'link', 'T2');
+
+        const res = await repository.list({
+            type: 'link',
+            where: { references: { path: 'to', id: 'T1' } },
+        });
+
+        expect(res.data.map((r) => r.id)).toEqual([hit.id]);
+        expect(res.total).toBe(1);
+    });
+
+    it('ignores an index row recorded for another entry type', async () => {
+        const row = await repository.create({
+            type: 'link',
+            fields: { from: '/a', to: '/x' },
+        });
+        await indexEdge(row.id, 'other', 'T1');
+
+        const res = await repository.list({
+            type: 'link',
+            where: { references: { path: 'to', id: 'T1' } },
+        });
+
+        expect(res.data).toEqual([]);
+        expect(res.total).toBe(0);
+    });
+
+    it('accepts a one-element list of types', async () => {
+        const hit = await repository.create({
+            type: 'link',
+            fields: { from: '/a', to: '/x' },
+        });
+        await indexEdge(hit.id, 'link', 'T1');
+
+        const res = await repository.list({
+            type: ['link'],
+            where: { references: { path: 'to', id: 'T1' } },
+        });
+
+        expect(res.data.map((r) => r.id)).toEqual([hit.id]);
+    });
+
+    it('throws when the filter comes with several entry types', async () => {
+        await expect(
+            repository.list({
+                type: ['link', 'other'],
+                where: { references: { path: 'to', id: 'T1' } },
+            })
+        ).rejects.toThrow(/single entry type, got link, other/);
     });
 });
 

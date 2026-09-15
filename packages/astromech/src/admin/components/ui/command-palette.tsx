@@ -71,6 +71,20 @@ type CommandPaletteContextValue = {
 
 const CommandPaletteContext = createContext<CommandPaletteContextValue | null>(null);
 
+/**
+ * The types to search, grouped into one request per batch: the types in the
+ * shared entries tables together, and each type stored in its own table alone,
+ * because `entries.query` refuses a cross-type query that includes one.
+ */
+function queryBatches(
+    types: string[],
+    entryTypes: Record<string, AdminEntryType>
+): (string | string[])[] {
+    const customTable = (type: string): boolean => entryTypes[type]?.customTable === true;
+    const shared = types.filter((type) => !customTable(type));
+    return [...(shared.length > 0 ? [shared] : []), ...types.filter(customTable)];
+}
+
 /** Reads open state from `CommandPaletteProvider`. */
 export function useCommandPalette(): CommandPaletteContextValue {
     const ctx = useContext(CommandPaletteContext);
@@ -264,13 +278,24 @@ export function CommandPalette(): React.ReactElement {
         queryFn: async (): Promise<LiveResults> => {
             const q2 = debouncedQuery;
 
-            const rootEntriesPromise: Promise<Entry[]> =
-                readableRootTypes.length > 0
-                    ? astromechClient.entries
-                          .query({ type: readableRootTypes, search: q2, limit: 5 })
-                          .then((r) => r.data)
-                          .catch(() => [])
-                    : Promise.resolve([]);
+            /** Run each batch as its own request and merge the rows. */
+            const searchEntries = (
+                entries: typeof astromechClient.entries,
+                batches: (string | string[])[]
+            ): Promise<Entry[]> =>
+                Promise.all(
+                    batches.map((type) =>
+                        entries
+                            .query({ type, search: q2, limit: 5 })
+                            .then((r) => r.data)
+                            .catch(() => [])
+                    )
+                ).then((chunks) => chunks.flat());
+
+            const rootEntriesPromise = searchEntries(
+                astromechClient.entries,
+                queryBatches(readableRootTypes, adminConfig.entries)
+            );
 
             const pluginEntriesPromises: Promise<Entry[]>[] = readablePluginTypes.map(
                 (p) => {
@@ -280,10 +305,10 @@ export function CommandPalette(): React.ReactElement {
                         | { entries: typeof astromechClient.entries }
                         | undefined;
                     if (!pluginApi) return Promise.resolve([]);
-                    return pluginApi.entries
-                        .query({ type: p.types, search: q2, limit: 5 })
-                        .then((r) => r.data)
-                        .catch(() => []);
+                    return searchEntries(
+                        pluginApi.entries,
+                        queryBatches(p.types, p.entries)
+                    );
                 }
             );
 

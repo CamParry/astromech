@@ -8,7 +8,14 @@ import type { Context, ErrorHandler, NotFoundHandler } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { ZodError, ZodIssue } from 'zod';
 import { HTTPException } from 'hono/http-exception';
-import { BulkOperationError, EntryNotFoundError } from '@/entries/errors';
+import {
+    BulkOperationError,
+    CustomTableCrossTypeQueryError,
+    EntryNotFoundError,
+    InvalidReferencesFilterError,
+    UnknownSortKeyError,
+    UnknownWhereKeyError,
+} from '@/entries/errors';
 import { resolveEnv } from '@/env';
 import { ValidationError } from '@/errors/validation';
 import { GlobalNotFoundError } from '@/globals/errors';
@@ -165,8 +172,8 @@ function fieldErrorsFrom(err: ValidationError): Record<string, string[]> {
 
 /**
  * Hono's app-level error handler: canonicalises HTTPException, the three
- * not-found errors, ValidationError — bare, or wrapped by a batch write's
- * BulkOperationError — and unknown errors alike.
+ * not-found errors, the entries query-input errors, ValidationError (bare, or
+ * wrapped by a batch write's BulkOperationError) and unknown errors alike.
  *
  * `GlobalValidationError` and `MediaValidationError` need no case of their own:
  * both extend `ValidationError`, so they map to the same 422.
@@ -183,6 +190,17 @@ export const onError: ErrorHandler = (err, c) => {
         err instanceof UserNotFoundError
     ) {
         return notFound(c, err.message);
+    }
+
+    // A malformed `entries.query` is the caller's to fix, whether it arrived over
+    // REST or over RPC, so it answers 400 rather than the catch-all 500.
+    if (
+        err instanceof UnknownWhereKeyError ||
+        err instanceof UnknownSortKeyError ||
+        err instanceof InvalidReferencesFilterError ||
+        err instanceof CustomTableCrossTypeQueryError
+    ) {
+        return badRequest(c, err.message);
     }
 
     if (err instanceof ValidationError) {

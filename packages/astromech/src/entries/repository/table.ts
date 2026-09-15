@@ -13,21 +13,30 @@ import type {
     ListParams,
 } from './types';
 import type { Column, Table } from '@/database/define-table';
-import type { Repository, Where } from '@/database/repository/create-repository';
+import type {
+    KyselyHandle,
+    Repository,
+    Where,
+} from '@/database/repository/create-repository';
 import type { Db } from '@/database/types';
-import type { JsonObject } from '@/types/index';
+import type { JsonObject, ReferencesFilter } from '@/types/index';
+import type { Expression, SqlBool } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { decodeWith } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
-import { RelationshipFilterUnsupportedError, UnknownSortKeyError } from '../errors';
+import { UnknownSortKeyError } from '../errors';
+import { isReferencesFilter } from './references-filter';
 
 type OrderPair = [column: string, direction: 'asc' | 'desc'];
+
+/** The expression builder the list predicate is compiled against. */
+type ListEb = Parameters<ReturnType<KyselyHandle<Table>['where']>>[0];
 
 /** D1 caps a query at 100 bound parameters, and each id binds one. */
 const ID_CHUNK = 100;
 
 export type TableRepositoryOptions = {
-    /** Primary key column name. Default 'id'. */
+    /** Primary key column name, declared with `col.id()`. Default 'id'. */
     idColumn?: string;
     /**
      * Managed timestamp column names; pass false to disable.
@@ -50,6 +59,16 @@ class TableRepository implements EntryRepository<EntryRow> {
         this.table = table;
         this.repository = createRepository(table, db);
         this.idCol = options?.idColumn ?? 'id';
+
+        // Both sides of the relationships index assume an id is unique across
+        // resources, and only an id column guarantees that (`DECISIONS.md`).
+        if (table.columns[this.idCol]?.kind !== 'id') {
+            throw new Error(
+                `tableRepository: the id column "${this.idCol}" of table "${table.name}" ` +
+                    `must be declared with col.id(), because relationship ids are unique ` +
+                    `across resources.`
+            );
+        }
 
         if (options?.timestamps === false) {
             this.createdAtCol = false;
@@ -244,23 +263,52 @@ class TableRepository implements EntryRepository<EntryRow> {
     }
 
     /**
-     * `params.where` → the shared `where` DSL. `locale` is dropped because a
-     * custom-table entry type has no locale concept. `references` is refused
-     * outright rather than dropped — silently ignoring it would return every row.
+     * `params.where` split in two: the column filters, for the shared `where`
+     * DSL, and the `references` filter, which the DSL cannot express and `list`
+     * compiles to a subquery instead. `locale` is dropped because a custom-table
+     * entry type has no locale concept.
      */
-    private whereFilters(params: ListParams): Where<Table> {
-        const out: Where<Table> = {};
+    private whereFilters(params: ListParams): {
+        filters: Where<Table>;
+        references: ReferencesFilter | null;
+    } {
+        const filters: Where<Table> = {};
+        let references: ReferencesFilter | null = null;
         for (const [key, value] of Object.entries(params.where ?? {})) {
             if (key === 'locale') continue; // no locale concept
             if (key === 'references') {
-                const type = params.type;
-                throw new RelationshipFilterUnsupportedError(
-                    Array.isArray(type) ? type.join(', ') : String(type)
-                );
+                if (isReferencesFilter(value)) references = value;
+                continue;
             }
-            out[key] = value;
+            filters[key] = value;
         }
-        return out;
+        return { filters, references };
+    }
+
+    /**
+     * `EXISTS` against the relationships index for one row of this table,
+     * correlated on the id column.
+     *
+     * Unlike the entries-table version, this also matches `sourceType`. An id is
+     * unique across resources, so the condition excludes nothing; it is there so
+     * the lookup can use `idx_rel_filter` on `(sourceType, schemaPath, targetId)`.
+     */
+    private referencesExists(
+        eb: ListEb,
+        table: string,
+        sourceType: string,
+        filter: ReferencesFilter
+    ): Expression<SqlBool> {
+        return eb.exists(
+            eb
+                .selectFrom('relationships')
+                .select('relationships.sourceId')
+                .whereRef('relationships.sourceId', '=', `${table}.${this.idCol}`)
+                .where('relationships.sourceKind', '=', 'entry')
+                .where('relationships.sourceType', '=', sourceType)
+                .where('relationships.schemaPath', '=', filter.path)
+                .where('relationships.targetId', '=', filter.id)
+        );
     }
 
     /**
@@ -316,15 +364,18 @@ class TableRepository implements EntryRepository<EntryRow> {
         return pairs;
     }
 
+    /**
+     * One page of rows. The column filters, the search and the `references`
+     * subquery are ANDed into one predicate that both the count and the rows
+     * query use, so the total always counts the rows the page is drawn from.
+     */
     async list(params: ListParams): Promise<{ data: EntryRow[]; total: number }> {
         const { db, table, where } = this.repository.kysely();
 
-        // One predicate compiled once and used for both the count and the rows,
-        // so the two cannot drift.
-        const filters = this.whereFilters(params);
+        const { filters, references } = this.whereFilters(params);
         const searchColumns = this.searchColumns(params);
         const search = params.search ?? '';
-        const predicate = where(
+        const columnPredicate = where(
             searchColumns.length === 0
                 ? filters
                 : {
@@ -332,6 +383,16 @@ class TableRepository implements EntryRepository<EntryRow> {
                       or: searchColumns.map((col) => ({ [col]: { contains: search } })),
                   }
         );
+
+        let predicate = columnPredicate;
+        if (references !== null) {
+            const sourceType = referencedSourceType(params.type);
+            predicate = (eb) =>
+                eb.and([
+                    columnPredicate(eb),
+                    this.referencesExists(eb, table, sourceType, references),
+                ]);
+        }
 
         let rowsQuery = db.selectFrom(table).selectAll().where(predicate);
         for (const [column, direction] of this.buildOrderBy(params)) {
@@ -359,6 +420,21 @@ class TableRepository implements EntryRepository<EntryRow> {
 
         return { data: toRecords(rows), total: Number(counted?.total ?? 0) };
     }
+}
+
+/**
+ * The entry type a `references` filter matches `relationships.sourceType`
+ * against. A custom table holds one type, and `entries.query` refuses a query
+ * naming a custom-table type among other types, so a list of more than one is a
+ * bug in the caller.
+ */
+function referencedSourceType(type: ListParams['type']): string {
+    if (typeof type === 'string') return type;
+    const [only, ...rest] = type;
+    if (only !== undefined && rest.length === 0) return only;
+    throw new Error(
+        `tableRepository: where.references needs a single entry type, got ${type.join(', ')}`
+    );
 }
 
 /**

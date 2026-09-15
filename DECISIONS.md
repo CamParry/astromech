@@ -524,6 +524,14 @@ storage adapters and Strapi's upload providers draw the same line. Rejected: a
 repository seam on every content module, four more internal contracts that no
 caller has asked for.
 
+**Every id in the relationships index is unique across resources, custom tables
+included.** Both sides of the index rely on it: a source's edges are replaced by
+its id and kind, and `findByTarget` and `incomingRelationships` match on
+`targetId` alone. Entries, media and custom-table rows take ULIDs and users take
+UUIDs, so `tableRepository` refuses an `idColumn` not declared with `col.id()`.
+Rejected: adding `sourceType` to the index key, which fixes sources but not
+targets and puts a nullable column in the primary key.
+
 **An entry's type is part of its address.** `EntryRepository.get` and
 `anyLocale` take the type with the id, and the entries-table repository answers
 null for a row of another type, so a by-id operation addressed at the wrong type

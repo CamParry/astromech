@@ -8,7 +8,6 @@ import type { RelationshipDeclaration, TargetKind } from '@/fields/relationship-
 import type { Field } from '@/types/fields';
 import type { JsonObject, ResolvedConfig } from '@/types/index';
 import { existingResourceIds } from '@/database/repository/resource-existence';
-import { getTransactionScope } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types.shared';
 import { parseInstancePath } from '@/fields/field-path';
 import {
@@ -53,23 +52,15 @@ export async function pruneDanglingRelations(
         );
     }
 
-    // Targets with a repository of their own keep no rows in `entries`, so each
-    // answers for its own ids through the hook the declaration was cleared on.
+    // Targets stored in their own table keep no rows in `entries`, so each
+    // answers for its own ids through its repository's `existingIds`. That read
+    // resolves the open `transaction()` through `getDb()`, as every repository's
+    // does, so a row written earlier in the same transaction counts as existing.
     const readsByPath = repositoryReadsByPath(definitions);
 
-    // Inside an open `transaction()` scope, a registered repository's own reads may
-    // still be bound to a handle outside it — so reading one here can answer
-    // from a different snapshot, where a row written earlier in this
-    // transaction looks missing and its live reference gets pruned. Those
-    // targets go UNCHECKED instead: a kept dangling id is dropped by the next
-    // write (`DECISIONS.md`), a deleted live one is gone.
-    const insideTransaction = getTransactionScope() !== undefined;
-
     const readByTarget = new Map<string, ExistingIds>();
-    if (!insideTransaction) {
-        for (const reads of readsByPath.values()) {
-            for (const [target, read] of reads) readByTarget.set(target, read);
-        }
+    for (const reads of readsByPath.values()) {
+        for (const [target, read] of reads) readByTarget.set(target, read);
     }
 
     const aliveByTarget = new Map<string, Set<string>>();
@@ -87,7 +78,6 @@ export async function pruneDanglingRelations(
     const dead = candidates.filter((edge) => {
         if (aliveByKind.get(edge.targetKind)?.has(edge.targetId) === true) return false;
         for (const target of readsByPath.get(edge.schemaPath)?.keys() ?? []) {
-            if (insideTransaction) return false;
             if (aliveByTarget.get(target)?.has(edge.targetId) === true) return false;
         }
         return true;

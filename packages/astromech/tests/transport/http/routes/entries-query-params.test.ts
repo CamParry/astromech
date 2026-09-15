@@ -141,9 +141,10 @@ describe('SORTABLE_FIELDS on the query string', () => {
 
     it('errors on a field outside the allowlist rather than answering the default order', async () => {
         // The route forwards the field as given; `entries/repository/entries-table.ts`
-        // holds the allowlist and throws `UnknownSortKeyError` on a miss.
+        // holds the allowlist and throws `UnknownSortKeyError` on a miss, which
+        // `onError` answers with 400.
         const unlisted = await app().request('/entries/post?sort=id&dir=asc');
-        expect(unlisted.status).toBe(500);
+        expect(unlisted.status).toBe(400);
     });
 });
 
@@ -165,7 +166,7 @@ describe('validateSort on the query body', () => {
 
     it('errors on a key outside the allowlist, even alongside an allowed one', async () => {
         const res = await queryBody({ sort: { id: 'asc', title: 'asc' } });
-        expect(res.status).toBe(500);
+        expect(res.status).toBe(400);
     });
 
     it('falls back to the default order for a shape the schema drops', async () => {

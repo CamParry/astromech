@@ -141,5 +141,6 @@ export function toResolvedEntryType(
         ...(resolvedSearch !== undefined ? { search: resolvedSearch } : {}),
         capabilities,
         titleField: entryType.titleField ?? 'title',
+        ...(entryType.repository !== undefined ? { customTable: true as const } : {}),
     };
 }

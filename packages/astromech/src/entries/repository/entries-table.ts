@@ -38,6 +38,7 @@ import { existingResourceIds } from '@/database/repository/resource-existence';
 import { entriesTable, entryContentTable, entryVersionsTable } from '@/database/tables';
 import { ALL_CAPABILITIES } from '@/entries/capabilities';
 import { EntryNotFoundError, UnknownSortKeyError, UnknownWhereKeyError } from '../errors';
+import { isReferencesFilter } from './references-filter';
 
 const SORTABLE_FIELDS: readonly string[] = [
     'title',
@@ -205,13 +206,6 @@ function referencesExists(eb: JoinedEb, filter: ReferencesFilter): Expression<Sq
             .where('relationships.schemaPath', '=', filter.path)
             .where('relationships.targetId', '=', filter.id)
     );
-}
-
-/** A `references` value carrying both strings; anything else filters nothing. */
-function isReferencesFilter(value: unknown): value is ReferencesFilter {
-    if (typeof value !== 'object' || value === null) return false;
-    const { path, id } = value as Partial<ReferencesFilter>;
-    return typeof path === 'string' && path !== '' && typeof id === 'string' && id !== '';
 }
 
 /** The two joined rows plus the locale list, in the shape the service reads. */

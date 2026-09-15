@@ -5,6 +5,9 @@
  * The `article` type declares a relation at the top level (`author`) and two
  * inside a repeater (`sections[].related`, `sections[].gallery`) so a nested
  * schema path is exercised end to end.
+ *
+ * `links/link` is stored in its own table, so it covers the custom-table
+ * repository's version of the filter and the cross-type refusal.
  */
 
 import type { AstromechConfig, PluginDefinition } from '@/types/index';
@@ -14,8 +17,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService as api } from '@/app-context/services';
 import { defineTable } from '@/database/define-table';
 import {
+    CustomTableCrossTypeQueryError,
     InvalidReferencesFilterError,
-    RelationshipFilterUnsupportedError,
     UnknownSortKeyError,
     UnknownWhereKeyError,
 } from '@/entries/errors';
@@ -30,7 +33,7 @@ const linksTable = defineTable('test_links', ({ col }) => ({
     updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
 }));
 
-/** `links/link` is a custom table, so it has no relationships predicate to compile. */
+/** `links/link` is stored in its own table. */
 function linksPlugin(): PluginDefinition {
     return {
         package: '@astromech/links',
@@ -317,30 +320,109 @@ describe('where.references validation', () => {
 });
 
 describe('where.references on a custom-table type', () => {
-    it('throws rather than returning unfiltered rows', async () => {
-        const target = await api.create({ type: 'post', data: { title: 'Target' } });
-        await api.create({
+    /** Create one `links/link` row and return its id. */
+    async function createLink(label: string, post?: string): Promise<string> {
+        const fields = post === undefined ? { label } : { label, post };
+        return (await api.create({ type: 'links/link', data: { fields } })).id;
+    }
+
+    async function createPost(title: string): Promise<string> {
+        return (await api.create({ type: 'post', data: { title } })).id;
+    }
+
+    it('returns only the rows referencing the target, and counts only those', async () => {
+        const target = await createPost('Target');
+        const hit = await createLink('Hit', target);
+        await createLink('No relation');
+
+        const result = await api.query({
             type: 'links/link',
-            data: { fields: { label: 'One', post: target.id } },
+            full: true,
+            where: { references: { path: 'post', id: target } },
         });
 
-        await expect(
-            api.query({
-                type: 'links/link',
-                full: true,
-                where: { references: { path: 'post', id: target.id } },
-            })
-        ).rejects.toThrow(RelationshipFilterUnsupportedError);
+        expect(result.data.map((e) => e.id)).toEqual([hit]);
+        expect(result.pagination?.total).toBe(1);
     });
 
-    it('names the entry type in the error', async () => {
+    it('excludes a row whose relation points at another target', async () => {
+        const target = await createPost('Target');
+        const other = await createPost('Other');
+        await createLink('Other', other);
+
+        const result = await api.query({
+            type: 'links/link',
+            full: true,
+            where: { references: { path: 'post', id: target } },
+        });
+
+        expect(result.data).toEqual([]);
+        expect(result.pagination?.total).toBe(0);
+    });
+
+    it('keeps the total at the filtered count when paging', async () => {
+        const target = await createPost('Target');
+        const other = await createPost('Other');
+        for (const label of ['a', 'b', 'c']) await createLink(label, target);
+        for (const label of ['d', 'e']) await createLink(label, other);
+
+        const result = await api.query({
+            type: 'links/link',
+            full: true,
+            limit: 2,
+            page: 2,
+            where: { references: { path: 'post', id: target } },
+        });
+
+        expect(result.data).toHaveLength(1);
+        expect(result.data[0]?.fields.post).toBe(target);
+        expect(result.pagination?.total).toBe(3);
+        expect(result.pagination?.pages).toBe(2);
+    });
+
+    it('combines with a column filter', async () => {
+        const target = await createPost('Target');
+        const other = await createPost('Other');
+        const hit = await createLink('Keep', target);
+        await createLink('Drop', target);
+        await createLink('Keep', other);
+
+        const result = await api.query({
+            type: 'links/link',
+            full: true,
+            where: { label: 'Keep', references: { path: 'post', id: target } },
+        });
+
+        expect(result.data.map((e) => e.id)).toEqual([hit]);
+        expect(result.pagination?.total).toBe(1);
+    });
+});
+
+// The query goes to one repository, so either order would drop one side's
+// rows without an error, whatever the filter.
+describe('a cross-type query naming a custom-table type', () => {
+    it('is refused in either order, with or without a filter', async () => {
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
+
+        for (const type of [
+            ['links/link', 'post'],
+            ['post', 'links/link'],
+        ]) {
+            for (const where of [
+                undefined,
+                { references: { path: 'post', id: target.id } },
+            ]) {
+                await expect(
+                    api.query({ type, full: true, ...(where ? { where } : {}) })
+                ).rejects.toThrow(CustomTableCrossTypeQueryError);
+            }
+        }
+    });
+
+    it('tells the caller to query the custom-table type on its own', async () => {
         await expect(
-            api.query({
-                type: 'links/link',
-                full: true,
-                where: { references: { path: 'post', id: 'x' } },
-            })
-        ).rejects.toThrow(/links\/link/);
+            api.query({ type: ['post', 'links/link'], full: true })
+        ).rejects.toThrow(/Query links\/link on its own/);
     });
 });
 
