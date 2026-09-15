@@ -44,14 +44,14 @@ API clients. It should answer like a file server.
 
 ## The work
 
-- [ ] The media handler catches its own failures as above.
-- [ ] Media responses carry the CORP value for `media.access`, and API
+- [x] The media handler catches its own failures as above.
+- [x] Media responses carry the CORP value for `media.access`, and API
       responses keep `same-origin`.
-- [ ] The mount answers `GET` and `HEAD`, and 405 for anything else.
-- [ ] `ETag`, `Accept-Ranges`, `Content-Range` and the immutable
+- [x] The mount answers `GET` and `HEAD`, and 405 for anything else.
+- [x] `ETag`, `Accept-Ranges`, `Content-Range` and the immutable
       `Cache-Control` on canonical variants keep surviving. `roadmap/completed/media.md`
       records what was verified.
-- [ ] Tests through the composed app cover the CORP header in both modes, `HEAD`,
+- [x] Tests through the composed app cover the CORP header in both modes, `HEAD`,
       the 405, a failing storage driver and a failing transform, so none of them
       can regress silently. Nothing in the gate fetches a media file through the
       app today.
