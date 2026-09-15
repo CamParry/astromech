@@ -73,9 +73,6 @@ expressions anywhere.
 
 ## Prerequisite it shares with relationships
 
-Visibility predicates run **post-fetch in JS**
-(`entries/operations/query.ts:84-104`), so `total` and `pages` are already
-wrong for scheduled content — a bug documented in a comment at
-`query.ts:48-53`. `status`, `publishedAt` and `deletedAt` are all real columns
-and trivially pushable into SQL. Any new filtering makes the existing miscount
-much more visible.
+A public entry list must count in SQL exactly the rows it returns, or any new
+filter makes a miscount more visible. The scheduled-content miscount is
+`roadmap/in-progress/scheduled-entries-in-list-counts.md`.
