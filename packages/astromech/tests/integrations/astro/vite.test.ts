@@ -77,6 +77,28 @@ describe('createViteConfig()', () => {
         }
     });
 
+    // Vite's own matching rule (`moduleListContains`): an excluded name also
+    // covers its subpaths, and it is checked against the specifier as written,
+    // before the alias replaces it.
+    it('keeps core and the admin out of pre-bundling, aliased entries included', () => {
+        const exclude = vite.optimizeDeps?.exclude ?? [];
+        const alias = vite.resolve?.alias as Record<string, string>;
+        const packageEntries = Object.keys(alias).filter(
+            (id) => id.startsWith('astromech/') || id.startsWith('@astromech/admin')
+        );
+        const bundled = packageEntries.filter(
+            (id) => !exclude.some((name) => id === name || id.startsWith(`${name}/`))
+        );
+
+        expect(exclude).toEqual(
+            expect.arrayContaining(['astromech', '@astromech/admin'])
+        );
+        expect(packageEntries).toEqual(
+            expect.arrayContaining(['astromech/shared', 'astromech/fetch'])
+        );
+        expect(bundled).toEqual([]);
+    });
+
     it('resolves every pre-bundled package from the site root through packages that declare it', () => {
         const include = (vite.optimizeDeps?.include ?? []).filter(
             (entry) => entry !== undefined

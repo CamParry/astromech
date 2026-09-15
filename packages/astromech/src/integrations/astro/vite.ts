@@ -60,7 +60,14 @@ export function createViteConfig({
                 'astromech/fetch': packageSource + '/exports/fetch.ts',
             },
         },
+        // Core and the admin ship source only the site's Vite can compile: core's
+        // `@/` imports resolve through `astromech:core-source-alias`, a plugin the
+        // pre-bundler does not run. So neither package is pre-bundled. A package
+        // name also excludes its subpaths, and Vite checks the specifier before an
+        // alias replaces it, so `astromech/shared` and `astromech/fetch` stay out
+        // too. `include` still pre-bundles the packages they depend on.
         optimizeDeps: {
+            exclude: ['astromech', '@astromech/admin'],
             // Named from the site's root. Peers stay flat, because the site installs
             // them and shares one copy. The rest go through the packages that depend
             // on them: Vite finds `c` in `a > b > c` from `b`, found from `a`.
