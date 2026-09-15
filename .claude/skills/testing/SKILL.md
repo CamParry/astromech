@@ -5,8 +5,8 @@ user-invocable: false
 ---
 
 Where a test file goes, and which files need per-file isolation, is in
-`packages/astromech/AGENTS.md` and `packages/plugins/AGENTS.md`. This skill
-covers how a test is written.
+`packages/astromech/AGENTS.md`, `packages/admin/AGENTS.md` and
+`packages/plugins/AGENTS.md`. This skill covers how a test is written.
 
 ## Names
 
@@ -36,8 +36,11 @@ unknown id')`, `it('answers 405 for POST')`. Not `it('should reject …')`, and
 - **Mock the leaf module, not a barrel**, and only at a real boundary: the
   session, the AI SDK, the network. `vi.mock('@/users/session')` is the model.
 - **A mock of a module other files import, `vi.resetModules()`, a stubbed
-  global, or a write to `globalThis.__astromech` makes the file isolated.** The list and the test that
-  guards it are described in `packages/astromech/AGENTS.md`.
+  global, or a write to `globalThis.__astromech` makes the file isolated.** Core
+  and the admin each keep their own list, described in their `AGENTS.md`. One
+  check, `packages/astromech/tests/_support/isolation-check.ts`, guards both:
+  each package's `tests/isolation-list.test.ts` runs it over that package's
+  tests.
 
 ## Time
 
@@ -54,7 +57,9 @@ expect(…))`. To assert that something does not happen, wait for a positive
 
 - **Render with `@testing-library/react`** (`render`, `renderHook`, `screen`,
   `userEvent`).
-- **`tests/_support/dom-setup.ts` runs before every happy-dom file.** It turns on
+- **Component tests live in the admin**, in `packages/admin/tests/`, and
+  `packages/admin/tests/_support/dom-setup.ts` runs before every happy-dom file
+  there. It turns on
   React's act environment, unmounts what each test rendered, and fails a test on
   any request it did not mock, naming the URL. Stub `fetch`, mock the client
   module, or seed the query cache the component reads.
@@ -72,10 +77,11 @@ expect(…))`. To assert that something does not happen, wait for a positive
 
 ## Coverage
 
-- **Thresholds live per directory** in `packages/astromech/vitest.config.ts`,
-  one entry for each top-level directory of `packages/astromech/src`.
+- **Thresholds live per directory** in the `vitest.config.ts` of core and of the
+  admin, one entry for each top-level directory of that package's `src`.
   `pnpm run test:run`, and so `verify`, fails when a directory drops below its
-  entry. `pnpm -F astromech test:coverage` runs core's suite alone with coverage.
+  entry. `pnpm -F astromech test:coverage` and
+  `pnpm -F @astromech/admin test:coverage` run one suite alone with coverage.
 - **A change that raises a directory's coverage raises its threshold in the same
   commit.**
 - **Never lower a threshold to pass.** Write the test instead.

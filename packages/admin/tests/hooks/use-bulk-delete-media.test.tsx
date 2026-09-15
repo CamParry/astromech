@@ -18,7 +18,7 @@ import en from '@/admin/locales/en.json';
 
 const { deleteMedia } = vi.hoisted(() => ({ deleteMedia: vi.fn() }));
 
-vi.mock('@/transport/http/client', () => ({
+vi.mock('astromech/fetch', () => ({
     astromechClient: { media: { delete: deleteMedia } },
 }));
 

@@ -1,5 +1,6 @@
 /**
- * The vitest alias map shared by core's suite and the first-party plugins'.
+ * The vitest alias map shared by core's suite, the admin's and the first-party
+ * plugins'. `@tests` is core's shared test support.
  *
  * Every path into core resolves to `src`, never `dist`. A plugin's `src`
  * imports `astromech` and its tests import `@/...`; if those resolved to
@@ -11,16 +12,6 @@ import { fileURLToPath } from 'node:url';
 
 export function coreAliases(): Record<string, string> {
     return {
-        // Admin virtual modules, normally injected by the Astro integration.
-        'virtual:astromech/admin-config': fileURLToPath(
-            new URL('./admin-config-shim.ts', import.meta.url)
-        ),
-        'virtual:astromech/plugins/components': fileURLToPath(
-            new URL('./plugins-components-shim.ts', import.meta.url)
-        ),
-        // Core's admin tests import the admin as `@/admin/...`. The key must
-        // precede `@`, which would otherwise take the match.
-        '@/admin': fileURLToPath(new URL('../../../admin/src', import.meta.url)),
         '@': fileURLToPath(new URL('../../src', import.meta.url)),
         '@tests': fileURLToPath(new URL('../../tests/_support', import.meta.url)),
         // The admin package's subpaths, which core imports and re-exports.

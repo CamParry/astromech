@@ -256,6 +256,12 @@ importers:
       '@tanstack/router-cli':
         specifier: ^1.167.21
         version: 1.167.29(supports-color@10.2.2)
+      '@testing-library/react':
+        specifier: ^16.3.2
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@testing-library/user-event':
+        specifier: ^14.6.1
+        version: 14.6.4(@testing-library/dom@10.4.1)
       '@types/node':
         specifier: ^22.20.1
         version: 22.20.1
@@ -265,6 +271,9 @@ importers:
       '@types/react-dom':
         specifier: ^19.0.0
         version: 19.2.4(@types/react@19.2.18)
+      '@vitest/coverage-v8':
+        specifier: 4.1.10
+        version: 4.1.10(vitest@4.1.10)
       astro:
         specifier: ^6.0.8
         version: 6.4.8(@types/node@22.20.1)(aws4fetch@1.0.20)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.62.4)(supports-color@10.2.2)(tsx@4.23.12)(yaml@2.9.0)
@@ -274,6 +283,9 @@ importers:
       eslint:
         specifier: ^10.8.1
         version: 10.8.1(jiti@2.7.0)(supports-color@10.2.2)
+      happy-dom:
+        specifier: ^20.10.4
+        version: 20.11.2
       react:
         specifier: ^19.0.0
         version: 19.2.8
@@ -289,6 +301,9 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+      vitest:
+        specifier: ^4.1.0
+        version: 4.1.10(@types/node@22.20.1)(@vitest/coverage-v8@4.1.10)(happy-dom@20.11.2)(vite@7.3.6(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)(yaml@2.9.0))
 
   packages/astromech:
     dependencies:
@@ -377,18 +392,6 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.30.0(supports-color@10.2.2)(zod@4.4.3)
-      '@tanstack/react-query':
-        specifier: ^5.94.5
-        version: 5.101.4(react@19.2.8)
-      '@tanstack/react-router':
-        specifier: ^1.168.1
-        version: 1.170.28(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      '@testing-library/react':
-        specifier: ^16.3.2
-        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      '@testing-library/user-event':
-        specifier: ^14.6.1
-        version: 14.6.4(@testing-library/dom@10.4.1)
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
@@ -419,12 +422,6 @@ importers:
       eslint:
         specifier: ^10.8.1
         version: 10.8.1(jiti@2.7.0)(supports-color@10.2.2)
-      happy-dom:
-        specifier: ^20.10.4
-        version: 20.11.2
-      i18next:
-        specifier: ^25.10.3
-        version: 25.10.10(typescript@5.9.3)
       kysely:
         specifier: ^0.28.14
         version: 0.28.17
@@ -437,9 +434,6 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.2.8(react@19.2.8)
-      react-i18next:
-        specifier: ^16.6.0
-        version: 16.6.6(i18next@25.10.10(typescript@5.9.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@5.9.3)
       sharp:
         specifier: ^0.35.1
         version: 0.35.3(@types/node@22.20.1)

@@ -22,7 +22,7 @@ const { versions, restoreVersion } = vi.hoisted(() => ({
     restoreVersion: vi.fn(),
 }));
 
-vi.mock('@/transport/http/client', () => ({
+vi.mock('astromech/fetch', () => ({
     astromechClient: { media: { versions, restoreVersion } },
 }));
 

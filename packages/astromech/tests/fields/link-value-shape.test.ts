@@ -1,7 +1,7 @@
 /**
  * A link value is keyed by `url` on every side of the contract. These pin the key
  * on the generated type and the validator, the halves checkable without
- * rendering; tests/admin/components/fields/link-field-value.test.tsx pins the editor.
+ * rendering; packages/admin/tests/components/fields/link-field-value.test.tsx pins the editor.
  */
 
 import type { FieldValidationContext } from '@/types/fields';

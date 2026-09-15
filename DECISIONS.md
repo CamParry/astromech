@@ -685,17 +685,19 @@ LTS (22 and 24) for Test and Boot; lint, typecheck and build run on 24 alone,
 since their output does not vary by runtime. `.nvmrc` names 24. Rejected: an
 unverified `>=20.0.0`, and relying on peer-dependency inheritance for the floor.
 
-**Core's tests share one module graph per worker.** vitest's default `forks`
+**Core's and the admin's tests share one module graph per worker.** vitest's default `forks`
 pool rebuilt the graph for every one of 222 files, spending 329 seconds of
 worker CPU on imports against 122 running test bodies, so the suite runs
 `pool: 'threads'` with `isolate: false` and a `tests/_support/isolated-tests.ts`
 list of files that opt back into per-file isolation. Threads alone, isolation
 kept, took the run from 61s to 48s; dropping isolation took it to 32s. Six files
 failed without isolation, every one a `vi.mock` of a module another file had
-already imported. The list is the 39 files that mock a module, stub a global or
-write `globalThis.__astromech`, not the six that fail today, because a leaked
-mock can as easily make an unrelated test pass for the wrong reason as fail;
-`tests/isolation-list.test.ts` fails when the list and the files disagree.
+already imported. Each package's list holds every file that mocks a module,
+stubs a global or writes a shared global, not only the ones that fail today,
+because a leaked mock can as easily make an unrelated test pass for the wrong
+reason as fail. Each package's `tests/isolation-list.test.ts` runs the same
+check, `packages/astromech/tests/_support/isolation-check.ts`, over its own
+tree, and fails when its list and its files disagree.
 Rejected: vitest's documented `*.non-isolated.test.ts` suffix, which inverts the
 default the wrong way round when 183 of 222 files are safe; `deps.optimizer.ssr`,
 measured slower at 65s; and folding the three package suites into one root

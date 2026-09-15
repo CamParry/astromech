@@ -1,5 +1,5 @@
 /**
- * Setup for every core test file, registered in `vitest.config.ts`.
+ * Setup for every admin test file, registered in the admin's `vitest.config.ts`.
  *
  * It does nothing in a node-environment file. In a happy-dom file it does three
  * things:

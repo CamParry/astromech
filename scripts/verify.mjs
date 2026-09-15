@@ -47,7 +47,7 @@ const stagesByMode = {
                 // The assistant is left out: its suite resolves core through
                 // `dist`, which this stage does not build. Every other plugin
                 // resolves core to source and needs no build.
-                'pnpm -F @astromech/schema-engine test:run && pnpm -F astromech test:run && pnpm -F @astromech/forms -F @astromech/menus -F @astromech/redirects -F @astromech/backups -F @astromech/seo test:run',
+                'pnpm -F @astromech/schema-engine test:run && pnpm -F astromech test:run && pnpm -F @astromech/admin test:run && pnpm -F @astromech/forms -F @astromech/menus -F @astromech/redirects -F @astromech/backups -F @astromech/seo test:run',
             ],
             ['lint', 'pnpm run lint'],
         ],

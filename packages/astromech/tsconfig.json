@@ -28,7 +28,6 @@
         "types": ["node"],
         "paths": {
             "@/*": ["./src/*"],
-            "@/admin/*": ["../admin/src/*"],
             "@tests/*": ["./tests/_support/*"],
             "astromech": ["./src/exports/index.ts"],
             "astromech/fields": ["./src/exports/fields.ts"],

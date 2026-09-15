@@ -56,12 +56,15 @@ Stages, each one commit that passes `pnpm run verify`:
        `astromech/ui*` re-exports. The UI instance guard keeps its own
        `__astromechAdmin` global, and the admin loads Inter, which its styles
        name but nothing has ever loaded.
-- [ ]   4. Move the admin tests, with their own vitest config, isolation list and
+- [x]   4. Move the admin tests, with their own vitest config, isolation list and
        coverage thresholds.
 - [ ]   5. Retire the `*.shared.ts` suffix and close
        `roadmap/planned/browser-boundary-enforcement.md`.
 - [ ]   6. Scope the `@/` alias in the site's Vite build to files inside core's
        `src`.
+- [ ] Core's `tsconfig.test.json` stops including the admin's route tree, and
+      core's `pretypecheck` stops generating it. Both remain because core
+      type-checks admin source through its `astromech/ui` re-exports.
 - [ ] After stage 3, try nested `optimizeDeps.include` entries so
       `publicHoistPattern` can shrink.
 

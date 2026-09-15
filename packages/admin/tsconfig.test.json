@@ -5,7 +5,17 @@
         "noEmit": true,
         "rootDir": "..",
         "incremental": true,
-        "tsBuildInfoFile": "./node_modules/.cache/tsc/tsconfig.test.tsbuildinfo"
+        "tsBuildInfoFile": "./node_modules/.cache/tsc/tsconfig.test.tsbuildinfo",
+        "paths": {
+            "@/admin/*": ["./src/*"],
+            "@/*": ["../astromech/src/*"],
+            "@tests/*": ["../astromech/tests/_support/*"],
+            "astromech": ["../astromech/src/exports/index.ts"],
+            "astromech/shared": ["../astromech/src/exports/shared.ts"],
+            "astromech/fetch": ["../astromech/src/exports/fetch.ts"],
+            "@astromech/schema-engine/generate": ["../schema-engine/src/generate.ts"],
+            "@astromech/schema-engine": ["../schema-engine/src/index.ts"]
+        }
     },
-    "include": ["src/**/*", "../astromech/src/virtual-modules.d.ts"]
+    "include": ["src/**/*", "tests/**/*", "../astromech/src/virtual-modules.d.ts"]
 }

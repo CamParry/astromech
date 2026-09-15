@@ -36,7 +36,7 @@ vi.mock('virtual:astromech/admin-config', () => ({
 
 const { queryUsers } = vi.hoisted(() => ({ queryUsers: vi.fn() }));
 
-vi.mock('@/transport/http/client', () => ({
+vi.mock('astromech/fetch', () => ({
     astromechClient: { users: { query: queryUsers } },
 }));
 

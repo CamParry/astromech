@@ -215,7 +215,12 @@ export default tseslint.config(
         },
     },
     {
-        files: ['packages/astromech/tests/**/*.ts', 'packages/astromech/tests/**/*.tsx'],
+        files: [
+            'packages/astromech/tests/**/*.ts',
+            'packages/astromech/tests/**/*.tsx',
+            'packages/admin/tests/**/*.ts',
+            'packages/admin/tests/**/*.tsx',
+        ],
         rules: {
             'no-restricted-syntax': ['error', ...noJsExtension, ...noBarrelImport],
         },

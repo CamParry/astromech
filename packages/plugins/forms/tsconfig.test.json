@@ -8,7 +8,6 @@
         "tsBuildInfoFile": "./node_modules/.cache/tsc/tsconfig.test.tsbuildinfo",
         "paths": {
             "@/*": ["../../astromech/src/*"],
-            "@/admin/*": ["../../admin/src/*"],
             "@tests/*": ["../../astromech/tests/_support/*"],
             "astromech": ["../../astromech/src/exports/index.ts"],
             "astromech/fields": ["../../astromech/src/exports/fields.ts"],
