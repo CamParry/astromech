@@ -1,7 +1,6 @@
-import type { Block } from '@/types/index';
+import type { Block } from 'astromech';
 import { useCallback, useRef, useState } from 'react';
-// Deep import: the `fields/` barrel reaches server code (virtual config / DB).
-import { buildDefaultValues } from '@/fields/defaults';
+import { buildDefaultValues } from '@/admin/utilities/defaults';
 
 export type BlockWithId = {
     _id: string;

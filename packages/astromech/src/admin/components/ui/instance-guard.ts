@@ -1,7 +1,5 @@
 /** Dev-only detection of a second copy of the admin UI in one page. */
 
-import { globals } from '@/registry';
-
 /**
  * Records this module's URL and logs if a different URL turns up.
  * Two copies mean two React contexts, so context reads from plugin components fail.
@@ -11,9 +9,12 @@ export function assertSingleUiInstance(): void {
     // `import.meta.env` is a Vite global; the kit barrel also loads under plain Node.
     if (import.meta.env?.DEV !== true) return;
 
-    const existing = globals().uiInstance;
-    if (existing === undefined) {
-        globals().uiInstance = import.meta.url;
+    // Its own `uiInstance` key on the shared namespace, read directly rather
+    // than through registry.ts so the admin reaches core only through its entries.
+    const namespace = (globalThis.__astromech ??= {});
+    const existing = namespace.uiInstance;
+    if (typeof existing !== 'string') {
+        namespace.uiInstance = import.meta.url;
         return;
     }
     if (existing === import.meta.url) return;

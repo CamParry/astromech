@@ -4,9 +4,9 @@
  * exercised until the chat drawer consumes it.
  */
 
+import { formatAiContextMessage } from 'astromech/shared';
 import { useAiContextItems } from '@/admin/context/ai-context';
 import { useLocalState } from '@/admin/hooks/use-local-state';
-import { formatAiContextMessage } from '@/utilities/ai-context';
 import './ai-context-readout.css';
 
 type ReadoutState = 'open' | 'closed';

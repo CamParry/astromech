@@ -143,6 +143,34 @@ export default tseslint.config(
         },
     },
     {
+        // The admin reaches core only through its browser entries: `astromech/shared`,
+        // `astromech/fetch` and type-only imports from `astromech`. No other block
+        // sets this rule, so these options are the whole of it for admin files.
+        files: [
+            'packages/astromech/src/admin/**/*.ts',
+            'packages/astromech/src/admin/**/*.tsx',
+        ],
+        rules: {
+            '@typescript-eslint/no-restricted-imports': [
+                'error',
+                {
+                    patterns: [
+                        {
+                            regex: '^@/(?!admin/)',
+                            message:
+                                'The admin reaches core through astromech/shared, astromech/fetch or a type import from astromech, never a @/ path outside src/admin (see DECISIONS.md).',
+                        },
+                        {
+                            regex: '^astromech/(?!(shared|fetch)$)',
+                            message:
+                                'The admin may import astromech/shared, astromech/fetch and the astromech root, and no other subpath (see DECISIONS.md).',
+                        },
+                    ],
+                },
+            ],
+        },
+    },
+    {
         files: contentModules.map((m) => `packages/astromech/src/${m}/**/*.ts`),
         rules: {
             'no-restricted-syntax': [

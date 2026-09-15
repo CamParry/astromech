@@ -118,10 +118,10 @@ export default defineConfig({
                     statements: 99,
                 },
                 'src/fields/**': {
-                    lines: 88,
-                    functions: 80,
-                    branches: 85,
-                    statements: 87,
+                    lines: 92,
+                    functions: 81,
+                    branches: 90,
+                    statements: 91,
                 },
                 'src/globals/**': {
                     lines: 96,
@@ -214,10 +214,10 @@ export default defineConfig({
                     statements: 91,
                 },
                 'src/utilities/**': {
-                    lines: 58,
+                    lines: 60,
                     functions: 40,
-                    branches: 71,
-                    statements: 59,
+                    branches: 76,
+                    statements: 62,
                 },
             },
         },

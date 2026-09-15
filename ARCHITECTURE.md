@@ -77,7 +77,8 @@ types · services · utilities · env · errors ·        pure leaves
   needs one — Node and Vercel need no code.
 - **`admin/`** is the React SPA (TanStack Router), mounted by `admin/shell.astro`
   under the configured `basePath`. It talks to the server only through the
-  fetch client in `transport/http/client.ts`.
+  fetch client, which it imports as `astromech/fetch`. "The browser boundary"
+  below says what else it may import.
 - **`codegen/`** generates the site's entry types and the method manifest.
 - **`transport/`** is every way a call arrives: Hono routes and middleware in
   `http/`, the CLI, the dev-only MCP server, and `tools/`, the tool surface the
@@ -223,9 +224,21 @@ hook runner. A hook handler's throw propagates to the caller.
 
 ## The browser boundary
 
-`admin/` runs in the browser. It may import the leaves, `fields/`, the fetch
-client, and pure files from any module that import nothing server-side; a service or a driver would pull the config and every backend into the client
-bundle. `pnpm run check:boot` loads the built admin and is the check.
+`admin/` runs in the browser, and reaches core through three entries and
+nothing else: `astromech/shared`, named re-exports of the browser-safe values
+it uses from `fields/`, `utilities/` and the `*.shared.ts` files;
+`astromech/fetch`, the fetch client; and type-only imports from `astromech`,
+which erase. A service or a driver would pull the config and every backend into
+the client bundle, so a lint rule refuses any other `@/` or `astromech/*`
+import from `src/admin/`. Code only the admin uses lives under `admin/`, not
+in core's leaves. The site's Vite build aliases `astromech/shared` and
+`astromech/fetch` to source, as it does `astromech/ui`, so the admin and every
+other browser caller share one instance of each.
+
+Two checks cover it. `packages/astromech/tests/exports/shared-browser.test.ts`
+bundles the two entries for the browser and fails on a Node builtin or on a core
+file outside its allowlist, and `pnpm run check:boot` loads the built admin in
+a headless browser.
 
 ## Scheduler
 
@@ -242,7 +255,8 @@ subpaths resolve to `src/` so a core edit reaches `apps/demo` without a
 rebuild, and `publishConfig.exports` restores the `dist/` map for npm.
 `pnpm run check:exports` keeps the two in step. The ones to know: `astromech`
 (core helpers, types and the plugin-authoring API), `astromech/astro`,
-`astromech/fetch`, `astromech/middleware`, `astromech/methods` (the server-side
+`astromech/fetch`, `astromech/shared` (the browser-safe values the admin
+reads), `astromech/middleware`, `astromech/methods` (the server-side
 manifest and dispatch surface, core-internal in practice), `astromech/fields`,
 `astromech/database/schema`, `astromech/storage/{filesystem,r2,s3}`,
 `astromech/cloudflare`, and the `astromech` CLI bin.

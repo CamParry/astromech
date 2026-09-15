@@ -5,7 +5,7 @@
  */
 
 import type { EntriesBinding } from './binding';
-import type { Entry, EntryUpdateData } from '@/types/index';
+import type { Entry, EntryUpdateData } from 'astromech';
 import { useNavigate } from '@tanstack/react-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';

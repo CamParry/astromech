@@ -4,7 +4,7 @@
  * the renderer and may export `validate(value, field)` for inline errors.
  */
 
-import type { BaseFieldProps } from '@/types/index';
+import type { BaseFieldProps } from 'astromech';
 import React from 'react';
 import { fieldTypes } from 'virtual:astromech/plugins/components';
 import { useFieldControl } from '@/admin/components/fields/field-control-context';

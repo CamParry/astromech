@@ -1,5 +1,5 @@
 import type { TypeFilter } from '../types/media';
-import type { Media } from '@/types/index';
+import type { Media } from 'astromech';
 import { File, FileText, Music, Video } from 'lucide-react';
 import React from 'react';
 

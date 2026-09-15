@@ -4,7 +4,7 @@
  * the literal, and an omitted value falls back to `Titlecase(name)`.
  */
 
-import type { Label } from '@/types/index';
+import type { Label } from 'astromech';
 import type { TFunction } from 'i18next';
 
 /**

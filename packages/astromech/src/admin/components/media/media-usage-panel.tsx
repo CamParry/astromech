@@ -4,14 +4,14 @@
  * display titles server-side, so this component only groups and links.
  */
 
-import type { MediaUsage } from '@/types/index';
+import type { MediaUsage } from 'astromech';
+import { parseEntryTypeId } from 'astromech/shared';
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { useMediaUsage } from '@/admin/hooks/media';
 import { Link } from '@/admin/rendering/cells/link';
 import { entryAdminPath } from '@/admin/utilities/entry-admin-path';
-import { parseEntryTypeId } from '@/entries/entry-types.shared';
 import { Spinner } from '../ui/spinner';
 
 export type MediaUsagePanelProps = {

@@ -1,10 +1,10 @@
-import type { Media } from '@/types/index';
+import type { Media } from 'astromech';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Checkbox } from '@/admin/components/ui/checkbox';
 import { Table } from '@/admin/components/ui/table';
-import { formatBytes } from '@/utilities/bytes';
-import { formatDatetime } from '@/utilities/dates';
+import { formatBytes } from '@/admin/utilities/bytes';
+import { formatDatetime } from '@/admin/utilities/dates';
 import { MediaThumb } from './media-thumb';
 
 export type MediaRowProps = {

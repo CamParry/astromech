@@ -302,7 +302,7 @@ driver subpath, so they sit in `peerDependencies` with
 `check:node-imports` loads each of those subpaths to prove the peer is reachable
 when a site does install it. `react`, `react-dom`, `better-auth` and `kysely`
 are required peers, so the site and the admin share one copy of each; a second
-React is what `admin/support/ui-instance-guard.ts` exists to detect, and a
+React is what `admin/components/ui/instance-guard.ts` exists to detect, and a
 second `kysely` or `better-auth` splits the query builder types and the session.
 `linkedom` stays a plain dependency because the root export imports it, so every
 site loads it whatever it configures. Rejected: keeping all of them as
@@ -507,11 +507,22 @@ input; and a REST catalogue resolved per request so the mount could check an
 entry type's or a global's permission before reading the body, which each of
 those routes' `precondition` already does.
 
-**The browser-safe surface will be declared, through an `exports/shared.ts`
-entrypoint plus a `browser` condition.** The `*.shared.ts` suffix has enforced
-nothing since dependency-cruiser went, and survives only until
-`integrations/astro/vite.ts` stops aliasing `@/` to all of `src/`. Rejected: a
-`@astromech/shared` package, and re-adding lint rules to police the suffix.
+**The browser-safe surface is `astromech/shared`, and a bundle test checks
+it.** `src/exports/shared.ts` names each browser-safe value the admin reads, and
+the admin reaches core only through it, `astromech/fetch` and type-only imports
+from `astromech`; a lint rule refuses any other `@/` or `astromech/*` import
+from `src/admin/`. `packages/astromech/tests/exports/shared-browser.test.ts`
+bundles the two entries for the browser and fails on a Node builtin, or on a
+core file outside `fields/`, `utilities/`, `errors/`, `types/`, the
+`*.shared.ts` files and the fetch client. A package boundary does not give that
+check by itself: in Directus issue 26613, subpath exports did not stop
+`node:assert` reaching the browser, because nothing checked what was added to
+the shared package. There is no `browser` export condition. On `./shared` it
+changes nothing, and on `.` the Cloudflare server build may resolve it and get
+the browser subset. Rejected: a `@astromech/shared` package, which adds a third
+publishable unit and, as Directus shows, does not enforce itself; a `browser`
+condition, for the reason above; and lint rules policing the `*.shared.ts`
+suffix, which check a filename rather than what the bundle reaches.
 
 **Every entry type persists through a repository, and the default is named for
 its storage.** The default backend is `createEntriesTableRepository` in

@@ -3,8 +3,8 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { astromechClient } from 'astromech/fetch';
 import { useTranslation } from 'react-i18next';
-import { astromechClient } from '@/transport/http/client';
 import { useToast } from '../components/ui/toast';
 import { queryKeys } from './use-query-keys';
 

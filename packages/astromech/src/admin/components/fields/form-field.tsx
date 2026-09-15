@@ -1,4 +1,4 @@
-import type { Field } from '@/types/index';
+import type { Field } from 'astromech';
 import React from 'react';
 import { Input } from '@/admin/components/ui/input';
 import { useLabel } from '@/admin/i18n/entry-namespace';

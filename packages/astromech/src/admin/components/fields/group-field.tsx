@@ -1,7 +1,6 @@
-import type { BaseFieldProps } from '@/types/index';
+import type { BaseFieldProps } from 'astromech';
+import { formatInstancePath, parseInstancePath } from 'astromech/shared';
 import { FormField } from '@/admin/components/fields/form-field';
-// Deep import: the `fields/` barrel reaches server code (virtual config / DB).
-import { formatInstancePath, parseInstancePath } from '@/fields/field-path';
 import './group-field.css';
 
 export function GroupField({ name, value, field, onChange }: BaseFieldProps) {

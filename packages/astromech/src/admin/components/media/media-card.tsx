@@ -1,4 +1,4 @@
-import type { Media } from '@/types/index';
+import type { Media } from 'astromech';
 import { Check } from 'lucide-react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';

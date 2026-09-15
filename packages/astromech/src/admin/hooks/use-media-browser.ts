@@ -4,7 +4,7 @@
  */
 
 import type { MediaBrowserQuery } from '@/admin/types/media';
-import type { Media } from '@/types/index';
+import type { Media } from 'astromech';
 import { useMediaQuery } from './media';
 
 export type MediaBrowserResult = {

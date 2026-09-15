@@ -5,7 +5,7 @@
  * lazily — only when the dropdown is open.
  */
 
-import type { Notification } from '@/types/index';
+import type { Notification } from 'astromech';
 import { Menu } from '@base-ui/react/menu';
 import { useNavigate } from '@tanstack/react-router';
 import { Bell, X } from 'lucide-react';

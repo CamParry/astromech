@@ -1,4 +1,4 @@
-import type { BaseFieldProps } from '@/types/index';
+import type { BaseFieldProps } from 'astromech';
 import { Input } from '@/admin/components/ui/input';
 
 export function SlugField({ name, value, required, onChange, disabled }: BaseFieldProps) {

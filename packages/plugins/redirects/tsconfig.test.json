@@ -13,6 +13,8 @@
             "astromech/fields": ["../../astromech/src/exports/fields.ts"],
             "astromech/columns": ["../../astromech/src/exports/columns.ts"],
             "astromech/email": ["../../astromech/src/exports/email.ts"],
+            "astromech/shared": ["../../astromech/src/exports/shared.ts"],
+            "astromech/fetch": ["../../astromech/src/exports/fetch.ts"],
             "astromech/ui": ["../../astromech/src/exports/admin/ui.ts"],
             "astromech/ui/app": ["../../astromech/src/exports/admin/ui-app.ts"],
             "@astromech/schema-engine": ["../../schema-engine/src/index.ts"],

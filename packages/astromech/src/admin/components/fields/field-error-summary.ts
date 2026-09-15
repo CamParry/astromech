@@ -4,12 +4,10 @@
  * the schema author actually wrote. Pure module — no React, no DOM.
  */
 
-import type { Field, FieldErrors, Label } from '@/types/index';
+import type { Field, FieldErrors, Label } from 'astromech';
 import type { TFunction } from 'i18next';
+import { flattenFieldNodes, parseInstancePath } from 'astromech/shared';
 import { titleCase } from '@/admin/i18n/labels';
-// Deep imports: the `fields/` barrel reaches server code (virtual config / DB).
-import { parseInstancePath } from '@/fields/field-path';
-import { flattenFieldNodes } from '@/fields/flatten';
 
 /** How many fields the summary names before it starts counting. */
 const NAMED_LIMIT = 3;

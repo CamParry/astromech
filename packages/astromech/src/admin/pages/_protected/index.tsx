@@ -2,9 +2,10 @@
  * Dashboard page — summary stat cards and recent activity.
  */
 
-import type { Entry } from '@/types/index';
+import type { Entry } from 'astromech';
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { astromechClient } from 'astromech/fetch';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -21,8 +22,7 @@ import {
 import { Panel } from '@/admin/components/ui/panel';
 import { Skeleton } from '@/admin/components/ui/spinner';
 import { useAiContext } from '@/admin/context/ai-context';
-import { astromechClient } from '@/transport/http/client';
-import { formatDate } from '@/utilities/dates';
+import { formatDate } from '@/admin/utilities/dates';
 
 function statusVariant(
     status: string

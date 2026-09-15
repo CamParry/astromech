@@ -9,7 +9,7 @@
 
 import type { GlobalsBinding } from './binding';
 import type { EntryPayload } from '@/admin/hooks/use-entry-form';
-import type { EntryStatus, Global } from '@/types/index';
+import type { EntryStatus, Global } from 'astromech';
 import { useStore } from '@tanstack/react-form';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link as RouterLink, useNavigate } from '@tanstack/react-router';

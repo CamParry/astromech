@@ -1,4 +1,4 @@
-import type { BaseFieldProps } from '@/types/index';
+import type { BaseFieldProps } from 'astromech';
 import { RadioGroup } from '@/admin/components/ui/radio-group';
 import { useLabel } from '@/admin/i18n/entry-namespace';
 

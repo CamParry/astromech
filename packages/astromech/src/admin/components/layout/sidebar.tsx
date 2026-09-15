@@ -1,4 +1,4 @@
-import type { PluginNavItem } from '@/types/index';
+import type { PluginNavItem } from 'astromech';
 import { Link, useRouterState } from '@tanstack/react-router';
 import {
     ChevronLeft,

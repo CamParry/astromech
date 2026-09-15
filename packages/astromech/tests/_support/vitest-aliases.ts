@@ -32,6 +32,12 @@ export function coreAliases(): Record<string, string> {
         'astromech/email': fileURLToPath(
             new URL('../../src/exports/email.ts', import.meta.url)
         ),
+        'astromech/shared': fileURLToPath(
+            new URL('../../src/exports/shared.ts', import.meta.url)
+        ),
+        'astromech/fetch': fileURLToPath(
+            new URL('../../src/exports/fetch.ts', import.meta.url)
+        ),
         'astromech/ui/app': fileURLToPath(
             new URL('../../src/exports/admin/ui-app.ts', import.meta.url)
         ),

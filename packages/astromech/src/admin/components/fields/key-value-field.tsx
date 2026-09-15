@@ -1,4 +1,4 @@
-import type { BaseFieldProps } from '@/types/index';
+import type { BaseFieldProps } from 'astromech';
 import { useTranslation } from 'react-i18next';
 import { KeyValueEditor } from '@/admin/components/ui/key-value-editor';
 

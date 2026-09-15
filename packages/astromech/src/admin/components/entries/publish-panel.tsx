@@ -5,10 +5,10 @@
  * the published date when the entry is live.
  */
 
-import type { EntryStatus } from '../../../types/index';
+import type { EntryStatus } from 'astromech';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { formatDatetime } from '@/utilities/dates';
+import { formatDatetime } from '@/admin/utilities/dates';
 import { Input } from '../ui/input';
 import { Panel } from '../ui/panel';
 import { Select } from '../ui/select';

@@ -1,5 +1,6 @@
 import type { MediaBrowserQuery } from '@/admin/types/media';
-import type { BaseFieldProps } from '@/types/index';
+import type { BaseFieldProps } from 'astromech';
+import { astromechClient } from 'astromech/fetch';
 import {
     ChevronDown,
     ChevronUp,
@@ -16,7 +17,6 @@ import { useFieldControl } from '@/admin/components/fields/field-control-context
 import { MediaPicker } from '@/admin/components/media/media-picker';
 import { Modal } from '@/admin/components/ui/modal';
 import { Spinner } from '@/admin/components/ui/spinner';
-import { astromechClient } from '@/transport/http/client';
 import './media-field.css';
 
 type MediaItem = {

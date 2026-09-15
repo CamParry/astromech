@@ -7,10 +7,10 @@
  */
 
 import type { EntryEditSearch } from '@/admin/utilities/entry-admin-path';
-import { editSearchString } from '@/admin/utilities/entry-admin-path';
 // A qualified global key splits on the same separator a qualified entry type
 // does; the rule has one implementation.
-import { parseEntryTypeId } from '@/entries/entry-types.shared';
+import { parseEntryTypeId } from 'astromech/shared';
+import { editSearchString } from '@/admin/utilities/entry-admin-path';
 
 /** Edit path under a mount's own base path (`/globals/site`). */
 export function globalEditPath(basePath: string, search?: EntryEditSearch): string {

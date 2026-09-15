@@ -9,7 +9,7 @@
  */
 
 import type { EntryPayload } from '@/admin/hooks/use-entry-form';
-import type { User, UserUpdateData } from '@/types/index';
+import type { User, UserUpdateData } from 'astromech';
 import { useStore } from '@tanstack/react-form';
 import { useNavigate } from '@tanstack/react-router';
 import React, { useEffect, useState } from 'react';
@@ -46,7 +46,7 @@ import { usePermissions } from '@/admin/hooks/use-permissions';
 import { useDeleteUser, useUpdateUser, useUser } from '@/admin/hooks/users';
 import { EntryNamespaceProvider, namespaceForScope } from '@/admin/i18n/entry-namespace';
 import { defaultContentLocale, localeOptions } from '@/admin/utilities/content-locale';
-import { formatDatetime } from '@/utilities/dates';
+import { formatDatetime } from '@/admin/utilities/dates';
 
 export type UserEditPageProps = {
     id: string;

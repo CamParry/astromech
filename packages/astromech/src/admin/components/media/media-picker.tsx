@@ -4,7 +4,7 @@
  */
 
 import type { MediaBrowserQuery } from '@/admin/types/media';
-import type { Media } from '@/types/index';
+import type { Media } from 'astromech';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ContentGrid } from '@/admin/components/ui/content-grid';

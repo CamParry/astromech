@@ -5,7 +5,7 @@
  * hooks and pass the results in.
  */
 
-import type { EntryStatus, JsonObject } from '@/types/index';
+import type { EntryStatus, JsonObject } from 'astromech';
 import { Link as RouterLink } from '@tanstack/react-router';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import React, { useState } from 'react';
@@ -22,7 +22,7 @@ import {
 } from '@/admin/components/ui/page';
 import { Panel } from '@/admin/components/ui/panel';
 import { authorName, useAuthorNames } from '@/admin/hooks/author-names';
-import { formatDatetime } from '@/utilities/dates';
+import { formatDatetime } from '@/admin/utilities/dates';
 
 // Binding link bases are runtime strings; address `Link` by string `to`.
 type LinkProps = Omit<React.ComponentProps<typeof RouterLink>, 'to'> & { to: string };

@@ -15,6 +15,7 @@ export default defineConfig([
             methods: 'src/exports/methods.ts',
             'integrations/astro/index': 'src/exports/astro.ts',
             'fetch/index': 'src/exports/fetch.ts',
+            shared: 'src/exports/shared.ts',
             middleware: 'src/exports/middleware.ts',
             'database/schema': 'src/exports/database-schema.ts',
             'admin/components/ui/index': 'src/exports/admin/ui.ts',

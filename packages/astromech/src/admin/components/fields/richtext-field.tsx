@@ -1,7 +1,6 @@
 import type { RichTextEditorProps } from '@/admin/components/ui/rich-text-editor';
-import type { RichTextAllow } from '@/types/fields';
-import type { BaseFieldProps } from '@/types/index';
 import type { JSONContent } from '@tiptap/core';
+import type { BaseFieldProps, RichTextAllow } from 'astromech';
 import React from 'react';
 import { RichTextEditor } from '@/admin/components/ui/rich-text-editor';
 

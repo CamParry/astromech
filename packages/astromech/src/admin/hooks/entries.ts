@@ -4,15 +4,15 @@
  * accepted via optional onSuccess. Options-object client surface, type required.
  */
 
-import type { EntriesService, Entry, EntryQueryParams } from '@/types/index';
+import type { EntriesService, Entry, EntryQueryParams } from 'astromech';
 import {
     queryOptions,
     useMutation,
     useQuery,
     useQueryClient,
 } from '@tanstack/react-query';
+import { AstromechApiError, astromechClient } from 'astromech/fetch';
 import { useTranslation } from 'react-i18next';
-import { AstromechApiError, astromechClient } from '@/transport/http/client';
 import { useToast } from '../components/ui/toast';
 import { queryKeys, scopedEntryKeys } from './use-query-keys';
 

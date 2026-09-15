@@ -1,4 +1,4 @@
-import type { CellRenderer } from '@/types/index';
+import type { CellRenderer } from 'astromech';
 import { authorName } from '@/admin/hooks/author-names';
 
 /** An author user id as a name; nothing at all when the id cannot be resolved. */

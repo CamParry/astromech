@@ -1,4 +1,4 @@
-import type { CellRenderer } from '@/types/index';
+import type { CellRenderer } from 'astromech';
 import { Link } from './link';
 
 export const TitleCell: CellRenderer = ({ entry, ctx }) =>

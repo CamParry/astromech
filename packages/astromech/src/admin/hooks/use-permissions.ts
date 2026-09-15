@@ -3,7 +3,7 @@
  * server (src/utilities/permission-match.ts).
  */
 
-import { hasPermission } from '@/utilities/permission-match';
+import { hasPermission } from 'astromech/shared';
 import { useAuth } from '../context/auth';
 
 export { hasPermission };

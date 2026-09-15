@@ -3,7 +3,7 @@
  * field types are not registered here; they're discovered lazily via the
  * virtual plugin-components module when `getFieldComponent` returns undefined.
  */
-import type { BaseFieldProps } from '@/types/index';
+import type { BaseFieldProps } from 'astromech';
 import type * as React from 'react';
 
 export type FieldComponent = (props: BaseFieldProps) => React.ReactElement;

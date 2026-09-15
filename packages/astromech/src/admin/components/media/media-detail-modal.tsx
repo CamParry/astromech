@@ -4,15 +4,15 @@
  * delete kept apart from cancel/update so it isn't adjacent to either.
  */
 
-import type { Media } from '@/types/index';
+import type { Media } from 'astromech';
 import { useForm, useStore } from '@tanstack/react-form';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
+import { formatBytes } from '@/admin/utilities/bytes';
 import { defaultContentLocale, localeOptions } from '@/admin/utilities/content-locale';
+import { formatDatetime } from '@/admin/utilities/dates';
 import { FileTypeIcon, versionedMediaUrl } from '@/admin/utilities/media';
-import { formatBytes } from '@/utilities/bytes';
-import { formatDatetime } from '@/utilities/dates';
 import {
     useDeleteMedia,
     useMediaItem,

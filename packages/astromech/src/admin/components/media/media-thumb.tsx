@@ -4,11 +4,11 @@
  * the width allowlist and the record's version.
  */
 
-import type { Media } from '@/types/index';
+import type { Media } from 'astromech';
+import { buildVariantUrl } from 'astromech/shared';
 import React from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
 import { FileTypeIcon, versionedMediaUrl } from '@/admin/utilities/media';
-import { buildVariantUrl } from '@/media/serving/image/url.shared';
 
 export type MediaThumbProps = {
     item: Media;

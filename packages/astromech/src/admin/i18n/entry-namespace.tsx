@@ -4,7 +4,7 @@
  * `translation`. Entry pages wrap their body in `EntryNamespaceProvider`.
  */
 
-import type { Label } from '@/types/index';
+import type { Label } from 'astromech';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { resolveLabel } from './labels';

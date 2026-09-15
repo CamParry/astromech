@@ -4,7 +4,7 @@
  */
 
 import type { SortDirection } from '@/admin/components/ui/table';
-import type { Media } from '@/types/index';
+import type { Media } from 'astromech';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Checkbox } from '@/admin/components/ui/checkbox';

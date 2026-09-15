@@ -5,15 +5,15 @@
  * a locale it has never been saved in is written by the first `update` there.
  */
 
-import type { Global, GlobalsService } from '@/types/index';
+import type { Global, GlobalsService } from 'astromech';
 import {
     queryOptions,
     useMutation,
     useQuery,
     useQueryClient,
 } from '@tanstack/react-query';
+import { AstromechApiError, astromechClient } from 'astromech/fetch';
 import { useTranslation } from 'react-i18next';
-import { AstromechApiError, astromechClient } from '@/transport/http/client';
 import { useToast } from '../components/ui/toast';
 import { scopedGlobalKeys } from './use-query-keys';
 

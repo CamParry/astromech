@@ -4,7 +4,7 @@
  * flat data model, while nested/leaf fields render through `FormField`.
  */
 
-import type { Field } from '@/types/index';
+import type { Field } from 'astromech';
 import React from 'react';
 import { FieldValuesProvider } from '@/admin/components/fields/field-context';
 import { FormField } from '@/admin/components/fields/form-field';

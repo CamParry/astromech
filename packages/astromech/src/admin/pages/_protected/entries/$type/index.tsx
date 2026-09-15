@@ -4,15 +4,15 @@
  * the plugin route.
  */
 import type { EntriesBinding } from '@/admin/components/entries/binding';
-import type { EntriesService } from '@/types/index';
+import type { EntriesService } from 'astromech';
 import { createFileRoute, redirect } from '@tanstack/react-router';
+import { astromechClient } from 'astromech/fetch';
 import React from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
 import { validateEntriesListSearch } from '@/admin/components/entries/binding';
 import { EntriesListPage } from '@/admin/components/entries/entries-list-page';
 import { useAiContext } from '@/admin/context/ai-context';
 import { pluginEntryRouteParams } from '@/admin/utilities/entry-admin-path';
-import { astromechClient } from '@/transport/http/client';
 
 function EntryIndexPage(): React.ReactElement {
     const { type } = Route.useParams();

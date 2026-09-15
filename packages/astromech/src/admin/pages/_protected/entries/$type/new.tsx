@@ -5,13 +5,13 @@
  */
 
 import type { EntriesBinding } from '@/admin/components/entries/binding';
-import type { EntriesService } from '@/types/index';
+import type { EntriesService } from 'astromech';
 import { createFileRoute, redirect } from '@tanstack/react-router';
+import { astromechClient } from 'astromech/fetch';
 import React from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntryNewPage } from '@/admin/components/entries/entry-new-page';
 import { pluginEntryRouteParams } from '@/admin/utilities/entry-admin-path';
-import { astromechClient } from '@/transport/http/client';
 
 type SearchParams = {
     locale?: string;

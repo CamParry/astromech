@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { formatDatetime } from '@/utilities/dates';
+import { formatDatetime } from '@/admin/utilities/dates';
 import { Button } from '../ui/button';
 import { useConfirm } from '../ui/confirm';
 import { Spinner } from '../ui/spinner';

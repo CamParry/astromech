@@ -6,11 +6,11 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
+import { astromechClient } from 'astromech/fetch';
+import { resolveContentLocale } from 'astromech/shared';
 import adminConfig from 'virtual:astromech/admin-config';
 import { assertSingleUiInstance } from '@/admin/components/ui/instance-guard';
-import { astromechClient } from '@/transport/http/client';
-import { setDateLocale } from '../utilities/dates';
-import { resolveContentLocale } from '../utilities/locale';
+import { setDateLocale } from '@/admin/utilities/dates';
 import { createAppRouter } from './router';
 import './rendering/cells/register-cells';
 import './rendering/register-fields';

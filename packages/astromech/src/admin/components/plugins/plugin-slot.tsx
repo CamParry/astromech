@@ -4,7 +4,7 @@
  * wrapper collapses via CSS `:empty`.
  */
 
-import type { AdminSlotName } from '@/types/config';
+import type { AdminSlotName } from 'astromech';
 import React from 'react';
 import { slots } from 'virtual:astromech/plugins/components';
 import { ComponentErrorBoundary } from '@/admin/components/pages/component-error-boundary';

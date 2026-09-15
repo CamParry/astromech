@@ -4,7 +4,7 @@
  * references with `useAiContextItems`.
  */
 
-import type { AiContextItem, AiContextReference } from '@/types/ai-context';
+import type { AiContextItem, AiContextReference } from 'astromech';
 import React, {
     createContext,
     useContext,

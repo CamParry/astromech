@@ -1,7 +1,6 @@
-import type { Field } from '@/types/index';
+import type { Field } from 'astromech';
 import { useCallback, useRef, useState } from 'react';
-// Deep import: the `fields/` barrel reaches server code (virtual config / DB).
-import { buildDefaultValues } from '@/fields/defaults';
+import { buildDefaultValues } from '@/admin/utilities/defaults';
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- idiomatic non-null assertions in tree-field traversal */
 /**

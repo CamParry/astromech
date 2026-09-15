@@ -1,6 +1,6 @@
-import type { BaseFieldProps } from '@/types/index';
+import type { BaseFieldProps } from 'astromech';
 import { Input } from '@/admin/components/ui/input';
-import { formatValueForInput } from '@/fields/formatters';
+import { formatValueForInput } from '@/admin/utilities/formatters';
 import { FieldCount } from './field-count';
 
 export function TextField({

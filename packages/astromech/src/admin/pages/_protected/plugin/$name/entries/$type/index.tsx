@@ -4,8 +4,9 @@
  * plugin/type falls back to the standard not-found UI.
  */
 
-import type { EntriesService } from '@/types/index';
+import type { EntriesService } from 'astromech';
 import { createFileRoute } from '@tanstack/react-router';
+import { astromechClient } from 'astromech/fetch';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -17,7 +18,6 @@ import { EntriesListPage } from '@/admin/components/entries/entries-list-page';
 import { EmptyState } from '@/admin/components/ui/empty-state';
 import { Page, PageContent } from '@/admin/components/ui/page';
 import { useAiContext } from '@/admin/context/ai-context';
-import { astromechClient } from '@/transport/http/client';
 
 function PluginEntryListPage(): React.ReactElement {
     const { name, type } = Route.useParams();

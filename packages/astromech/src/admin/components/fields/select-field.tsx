@@ -1,4 +1,4 @@
-import type { BaseFieldProps } from '@/types/index';
+import type { BaseFieldProps } from 'astromech';
 import { Select } from '@/admin/components/ui/select';
 import { useLabel } from '@/admin/i18n/entry-namespace';
 

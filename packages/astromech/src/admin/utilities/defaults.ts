@@ -4,9 +4,8 @@
  * item added while editing an existing resource through here instead.
  */
 
-import type { Field } from '@/types/fields';
-import { getFieldType } from './field-type-registry';
-import { flattenFieldNodes } from './flatten';
+import type { Field } from 'astromech';
+import { flattenFieldNodes, getFieldType } from 'astromech/shared';
 
 /**
  * The declared defaults for `definitions`, keyed by field name — the field's own

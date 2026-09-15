@@ -7,7 +7,7 @@
 import type { EntriesBinding, EntriesListSearch } from './binding';
 import type { DropdownItem } from '@/admin/components/ui/dropdown';
 import type { SortDirection } from '@/admin/components/ui/table';
-import type { CellRenderContext, Entry, TableColumn } from '@/types/index';
+import type { CellRenderContext, Entry, TableColumn } from 'astromech';
 import { Menu } from '@base-ui/react/menu';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import {

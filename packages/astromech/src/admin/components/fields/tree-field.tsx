@@ -1,6 +1,6 @@
 import type { TreeNode } from '@/admin/hooks/use-tree-field';
-import type { BaseFieldProps, Field } from '@/types/index';
 import type { DragEndEvent, Modifier } from '@dnd-kit/core';
+import type { BaseFieldProps, Field } from 'astromech';
 import { Collapsible } from '@base-ui/react';
 import {
     closestCenter,
@@ -17,6 +17,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { formatInstancePath, parseInstancePath } from 'astromech/shared';
 import { clsx } from 'clsx';
 import {
     ChevronDown,
@@ -34,8 +35,6 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FormField } from '@/admin/components/fields/form-field';
 import { useTreeField } from '@/admin/hooks/use-tree-field';
-// Deep import: the `fields/` barrel reaches server code (virtual config / DB).
-import { formatInstancePath, parseInstancePath } from '@/fields/field-path';
 import './tree-field.css';
 
 // Lock dragging to the vertical axis — sortable strategy governs reordering

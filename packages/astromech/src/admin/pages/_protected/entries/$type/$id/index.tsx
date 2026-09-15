@@ -5,8 +5,9 @@
  */
 
 import type { EntriesBinding } from '@/admin/components/entries/binding';
-import type { EntriesService } from '@/types/index';
+import type { EntriesService } from 'astromech';
 import { createFileRoute, redirect } from '@tanstack/react-router';
+import { astromechClient } from 'astromech/fetch';
 import React from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntryEditPage } from '@/admin/components/entries/entry-edit-page';
@@ -16,7 +17,6 @@ import {
     pluginEntryRouteParams,
     validateEntryEditSearch,
 } from '@/admin/utilities/entry-admin-path';
-import { astromechClient } from '@/transport/http/client';
 
 function EntryEditRoutePage(): React.ReactElement {
     const { type, id } = Route.useParams();

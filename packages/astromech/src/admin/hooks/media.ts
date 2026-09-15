@@ -4,15 +4,15 @@
  * Upload is handled separately by useUploadMedia.
  */
 
-import type { Media, MediaQueryParams } from '@/types/index';
+import type { Media, MediaQueryParams } from 'astromech';
 import {
     queryOptions,
     useMutation,
     useQuery,
     useQueryClient,
 } from '@tanstack/react-query';
+import { astromechClient } from 'astromech/fetch';
 import { useTranslation } from 'react-i18next';
-import { astromechClient } from '@/transport/http/client';
 import { useToast } from '../components/ui/toast';
 import { queryKeys } from './use-query-keys';
 

@@ -1,6 +1,6 @@
 /** Shared human label for an entry, used by the command palette and AI context. */
 
-import type { AdminEntryType, Entry } from '@/types/index';
+import type { AdminEntryType, Entry } from 'astromech';
 
 /**
  * Pick a human label for a live entry result. Entry types with

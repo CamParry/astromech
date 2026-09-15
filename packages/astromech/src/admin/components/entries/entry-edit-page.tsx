@@ -5,11 +5,12 @@
  */
 
 import type { EntriesBinding } from './binding';
-import type { Entry, EntryStatus } from '@/types/index';
+import type { Entry, EntryStatus } from 'astromech';
 import { Menu } from '@base-ui/react/menu';
 import { useStore } from '@tanstack/react-form';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link as RouterLink, useNavigate } from '@tanstack/react-router';
+import { resolveEntryUrl } from 'astromech/shared';
 import {
     ArrowLeft,
     Copy,
@@ -72,9 +73,8 @@ import { scopedEntryKeys } from '@/admin/hooks/use-query-keys';
 import { EntryNamespaceProvider, namespaceForScope } from '@/admin/i18n/entry-namespace';
 import { resolveAdminEntryType, resolveForm } from '@/admin/rendering/resolve';
 import { defaultContentLocale } from '@/admin/utilities/content-locale';
+import { formatDatetime } from '@/admin/utilities/dates';
 import { entryEditPath, entryVersionsPath } from '@/admin/utilities/entry-admin-path';
-import { resolveEntryUrl } from '@/entries/entry-url.shared';
-import { formatDatetime } from '@/utilities/dates';
 import { EntryFormErrors } from './entry-form-errors';
 
 // Surface link bases are runtime strings; address `Link` by string `to`.

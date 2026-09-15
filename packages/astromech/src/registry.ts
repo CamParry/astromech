@@ -18,8 +18,6 @@ type AstromechGlobals = Record<string, unknown> & {
     cronTickRunning?: boolean | undefined;
     /** Cron job names already warned about as unscheduled. */
     cronUnscheduledWarned?: Set<string> | undefined;
-    /** Module URL of the loaded admin UI barrel, for the duplicate-copy check. */
-    uiInstance?: string | undefined;
 };
 
 declare global {

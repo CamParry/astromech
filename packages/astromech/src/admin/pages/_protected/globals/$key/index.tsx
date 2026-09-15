@@ -5,8 +5,9 @@
  */
 
 import type { GlobalsBinding } from '@/admin/components/globals/binding';
-import type { GlobalsService } from '@/types/index';
+import type { GlobalsService } from 'astromech';
 import { createFileRoute, redirect } from '@tanstack/react-router';
+import { astromechClient } from 'astromech/fetch';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -17,7 +18,6 @@ import { globalQueryOptions } from '@/admin/hooks/globals';
 import { defaultContentLocale } from '@/admin/utilities/content-locale';
 import { validateEntryEditSearch } from '@/admin/utilities/entry-admin-path';
 import { pluginGlobalRouteParams } from '@/admin/utilities/global-admin-path';
-import { astromechClient } from '@/transport/http/client';
 
 function GlobalEditRoutePage(): React.ReactElement {
     const { key } = Route.useParams();

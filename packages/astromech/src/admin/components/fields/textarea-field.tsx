@@ -1,4 +1,4 @@
-import type { BaseFieldProps } from '@/types/index';
+import type { BaseFieldProps } from 'astromech';
 import { Textarea } from '@/admin/components/ui/textarea';
 import { FieldCount } from './field-count';
 

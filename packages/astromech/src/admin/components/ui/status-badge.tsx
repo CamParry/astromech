@@ -3,7 +3,7 @@
  * and global edit pages, which read the same `EntryStatus` vocabulary.
  */
 
-import type { EntryStatus } from '@/types/index';
+import type { EntryStatus } from 'astromech';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from './badge';

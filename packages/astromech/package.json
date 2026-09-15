@@ -55,6 +55,10 @@
             "types": "./dist/fetch/index.d.ts",
             "default": "./dist/fetch/index.js"
         },
+        "./shared": {
+            "types": "./dist/shared.d.ts",
+            "default": "./dist/shared.js"
+        },
         "./middleware": "./src/exports/middleware.ts",
         "./routes/handler.ts": "./src/integrations/astro/handler.ts",
         "./media/image/sharp": {
@@ -165,6 +169,10 @@
             "./fetch": {
                 "types": "./dist/fetch/index.d.ts",
                 "default": "./dist/fetch/index.js"
+            },
+            "./shared": {
+                "types": "./dist/shared.d.ts",
+                "default": "./dist/shared.js"
             },
             "./middleware": {
                 "types": "./dist/middleware.d.ts",
@@ -375,6 +383,7 @@
         "astro": "^6.0.8",
         "aws4fetch": "^1.0.20",
         "better-auth": "^1.5.5",
+        "esbuild": "0.28.2",
         "eslint": "^10.8.1",
         "happy-dom": "^20.10.4",
         "kysely": "^0.28.14",

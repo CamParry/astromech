@@ -4,11 +4,13 @@
  * Static shortcuts filter client-side; a non-empty query also runs live search.
  */
 
-import type { AdminEntryType, Entry, Media, User } from '@/types/index';
+import type { AdminEntryType, Entry, Media, User } from 'astromech';
 import type { LucideIcon } from 'lucide-react';
 import { Dialog } from '@base-ui/react/dialog';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
+import { astromechClient } from 'astromech/fetch';
+import { parseEntryTypeId } from 'astromech/shared';
 import { icons, Image, LayoutDashboard, Puzzle, Users } from 'lucide-react';
 import React, {
     createContext,
@@ -23,8 +25,6 @@ import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { entryLabel } from '@/admin/components/entries/entry-label';
 import { entryAdminPath } from '@/admin/utilities/entry-admin-path';
-import { parseEntryTypeId } from '@/entries/entry-types.shared';
-import { astromechClient } from '@/transport/http/client';
 import { useDebounce } from '../../hooks/use-debounce';
 import { usePermissions } from '../../hooks/use-permissions';
 import { EntryTypeIcon } from './entry-type-icon';

@@ -5,8 +5,9 @@
  * Carries the `locale` search param through.
  */
 
-import type { EntriesService } from '@/types/index';
+import type { EntriesService } from 'astromech';
 import { createFileRoute } from '@tanstack/react-router';
+import { astromechClient } from 'astromech/fetch';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -14,7 +15,6 @@ import { buildPluginEntriesBinding } from '@/admin/components/entries/binding';
 import { EntryNewPage } from '@/admin/components/entries/entry-new-page';
 import { EmptyState } from '@/admin/components/ui/empty-state';
 import { Page, PageContent } from '@/admin/components/ui/page';
-import { astromechClient } from '@/transport/http/client';
 
 type SearchParams = {
     locale?: string;

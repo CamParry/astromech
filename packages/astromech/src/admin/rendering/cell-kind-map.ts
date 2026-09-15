@@ -1,4 +1,4 @@
-import type { CellKind, FieldTypeName } from '@/types/index';
+import type { CellKind, FieldTypeName } from 'astromech';
 
 const FIELD_TYPE_TO_CELL_KIND: Partial<Record<FieldTypeName, CellKind>> = {
     boolean: 'boolean',

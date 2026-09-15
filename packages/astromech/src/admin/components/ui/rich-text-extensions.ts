@@ -4,5 +4,5 @@
  * `@/fields/rich-text/extensions.js`.
  */
 
-export { buildRichTextExtensions } from '@/fields/rich-text/extensions';
-export type { RichTextAllow } from '@/types/fields';
+export { buildRichTextExtensions } from 'astromech/shared';
+export type { RichTextAllow } from 'astromech';

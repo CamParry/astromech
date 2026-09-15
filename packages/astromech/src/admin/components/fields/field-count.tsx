@@ -1,6 +1,6 @@
-import type { Field } from '@/types/index';
+import type { Field } from 'astromech';
+import { countStatus } from 'astromech/shared';
 import { clsx } from 'clsx';
-import { countStatus } from '@/fields/count';
 
 type CountSetting = NonNullable<Field['count']>;
 

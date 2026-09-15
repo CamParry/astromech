@@ -7,7 +7,7 @@
 
 import type { Field } from '@/types/fields';
 import { describe, expect, it } from 'vitest';
-import { buildDefaultValues } from '@/fields/defaults';
+import { buildDefaultValues } from '@/admin/utilities/defaults';
 
 function field(def: Partial<Field> & { name: string; type: string }): Field {
     return def as Field;

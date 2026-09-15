@@ -5,8 +5,8 @@
  * `admin/components/entries/binding.ts`.
  */
 
-import type { AdminConfig, AdminGlobal, GlobalsService } from '@/types/index';
-import { qualifyEntryType } from '@/entries/entry-types.shared';
+import type { AdminConfig, AdminGlobal, GlobalsService } from 'astromech';
+import { qualifyEntryType } from 'astromech/shared';
 
 export type GlobalAction = 'read' | 'update' | 'publish';
 

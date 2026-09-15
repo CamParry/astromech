@@ -4,10 +4,9 @@
  * on the server; data-dependent checks are skipped.
  */
 
-import type { Field, FieldErrors, FieldLookups, ValidationMode } from '@/types/index';
+import type { Field, FieldErrors, FieldLookups, ValidationMode } from 'astromech';
+import { safeParseFields } from 'astromech/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-// Deep import: the `fields/` barrel reaches server code (virtual config / DB).
-import { safeParseFields } from '@/fields/parse-fields';
 
 /**
  * Data-dependent checks are server-only and skipped in silence: `unique` and

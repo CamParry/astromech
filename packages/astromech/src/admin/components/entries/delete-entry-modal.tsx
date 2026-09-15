@@ -4,7 +4,7 @@
  * modal says so when there is more than one, and lists incoming relationships.
  */
 
-import type { Entry, IncomingRelationship } from '@/types/index';
+import type { Entry, IncomingRelationship } from 'astromech';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/admin/components/ui/button';

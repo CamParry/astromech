@@ -23,6 +23,9 @@ const SUBPATHS = [
     'astromech/astro',
     'astromech/fields',
     'astromech/columns',
+    // The browser-safe values the admin reads. Loading it in Node too keeps it
+    // free of anything that needs a bundler to resolve.
+    'astromech/shared',
     // The component kit. `astromech/ui` resolves to source in this repo and to
     // dist for npm (`DECISIONS.md`), so Node is pointed at what npm publishes.
     './dist/admin/components/ui/index.js',

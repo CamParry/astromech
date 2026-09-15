@@ -1,5 +1,5 @@
-import type { BaseFieldProps, Field } from '@/types/index';
 import type { DragEndEvent, Modifier } from '@dnd-kit/core';
+import type { BaseFieldProps, Field } from 'astromech';
 import { Collapsible } from '@base-ui/react';
 import {
     closestCenter,
@@ -16,6 +16,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { formatInstancePath, parseInstancePath } from 'astromech/shared';
 import { clsx } from 'clsx';
 import {
     ChevronDown,
@@ -31,9 +32,7 @@ import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FormField } from '@/admin/components/fields/form-field';
 import { InlineTitle } from '@/admin/components/fields/inline-title';
-import { buildDefaultValues } from '@/fields/defaults';
-// Deep import: the `fields/` barrel reaches server code (virtual config / DB).
-import { formatInstancePath, parseInstancePath } from '@/fields/field-path';
+import { buildDefaultValues } from '@/admin/utilities/defaults';
 import './repeater-field.css';
 
 // Lock dragging to the vertical axis — verticalListSortingStrategy only governs

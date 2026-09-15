@@ -4,8 +4,8 @@
  * resolves down its lookup chain first.
  */
 
+import { resolveContentLocale } from 'astromech/shared';
 import adminConfig from 'virtual:astromech/admin-config';
-import { resolveContentLocale } from '@/utilities/locale';
 
 export function defaultContentLocale(): string {
     return (

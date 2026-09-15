@@ -4,8 +4,8 @@
  * behavioural divergence.
  */
 
-import type { AdminConfig, EntriesService } from '@/types/index';
-import { qualifyEntryType } from '@/entries/entry-types.shared';
+import type { AdminConfig, EntriesService } from 'astromech';
+import { qualifyEntryType } from 'astromech/shared';
 
 export type EntryAction = 'read' | 'create' | 'update' | 'delete' | 'publish';
 

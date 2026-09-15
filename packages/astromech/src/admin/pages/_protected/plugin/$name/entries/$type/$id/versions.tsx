@@ -4,8 +4,9 @@
  * never link here.
  */
 
-import type { EntriesService } from '@/types/index';
+import type { EntriesService } from 'astromech';
 import { createFileRoute } from '@tanstack/react-router';
+import { astromechClient } from 'astromech/fetch';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -14,7 +15,6 @@ import { EntryVersionsPage } from '@/admin/components/entries/entry-versions-pag
 import { EmptyState } from '@/admin/components/ui/empty-state';
 import { Page, PageContent } from '@/admin/components/ui/page';
 import { validateEntryEditSearch } from '@/admin/utilities/entry-admin-path';
-import { astromechClient } from '@/transport/http/client';
 
 function PluginEntryVersionsPage(): React.ReactElement {
     const { name, type, id } = Route.useParams();

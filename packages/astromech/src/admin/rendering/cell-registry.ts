@@ -3,7 +3,7 @@
  * Map suffices (no globalThis): the admin SPA is a single Vite bundle with
  * one module graph, so there's no multi-entry chunk duplication to guard against.
  */
-import type { CellKind, CellRenderer } from '@/types/index';
+import type { CellKind, CellRenderer } from 'astromech';
 
 const registry = new Map<CellKind, CellRenderer>();
 

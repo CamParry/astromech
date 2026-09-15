@@ -22,7 +22,7 @@ import { Toolbar, ToolbarStart } from '@/admin/components/ui/toolbar';
 import { useAiContext } from '@/admin/context/ai-context';
 import { usePermissions } from '@/admin/hooks/use-permissions';
 import { useDeleteUser, useUsersQuery } from '@/admin/hooks/users';
-import { formatDate } from '@/utilities/dates';
+import { formatDate } from '@/admin/utilities/dates';
 
 const PER_PAGE = 20;
 

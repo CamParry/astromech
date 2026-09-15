@@ -6,7 +6,7 @@
  * edited) rides in the search params.
  */
 
-import { parseEntryTypeId } from '@/entries/entry-types.shared';
+import { parseEntryTypeId } from 'astromech/shared';
 
 /** Which row of an entry an edit link addresses. */
 export type EntryEditSearch = {

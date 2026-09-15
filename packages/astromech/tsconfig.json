@@ -33,6 +33,8 @@
             "astromech/fields": ["./src/exports/fields.ts"],
             "astromech/columns": ["./src/exports/columns.ts"],
             "astromech/email": ["./src/exports/email.ts"],
+            "astromech/shared": ["./src/exports/shared.ts"],
+            "astromech/fetch": ["./src/exports/fetch.ts"],
             "@astromech/schema-engine/generate": ["../schema-engine/src/generate.ts"],
             "@astromech/schema-engine": ["../schema-engine/src/index.ts"],
             "@astromech/menus": ["../plugins/menus/src/index.ts"],

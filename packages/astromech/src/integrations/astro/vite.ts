@@ -45,7 +45,11 @@ export function createViteConfig({
             // Browser-facing entries alias to package src so plugin components
             // share module identity (React context, hooks) with the admin app.
             // Specific keys first — bare `astromech/ui` would shadow them.
+            // `astromech/shared` and `astromech/fetch` are how the admin reaches
+            // core, so every browser caller shares their one module instance.
             alias: {
+                'astromech/shared': packageSource + '/exports/shared.ts',
+                'astromech/fetch': packageSource + '/exports/fetch.ts',
                 'astromech/ui/fields':
                     packageSource + '/admin/components/fields/index.ts',
                 'astromech/ui/layout': packageSource + '/admin/components/ui/layout.ts',

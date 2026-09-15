@@ -1,6 +1,6 @@
 import type { BlockWithId } from '@/admin/hooks/use-blocks-field';
-import type { BaseFieldProps, Block, Field } from '@/types/index';
 import type { DragEndEvent, Modifier } from '@dnd-kit/core';
+import type { BaseFieldProps, Block, Field } from 'astromech';
 import { Collapsible } from '@base-ui/react';
 import {
     closestCenter,
@@ -17,6 +17,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { formatInstancePath, parseInstancePath } from 'astromech/shared';
 import { clsx } from 'clsx';
 import {
     ChevronDown,
@@ -34,8 +35,6 @@ import { FormField } from '@/admin/components/fields/form-field';
 import { InlineTitle } from '@/admin/components/fields/inline-title';
 import { useBlocksField } from '@/admin/hooks/use-blocks-field';
 import { useLabel } from '@/admin/i18n/entry-namespace';
-// Deep import: the `fields/` barrel reaches server code (virtual config / DB).
-import { formatInstancePath, parseInstancePath } from '@/fields/field-path';
 import './blocks-field.css';
 
 // Lock dragging to the vertical axis — verticalListSortingStrategy only governs

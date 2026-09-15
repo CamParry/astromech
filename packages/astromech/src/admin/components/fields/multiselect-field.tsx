@@ -1,4 +1,4 @@
-import type { BaseFieldProps } from '@/types/index';
+import type { BaseFieldProps } from 'astromech';
 import { MultiSelect } from '@/admin/components/ui/multi-select';
 import { useLabel } from '@/admin/i18n/entry-namespace';
 

@@ -4,16 +4,13 @@
  * The caller supplies `saveFn`/`publishFn` so create and edit share the rest.
  */
 
-import type {
-    Entry,
-    EntryStatus,
-    Field,
-    FieldErrors,
-    JsonObject,
-} from '../../types/index';
 import type { UseMutationResult } from '@tanstack/react-query';
+import type { Entry, EntryStatus, Field, FieldErrors, JsonObject } from 'astromech';
 import { useForm, useStore } from '@tanstack/react-form';
 import { useMutation } from '@tanstack/react-query';
+import { AstromechApiError } from 'astromech/fetch';
+// The function the server uses, so the browser picks the same stage it will.
+import { entryValidationMode } from 'astromech/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -21,10 +18,6 @@ import {
     validationSummaryMessage,
 } from '@/admin/components/fields/field-error-summary';
 import { resolveLabel } from '@/admin/i18n/labels';
-// Deep import of a pure leaf: the browser must pick the same stage the server
-// will, and the entries barrel would drag a domain service into the bundle.
-import { entryValidationMode } from '@/entries/validation-mode.shared';
-import { AstromechApiError } from '@/transport/http/client';
 import { useToast } from '../components/ui/toast';
 import { useFieldValidation } from './use-field-validation';
 import { useHotkeys } from './use-hotkeys';

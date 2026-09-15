@@ -1,4 +1,4 @@
-import type { BaseFieldProps } from '@/types/index';
+import type { BaseFieldProps } from 'astromech';
 import { Toggle } from '@/admin/components/ui/toggle';
 
 export function BooleanField({ name, value, onChange, disabled }: BaseFieldProps) {
