@@ -124,8 +124,8 @@ instance guard and is declared in the guard's file.
 ## The environment
 
 Every environment read goes through `env/`. `resolveEnv(name)` returns the value
-or `undefined`, `getEnv(name)` throws naming the variable, and `getEnvRecord()`
-builds the record the plugin `ctx` exposes. A runtime integration declares its
+or `undefined`, and `getEnvRecord()` builds the record the plugin `ctx` exposes.
+A runtime integration declares its
 own source with `setEnvSource`, which is how a Cloudflare Worker's `env` — string
 vars and object bindings in one object — reaches `resolveEnv` and
 `resolveBinding` alike. The admin package is exempt: it reads `import.meta.env.DEV`,

@@ -1,8 +1,7 @@
 /**
- * The hook runner: `addHook` registers a handler, `runHook` awaits an event's
- * handlers in registration order (a non-`undefined` return replaces the
- * payload for the next one and for the caller), `hasHook` reports whether
- * anything is subscribed. No try/catch — a handler throw propagates.
+ * The hook runner: `addHook` registers a handler, and `runHook` awaits an event's
+ * handlers in registration order (a non-`undefined` return replaces the payload
+ * for the next one and for the caller). No try/catch: a handler throw propagates.
  */
 
 import type { HookEvent, HookPayloadFor } from '@/types/hooks';
@@ -43,11 +42,6 @@ export async function runHook<E extends HookEvent>(
         if (result !== undefined) current = result;
     }
     return current as HookPayloadFor<E>;
-}
-
-/** Whether any handler is registered for `event`. */
-export function hasHook(event: HookEvent): boolean {
-    return (handlers.get(event)?.length ?? 0) > 0;
 }
 
 /** Drop every registered handler. Plugin re-registration starts from empty. */

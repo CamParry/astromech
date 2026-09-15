@@ -4,7 +4,6 @@
  * `import.meta.env` and `process.env`.
  */
 
-import { AstromechError } from '@/errors/astromech-error';
 import { createRegistry } from '@/registry';
 
 /**
@@ -50,21 +49,6 @@ export function resolveEnv(name: string): string | undefined {
         if (typeof value === 'string' && value !== '') return value;
     }
     return undefined;
-}
-
-/**
- * An environment value. Throws naming the variable when nothing supplies it,
- * for values a caller cannot invent a default for.
- */
-export function getEnv(name: string): string {
-    const value = resolveEnv(name);
-    if (value === undefined) {
-        throw new AstromechError(
-            `Environment variable '${name}' is not set. On Cloudflare it comes from ` +
-                'the `vars` section of your wrangler config, elsewhere from the process environment.'
-        );
-    }
-    return value;
 }
 
 /**

@@ -326,7 +326,7 @@ because a plugin's tables are fixed by its package, not by the site's config.
 Accepted cost: a plugin package in the program but not installed in the config
 still adds its table types.
 
-**Every environment read goes through `src/env.ts`** (`resolveEnv`, `getEnv`,
+**Every environment read goes through `src/env.ts`** (`resolveEnv`,
 `getEnvRecord`, `setEnvSource`). Unset `NODE_ENV` means production, and a Worker
 with no named scheduler throws. `integrations/` holds framework and runtime
 integrations side by side; a runtime earns a directory only when its environment
@@ -379,8 +379,8 @@ documented convention in `ARCHITECTURE.md`, and the browser boundary rides on
 `check:boot`'s headless load. Rejected: a browser-only config, eslint
 `import/no-cycle`, and case-by-case relaxation.
 
-**One hook runner, and a throw always propagates.** `hooks/` holds `addHook`,
-`runHook` and `hasHook`; a non-`undefined` handler return replaces the payload;
+**One hook runner, and a throw always propagates.** `hooks/` holds `addHook`
+and `runHook`; a non-`undefined` handler return replaces the payload;
 there is no try/catch, whatever the event is named. Hooks are not a plugin
 concept — the plugin runtime is one subscriber like any other. Rejected: two
 name-keyed dispatchers where a `:before` substring decided failure semantics and
