@@ -34,8 +34,11 @@ lands.
       `SQLITE_BUSY` before the fix and passes after it.
 - [x] Remove the pins from `apps/docs/installation.md` and
       `packages/astromech/README.md`.
-- [ ] Follow `apps/docs/installation.md` on a new site installed from packed
-      tarballs, since generated sites gain the new migration import.
+- [x] Follow `apps/docs/installation.md` on a new site installed from packed
+      tarballs, since generated sites gain the new migration import. Every
+      step passed on 2026-09-15 with the guide's unpinned command (Astro
+      7.3.2, Kysely 0.29.5, better-auth 1.7.5, `@libsql/client` 0.18.0). The
+      warnings it showed are in `roadmap/planned/new-site-warnings.md`.
 
 ## Decisions
 
