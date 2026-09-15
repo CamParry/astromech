@@ -3,7 +3,7 @@
 The full gate takes 4 to 5 minutes run serially and has become a bottleneck.
 This file holds the measurements and the mechanical work to make it fast. The
 quality of what the gate checks is a separate problem with its own file:
-[test-suite-trust](../planned/test-suite-trust.md).
+[test-suite-trust](../in-progress/test-suite-trust.md).
 
 ## What is actually true today
 

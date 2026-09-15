@@ -20,10 +20,9 @@ The problems sit at the edges and in the conventions:
 
 - **The real session path is never exercised.** `packages/astromech/src/users/session.ts` is
   mocked in every test that touches it, so nothing covers the Better Auth
-  session to `User` + `Role` translation, and nothing asserts what
-  `resolveRole()` does with an unknown slug. That function currently fails
-  open to admin ([role-resolution-fails-open](../completed/role-resolution-fails-open.md)),
-  and the suite is blind to both the bug and any fix.
+  session to `User` + `Role` translation, and nothing asserts that a role
+  missing from the config refuses the session
+  ([role-resolution-fails-open](../completed/role-resolution-fails-open.md)).
 - **Everything behind admin login has no coverage of any kind.** Not unit, not
   integration, not boot: `scripts/check-boot.mjs` stops at the login screen by
   design, and `src/admin/pages/` has zero test files. This is the largest gap
@@ -55,29 +54,36 @@ The problems sit at the edges and in the conventions:
 ## The work
 
 Ordered so the cheap fixes land before the conventions they depend on stop
-being enforced by memory.
+being enforced by memory. Stage 1 is the fixes and the missing coverage; stage 2
+is the measurement and the pass behind login.
 
-- [ ] Test `getSession()` and `resolveRole()` against the harness database
-      instead of mocking `@/users/session` at its five call sites: valid session
-      resolves the right role, deleted user resolves to nothing, and an unknown
-      `role` asserts whichever behaviour
-      [role-resolution-fails-open](../completed/role-resolution-fails-open.md) settles on.
-- [ ] Write a `testing` skill: present-tense test names, one React rendering
-      approach (`@testing-library/react`), mock leaves not barrels, no wall-clock
-      sleeps, where a new test file goes, and the per-file-isolation dependency
-      the registry-wiping tests rely on.
-- [ ] Replace the `setTimeout` sleeps (eight admin files, six DB files) with
-      `waitFor`/`findBy*` and `vi.setSystemTime`.
+### Stage 1
+
+- [ ] Test `getSession()` against the harness database: a valid session resolves
+      the user and role, a deleted user resolves to nothing, and a role missing
+      from the config refuses the session, which is what
+      [role-resolution-fails-open](../completed/role-resolution-fails-open.md)
+      settled on. The route tests keep mocking the session boundary.
+- [ ] Replace the 21 `setTimeout` sleeps (14 admin and assistant component
+      files, 7 in DB and runtime tests) with `waitFor`/`findBy*` and
+      `vi.setSystemTime`.
 - [ ] Delete `packages/plugins/redirects/tests/schema.test.ts`, rewrite the weak
       assertions in `richtext-field.test.ts`, and add real redirects coverage:
       `service/redirects.ts` matching and `hooks/slug-change.ts`.
 - [ ] Sweep the stale docblocks. The tree itself now mirrors `src/`
       ([test-tree-mirrors-src](../completed/test-tree-mirrors-src.md)).
-- [ ] Export the shared fixtures (`noopStorage`, `noopDriver`, the role
-      helpers) from `_support/` and replace the ~22 local copies.
+- [ ] Export the shared fixtures (the no-op storage driver, the role helpers)
+      from `_support/` and replace the local copies.
 - [ ] Write the seo plugin's first tests (`utilities/length.ts`,
-      `utilities/meta-value.ts`, `service/seo.ts`). Its `tests/` directory,
-      `test:run` script and place in the gate are already there.
+      `utilities/meta-value.ts`, `service/seo.ts`) and drop its
+      `passWithNoTests`.
+- [ ] Write a `testing` skill: present-tense test names, one React rendering
+      approach (`@testing-library/react`), mock leaves not barrels, no wall-clock
+      sleeps, where a new test file goes, and the per-file-isolation dependency
+      the registry-wiping tests rely on.
+
+### Stage 2
+
 - [ ] Cover the Astro integration with unit tests: the emitted virtual module,
       the injected route paths, and the `optimizeDeps.include` versus
       `publicHoistPattern` parity check that currently costs a `check:boot` run to
