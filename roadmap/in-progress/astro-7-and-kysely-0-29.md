@@ -27,16 +27,11 @@ lands.
 - [x] Move to `@libsql/client` 0.18 and Kysely 0.29 (steps 1 and 2 below).
 - [x] Move to Astro 7 and its adapters, upgrade both demo apps, and run the
       gate with both boot checks.
-- [ ] On a local file database, stop a better-auth write failing with
-      `SQLITE_BUSY` while an app transaction is open. Found on 2026-09-15: with
-      5 app transactions held open, all 200 sign-ins beside them failed. A busy
-      timeout does not help, since the wait blocks the thread the lock holder
-      needs. The fix is to pass better-auth the app's instance,
-      `getInstance().withoutPlugins()`, in `packages/astromech/src/users/auth.ts`,
-      so one Kysely lock covers both. The regression test is on branch
-      `astro-7-and-kysely-0-29` (commit 71bc228c, not yet run against the old
-      code). Then update `apps/docs/configuration/database.md` and
-      `ARCHITECTURE.md`, which name `createDialect()` as better-auth's way in.
+- [x] On a local file database, stop a better-auth write failing with
+      `SQLITE_BUSY` while an app transaction is open. better-auth now queries
+      through `getInstance().withoutPlugins()`, and `createDialect()` is gone
+      from `DatabaseDriver`. `tests/users/auth-database.test.ts` failed with
+      `SQLITE_BUSY` before the fix and passes after it.
 - [x] Remove the pins from `apps/docs/installation.md` and
       `packages/astromech/README.md`.
 - [ ] Follow `apps/docs/installation.md` on a new site installed from packed
@@ -63,9 +58,11 @@ integration uses.
   overrides `supportsMultipleConnections` to `true`, since a D1 connection holds
   no state and has no transactions. libsql keeps the lock for a local file,
   matching 0.17's one connection, and overrides it for a remote database.
-  better-auth builds its own Kysely instance from the same dialect, with its
-  own lock, so on a local file an auth query and an app query can still run at
-  once. Whether that can raise `SQLITE_BUSY` is open (see the work list).
+- **better-auth shares the app's Kysely instance.** Its own instance had its
+  own lock, and on a local file its writes failed with `SQLITE_BUSY` while an
+  app transaction was open (all 200 sign-ins beside 5 held transactions in a
+  throwaway test). A busy timeout did not help, since the wait blocks the event
+  loop the lock holder needs. `DECISIONS.md` records the choice.
 - **`@libsql/client` `^0.18.0`.** 0.18 gives a local client a connection pool,
   so `restore()`, which sends `ATTACH`, `PRAGMA` and `BEGIN` as separate calls,
   moves to a dedicated single-connection client.
