@@ -38,7 +38,7 @@ lands.
       tarballs, since generated sites gain the new migration import. Every
       step passed on 2026-09-15 with the guide's unpinned command (Astro
       7.3.2, Kysely 0.29.5, better-auth 1.7.5, `@libsql/client` 0.18.0). The
-      warnings it showed are in `roadmap/planned/new-site-warnings.md`.
+      warnings it showed are in `roadmap/in-progress/new-site-warnings.md`.
 
 ## Decisions
 
