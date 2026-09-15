@@ -34,6 +34,11 @@ slug, translation, versioning, trash and staging, or a database driver's optiona
 extras. It gates behaviour and interface, never schema, so turning one on needs
 no migration.
 
+**Component kit.** The config-free React components and hooks a plugin builds
+admin UI from, imported as `astromech/ui`. It needs no running admin, so it
+also loads in plain Node. What needs the running admin, such as the plugin hook
+and the command palette, is imported as `astromech/ui/app` instead.
+
 **Confirmation.** A stateless brake: a mutating call is turned back with the
 question to put to a human, and the caller re-issues it carrying the answer. It
 buys one turn against a runaway agent and is not a security boundary.
@@ -147,6 +152,11 @@ declarations themselves, which are tables.
 **Service method.** One verb of a content or plugin service: what it demands of
 its caller, its input and output schemas, its effect hints, and the handler.
 Declared once, and read by every transport.
+
+**Shared entry point.** The one way browser code reaches core's values: named
+re-exports of the browser-safe helpers the admin reads, imported as
+`astromech/shared`. The fetch client is a separate entry point, and every other
+import of core from the browser is type-only.
 
 **Staged entry.** A prepared future change to one locale of a live entry, edited
 and previewed on its own and merged deliberately. It shares its entry's id, so a

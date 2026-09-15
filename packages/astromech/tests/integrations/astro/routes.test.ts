@@ -1,7 +1,10 @@
 /**
- * `registerRoutes()`: the three patterns it injects, and that each entrypoint
- * resolves through both exports maps to a file that exists.
+ * `registerRoutes()`: the three patterns it injects, that the admin shell is a
+ * file that exists, and that each package entrypoint resolves through both
+ * exports maps to a file that exists.
  */
+import { existsSync } from 'node:fs';
+import { createAdminViteConfig } from '@astromech/admin/vite';
 import { makeTestConfig } from '@tests/harness';
 import { findMissingExportTargets } from '@tests/package-exports';
 import { describe, expect, it } from 'vitest';
@@ -10,6 +13,8 @@ import { registerRoutes } from '@/integrations/astro/routes';
 
 type InjectedRoute = { pattern: string; entrypoint: string; prerender: boolean };
 
+const { shellEntrypoint } = createAdminViteConfig();
+
 function recordRoutes(): InjectedRoute[] {
     const routes: InjectedRoute[] = [];
     const resolved = resolveConfig({
@@ -17,7 +22,7 @@ function recordRoutes(): InjectedRoute[] {
         basePath: '/admin',
         mediaRoute: '/files',
     });
-    registerRoutes((route) => routes.push(route), resolved);
+    registerRoutes((route) => routes.push(route), resolved, shellEntrypoint);
     return routes;
 }
 
@@ -33,7 +38,7 @@ describe('registerRoutes()', () => {
             },
             {
                 pattern: '/admin/[...path]',
-                entrypoint: 'astromech/admin/shell.astro',
+                entrypoint: shellEntrypoint,
                 prerender: false,
             },
             {
@@ -44,7 +49,15 @@ describe('registerRoutes()', () => {
         ]);
     });
 
-    it.each([...new Set(routes.map((route) => route.entrypoint))])(
+    it('points the admin shell at a file that exists', () => {
+        expect(existsSync(shellEntrypoint)).toBe(true);
+    });
+
+    const packageEntrypoints = routes
+        .map((route) => route.entrypoint)
+        .filter((entrypoint) => entrypoint.startsWith('astromech/'));
+
+    it.each([...new Set(packageEntrypoints)])(
         'resolves %s through both exports maps to a file that exists',
         (entrypoint) => {
             expect(findMissingExportTargets(entrypoint)).toEqual([]);

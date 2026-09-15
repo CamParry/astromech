@@ -1,10 +1,12 @@
 /**
- * `createViteConfig()`: the aliases, the base-path define, the three virtual
- * modules, and that the pre-bundled packages match the workspace hoist list.
+ * `createViteConfig()` with the admin package's share merged in: the aliases,
+ * the base-path define, the three virtual modules, and that the pre-bundled
+ * packages match the workspace hoist list.
  */
 import type { VirtualModulePlugin } from '@/integrations/astro/virtual-module';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { createAdminViteConfig } from '@astromech/admin/vite';
 import { makeTestConfig } from '@tests/harness';
 import { describe, expect, it } from 'vitest';
 import { buildAdminConfig } from '@/config/admin-config';
@@ -26,6 +28,7 @@ describe('createViteConfig()', () => {
     const resolvedConfig = resolveConfig(config);
     const vite = createViteConfig({
         packageSource,
+        admin: createAdminViteConfig(),
         root: new URL('file:///site/'),
         configFile: './site.config.ts',
         config,
@@ -84,13 +87,13 @@ describe('createViteConfig()', () => {
                 .filter((name) => !hoisted.has(name))
                 .map(
                     (name) =>
-                        `${name} is in optimizeDeps.include (vite.ts) but missing from publicHoistPattern (pnpm-workspace.yaml)`
+                        `${name} is in optimizeDeps.include but missing from publicHoistPattern (pnpm-workspace.yaml)`
                 ),
             ...[...hoisted]
                 .filter((name) => !included.has(name))
                 .map(
                     (name) =>
-                        `${name} is in publicHoistPattern (pnpm-workspace.yaml) but missing from optimizeDeps.include (vite.ts)`
+                        `${name} is in publicHoistPattern (pnpm-workspace.yaml) but missing from optimizeDeps.include`
                 ),
         ];
 

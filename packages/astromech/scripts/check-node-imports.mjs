@@ -26,9 +26,9 @@ const SUBPATHS = [
     // The browser-safe values the admin reads. Loading it in Node too keeps it
     // free of anything that needs a bundler to resolve.
     'astromech/shared',
-    // The component kit. `astromech/ui` resolves to source in this repo and to
-    // dist for npm (`DECISIONS.md`), so Node is pointed at what npm publishes.
-    './dist/admin/components/ui/index.js',
+    // The component kit, by name, so Node follows core's re-export into the
+    // admin package's `dist` the way it does in a site.
+    'astromech/ui',
     // Each of these imports an optional peer (`sharp`, `@libsql/client` with
     // `@libsql/kysely-libsql`, `aws4fetch`). Loading them proves the peer is
     // reachable from the driver subpath when a site installs it.

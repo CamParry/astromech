@@ -6,7 +6,7 @@ user-invocable: false
 
 ## Components
 
-- Check `@/admin/components/ui/` before building. Import from `@/components/ui/index.js` only.
+- Check `packages/admin/src/components/ui/` before building a component. Inside the admin, import the kit through its `components/ui/index` barrel with a relative path; a plugin imports it from `astromech/ui`.
 - Extend and spread native element props: `type FooProps = React.ComponentProps<'div'> & { ... }`, then `<div {...props}>`.
 - Class names: `['am-block', mod ? 'am-block--mod' : '', className].filter(Boolean).join(' ')`
 

@@ -60,12 +60,6 @@ export default defineConfig({
                     branches: 75,
                     statements: 90,
                 },
-                'src/admin/**': {
-                    lines: 41,
-                    functions: 39,
-                    branches: 38,
-                    statements: 41,
-                },
                 'src/ai/**': { lines: 99, functions: 99, branches: 84, statements: 99 },
                 'src/app-context/**': {
                     lines: 88,

@@ -51,7 +51,7 @@ Stages, each one commit that passes `pnpm run verify`:
 - [x]   2. Remove core's references to admin paths: the unread `component`
        strings in the core field types, the instance guard's slot in the
        registry, and the unused `@fontsource-variable/inter`.
-- [ ]   3. Move the source into packages/admin, with relative imports, its own
+- [x]   3. Move the source into packages/admin, with relative imports, its own
        package manifest, tsconfig, tsup config and Vite helper, and core's
        `astromech/ui*` re-exports. The UI instance guard keeps its own
        `__astromechAdmin` global, and the admin loads Inter, which its styles

@@ -28,6 +28,7 @@
         "types": ["node"],
         "paths": {
             "@/*": ["./src/*"],
+            "@/admin/*": ["../admin/src/*"],
             "@tests/*": ["./tests/_support/*"],
             "astromech": ["./src/exports/index.ts"],
             "astromech/fields": ["./src/exports/fields.ts"],
@@ -37,6 +38,11 @@
             "astromech/fetch": ["./src/exports/fetch.ts"],
             "@astromech/schema-engine/generate": ["../schema-engine/src/generate.ts"],
             "@astromech/schema-engine": ["../schema-engine/src/index.ts"],
+            "@astromech/admin/vite": ["../admin/src/vite.ts"],
+            "@astromech/admin/ui": ["../admin/src/exports/ui.ts"],
+            "@astromech/admin/ui/app": ["../admin/src/exports/ui-app.ts"],
+            "@astromech/admin/ui/layout": ["../admin/src/exports/ui-layout.ts"],
+            "@astromech/admin/ui/fields": ["../admin/src/exports/ui-fields.ts"],
             "@astromech/menus": ["../plugins/menus/src/index.ts"],
             "@astromech/redirects": ["../plugins/redirects/src/index.ts"],
             "@astromech/redirects/tables": ["../plugins/redirects/src/tables/index.ts"],
@@ -46,6 +52,6 @@
             "@astromech/forms": ["../plugins/forms/src/index.ts"]
         }
     },
-    "include": ["src/**/*"],
+    "include": ["src/**/*", "../admin/src/virtual-modules.d.ts"],
     "exclude": ["node_modules", "dist"]
 }

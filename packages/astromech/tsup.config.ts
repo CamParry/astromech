@@ -18,10 +18,10 @@ export default defineConfig([
             shared: 'src/exports/shared.ts',
             middleware: 'src/exports/middleware.ts',
             'database/schema': 'src/exports/database-schema.ts',
-            'admin/components/ui/index': 'src/exports/admin/ui.ts',
-            'admin/components/ui/app': 'src/exports/admin/ui-app.ts',
-            'admin/components/ui/layout': 'src/exports/admin/ui-layout.ts',
-            'admin/components/fields/index': 'src/exports/admin/ui-fields.ts',
+            'ui/index': 'src/exports/ui.ts',
+            'ui/app': 'src/exports/ui-app.ts',
+            'ui/layout': 'src/exports/ui-layout.ts',
+            'ui/fields': 'src/exports/ui-fields.ts',
             'email/index': 'src/exports/email.ts',
             'email/drivers/console': 'src/exports/email-console.ts',
             'email/drivers/resend': 'src/exports/email-resend.ts',
@@ -45,8 +45,12 @@ export default defineConfig([
         // Declaration emit is the slowest part of the build, and only
         // `typecheck` consumers read the `.d.ts`. `ASTROMECH_NO_DTS` lets the
         // boot checks, check:node-imports and the assistant test build the JS
-        // without paying for it.
-        dts: !process.env.ASTROMECH_NO_DTS,
+        // without paying for it. The declaration program reads the admin
+        // package's source through `paths`, so its root is `packages/`, not
+        // `src/`.
+        dts: process.env.ASTROMECH_NO_DTS
+            ? false
+            : { compilerOptions: { rootDir: '..' } },
         sourcemap: true,
         clean: true,
         external: [
@@ -56,8 +60,6 @@ export default defineConfig([
             'sharp',
             'blurhash',
             'virtual:astromech/config',
-            'virtual:astromech/admin-config',
-            'virtual:astromech/plugins/components',
             'cloudflare:workers',
             'wrangler',
         ],

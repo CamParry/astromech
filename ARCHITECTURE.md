@@ -23,6 +23,7 @@ It runs on Node and on Cloudflare Workers with equal standing: every backend has
 ```
 packages/
 ├── astromech/        # the `astromech` core package (layout below)
+├── admin/            # @astromech/admin: the admin app, the component kit and its Vite helper
 ├── schema-engine/    # @astromech/schema-engine — table diffing and DDL rendering
 └── plugins/          # first-party plugins, one published package each:
                       # assistant · backups · forms · menus · redirects · seo
@@ -40,7 +41,7 @@ apps/
 integrations · transport/cli · transport/mcp         process entry points, each boots the application
 astromech.ts · plugins/runtime/plugin-runtime.ts ·   composition root
   app-context/app-context.ts
-transport (http · tools) · admin                     delivery
+transport (http · tools)                             delivery
 codegen                                              generation
 policies                                             who may call what
 entries · globals · media · users · settings ·       the content modules
@@ -62,23 +63,19 @@ types · services · utilities · env · errors ·        pure leaves
   `app-context/services.ts` holds the bound form of each content module's
   definition, and `createPluginContext` layers the plugin members over it.
   `exports/` holds the re-export barrels, one per published subpath except
-  three that name a source file directly: `./admin/shell.astro`,
-  `./media/Image` and `./routes/handler.ts`. Nothing else in `src/`
+  two that name a source file directly: `./media/Image` and
+  `./routes/handler.ts`. Nothing else in `src/`
   re-exports — inside the package every import names the file that declares
   the symbol.
 - **`integrations/`** holds two kinds of glue side by side. A **framework
   integration** answers how a request arrives and where the config lives:
-  `astro/` is the Vite plugin, the virtual modules
-  (`virtual:astromech/config`, `virtual:astromech/admin-config`), the injected
-  routes (admin shell, API, media) and the boot middleware. A **runtime
+  `astro/` is the Vite config, with the admin package's share merged in, the
+  virtual modules (`virtual:astromech/config`, `virtual:astromech/admin-config`),
+  the injected routes (admin shell, API, media) and the boot middleware. A **runtime
   integration** answers where environment values come from and whether the host
   has an entry point that is not an HTTP request: `cloudflare/` builds the
   Worker entry and looks up bindings. A runtime only gets a directory when it
   needs one — Node and Vercel need no code.
-- **`admin/`** is the React SPA (TanStack Router), mounted by `admin/shell.astro`
-  under the configured `basePath`. It talks to the server only through the
-  fetch client, which it imports as `astromech/fetch`. "The browser boundary"
-  below says what else it may import.
 - **`codegen/`** generates the site's entry types and the method manifest.
 - **`transport/`** is every way a call arrives: Hono routes and middleware in
   `http/`, the CLI, the dev-only MCP server, and `tools/`, the tool surface the
@@ -100,6 +97,29 @@ types · services · utilities · env · errors ·        pure leaves
 - **The modules below them** (`database`, `storage`, `fields`, `config`, `permissions`, `hooks`, `request-context`, `email`, `ai`, `cron`, and `plugins` — the `define*` authoring API and every `runtime/` file except `plugin-runtime.ts`) are what the content modules build on. Each does one thing and holds no business logic.
 - **Leaves** import only other leaves and third-party packages. A small pure file (a constant, a type, a function over its arguments) may sit inside any module and still be imported from any layer.
 
+## The admin package
+
+`packages/admin` is `@astromech/admin`: the React SPA (TanStack Router), the
+component kit that core's `astromech/ui` subpaths re-export, and a Node-side
+Vite helper. `astromech/astro` injects the admin into every site, so core
+depends on the admin package and a site installs core alone.
+
+The admin ships as source. The site's Vite compiles it after core's integration
+has registered the virtual modules it imports
+(`virtual:astromech/admin-config` and `virtual:astromech/plugins/components`),
+so plugin components and the admin share one copy of the kit and one React.
+`createAdminViteConfig()` in `packages/admin/src/vite.ts` returns what core's
+Vite config merges: the `astromech/ui` aliases onto admin source, the admin's
+share of `optimizeDeps.include`, the TanStack Router plugin, and the absolute
+path of `packages/admin/src/shell.astro`, which the admin route serves under the
+configured `basePath`. tsup builds only what plain Node loads: that helper and
+the four `astromech/ui` entries.
+
+Every import inside the admin is relative, and it talks to the server only
+through the fetch client. "The browser boundary" below says what it may import
+from core. Its one global, `globalThis.__astromechAdmin`, belongs to the UI
+instance guard and is declared in the guard's file.
+
 ## The environment
 
 Every environment read goes through `env/`. `resolveEnv(name)` returns the value
@@ -107,7 +127,7 @@ or `undefined`, `getEnv(name)` throws naming the variable, and `getEnvRecord()`
 builds the record the plugin `ctx` exposes. A runtime integration declares its
 own source with `setEnvSource`, which is how a Cloudflare Worker's `env` — string
 vars and object bindings in one object — reaches `resolveEnv` and
-`resolveBinding` alike. `admin/` is exempt: it reads `import.meta.env.DEV`,
+`resolveBinding` alike. The admin package is exempt: it reads `import.meta.env.DEV`,
 which Vite replaces at build time, and never imports server modules.
 
 ## Drivers and registries
@@ -211,7 +231,8 @@ view). Everything a plugin needs from the platform is on `ctx`: the content serv
 ### Plugin runtime boundary
 
 A plugin package may import `astromech`, `astromech/ui` and `astromech/ui/app`,
-and nothing else from core. The site's `astromech.config.ts` is evaluated
+and nothing else from core. The `astromech/ui` subpaths are one-line re-exports
+of the admin package's, so a plugin names core and never `@astromech/admin`. The site's `astromech.config.ts` is evaluated
 twice: once in plain Node at config time (route registration, codegen,
 migrations) and once in the Vite SSR graph that serves requests. So a plugin's
 entry must load under plain Node, where `virtual:` modules do not exist.
@@ -224,14 +245,14 @@ hook runner. A hook handler's throw propagates to the caller.
 
 ## The browser boundary
 
-`admin/` runs in the browser, and reaches core through three entries and
+The admin runs in the browser, and reaches core through three entries and
 nothing else: `astromech/shared`, named re-exports of the browser-safe values
 it uses from `fields/`, `utilities/` and the `*.shared.ts` files;
 `astromech/fetch`, the fetch client; and type-only imports from `astromech`,
 which erase. A service or a driver would pull the config and every backend into
-the client bundle, so a lint rule refuses any other `@/` or `astromech/*`
-import from `src/admin/`. Code only the admin uses lives under `admin/`, not
-in core's leaves. The site's Vite build aliases `astromech/shared` and
+the client bundle, so a lint rule refuses any `@/` import and any other
+`astromech/*` subpath from `packages/admin/src/`. Code only the admin uses
+lives in the admin package, not in core's leaves. The site's Vite build aliases `astromech/shared` and
 `astromech/fetch` to source, as it does `astromech/ui`, so the admin and every
 other browser caller share one instance of each.
 
@@ -253,10 +274,12 @@ Consumers import subpaths, never deep into `src/`. `exports` in
 `packages/astromech/package.json` is canonical; in the repo the Astro-loaded
 subpaths resolve to `src/` so a core edit reaches `apps/demo` without a
 rebuild, and `publishConfig.exports` restores the `dist/` map for npm.
-`pnpm run check:exports` keeps the two in step. The ones to know: `astromech`
+`pnpm run check:exports` keeps the two in step, in core and in
+`packages/admin/package.json`. The ones to know: `astromech`
 (core helpers, types and the plugin-authoring API), `astromech/astro`,
 `astromech/fetch`, `astromech/shared` (the browser-safe values the admin
-reads), `astromech/middleware`, `astromech/methods` (the server-side
+reads), `astromech/ui` (the component kit, re-exported from
+`@astromech/admin`), `astromech/middleware`, `astromech/methods` (the server-side
 manifest and dispatch surface, core-internal in practice), `astromech/fields`,
 `astromech/database/schema`, `astromech/storage/{filesystem,r2,s3}`,
 `astromech/cloudflare`, and the `astromech` CLI bin.

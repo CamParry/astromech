@@ -1,0 +1,11 @@
+{
+    "$schema": "https://json.schemastore.org/tsconfig",
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "noEmit": true,
+        "rootDir": "..",
+        "incremental": true,
+        "tsBuildInfoFile": "./node_modules/.cache/tsc/tsconfig.test.tsbuildinfo"
+    },
+    "include": ["src/**/*", "../astromech/src/virtual-modules.d.ts"]
+}

@@ -302,7 +302,7 @@ driver subpath, so they sit in `peerDependencies` with
 `check:node-imports` loads each of those subpaths to prove the peer is reachable
 when a site does install it. `react`, `react-dom`, `better-auth` and `kysely`
 are required peers, so the site and the admin share one copy of each; a second
-React is what `admin/components/ui/instance-guard.ts` exists to detect, and a
+React is what `packages/admin/src/components/ui/instance-guard.ts` exists to detect, and a
 second `kysely` or `better-auth` splits the query builder types and the session.
 `linkedom` stays a plain dependency because the root export imports it, so every
 site loads it whatever it configures. Rejected: keeping all of them as
@@ -383,9 +383,9 @@ name-keyed dispatchers where a `:before` substring decided failure semantics and
 `after*` throws were swallowed and logged.
 
 **A barrel is an entry point, not navigation.** Re-export barrels exist only
-where something outside reads them: `src/exports/`, one file per published
-subpath, plus the two under `src/admin/components/` that the Astro integration
-aliases. Every other import names the file that declares the symbol.
+where something outside reads them: `src/exports/` in core and in the admin
+package, one file per published subpath, plus the two under the admin's
+`src/components/` that its Vite helper aliases. Every other import names the file that declares the symbol.
 `src/types/index.ts` is the exception, kept because it is type-only — 359 imports
 that erase at compile time, so there is no runtime graph to shrink. The name
 `index` is reserved for a file something resolves by path — a tsup entry, a Vite
@@ -394,7 +394,7 @@ what it holds instead: `src/env.ts` and `src/transport/http/client.ts`, not an
 `index.ts` a directory down. An eslint selector enforces this, and `sideEffects`
 is an array rather than `false`, because the UI barrels' instance guard, the
 admin entry's field and cell registrations, and every admin component's
-stylesheet do have effects. Rejected: barrels as intra-package boundaries — 93%
+stylesheet do have effects; the admin package's manifest names them. Rejected: barrels as intra-package boundaries — 93%
 of imports already went around them, nothing enforced barrel-only entry, and the
 browser boundary needed the opposite. Also rejected: letting a real-code
 `index.ts` keep its name and carrying it as a lint exception, which grew the
@@ -518,11 +518,28 @@ input; and a REST catalogue resolved per request so the mount could check an
 entry type's or a global's permission before reading the body, which each of
 those routes' `precondition` already does.
 
+**The admin is its own package, `@astromech/admin`, and core depends on it.**
+The admin app, the component kit and the shell page live in `packages/admin`.
+`astromech/astro` injects the admin into every site, so core depends on the
+admin package, as Strapi's and Directus's cores depend on their admin apps, and
+a site installs core alone. `astromech/ui`, `astromech/ui/app`,
+`astromech/ui/layout` and `astromech/ui/fields` stay, as one-line re-exports,
+so no plugin import changes. The admin still ships as source, because a site's
+own admin components join its module graph at build time, and it publishes a
+Node-side Vite helper holding its aliases, its share of `optimizeDeps.include`,
+the TanStack Router plugin and the shell's path. Imports inside the admin are
+relative. The admin peers on core and links it in the workspace for its built
+kit, so the two packages depend on each other, which pnpm allows with a
+warning. Rejected: sites installing the admin beside core, Payload's model,
+which suits a UI package that no consumer code joins; and an `@admin/*` alias,
+which the site's Vite would have to register too, in a build where the site may
+already use that name.
+
 **The browser-safe surface is `astromech/shared`, and a bundle test checks
 it.** `src/exports/shared.ts` names each browser-safe value the admin reads, and
 the admin reaches core only through it, `astromech/fetch` and type-only imports
-from `astromech`; a lint rule refuses any other `@/` or `astromech/*` import
-from `src/admin/`. `packages/astromech/tests/exports/shared-browser.test.ts`
+from `astromech`; a lint rule refuses any `@/` import and any other
+`astromech/*` subpath from `packages/admin/src/`. `packages/astromech/tests/exports/shared-browser.test.ts`
 bundles the two entries for the browser and fails on a Node builtin, or on a
 core file outside `fields/`, `utilities/`, `errors/`, `types/`, the
 `*.shared.ts` files and the fetch client. A package boundary does not give that

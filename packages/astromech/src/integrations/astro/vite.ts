@@ -1,13 +1,13 @@
 /**
  * The Vite config the integration hands to Astro's `updateConfig`: the aliases
  * onto package source, dependency pre-bundling, build-time defines and the
- * virtual modules.
+ * virtual modules. The admin package supplies its own share, which this merges.
  */
 
 import type { AstromechConfig, ResolvedConfig } from '@/types/index';
+import type { AdminViteConfig } from '@astromech/admin/vite';
 import type { HookParameters } from 'astro';
 import { fileURLToPath } from 'node:url';
-import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 import { generatePluginClientManifest } from '@/codegen/plugin-client-manifest';
 import { buildAdminConfig } from '@/config/admin-config';
 import { resolveConfigPath } from '@/config/load';
@@ -19,8 +19,10 @@ type ViteConfig = NonNullable<
 >;
 
 export type ViteConfigOptions = {
-    /** Absolute path to this package's `src/`, the target of the aliases. */
+    /** Absolute path to this package's `src/`, the target of core's aliases. */
     packageSource: string;
+    /** The admin package's share: its aliases, pre-bundled packages and router plugin. */
+    admin: AdminViteConfig;
     /** The Astro project root. */
     root: URL;
     /** The site's config file path, as passed to the integration. */
@@ -32,6 +34,7 @@ export type ViteConfigOptions = {
 /** Build the `vite` half of the Astro config update. */
 export function createViteConfig({
     packageSource,
+    admin,
     root,
     configFile,
     config,
@@ -42,48 +45,28 @@ export function createViteConfig({
 
     return {
         resolve: {
-            // Browser-facing entries alias to package src so plugin components
-            // share module identity (React context, hooks) with the admin app.
-            // Specific keys first — bare `astromech/ui` would shadow them.
-            // `astromech/shared` and `astromech/fetch` are how the admin reaches
-            // core, so every browser caller shares their one module instance.
+            // Browser-facing entries alias to source so plugin components share
+            // module identity (React context, hooks) with the admin app. The
+            // admin's aliases cover `astromech/ui*`. `astromech/shared` and
+            // `astromech/fetch` are how the admin reaches core, so every browser
+            // caller shares their one module instance.
             alias: {
+                ...admin.alias,
                 'astromech/shared': packageSource + '/exports/shared.ts',
                 'astromech/fetch': packageSource + '/exports/fetch.ts',
-                'astromech/ui/fields':
-                    packageSource + '/admin/components/fields/index.ts',
-                'astromech/ui/layout': packageSource + '/admin/components/ui/layout.ts',
-                'astromech/ui/app': packageSource + '/admin/components/ui/app.ts',
-                'astromech/ui': packageSource + '/admin/components/ui/index.ts',
                 '@/': packageSource + '/',
             },
         },
         optimizeDeps: {
-            include: [
-                'react',
-                'react-dom',
-                'react/jsx-runtime',
-                'lucide-react',
-                '@tanstack/react-router',
-                '@tanstack/react-query',
-                '@base-ui/react',
-                'i18next',
-                'react-i18next',
-                '@tiptap/core',
-                '@tiptap/react',
-                '@tiptap/starter-kit',
-                'lodash-es',
-            ],
+            // The admin's packages, then the ones `astromech/shared` reaches in
+            // the browser that the admin does not import itself.
+            include: [...admin.optimizeDeps.include, '@tiptap/starter-kit', 'lodash-es'],
         },
         define: {
             __ASTROMECH_BASE_PATH__: JSON.stringify(resolvedConfig.basePath),
         },
         plugins: [
-            TanStackRouterVite({
-                routesDirectory: packageSource + '/admin/pages',
-                generatedRouteTree: packageSource + '/admin/routeTree.gen.ts',
-                routeToken: 'route',
-            }),
+            ...admin.plugins,
             virtualModule('virtual:astromech/config', () =>
                 liveConfigModule(resolveConfigPath(rootDir, configFile))
             ),

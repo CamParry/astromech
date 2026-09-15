@@ -21,8 +21,8 @@ const nonBarrelIndexModules = [
     'types/index',
     'transport/cli/index',
     'transport/mcp/index',
-    'admin/components/ui/index',
-    'admin/components/fields/index',
+    'components/ui/index',
+    'components/fields/index',
     'pages/.*index',
 ];
 
@@ -45,11 +45,12 @@ const noBarrelImport = [
 
 // Core's globals share one `globalThis.__astromech` namespace, declared once in
 // registry.ts. The namespace grew ten siblings with that invariant already
-// written down, so it is a lint rule rather than a convention.
+// written down, so it is a lint rule rather than a convention. The admin has one
+// global of its own, declared in its UI instance guard.
 const noDeclareGlobal = {
     selector: 'TSModuleDeclaration[global=true]',
     message:
-        'Declare globals in packages/astromech/src/registry.ts only — add a key to `globalThis.__astromech` instead of a new global.',
+        'Declare core globals in packages/astromech/src/registry.ts, as a key on `globalThis.__astromech`, and the admin global in packages/admin/src/components/ui/instance-guard.ts. Do not add a new global.',
 };
 
 // Astro evaluates a module before the request that boots the app, so the
@@ -143,22 +144,28 @@ export default tseslint.config(
         },
     },
     {
-        // The admin reaches core only through its browser entries: `astromech/shared`,
-        // `astromech/fetch` and type-only imports from `astromech`. No other block
-        // sets this rule, so these options are the whole of it for admin files.
-        files: [
-            'packages/astromech/src/admin/**/*.ts',
-            'packages/astromech/src/admin/**/*.tsx',
-        ],
+        // The admin package. Its files import one another by relative path and
+        // reach core only through its browser entries: `astromech/shared`,
+        // `astromech/fetch` and type-only imports from `astromech`. No other
+        // block sets `no-restricted-imports`, so these options are the whole of
+        // it for admin files.
+        files: ['packages/admin/src/**/*.ts', 'packages/admin/src/**/*.tsx'],
         rules: {
+            'no-restricted-syntax': [
+                'error',
+                ...noJsExtension,
+                noDeclareGlobal,
+                ...noBarrelImport,
+                noModuleScopeConfigRead,
+            ],
             '@typescript-eslint/no-restricted-imports': [
                 'error',
                 {
                     patterns: [
                         {
-                            regex: '^@/(?!admin/)',
+                            regex: '^@/',
                             message:
-                                'The admin reaches core through astromech/shared, astromech/fetch or a type import from astromech, never a @/ path outside src/admin (see DECISIONS.md).',
+                                'The admin imports its own files by relative path and reaches core through astromech/shared, astromech/fetch or a type import from astromech, never a @/ path (see DECISIONS.md).',
                         },
                         {
                             regex: '^astromech/(?!(shared|fetch)$)',
@@ -167,6 +174,18 @@ export default tseslint.config(
                         },
                     ],
                 },
+            ],
+        },
+    },
+    {
+        // The admin's one global, declared beside the check that reads it.
+        files: ['packages/admin/src/components/ui/instance-guard.ts'],
+        rules: {
+            'no-restricted-syntax': [
+                'error',
+                ...noJsExtension,
+                ...noBarrelImport,
+                noModuleScopeConfigRead,
             ],
         },
     },

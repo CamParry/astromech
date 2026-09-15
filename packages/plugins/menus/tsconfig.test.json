@@ -8,6 +8,7 @@
         "tsBuildInfoFile": "./node_modules/.cache/tsc/tsconfig.test.tsbuildinfo",
         "paths": {
             "@/*": ["../../astromech/src/*"],
+            "@/admin/*": ["../../admin/src/*"],
             "@tests/*": ["../../astromech/tests/_support/*"],
             "astromech": ["../../astromech/src/exports/index.ts"],
             "astromech/fields": ["../../astromech/src/exports/fields.ts"],
@@ -15,8 +16,13 @@
             "astromech/email": ["../../astromech/src/exports/email.ts"],
             "astromech/shared": ["../../astromech/src/exports/shared.ts"],
             "astromech/fetch": ["../../astromech/src/exports/fetch.ts"],
-            "astromech/ui": ["../../astromech/src/exports/admin/ui.ts"],
-            "astromech/ui/app": ["../../astromech/src/exports/admin/ui-app.ts"],
+            "astromech/ui": ["../../astromech/src/exports/ui.ts"],
+            "astromech/ui/app": ["../../astromech/src/exports/ui-app.ts"],
+            "@astromech/admin/vite": ["../../admin/src/vite.ts"],
+            "@astromech/admin/ui": ["../../admin/src/exports/ui.ts"],
+            "@astromech/admin/ui/app": ["../../admin/src/exports/ui-app.ts"],
+            "@astromech/admin/ui/layout": ["../../admin/src/exports/ui-layout.ts"],
+            "@astromech/admin/ui/fields": ["../../admin/src/exports/ui-fields.ts"],
             "@astromech/schema-engine": ["../../schema-engine/src/index.ts"],
             "@astromech/schema-engine/generate": ["../../schema-engine/src/generate.ts"]
         }
@@ -25,6 +31,7 @@
         "src/**/*",
         "tests/**/*",
         "../../astromech/src/virtual-modules.d.ts",
+        "../../admin/src/virtual-modules.d.ts",
         "../../astromech/src/astro-client.d.ts"
     ]
 }

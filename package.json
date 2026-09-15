@@ -22,7 +22,7 @@
         "check:boot:cloudflare": "node scripts/check-boot-cloudflare.mjs",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
-        "lint:css": "pnpm -F astromech lint:css",
+        "lint:css": "pnpm -F @astromech/admin lint:css",
         "test": "pnpm -F astromech test",
         "test:run": "pnpm -F @astromech/schema-engine test:run && pnpm -F astromech test:coverage && pnpm -r -F \"./packages/plugins/**\" test:run",
         "db:generate": "pnpm -F astromech-demo db:generate",

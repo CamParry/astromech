@@ -14,7 +14,7 @@
  * Two things decide the stage boundaries, and neither is arbitrary:
  *
  * - Anything reading `dist` waits for `build`.
- * - `tsr generate` writes `packages/astromech/src/admin/routeTree.gen.ts`, and
+ * - `tsr generate` writes `packages/admin/src/routeTree.gen.ts`, and
  *   so does the TanStack Router Vite plugin inside each app build. `typecheck`
  *   gets a stage of its own for this reason. The two boot checks then run
  *   together, but only after a `routes:generate` stage writes that file first:
@@ -59,7 +59,7 @@ const stagesByMode = {
         // builds below (see the header comment); test:run is independent of it.
         [
             ['test:run', 'pnpm run test:run'],
-            ['routes:generate', 'pnpm -F astromech routes:generate'],
+            ['routes:generate', 'pnpm -F @astromech/admin routes:generate'],
         ],
         [
             ['check:boot', 'pnpm run check:boot'],
@@ -78,7 +78,7 @@ const stagesByMode = {
         [['typecheck', 'pnpm run typecheck']],
         // Prime routeTree.gen.ts so the two boot builds below both read it
         // unchanged and neither writes it. See the header comment.
-        [['routes:generate', 'pnpm -F astromech routes:generate']],
+        [['routes:generate', 'pnpm -F @astromech/admin routes:generate']],
         [
             ['check:boot', 'pnpm run check:boot'],
             ['check:boot:cloudflare', 'pnpm run check:boot:cloudflare'],

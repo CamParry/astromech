@@ -13,7 +13,8 @@
 // `<AdminApp client:only="react" />`, so the React app has not been evaluated
 // when the response is written. A browser step therefore loads `/cms` in
 // headless chromium and waits for markup that only exists once React has
-// painted. A broken import under `src/admin/` reaches nothing else in the gate.
+// painted. A broken import under `packages/admin/src/` reaches nothing else in
+// the gate.
 //
 // The same page then goes past login. The scratch database has no users, so
 // `/cms` sends the browser on to first-run setup, which creates the first
@@ -21,8 +22,11 @@
 // second sign-up from outside the page session answers 403. It then asserts the
 // app shell's navigation, opens the `post` entries list from the sidebar,
 // creates a post through the REST API with the page's session cookie, and opens
-// that post's edit page. That covers the app shell, one list and one edit form.
-// The other pages under `pages/_protected` are not loaded here.
+// that post's edit page. Last it opens the backups plugin's page, whose own
+// component reads the admin's React context, which only works when the plugin
+// and the admin share one copy of the kit. That covers the app shell, one list,
+// one edit form and one plugin page. The other pages under `pages/_protected`
+// are not loaded here.
 //
 // Slow (a full Astro build plus a browser), so it is run on demand and in CI,
 // never from the pre-commit hook. It is not skippable: a check that can be
@@ -60,7 +64,7 @@ const MOUNT_TIMEOUT_MS = 30_000;
 // gets the same allowance as the mount.
 const SCREEN_TIMEOUT_MS = 30_000;
 
-// `#am-app` is the router root (`admin/pages/__root.tsx`) and the password
+// `#am-app` is the router root (`packages/admin/src/pages/__root.tsx`) and the password
 // field belongs to the unauthenticated screen. On the scratch database that is
 // the setup form: `/cms` redirects an anonymous visitor to `/login`, which
 // sends them on to `/setup` while no user exists. Neither can exist in the served shell, and
@@ -336,6 +340,26 @@ async function expectAdminWorks(admin) {
     console.log(
         '  ok  the edit page renders the new post with its title in the title input'
     );
+
+    step('opening a plugin admin page');
+    // The backups page is the plugin's own component. It calls
+    // `useAstromechPlugin()` from `astromech/ui/app`, which throws unless the
+    // plugin resolved the same copy of the kit as the admin, so the admin's
+    // React context is visible to it. "Run now" renders once that call has
+    // worked and the plugin's own `listRuns` method has answered.
+    await page.goto(`${admin}/plugin/backups`, {
+        waitUntil: 'commit',
+        timeout: REQUEST_TIMEOUT_MS,
+    });
+    await waitFor(
+        page.getByRole('button', { name: 'Run now', exact: true }),
+        'the backups plugin page'
+    );
+    await waitFor(
+        page.getByText('No backups yet. Run one to get started.', { exact: true }),
+        'the backups plugin page empty state'
+    );
+    console.log('  ok  the backups plugin page renders its own component in the admin');
 
     if (errors.length > 0) {
         throw new Error(`the admin reported errors in the browser${formatLines(errors)}`);

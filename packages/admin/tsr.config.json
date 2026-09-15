@@ -1,0 +1,7 @@
+{
+    "routesDirectory": "./src/pages",
+    "generatedRouteTree": "./src/routeTree.gen.ts",
+    "routeToken": "route",
+    "routeFileIgnorePattern": "\\.test\\.tsx?$",
+    "quoteStyle": "single"
+}

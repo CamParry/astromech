@@ -6,14 +6,18 @@
 
 import type { ResolvedConfig } from '@/types/index';
 
-/** Register the injected Astro routes. */
+/**
+ * Register the injected Astro routes. `shellEntrypoint` is the admin
+ * package's shell page, as an absolute path.
+ */
 export function registerRoutes(
     injectRoute: (route: {
         pattern: string;
         entrypoint: string;
         prerender: boolean;
     }) => void,
-    resolvedConfig: ResolvedConfig
+    resolvedConfig: ResolvedConfig,
+    shellEntrypoint: string
 ): void {
     const { basePath, mediaRoute } = resolvedConfig;
 
@@ -26,10 +30,10 @@ export function registerRoutes(
         prerender: false,
     });
 
-    // Admin SPA shell — catch-all that serves the React SPA for all admin paths
+    // Admin SPA shell: a catch-all that serves the React SPA for every admin path
     injectRoute({
         pattern: `${basePath}/[...path]`,
-        entrypoint: 'astromech/admin/shell.astro',
+        entrypoint: shellEntrypoint,
         prerender: false,
     });
 

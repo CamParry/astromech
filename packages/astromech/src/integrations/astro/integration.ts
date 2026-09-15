@@ -7,6 +7,7 @@
 import type { AstromechConfig, ResolvedConfig } from '@/types/index';
 import type { AstroIntegration } from 'astro';
 import { fileURLToPath } from 'node:url';
+import { createAdminViteConfig } from '@astromech/admin/vite';
 import { loadConfigFile } from '@/config/load';
 import { resolveConfig } from '@/config/resolve';
 import { runMigrations } from '@/database/migrations';
@@ -53,9 +54,12 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
 
                 logger.info('Initializing Astromech CMS');
 
+                const admin = createAdminViteConfig();
+
                 updateConfig({
                     vite: createViteConfig({
                         packageSource,
+                        admin,
                         root: astroConfig.root,
                         configFile: options.configFile,
                         config,
@@ -63,7 +67,7 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
                     }),
                 });
 
-                registerRoutes(injectRoute, resolvedConfig);
+                registerRoutes(injectRoute, resolvedConfig, admin.shellEntrypoint);
 
                 addMiddleware({
                     entrypoint: 'astromech/middleware',
