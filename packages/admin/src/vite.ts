@@ -1,8 +1,8 @@
 /**
  * What the Astro integration needs from the admin to serve it: the
- * `astromech/ui*` aliases onto admin source, the admin's share of
- * `optimizeDeps.include`, the TanStack Router plugin that writes its route
- * tree, and the path of the shell page. Runs in Node at config time.
+ * `astromech/ui*` aliases onto admin source, the packages it imports in the
+ * browser, the TanStack Router plugin that writes its route tree, and the path
+ * of the shell page. Runs in Node at config time.
  */
 
 import { fileURLToPath } from 'node:url';
@@ -11,8 +11,13 @@ import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 export type AdminViteConfig = {
     /** Aliases onto admin source, the more specific keys first. */
     alias: Record<string, string>;
-    /** The packages the admin imports in the browser, for Vite to pre-bundle. */
-    optimizeDeps: { include: string[] };
+    /** Bare specifiers the admin imports in the browser, for Vite to pre-bundle. */
+    optimizeDeps: {
+        /** Installed with the admin: its `dependencies`. */
+        dependencies: string[];
+        /** Installed by the site and shared with it: its `peerDependencies`. */
+        peerDependencies: string[];
+    };
     plugins: ReturnType<typeof TanStackRouterVite>[];
     /** Absolute path to `shell.astro`, the page the admin route serves. */
     shellEntrypoint: string;
@@ -34,21 +39,47 @@ export function createAdminViteConfig(): AdminViteConfig {
             'astromech/ui/app': source + 'components/ui/app.ts',
             'astromech/ui': source + 'components/ui/index.ts',
         },
-        // The admin is compiled by the site's Vite, so these resolve from the
-        // site's root. pnpm-workspace.yaml hoists each one for that reason.
+        // Every bare specifier `src` imports at runtime, filed by the
+        // package.json field that declares it. Core turns these into
+        // Vite's list, because only core knows how a site reaches the admin.
         optimizeDeps: {
-            include: [
-                'react',
-                'react-dom',
-                'react/jsx-runtime',
-                'lucide-react',
-                '@tanstack/react-router',
-                '@tanstack/react-query',
+            peerDependencies: ['react', 'react-dom', 'react/jsx-runtime'],
+            dependencies: [
                 '@base-ui/react',
-                'i18next',
-                'react-i18next',
+                '@base-ui/react/accordion',
+                '@base-ui/react/alert-dialog',
+                '@base-ui/react/avatar',
+                '@base-ui/react/checkbox',
+                '@base-ui/react/collapsible',
+                '@base-ui/react/combobox',
+                '@base-ui/react/dialog',
+                '@base-ui/react/field',
+                '@base-ui/react/menu',
+                '@base-ui/react/number-field',
+                '@base-ui/react/popover',
+                '@base-ui/react/progress',
+                '@base-ui/react/select',
+                '@base-ui/react/slider',
+                '@base-ui/react/switch',
+                '@base-ui/react/tabs',
+                '@base-ui/react/toast',
+                '@base-ui/react/toggle',
+                '@base-ui/react/toggle-group',
+                '@base-ui/react/tooltip',
+                '@dnd-kit/core',
+                '@dnd-kit/sortable',
+                '@dnd-kit/utilities',
+                '@tanstack/react-form',
+                '@tanstack/react-query',
+                '@tanstack/react-router',
                 '@tiptap/core',
                 '@tiptap/react',
+                'clsx',
+                'date-fns',
+                'i18next',
+                'lucide-react',
+                'react-colorful',
+                'react-i18next',
             ],
         },
         plugins: [

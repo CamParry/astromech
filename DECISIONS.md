@@ -530,7 +530,7 @@ a site installs core alone. `astromech/ui`, `astromech/ui/app`,
 `astromech/ui/layout` and `astromech/ui/fields` stay, as one-line re-exports,
 so no plugin import changes. The admin still ships as source, because a site's
 own admin components join its module graph at build time, and it publishes a
-Node-side Vite helper holding its aliases, its share of `optimizeDeps.include`,
+Node-side Vite helper holding its aliases, the browser packages it pre-bundles,
 the TanStack Router plugin and the shell's path. Imports inside the admin are
 relative. The admin peers on core and links it in the workspace for its built
 kit, so the two packages depend on each other, which pnpm allows with a

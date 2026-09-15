@@ -1,14 +1,16 @@
 /**
- * `createViteConfig()` with the admin package's share merged in: the aliases,
- * the `@/` resolver scoped to core's `src`, the base-path define, the three
- * virtual modules, and that the pre-bundled packages match the hoist list.
+ * `createViteConfig()` with the admin's share merged in: the aliases, the `@/`
+ * resolver scoped to core's `src`, the base-path define, the virtual modules,
+ * and that each pre-bundled package resolves from the site root.
  */
 import type {
     CoreSourceAliasPlugin,
     ResolveContext,
 } from '@/integrations/astro/core-source-alias';
 import type { VirtualModulePlugin } from '@/integrations/astro/virtual-module';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createAdminViteConfig } from '@astromech/admin/vite';
 import { makeTestConfig } from '@tests/harness';
@@ -22,12 +24,8 @@ type ViteConfig = ReturnType<typeof createViteConfig>;
 type ResolveCall = Parameters<ResolveContext['resolve']>;
 
 const packageSource = fileURLToPath(new URL('../../../src', import.meta.url));
-const workspaceFile = fileURLToPath(
-    new URL('../../../../../pnpm-workspace.yaml', import.meta.url)
-);
-
-// Hoisted so Vite can externalise libsql's native binding, not for the admin.
-const serverOnlyHoists = ['libsql', '@libsql/*'];
+// The demo stands in for a site: it depends on `astromech`, not on the admin.
+const siteRoot = fileURLToPath(new URL('../../../../../apps/demo', import.meta.url));
 
 describe('createViteConfig()', () => {
     const config = { ...makeTestConfig(), basePath: '/admin' };
@@ -78,32 +76,15 @@ describe('createViteConfig()', () => {
         }
     });
 
-    it('pre-bundles exactly the packages pnpm-workspace.yaml hoists for the admin', () => {
-        const included = new Set(
-            (vite.optimizeDeps?.include ?? [])
-                .filter((specifier) => specifier !== undefined)
-                .map(packageNameOf)
+    it('resolves every pre-bundled package from the site root through packages that declare it', () => {
+        const include = (vite.optimizeDeps?.include ?? []).filter(
+            (entry) => entry !== undefined
         );
-        const hoisted = new Set(
-            readPublicHoistPattern().filter((name) => !serverOnlyHoists.includes(name))
-        );
+        const problems = include
+            .map((entry) => findChainProblem(entry, siteRoot))
+            .filter((problem) => problem !== undefined);
 
-        const problems = [
-            ...[...included]
-                .filter((name) => !hoisted.has(name))
-                .map(
-                    (name) =>
-                        `${name} is in optimizeDeps.include but missing from publicHoistPattern (pnpm-workspace.yaml)`
-                ),
-            ...[...hoisted]
-                .filter((name) => !included.has(name))
-                .map(
-                    (name) =>
-                        `${name} is in publicHoistPattern (pnpm-workspace.yaml) but missing from optimizeDeps.include`
-                ),
-        ];
-
-        expect(included.size).toBeGreaterThan(0);
+        expect(include).not.toHaveLength(0);
         expect(problems).toEqual([]);
     });
 
@@ -207,18 +188,43 @@ function packageNameOf(specifier: string): string {
         .join('/');
 }
 
-/** The `publicHoistPattern:` list, read line by line to avoid a YAML dependency. */
-function readPublicHoistPattern(): string[] {
-    const lines = readFileSync(workspaceFile, 'utf8').split('\n');
-    const start = lines.findIndex((line) => line.trim() === 'publicHoistPattern:');
-    if (start === -1) throw new Error('pnpm-workspace.yaml has no publicHoistPattern');
-
-    const names: string[] = [];
-    for (const line of lines.slice(start + 1)) {
-        if (line.trim().startsWith('#')) continue;
-        const name = /^\s+-\s+['"]?([^'"\s]+)['"]?\s*$/.exec(line)?.[1];
-        if (name === undefined) break;
-        names.push(name);
+/**
+ * Walk an `optimizeDeps.include` entry as Vite does, finding each package in
+ * `a > b > c` from the one before it. Each must be declared by that package,
+ * since pnpm links nothing undeclared, and must resolve there.
+ */
+function findChainProblem(entry: string, root: string): string | undefined {
+    let dir = root;
+    for (const name of entry.split('>').map((part) => packageNameOf(part.trim()))) {
+        const manifest = readManifest(dir);
+        const declared = { ...manifest.dependencies, ...manifest.peerDependencies };
+        if (!(name in declared)) {
+            return `${entry}: ${name} is not a dependency of ${manifest.name}`;
+        }
+        const found = resolvePackageDir(name, dir);
+        if (found === undefined) {
+            return `${entry}: ${name} does not resolve from ${manifest.name}`;
+        }
+        dir = found;
     }
-    return names;
+    return undefined;
+}
+
+type Manifest = {
+    name: string;
+    dependencies?: Record<string, string>;
+    peerDependencies?: Record<string, string>;
+};
+
+function readManifest(dir: string): Manifest {
+    return JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as Manifest;
+}
+
+/** The real path of package `name` as Node's lookup finds it from `dir`. */
+function resolvePackageDir(name: string, dir: string): string | undefined {
+    const lookup = createRequire(join(dir, 'package.json')).resolve.paths(name) ?? [];
+    const found = lookup
+        .map((nodeModules) => join(nodeModules, name))
+        .find((candidate) => existsSync(join(candidate, 'package.json')));
+    return found === undefined ? undefined : realpathSync(found);
 }

@@ -18,37 +18,14 @@ allowBuilds:
 # so a prompt there waits on a terminal that isn't attached and hangs the gate.
 confirmModulesPurge: false
 
-# The admin ships as SOURCE, so the host app's Vite compiles it and has to
-# resolve the admin's client dependencies from the app root. That is what
-# `optimizeDeps.include` asks for, and it is deliberate: the admin shares the
-# host's React instance rather than bundling a second one. The admin's share of
-# that list is in packages/admin/src/vite.ts, and core's is in
-# packages/astromech/src/integrations/astro/vite.ts, which merges the two.
-# pnpm's default layout hides those packages from the app, so this hoists
-# exactly them and nothing else. Keep the lists in step: a package in one and
-# not the other is a bug. The parity is checked by
-# packages/astromech/tests/integrations/astro/vite.test.ts.
-#
-# `libsql` and `@libsql/*` are here for a different reason. Vite externalises a
-# server dependency only if it can resolve it from the app root, and `libsql`
-# reaches `apps/demo` transitively through `@libsql/client`. When it cannot be
-# resolved, Vite inlines it instead — and libsql loads its native binding with a
-# dynamic `require('@libsql/darwin-arm64')`, which Rollup can only replace with
-# a stub that throws. So the whole failure is decided at build time and does not
-# surface until the first render, where the node adapter answers the unhandled
-# rejection by holding the socket open rather than returning 500.
+# `libsql` and `@libsql/*` are hoisted so Vite can externalise them. Vite
+# externalises a server dependency only if it can resolve it from the app root,
+# and `libsql` reaches `apps/demo` transitively through `@libsql/client`. When
+# it cannot be resolved, Vite inlines it instead. libsql loads its native binding
+# with a dynamic `require('@libsql/darwin-arm64')`, which Rollup can only
+# replace with a stub that throws. So the whole failure is decided at build time
+# and does not surface until the first render, where the node adapter answers
+# the unhandled rejection by holding the socket open rather than returning 500.
 publicHoistPattern:
     - 'libsql'
     - '@libsql/*'
-    - 'react'
-    - 'react-dom'
-    - 'lucide-react'
-    - '@tanstack/react-router'
-    - '@tanstack/react-query'
-    - '@base-ui/react'
-    - 'i18next'
-    - 'react-i18next'
-    - '@tiptap/core'
-    - '@tiptap/react'
-    - '@tiptap/starter-kit'
-    - 'lodash-es'

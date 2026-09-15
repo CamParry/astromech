@@ -58,9 +58,18 @@ export function createViteConfig({
             },
         },
         optimizeDeps: {
-            // The admin's packages, then the ones `astromech/shared` reaches in
-            // the browser that the admin does not import itself.
-            include: [...admin.optimizeDeps.include, '@tiptap/starter-kit', 'lodash-es'],
+            // Named from the site's root. Peers stay flat, because the site installs
+            // them and shares one copy. The rest go through the packages that depend
+            // on them: Vite finds `c` in `a > b > c` from `b`, found from `a`.
+            include: [
+                ...admin.optimizeDeps.peerDependencies,
+                ...admin.optimizeDeps.dependencies.map(
+                    (specifier) => `astromech > @astromech/admin > ${specifier}`
+                ),
+                // Reached in the browser by `astromech/shared`, not by the admin.
+                'astromech > @tiptap/starter-kit',
+                'astromech > lodash-es',
+            ],
         },
         define: {
             __ASTROMECH_BASE_PATH__: JSON.stringify(resolvedConfig.basePath),

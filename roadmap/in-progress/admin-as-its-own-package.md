@@ -68,8 +68,11 @@ Stages, each one commit that passes `pnpm run verify`:
       core's `pretypecheck` stops generating it. Core type-checks the admin's
       kit through its `astromech/ui` re-exports, but nothing the kit imports
       reaches the route tree, so core needs neither.
-- [ ] After stage 3, try nested `optimizeDeps.include` entries so
-      `publicHoistPattern` can shrink.
+- [x] After stage 3, try nested `optimizeDeps.include` entries so
+      `publicHoistPattern` can shrink. It holds only `libsql` and `@libsql/*`
+      now. The admin lists its browser packages bare, as `dependencies` and
+      `peerDependencies`, and core renders them for Vite: peers flat, the rest
+      as `astromech > @astromech/admin > <name>`.
 
 ## The seam, re-measured
 
