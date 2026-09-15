@@ -84,11 +84,11 @@ is the measurement and the pass behind login.
 
 ### Stage 2
 
-- [ ] Cover the Astro integration with unit tests: the emitted virtual module,
+- [x] Cover the Astro integration with unit tests: the emitted virtual module,
       the injected route paths, and the `optimizeDeps.include` versus
       `publicHoistPattern` parity check that currently costs a `check:boot` run to
       discover.
-- [ ] Turn on coverage (`@vitest/coverage-v8`) with per-directory thresholds,
+- [x] Turn on coverage (`@vitest/coverage-v8`) with per-directory thresholds,
       not one global number.
 - [ ] Extend verification past login: either grow the `check:boot` browser
       step or add an authenticated pass covering the entries list and one entry

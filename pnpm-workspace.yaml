@@ -19,11 +19,12 @@ confirmModulesPurge: false
 
 # The admin ships as SOURCE, so the host app's Vite compiles it and has to
 # resolve the admin's client dependencies from the app root. That is what the
-# `optimizeDeps.include` array in packages/astromech/src/boot/astro.ts asks for,
-# and it is deliberate: the admin shares the host's React instance rather than
-# bundling a second one. pnpm's default layout hides those packages from the
-# app, so this hoists exactly them and nothing else. Keep the two lists in step
-# — a package in one and not the other is a bug.
+# `optimizeDeps.include` array in packages/astromech/src/integrations/astro/vite.ts
+# asks for, and it is deliberate: the admin shares the host's React instance
+# rather than bundling a second one. pnpm's default layout hides those packages
+# from the app, so this hoists exactly them and nothing else. Keep the two lists
+# in step: a package in one and not the other is a bug. The parity is checked
+# by packages/astromech/tests/integrations/astro/vite.test.ts.
 #
 # `libsql` and `@libsql/*` are here for a different reason. Vite externalises a
 # server dependency only if it can resolve it from the app root, and `libsql`

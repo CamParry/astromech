@@ -66,3 +66,13 @@ expect(…))`. To assert that something does not happen, wait for a positive
 - **A route change is tested through the real router.** A service test calls the
   Local API and never touches `transport/http/routes/`, so it cannot catch a
   route that drops a field.
+
+## Coverage
+
+- **Thresholds live per directory** in `packages/astromech/vitest.config.ts`,
+  one entry for each top-level directory of `packages/astromech/src`.
+  `pnpm run test:run`, and so `verify`, fails when a directory drops below its
+  entry. `pnpm -F astromech test:coverage` runs core's suite alone with coverage.
+- **A change that raises a directory's coverage raises its threshold in the same
+  commit.**
+- **Never lower a threshold to pass.** Write the test instead.

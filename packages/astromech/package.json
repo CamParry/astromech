@@ -278,6 +278,7 @@
         "format:check": "prettier --check src",
         "test": "vitest",
         "test:run": "vitest run",
+        "test:coverage": "vitest run --coverage",
         "db:seed": "tsx scripts/seed.ts",
         "lint:css": "stylelint \"src/admin/styles/**/*.css\""
     },
@@ -370,6 +371,7 @@
         "@types/node": "^22.20.1",
         "@types/react": "^19.0.0",
         "@types/react-dom": "^19.0.0",
+        "@vitest/coverage-v8": "4.1.10",
         "astro": "^6.0.8",
         "aws4fetch": "^1.0.20",
         "better-auth": "^1.5.5",

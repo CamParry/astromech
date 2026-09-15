@@ -634,6 +634,13 @@ workspace, which matched three separate invocations to within a second and broke
 `tests/integrations/cloudflare/d1-local-emulation.test.ts`, which finds
 `packages/astromech/wrangler.jsonc` from the working directory.
 
+**Coverage thresholds are per directory and only ever raised.** Each top-level
+directory of `packages/astromech/src` has its own lines, functions, branches and
+statements threshold in `packages/astromech/vitest.config.ts`, set one below what
+it measures, and a change that raises a directory's coverage raises its
+threshold. Rejected: one global number, because an average hides a directory
+near zero behind well-covered ones.
+
 ## Reserved words
 
 These words are taken. Using one for something else costs a reader more than a
