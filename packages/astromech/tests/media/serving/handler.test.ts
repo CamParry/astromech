@@ -1,7 +1,7 @@
 import type { ImageFormat } from '@/media/serving/image/url.shared';
 import type { ImageDriver, ImageSource, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mediaService } from '@/app-context/services';
 import { handleMediaRequest } from '@/media/serving/handler';
 import { setImageConfig } from '@/media/serving/image/registry';
@@ -473,5 +473,78 @@ describe('handleMediaRequest — range requests', () => {
         expect(res.status).toBe(200);
         expect(res.headers.get('Content-Range')).toBeNull();
         expect(await readBody(res)).toEqual(VARIANT_BYTES);
+    });
+});
+
+describe('handleMediaRequest failures', () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('serves the original under its own cache headers when the transform throws', async () => {
+        const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        setImageConfig({
+            driver: {
+                name: 'broken',
+                cachesVariants: false,
+                async transform() {
+                    throw new Error('corrupt image');
+                },
+            },
+            widths: [320, 640],
+            avif: true,
+        });
+        const jpegBytes = makeJpegBytes();
+        const media = await mediaService.upload({
+            file: new File([jpegBytes as BlobPart], 'photo.jpg', { type: 'image/jpeg' }),
+        });
+        const version = media.metadata?.version ?? '';
+
+        const res = await handleMediaRequest({
+            id: media.id,
+            ext: 'jpg',
+            search: new URLSearchParams({ w: '320', f: 'webp', v: version }),
+            origin: 'http://x',
+        });
+
+        expect(res.status).toBe(200);
+        expect(res.headers.get('Content-Type')).toBe('image/jpeg');
+        expect(res.headers.get('Cache-Control')).toBe(
+            'public, max-age=300, must-revalidate'
+        );
+        expect(res.headers.get('ETag')).toBe(`"${version}"`);
+        expect(await readBody(res)).toEqual(jpegBytes);
+        expect(
+            [...storage._store.keys()].filter((k) => k.startsWith('variants/'))
+        ).toEqual([]);
+        expect(errors).toHaveBeenCalledOnce();
+    });
+
+    it('answers a plain-text 500 with no-store when storage throws', async () => {
+        const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        const media = await mediaService.upload({
+            file: new File([makeJpegBytes() as BlobPart], 'photo.jpg', {
+                type: 'image/jpeg',
+            }),
+        });
+        setStorageDriver({
+            ...storage,
+            async get() {
+                throw new Error('storage unavailable');
+            },
+        });
+
+        const res = await handleMediaRequest({
+            id: media.id,
+            ext: 'jpg',
+            search: new URLSearchParams(),
+            origin: 'http://x',
+        });
+
+        expect(res.status).toBe(500);
+        expect(res.headers.get('Content-Type')).toMatch(/^text\/plain/);
+        expect(res.headers.get('Cache-Control')).toBe('no-store');
+        expect(await res.text()).toBe('Internal server error');
+        expect(errors).toHaveBeenCalledOnce();
     });
 });

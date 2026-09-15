@@ -54,16 +54,29 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
         )
     );
 
-    // Security headers, applied to all responses.
+    // Security headers, applied to all responses. A media response relaxes
+    // `Cross-Origin-Resource-Policy` so another origin can embed a public file,
+    // or another subdomain of this site a private one.
     const headers = config.security?.headers;
+    const secureHeaderOptions = {
+        xContentTypeOptions: headers?.xContentTypeOptions ?? 'nosniff',
+        xFrameOptions: headers?.xFrameOptions ?? 'DENY',
+        referrerPolicy: headers?.referrerPolicy ?? 'strict-origin-when-cross-origin',
+    };
+    const apiSecureHeaders = secureHeaders(secureHeaderOptions);
+    const mediaSecureHeaders = secureHeaders({
+        ...secureHeaderOptions,
+        crossOriginResourcePolicy:
+            config.media.access === 'public' ? 'cross-origin' : 'same-site',
+    });
 
-    app.use(
-        '*',
-        secureHeaders({
-            xContentTypeOptions: headers?.xContentTypeOptions ?? 'nosniff',
-            xFrameOptions: headers?.xFrameOptions ?? 'DENY',
-            referrerPolicy: headers?.referrerPolicy ?? 'strict-origin-when-cross-origin',
-        })
+    // The same paths Hono's `${mediaRoute}/*` matches, the bare route included.
+    const mediaPrefix = `${config.mediaRoute}/`;
+    const isMediaPath = (path: string): boolean =>
+        path === config.mediaRoute || path.startsWith(mediaPrefix);
+
+    app.use('*', (c, next) =>
+        isMediaPath(c.req.path) ? mediaSecureHeaders(c, next) : apiSecureHeaders(c, next)
     );
 
     const permissionsPolicy = headers?.permissionsPolicy;
@@ -95,9 +108,9 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
     // Media serving at its own top-level prefix — public and identity-free.
     // Registered above `requireAuth` so no future widening of that middleware
     // can reach it. Hono gives no wildcard param, so the `<id>.<ext>` tail comes
-    // off the pathname.
-    const mediaPrefix = `${config.mediaRoute}/`;
-    app.all(`${config.mediaRoute}/*`, (c) => {
+    // off the pathname. Hono answers HEAD from the GET handler with the body
+    // dropped; every other method is a 405.
+    app.get(`${config.mediaRoute}/*`, (c) => {
         const url = new URL(c.req.url);
         const path = url.pathname.slice(mediaPrefix.length);
         const dot = path.lastIndexOf('.');
@@ -110,6 +123,9 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
             range: c.req.header('range') ?? null,
         });
     });
+    app.all(`${config.mediaRoute}/*`, (c) =>
+        c.text('Method not allowed', 405, { Allow: 'GET, HEAD' })
+    );
 
     // Not in a route table: unauthenticated by design, and it deliberately calls
     // `users.query` — a `users:read` method — ungated, because before the first

@@ -141,11 +141,14 @@ export default defineConfig({
 - **`public`** (default) — a media record's `url` is the driver's own URL when
   the driver offers one, falling back to the media route when it doesn't. That
   fallback is what keeps `filesystem()` in dev and `r2()` without a `publicUrl`
-  working unchanged.
+  working unchanged. The media route sends
+  `Cross-Origin-Resource-Policy: cross-origin`, so any site can embed the file.
 - **`private`** — `getPublicUrl` is never consulted; every original is served
   through the media route. Note what this is and isn't: it stops direct storage
   URLs being handed out, so access _can_ be gated at the route — the media route
-  does not itself check permissions today.
+  does not itself check permissions today. The route sends
+  `Cross-Origin-Resource-Policy: same-site`, so your own subdomains can embed
+  the file and other sites cannot.
 
 Two things people get wrong:
 

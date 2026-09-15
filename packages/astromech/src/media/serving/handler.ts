@@ -57,8 +57,24 @@ function extOf(filename: string): string {
     return dot >= 0 ? filename.slice(dot + 1) : '';
 }
 
-/** Serve one media/image request: original, redirect to canonical variant, or transform on a cache miss. */
+/**
+ * Serve one media/image request. A failure answers a plain-text 500 rather than
+ * the API's JSON envelope, since the caller is an `<img>` tag or a CDN.
+ */
 export async function handleMediaRequest(info: MediaRequestInfo): Promise<Response> {
+    try {
+        return await serveMedia(info);
+    } catch (err) {
+        console.error(`[astromech/media] Serving "${info.id}" failed:`, err);
+        return new Response('Internal server error', {
+            status: 500,
+            headers: { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' },
+        });
+    }
+}
+
+/** Serve the original, redirect to the canonical variant, or transform on a cache miss. */
+async function serveMedia(info: MediaRequestInfo): Promise<Response> {
     const { id, search, origin, ifNoneMatch, range } = info;
 
     const media = await mediaService.get({ id });
@@ -132,7 +148,7 @@ export async function handleMediaRequest(info: MediaRequestInfo): Promise<Respon
     }
 
     // All valid: width in allowlist, format explicit, version correct — serve variant.
-    // A `Range` header is deliberately ignored from here down: variants are images
+    // A `Range` header is deliberately ignored for a variant: variants are images
     // and are served whole, and one may not exist yet (a cache miss transforms it
     // on the spot), so there is nothing stable to range over. Ranges are an
     // originals-only concern — see `serveOriginal`.
@@ -173,17 +189,38 @@ export async function handleMediaRequest(info: MediaRequestInfo): Promise<Respon
         originUrl: `${origin}${buildMediaUrl(getConfig().mediaRoute, id, ext)}`,
     };
 
-    const out = await imageConfig.driver.transform(src, { width: params.width, format });
-    const bytes = await toBytes(out.body);
-
-    if (!imageConfig.driver.cachesVariants) {
-        await storage.put(vKey, bytes, { contentType: out.contentType });
+    let variant: { bytes: Uint8Array; contentType: string };
+    try {
+        const out = await imageConfig.driver.transform(src, {
+            width: params.width,
+            format,
+        });
+        variant = { bytes: await toBytes(out.body), contentType: out.contentType };
+    } catch (err) {
+        // The original stands in under its own short-lived cache headers, never
+        // the variant's immutable ones, so a later request can still transform.
+        console.error(
+            `[astromech/media] Transforming "${id}" failed, serving the original:`,
+            err
+        );
+        return serveOriginal({
+            key,
+            mimeType: media.mimeType,
+            version,
+            storage,
+            ifNoneMatch,
+            range,
+        });
     }
 
-    return new Response(bytes as BodyInit, {
+    if (!imageConfig.driver.cachesVariants) {
+        await storage.put(vKey, variant.bytes, { contentType: variant.contentType });
+    }
+
+    return new Response(variant.bytes as BodyInit, {
         status: 200,
         headers: {
-            'Content-Type': out.contentType,
+            'Content-Type': variant.contentType,
             'Cache-Control': variantCacheControl,
             ETag: etag,
         },

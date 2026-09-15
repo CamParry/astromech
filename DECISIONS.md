@@ -371,6 +371,19 @@ Atlassian make did not reproduce here: vitest's aggregate module-import time
 stayed inside its run-to-run variance on both sides, so the reasons above carry
 the change alone.
 
+**The media route answers like a file server, not like the API.** It lives in
+the Hono app for one terminal handler, but its callers are `<img>` tags and CDNs,
+so it keeps none of the API's response shapes. The handler catches its own
+failures: a missing file is a plain-text 404, a failed transform serves the
+original (as Next.js's image optimiser does), and anything else is a plain-text
+500 marked `no-store`. It answers `GET` and `HEAD` and a 405 for anything else.
+Its `Cross-Origin-Resource-Policy` follows `media.access`: `cross-origin` for
+public media, `same-site` for private, where the API keeps `same-origin`.
+Rejected: scoping `onError` away from the media prefix, which splits error
+handling across two places; and `same-origin` for private media, which is not
+access control yet and would break a site serving its pages and its CMS from two
+subdomains.
+
 **A route declares itself.** One table of `(verb, path, method id)` plus wire
 facts is read by the Hono handler, the OpenAPI document and the fetch client;
 only per-route `args` are hand-written, and a bespoke handler says so with
