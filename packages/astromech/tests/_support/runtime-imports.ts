@@ -2,7 +2,6 @@
  * Collects the bare package specifiers a directory's TypeScript loads at
  * runtime, for the checks that a package lists what Vite must pre-bundle.
  */
-import type { PluginDefinition } from '@/types/index';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import ts from 'typescript';
@@ -79,15 +78,15 @@ const siteOwned = new Set(['react', 'react-dom', 'react/jsx-runtime']);
 
 /**
  * Each package a plugin's admin components under `adminDir` import at runtime
- * but its `admin.optimizeDeps.include` misses, as `<specifier> (imported by
+ * but `include`, its `admin.optimizeDeps.include`, misses, as `<specifier> (imported by
  * <file>)`. Core (`astromech`, `astromech/*`), which the site's Vite aliases to
  * source, and the site's own React are exempt.
  */
 export function missingFromOptimizeDeps(
-    def: PluginDefinition,
+    include: readonly string[] | undefined,
     adminDir: string
 ): string[] {
-    const listed = new Set<string>(def.admin?.optimizeDeps?.include);
+    const listed = new Set<string>(include);
     return [...collectRuntimeImports(adminDir)]
         .filter(
             ([specifier]) =>

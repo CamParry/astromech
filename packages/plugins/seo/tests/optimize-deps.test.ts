@@ -11,6 +11,8 @@ const adminDir = fileURLToPath(new URL('../src/admin', import.meta.url));
 
 describe('seo() admin.optimizeDeps', () => {
     it('lists every package the admin components import', () => {
-        expect(missingFromOptimizeDeps(seo(), adminDir)).toEqual([]);
+        expect(
+            missingFromOptimizeDeps(seo().admin?.optimizeDeps?.include, adminDir)
+        ).toEqual([]);
     });
 });
