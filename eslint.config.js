@@ -52,6 +52,20 @@ const noDeclareGlobal = {
         'Declare globals in packages/astromech/src/registry.ts only — add a key to `globalThis.__astromech` instead of a new global.',
 };
 
+// Astro evaluates a module before the request that boots the app, so the
+// config and the app instance exist only at call time and a read at module
+// scope throws. A class field initialiser runs at construction, so it may read;
+// a static one runs with the module, so it may not.
+const noModuleScopeConfigRead = {
+    selector:
+        'CallExpression[callee.name=/^(getConfig|getAstromech)$/]' +
+        ':not(:function CallExpression, ' +
+        'PropertyDefinition[static=false] > .value, ' +
+        'PropertyDefinition[static=false] > .value CallExpression)',
+    message:
+        'Call getConfig() and getAstromech() inside the function that uses them. Astro evaluates a module before the request that boots the app, so a module-scope call throws.',
+};
+
 // The content modules take their dependencies from the method's `ctx`. The
 // three modules a handler must not reach for are the request store, the config
 // registry and the hook bus.
@@ -110,7 +124,9 @@ export default tseslint.config(
     },
     {
         files: ['**/*.ts', '**/*.tsx'],
-        rules: { 'no-restricted-syntax': ['error', ...noJsExtension] },
+        rules: {
+            'no-restricted-syntax': ['error', ...noJsExtension, noModuleScopeConfigRead],
+        },
     },
     {
         // `no-restricted-syntax` options replace rather than merge, so each block
@@ -122,6 +138,7 @@ export default tseslint.config(
                 ...noJsExtension,
                 noDeclareGlobal,
                 ...noBarrelImport,
+                noModuleScopeConfigRead,
             ],
         },
     },
@@ -134,6 +151,7 @@ export default tseslint.config(
                 noDeclareGlobal,
                 ...noBarrelImport,
                 ...noAmbientRead,
+                noModuleScopeConfigRead,
             ],
         },
     },
@@ -145,6 +163,7 @@ export default tseslint.config(
                 ...noJsExtension,
                 noDeclareGlobal,
                 ...noBarrelImport,
+                noModuleScopeConfigRead,
             ],
         },
     },
@@ -159,12 +178,19 @@ export default tseslint.config(
         // may re-export a barrel — the `astromech/ui` subpaths are built from it.
         files: ['packages/astromech/src/exports/**/*.ts'],
         rules: {
-            'no-restricted-syntax': ['error', ...noJsExtension, noDeclareGlobal],
+            'no-restricted-syntax': [
+                'error',
+                ...noJsExtension,
+                noDeclareGlobal,
+                noModuleScopeConfigRead,
+            ],
         },
     },
     {
         files: ['packages/astromech/src/registry.ts'],
-        rules: { 'no-restricted-syntax': ['error', ...noJsExtension] },
+        rules: {
+            'no-restricted-syntax': ['error', ...noJsExtension, noModuleScopeConfigRead],
+        },
     },
     {
         // Repo tooling: plain Node, run by npm scripts rather than bundled.

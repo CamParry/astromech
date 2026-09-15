@@ -27,7 +27,8 @@ rather than an error.
   function.** It applies to every TypeScript file ESLint sees except tests and
   scripts: core through `pnpm run lint`, and plugins and host apps through the
   pre-commit hook, which lints every staged file. A class field initialiser runs
-  at construction, so it is allowed. `.astro` files are not linted, and their
+  at construction, so it is allowed; a static one runs with the module, so it is
+  not. `.astro` files are not linted, and their
   frontmatter runs per request, so they need no rule.
 - **Both errors name the likely cause.** `getConfig()` and `getAstromech()` say
   that a call at module scope runs before boot, not only that nothing is
@@ -35,10 +36,10 @@ rather than an error.
 
 ## The work
 
-- [ ] The lint rule in `eslint.config.js`, in every block that restates
+- [x] The lint rule in `eslint.config.js`, in every block that restates
       `no-restricted-syntax`.
-- [ ] The two error messages.
-- [ ] `ARCHITECTURE.md`'s config paragraph names the rule.
+- [x] The two error messages.
+- [x] `ARCHITECTURE.md`'s config paragraph names the rule.
 
 ## Not in scope
 

@@ -125,7 +125,7 @@ export function getAstromech(): Promise<Astromech> {
     const existing = registry.get();
     if (existing === null) {
         throw new AstromechError(
-            'no instance of Astromech exists, createAstromech({ config }) must be called before getAstromech()'
+            'no instance of Astromech exists, createAstromech({ config }) must be called before getAstromech(). A call at module scope runs before boot, so move it into the function that uses it.'
         );
     }
     return existing.app;

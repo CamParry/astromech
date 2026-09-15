@@ -124,7 +124,8 @@ central context object, and no module-scope singletons: the package can be
 loaded more than once in a process (two builds, source and dist resolution,
 Vite aliases), and the global is the only namespace every copy shares. Config
 follows the same rule: `createAstromech` stores the resolved config once and
-every reader calls `getConfig()` at call time, never at module scope.
+every reader calls `getConfig()` at call time, never at module scope. A lint
+rule refuses a call to `getConfig()` or `getAstromech()` outside a function.
 
 ## Entries and fields
 

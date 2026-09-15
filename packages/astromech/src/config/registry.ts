@@ -7,7 +7,7 @@ import type { ResolvedConfig } from '@/types/index';
 import { createRegistry } from '@/registry';
 
 const config = createRegistry<ResolvedConfig>('config', {
-    hint: 'Ensure createAstromech({ config }) has run before reading config.',
+    hint: 'Ensure createAstromech({ config }) has run before reading config. A read at module scope runs before boot, so move it into the function that uses it.',
 });
 
 export const setConfig = config.set;
