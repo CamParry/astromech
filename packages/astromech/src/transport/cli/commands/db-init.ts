@@ -1,6 +1,7 @@
 import { mergeMigrationProviders, migrateToLatest } from '@astromech/schema-engine';
 import { defineCommand } from 'citty';
 import { loadAppMigrations } from '@/database/app-migrations';
+import { assertForeignKeysEnforced } from '@/database/migrations';
 import { collectPluginMigrations } from '@/database/plugin-migrations';
 import { getDb } from '@/database/registry';
 import { loadConfig, loadRawConfig } from '../config';
@@ -25,6 +26,7 @@ export default defineCommand({
             migrationProvider,
             collectPluginMigrations(rawConfig.plugins ?? [])
         );
+        await assertForeignKeysEnforced(getDb());
         console.log('Running migrations...');
         await migrateToLatest(getDb(), merged, { allowUnorderedMigrations: true });
         console.log('Database migrations applied');

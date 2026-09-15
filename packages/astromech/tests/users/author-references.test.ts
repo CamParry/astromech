@@ -2,10 +2,10 @@
  * Deleting a user nulls their author references across every table that carries
  * one, not just the entry tables.
  *
- * `createdBy`/`updatedBy` are `ON DELETE set null` FKs, but libSQL does not
- * enforce foreign keys at runtime, so `deleteUser` clears them itself, walking
- * the table descriptors. This pins that clearing table by table, and that a
- * different user's authorship is left untouched.
+ * `createdBy`/`updatedBy` are `ON DELETE set null` foreign keys, and libSQL and
+ * D1 both enforce foreign keys, so the database clears them when the user row
+ * goes. This pins the schema's `set null` table by table, and that a different
+ * user's authorship is left untouched.
  */
 
 import type { Db } from '@/database/types';

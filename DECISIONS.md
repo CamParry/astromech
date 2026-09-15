@@ -44,9 +44,8 @@ content outlives its author, and the column already means "the acting user, if
 known". Rejected: reassigning to another user (WordPress's model, too heavy for
 a "who touched this row" stamp, and Astromech has no ownership concept to
 reassign to), cascade (deletes the content), and restrict (blocks a legitimate
-user removal). libSQL opens with foreign keys off, so the FK action is inert
-there and `deleteUser` nulls the columns itself: the DB clause records the
-intent and enforces it on D1, the app guarantees it on every driver. This is a
+user removal). The database carries out the `set null`, as the entry on
+deleting a user below explains. This is a
 column FK, unlike the `relationships` index above whose dangling ids are field
 data with nothing to act on.
 
@@ -192,14 +191,19 @@ generic 422 rather than `SIGN_UP_CLOSED`; and deleting the later admin in the
 `after` hook, which runs once the session exists and leaves two admins if the
 process dies first.
 
-**Author clearing enumerates columns from the table descriptors.** The
-hand-kept list under `entries/internal/` was three tables when nine carried the
-column; `users/internal/clear-author-references.ts` walks `CORE_TABLES` and
-clears every column whose FK targets `users` with `onDelete: 'set null'`.
-Rejected: relying on `ON DELETE set null` alone (libSQL does not enforce
-foreign keys), and a plugin table walk (a plugin's table descriptors reach the
-runtime only through `config.plugins`, which `ResolvedConfig` strips, so the
-delete path cannot enumerate them without being handed the config).
+**Deleting a user leaves its references to the database's foreign keys.**
+Every column that references `users` declares its `onDelete`, and the
+migrations render it: `set null` clears the 19 author columns, and `cascade`
+removes sessions, accounts, content rows and notifications. libSQL's native
+binding and sqld are built with foreign keys on by default, and D1 enforces
+them, so the migration runner reads `PRAGMA foreign_keys` and refuses a
+database where it is off rather than let a delete leave dangling ids. A client
+cannot turn enforcement on for a remote libSQL database, since each query runs
+on a new stream. Rejected: clearing the author columns by hand before the
+delete, which repeated the database's own work in 19 updates and was not
+atomic with the delete on D1, whose `transaction()` runs no transaction; and
+keeping it only for a driver that does not enforce, which would still leave
+that driver's cascades undone.
 
 **Filtering entries by field data rides declared expression indexes** over
 `json_extract(fields, '$.path')` on `entry_content`, with the index DDL and the

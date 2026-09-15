@@ -187,9 +187,10 @@ first one through better-auth, and the users service
 writes every later one; `user_content` holds one row per locale of the site's own
 `fields`; `user_versions` snapshots a content row. `name`, `email` and `role`
 are written whatever the locale, while `fields` addresses one locale.
-`users/internal/clear-author-references.ts` walks the core table descriptors on
-delete, clearing every column whose reference targets `users` with
-`onDelete: 'set null'`, rather than naming tables by hand. Translation opts in
+Deleting a user leaves the rest to the database: each reference to `users`
+declares `onDelete: 'set null'` (author columns) or `'cascade'` (sessions,
+accounts, content rows, notifications), and the migration runner refuses a
+database that does not enforce foreign keys. Translation opts in
 through `users: { translatable: true }`; versioning is always on.
 
 **Fields** are shared by entry types, globals and plugin tables. `fields/builder.ts` is the authoring API (`fields.text(...)`), and

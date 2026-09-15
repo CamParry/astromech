@@ -22,6 +22,7 @@ import { migrateToLatest } from '@astromech/schema-engine';
 import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { d1 } from '@/database/drivers/d1';
+import { assertForeignKeysEnforced } from '@/database/migrations';
 import { clearEnvSource } from '@/env';
 import {
     disposeBindings,
@@ -170,6 +171,14 @@ describe('d1() against local emulation', () => {
 
         await releaseFirstAdminClaim(appDb);
         expect(await claimFirstAdmin(now, appDb)).toBe(true);
+    });
+
+    // The migration runner reads `PRAGMA foreign_keys`, and D1 answers only the
+    // pragmas it allows.
+    it('enforces foreign keys, so the migration check passes', async () => {
+        await expect(
+            assertForeignKeysEnforced(db as unknown as Db)
+        ).resolves.toBeUndefined();
     });
 
     it("introspects columns, which Kysely's own SQLite introspector cannot do here", async () => {
