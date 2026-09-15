@@ -194,7 +194,9 @@ process dies first.
 **Deleting a user leaves its references to the database's foreign keys.**
 Every column that references `users` declares its `onDelete`, and the
 migrations render it: `set null` clears the 19 author columns, and `cascade`
-removes sessions, accounts, content rows and notifications. libSQL's native
+removes sessions, accounts, content rows and notifications. A plugin table
+declares its reference the same way, as the assistant's sessions and approvals
+do with `cascade`. libSQL's native
 binding and sqld are built with foreign keys on by default, and D1 enforces
 them, so the migration runner reads `PRAGMA foreign_keys` and refuses a
 database where it is off rather than let a delete leave dangling ids. A client

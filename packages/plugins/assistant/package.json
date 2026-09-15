@@ -59,6 +59,8 @@
         "remark-gfm": "^4.0.1"
     },
     "devDependencies": {
+        "@libsql/client": "^0.18.0",
+        "@libsql/kysely-libsql": "^0.4.1",
         "@types/node": "^22.20.1",
         "@types/react": "^19.2.18",
         "@types/react-dom": "^19.2.4",

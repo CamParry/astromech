@@ -16,7 +16,7 @@
                 {
                     "key": "userId",
                     "name": "user_id",
-                    "kind": "text",
+                    "kind": "reference",
                     "type": "text",
                     "notNull": true,
                     "primaryKey": false
@@ -95,7 +95,14 @@
                     "primaryKey": false
                 }
             ],
-            "fks": [],
+            "fks": [
+                {
+                    "column": "user_id",
+                    "targetTable": "users",
+                    "targetColumn": "id",
+                    "onDelete": "cascade"
+                }
+            ],
             "indexes": []
         },
         "plugin_assistant_sessions": {
@@ -112,7 +119,7 @@
                 {
                     "key": "userId",
                     "name": "user_id",
-                    "kind": "text",
+                    "kind": "reference",
                     "type": "text",
                     "notNull": true,
                     "primaryKey": false
@@ -142,7 +149,14 @@
                     "primaryKey": false
                 }
             ],
-            "fks": [],
+            "fks": [
+                {
+                    "column": "user_id",
+                    "targetTable": "users",
+                    "targetColumn": "id",
+                    "onDelete": "cascade"
+                }
+            ],
             "indexes": [
                 {
                     "name": "plugin_assistant_sessions_user_id_unique",

@@ -33,4 +33,4 @@ relied on enforcement.
 
 Found along the way: the assistant plugin's `approvals` and `sessions` tables
 hold a `userId` with no foreign key, so they outlive a deleted user. That is
-`roadmap/in-progress/assistant-rows-outlive-their-user.md`.
+`roadmap/completed/assistant-rows-outlive-their-user.md`.

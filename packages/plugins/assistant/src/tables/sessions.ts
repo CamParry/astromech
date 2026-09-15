@@ -15,12 +15,13 @@ export const sessionsTable = definePluginTable(
     ({ col }) => ({
         id: col.id(),
         /** Unique: a user has one conversation, replaced rather than archived. */
-        userId: col.text({ notNull: true, unique: true }),
+        userId: col.reference('users', { notNull: true, onDelete: 'cascade' }),
         /** The transcript as content blocks, in the shape the drawer posts back. */
         messages: col.json<ChatMessage[]>({ notNull: true }),
         createdAt: col.timestamp({ notNull: true, defaultNow: true }),
         updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
-    })
+    }),
+    ({ index }) => [index('sessions_user_id_unique', ['userId'], { unique: true })]
 );
 
 export type SessionRow = TableSelect<typeof sessionsTable>;

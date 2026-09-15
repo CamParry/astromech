@@ -13,7 +13,7 @@ export const approvalsTable = definePluginTable(
     'approvals',
     ({ col }) => ({
         id: col.id(),
-        userId: col.text({ notNull: true }),
+        userId: col.reference('users', { notNull: true, onDelete: 'cascade' }),
         toolCallId: col.text({ notNull: true }),
         /** Manifest method id, e.g. `entries.page.publish`. */
         method: col.text({ notNull: true }),
