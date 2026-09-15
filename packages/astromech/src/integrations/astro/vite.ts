@@ -78,8 +78,12 @@ export function createViteConfig({
                         (specifier) => `astromech > @astromech/admin > ${specifier}`
                     ),
                     // Reached in the browser by `astromech/shared`, not by the admin.
+                    'astromech > @tiptap/extension-placeholder',
+                    'astromech > @tiptap/extension-text-align',
+                    'astromech > @tiptap/pm/model',
                     'astromech > @tiptap/starter-kit',
                     'astromech > lodash-es',
+                    'astromech > zod',
                     ...plugins.flatMap(pluginOptimizeDeps),
                 ]),
             ],
