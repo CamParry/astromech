@@ -136,9 +136,7 @@ class D1Connection implements DatabaseConnection {
 
         return {
             rows: result.results ?? [],
-            ...(numAffectedRows !== undefined
-                ? { numAffectedRows, numUpdatedOrDeletedRows: numAffectedRows }
-                : {}),
+            ...(numAffectedRows !== undefined ? { numAffectedRows } : {}),
             ...(insertId !== undefined ? { insertId } : {}),
         };
     }
