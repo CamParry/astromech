@@ -498,6 +498,19 @@ longer type-checks. Rejected: publishing `EntryRepository` as a public adapter
 surface — a compatibility promise on an internal contract, for a use case nothing
 needs.
 
+**Only entry types take storage of their own.** `tableRepository` gives an entry
+type its own table, because entry types are what sites and plugins declare in
+open-ended numbers, and a plugin's own records (form submissions, redirects)
+belong in a table it owns, as a WordPress plugin keeps a custom table. Users,
+media, settings and notifications read and write core's tables directly. Users
+are the tables Better Auth signs in against, so another store for them would
+have to satisfy Better Auth as well as core. Media already has its seam where the
+bytes live: a `StorageDriver` puts files on the filesystem, R2 or S3, and the
+record stays in core so relationships and "used by" can index it. Payload's
+storage adapters and Strapi's upload providers draw the same line. Rejected: a
+repository seam on every content module, four more internal contracts that no
+caller has asked for.
+
 **An entry's type is part of its address.** `EntryRepository.get` and
 `anyLocale` take the type with the id, and the entries-table repository answers
 null for a row of another type, so a by-id operation addressed at the wrong type

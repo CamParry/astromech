@@ -6,7 +6,7 @@ siblings in that outline and five different shapes underneath it. This file is
 about deciding which of those differences are the design and which are just
 where each module stopped, before the answer becomes a breaking change.
 
-## What the five actually have
+## What the five had when this was filed
 
 |                      | `entries`              | `media`         | `users`         | `settings`      | `notifications` |
 | -------------------- | ---------------------- | --------------- | --------------- | --------------- | --------------- |
@@ -59,17 +59,18 @@ of the present has nowhere to say "and this is on purpose".
 
 ## The work
 
-- [ ] Settle the repository seam. Either extend it to `users`, `media`,
-      `settings` and `notifications`, or write in `DECISIONS.md` that entries is
-      the only pluggable one and what that beat.
-- [ ] The contract catalogue is going away altogether: each verb becomes one
-      method object, per `../completed/unified-service-methods.md`.
-- [ ] Decide whether `notifications` needs a `schema.ts` and add it or record
-      why not.
-- [ ] The notifications subject comes from the context a method is bound to,
-      per `../completed/unified-service-methods.md`; no separate file is needed.
-- [ ] Once the shapes agree, `ARCHITECTURE.md`'s content-module paragraph loses
-      its two parenthetical exceptions.
+- [x] Settle the repository seam. Entries is the only pluggable one, recorded in
+      `DECISIONS.md` as "Only entry types take storage of their own".
+- [x] The contract catalogue is gone: each verb is one method object, per
+      `../completed/unified-service-methods.md`.
+- [x] `notifications` has no `schema.ts` because its methods share no schema:
+      three take no input and one takes an id. `ARCHITECTURE.md` describes
+      `schema.ts` as the request schemas a module's methods share, so this is no
+      longer an exception.
+- [x] The notifications subject comes from the context a method is bound to,
+      per `../completed/unified-service-methods.md`.
+- [x] `ARCHITECTURE.md`'s content-module paragraph has no parenthetical
+      exceptions left.
 
 ## Why it is worth doing before 1.0
 
