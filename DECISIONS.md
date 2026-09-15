@@ -721,6 +721,12 @@ it measures, and a change that raises a directory's coverage raises its
 threshold. Rejected: one global number, because an average hides a directory
 near zero behind well-covered ones.
 
+**knip checks for unused files, exports and dependencies.** `pnpm run check:unused`
+runs it over the whole workspace with the config in `knip.json`, as Astro and
+better-auth do. Its first run found a live bug beside the dead code: plugin email
+overrides were typed and read but never registered. Rejected: `ts-prune`, which
+is unmaintained, and no check at all.
+
 ## Reserved words
 
 These words are taken. Using one for something else costs a reader more than a

@@ -1,0 +1,78 @@
+{
+    "$schema": "https://unpkg.com/knip@5/schema.json",
+    "ignoreExportsUsedInFile": true,
+    "ignoreIssues": {
+        "packages/plugins/*/src/index.ts": ["duplicates"],
+        "packages/astromech/src/integrations/astro/middleware.ts": ["duplicates"],
+        "packages/astromech/src/transport/http/client.ts": ["duplicates"],
+        "packages/astromech/src/database/repository/relationships.ts": ["types"],
+        "packages/astromech/src/entries/repository/maintenance.ts": ["types"],
+        "packages/astromech/src/notifications/repository.ts": ["types"],
+        "packages/astromech/src/plugins/runtime/plugin-tracking-repository.ts": ["types"],
+        "packages/astromech/src/settings/repository.ts": ["types"],
+        "packages/plugins/backups/src/repository.ts": ["types"]
+    },
+    "workspaces": {
+        ".": {
+            "entry": ["scripts/*.mjs"],
+            "project": ["scripts/**/*.mjs"]
+        },
+        "packages/astromech": {
+            "entry": [
+                "src/exports/*.ts",
+                "scripts/*.{mjs,ts}",
+                "tests/**/*.test.{ts,tsx}",
+                "tests/_support/**/*.{ts,tsx}"
+            ],
+            "project": [
+                "src/**/*.{ts,tsx,astro}",
+                "tests/**/*.{ts,tsx}",
+                "scripts/**/*.{mjs,ts}"
+            ],
+            "ignoreDependencies": ["wrangler"]
+        },
+        "packages/admin": {
+            "entry": [
+                "src/exports/*.ts",
+                "src/pages/**/*.tsx",
+                "tests/**/*.test.{ts,tsx}",
+                "tests/_support/**/*.{ts,tsx}"
+            ],
+            "project": ["src/**/*.{ts,tsx,astro}", "tests/**/*.{ts,tsx}"],
+            "ignoreUnresolved": ["./routeTree.gen"]
+        },
+        "packages/schema-engine": {
+            "entry": ["tests/**/*.test.ts"],
+            "project": ["src/**/*.ts", "tests/**/*.ts"]
+        },
+        "packages/plugins/*": {
+            "entry": [
+                "src/tables/index.ts",
+                "src/admin/**/*.tsx",
+                "migrations/**/*.ts",
+                "tests/**/*.test.{ts,tsx}"
+            ],
+            "project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}", "migrations/**/*.ts"]
+        },
+        "apps/demo": {
+            "entry": [
+                "src/admin/**/*.tsx",
+                "src/plugins/*/admin/**/*.tsx",
+                "migrations/**/*.ts"
+            ],
+            "project": ["*.{ts,mjs}", "src/**/*.{ts,tsx,astro}", "migrations/**/*.ts"],
+            "ignoreDependencies": [
+                "tailwindcss",
+                "@tailwindcss/forms",
+                "@tailwindcss/typography",
+                "@iconify-json/lucide",
+                "@iconify-json/simple-icons"
+            ]
+        },
+        "apps/demo-cloudflare": {
+            "entry": ["migrations/**/*.ts"],
+            "project": ["*.{ts,mjs}", "src/**/*.{ts,tsx,astro}", "migrations/**/*.ts"]
+        },
+        "apps/docs": {}
+    }
+}

@@ -2,8 +2,8 @@
  * Runs the gate, in stages, with everything that can overlap overlapping.
  *
  * `--fast` runs only the stages that need no build: the published packages'
- * typechecks, their test suites, and lint. That is the loop to run while
- * working. The full run adds the build and everything downstream of it.
+ * typechecks, their test suites, lint and `check:unused`. That is the loop to
+ * run while working. The full run adds the build and everything downstream of it.
  *
  * `--runtime` runs only the checks whose result can vary with the Node version:
  * the test suites and the two boot checks, over a `build:js` (no declarations,
@@ -50,6 +50,7 @@ const stagesByMode = {
                 'pnpm -F @astromech/schema-engine test:run && pnpm -F astromech test:run && pnpm -F @astromech/admin test:run && pnpm -F @astromech/forms -F @astromech/menus -F @astromech/redirects -F @astromech/backups -F @astromech/seo test:run',
             ],
             ['lint', 'pnpm run lint'],
+            ['check:unused', 'pnpm run check:unused'],
         ],
     ],
     runtime: [
@@ -71,6 +72,7 @@ const stagesByMode = {
         [
             ['test:run', 'pnpm run test:run'],
             ['lint', 'pnpm run lint'],
+            ['check:unused', 'pnpm run check:unused'],
             ['check:node-imports', 'pnpm run check:node-imports'],
             ['check:exports', 'pnpm run check:exports'],
             ['check:docs', 'pnpm run check:docs'],
