@@ -4,8 +4,9 @@ This page runs a site set up by [the installation guide](../installation.md),
 which uses `@astrojs/node` in standalone mode, as a production server. For
 Cloudflare Workers, see [cloudflare.md](cloudflare.md).
 
-Run every command below from the project root. The paths in your config and the
-`migrations` folder resolve against the working directory, as
+Run every command below from the project root. The paths in your config,
+including the `migrations` folder or your `migrationsDir`, resolve against the
+working directory, as
 [the installation guide explains](../installation.md#run-every-command-from-the-project-root).
 
 ## Build
@@ -51,7 +52,8 @@ npx astromech db:init
 ```
 
 The server never applies migrations. When it starts, it compares the database
-with the `migrations` folder and logs a warning naming any that are pending. Run
+with the `migrations` folder, or your `migrationsDir`, and logs a warning naming
+any that are pending. Run
 `db:init` against the production database before starting a new build.
 
 The CLI refuses a remote database, meaning any `libsql:`, `http:`, `https:`,
@@ -71,7 +73,8 @@ node dist/server/entry.mjs
 ```
 
 Run it from the project root, so that `file:./database.db`, `./uploads` and the
-`migrations` folder resolve to the right place. Any process manager or container
+`migrations` folder (or your `migrationsDir`) resolve to the right place. Any
+process manager or container
 works, as long as it runs this command with the environment above.
 
 With no `scheduler` in your config, scheduled jobs run from `interval()`, a timer
@@ -104,4 +107,5 @@ replace the code:
 - the uploads directory, `./uploads` or whatever `dir` your `filesystem()`
   config names
 
-The `migrations` folder is committed to git, so each checkout brings it.
+The `migrations` folder, or your `migrationsDir`, is committed to git, so each
+checkout brings it.

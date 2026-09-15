@@ -40,7 +40,7 @@ describe('the foreign key check', () => {
                 error: (message: string) => messages.push(message),
             };
 
-            const run = runMigrations(db, logger, []);
+            const run = runMigrations(db, logger, [], './migrations');
 
             await expect(run).rejects.toBeInstanceOf(AstromechError);
             await expect(run).rejects.toThrow(

@@ -132,22 +132,24 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
             // handle. Nothing here touches the registries: the one booted copy of
             // the config lives in the serving process.
             'astro:server:setup': async ({ logger }) => {
-                const { config } = getLoadedConfig();
+                const { config, resolved } = getLoadedConfig();
                 logger.info('Astromech dev server ready');
                 await runMigrations(
                     config.db.getInstance(),
                     logger,
-                    config.plugins ?? []
+                    config.plugins ?? [],
+                    resolved.migrationsDir
                 );
             },
 
             'astro:build:done': async ({ logger }) => {
-                const { config } = getLoadedConfig();
+                const { config, resolved } = getLoadedConfig();
                 logger.info('Astromech build complete');
                 await runMigrations(
                     config.db.getInstance(),
                     logger,
-                    config.plugins ?? []
+                    config.plugins ?? [],
+                    resolved.migrationsDir
                 );
             },
         },

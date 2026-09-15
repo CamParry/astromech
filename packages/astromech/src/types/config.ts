@@ -449,6 +449,11 @@ export type AstromechConfig = {
     /** URL prefix for the admin panel; the API is served at `${basePath}/api`. Default `/cms`. */
     basePath?: string;
     mediaRoute?: string;
+    /**
+     * The folder `db:generate` writes the app's migrations to and every migration
+     * step reads, relative to the working directory. Default `./migrations`.
+     */
+    migrationsDir?: string;
     entries: Record<string, EntryType>;
     /** Site-wide globals, each self-contained with its own `key`. */
     globals?: GlobalConfig[];
@@ -527,6 +532,7 @@ export type ResolvedConfig = Omit<
 > & {
     basePath: string;
     mediaRoute: string;
+    migrationsDir: string;
     entries: Record<string, ResolvedEntryType>;
     /** Host-declared globals, keyed by bare key. Always present. */
     globals: Record<string, ResolvedGlobal>;

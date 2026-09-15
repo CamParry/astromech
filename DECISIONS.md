@@ -300,6 +300,19 @@ serving process. Rejected: copying live values into registries at boot, which
 only worked in dev because a build-time boot left the deployed registries empty.
 The cost is two config evaluations, one of which boots.
 
+**A moved config is found with `--config`, and the migrations folder is a config
+key.** A site that keeps its config outside the project root passes the same
+path to the integration (`configFile`) and to the CLI (`--config`).
+`migrationsDir` names the app's migrations folder, `./migrations` by default, and
+resolves against the working directory like every other path in the config.
+Rejected: the CLI reading `astro.config.mjs`, which would tie the CLI to Astro; a
+`package.json` field, which Prisma removed in 7.0.0; an environment variable,
+which only respells `--config` and cannot come from a `.env` file the config
+itself loads; and resolving the folder next to the config file (Prisma 7's
+rule), which would make it the one path that does not follow the working
+directory, and which the built server cannot do because it does not know where
+the config file was.
+
 **`ctx.config` is an explicit `Pick`, built field by field, never a spread.**
 Live config makes `ctx.config.storage.put` and `ctx.config.email.driver.send`
 working functions that bypass `ctx.storage`'s key prefix. Rejected: extending a

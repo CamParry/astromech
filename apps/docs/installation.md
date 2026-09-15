@@ -11,10 +11,10 @@ which step 1 installs.
 ## Run every command from the project root
 
 Astromech resolves relative paths against the working directory. That covers
-the config file the CLI loads, every path inside the config (such as
-`file:./database.db` and `./uploads`), and the `migrations` folder. Run a
-command from anywhere else and the CLI cannot find your config, and the server
-opens a database file in the wrong place.
+the config file the CLI loads and every path inside the config, such as
+`file:./database.db`, `./uploads` and the migrations folder. Run a command from
+anywhere else and the CLI cannot find your config, and the server opens a
+database file in the wrong place.
 [configuration/database.md](configuration/database.md#where-filedatabasedb-points)
 shows what this means for the database path.
 
@@ -138,10 +138,12 @@ npx astromech db:generate
 npx astromech db:init
 ```
 
-`db:generate` writes the migrations for Astromech's tables into `migrations`.
+`db:generate` writes the migrations for Astromech's tables into `./migrations`.
 Commit that folder. `db:init` applies the migrations to the database in your
 config. `astro dev` and `astro build` also apply any that are pending, but only
-once `db:generate` has created the folder.
+once `db:generate` has created the folder. To keep the folder somewhere else,
+set `migrationsDir` in your config, as
+[data/migrations.md](data/migrations.md#the-migrations-folder) describes.
 
 [data/migrations.md](data/migrations.md) covers what the generator writes and
 when to run it again. [cli.md](cli.md) lists every command.

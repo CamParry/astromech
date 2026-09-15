@@ -72,6 +72,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
         ...rest,
         basePath: config.basePath ?? '/cms',
         mediaRoute: config.mediaRoute ?? '/_media',
+        migrationsDir: config.migrationsDir ?? './migrations',
         media: {
             ...media,
             access: mediaAccess,

@@ -162,7 +162,7 @@ async function build(config: AstromechConfig): Promise<Astromech> {
     setSchedulerDriver(resolveSchedulerDriver(config.scheduler));
 
     // Verify the schema before anything boots against it
-    await checkMigrationDrift(db, plugins);
+    await checkMigrationDrift(db, plugins, resolved.migrationsDir);
 
     // Built-in cron jobs
     registerBuiltInJobs();

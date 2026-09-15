@@ -68,6 +68,21 @@ const emptyRepository = (): EntryRepository => ({
     uniqueSlug: async () => '',
 });
 
+describe('resolveConfig migrationsDir', () => {
+    it('defaults to ./migrations', () => {
+        expect(resolveConfig(baseConfig([])).migrationsDir).toBe('./migrations');
+    });
+
+    it('keeps the folder the config names', () => {
+        const resolved = resolveConfig({
+            ...baseConfig([]),
+            migrationsDir: './database/migrations',
+        });
+
+        expect(resolved.migrationsDir).toBe('./database/migrations');
+    });
+});
+
 describe('resolveConfig pluginEntries', () => {
     it('resolves plugin entry types into the namespaced map (not root entries)', () => {
         const resolved = resolveConfig(

@@ -34,10 +34,14 @@ server's pending-migrations check.
 
 ## The work
 
-- [ ] Decide, recording the choice in `DECISIONS.md`.
-- [ ] Add `migrationsDir` and read it everywhere the folder is resolved.
-- [ ] Update `apps/docs/installation.md`, `apps/docs/cli.md`,
+- [x] Decide, recording the choice in `DECISIONS.md`.
+- [x] Add `migrationsDir` and read it everywhere the folder is resolved.
+- [x] Update `apps/docs/installation.md`, `apps/docs/cli.md`,
       `apps/docs/data/migrations.md`, `apps/docs/deployment/node.md` and
       `ARCHITECTURE.md` to match.
-- [ ] A test that a config naming another folder generates, applies and checks
+- [x] A test that a config naming another folder generates, applies and checks
       migrations there.
+
+The config has no schema to validate the key against and no reference page of
+config keys, so `apps/docs/data/migrations.md` documents `migrationsDir` and
+the other pages link to it.

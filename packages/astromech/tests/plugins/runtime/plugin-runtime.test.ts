@@ -84,6 +84,7 @@ const config: ResolvedConfig = {
     publicSettingKeys: [],
     timezone: 'UTC',
     mediaRoute: '/_media',
+    migrationsDir: './migrations',
     media: { access: 'public', translatable: false },
     users: { fields: [], translatable: false },
 };

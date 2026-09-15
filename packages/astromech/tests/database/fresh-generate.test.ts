@@ -59,7 +59,7 @@ beforeAll(async () => {
         getInstance: () => db,
         supportsTransactions: true,
     });
-    await migrateToLatest(db, await loadAppMigrations(siteDir), {
+    await migrateToLatest(db, await loadAppMigrations(join(siteDir, 'migrations')), {
         allowUnorderedMigrations: true,
     });
 

@@ -5,8 +5,9 @@
  * `--collapse` folds later migrations into it too — legal only before release.
  */
 
-import { resolve } from 'node:path';
+import { join } from 'node:path';
 import { defineCommand } from 'citty';
+import { resolveMigrationsDir } from '@/database/app-migrations';
 import { rebaselineMigrations } from '@/database/generate';
 import { CORE_TABLES } from '@/database/tables';
 import { loadConfig } from '../config';
@@ -26,12 +27,13 @@ export default defineCommand({
         ...allowRemoteArgs,
     },
     async run({ args }) {
-        await loadConfig(args.config, toAllowRemoteOption(args));
+        const config = await loadConfig(args.config, toAllowRemoteOption(args));
+        const folder = config.migrationsDir;
 
         let result;
         try {
             result = await rebaselineMigrations({
-                dir: resolve(process.cwd(), 'migrations'),
+                dir: resolveMigrationsDir(folder),
                 tables: CORE_TABLES,
                 dialect: 'sqlite',
                 collapse: args.collapse === true,
@@ -44,15 +46,15 @@ export default defineCommand({
         }
 
         console.log(
-            `[astromech db:rebaseline] rewrote migrations/${result.tag}.ts — ` +
+            `[astromech db:rebaseline] rewrote ${join(folder, `${result.tag}.ts`)} — ` +
                 `${result.emitted.length} table(s) re-emitted, ` +
                 `${result.preserved.length} copied verbatim (${result.preserved.join(', ') || 'none'})`
         );
         for (const file of result.deleted) {
-            console.log(`[astromech db:rebaseline] deleted migrations/${file}`);
+            console.log(`[astromech db:rebaseline] deleted ${join(folder, file)}`);
         }
         console.log(
-            '[astromech db:rebaseline] rewrote migrations/snapshot.json, journal.json and index.ts'
+            `[astromech db:rebaseline] rewrote ${join(folder, 'snapshot.json')}, journal.json and index.ts`
         );
         console.log(
             '[astromech db:rebaseline] WARNING: any database that already applied the old ' +

@@ -220,9 +220,10 @@ vs relationship, staging, preview token).
 `database/` wraps Kysely. Tables are declared with `defineTable` (core) and
 `definePluginTable` (plugins); `database/tables.ts` aggregates every core
 table. Migrations are an **app artifact**: `astromech db:generate` diffs the
-declared tables against the app's `migrations/snapshot.json` and writes a new
-migration into the app's `migrations/` folder, and `astromech db:init` applies
-them. A plugin runs `astromech plugin:generate` against its own tables and
+declared tables against `snapshot.json` in the app's migrations folder (the
+config's `migrationsDir`, `./migrations` by default, resolved against the
+working directory) and writes a new migration there, and `astromech db:init`
+applies them. A plugin runs `astromech plugin:generate` against its own tables and
 ships its own chain, which the app merges with `mergeMigrationProviders`. A
 no-op `db:generate` doubles as the CI drift check.
 

@@ -12,6 +12,10 @@ astromech <command> [args] [--config path/to/astromech.config.ts]
 `--config` points at your `astromech.config.ts` (defaults to one in the current
 directory). Every command accepts it.
 
+`db:generate`, `db:init` and `db:rebaseline` use the migrations folder your
+config's `migrationsDir` names, `./migrations` by default, as
+[data/migrations.md](data/migrations.md#the-migrations-folder) describes.
+
 Every command that opens the database refuses a remote one — a `libsql://` URL,
 or any D1 binding — so a command meant for a dev machine cannot reach production
 through whatever `DATABASE_URL` happens to be exported. Pass `--allow-remote`

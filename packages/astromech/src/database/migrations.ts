@@ -5,7 +5,7 @@ import type { MigrationProvider } from 'kysely/migration';
 import { mergeMigrationProviders, migrateToLatest } from '@astromech/schema-engine';
 import { sql } from 'kysely';
 import { Migrator } from 'kysely/migration';
-import { loadAppMigrations } from '@/database/app-migrations';
+import { loadAppMigrations, resolveMigrationsDir } from '@/database/app-migrations';
 import { collectPluginMigrations } from '@/database/plugin-migrations';
 import { AstromechError } from '@/errors/astromech-error';
 import { log } from '@/utilities/log';
@@ -51,18 +51,19 @@ export async function assertForeignKeysEnforced(db: Kysely<DB>): Promise<void> {
  * after checking the database enforces foreign keys. A missing provider is
  * reported and skipped, because `db:init` is the primary migration path; a
  * failed migration throws, because the caller would otherwise carry on against
- * a stale schema.
+ * a stale schema. `migrationsDir` is the resolved config's.
  */
 export async function runMigrations(
     db: Kysely<DB>,
     logger: MigrationLogger,
-    plugins: PluginDefinition[]
+    plugins: PluginDefinition[],
+    migrationsDir: string
 ): Promise<void> {
     await assertForeignKeysEnforced(db);
 
     let provider: MigrationProvider;
     try {
-        provider = await loadMergedProvider(plugins);
+        provider = await loadMergedProvider(plugins, migrationsDir);
     } catch (error) {
         logger.error(`Astromech could not load its migrations: ${describe(error)}`);
         return;
@@ -75,15 +76,16 @@ export async function runMigrations(
 /**
  * Warn when the database is behind the migration chain. Reads only: applying
  * the difference is `db:init`'s job, and a serving process that migrates itself
- * races every other replica.
+ * races every other replica. `migrationsDir` is the resolved config's.
  */
 export async function checkMigrationDrift(
     db: Kysely<DB>,
-    plugins: PluginDefinition[]
+    plugins: PluginDefinition[],
+    migrationsDir: string
 ): Promise<void> {
     let provider: MigrationProvider;
     try {
-        provider = await loadMergedProvider(plugins);
+        provider = await loadMergedProvider(plugins, migrationsDir);
     } catch {
         // No migrations directory to compare against — a bundled runtime ships
         // none, and the app may not have run `db:generate` yet.
@@ -105,13 +107,14 @@ export async function checkMigrationDrift(
 
 /** The app's own migrations with each plugin's merged in, as one provider. */
 async function loadMergedProvider(
-    plugins: PluginDefinition[]
+    plugins: PluginDefinition[],
+    migrationsDir: string
 ): Promise<MigrationProvider> {
     // Plugin migrations merge at apply time, so a newly installed plugin can
     // introduce a migration that sorts before ones already applied — which is
     // why every caller here passes `allowUnorderedMigrations`.
     return mergeMigrationProviders(
-        await loadAppMigrations(),
+        await loadAppMigrations(resolveMigrationsDir(migrationsDir)),
         collectPluginMigrations(plugins)
     );
 }

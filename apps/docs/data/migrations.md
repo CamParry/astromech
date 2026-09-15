@@ -14,7 +14,14 @@ transactional DDL support, and the SQLite adapter reports `false` — so the
 chain applies the same way on D1 as on libsql. See
 [configuration/database.md](../configuration/database.md).
 
-## What lives in `migrations/`
+## The migrations folder
+
+The folder is your config's `migrationsDir`, `./migrations` by default. Like
+every relative path in the config, it resolves against the working directory, so
+`migrationsDir: './database/migrations'` puts it in `database/migrations` under
+the directory you run `astro` and `astromech` from. `db:generate` writes to it,
+and `db:init`, `astro dev`, `astro build` and the built server's check for
+pending migrations read from it. It holds these files:
 
 | File             | Written by | What it is                                            |
 | ---------------- | ---------- | ----------------------------------------------------- |
