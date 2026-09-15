@@ -8,9 +8,11 @@ install now fails with `ERESOLVE`:
   `astro@^7.2.1`.
 - `@astrojs/react` 6 requires Vite 8, so it pairs with Astro 7, not 6.
 - `kysely` latest is 0.29.5, outside `^0.28.14`.
+- `@libsql/client` latest is 0.18.0, outside the optional peer range
+  `^0.17.2`.
 
 Found on 2026-09-15 while testing `apps/docs/installation.md` against the
-registry. The page pins `astro@6 kysely@0.28 @astrojs/react@5 @astrojs/node@10`
+registry. The page pins `astro@6 kysely@0.28 @astrojs/react@5 @astrojs/node@10 @libsql/client@0.17`
 until this lands.
 
 ## The work
@@ -20,8 +22,8 @@ until this lands.
       server's `optimizeDeps` (including the nested `a > b > c` entries in
       `packages/astromech/src/integrations/astro/vite.ts`), `astro sync`, and
       the Cloudflare adapter.
-- [ ] Read the Kysely 0.29 changelog against the dialects and
-      `@libsql/kysely-libsql`, which pins its own Kysely range.
+- [ ] Read the Kysely 0.29 and `@libsql/client` 0.18 changelogs against the
+      dialects and `@libsql/kysely-libsql`, which pins its own Kysely range.
 - [ ] Widen or move each peer range, upgrade both demo apps, and run the gate
       with both boot checks.
 - [ ] Remove the pins from `apps/docs/installation.md` and
