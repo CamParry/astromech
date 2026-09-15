@@ -457,7 +457,7 @@ result.
 
 - `roadmap/completed/role-resolution-fails-open.md` — filed, not in scope.
 - Default visibility shape for host-page queries, if stage 11 does not settle it.
-- `roadmap/planned/media-serving-responses.md` — filed, not in scope. Stage 7
+- `roadmap/in-progress/media-serving-responses.md` — filed, not in scope. Stage 7
   put media behind the app's middleware and error handling, so the serving route
   now answers with API error envelopes, carries
   `Cross-Origin-Resource-Policy: same-origin`, and still accepts every method.
