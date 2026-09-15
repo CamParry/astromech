@@ -60,6 +60,21 @@ export const sessionQueryOptions = queryOptions({
     retry: false,
 });
 
+/** React Query options for whether the install still needs first-run setup; the login route reads it and the setup page writes it. */
+export const setupCheckQueryOptions = queryOptions({
+    queryKey: ['setup-check'] as const,
+    queryFn: fetchSetupCheck,
+    retry: false,
+});
+
+async function fetchSetupCheck(): Promise<{ needsSetup: boolean }> {
+    const res = await fetch(`${__ASTROMECH_BASE_PATH__}/api/setup/check`, {
+        credentials: 'include',
+    });
+    if (!res.ok) throw new Error(`Setup check failed with status ${res.status}`);
+    return (await res.json()) as { needsSetup: boolean };
+}
+
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 type AuthProviderProps = {

@@ -170,6 +170,19 @@ are the account row, which better-auth and the roles machinery own; a version
 of a profile is a version of what the site's own fields say, not of an account
 change that machinery already tracks.
 
+**Sign-up is closed once a user exists.** First-run setup creates the first
+account as `admin`, and every later account is created by an admin through the
+users service, as Payload's `first-register` and Strapi's `register-admin` do.
+The guard is Better Auth's `databaseHooks.user.create.before`, which every
+Better Auth sign-up path runs through and the users service does not. Its count
+and the insert share Better Auth's adapter but no transaction, so two sign-ups
+racing on an empty install can both get `admin`; anyone who can reach an
+install with no users can finish setup first anyway. Rejected: open sign-up
+with a least-privileged default role (the built-in `editor` still grants
+content access to anyone with the URL), and Better Auth's `disableSignUp` plus
+a setup endpoint of our own (setup would have to write the credential account
+itself).
+
 **Author clearing enumerates columns from the table descriptors.** The
 hand-kept list under `entries/internal/` was three tables when nine carried the
 column; `users/internal/clear-author-references.ts` walks `CORE_TABLES` and

@@ -16,11 +16,13 @@
 // painted. A broken import under `src/admin/` reaches nothing else in the gate.
 //
 // The same page then goes past login. The scratch database has no users, so
-// it completes first-run setup at `/cms/setup`, which signs the new admin in.
-// It asserts the app shell's navigation, opens the `post` entries list from the
-// sidebar, creates a post through the REST API with the page's session cookie,
-// and opens that post's edit page. That covers the app shell, one list and one
-// edit form. The other pages under `pages/_protected` are not loaded here.
+// `/cms` sends the browser on to first-run setup, which creates the first
+// account and signs it in. It asserts that account holds `admin`, and that a
+// second sign-up from outside the page session answers 403. It then asserts the
+// app shell's navigation, opens the `post` entries list from the sidebar,
+// creates a post through the REST API with the page's session cookie, and opens
+// that post's edit page. That covers the app shell, one list and one edit form.
+// The other pages under `pages/_protected` are not loaded here.
 //
 // Slow (a full Astro build plus a browser), so it is run on demand and in CI,
 // never from the pre-commit hook. It is not skippable: a check that can be
@@ -30,7 +32,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, URL } from 'node:url';
 import { requireFreshDist } from './require-fresh-dist.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -60,8 +62,8 @@ const SCREEN_TIMEOUT_MS = 30_000;
 
 // `#am-app` is the router root (`admin/pages/__root.tsx`) and the password
 // field belongs to the unauthenticated screen. On the scratch database that is
-// the login form: `/cms` redirects an anonymous visitor to `/login`, and
-// nothing redirects to `/setup`. Neither can exist in the served shell, and
+// the setup form: `/cms` redirects an anonymous visitor to `/login`, which
+// sends them on to `/setup` while no user exists. Neither can exist in the served shell, and
 // the pair distinguishes a painted screen from the pending placeholder the
 // auth layout renders while the session query is in flight.
 const MOUNTED_SELECTOR = '#am-app form input[type="password"]';
@@ -145,9 +147,9 @@ async function main() {
 }
 
 /**
- * Load `/cms` in headless chromium, assert the React app rendered, then sign
- * in through first-run setup and load the app shell, the `post` list and one
- * post's edit page.
+ * Load `/cms` in headless chromium, assert the React app rendered and landed on
+ * first-run setup, sign in through it, check the first account and closed
+ * sign-up, then load the app shell, the `post` list and one post's edit page.
  *
  * Runs against the server already started above — a second one would double
  * the slowest part of the check and prove nothing extra.
@@ -191,31 +193,44 @@ async function expectAdminWorks(admin) {
     });
     page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
 
-    /** Wait for `locator` to be visible, naming what it stands for on timeout. */
+    /** Wait for `locator` to be visible, naming what it stands for if that fails. */
     async function waitFor(locator, description, timeout = SCREEN_TIMEOUT_MS) {
         try {
             await locator.waitFor({ state: 'visible', timeout });
-        } catch {
+        } catch (error) {
+            // Playwright's first line says what went wrong: a timeout, or
+            // something else such as a strict-mode violation.
+            const reason = error.message.split('\n')[0];
             throw new Error(
-                `timed out after ${timeout} ms waiting for ${description} at ${page.url()}${formatLines([...errors, ...notes])}`
+                `waiting for ${description} at ${page.url()} failed: ${reason}${formatLines([...errors, ...notes])}`,
+                { cause: error }
             );
         }
     }
 
     await page.goto(admin, { waitUntil: 'commit', timeout: REQUEST_TIMEOUT_MS });
+    // `.first()` because the setup form has two password fields, and a locator
+    // matching more than one element fails Playwright's strict mode.
     await waitFor(
-        page.locator(MOUNTED_SELECTOR),
+        page.locator(MOUNTED_SELECTOR).first(),
         `the unauthenticated screen (\`${MOUNTED_SELECTOR}\`)`,
         MOUNT_TIMEOUT_MS
     );
     console.log('  ok  the admin app mounts and renders its unauthenticated screen');
 
     step('completing first-run setup');
-    await page.goto(`${admin}/setup`, {
-        waitUntil: 'commit',
-        timeout: REQUEST_TIMEOUT_MS,
-    });
-    await waitFor(page.getByLabel('Name', { exact: true }), 'the first-run setup form');
+    // Nothing navigates here: landing on the setup form from `/cms` is what
+    // proves the login route sends a first-time visitor to setup.
+    await waitFor(
+        page.getByLabel('Name', { exact: true }),
+        'the first-run setup form, reached from /cms'
+    );
+    if (!page.url().startsWith(`${admin}/setup`)) {
+        throw new Error(
+            `expected /cms to land on ${admin}/setup, landed on ${page.url()}`
+        );
+    }
+    console.log('  ok  /cms sends a first-time visitor to first-run setup');
     await page.getByLabel('Name', { exact: true }).fill(FIRST_ADMIN.name);
     await page.getByLabel('Email', { exact: true }).fill(FIRST_ADMIN.email);
     await page.getByLabel('Password', { exact: true }).fill(FIRST_ADMIN.password);
@@ -230,6 +245,50 @@ async function expectAdminWorks(admin) {
     );
     signedIn = true;
     console.log('  ok  first-run setup signs the new admin in and renders the app shell');
+
+    step('checking the first account and closed sign-up');
+    // `page.request` shares the page's cookies, so this reads the session
+    // first-run setup created.
+    const meUrl = `${admin}/api/me`;
+    const me = await page.request.get(meUrl, { timeout: REQUEST_TIMEOUT_MS });
+    if (me.status() !== 200) {
+        throw new Error(
+            `GET ${meUrl} returned ${me.status()}, expected 200: ${await me.text()}`
+        );
+    }
+    const { data: session } = await me.json();
+    if (session.role.slug !== 'admin') {
+        throw new Error(
+            `the first account holds role "${session.role.slug}", expected "admin"`
+        );
+    }
+    console.log('  ok  the first account holds the admin role');
+
+    // A plain fetch carries none of the page's cookies: an anonymous visitor
+    // trying to open a second account. It sends the trusted origin, as any
+    // script can, so Better Auth's origin check passes and the sign-up guard
+    // answers. The code tells that refusal apart from Better Auth's own 403s.
+    const signUpUrl = `${admin}/api/auth/sign-up/email`;
+    const signUp = await fetch(signUpUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Origin: new URL(admin).origin,
+        },
+        body: JSON.stringify({
+            name: 'Second Account',
+            email: 'second-account@example.com',
+            password: FIRST_ADMIN.password,
+        }),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    const refusal = await signUp.json().catch(() => ({}));
+    if (signUp.status !== 403 || refusal.code !== 'SIGN_UP_CLOSED') {
+        throw new Error(
+            `POST ${signUpUrl} returned ${signUp.status} ${JSON.stringify(refusal)}, expected 403 SIGN_UP_CLOSED`
+        );
+    }
+    console.log(`  ok  403 POST ${signUpUrl} (sign-up is closed once a user exists)`);
 
     step('opening the post entries list');
     const postsLink = page

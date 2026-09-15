@@ -37,6 +37,8 @@ function signIn(user: User | null): void {
 let api: string;
 
 async function freshApp(): Promise<OpenAPIHono> {
+    // Better Auth binds to the database registered when it is first asked for.
+    delete globalThis.__astromech?.auth;
     await createTestDb();
     const resolved = setupTestConfig(makeTestConfig());
     api = `${resolved.basePath}/api`;
@@ -108,6 +110,25 @@ describe('the Better Auth catch-all', () => {
         expect(res.status).toBe(400);
         const body = (await res.json()) as { code?: string };
         expect(body.code).toBe('INVALID_EMAIL');
+    });
+
+    it('answers 403 to a sign-up once a user exists', async () => {
+        const app = await freshApp();
+        const signUp = (email: string) =>
+            app.request(`${api}/auth/sign-up/email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password: 'password123', name: 'Sign Up' }),
+            });
+
+        expect((await signUp('first@test.dev')).status).toBe(200);
+        const res = await signUp('second@test.dev');
+
+        expect(res.status).toBe(403);
+        const body = (await res.json()) as { code?: string };
+        expect(body.code).toBe('SIGN_UP_CLOSED');
+        const users = await usersService.query({ limit: 'all' });
+        expect(users.data.map((user) => user.email)).toEqual(['first@test.dev']);
     });
 });
 

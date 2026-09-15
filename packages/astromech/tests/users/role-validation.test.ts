@@ -10,12 +10,12 @@
 
 import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
+import { signInTestUser } from '@tests/auth';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { usersService } from '@/app-context/services';
 import { ValidationError } from '@/errors/validation';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
-import { getAuth } from '@/users/auth';
 import { getSession } from '@/users/session';
 
 let db: Kysely<DB>;
@@ -94,13 +94,7 @@ describe('getSession', () => {
      * chose.
      */
     it('refuses a session whose stored role is no longer configured', async () => {
-        const response = await getAuth().api.signUpEmail({
-            body: { email: 'stale@test.dev', password: 'password123', name: 'Stale' },
-            asResponse: true,
-        });
-        const cookie = response.headers.get('set-cookie');
-        expect(cookie).toBeTruthy();
-        const headers = new Headers({ cookie: cookie ?? '' });
+        const { headers } = await signInTestUser(db, 'stale@test.dev');
 
         expect(await getSession(headers)).not.toBeNull();
 

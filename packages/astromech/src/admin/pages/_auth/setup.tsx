@@ -4,19 +4,21 @@
  * Shown when no users exist. Creates the first admin account.
  */
 
+import { useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AuthCard } from '@/admin/components/auth/auth-card';
 import { Button } from '@/admin/components/ui/button';
 import { Input } from '@/admin/components/ui/input';
-import { useAuth } from '@/admin/context/auth';
+import { setupCheckQueryOptions, useAuth } from '@/admin/context/auth';
 
 declare const __ASTROMECH_BASE_PATH__: string;
 
 function SetupPage() {
     const { login } = useAuth();
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const { t } = useTranslation();
 
     const [name, setName] = useState('');
@@ -28,9 +30,10 @@ function SetupPage() {
     const [isChecking, setIsChecking] = useState(true);
 
     useEffect(() => {
-        fetch(`${__ASTROMECH_BASE_PATH__}/api/setup/check`, { credentials: 'include' })
-            .then(async (res) => {
-                const data = (await res.json()) as { needsSetup: boolean };
+        // Through the query cache, so the login route's redirect reads this answer.
+        queryClient
+            .fetchQuery(setupCheckQueryOptions)
+            .then(async (data) => {
                 if (!data.needsSetup) {
                     await navigate({ to: '/' });
                 }
@@ -41,7 +44,7 @@ function SetupPage() {
             .finally(() => {
                 setIsChecking(false);
             });
-    }, [navigate]);
+    }, [navigate, queryClient]);
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -67,6 +70,10 @@ function SetupPage() {
                 throw new Error(data.message ?? 'Setup failed');
             }
 
+            // Otherwise the cached answer sends a signed-out admin back here from login.
+            queryClient.setQueryData(setupCheckQueryOptions.queryKey, {
+                needsSetup: false,
+            });
             await login(email, password);
             await navigate({ to: '/' });
         } catch (err) {

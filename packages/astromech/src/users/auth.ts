@@ -4,8 +4,9 @@
  * must already be filled; the built instance is held in a registry.
  */
 
+import type { BuiltInRoleSlug } from '@/permissions/roles';
 import type { Auth, BetterAuthOptions } from 'better-auth';
-import { betterAuth } from 'better-auth';
+import { APIError, betterAuth, getCurrentAdapter } from 'better-auth';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { getConfig } from '@/config/registry';
 import { getDatabaseDriverOrThrow } from '@/database/driver-registry';
@@ -42,6 +43,27 @@ function buildAuth(): Auth<BetterAuthOptions> {
         databaseHooks: {
             user: {
                 create: {
+                    // The first account gets `admin`; once any user exists, every
+                    // Better Auth sign-up is refused. Admins create the rest
+                    // through the users service, which does not run this hook.
+                    before: async (user, context) => {
+                        // The adapter Better Auth's own insert uses next. It runs no
+                        // transaction, so two sign-ups racing on an empty install
+                        // can both count zero and both get `admin`.
+                        const { adapter } =
+                            context?.context ?? (await getAuth().$context);
+                        const current = await getCurrentAdapter(adapter);
+                        if ((await current.count({ model: 'user' })) > 0) {
+                            throw new APIError('FORBIDDEN', {
+                                code: 'SIGN_UP_CLOSED',
+                                message:
+                                    'Sign-up is closed. Ask an administrator to create your account.',
+                            });
+                        }
+                        return {
+                            data: { ...user, role: 'admin' satisfies BuiltInRoleSlug },
+                        };
+                    },
                     // better-auth inserts the account row through its own
                     // Kysely instance, so the default-locale content row that
                     // every other create path writes is written here.
@@ -63,9 +85,9 @@ function buildAuth(): Auth<BetterAuthOptions> {
                 updatedAt: 'updated_at',
             },
             additionalFields: {
-                // Signup inserts through better-auth's own Kysely instance, so
-                // the role it writes is declared here rather than left to a
-                // column default. `input: false` stops a signup body naming its own role.
+                // better-auth inserts through its own Kysely instance, so the
+                // role column is declared here. `input: false` stops a sign-up
+                // body naming its own role; `create.before` sets the one written.
                 role: {
                     type: 'string',
                     input: false,

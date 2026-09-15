@@ -2,13 +2,13 @@
  * Login page for the Astromech admin SPA.
  */
 
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AuthCard } from '@/admin/components/auth/auth-card';
 import { Button } from '@/admin/components/ui/button';
 import { Input } from '@/admin/components/ui/input';
-import { useAuth } from '@/admin/context/auth';
+import { setupCheckQueryOptions, useAuth } from '@/admin/context/auth';
 
 function LoginPage() {
     const { login } = useAuth();
@@ -76,5 +76,15 @@ function LoginPage() {
 }
 
 export const Route = createFileRoute('/_auth/login')({
+    // An install with no users sends the visitor to first-run setup. A check that
+    // fails leaves the login form in place rather than blocking sign-in.
+    beforeLoad: async ({ context }) => {
+        const setup = await context.queryClient
+            .ensureQueryData(setupCheckQueryOptions)
+            .catch(() => null);
+        if (setup?.needsSetup === true) {
+            throw redirect({ to: '/setup' });
+        }
+    },
     component: LoginPage,
 });

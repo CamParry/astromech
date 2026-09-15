@@ -156,8 +156,9 @@ key derived from the media id, never from a URL. Translation opts in through
 declares no statuses, staging or trash.
 
 A **user** lives across the same three tables, declared in `users/tables.ts`:
-`users` is the account row, which better-auth owns and writes through its own
-Kysely instance; `user_content` holds one row per locale of the site's own
+`users` is the account row, which better-auth owns. First-run setup writes the
+first one through better-auth's own Kysely instance, and the users service
+writes every later one; `user_content` holds one row per locale of the site's own
 `fields`; `user_versions` snapshots a content row. `name`, `email` and `role`
 are written whatever the locale, while `fields` addresses one locale.
 `users/internal/clear-author-references.ts` walks the core table descriptors on

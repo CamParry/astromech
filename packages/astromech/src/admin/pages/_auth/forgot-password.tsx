@@ -28,7 +28,7 @@ function ForgotPasswordPage() {
             const redirectTo =
                 window.location.origin + __ASTROMECH_BASE_PATH__ + '/reset-password';
             const res = await fetch(
-                `${__ASTROMECH_BASE_PATH__}/api/auth/forget-password`,
+                `${__ASTROMECH_BASE_PATH__}/api/auth/request-password-reset`,
                 {
                     method: 'POST',
                     credentials: 'include',
