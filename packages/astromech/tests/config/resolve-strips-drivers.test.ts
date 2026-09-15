@@ -24,9 +24,6 @@ const dbDriver = {
     getInstance: () => {
         throw new Error('not called');
     },
-    createDialect: () => {
-        throw new Error('not called');
-    },
 } as unknown as DatabaseDriver;
 
 const storageDriver: StorageDriver = {

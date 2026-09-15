@@ -35,7 +35,7 @@ const unused = () => {
 
 export default {
     basePath: '/admin',
-    db: { type: 'test', getInstance: unused, createDialect: unused },
+    db: { type: 'test', getInstance: unused },
     storage: {
         name: 'test-noop',
         put: async () => undefined,

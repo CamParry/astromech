@@ -56,8 +56,16 @@ function buildAuth(): Auth<BetterAuthOptions> {
         secret: resolveEnv('BETTER_AUTH_SECRET'),
         baseURL: resolveEnv('BETTER_AUTH_URL'),
         basePath: `${basePath}/api/auth`,
+        // Better Auth queries through the app's Kysely instance, so one Kysely
+        // lock covers auth and app queries. A second instance's write fails with
+        // SQLITE_BUSY on a local file while an app transaction is open.
+        // `withoutPlugins()` because Better Auth names its own snake_case
+        // columns and reads rows by those names, which `CamelCasePlugin` would
+        // rename. No `transaction` option is passed: D1 has no interactive
+        // transactions, and a Better Auth transaction would hold the lock, so
+        // an app query made inside one of its hooks would wait forever.
         database: {
-            dialect: getDatabaseDriverOrThrow().createDialect(),
+            db: getDatabaseDriverOrThrow().getInstance().withoutPlugins(),
             type: 'sqlite',
         },
         databaseHooks: {
@@ -84,9 +92,10 @@ function buildAuth(): Auth<BetterAuthOptions> {
                             data: { ...user, role: 'admin' satisfies BuiltInRoleSlug },
                         };
                     },
-                    // better-auth inserts the account row through its own
-                    // Kysely instance, so the default-locale content row that
-                    // every other create path writes is written here.
+                    // better-auth inserts the account row with its own queries,
+                    // not through the users service, so the default-locale
+                    // content row that every other create path writes is
+                    // written here.
                     after: async (user: { id: string }) => {
                         await createRepository(userContentTable).create({
                             userId: user.id,
@@ -105,9 +114,10 @@ function buildAuth(): Auth<BetterAuthOptions> {
                 updatedAt: 'updated_at',
             },
             additionalFields: {
-                // better-auth inserts through its own Kysely instance, so the
-                // role column is declared here. `input: false` stops a sign-up
-                // body naming its own role; `create.before` sets the one written.
+                // better-auth builds its own inserts, not through the users
+                // service, so the role column is declared here. `input: false`
+                // stops a sign-up body naming its own role; `create.before`
+                // sets the one written.
                 role: {
                     type: 'string',
                     input: false,

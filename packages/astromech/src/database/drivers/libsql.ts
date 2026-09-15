@@ -94,7 +94,6 @@ export function libsql(options?: LibsqlOptions) {
     return {
         type: 'libsql' as const,
         getInstance,
-        createDialect,
         supportsTransactions: true,
         isRemote,
 

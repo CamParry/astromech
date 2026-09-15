@@ -16,7 +16,7 @@ import type { CellKind } from './resolved';
 import type { DB } from '@/database/types';
 import type { CustomTableRepository } from '@/entries/repository/table';
 import type { ImageFormat } from '@/media/serving/image/url';
-import type { Dialect, Kysely } from 'kysely';
+import type { Kysely } from 'kysely';
 
 export type DbDump = {
     /** Raw bytes of a consistent SQLite snapshot. */
@@ -28,13 +28,6 @@ export type DbDump = {
 export type DatabaseDriver = {
     type: string;
     getInstance(): Kysely<DB>;
-    /**
-     * A fresh, plugin-free Kysely dialect. better-auth builds its own Kysely
-     * instance and must not inherit the `CamelCasePlugin` the main instance
-     * uses, so it needs its own dialect rather than the shared instance. Each
-     * call returns a new dialect.
-     */
-    createDialect(): Dialect;
     /**
      * Whether the driver supports interactive transactions (`BEGIN`/`COMMIT`
      * across round-trips). Absent or `true` means yes. Cloudflare D1 has no

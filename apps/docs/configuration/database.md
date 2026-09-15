@@ -151,7 +151,6 @@ writes the migration files, and none of that touches the database.
 type DatabaseDriver = {
     type: string;
     getInstance(): Kysely<DB>;
-    createDialect(): Dialect;
     supportsTransactions?: boolean;
     dump?(): Promise<DbDump>;
     restore?(source, opts): Promise<void>;
@@ -164,11 +163,9 @@ type DatabaseDriver = {
 its binding inside Kysely's `acquireConnection()`, which is already async, so
 nothing needs to widen this signature.
 
-`createDialect()` returns a fresh, plugin-free dialect on every call.
-better-auth builds its own Kysely instance and must not inherit
-`CamelCasePlugin` — it has its own snake_case field maps and would be
-double-transformed. This is the seam that lets any driver back auth, rather
-than auth being wired to one client type.
+better-auth queries through this same instance with its plugins stripped
+(`withoutPlugins()`), because it names its own snake_case columns. One instance
+serves the whole CMS, so a driver needs nothing extra to back auth.
 
 `supportsTransactions` is how a driver says it cannot do interactive
 transactions. Absent or `true` means it can.

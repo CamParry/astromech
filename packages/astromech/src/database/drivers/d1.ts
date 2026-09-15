@@ -58,7 +58,6 @@ export function d1(options: D1Options) {
     return {
         type: 'd1' as const,
         getInstance,
-        createDialect,
         supportsTransactions: false,
 
         // Always remote: D1 is only reachable through a binding, and nothing

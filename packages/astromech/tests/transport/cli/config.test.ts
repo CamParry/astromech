@@ -18,9 +18,6 @@ function configWith(db: Partial<DatabaseDriver>): AstromechConfig {
             getInstance: () => {
                 throw new Error('getInstance must not be called by the guard');
             },
-            createDialect: () => {
-                throw new Error('createDialect must not be called by the guard');
-            },
             ...db,
         },
         entries: {},

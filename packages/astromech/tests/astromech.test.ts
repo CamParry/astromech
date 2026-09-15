@@ -62,9 +62,6 @@ function makeConfig(getInstance: () => Kysely<DB>): AstromechConfig {
         db: {
             type: 'test',
             getInstance,
-            createDialect() {
-                throw new Error('unused');
-            },
             supportsTransactions: true,
         },
         storage: storageDriver,

@@ -8,7 +8,7 @@
 
 import type { DB } from '@/database/types';
 import type { DatabaseDriver } from '@/types/index';
-import type { Dialect, Kysely } from 'kysely';
+import type { Kysely } from 'kysely';
 import { createTestDb } from '@tests/harness';
 import { afterEach, describe, expect, it } from 'vitest';
 import { setDatabaseDriver } from '@/database/driver-registry';
@@ -18,9 +18,6 @@ import { transaction } from '@/database/transaction';
 const noTxDriver: DatabaseDriver = {
     type: 'no-tx-fake',
     getInstance(): Kysely<DB> {
-        throw new Error('unused in this test — only supportsTransactions is read');
-    },
-    createDialect(): Dialect {
         throw new Error('unused in this test — only supportsTransactions is read');
     },
     supportsTransactions: false,

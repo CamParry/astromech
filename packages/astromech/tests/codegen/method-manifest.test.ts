@@ -17,9 +17,6 @@ const driver: DatabaseDriver = {
     getInstance() {
         throw new Error('not called');
     },
-    createDialect() {
-        throw new Error('not called');
-    },
 };
 
 const storageDriver: StorageDriver = {

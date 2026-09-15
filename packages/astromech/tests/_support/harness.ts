@@ -36,7 +36,6 @@ import type {
     ResolvedConfig,
     User,
 } from '@/types/index';
-import type { Dialect } from 'kysely';
 import type { MigrationProvider } from 'kysely/migration';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
@@ -80,7 +79,6 @@ async function buildTestDb(url: string): Promise<Db> {
     setDatabaseDriver({
         type: 'libsql',
         getInstance: () => db,
-        createDialect: () => new LibsqlDialect({ client: client as never }),
         supportsTransactions: true,
     });
     const { migrationProvider } = await import(
@@ -136,9 +134,6 @@ const noopDriver: DatabaseDriver = {
     type: 'test',
     getInstance(): Kysely<DB> {
         throw new Error('test driver getInstance should not be called');
-    },
-    createDialect(): Dialect {
-        throw new Error('test driver createDialect should not be called');
     },
 };
 

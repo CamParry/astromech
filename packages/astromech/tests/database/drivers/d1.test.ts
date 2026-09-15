@@ -107,7 +107,7 @@ describe('d1()', () => {
     });
 
     it('lets Kysely run queries side by side, since a D1 connection holds no state', () => {
-        const adapter = d1({ database: fakeDb }).createDialect().createAdapter();
+        const { adapter } = d1({ database: fakeDb }).getInstance().getExecutor();
         expect(adapter.supportsMultipleConnections).toBe(true);
     });
 

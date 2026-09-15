@@ -37,9 +37,6 @@ beforeEach(async () => {
         db: {
             type: 'test',
             getInstance: () => db,
-            createDialect(): never {
-                throw new Error('unused');
-            },
             supportsTransactions: true,
         },
         scheduler: noScheduler,

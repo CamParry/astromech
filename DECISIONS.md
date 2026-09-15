@@ -214,6 +214,18 @@ resolves it and repositories join automatically: no `db` parameter, no
 stay outside it. Rejected: threading explicit handles, savepoints, and a
 transaction-aware repository.
 
+**better-auth queries through the app's Kysely instance, with its plugins
+stripped.** On a local libsql file, Kysely's `SqliteAdapter` runs one query at a
+time per instance, so a second instance for better-auth brings a second lock,
+and its writes fail with `SQLITE_BUSY` while an app transaction is open.
+`getInstance().withoutPlugins()` keeps the one lock and drops `CamelCasePlugin`,
+which renames the snake_case keys better-auth reads its rows by. better-auth gets
+no `transaction` option: D1 has no interactive transactions, and one held on the
+shared instance would block any app query its hooks make. Rejected: a separate
+dialect per driver for better-auth (the `SQLITE_BUSY` above), and a busy
+timeout, whose wait runs inside libsql's synchronous call and blocks the event
+loop, so the transaction holding the lock cannot commit.
+
 **The `where` DSL is the repository's stable contract; `kysely()` is not.** Core
 code stays inside `createRepository`'s typed methods, so the DSL grows to meet it
 rather than call sites dropping to raw SQL. `kysely()` hands out the Kysely

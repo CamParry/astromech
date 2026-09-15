@@ -31,6 +31,7 @@ export const isolatedTests = [
     'tests/media/atomicity.test.ts',
     'tests/users/atomicity.test.ts',
     'tests/users/auth-base-path.test.ts',
+    'tests/users/auth-database.test.ts',
     'tests/users/auth-secret.test.ts',
     'tests/users/auth-signup.test.ts',
     'tests/users/password-reset.test.ts',

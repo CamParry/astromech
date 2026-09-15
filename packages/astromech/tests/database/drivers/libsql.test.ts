@@ -43,14 +43,14 @@ describe('libsql isRemote', () => {
 
 describe('libsql adapter', () => {
     it('runs one query at a time on a local database', () => {
-        const adapter = libsql({ url: ':memory:' }).createDialect().createAdapter();
+        const { adapter } = libsql({ url: ':memory:' }).getInstance().getExecutor();
         expect(adapter.supportsMultipleConnections).toBe(false);
     });
 
     it('lets Kysely run queries side by side on a remote database', () => {
-        const adapter = libsql({ url: 'https://db.turso.io' })
-            .createDialect()
-            .createAdapter();
+        const { adapter } = libsql({ url: 'https://db.turso.io' })
+            .getInstance()
+            .getExecutor();
         expect(adapter.supportsMultipleConnections).toBe(true);
     });
 });

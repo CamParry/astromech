@@ -1,6 +1,6 @@
 /**
- * The users tables. `users` is better-auth's account row — it writes it through
- * its own Kysely instance, so the descriptor describes its on-disk format
+ * The users tables. `users` is better-auth's account row — it writes it with
+ * its own queries, so the descriptor describes its on-disk format
  * rather than defining it. `sessions`, `accounts` and `verifications` are
  * better-auth's in the same way. `user_content` and `user_versions` are ours: one
  * row per locale of what the site's own fields say about a user, and snapshots of

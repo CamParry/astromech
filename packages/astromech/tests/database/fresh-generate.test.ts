@@ -57,7 +57,6 @@ beforeAll(async () => {
     setDatabaseDriver({
         type: 'libsql',
         getInstance: () => db,
-        createDialect: () => new LibsqlDialect({ client: client as never }),
         supportsTransactions: true,
     });
     await migrateToLatest(db, await loadAppMigrations(siteDir), {

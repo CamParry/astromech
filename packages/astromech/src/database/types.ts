@@ -79,7 +79,7 @@ export interface DB extends AstromechPluginTables {
     _astromech_cron: KyselyOf<typeof cronTable>;
     _astromech_plugins: KyselyOf<typeof pluginsTable>;
 
-    // better-auth's, written through its own Kysely instance
+    // better-auth's, written by its own queries rather than our repository
     sessions: KyselyOf<typeof sessionsTable>;
     accounts: KyselyOf<typeof accountsTable>;
     verifications: KyselyOf<typeof verificationsTable>;

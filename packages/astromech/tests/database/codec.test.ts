@@ -1,6 +1,6 @@
 /**
  * Row codec for better-auth's tables. better-auth writes `sessions`, `accounts`
- * and `verifications` through its own Kysely instance, and on SQLite it stores
+ * and `verifications` with its own queries, and on SQLite it stores
  * every timestamp as ISO-8601 TEXT. Their descriptors declare that format, and
  * getting it wrong breaks login, so the assertions go down to the stored cells
  * rather than stopping at the round trip. `accounts` stands in for the three.
