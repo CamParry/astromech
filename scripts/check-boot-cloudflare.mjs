@@ -16,8 +16,17 @@
 // account and no network. Both the build (which applies migrations through
 // `getPlatformProxy()`) and the served Worker must be pointed at the same
 // state directory, or the Worker boots against an empty database.
+//
+// Better Auth's secret reaches the Worker as a secret binding, the way a real
+// one gets it: a deployment sets it with `wrangler secret put`, and `wrangler
+// dev` reads it from `.dev.vars`. The check takes `BETTER_AUTH_SECRET` from its
+// own environment, as `check:boot` does, and hands it over in a scratch env file
+// passed with `--env-file`, so no value is written into the app or committed.
+// Without it the Worker refuses every request and `/` answers 500.
 import { spawn } from 'node:child_process';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { requireFreshDist } from './require-fresh-dist.mjs';
@@ -30,6 +39,7 @@ const READY_ATTEMPTS = 60;
 const READY_INTERVAL_MS = 500;
 const REQUEST_TIMEOUT_MS = 10_000;
 
+let scratchDir = null;
 let server = null;
 
 async function main() {
@@ -47,9 +57,14 @@ async function main() {
     step('building apps/demo-cloudflare');
     await run('pnpm', ['build'], { cwd: demoDir, env });
 
+    scratchDir = await mkdtemp(join(tmpdir(), 'astromech-check-boot-cloudflare-'));
+    const envFile = join(scratchDir, 'secrets.env');
+    const secret = process.env.BETTER_AUTH_SECRET;
+    await writeFile(envFile, secret ? `BETTER_AUTH_SECRET=${secret}\n` : '');
+
     const port = await freePort();
     step(`serving the built Worker on workerd, port ${port}`);
-    server = startWorker(port, env);
+    server = startWorker(port, env, envFile);
 
     const base = `http://127.0.0.1:${port}`;
     await waitForServer(base);
@@ -103,10 +118,11 @@ function freePort() {
 
 /**
  * `wrangler dev` over the config the Astro build emitted, which names the
- * built entry and carries the bindings across from `wrangler.jsonc`. Output is
- * captured rather than inherited, and printed only if the check fails.
+ * built entry and carries the bindings across from `wrangler.jsonc`, with the
+ * secrets from `envFile`. Output is captured rather than inherited, and printed
+ * only if the check fails.
  */
-function startWorker(port, env) {
+function startWorker(port, env, envFile) {
     const child = spawn(
         'npx',
         [
@@ -121,6 +137,8 @@ function startWorker(port, env) {
             String(port),
             '--persist-to',
             stateDir,
+            '--env-file',
+            envFile,
         ],
         { cwd: demoDir, env }
     );
@@ -191,6 +209,7 @@ async function cleanUp() {
         await stopped;
         clearTimeout(escalate);
     }
+    if (scratchDir) await rm(scratchDir, { recursive: true, force: true });
 }
 
 try {

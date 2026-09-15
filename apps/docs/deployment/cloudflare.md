@@ -89,6 +89,18 @@ come from the environment the entry registered.
 explicit `development` as production, so error responses carry no exception
 detail unless you set it deliberately.
 
+Set `BETTER_AUTH_SECRET` as a secret, not in `vars`, which sit in plain text in
+your wrangler config. Generate a value and store it:
+
+```
+openssl rand -base64 32
+npx wrangler secret put BETTER_AUTH_SECRET
+```
+
+Until it is set, Astromech refuses every request, because Better Auth would
+otherwise sign sessions with a built-in secret that anyone can read. Running it
+locally, below, covers `wrangler dev`.
+
 ## Migrations
 
 Migrations are applied by command, never on boot. D1 reports itself remote
@@ -104,8 +116,13 @@ astromech db:init --allow-remote
 
 ```
 pnpm run build
-npx wrangler dev -c dist/server/wrangler.json --local
+npx wrangler dev -c dist/server/wrangler.json --local --env-file "$PWD/.dev.vars"
 ```
+
+`.dev.vars` beside your `wrangler.jsonc` holds local secrets, one per line as
+`BETTER_AUTH_SECRET=…`; keep it out of git. Wrangler looks for `.dev.vars` beside
+the config it runs, which with `-c` is inside the build output, so the file is
+passed with `--env-file` instead.
 
 The build applies migrations through wrangler's `getPlatformProxy()`, which
 writes local state next to your wrangler config. `wrangler dev` keeps its own

@@ -17,7 +17,7 @@ import {
     UnknownSortKeyError,
     UnknownWhereKeyError,
 } from '@/entries/errors';
-import { resolveEnv } from '@/env';
+import { resolveNodeEnv } from '@/env';
 import { ValidationError } from '@/errors/validation';
 import { GlobalNotFoundError } from '@/globals/errors';
 import { MediaNotFoundError } from '@/media/errors';
@@ -211,7 +211,7 @@ export const onError: ErrorHandler = (err, c) => {
     // Anything but an explicit development environment is treated as
     // production: a Worker sets no NODE_ENV, and the wrong guess leaks
     // exception messages to clients.
-    const isDev = resolveEnv('NODE_ENV') === 'development';
+    const isDev = resolveNodeEnv() === 'development';
     const message =
         isDev && err instanceof Error ? err.message : 'An unexpected error occurred';
 

@@ -12,7 +12,8 @@ import { getConfig } from '@/config/registry';
 import { getDatabaseDriverOrThrow } from '@/database/driver-registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { userContentTable } from '@/database/tables';
-import { resolveEnv } from '@/env';
+import { resolveEnv, resolveNodeEnv } from '@/env';
+import { AstromechError } from '@/errors/astromech-error';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { createRegistry } from '@/registry';
 import { log } from '@/utilities/log';
@@ -30,10 +31,29 @@ export function getAuth(): Auth<BetterAuthOptions> {
     return auth;
 }
 
+/**
+ * Refuse to serve without `BETTER_AUTH_SECRET` outside development and tests.
+ * Without it Better Auth signs sessions with its built-in secret, which is
+ * public, and only refuses that when `NODE_ENV` is `production`, which a
+ * Worker never sets.
+ */
+export function assertAuthSecret(): void {
+    if (resolveNodeEnv() !== 'production') return;
+    if (resolveEnv('BETTER_AUTH_SECRET') !== undefined) return;
+    throw new AstromechError(
+        'Astromech requires missing env var: BETTER_AUTH_SECRET. It signs sessions. ' +
+            'Generate one with `openssl rand -base64 32` and set it in your environment ' +
+            'or .env file, or on Cloudflare Workers with `wrangler secret put BETTER_AUTH_SECRET`.'
+    );
+}
+
 /** Configure Better Auth against the registered config and database driver. */
 function buildAuth(): Auth<BetterAuthOptions> {
     const { basePath } = getConfig();
     return betterAuth({
+        // Read here rather than left to Better Auth, which reads `process.env`
+        // only, so a Worker's secret arrives from the env source it registers.
+        secret: resolveEnv('BETTER_AUTH_SECRET'),
         baseURL: resolveEnv('BETTER_AUTH_URL'),
         basePath: `${basePath}/api/auth`,
         database: {

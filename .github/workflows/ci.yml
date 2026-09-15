@@ -28,8 +28,13 @@ concurrency:
 # v22.13, and `cache: pnpm` makes `setup-node` run `pnpm store path`, so a
 # Node 20 job dies at that step before installing anything. Node 20 reached end
 # of life in April 2026 in any case.
+#
+# Both boot checks serve a built site, which refuses every request without
+# BETTER_AUTH_SECRET. This value signs sessions on a scratch site that lives for
+# one run, so it is not a secret and sits here in the open.
 env:
     ACTIVE_LTS: 24
+    BETTER_AUTH_SECRET: ci-boot-check-secret-0123456789abcdef
 
 jobs:
     gate:

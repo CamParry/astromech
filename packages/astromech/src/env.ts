@@ -40,6 +40,15 @@ export function isWorkersRuntime(): boolean {
     );
 }
 
+/**
+ * The mode `NODE_ENV` names. Anything but `development` or `test`, unset
+ * included, is production, because a Worker sets no `NODE_ENV`.
+ */
+export function resolveNodeEnv(): 'development' | 'test' | 'production' {
+    const value = resolveEnv('NODE_ENV');
+    return value === 'development' || value === 'test' ? value : 'production';
+}
+
 /** An environment value, or `undefined` when nothing supplies it. */
 export function resolveEnv(name: string): string | undefined {
     for (const source of sources()) {

@@ -12,7 +12,7 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 import { usersService } from '@/app-context/services';
-import { resolveEnv } from '@/env';
+import { resolveNodeEnv } from '@/env';
 import { handleMediaRequest } from '@/media/serving/handler';
 import { runWithContext } from '@/request-context/request-context';
 import { getClientAddress } from '@/transport/http/client-address';
@@ -179,7 +179,7 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
         },
     });
 
-    if (resolveEnv('NODE_ENV') === 'development') {
+    if (resolveNodeEnv() === 'development') {
         app.get(`${api}/docs`, swaggerUI({ url: `${api}/openapi.json` }));
     }
 

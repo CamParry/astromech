@@ -327,11 +327,17 @@ Accepted cost: a plugin package in the program but not installed in the config
 still adds its table types.
 
 **Every environment read goes through `src/env.ts`** (`resolveEnv`,
-`getEnvRecord`, `setEnvSource`). Unset `NODE_ENV` means production, and a Worker
-with no named scheduler throws. `integrations/` holds framework and runtime
-integrations side by side; a runtime earns a directory only when its environment
-or entry point is non-standard, so Node and Vercel have none. Rejected: Hono's
-record-returning `env()`, and a `RuntimeIntegration` interface for one member.
+`getEnvRecord`, `setEnvSource`), Better Auth's secret included, since Better Auth
+alone reads only `process.env`. Unset `NODE_ENV` means production
+(`resolveNodeEnv`), and a Worker with no named scheduler throws. The Astro
+middleware refuses every request in production while `BETTER_AUTH_SECRET` is
+unset, because Better Auth accepts its public default secret whenever `NODE_ENV`
+is not `production`. `integrations/` holds framework and runtime integrations
+side by side; a runtime earns a directory only when its environment or entry
+point is non-standard, so Node and Vercel have none. Rejected: Hono's
+record-returning `env()`; a `RuntimeIntegration` interface for one member; and
+refusing the missing secret in `build()`, which the CLI's `validate`,
+`index:rebuild` and `mcp` also run without signing a session.
 
 **No runtime is declared: the entry a site deploys says which one it is.**
 `createWorkerEntry` supplies the Worker's bindings and nominates
