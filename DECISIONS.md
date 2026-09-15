@@ -322,12 +322,23 @@ because a plugin's tables are fixed by its package, not by the site's config.
 Accepted cost: a plugin package in the program but not installed in the config
 still adds its table types.
 
-**Every environment read goes through `src/env/`** (`resolveEnv`, `getEnv`,
+**Every environment read goes through `src/env.ts`** (`resolveEnv`, `getEnv`,
 `getEnvRecord`, `setEnvSource`). Unset `NODE_ENV` means production, and a Worker
 with no named scheduler throws. `integrations/` holds framework and runtime
 integrations side by side; a runtime earns a directory only when its environment
 or entry point is non-standard, so Node and Vercel have none. Rejected: Hono's
 record-returning `env()`, and a `RuntimeIntegration` interface for one member.
+
+**No runtime is declared: the entry a site deploys says which one it is.**
+`createWorkerEntry` supplies the Worker's bindings and nominates
+`cloudflareCron()`, workerd fills `process.env` from wrangler `vars` so
+`resolveEnv` needs no Cloudflare path of its own, and Node needs nothing.
+Rejected: a `runtime` config key, whose strongest job was refusing
+`d1({ binding })` off Workers, a setup that works in Node through wrangler's
+platform proxy; inheriting from Astro's Cloudflare adapter, whose per-request
+environment Astro 6 removed; and importing `env` from `cloudflare:workers` in
+core, which resolves only inside a workerd bundle while core also loads in plain
+Node for the CLI and the build.
 
 ## Structure and extension
 
