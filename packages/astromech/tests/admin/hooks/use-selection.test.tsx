@@ -5,11 +5,9 @@
  * filter points a bulk action at rows the user can no longer see.
  */
 
-import { act, cleanup, renderHook } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 import { useSelection } from '@/admin/hooks/use-selection';
-
-afterEach(cleanup);
 
 const PAGE_ONE = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
 const PAGE_TWO = [{ id: 'd' }, { id: 'e' }];

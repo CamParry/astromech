@@ -15,7 +15,7 @@ import type { BaseFieldProps, Field } from '@/types/index';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import '@/admin/rendering/register-fields';
 import { FormField } from '@/admin/components/fields/form-field';
 
@@ -30,8 +30,6 @@ vi.mock('virtual:astromech/plugins/components', () => ({
     i18n: {},
     slots: { 'global-overlay': [], 'right-drawer': [], toolbar: [] },
 }));
-
-afterEach(cleanup);
 
 /** A renderer that shows the value it is handed and can write a new one. */
 function StubRenderer({ name, value, onChange }: BaseFieldProps): React.ReactElement {

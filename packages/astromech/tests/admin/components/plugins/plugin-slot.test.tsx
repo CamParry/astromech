@@ -2,13 +2,11 @@
  * @vitest-environment happy-dom
  *
  * PluginSlot, and with it the `slots` half of the plugins-components shim.
- * There is no `@testing-library/react` here, so this drives a real React root
- * (same approach as tests/admin/context/ai-context.test.tsx).
  */
 
 import type { AdminSlotName } from '@/types/config';
-import { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import type { RenderResult } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import { slots } from 'virtual:astromech/plugins/components';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PluginSlot } from '@/admin/components/plugins/plugin-slot';
@@ -73,18 +71,17 @@ function contribution(id: string, permission: string | null) {
 
 /** Mount one slot into a real root, awaiting any lazy contribution. */
 async function mount(name: AdminSlotName) {
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
+    let view: RenderResult | undefined;
     await act(async () => {
-        root.render(<PluginSlot name={name} />);
+        view = render(<PluginSlot name={name} />);
     });
+    if (view === undefined) throw new Error('the slot never rendered');
+    const { container, unmount } = view;
 
     return {
-        html: () => host.innerHTML,
+        html: () => container.innerHTML,
         unmount: async () => {
-            await act(async () => root.unmount());
-            host.remove();
+            await act(async () => unmount());
         },
     };
 }

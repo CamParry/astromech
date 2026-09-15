@@ -6,11 +6,9 @@
  */
 
 import type { CellRenderContext, Entry, TableColumn } from '@/types/index';
-import { cleanup, render } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { render } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 import { AuthorCell } from '@/admin/rendering/cells/author-cell';
-
-afterEach(cleanup);
 
 const COLUMN: TableColumn = {
     key: 'updatedBy',

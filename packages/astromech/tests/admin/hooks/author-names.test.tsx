@@ -7,7 +7,7 @@
 
 import type { AuthUser } from '@/admin/context/auth';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
@@ -20,7 +20,6 @@ vi.mock('@/transport/http/client', () => ({
 }));
 
 afterEach(() => {
-    cleanup();
     queryUsers.mockReset();
 });
 

@@ -20,11 +20,11 @@ import {
     RouterProvider,
     useSearch,
 } from '@tanstack/react-router';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { GlobalEditPage } from '@/admin/components/globals/global-edit-page';
 import { ConfirmProvider } from '@/admin/components/ui/confirm';
 import { ToastProvider } from '@/admin/components/ui/toast';
@@ -39,8 +39,6 @@ vi.mock('virtual:astromech/admin-config', () => ({
 
 const KEY = 'site';
 const BASE_PATH = `/globals/${KEY}`;
-
-afterEach(cleanup);
 
 beforeAll(async () => {
     await i18n.use(initReactI18next).init({

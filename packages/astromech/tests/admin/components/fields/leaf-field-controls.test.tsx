@@ -11,14 +11,12 @@
  */
 
 import type { Field } from '@/types/index';
-import { act, cleanup, render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import '@/admin/rendering/register-fields';
 import { FormField } from '@/admin/components/fields/form-field';
-
-afterEach(cleanup);
 
 type Commit = { name: string; value: unknown };
 

@@ -18,7 +18,7 @@ import {
     RouterProvider,
     useParams,
 } from '@tanstack/react-router';
-import { cleanup, render, waitFor } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -41,7 +41,6 @@ vi.mock('@/transport/http/client', () => ({
 }));
 
 afterEach(() => {
-    cleanup();
     queryUsers.mockReset();
 });
 

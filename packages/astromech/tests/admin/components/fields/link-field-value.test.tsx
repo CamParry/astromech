@@ -4,14 +4,10 @@
  * `LinkField` must commit the shape the contract describes: it reads and writes
  * `url`, the key the descriptor and `validateLink` require, and keeps any other
  * key the value carries. Both are checked here against the real validator.
- *
- * There is no `@testing-library/react` here, so this drives a real React root
- * and real inputs directly (same approach as container-field-editing.test.tsx).
  */
 
 import type { Field, FieldValidationContext } from '@/types/index';
-import { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { act, render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import '@/admin/rendering/register-fields';
 import { FormField } from '@/admin/components/fields/form-field';
@@ -30,18 +26,13 @@ type Mounted = {
 /** Mount one link `FormField` and capture what it commits. */
 function mountLink(value: unknown): Mounted {
     const commits: unknown[] = [];
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-    act(() => {
-        root.render(
-            <FormField
-                field={cta}
-                value={value}
-                onChange={(_name, next) => commits.push(next)}
-            />
-        );
-    });
+    const { container: host, unmount } = render(
+        <FormField
+            field={cta}
+            value={value}
+            onChange={(_name, next) => commits.push(next)}
+        />
+    );
 
     return {
         typeInto: (name, text) => {
@@ -72,10 +63,7 @@ function mountLink(value: unknown): Mounted {
             if (last === undefined) throw new Error('no commit was made');
             return last as Record<string, unknown>;
         },
-        unmount: () => {
-            act(() => root.unmount());
-            host.remove();
-        },
+        unmount,
     };
 }
 

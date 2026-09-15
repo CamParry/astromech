@@ -26,20 +26,28 @@ import {
     useParams,
     useSearch,
 } from '@tanstack/react-router';
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EntryEditPage } from '@/admin/components/entries/entry-edit-page';
 import { ConfirmProvider } from '@/admin/components/ui/confirm';
 import { ToastProvider } from '@/admin/components/ui/toast';
 import { AiContextProvider } from '@/admin/context/ai-context';
 import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
+import { queryKeys } from '@/admin/hooks/use-query-keys';
 import '@/admin/rendering/register-fields';
 import type { EntriesBinding } from '@/admin/components/entries/binding';
 import type * as UseEntryForm from '@/admin/hooks/use-entry-form';
-import type { AdminEntryType, EntriesService, Entry, EntryStatus } from '@/types/index';
+import type {
+    AdminEntryType,
+    EntriesService,
+    Entry,
+    EntryStatus,
+    QueryResult,
+    User,
+} from '@/types/index';
 
 // The shim declares one locale; the switcher needs two to have anywhere to go.
 vi.mock('virtual:astromech/admin-config', () => ({
@@ -74,7 +82,6 @@ vi.mock('@/admin/hooks/use-entry-form', async (importOriginal) => {
     };
 });
 
-afterEach(cleanup);
 beforeEach(() => {
     transitions.length = 0;
 });
@@ -258,6 +265,11 @@ function makeClient(): QueryClient {
         image: null,
         role: 'admin',
         permissions: ['*'],
+    });
+    // No known users, so the page's author names need no request either.
+    queryClient.setQueryData<QueryResult<User>>(queryKeys.users.list({ limit: 'all' }), {
+        data: [],
+        pagination: null,
     });
     return queryClient;
 }

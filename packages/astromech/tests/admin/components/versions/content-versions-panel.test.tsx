@@ -5,11 +5,11 @@
  * restore action at all for a viewer who may not update.
  */
 import type { VersionListItem } from '@/admin/components/versions/content-versions-panel';
-import { cleanup, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { ConfirmProvider } from '@/admin/components/ui/confirm';
 import { ContentVersionsPanel } from '@/admin/components/versions/content-versions-panel';
 import en from '@/admin/locales/en.json';
@@ -28,10 +28,6 @@ beforeAll(async () => {
         resources: { en: { translation: en } },
         interpolation: { escapeValue: false },
     });
-});
-
-afterEach(() => {
-    cleanup();
 });
 
 function renderPanel(

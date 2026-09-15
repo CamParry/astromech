@@ -6,6 +6,9 @@ const alias = coreAliases();
 
 const include = ['tests/**/*.test.ts', 'tests/**/*.test.tsx'];
 
+// Runs before every test file, and only acts in a happy-dom one.
+const setupFiles = ['tests/_support/dom-setup.ts'];
+
 // Worker threads start faster than child processes and share the transform
 // cache, and nothing here needs a process of its own.
 const pool = 'threads';
@@ -22,6 +25,7 @@ const projects = [
             // files that cannot live with it.
             isolate: false,
             include,
+            setupFiles,
             exclude: [...defaultExclude, ...isolatedTests],
         },
     },
@@ -32,6 +36,7 @@ const projects = [
             environment: 'node',
             pool,
             include: isolatedTests,
+            setupFiles,
         },
     },
 ];

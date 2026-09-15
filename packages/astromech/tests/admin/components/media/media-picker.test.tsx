@@ -7,7 +7,7 @@
 
 import type { Media } from '@/types/index';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -75,7 +75,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-    cleanup();
     mediaQuery.mockReset();
     uploadMedia.mockReset();
     canUploadMedia.mockReset();

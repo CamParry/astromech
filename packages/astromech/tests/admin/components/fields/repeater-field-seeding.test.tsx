@@ -9,14 +9,11 @@
  * The guard must fire once and once only: a later value change is the
  * last-saved server value arriving, and resyncing to it would clobber the
  * edit in progress. `useBlocksField` and `useTreeField` carry the same guard.
- *
- * There is no `@testing-library/react` here, so this drives a real React root
- * and real inputs directly (same approach as container-field-editing.test.tsx).
  */
 
 import type { Field } from '@/types/index';
-import { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import type { ReactElement } from 'react';
+import { act, render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import '@/admin/rendering/register-fields';
 import { FormField } from '@/admin/components/fields/form-field';
@@ -41,24 +38,17 @@ type Mounted = {
 
 /** Mount one repeater `FormField` whose value can change after first render. */
 function mountRepeater(value: unknown): Mounted {
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-
-    const render = (next: unknown): void => {
-        act(() => {
-            root.render(
-                <FormField field={socials} value={next} onChange={() => undefined} />
-            );
-        });
-    };
-    render(value);
+    const repeater = (next: unknown): ReactElement => (
+        <FormField field={socials} value={next} onChange={() => undefined} />
+    );
+    const view = render(repeater(value));
+    const host = view.container;
 
     const find = (path: string): HTMLInputElement | null =>
         host.querySelector<HTMLInputElement>(`input[name="${path}"]`);
 
     return {
-        rerender: render,
+        rerender: (next) => view.rerender(repeater(next)),
         inputValue: (path) => find(path)?.value ?? null,
         inputNames: () =>
             [...host.querySelectorAll('input')].map((el) => el.name).filter(Boolean),
@@ -77,10 +67,7 @@ function mountRepeater(value: unknown): Mounted {
                 input.dispatchEvent(new Event('input', { bubbles: true }));
             });
         },
-        unmount: () => {
-            act(() => root.unmount());
-            host.remove();
-        },
+        unmount: view.unmount,
     };
 }
 

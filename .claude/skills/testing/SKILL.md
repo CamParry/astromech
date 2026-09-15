@@ -52,9 +52,12 @@ expect(…))`. To assert that something does not happen, wait for a positive
 
 ## React
 
-- **Render with `@testing-library/react`** (`render`, `screen`, `userEvent`).
-  Some older files render through a hand-rolled `createRoot`; move a file to
-  Testing Library when you next change it rather than adding another.
+- **Render with `@testing-library/react`** (`render`, `renderHook`, `screen`,
+  `userEvent`).
+- **`tests/_support/dom-setup.ts` runs before every happy-dom file.** It turns on
+  React's act environment, unmounts what each test rendered, and fails a test on
+  any request it did not mock, naming the URL. Stub `fetch`, mock the client
+  module, or seed the query cache the component reads.
 - **Query by role or label**, as a user finds the element, before reaching for a
   test id.
 

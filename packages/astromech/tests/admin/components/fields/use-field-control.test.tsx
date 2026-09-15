@@ -9,13 +9,10 @@
  * Two halves: inside a `FieldWrapper` that has an error the hook hands back the
  * association pointing at the message the wrapper rendered, and outside one it
  * hands back nothing — so the same component is safe standalone.
- *
- * There is no `@testing-library/react` here, so this drives a real React root
- * directly (same approach as field-error-aria.test.tsx).
  */
 
-import React, { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { render } from '@testing-library/react';
+import React from 'react';
 import { describe, expect, it } from 'vitest';
 // Through the public barrel: the point of the test is that plugins can reach it.
 import { useFieldControl } from '@/admin/components/fields/field-control-context';
@@ -38,19 +35,8 @@ function CustomControl(): React.ReactElement {
 type Mounted = { host: HTMLElement; unmount: () => void };
 
 function mount(node: React.ReactElement): Mounted {
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-    act(() => {
-        root.render(node);
-    });
-    return {
-        host,
-        unmount: () => {
-            act(() => root.unmount());
-            host.remove();
-        },
-    };
+    const { container, unmount } = render(node);
+    return { host: container, unmount };
 }
 
 describe('useFieldControl', () => {

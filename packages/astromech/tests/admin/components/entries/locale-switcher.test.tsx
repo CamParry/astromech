@@ -18,19 +18,17 @@ import {
     Outlet,
     RouterProvider,
 } from '@tanstack/react-router';
-import { cleanup, render, waitFor } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { LocaleSwitcher } from '@/admin/components/translations/locale-switcher';
 import { ToastProvider } from '@/admin/components/ui/toast';
 
 const TYPE = 'caseStudy';
 const ID = 'cs1';
 const BASE_PATH = `/entries/${TYPE}`;
-
-afterEach(cleanup);
 
 beforeAll(async () => {
     await i18n.use(initReactI18next).init({

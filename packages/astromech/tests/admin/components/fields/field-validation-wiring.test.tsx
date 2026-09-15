@@ -12,14 +12,10 @@
  * Blur is the mirror problem: React's `onBlur` is `focusout` and bubbles, so
  * without `stopPropagation` every enclosing container would also report a blur
  * the author never performed on it.
- *
- * There is no `@testing-library/react` here, so this drives a real React root
- * and real inputs directly (same approach as container-field-editing.test.tsx).
  */
 
 import type { Field } from '@/types/index';
-import { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { act, render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import '@/admin/rendering/register-fields';
 import { FieldValidationProvider } from '@/admin/components/fields/field-validation-context';
@@ -38,21 +34,16 @@ type Mounted = {
 function mountField(field: Field, value: unknown): Mounted {
     const changed: string[] = [];
     const blurred: string[] = [];
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-    act(() => {
-        root.render(
-            <FieldValidationProvider
-                value={{
-                    onFieldChange: (path) => changed.push(path),
-                    onFieldBlur: (path) => blurred.push(path),
-                }}
-            >
-                <FormField field={field} value={value} onChange={() => undefined} />
-            </FieldValidationProvider>
-        );
-    });
+    const { container: host, unmount } = render(
+        <FieldValidationProvider
+            value={{
+                onFieldChange: (path) => changed.push(path),
+                onFieldBlur: (path) => blurred.push(path),
+            }}
+        >
+            <FormField field={field} value={value} onChange={() => undefined} />
+        </FieldValidationProvider>
+    );
 
     const inputFor = (path: string): HTMLInputElement => {
         const input = host.querySelector<HTMLInputElement>(`input[name="${path}"]`);
@@ -91,10 +82,7 @@ function mountField(field: Field, value: unknown): Mounted {
                 input.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
             });
         },
-        unmount: () => {
-            act(() => root.unmount());
-            host.remove();
-        },
+        unmount,
     };
 }
 
@@ -198,19 +186,14 @@ describe('blur reporting', () => {
 
 describe('without a provider', () => {
     it('should render and accept input with no validation handlers in scope', () => {
-        const host = document.createElement('div');
-        document.body.appendChild(host);
-        const root = createRoot(host);
         const commits: unknown[] = [];
-        act(() => {
-            root.render(
-                <FormField
-                    field={{ name: 'title', type: 'text' }}
-                    value=""
-                    onChange={(_name, next) => commits.push(next)}
-                />
-            );
-        });
+        const { container: host, unmount } = render(
+            <FormField
+                field={{ name: 'title', type: 'text' }}
+                value=""
+                onChange={(_name, next) => commits.push(next)}
+            />
+        );
 
         const input = host.querySelector<HTMLInputElement>('input[name="title"]');
         const setter = Object.getOwnPropertyDescriptor(
@@ -223,7 +206,6 @@ describe('without a provider', () => {
         });
 
         expect(commits).toEqual(['Hello']);
-        act(() => root.unmount());
-        host.remove();
+        unmount();
     });
 });

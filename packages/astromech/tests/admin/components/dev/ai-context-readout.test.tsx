@@ -7,8 +7,7 @@
  */
 
 import type { AiContextReference } from '@/types/ai-context';
-import { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { act, render } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AiContextReadout } from '@/admin/components/dev/ai-context-readout';
 import { AiContextProvider, useAiContext } from '@/admin/context/ai-context';
@@ -78,17 +77,12 @@ function mountReadout(reference: AiContextReference | null): Mounted {
         return null;
     }
 
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-    act(() => {
-        root.render(
-            <AiContextProvider>
-                <DeclaringRoute />
-                <AiContextReadout />
-            </AiContextProvider>
-        );
-    });
+    const { container: host, unmount } = render(
+        <AiContextProvider>
+            <DeclaringRoute />
+            <AiContextReadout />
+        </AiContextProvider>
+    );
 
     const toggle = (): HTMLButtonElement => {
         const element = host.querySelector<HTMLButtonElement>('.am-ai-readout-toggle');
@@ -105,9 +99,6 @@ function mountReadout(reference: AiContextReference | null): Mounted {
                 toggle().click();
             });
         },
-        unmount: () => {
-            act(() => root.unmount());
-            host.remove();
-        },
+        unmount,
     };
 }

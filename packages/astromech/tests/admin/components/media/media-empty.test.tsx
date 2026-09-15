@@ -6,10 +6,10 @@
  */
 
 import type { MediaBrowserQuery } from '@/admin/types/media';
-import { cleanup, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { MediaEmpty } from '@/admin/components/media/media-empty';
 import en from '@/admin/locales/en.json';
 
@@ -24,8 +24,6 @@ beforeAll(async () => {
         interpolation: { escapeValue: false },
     });
 });
-
-afterEach(cleanup);
 
 /** Render the empty state for one browsing query and permission. */
 function renderEmpty(query: Partial<MediaBrowserQuery>, canUpload: boolean): void {

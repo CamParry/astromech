@@ -16,16 +16,12 @@
  *
  * Warnings ride the same reveal set as errors and block nothing, which is why
  * blur reveals a path whether or not it has an error to show.
- *
- * There is no `@testing-library/react` here, so this drives a real React root
- * directly (same approach as container-field-editing.test.tsx).
  */
 
 import type { FieldValidationHandle } from '@/admin/hooks/use-field-validation';
 import type { Field, FieldErrors, ValidationRule } from '@/types/index';
-import React, { act } from 'react';
-import { createRoot } from 'react-dom/client';
-import { describe, expect, it, vi } from 'vitest';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 import { useFieldValidation } from '@/admin/hooks/use-field-validation';
 
 type Mounted = {
@@ -44,53 +40,21 @@ function mountValidation(
     initialValues: Record<string, unknown>,
     operation: 'create' | 'update' = 'update'
 ): Mounted {
-    let latest: FieldValidationHandle | undefined;
-    let replace: ((values: Record<string, unknown>) => void) | undefined;
+    const { result, rerender, unmount } = renderHook(
+        ({ values }: { values: Record<string, unknown> }) =>
+            useFieldValidation({ definitions, values, operation }),
+        { initialProps: { values: initialValues } }
+    );
 
-    function Probe(): null {
-        const [values, setValues] = React.useState(initialValues);
-        replace = setValues;
-        latest = useFieldValidation({ definitions, values, operation });
-        return null;
-    }
-
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-    act(() => {
-        root.render(<Probe />);
-    });
-
-    const handle = (): FieldValidationHandle => {
-        if (latest === undefined) throw new Error('the probe never rendered');
-        return latest;
-    };
+    const handle = (): FieldValidationHandle => result.current;
 
     return {
         handle,
         errors: () => handle().errors,
         warnings: () => handle().warnings,
-        setValues: (values) => {
-            act(() => {
-                replace?.(values);
-            });
-        },
-        unmount: () => {
-            act(() => root.unmount());
-            host.remove();
-        },
+        setValues: (values) => rerender({ values }),
+        unmount,
     };
-}
-
-/**
- * Retry `assertion`, flushing React's pending work inside `act` before each try,
- * so the state a validation run sets lands inside a scope React knows about.
- */
-async function waitUntil(assertion: () => void): Promise<void> {
-    await vi.waitFor(async () => {
-        await act(async () => undefined);
-        assertion();
-    });
 }
 
 /**
@@ -139,7 +103,7 @@ describe('reveal on blur', () => {
             m.handle().markDirty('link');
             m.handle().reportBlur('link');
         });
-        await waitUntil(() => {
+        await waitFor(() => {
             expect(m.errors()).toEqual({ link: ['Must be a valid URL'] });
         });
         m.unmount();
@@ -155,7 +119,7 @@ describe('reveal on blur', () => {
             m.handle().markDirty('link');
             m.handle().reportBlur('link');
         });
-        await waitUntil(() => {
+        await waitFor(() => {
             expect(Object.keys(m.errors())).toEqual(['link']);
         });
         m.unmount();
@@ -171,12 +135,12 @@ describe('re-validation while showing an error', () => {
             m.handle().markDirty('link');
             m.handle().reportBlur('link');
         });
-        await waitUntil(() => {
+        await waitFor(() => {
             expect(m.errors()).toEqual({ link: ['Must be a valid URL'] });
         });
 
         m.setValues({ link: 'https://example.com' });
-        await waitUntil(() => {
+        await waitFor(() => {
             expect(m.errors()).toEqual({});
         });
         m.unmount();
@@ -283,7 +247,7 @@ describe('nested fields', () => {
             m.handle().markDirty('items[i2].link');
             m.handle().reportBlur('items[i2].link');
         });
-        await waitUntil(() => {
+        await waitFor(() => {
             expect(m.errors()).toEqual({ 'items[i2].link': ['Must be a valid URL'] });
         });
         m.unmount();
@@ -340,7 +304,7 @@ describe('warnings', () => {
             m.handle().markDirty('summary');
             m.handle().reportBlur('summary');
         });
-        await waitUntil(() => {
+        await waitFor(() => {
             expect(m.warnings()).toEqual({ summary: ['Must be at most 10 characters'] });
         });
         m.unmount();

@@ -8,12 +8,10 @@
 
 import type { Field } from '@/types/index';
 import type { JSONContent } from '@tiptap/core';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { coerceToDoc, RichtextField } from '@/admin/components/fields/richtext-field';
-
-afterEach(cleanup);
 
 /** A document holding one paragraph of `text`. */
 function paragraphDoc(text: string): JSONContent {

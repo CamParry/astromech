@@ -33,22 +33,27 @@ import {
     Outlet,
     RouterProvider,
 } from '@tanstack/react-router';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { EntryEditPage } from '@/admin/components/entries/entry-edit-page';
 import { ConfirmProvider } from '@/admin/components/ui/confirm';
 import { ToastProvider } from '@/admin/components/ui/toast';
 import { AiContextProvider } from '@/admin/context/ai-context';
 import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
-import { scopedEntryKeys } from '@/admin/hooks/use-query-keys';
+import { queryKeys, scopedEntryKeys } from '@/admin/hooks/use-query-keys';
 import '@/admin/rendering/register-fields';
 import type { EntriesBinding } from '@/admin/components/entries/binding';
-import type { AdminEntryType, EntriesService, Entry, EntryStatus } from '@/types/index';
-
-afterEach(cleanup);
+import type {
+    AdminEntryType,
+    EntriesService,
+    Entry,
+    EntryStatus,
+    QueryResult,
+    User,
+} from '@/types/index';
 
 beforeAll(async () => {
     // The page reads labels through `useTranslation`; the SPA's own i18n module
@@ -190,6 +195,11 @@ describe('the entry edit page after a save', () => {
             role: 'admin',
             permissions: ['*'],
         });
+        // No known users, so the page's author names need no request either.
+        queryClient.setQueryData<QueryResult<User>>(
+            queryKeys.users.list({ limit: 'all' }),
+            { data: [], pagination: null }
+        );
 
         const page = mountEditPage(queryClient);
 

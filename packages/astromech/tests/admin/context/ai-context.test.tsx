@@ -5,14 +5,11 @@
  * re-renders forever on a fresh snapshot, and a route that re-renders must not
  * be reshuffled against its siblings. Insertion order is kept; sorting is the
  * message formatter's job.
- *
- * There is no `@testing-library/react` here, so the hook tests drive a real
- * React root directly (same approach as use-field-validation.test.tsx).
  */
 
 import type { AiContextItem, AiContextReference } from '@/types/ai-context';
-import React, { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { act, render } from '@testing-library/react';
+import React from 'react';
 import { describe, expect, it } from 'vitest';
 import {
     AiContextProvider,
@@ -194,12 +191,7 @@ function mountAdmin(initial: AiContextReference | null): Mounted {
         );
     }
 
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-    act(() => {
-        root.render(<App />);
-    });
+    const { unmount } = render(<App />);
 
     const update = (next: Partial<AppState>): void => {
         act(() => {
@@ -211,9 +203,6 @@ function mountAdmin(initial: AiContextReference | null): Mounted {
         items: () => items,
         setReference: (reference) => update({ reference }),
         hideRoute: () => update({ visible: false }),
-        unmount: () => {
-            act(() => root.unmount());
-            host.remove();
-        },
+        unmount,
     };
 }

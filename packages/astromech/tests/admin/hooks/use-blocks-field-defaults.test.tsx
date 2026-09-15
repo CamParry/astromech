@@ -9,9 +9,7 @@
  */
 import type { BlockWithId } from '@/admin/hooks/use-blocks-field';
 import type { Block } from '@/types/index';
-import type { Root } from 'react-dom/client';
-import { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useBlocksField } from '@/admin/hooks/use-blocks-field';
 
@@ -36,27 +34,16 @@ function renderBlocksField(
     value: unknown,
     onChange: (name: string, value: unknown) => void
 ): { current: () => ReturnType<typeof useBlocksField>; unmount: () => void } {
-    const container = document.createElement('div');
-    document.body.appendChild(container);
-    let root: Root;
-    let latest: ReturnType<typeof useBlocksField>;
-
-    function Probe(): null {
-        latest = useBlocksField({
+    const { result, unmount } = renderHook(() =>
+        useBlocksField({
             name: 'fields',
             value,
             onChange,
             blockDefs: BLOCK_DEFS,
-        });
-        return null;
-    }
+        })
+    );
 
-    act(() => {
-        root = createRoot(container);
-        root.render(<Probe />);
-    });
-
-    return { current: () => latest, unmount: () => act(() => root.unmount()) };
+    return { current: () => result.current, unmount };
 }
 
 describe('useBlocksField addBlock', () => {

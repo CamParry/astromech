@@ -12,14 +12,10 @@
  * carries `aria-invalid="true"` plus an `aria-describedby` pointing at that `id`.
  * Every field type that renders a focusable control must reach that state, so
  * this walks the registry rather than checking one representative field.
- *
- * There is no `@testing-library/react` here, so this drives a real React root
- * directly (same approach as nested-field-errors.test.tsx).
  */
 
 import type { Field } from '@/types/index';
-import { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import '@/admin/rendering/register-fields';
 import { FieldErrorsProvider } from '@/admin/components/fields/field-errors-context';
@@ -29,23 +25,12 @@ type Mounted = { host: HTMLElement; unmount: () => void };
 
 /** Mount one `FormField` whose only field is in error. */
 function mountWithError(field: Field, value: unknown): Mounted {
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-    act(() => {
-        root.render(
-            <FieldErrorsProvider value={{ [field.name]: ['Something is wrong'] }}>
-                <FormField field={field} value={value} onChange={() => undefined} />
-            </FieldErrorsProvider>
-        );
-    });
-    return {
-        host,
-        unmount: () => {
-            act(() => root.unmount());
-            host.remove();
-        },
-    };
+    const { container, unmount } = render(
+        <FieldErrorsProvider value={{ [field.name]: ['Something is wrong'] }}>
+            <FormField field={field} value={value} onChange={() => undefined} />
+        </FieldErrorsProvider>
+    );
+    return { host: container, unmount };
 }
 
 describe('field error markup', () => {

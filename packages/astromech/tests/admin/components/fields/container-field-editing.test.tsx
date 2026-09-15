@@ -14,14 +14,10 @@
  * value, AND no key is path-shaped. The second is the one that pins the bug: the
  * junk key lands *alongside* the untouched bare key, so a check for `url` alone
  * passes while the field is broken.
- *
- * There is no `@testing-library/react` here, so this drives a real React root
- * and real inputs directly (same approach as nested-field-errors.test.tsx).
  */
 
 import type { Field } from '@/types/index';
-import { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { act, render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import '@/admin/rendering/register-fields';
 import { FormField } from '@/admin/components/fields/form-field';
@@ -43,18 +39,13 @@ type Mounted = {
 /** Mount one container `FormField` and capture what it commits. */
 function mountField(field: Field, value: unknown): Mounted {
     const commits: Commit[] = [];
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-    act(() => {
-        root.render(
-            <FormField
-                field={field}
-                value={value}
-                onChange={(name, next) => commits.push({ name, value: next })}
-            />
-        );
-    });
+    const { container: host, unmount } = render(
+        <FormField
+            field={field}
+            value={value}
+            onChange={(name, next) => commits.push({ name, value: next })}
+        />
+    );
 
     const last = (): unknown => {
         const commit = commits.at(-1);
@@ -89,10 +80,7 @@ function mountField(field: Field, value: unknown): Mounted {
         },
         lastItems: () => last() as Record<string, unknown>[],
         lastObject: () => last() as Record<string, unknown>,
-        unmount: () => {
-            act(() => root.unmount());
-            host.remove();
-        },
+        unmount,
     };
 }
 

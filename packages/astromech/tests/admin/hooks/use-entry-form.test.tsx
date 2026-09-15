@@ -3,15 +3,15 @@
  *
  * Save and publish share one submit path, so both run TanStack's own field
  * validators (the entry pages' required-title check among them) before a
- * mutation fires. It drives a real React root, as use-field-validation does.
+ * mutation fires.
  */
 
 import type { UseEntryFormResult } from '@/admin/hooks/use-entry-form';
 import type { Entry, Field } from '@/types/index';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, render, waitFor } from '@testing-library/react';
 import i18n from 'i18next';
-import React, { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import React from 'react';
 import { initReactI18next } from 'react-i18next';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/admin/components/ui/toast';
@@ -77,18 +77,13 @@ function mountForm(defaults: {
         );
     }
 
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-    act(() => {
-        root.render(
-            <QueryClientProvider client={new QueryClient()}>
-                <ToastProvider>
-                    <Probe />
-                </ToastProvider>
-            </QueryClientProvider>
-        );
-    });
+    const { unmount } = render(
+        <QueryClientProvider client={new QueryClient()}>
+            <ToastProvider>
+                <Probe />
+            </ToastProvider>
+        </QueryClientProvider>
+    );
 
     return {
         handle: () => {
@@ -97,22 +92,8 @@ function mountForm(defaults: {
         },
         saveFn,
         publishFn,
-        unmount: () => {
-            act(() => root.unmount());
-            host.remove();
-        },
+        unmount,
     };
-}
-
-/**
- * Retry `assertion`, flushing React's pending work inside `act` before each try,
- * so the updates a submit makes land inside a scope React knows about.
- */
-async function waitUntil(assertion: () => void): Promise<void> {
-    await vi.waitFor(async () => {
-        await act(async () => undefined);
-        assertion();
-    });
 }
 
 /**
@@ -120,7 +101,7 @@ async function waitUntil(assertion: () => void): Promise<void> {
  * A success resets the form's attempt count, so a fired mutation is the signal.
  */
 async function waitForSubmit(mounted: Mounted): Promise<void> {
-    await waitUntil(() => {
+    await waitFor(() => {
         const fired =
             mounted.saveFn.mock.calls.length + mounted.publishFn.mock.calls.length;
         const { submissionAttempts, isSubmitting } = mounted.handle().form.state;
@@ -145,7 +126,7 @@ describe('handlePublish', () => {
         const mounted = mountForm({ title: 'Ready', fields: { body: 'written' } });
 
         act(() => mounted.handle().handlePublish());
-        await waitUntil(() => expect(mounted.publishFn).toHaveBeenCalledTimes(1));
+        await waitFor(() => expect(mounted.publishFn).toHaveBeenCalledTimes(1));
 
         expect(mounted.publishFn.mock.calls[0]?.[0]).toMatchObject({
             title: 'Ready',
@@ -173,7 +154,7 @@ describe('handlePublish', () => {
         act(() => mounted.handle().handlePublish());
         await waitForSubmit(mounted);
         act(() => mounted.handle().handleSave());
-        await waitUntil(() => expect(mounted.saveFn).toHaveBeenCalledTimes(1));
+        await waitFor(() => expect(mounted.saveFn).toHaveBeenCalledTimes(1));
 
         expect(mounted.publishFn).toHaveBeenCalledTimes(1);
         expect(mounted.saveFn).toHaveBeenCalledTimes(1);
@@ -201,7 +182,7 @@ describe('handleSave', () => {
         const mounted = mountForm({ title: 'Draft', fields: { body: '' } });
 
         act(() => mounted.handle().handleSave());
-        await waitUntil(() => expect(mounted.saveFn).toHaveBeenCalledTimes(1));
+        await waitFor(() => expect(mounted.saveFn).toHaveBeenCalledTimes(1));
 
         expect(mounted.publishFn).not.toHaveBeenCalled();
 

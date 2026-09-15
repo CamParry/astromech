@@ -7,14 +7,10 @@
  * (`blocks[6f1e2a].heading`), so a container's sub-field only renders its error
  * if it rebuilds exactly that path. A lookup by the bare `field.name` (`heading`)
  * can never match a nested key, so the error would exist and stay invisible.
- *
- * There is no `@testing-library/react` here, so this drives a real React root
- * directly (same approach as container-field-editing.test.tsx).
  */
 
 import type { Field } from '@/types/index';
-import { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import '@/admin/rendering/register-fields';
 import { FieldErrorsProvider } from '@/admin/components/fields/field-errors-context';
@@ -26,19 +22,13 @@ function renderField(
     value: unknown,
     errors: Record<string, string[]>
 ): string {
-    const container = document.createElement('div');
-    document.body.appendChild(container);
-    const root = createRoot(container);
-    act(() => {
-        root.render(
-            <FieldErrorsProvider value={errors}>
-                <FormField field={field} value={value} onChange={() => undefined} />
-            </FieldErrorsProvider>
-        );
-    });
+    const { container, unmount } = render(
+        <FieldErrorsProvider value={errors}>
+            <FormField field={field} value={value} onChange={() => undefined} />
+        </FieldErrorsProvider>
+    );
     const html = container.innerHTML;
-    act(() => root.unmount());
-    container.remove();
+    unmount();
     return html;
 }
 

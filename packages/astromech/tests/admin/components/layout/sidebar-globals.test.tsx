@@ -14,10 +14,10 @@ import {
     createRouter,
     RouterProvider,
 } from '@tanstack/react-router';
-import { cleanup, render, waitFor } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { Sidebar } from '@/admin/components/layout/sidebar';
 import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
 import { UiProvider } from '@/admin/context/ui';
@@ -36,8 +36,6 @@ vi.mock('virtual:astromech/admin-config', () => ({
         },
     },
 }));
-
-afterEach(cleanup);
 
 beforeAll(async () => {
     await i18n.use(initReactI18next).init({

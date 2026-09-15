@@ -4,13 +4,10 @@
  * A warning is advisory, so it describes the control without invalidating it:
  * `aria-describedby` yes, `aria-invalid` no. And an error supersedes it — two
  * messages under one field leave the author guessing which to act on.
- *
- * There is no `@testing-library/react` here, so this drives a real React root
- * directly (same approach as use-field-control.test.tsx).
  */
 
-import React, { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { render } from '@testing-library/react';
+import React from 'react';
 import { describe, expect, it } from 'vitest';
 import { useFieldControl } from '@/admin/components/fields/field-control-context';
 import { FieldWrapper } from '@/admin/components/fields/field-wrapper';
@@ -24,19 +21,8 @@ function CustomControl(): React.ReactElement {
 type Mounted = { host: HTMLElement; unmount: () => void };
 
 function mount(node: React.ReactElement): Mounted {
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-    act(() => {
-        root.render(node);
-    });
-    return {
-        host,
-        unmount: () => {
-            act(() => root.unmount());
-            host.remove();
-        },
-    };
+    const { container, unmount } = render(node);
+    return { host: container, unmount };
 }
 
 describe('FieldWrapper warnings', () => {

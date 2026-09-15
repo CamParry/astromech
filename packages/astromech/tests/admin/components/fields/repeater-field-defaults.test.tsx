@@ -7,14 +7,10 @@
  * The field pipeline applies defaults on `create` only, so the added item would
  * otherwise reach the server bare and its declared `defaultValue`s would never
  * land. `RepeaterField` seeds them at the point the item is added.
- *
- * There is no `@testing-library/react` here, so this drives a real React root
- * and clicks the real add button (same approach as repeater-field-seeding).
  */
 
 import type { Field } from '@/types/index';
-import { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { act, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import '@/admin/rendering/register-fields';
 import { FormField } from '@/admin/components/fields/form-field';
@@ -44,13 +40,9 @@ function mountRepeater(
     value: unknown,
     onChange: (name: string, value: unknown) => void
 ): Mounted {
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-
-    act(() => {
-        root.render(<FormField field={socials} value={value} onChange={onChange} />);
-    });
+    const { container: host, unmount } = render(
+        <FormField field={socials} value={value} onChange={onChange} />
+    );
 
     return {
         add: () => {
@@ -58,10 +50,7 @@ function mountRepeater(
             if (button === null) throw new Error('no add button');
             act(() => button.click());
         },
-        unmount: () => {
-            act(() => root.unmount());
-            host.remove();
-        },
+        unmount,
     };
 }
 

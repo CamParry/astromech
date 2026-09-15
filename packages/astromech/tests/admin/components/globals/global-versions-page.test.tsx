@@ -8,7 +8,13 @@
 
 import type { GlobalsBinding } from '@/admin/components/globals/binding';
 import type { AuthUser } from '@/admin/context/auth';
-import type { AdminGlobal, GlobalsService, GlobalVersion } from '@/types/index';
+import type {
+    AdminGlobal,
+    GlobalsService,
+    GlobalVersion,
+    QueryResult,
+    User,
+} from '@/types/index';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
     createMemoryHistory,
@@ -18,20 +24,19 @@ import {
     Outlet,
     RouterProvider,
 } from '@tanstack/react-router';
-import { cleanup, render, waitFor } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { GlobalVersionsPage } from '@/admin/components/globals/global-versions-page';
 import { ConfirmProvider } from '@/admin/components/ui/confirm';
 import { ToastProvider } from '@/admin/components/ui/toast';
 import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
+import { queryKeys } from '@/admin/hooks/use-query-keys';
 
 const KEY = 'site';
 const BASE_PATH = `/globals/${KEY}`;
-
-afterEach(cleanup);
 
 beforeAll(async () => {
     await i18n.use(initReactI18next).init({
@@ -93,6 +98,11 @@ function mountPage() {
         image: null,
         role: 'admin',
         permissions: ['*'],
+    });
+    // No known users, so the page's author names need no request either.
+    queryClient.setQueryData<QueryResult<User>>(queryKeys.users.list({ limit: 'all' }), {
+        data: [],
+        pagination: null,
     });
 
     const rootRoute = createRootRoute({ component: () => <Outlet /> });

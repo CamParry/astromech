@@ -17,20 +17,18 @@
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, cleanup, render, waitFor } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import React from 'react';
 import { initReactI18next } from 'react-i18next';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/admin/components/ui/toast';
 import '@/admin/rendering/register-fields';
 import type { UseEntryFormResult } from '@/admin/hooks/use-entry-form';
 import type { Entry, Field } from '@/types/index';
 import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer';
 import { useEntryForm } from '@/admin/hooks/use-entry-form';
-
-afterEach(cleanup);
 
 beforeAll(async () => {
     // The hook reads labels through `useTranslation`; the SPA's own i18n module

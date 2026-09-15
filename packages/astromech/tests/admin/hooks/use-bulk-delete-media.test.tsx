@@ -6,7 +6,7 @@
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, cleanup, renderHook, screen, waitFor } from '@testing-library/react';
+import { act, renderHook, screen, waitFor } from '@testing-library/react';
 import i18n from 'i18next';
 import React from 'react';
 import { initReactI18next } from 'react-i18next';
@@ -33,7 +33,6 @@ beforeAll(async () => {
 });
 
 afterEach(() => {
-    cleanup();
     deleteMedia.mockReset();
 });
 

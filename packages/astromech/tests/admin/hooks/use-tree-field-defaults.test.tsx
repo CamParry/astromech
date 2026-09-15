@@ -10,9 +10,7 @@
  */
 import type { TreeNode } from '@/admin/hooks/use-tree-field';
 import type { Field } from '@/types/index';
-import type { Root } from 'react-dom/client';
-import { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useTreeField } from '@/admin/hooks/use-tree-field';
 
@@ -31,22 +29,11 @@ function renderTreeField(
     value: unknown,
     onChange: (name: string, value: unknown) => void
 ): { current: () => ReturnType<typeof useTreeField>; unmount: () => void } {
-    const container = document.createElement('div');
-    document.body.appendChild(container);
-    let root: Root;
-    let latest: ReturnType<typeof useTreeField>;
+    const { result, unmount } = renderHook(() =>
+        useTreeField({ name: 'items', value, onChange, fields: FIELDS })
+    );
 
-    function Probe(): null {
-        latest = useTreeField({ name: 'items', value, onChange, fields: FIELDS });
-        return null;
-    }
-
-    act(() => {
-        root = createRoot(container);
-        root.render(<Probe />);
-    });
-
-    return { current: () => latest, unmount: () => act(() => root.unmount()) };
+    return { current: () => result.current, unmount };
 }
 
 describe('useTreeField node add', () => {

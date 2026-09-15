@@ -9,7 +9,7 @@ import type { MediaBrowserResult } from '@/admin/hooks/use-media-browser';
 import type { MediaBrowserQuery } from '@/admin/types/media';
 import type { Media, MediaQueryParams } from '@/types/index';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useMediaBrowser } from '@/admin/hooks/use-media-browser';
@@ -47,7 +47,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-    cleanup();
     mediaQuery.mockReset();
 });
 
