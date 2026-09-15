@@ -24,6 +24,10 @@ export default defineConfig({
     clean: true,
     // Dependencies and peers are external already. These exist only inside a
     // site's Vite graph, which the Astro integration builds.
-    external: ['virtual:astromech/admin-config', 'virtual:astromech/plugins/components'],
+    external: [
+        'virtual:astromech/admin-config',
+        'virtual:astromech/admin-icons',
+        'virtual:astromech/plugins/components',
+    ],
     treeshake: true,
 });

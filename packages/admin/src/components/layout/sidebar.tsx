@@ -4,7 +4,6 @@ import {
     ChevronLeft,
     ChevronRight,
     Globe,
-    icons,
     Image,
     LayoutDashboard,
     Puzzle,
@@ -13,6 +12,7 @@ import {
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
+import adminIcons from 'virtual:astromech/admin-icons';
 import { useUi } from '../../context/ui';
 import { usePermissions } from '../../hooks/use-permissions';
 import { resolveLabel } from '../../i18n/labels';
@@ -190,14 +190,12 @@ export function Sidebar() {
 }
 
 function GlobalIcon({ name }: { name?: string | undefined }) {
-    const Icon =
-        name !== undefined ? (icons[name as keyof typeof icons] ?? Globe) : Globe;
+    const Icon = name !== undefined ? (adminIcons[name] ?? Globe) : Globe;
     return <Icon size={16} />;
 }
 
 function PluginNavIcon({ name }: { name?: string | undefined }) {
-    const Icon =
-        name !== undefined ? (icons[name as keyof typeof icons] ?? Puzzle) : Puzzle;
+    const Icon = name !== undefined ? (adminIcons[name] ?? Puzzle) : Puzzle;
     return <Icon size={16} />;
 }
 

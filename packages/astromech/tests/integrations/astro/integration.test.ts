@@ -97,6 +97,21 @@ describe('astromech()', () => {
             ]);
         });
 
+        it('throws when react() comes before astromech()', async () => {
+            await expect(
+                runSetup([{ name: '@astrojs/react' }, { name: 'astromech' }])
+            ).rejects.toThrow(
+                "astromech() must come before react() in `integrations`. The admin splits its routes into chunks with the TanStack Router plugin, which has to run before React's transform, and Astro adds Vite plugins in integration order. Use `integrations: [astromech(), react()]`."
+            );
+        });
+
+        it('accepts astromech() before react(), and a site without react()', async () => {
+            await expect(
+                runSetup([{ name: 'astromech' }, { name: '@astrojs/react' }])
+            ).resolves.toBeDefined();
+            await expect(runSetup([{ name: 'astromech' }])).resolves.toBeDefined();
+        });
+
         it('adds astromech/middleware ahead of the site middleware', async () => {
             const { recorded } = await runSetup();
 
@@ -132,14 +147,15 @@ describe('astromech()', () => {
     });
 });
 
-async function runSetup() {
+async function runSetup(integrations?: { name: string }[]) {
     const integration = astromech();
-    const fakes = createFakes();
+    const fakes = createFakes(integrations);
     await integration.hooks['astro:config:setup']?.(fakes.setup);
     return { integration, ...fakes };
 }
 
-function createFakes() {
+/** Recording fakes for both hooks, for a site whose integrations are `integrations`. */
+function createFakes(integrations: { name: string }[] = [{ name: 'astromech' }]) {
     const recorded: Recorded = {
         updateConfig: [],
         injectRoute: [],
@@ -153,7 +169,7 @@ function createFakes() {
         error: () => undefined,
         debug: () => undefined,
     };
-    const config = { root: pathToFileURL(`${root}/`) };
+    const config = { root: pathToFileURL(`${root}/`), integrations };
 
     const setup = {
         config,

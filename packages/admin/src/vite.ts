@@ -1,12 +1,21 @@
 /**
- * What the Astro integration needs from the admin to serve it: the
- * `astromech/ui*` aliases onto admin source, the packages it imports in the
- * browser, the TanStack Router plugin that writes its route tree, and the path
- * of the shell page. Runs in Node at config time.
+ * What the Astro integration needs from the admin to serve it: `astromech/ui*`
+ * aliases, browser packages to pre-bundle, the router and icon plugins, and the
+ * shell page. Runs in Node at config time.
  */
 
 import { fileURLToPath } from 'node:url';
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
+import { icons } from 'lucide-react';
+
+const ICONS_MODULE_ID = 'virtual:astromech/admin-icons';
+
+export type AdminViteConfigOptions = {
+    /** Lucide icon names the admin config sets, served by `virtual:astromech/admin-icons`. */
+    iconNames?: string[];
+    /** Reports an icon name Lucide does not have. Defaults to `console.warn`. */
+    warn?: (message: string) => void;
+};
 
 export type AdminViteConfig = {
     /** Aliases onto admin source, the more specific keys first. */
@@ -18,13 +27,36 @@ export type AdminViteConfig = {
         /** Installed by the site and shared with it: its `peerDependencies`. */
         peerDependencies: string[];
     };
-    plugins: ReturnType<typeof TanStackRouterVite>[];
+    plugins: (ReturnType<typeof TanStackRouterVite> | AdminIconsPlugin)[];
     /** Absolute path to `shell.astro`, the page the admin route serves. */
     shellEntrypoint: string;
 };
 
+/** The part of Vite's plugin context the icons plugin calls. */
+export type ResolveContext = {
+    resolve: (
+        id: string,
+        importer?: string,
+        options?: { skipSelf?: boolean }
+    ) => Promise<{ id: string } | null>;
+};
+
+/** Minimal Vite plugin shape for `virtual:astromech/admin-icons`. */
+export type AdminIconsPlugin = {
+    name: string;
+    enforce: 'pre';
+    resolveId: (
+        this: ResolveContext,
+        id: string,
+        importer: string | undefined
+    ) => string | Promise<{ id: string } | null> | null;
+    load: (id: string) => string | null;
+};
+
 /** Build the admin's share of the site's Vite config. */
-export function createAdminViteConfig(): AdminViteConfig {
+export function createAdminViteConfig(
+    options: AdminViteConfigOptions = {}
+): AdminViteConfig {
     // `src/vite.ts` under vitest and `dist/vite.js` in a site both sit one
     // level below the package root.
     const source = fileURLToPath(new URL('../src/', import.meta.url));
@@ -87,8 +119,47 @@ export function createAdminViteConfig(): AdminViteConfig {
                 routesDirectory: source + 'pages',
                 generatedRouteTree: source + 'routeTree.gen.ts',
                 routeToken: 'route',
+                // Each route's component loads as its own chunk.
+                autoCodeSplitting: true,
             }),
+            adminIcons(filterKnownIcons(options), source + 'main.tsx'),
         ],
         shellEntrypoint: source + 'shell.astro',
+    };
+}
+
+/** Keep the names Lucide has, reporting each one it does not. */
+function filterKnownIcons({
+    iconNames = [],
+    warn = (message) => console.warn(`[astromech] ${message}`),
+}: AdminViteConfigOptions): string[] {
+    return [...new Set(iconNames)].filter((name) => {
+        if (Object.hasOwn(icons, name)) return true;
+        warn(`Unknown Lucide icon "${name}"; the admin shows its default icon.`);
+        return false;
+    });
+}
+
+/** Serve `virtual:astromech/admin-icons`, importing only the named icons. */
+function adminIcons(names: string[], adminEntry: string): AdminIconsPlugin {
+    const resolvedId = `\0${ICONS_MODULE_ID}`;
+    const list = names.join(', ');
+    return {
+        name: 'astromech:admin-icons',
+        enforce: 'pre',
+        resolveId(id, importer) {
+            if (id === ICONS_MODULE_ID) return resolvedId;
+            // A site cannot resolve the admin's `lucide-react` from its root, and
+            // `astro dev` serves the pre-bundled copy, so resolve it from the admin.
+            if (id === 'lucide-react' && importer === resolvedId) {
+                return this.resolve('lucide-react', adminEntry, { skipSelf: true });
+            }
+            return null;
+        },
+        load(id) {
+            if (id !== resolvedId) return null;
+            if (names.length === 0) return 'export default {};';
+            return `import { ${list} } from 'lucide-react';\nexport default { ${list} };`;
+        },
     };
 }

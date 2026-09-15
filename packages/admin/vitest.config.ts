@@ -9,12 +9,12 @@ function fromHere(path: string): string {
 
 // Core's aliases resolve core, the schema engine and the admin's published
 // subpaths to source, and map `@tests` to core's shared test support. The admin
-// adds its own `src` as `@/admin`, and shims for the two virtual modules core's
-// Astro integration injects in a site. Vite tries aliases in order and takes the
-// first match, and core's `@` also matches `@/admin/...`, so `@/admin` comes
-// first.
+// adds its own `src` as `@/admin`, and shims for the three virtual modules a
+// site's Vite serves it. Vite tries aliases in order and takes the first match,
+// and core's `@` also matches `@/admin/...`, so `@/admin` comes first.
 const alias = {
     'virtual:astromech/admin-config': fromHere('./tests/_support/admin-config-shim.ts'),
+    'virtual:astromech/admin-icons': fromHere('./tests/_support/admin-icons-shim.ts'),
     'virtual:astromech/plugins/components': fromHere(
         './tests/_support/plugins-components-shim.ts'
     ),

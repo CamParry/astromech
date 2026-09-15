@@ -22,8 +22,8 @@ export default defineConfig({
         enabled: false,
     },
     integrations: [
-        react(),
         astromech(),
+        react(),
         icon({
             include: {
                 lucide: ['*'],

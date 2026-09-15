@@ -557,6 +557,25 @@ which suits a UI package that no consumer code joins; and an `@admin/*` alias,
 which the site's Vite would have to register too, in a build where the site may
 already use that name.
 
+**The admin splits its bundle by route, so `astromech()` comes before `react()`
+in a site's `integrations`.** The TanStack Router plugin's `autoCodeSplitting`
+loads each route's component as its own chunk, and it refuses to run after
+`@vitejs/plugin-react`, whose transform would reach the route files first.
+Astro adds each integration's Vite plugins in list order, so the order is the
+site's to set, and the integration throws a message naming the fix when
+`react()` comes first. Rejected: reordering Vite's resolved plugin list, which
+Vite does not support; splitting the 26 route files by hand into `.lazy.tsx`
+pairs; and raising `chunkSizeWarningLimit`, which hides a 1.6 MB first load
+rather than shrinking it.
+
+**The admin bundles only the Lucide icons the config names.** Every icon a site
+or plugin sets is a name in the admin config, known when the integration
+builds it, so `virtual:astromech/admin-icons` imports those names alone and an
+unknown name warns at build time and falls back to the default icon. Rejected:
+looking names up in Lucide's `icons` object, which bundles all 475 kB of them;
+and `lucide-react/dynamic`, which emits one chunk per icon in every site's
+build.
+
 **The browser-safe surface is `astromech/shared`, and a bundle test checks
 it.** `src/exports/shared.ts` names each browser-safe value the admin reads, and
 the admin reaches core only through it, `astromech/fetch` and type-only imports

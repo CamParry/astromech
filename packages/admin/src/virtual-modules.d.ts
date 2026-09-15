@@ -1,11 +1,20 @@
-// The two virtual modules the admin imports. Core's Astro integration builds
-// both from the site config; these declarations type them for the admin.
+// The virtual modules the admin imports. Core's Astro integration builds the
+// config and plugin modules from the site config, and `src/vite.ts` builds the
+// icon map from the names core passes it. These declarations type all three.
 
 declare module 'virtual:astromech/admin-config' {
     import type { AdminConfig } from 'astromech';
 
     const config: AdminConfig;
     export default config;
+}
+
+declare module 'virtual:astromech/admin-icons' {
+    import type { LucideIcon } from 'lucide-react';
+
+    /** The Lucide icons the admin config names, keyed by icon name. */
+    const icons: Record<string, LucideIcon>;
+    export default icons;
 }
 
 declare module 'virtual:astromech/plugins/components' {

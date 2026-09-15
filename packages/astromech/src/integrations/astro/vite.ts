@@ -4,6 +4,7 @@
  * virtual modules. The admin package supplies its own share, which this merges.
  */
 
+import type { AdminConfig } from '@/types/config';
 import type { AstromechConfig, PluginDefinition, ResolvedConfig } from '@/types/index';
 import type { AdminViteConfig } from '@astromech/admin/vite';
 import type { HookParameters } from 'astro';
@@ -113,6 +114,25 @@ export function createViteConfig({
             ),
         ],
     };
+}
+
+/** Every `icon` name in the admin config, deduped and sorted, for the admin's icon map. */
+export function collectIconNames(adminConfig: AdminConfig): string[] {
+    const names = new Set<string>();
+    // Walking the whole object keeps a new icon-bearing surface from being missed.
+    const visit = (value: unknown): void => {
+        if (Array.isArray(value)) {
+            value.forEach(visit);
+            return;
+        }
+        if (value === null || typeof value !== 'object') return;
+        for (const [key, child] of Object.entries(value)) {
+            if (key === 'icon' && typeof child === 'string') names.add(child);
+            else visit(child);
+        }
+    };
+    visit(adminConfig);
+    return [...names].sort();
 }
 
 /**

@@ -1,7 +1,7 @@
 import type { ValueRow } from '../../utilities/values';
 import type { ReactElement } from 'react';
-import { Column, Hr, Row, Section, Text } from '@react-email/components';
 import { BaseLayout } from 'astromech/email';
+import { Column, Hr, Row, Section, Text } from 'react-email';
 
 export type SubmissionEmailProps = {
     /** Inbox preview text — the resolved subject line. */

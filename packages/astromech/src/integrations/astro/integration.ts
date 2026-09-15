@@ -8,12 +8,13 @@ import type { AstromechConfig, ResolvedConfig } from '@/types/index';
 import type { AstroIntegration } from 'astro';
 import { fileURLToPath } from 'node:url';
 import { createAdminViteConfig } from '@astromech/admin/vite';
+import { buildAdminConfig } from '@/config/admin-config';
 import { loadConfigFile } from '@/config/load';
 import { resolveConfig } from '@/config/resolve';
 import { runMigrations } from '@/database/migrations';
 import { AstromechError } from '@/errors/astromech-error';
 import { registerRoutes } from '@/integrations/astro/routes';
-import { createViteConfig } from '@/integrations/astro/vite';
+import { collectIconNames, createViteConfig } from '@/integrations/astro/vite';
 import { collectPluginFieldTypes } from '@/plugins/runtime/plugin-fields';
 
 export type AstromechIntegrationOptions = {
@@ -47,6 +48,8 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
                 logger,
                 config: astroConfig,
             }) => {
+                assertIntegrationOrder(astroConfig.integrations);
+
                 const rootDir = fileURLToPath(astroConfig.root);
                 const config = await loadConfigFile(rootDir, options.configFile);
                 const resolvedConfig = resolveConfig(config);
@@ -54,7 +57,10 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
 
                 logger.info('Initializing Astromech CMS');
 
-                const admin = createAdminViteConfig();
+                const admin = createAdminViteConfig({
+                    iconNames: collectIconNames(buildAdminConfig(config, resolvedConfig)),
+                    warn: (message) => logger.warn(message),
+                });
 
                 updateConfig({
                     vite: createViteConfig({
@@ -146,4 +152,18 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
             },
         },
     };
+}
+
+/**
+ * Throw when `react()` comes before `astromech()`. The admin's router plugin has
+ * to run before React's transform, and Astro adds Vite plugins in integration order.
+ */
+function assertIntegrationOrder(integrations: AstroIntegration[]): void {
+    const names = integrations.map((integration) => integration.name);
+    const react = names.indexOf('@astrojs/react');
+    if (react !== -1 && react < names.indexOf('astromech')) {
+        throw new AstromechError(
+            "astromech() must come before react() in `integrations`. The admin splits its routes into chunks with the TanStack Router plugin, which has to run before React's transform, and Astro adds Vite plugins in integration order. Use `integrations: [astromech(), react()]`."
+        );
+    }
 }

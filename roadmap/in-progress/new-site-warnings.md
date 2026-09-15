@@ -24,8 +24,14 @@ the site's own `@libsql/client` and hands it to the dialect.
 
 ## The work
 
-- [ ] Replace `@react-email/components` with the packages core imports, or
-      with whatever React Email now publishes in its place.
-- [ ] Skip the `defaultLocale` warning when the site declares no locales.
-- [ ] Split the admin bundle by route, or decide the size is acceptable for an
-      admin app and raise Vite's `chunkSizeWarningLimit` for it.
+- [x] Replace `@react-email/components` with the packages core imports, or
+      with whatever React Email now publishes in its place. React Email 6 moved
+      every component and `render` into `react-email`, which since 6.7 marks
+      itself side-effect free, so a Worker bundles only the components core
+      imports. It installs React Email's CLI dependencies with it.
+- [x] Skip the `defaultLocale` warning when the site declares no locales.
+- [x] Split the admin bundle by route, or decide the size is acceptable for an
+      admin app and raise Vite's `chunkSizeWarningLimit` for it. Split with
+      `autoCodeSplitting`, which needs `astromech()` before `react()`, and
+      bundle only the Lucide icons the config names, which were 475 kB of the
+      largest chunk.

@@ -8,6 +8,7 @@ import type {
     ResolveContext,
 } from '@/integrations/astro/core-source-alias';
 import type { VirtualModulePlugin } from '@/integrations/astro/virtual-module';
+import type { AdminConfig } from '@/types/config';
 import type { PluginDefinition } from '@/types/index';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -18,7 +19,7 @@ import { makeTestConfig } from '@tests/harness';
 import { describe, expect, it } from 'vitest';
 import { buildAdminConfig } from '@/config/admin-config';
 import { resolveConfig } from '@/config/resolve';
-import { createViteConfig } from '@/integrations/astro/vite';
+import { collectIconNames, createViteConfig } from '@/integrations/astro/vite';
 
 type ViteConfig = ReturnType<typeof createViteConfig>;
 
@@ -191,6 +192,25 @@ describe('createViteConfig()', () => {
             expect(result).toEqual({ id: packageSource + '/entries/entry-url' });
             expect(calls).toHaveLength(1);
         });
+    });
+});
+
+describe('collectIconNames()', () => {
+    it('collects every icon name in the admin config, deduped and sorted', () => {
+        const adminConfig = {
+            entries: { post: { icon: 'Newspaper' }, page: { icon: 'FileText' } },
+            globals: { site: { icon: 'Globe' } },
+            plugins: [{ nav: [{ icon: 'Star', children: [{ icon: 'FileText' }] }] }],
+            pages: [{ icon: 'ChartBar' }],
+        } as unknown as AdminConfig;
+
+        expect(collectIconNames(adminConfig)).toEqual([
+            'ChartBar',
+            'FileText',
+            'Globe',
+            'Newspaper',
+            'Star',
+        ]);
     });
 });
 

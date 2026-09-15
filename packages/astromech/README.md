@@ -23,7 +23,7 @@ import { astromech } from 'astromech/astro';
 export default defineConfig({
     output: 'server',
     adapter: node({ mode: 'standalone' }),
-    integrations: [react(), astromech()],
+    integrations: [astromech(), react()],
 });
 ```
 

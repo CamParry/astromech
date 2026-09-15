@@ -45,9 +45,13 @@ import { astromech } from 'astromech/astro';
 export default defineConfig({
     output: 'server',
     adapter: node({ mode: 'standalone' }),
-    integrations: [react(), astromech()],
+    integrations: [astromech(), react()],
 });
 ```
+
+Keep `astromech()` before `react()`, because the step that splits the admin
+into one file per page has to run before React's transform, and Astro runs
+integrations in the order you list them.
 
 `astromech()` loads `astromech.config.ts` from your Astro project root. To keep
 the config somewhere else, pass its path, relative to the project root:

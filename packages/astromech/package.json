@@ -283,8 +283,6 @@
         "@astromech/schema-engine": "workspace:*",
         "@hono/swagger-ui": "^0.6.1",
         "@hono/zod-openapi": "^1.2.3",
-        "@react-email/components": "^1.0.10",
-        "@react-email/render": "^2.0.4",
         "@tiptap/core": "^3.0.0",
         "@tiptap/extension-placeholder": "^3.26.1",
         "@tiptap/extension-text-align": "^3.26.1",
@@ -299,6 +297,7 @@
         "jiti": "^2.6.1",
         "linkedom": "^0.18.13",
         "lodash-es": "^4.17.21",
+        "react-email": "^6.9.5",
         "ulidx": "^2.4.1",
         "zod": "^4.3.6"
     },

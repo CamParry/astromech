@@ -11,7 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { astromechClient } from 'astromech/fetch';
 import { parseEntryTypeId } from 'astromech/shared';
-import { icons, Image, LayoutDashboard, Puzzle, Users } from 'lucide-react';
+import { Image, LayoutDashboard, Puzzle, Users } from 'lucide-react';
 import React, {
     createContext,
     useCallback,
@@ -23,6 +23,7 @@ import React, {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
+import adminIcons from 'virtual:astromech/admin-icons';
 import { useDebounce } from '../../hooks/use-debounce';
 import { usePermissions } from '../../hooks/use-permissions';
 import { entryAdminPath } from '../../utilities/entry-admin-path';
@@ -31,7 +32,7 @@ import { EntryTypeIcon } from './entry-type-icon';
 
 function lucideIcon(name: string | undefined, Fallback: LucideIcon): LucideIcon {
     if (name === undefined) return Fallback;
-    return (icons[name as keyof typeof icons] ?? Fallback) as LucideIcon;
+    return adminIcons[name] ?? Fallback;
 }
 
 /** Groups rendered in the palette. Static = always computed client-side. */

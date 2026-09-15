@@ -1,4 +1,4 @@
-import { Button, Text } from '@react-email/components';
+import { Button, Text } from 'react-email';
 import { BaseLayout } from './base-layout';
 
 type PasswordResetEmailProps = {

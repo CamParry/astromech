@@ -33,10 +33,11 @@ setDateLocale(adminConfig.defaultLocale);
 
 if (
     import.meta.env.DEV &&
+    adminConfig.locales.length > 0 &&
     resolveContentLocale(adminConfig.defaultLocale, adminConfig.locales) === undefined
 ) {
     console.warn(
-        `[astromech] defaultLocale "${adminConfig.defaultLocale}" has no content-locale match in [${adminConfig.locales.join(', ')}]; content falls back to "${adminConfig.locales[0] ?? 'en'}".`
+        `[astromech] defaultLocale "${adminConfig.defaultLocale}" has no content-locale match in [${adminConfig.locales.join(', ')}]; content falls back to "${adminConfig.locales[0]}".`
     );
 }
 
