@@ -13,6 +13,7 @@ import { usersService as api } from '@/app-context/services';
 import { encodeWith } from '@/database/codec';
 import { usersTable } from '@/database/tables';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
+import { readUser } from '@/users/internal/read-user';
 import { createUserRepository } from '@/users/repository';
 
 let db: Kysely<DB>;
@@ -50,7 +51,7 @@ describe('a user with no content row', () => {
     });
 
     it('reads through the repository the session resolves with', async () => {
-        const row = await createUserRepository().get(id);
+        const row = await readUser(createUserRepository(), id);
         expect(row?.email).toBe('noprofile@test.dev');
         expect(row?.fields).toEqual({});
         expect(row?.locales).toEqual([]);

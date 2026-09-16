@@ -52,7 +52,7 @@ export const createUser = defineServiceMethod({
         // that is not there.
         const userId = ctx.user?.id ?? null;
         const created = await transaction(async () => {
-            const row = await createUserRepository().create(
+            const row = await createUserRepository(ctx.config).create(
                 {
                     email: data.email,
                     name: data.name,

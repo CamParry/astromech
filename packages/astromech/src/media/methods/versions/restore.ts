@@ -4,9 +4,10 @@ import { snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { MediaNotFoundError } from '../../errors';
-import { mediaRepository, resolveMediaLocale } from '../../internal/locale';
+import { resolveMediaLocale } from '../../internal/locale';
 import { indexMediaRelationships } from '../../internal/relationships';
 import { toMedia } from '../../internal/to-media';
+import { createMediaRepository } from '../../repository';
 
 /**
  * Restores one locale of a media item to one of its saved versions, snapshotting
@@ -25,8 +26,8 @@ export const restoreMediaVersion = defineServiceMethod({
     async handler(params, ctx): Promise<Media> {
         const { id } = params;
         const locale = resolveMediaLocale(ctx.config, params.locale);
-        const repository = mediaRepository(ctx.config);
-        const current = await repository.getExact(id, locale);
+        const repository = createMediaRepository(ctx.config);
+        const current = await repository.get(id, locale);
         if (!current) throw new MediaNotFoundError({ id, locale });
 
         const version = await repository.versions.get(params.versionId);

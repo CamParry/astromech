@@ -1,8 +1,10 @@
 import type { User } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { resolveUserLocale, userRepository } from '../internal/locale';
+import { resolveUserLocale } from '../internal/locale';
+import { readUser } from '../internal/read-user';
 import { toUser } from '../internal/to-user';
+import { createUserRepository } from '../repository';
 
 /**
  * Read one user by id, or null when there is no such row. A locale with no
@@ -16,7 +18,7 @@ export const getUser = defineServiceMethod({
     mutates: false,
     async handler(params, ctx): Promise<User | null> {
         const locale = resolveUserLocale(ctx.config, params.locale);
-        const row = await userRepository(ctx.config).get(params.id, locale);
+        const row = await readUser(createUserRepository(ctx.config), params.id, locale);
         return row ? toUser(row) : null;
     },
 });

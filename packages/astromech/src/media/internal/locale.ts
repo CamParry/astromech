@@ -1,15 +1,12 @@
 /**
- * The locale a media call addresses, and the repository bound to the configured
- * default content locale. Media opts into translation through
+ * The locale a media call addresses. Media opts into translation through
  * `media: { translatable: true }`; without it a file's content lives in the
  * default locale alone.
  */
 
-import type { MediaRepository } from '../repository';
 import type { ResolvedConfig } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
 import { MediaValidationError } from '../errors';
-import { createMediaRepository } from '../repository';
 
 /**
  * The locale a call addresses. Non-translatable media lives in the default
@@ -26,9 +23,4 @@ export function resolveMediaLocale(config: ResolvedConfig, locale?: string): str
         ]);
     }
     return resolved;
-}
-
-/** The media repository, bound to the configured default content locale. */
-export function mediaRepository(config: ResolvedConfig): MediaRepository {
-    return createMediaRepository({ defaultLocale: defaultContentLocale(config) });
 }

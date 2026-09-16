@@ -4,9 +4,10 @@ import { snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { UserNotFoundError } from '../../errors';
-import { resolveUserLocale, userRepository } from '../../internal/locale';
+import { resolveUserLocale } from '../../internal/locale';
 import { indexUserRelationships } from '../../internal/relationships';
 import { toUser } from '../../internal/to-user';
+import { createUserRepository } from '../../repository';
 
 /**
  * Restores one locale of a user's fields to one of its saved versions,
@@ -26,8 +27,8 @@ export const restoreUserVersion = defineServiceMethod({
     async handler(params, ctx): Promise<User> {
         const { id } = params;
         const locale = resolveUserLocale(ctx.config, params.locale);
-        const repository = userRepository(ctx.config);
-        const current = await repository.getExact(id, locale);
+        const repository = createUserRepository(ctx.config);
+        const current = await repository.get(id, locale);
         if (!current) throw new UserNotFoundError({ id, locale });
 
         const version = await repository.versions.get(params.versionId);

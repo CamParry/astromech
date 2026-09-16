@@ -122,7 +122,9 @@ router.put('/:id', async (c) => {
         // Last-admin check: if changing away from 'admin', ensure it's not the last one
         const targetUser = await usersService.get({ id });
         if (targetUser && targetUser.role === 'admin' && role !== 'admin') {
-            const adminCount = await createUserRepository().countByRole('admin');
+            const adminCount = await createUserRepository().accounts.count({
+                role: 'admin',
+            });
             if (adminCount <= 1) {
                 return badRequest(c, 'Cannot remove the last administrator');
             }
@@ -153,7 +155,7 @@ router.delete('/:id', async (c) => {
     // Last-admin check
     const targetUser = await usersService.get({ id });
     if (targetUser && targetUser.role === 'admin') {
-        const adminCount = await createUserRepository().countByRole('admin');
+        const adminCount = await createUserRepository().accounts.count({ role: 'admin' });
         if (adminCount <= 1) {
             return badRequest(c, 'Cannot delete the last administrator');
         }

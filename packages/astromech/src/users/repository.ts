@@ -1,9 +1,7 @@
 /**
  * The user repository — the shared content repository over
- * `users`/`user_content`/`user_versions`, plus what only users have: the
- * account-row list query with its name/email search and sort allow-list, the
- * role counts the permission checks read, and a write that touches the account
- * columns alone.
+ * `users`/`user_content`/`user_versions`, plus the account-row repository and
+ * the list query with its name/email search and sort allow-list.
  */
 
 import type { NewUserTableRow, UserContentRow, UserTableRow } from './tables';
@@ -13,10 +11,9 @@ import type {
     ContentWrite,
     JoinedWhere,
 } from '@/content/repository/types';
-import type { Patch } from '@/database/repository/create-repository';
-import type { JsonObject, SortOption } from '@/types/index';
+import type { JsonObject, ResolvedConfig, SortOption } from '@/types/index';
 import type { Expression, SqlBool } from 'kysely';
-import { getDefaultContentLocale } from '@/config/content-locale';
+import { defaultContentLocale, getDefaultContentLocale } from '@/config/content-locale';
 import { createContentRepository } from '@/content/repository/content-table';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
@@ -32,13 +29,6 @@ export type UserRow = ContentRow & {
     /** The account row's `updatedAt`. */
     accountUpdatedAt: Date;
 };
-
-/**
- * An allow-list, not the table's full patch shape: `id` is the key, `createdAt`
- * is history, and `emailVerified` and `image` belong to better-auth's own flows.
- * Derived from the descriptor so the value types stay in step with it.
- */
-export type UserAccountPatch = Pick<Patch<typeof usersTable>, 'email' | 'name' | 'role'>;
 
 export type UserListParams = {
     search?: string | undefined;
@@ -79,8 +69,10 @@ export type UserRepository = ReturnType<typeof createUserRepository>;
  * Build the user repository. It resolves its db handle per call, so a write
  * inside `transaction()` joins that transaction without being handed one.
  */
-export function createUserRepository(opts?: { defaultLocale?: string }) {
-    const defaultLocale = opts?.defaultLocale ?? getDefaultContentLocale();
+export function createUserRepository(config?: ResolvedConfig) {
+    const defaultLocale = config
+        ? defaultContentLocale(config)
+        : getDefaultContentLocale();
     const accounts = createRepository(usersTable);
     const contents = createRepository(userContentTable);
 
@@ -196,22 +188,8 @@ export function createUserRepository(opts?: { defaultLocale?: string }) {
         return content.query.rows(raw);
     }
 
-    async function countByRole(role: string): Promise<number> {
-        return accounts.count({ role });
-    }
-
-    /** Every user id — the `notify()` broadcast target. */
-    async function ids(): Promise<string[]> {
-        return accounts.pluck('id');
-    }
-
-    /** User ids holding a role — the `notify()` per-role target. */
-    async function idsByRole(role: string): Promise<string[]> {
-        return accounts.pluck('id', { where: { role } });
-    }
-
-    /** The account row alone, read as an empty-content `UserRow`. */
-    async function ownOnly(id: string): Promise<UserRow | null> {
+    /** The account row alone, read as a `UserRow` with no content. */
+    async function accountRow(id: string): Promise<UserRow | null> {
         const own = await accounts.findOne({ id });
         if (!own) return null;
         return {
@@ -234,39 +212,13 @@ export function createUserRepository(opts?: { defaultLocale?: string }) {
         };
     }
 
-    /**
-     * One locale of one user, falling back to the default locale and then to
-     * the account row alone. The last fallback is here because better-auth
-     * mints `users` rows outside Astromech's write path, so a user can exist
-     * with no content row at all, and a session must not fail on a profile
-     * nobody has written.
-     */
+    /** One locale of one user, with no fallback. `readUser` holds the fallback policy. */
     async function get(id: string, locale?: string): Promise<UserRow | null> {
-        return (
-            (await content.get({ id, locale })) ??
-            (await content.get({ id })) ??
-            (await ownOnly(id))
-        );
-    }
-
-    /** One locale of one user, with no fallback — what versions address. */
-    async function getExact(id: string, locale: string): Promise<UserRow | null> {
         return content.get({ id, locale });
     }
 
     async function create(own: NewUserTableRow, write: ContentWrite): Promise<UserRow> {
         return content.create(own, write);
-    }
-
-    /**
-     * Write the account columns, leaving every content row untouched. Throws
-     * when no row matched.
-     */
-    async function updateAccount(id: string, patch: UserAccountPatch): Promise<UserRow> {
-        await accounts.update(id, patch);
-        const row = await get(id);
-        if (!row) throw new Error(`User '${id}' not found`);
-        return row;
     }
 
     /** Write one locale's content row, creating it when it does not exist. */
@@ -281,16 +233,17 @@ export function createUserRepository(opts?: { defaultLocale?: string }) {
     }
 
     return {
+        /**
+         * The account row alone, the one better-auth writes, for the reads and
+         * writes that never touch content.
+         */
+        accounts,
         list,
         listContent,
         count,
-        countByRole,
-        ids,
-        idsByRole,
         get,
-        getExact,
+        accountRow,
         create,
-        updateAccount,
         update,
         delete: del,
         versions: content.versions,

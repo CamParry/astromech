@@ -1,9 +1,7 @@
 /**
  * The media repository — the shared content repository over
- * `media`/`media_content`/`media_versions`, plus what only media has: the
- * library list query with its filename search, mime bucket and sort allow-list,
- * and a write that touches the file columns alone. Blob writes stay in the
- * service.
+ * `media`/`media_content`/`media_versions`, plus the file-row repository and the
+ * library list query with its filename search, mime bucket and sort allow-list.
  */
 
 import type { MediaContentRow, MediaTableRow, NewMediaTableRow } from './tables';
@@ -13,17 +11,17 @@ import type {
     ContentWrite,
     JoinedWhere,
 } from '@/content/repository/types';
-import type { Patch } from '@/database/repository/create-repository';
 import type {
     JsonObject,
     MediaMetadata,
     MediaMimeTypeFilter,
     MediaQueryParams,
+    ResolvedConfig,
     SortOption,
 } from '@/types/index';
 import type { Expression, SqlBool } from 'kysely';
 import { sql } from 'kysely';
-import { getDefaultContentLocale } from '@/config/content-locale';
+import { defaultContentLocale, getDefaultContentLocale } from '@/config/content-locale';
 import { createContentRepository } from '@/content/repository/content-table';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
@@ -136,9 +134,11 @@ function buildOrderBy(
  * Build the media repository. It resolves its db handle per call, so a write
  * inside `transaction()` joins that transaction without being handed one.
  */
-export function createMediaRepository(opts?: { defaultLocale?: string }) {
-    const defaultLocale = opts?.defaultLocale ?? getDefaultContentLocale();
-    const media = createRepository(mediaTable);
+export function createMediaRepository(config?: ResolvedConfig) {
+    const defaultLocale = config
+        ? defaultContentLocale(config)
+        : getDefaultContentLocale();
+    const files = createRepository(mediaTable);
     const contents = createRepository(mediaContentTable);
 
     const content = createContentRepository(
@@ -232,36 +232,13 @@ export function createMediaRepository(opts?: { defaultLocale?: string }) {
         return content.query.rows(raw);
     }
 
-    /**
-     * One locale of one item, falling back to the default locale when that one
-     * has no content row. The returned row's `locale` names where the content
-     * came from, which is the contract a media read states.
-     */
+    /** One locale of one item, with no fallback. `readMedia` holds the fallback policy. */
     async function get(id: string, locale?: string): Promise<MediaRow | null> {
-        return (await content.get({ id, locale })) ?? (await content.get({ id }));
-    }
-
-    /** One locale of one item, with no fallback — what versions address. */
-    async function getExact(id: string, locale: string): Promise<MediaRow | null> {
         return content.get({ id, locale });
     }
 
     async function create(own: NewMediaTableRow, write: ContentWrite): Promise<MediaRow> {
         return content.create(own, write);
-    }
-
-    /**
-     * Write the file columns of the resource row, leaving every content row
-     * untouched — what `replace` does. Throws when no row matched.
-     */
-    async function updateFile(
-        id: string,
-        patch: Patch<typeof mediaTable>
-    ): Promise<MediaRow> {
-        await media.update(id, patch);
-        const row = await get(id);
-        if (!row) throw new Error(`Media '${id}' not found`);
-        return row;
     }
 
     /** Write one locale's content row, creating it when it does not exist. */
@@ -282,13 +259,16 @@ export function createMediaRepository(opts?: { defaultLocale?: string }) {
     }
 
     return {
+        /**
+         * The file row alone, for the reads and writes that never touch
+         * authored content.
+         */
+        files,
         list,
         listContent,
         count,
         get,
-        getExact,
         create,
-        updateFile,
         update,
         delete: del,
         versions: content.versions,

@@ -2,7 +2,8 @@ import type { JsonObject, MediaVersion } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { MediaNotFoundError } from '../../errors';
-import { mediaRepository, resolveMediaLocale } from '../../internal/locale';
+import { resolveMediaLocale } from '../../internal/locale';
+import { createMediaRepository } from '../../repository';
 
 /**
  * Lists the saved versions of one locale of a media item, newest first. Unlike a
@@ -16,8 +17,8 @@ export const listMediaVersions = defineServiceMethod({
     mutates: false,
     async handler(params, ctx): Promise<MediaVersion[]> {
         const locale = resolveMediaLocale(ctx.config, params.locale);
-        const repository = mediaRepository(ctx.config);
-        const current = await repository.getExact(params.id, locale);
+        const repository = createMediaRepository(ctx.config);
+        const current = await repository.get(params.id, locale);
         if (!current) throw new MediaNotFoundError({ id: params.id, locale });
 
         const rows = await repository.versions.list(current.contentId);

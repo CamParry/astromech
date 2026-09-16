@@ -10,10 +10,12 @@ import { mergePatch, projectToSchema } from '@/fields/values';
 import { requireRole } from '@/permissions/roles';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { UserNotFoundError } from '../errors';
-import { resolveUserLocale, userRepository } from '../internal/locale';
+import { resolveUserLocale } from '../internal/locale';
 import { createUserLookups } from '../internal/lookups';
+import { readUser } from '../internal/read-user';
 import { indexUserRelationships } from '../internal/relationships';
 import { toUser } from '../internal/to-user';
+import { createUserRepository } from '../repository';
 import { updateUserSchema } from '../schema';
 
 /**
@@ -37,12 +39,12 @@ export const updateUser = defineServiceMethod({
     async handler(params, ctx): Promise<User> {
         const { id, data } = params;
         const locale = resolveUserLocale(ctx.config, params.locale);
-        const repository = userRepository(ctx.config);
+        const repository = createUserRepository(ctx.config);
 
         // The row this write edits, or — when the locale has none — the
         // default-locale row the new one is copied from.
-        const current = await repository.getExact(id, locale);
-        const base = current ?? (await repository.get(id));
+        const current = await repository.get(id, locale);
+        const base = current ?? (await readUser(repository, id));
         if (!base) throw new UserNotFoundError({ id });
 
         const config = ctx.config;
@@ -93,7 +95,7 @@ export const updateUser = defineServiceMethod({
                 await snapshotVersion(repository.versions, current, ctx.user);
             }
             if (name !== undefined || email !== undefined || role !== undefined) {
-                await repository.updateAccount(id, { name, email, role });
+                await repository.accounts.update(id, { name, email, role });
             }
             if (fields !== undefined) {
                 await repository.update(
@@ -122,7 +124,7 @@ export const updateUser = defineServiceMethod({
             }
         });
 
-        const updated = await repository.get(id, locale);
+        const updated = await readUser(repository, id, locale);
         if (!updated) throw new UserNotFoundError({ id });
         return toUser(updated);
     },

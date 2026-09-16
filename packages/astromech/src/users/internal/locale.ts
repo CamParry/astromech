@@ -1,15 +1,12 @@
 /**
- * The locale a users call addresses, and the repository bound to the configured
- * default content locale. Users opt into translation through
+ * The locale a users call addresses. Users opt into translation through
  * `users: { translatable: true }`; without it a profile's content lives in the
  * default locale alone.
  */
 
-import type { UserRepository } from '../repository';
 import type { ResolvedConfig } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
 import { UserValidationError } from '../errors';
-import { createUserRepository } from '../repository';
 
 /**
  * The locale a call addresses. Non-translatable users live in the default
@@ -26,9 +23,4 @@ export function resolveUserLocale(config: ResolvedConfig, locale?: string): stri
         ]);
     }
     return resolved;
-}
-
-/** The user repository, bound to the configured default content locale. */
-export function userRepository(config: ResolvedConfig): UserRepository {
-    return createUserRepository({ defaultLocale: defaultContentLocale(config) });
 }

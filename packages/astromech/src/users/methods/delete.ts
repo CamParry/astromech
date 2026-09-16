@@ -14,11 +14,11 @@ export const deleteUser = defineServiceMethod({
     access: 'users:delete',
     mutates: true,
     destructive: true,
-    async handler(params): Promise<void> {
+    async handler(params, ctx): Promise<void> {
         // One transaction: the repository removes the user's relationship rows
         // before the user row, and neither may go without the other.
         await transaction(async () => {
-            await createUserRepository().delete(params.id);
+            await createUserRepository(ctx.config).delete(params.id);
         });
     },
 });

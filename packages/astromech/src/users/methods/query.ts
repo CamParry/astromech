@@ -1,7 +1,8 @@
 import type { QueryResult, User } from '@/types/index';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { resolveUserLocale, userRepository } from '../internal/locale';
+import { resolveUserLocale } from '../internal/locale';
 import { toUser } from '../internal/to-user';
+import { createUserRepository } from '../repository';
 import { userQuerySchema } from '../schema';
 
 /**
@@ -16,7 +17,7 @@ export const queryUsers = defineServiceMethod({
     mutates: false,
     async handler(params, ctx): Promise<QueryResult<User>> {
         const locale = resolveUserLocale(ctx.config, params.locale);
-        const repository = userRepository(ctx.config);
+        const repository = createUserRepository(ctx.config);
         const page = params.page ?? 1;
         const limit = params.limit;
 

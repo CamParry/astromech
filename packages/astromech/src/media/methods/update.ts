@@ -10,10 +10,12 @@ import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { MediaNotFoundError } from '../errors';
-import { mediaRepository, resolveMediaLocale } from '../internal/locale';
+import { resolveMediaLocale } from '../internal/locale';
 import { createMediaLookups } from '../internal/lookups';
+import { readMedia } from '../internal/read-media';
 import { indexMediaRelationships } from '../internal/relationships';
 import { toMedia } from '../internal/to-media';
+import { createMediaRepository } from '../repository';
 import { updateMediaSchema } from '../schema';
 
 /** The content columns a version snapshots, so a change to one is versioned. */
@@ -39,12 +41,12 @@ export const updateMedia = defineServiceMethod({
     async handler(params, ctx): Promise<Media> {
         const { id, data } = params;
         const locale = resolveMediaLocale(ctx.config, params.locale);
-        const repository = mediaRepository(ctx.config);
+        const repository = createMediaRepository(ctx.config);
 
         // The row this write edits, or — when the locale has none — the
         // default-locale row the new one is copied from.
-        const current = await repository.getExact(id, locale);
-        const base = current ?? (await repository.get(id));
+        const current = await repository.get(id, locale);
+        const base = current ?? (await readMedia(repository, id));
         if (!base) throw new MediaNotFoundError({ id });
 
         const config = ctx.config;

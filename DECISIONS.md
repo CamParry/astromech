@@ -100,6 +100,16 @@ a dedicated `createTranslation` method, a second write path for the same row, an
 duplicating the entry into a translation group, which `duplicate` no longer does
 (it copies an entry, not a locale).
 
+**A repository answers exact reads; fallback is the service's.** `get` on the
+users and media repositories returns the row asked for, or null. The chain a
+read promises (the asked locale, then the default locale, then for users the
+account row alone) lives in `readUser` and `readMedia`, beside the methods that
+call them. A one-off question about an account goes through the exposed table
+repository (`users.accounts.count({ role: 'admin' })`) rather than a named
+method per question. Rejected: a method per question on the repository, which
+grew `countByRole`, `ids` and `idsByRole` and put read policy behind a name that
+did not say so.
+
 **The word is `globals`.** Payload (`globals: []`), Craft ("Global Sets") and
 Statamic ("Globals") share it for editor-owned, exactly-one, site-wide content.
 Rejected: "single types" (Strapi; two words, and it names the constraint on a

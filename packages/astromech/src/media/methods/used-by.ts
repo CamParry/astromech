@@ -6,7 +6,6 @@
 import type { RelationshipRow } from '@/database/tables';
 import type { MediaUsage, ResolvedConfig } from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { defaultContentLocale } from '@/config/content-locale';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 // Peer domains, read only to name a source row. See the `listMediaUsage` docstring.
 import { getEntryResource } from '@/entries/internal/records';
@@ -28,8 +27,7 @@ export const listMediaUsage = defineServiceMethod({
     mutates: false,
     async handler(params, ctx): Promise<MediaUsage[]> {
         const { id } = params;
-        const defaultLocale = defaultContentLocale(ctx.config);
-        const row = await createMediaRepository({ defaultLocale }).get(id);
+        const row = await createMediaRepository(ctx.config).get(id);
         if (!row) throw new MediaNotFoundError({ id });
 
         // Staged sources count: a pending merge that uses this file is a reason
@@ -65,7 +63,6 @@ async function resolveSourceTitles(
     config: ResolvedConfig,
     rows: readonly RelationshipRow[]
 ): Promise<Map<string, string>> {
-    const defaultLocale = defaultContentLocale(config);
     const titles = new Map<string, string>();
 
     const entryIdsByType = new Map<string, Set<string>>();
@@ -103,13 +100,14 @@ async function resolveSourceTitles(
         }
     }
 
-    const userRepository = createUserRepository({ defaultLocale });
+    // A name or an email is all a title needs, so the account row is enough.
+    const accounts = createUserRepository(config).accounts;
     for (const userId of userIds) {
-        const user = await userRepository.get(userId);
+        const user = await accounts.findOne({ id: userId });
         if (user !== null) titles.set(`user ${userId}`, user.name || user.email);
     }
 
-    const mediaRepository = createMediaRepository({ defaultLocale });
+    const mediaRepository = createMediaRepository(config);
     for (const mediaId of mediaIds) {
         const item = await mediaRepository.get(mediaId);
         if (item !== null) titles.set(`media ${mediaId}`, item.filename);
