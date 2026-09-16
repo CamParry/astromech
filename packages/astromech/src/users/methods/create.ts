@@ -1,15 +1,16 @@
 import type { JsonObject, User } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { defaultContentLocale } from '@/config/content-locale';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { transaction } from '@/database/transaction';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
-import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { requireRole } from '@/permissions/roles';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { syncUserRelationships } from '../internal/relationships';
 import { toUser } from '../internal/to-user';
+import { userIsUnique } from '../internal/unique';
 import { createUserRepository } from '../repository';
 import { createUserSchema } from '../schema';
 
@@ -31,12 +32,10 @@ export const createUser = defineServiceMethod({
             operation: 'create',
             resource: { kind: 'user', record: null },
             user: ctx.user,
-            lookups: fieldLookupsFromRecords({
-                load: async () => (await ctx.users.query({ limit: 'all' })).data,
-                getId: (r) => r.id,
-                getFields: (r) => r.fields as Record<string, unknown>,
-                entryTypes: (relIds) => existingEntryTypes(relIds),
+            isUnique: userIsUnique(createUserRepository(config), {
+                locale: defaultContentLocale(config),
             }),
+            entryTypes: (relIds) => existingEntryTypes(relIds),
             ...(validate ? { validate } : {}),
         });
         // After `parseFields` (its minted item ids are what the traversal

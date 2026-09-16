@@ -253,7 +253,7 @@ const { values, errors } = await safeParseFields(input, definitions, {
     operation: 'create',
     resource: { kind: 'entry', record: null },
     user: ctx.user,
-    lookups: noReads,
+    isUnique: async () => true,
 });
 if (Object.keys(errors).length > 0) return { ok: false, errors };
 ```
@@ -265,10 +265,11 @@ instead: use it when you want to hand the messages back to a caller, as a form
 submission does. Both coerce values and apply defaults as well as check them,
 so the `values` they return are what you store — not the input you passed in.
 
-`lookups` is how the data-backed rules read: `unique` needs to scan existing
-rows, and a relationship's target-type check needs to resolve ids. Supply a
-`lookups` that performs no reads and those checks pass silently, which is the
-right trade for an unauthenticated submission and the wrong one for an import.
+`isUnique` and `entryTypes` are how the data-backed rules read: `unique` needs to
+scan existing rows, and a relationship's target-type check needs to resolve ids.
+An `isUnique` that reads nothing, with `entryTypes` left out, makes both checks
+pass silently, which is the right trade for an unauthenticated submission and
+the wrong one for an import.
 `apps/docs/content/field-validation.md` covers what each rule checks and when.
 
 ### Admin pages

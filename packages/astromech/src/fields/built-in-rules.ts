@@ -190,7 +190,7 @@ async function validateTargetType(
     ids: string[]
 ): Promise<true | string> {
     const target = ctx.field.target;
-    const read = ctx.lookups.entryTypes;
+    const read = ctx.entryTypes;
     if (ctx.field.type !== 'relationship') return true;
     if (typeof target !== 'string' || target === '') return true;
     if (read === undefined || ids.length === 0) return true;

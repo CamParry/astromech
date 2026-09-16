@@ -9,7 +9,7 @@ type CtxOverrides = Partial<{
     validation: ValidationMode;
     resource: { kind: ResourceType; record: unknown };
     user: null;
-    lookups: { isUnique: (field: Field, value: unknown) => Promise<boolean> };
+    isUnique: (field: Field, value: unknown) => Promise<boolean>;
 }>;
 
 function fakeCtx(overrides: CtxOverrides = {}) {
@@ -17,7 +17,7 @@ function fakeCtx(overrides: CtxOverrides = {}) {
         operation: 'create' as const,
         resource: { kind: 'entry' as const, record: {} },
         user: null,
-        lookups: { isUnique: async () => true },
+        isUnique: async () => true,
         ...overrides,
     };
 }
@@ -724,7 +724,7 @@ describe('rule: unique', () => {
         const { errors } = await safeParseFields(
             { slug: 'my-slug' },
             [field({ name: 'slug', type: 'text', validation: [{ unique: true }] })],
-            fakeCtx({ lookups: { isUnique } })
+            fakeCtx({ isUnique })
         );
         expect(errors.slug).toBeUndefined();
         expect(isUnique).toHaveBeenCalledWith(
@@ -738,7 +738,7 @@ describe('rule: unique', () => {
         const { errors } = await safeParseFields(
             { slug: 'taken-slug' },
             [field({ name: 'slug', type: 'text', validation: [{ unique: true }] })],
-            fakeCtx({ lookups: { isUnique } })
+            fakeCtx({ isUnique })
         );
         expect(errors.slug).toEqual(['Already in use']);
         expect(isUnique).toHaveBeenCalledWith(

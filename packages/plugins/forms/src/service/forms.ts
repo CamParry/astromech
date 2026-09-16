@@ -6,7 +6,7 @@
 import type { FormsAfterSubmitPayload, FormsBeforeSubmitPayload } from '../hooks/events';
 import type { SpamProvider } from '../spam/types';
 import type { FormsOptions, SubmissionMeta } from '../types';
-import type { Field, FieldErrors, FieldLookups } from 'astromech';
+import type { Field, FieldErrors } from 'astromech';
 import { defineServiceMethod, z } from 'astromech';
 import { safeParseFields } from 'astromech/fields';
 import { compileFormFields } from '../fields/compile';
@@ -101,7 +101,7 @@ export function buildFormsService(
                         operation: 'create',
                         resource: { kind: 'entry', record: null },
                         user: ctx.user,
-                        lookups: noReads,
+                        isUnique: refuseUniqueCheck,
                     }
                 );
                 // Validation runs BEFORE the spam gate so a legitimate user
@@ -195,17 +195,15 @@ const NOT_ACCEPTING = 'This form is not accepting submissions';
 const TOO_MANY = 'Too many submissions — please try again shortly';
 
 /**
- * `safeParseFields` only reaches this port for DB-backed rules, which the form
+ * `safeParseFields` only reaches this for DB-backed rules, which the form
  * compiler never emits. It throws rather than answering `true` so a compiler
  * change that does emit one fails loudly.
  */
-const noReads: FieldLookups = {
-    isUnique: () => {
-        throw new Error(
-            '[@astromech/forms] a compiled form field emitted a read-backed validation rule, ' +
-                'but forms has no reads port to serve it'
-        );
-    },
+const refuseUniqueCheck = (): Promise<boolean> => {
+    throw new Error(
+        '[@astromech/forms] a compiled form field emitted a read-backed validation rule, ' +
+            'but forms has no reads port to serve it'
+    );
 };
 
 /** A form-level failure, keyed under the reserved non-field key. */

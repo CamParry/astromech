@@ -65,8 +65,8 @@ expressions anywhere.
 ## Also riding this mechanism
 
 - [ ] **Indexed field uniqueness.** `{ unique: true }` resolves to
-      `FieldLookups.isUnique`, which today scans candidate rows in memory
-      (`entries/lookups.ts`). SQLite supports **unique expression indexes**, so
+      the validation context's `isUnique`, which today scans candidate rows in
+      memory (`entries/unique.ts`). SQLite supports **unique expression indexes**, so
       uniqueness is the same declaration with a `UNIQUE` qualifier rather than a
       second bespoke strategy. One deliberate decision to carry over: the
       built-in repository's `list` filters `stagedFor IS NULL`, so staged rows are invisible

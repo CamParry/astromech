@@ -17,7 +17,7 @@ type CtxOverrides = Partial<{
     validate: ResourceValidator;
     resource: { kind: ResourceType; record: unknown };
     user: null;
-    lookups: { isUnique: (field: Field, value: unknown) => Promise<boolean> };
+    isUnique: (field: Field, value: unknown) => Promise<boolean>;
 }>;
 
 function fakeCtx(overrides: CtxOverrides = {}) {
@@ -25,7 +25,7 @@ function fakeCtx(overrides: CtxOverrides = {}) {
         operation: 'create' as const,
         resource: { kind: 'entry' as const, record: {} },
         user: null,
-        lookups: { isUnique: async () => true },
+        isUnique: async () => true,
         ...overrides,
     };
 }

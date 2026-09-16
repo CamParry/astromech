@@ -6,27 +6,24 @@
  */
 
 import type { GlobalRow, GlobalsRepository } from '../repository/globals-table';
-import type { Global, JsonObject, ResolvedGlobal, User } from '@/types/index';
+import type { Field, Global, JsonObject, ResolvedGlobal, User } from '@/types/index';
 import { inheritSharedFields } from '@/content/translatable';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { entryValidationMode } from '@/entries/validation-mode';
-import { fieldLookupsFromRecords } from '@/fields/field-lookups';
 import { flattenEntryFields } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
+import { uniqueAmongRecords } from '@/fields/unique-among';
 import { mergePatch, projectToSchema } from '@/fields/values';
 
 /**
- * Field lookups for a global. A global has exactly one row per locale, so
- * `isUnique` has nothing to scan against and always answers true; `entryTypes`
- * is still supplied, since a relationship field's target-type check reads real
- * rows.
+ * The uniqueness check for a global. A global has exactly one row per locale, so
+ * there is nothing to scan against and it always answers true.
  */
-export function globalLookups(): ReturnType<typeof fieldLookupsFromRecords> {
-    return fieldLookupsFromRecords<never>({
+export function globalIsUnique(): (field: Field, value: unknown) => Promise<boolean> {
+    return uniqueAmongRecords<never>({
         load: async () => [],
         getId: () => undefined,
         getFields: () => ({}),
-        entryTypes: (ids) => existingEntryTypes(ids),
     });
 }
 
@@ -81,7 +78,8 @@ export async function toStoredFields(input: {
         }),
         resource: { kind: 'global', record },
         user: input.user,
-        lookups: globalLookups(),
+        isUnique: globalIsUnique(),
+        entryTypes: (ids) => existingEntryTypes(ids),
         ...(current ? { coerceOnly: new Set(patchedFieldNames(patch)) } : {}),
         ...(global.validate ? { validate: global.validate } : {}),
     });

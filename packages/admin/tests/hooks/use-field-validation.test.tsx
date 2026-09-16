@@ -59,7 +59,7 @@ function mountValidation(
 
 /**
  * Settle every in-flight validation run. A run is promise-only (the browser's
- * lookups resolve at once and nothing waits on a timer), so one flush drains it.
+ * checks resolve at once and nothing waits on a timer), so one flush drains it.
  */
 async function flush(): Promise<void> {
     await act(async () => undefined);

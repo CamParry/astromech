@@ -16,10 +16,11 @@ import type {
     User,
 } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
+import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { flattenEntryFields } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
-import { createEntryLookups } from '../lookups';
+import { entryIsUnique } from '../unique';
 import { entryValidationMode } from '../validation-mode';
 import { pruneDanglingRelations } from './dangling-relations';
 import { inheritSharedFields } from './translatable';
@@ -83,11 +84,12 @@ export async function toStoredFields(input: StoredFieldsInput): Promise<JsonObje
         }),
         resource: { kind: 'entry', record: write.record },
         user: input.user,
-        lookups: createEntryLookups(repository, {
+        isUnique: entryIsUnique(repository, {
             type: write.type,
             locale: write.locale,
             ...(write.excludeId ? { excludeId: write.excludeId } : {}),
         }),
+        entryTypes: (ids) => existingEntryTypes(ids),
         ...(write.coerceOnly ? { coerceOnly: write.coerceOnly } : {}),
         ...(validate ? { validate } : {}),
     });

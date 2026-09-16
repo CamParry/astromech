@@ -3,6 +3,7 @@ import type { JsonObject, Media } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
+import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { transaction } from '@/database/transaction';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
 import { flattenFieldNodes } from '@/fields/flatten';
@@ -11,10 +12,10 @@ import { mergePatch, projectToSchema } from '@/fields/values';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { MediaNotFoundError } from '../errors';
 import { resolveMediaLocale } from '../internal/locale';
-import { createMediaLookups } from '../internal/lookups';
 import { readMedia } from '../internal/read-media';
 import { syncMediaRelationships } from '../internal/relationships';
 import { toMedia } from '../internal/to-media';
+import { mediaIsUnique } from '../internal/unique';
 import { createMediaRepository } from '../repository';
 import { updateMediaSchema } from '../schema';
 
@@ -67,7 +68,8 @@ export const updateMedia = defineServiceMethod({
                 operation: 'update',
                 resource: { kind: 'media', record: toMedia(config, base) },
                 user: ctx.user,
-                lookups: createMediaLookups(repository, { locale, excludeId: id }),
+                isUnique: mediaIsUnique(repository, { locale, excludeId: id }),
+                entryTypes: (ids) => existingEntryTypes(ids),
                 coerceOnly: new Set(patchedNames),
                 ...(config.media.validate ? { validate: config.media.validate } : {}),
             });

@@ -77,7 +77,7 @@ function ctx(value: unknown): FieldValidationContext {
         validation: 'complete',
         resource: { kind: 'entry', record: null },
         user: null,
-        lookups: { isUnique: async () => true },
+        isUnique: async () => true,
     };
 }
 

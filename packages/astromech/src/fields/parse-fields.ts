@@ -131,7 +131,7 @@ async function runRule(
     }
 
     if ('unique' in rule) {
-        const isUniq = await ctx.lookups.isUnique(ctx.field, value);
+        const isUniq = await ctx.isUnique(ctx.field, value);
         if (!isUniq) return 'Already in use';
         return null;
     }
@@ -353,7 +353,8 @@ async function processScope(
                 validation: ctx.validation,
                 resource: ctx.resource,
                 user: ctx.user,
-                lookups: ctx.lookups,
+                isUnique: ctx.isUnique,
+                ...(ctx.entryTypes !== undefined ? { entryTypes: ctx.entryTypes } : {}),
             };
             ({ error, warning } = await checkCorrectness(
                 field,
@@ -443,7 +444,8 @@ export async function safeParseFields(
             validation,
             resource: ctx.resource,
             user: ctx.user,
-            lookups: ctx.lookups,
+            isUnique: ctx.isUnique,
+            ...(ctx.entryTypes !== undefined ? { entryTypes: ctx.entryTypes } : {}),
         });
         if (typeof reported === 'string') {
             if (reported !== '') form.push(reported);

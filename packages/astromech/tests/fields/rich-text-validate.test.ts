@@ -30,7 +30,7 @@ function ctx(value: unknown, field: Field): FieldValidationContext {
         validation: 'complete',
         resource: { kind: 'entry', record: null },
         user: null,
-        lookups: { isUnique: async () => true },
+        isUnique: async () => true,
     };
 }
 
@@ -39,7 +39,7 @@ function fakeCtx() {
         operation: 'create' as const,
         resource: { kind: 'entry' as const, record: null },
         user: null,
-        lookups: { isUnique: async () => true },
+        isUnique: async () => true,
     };
 }
 

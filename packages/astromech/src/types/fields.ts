@@ -87,7 +87,7 @@ export type ValidationSeverity = 'error' | 'warning';
  * `custom`, which is an imperative server-only validator. `{ required: true }`
  * is intentionally absent: required-ness is the `Field.required` flag,
  * declared in exactly one place. `{ unique: true }` resolves to
- * `ctx.lookups.isUnique(field, value)` in the pipeline.
+ * `ctx.isUnique(field, value)` in the pipeline.
  */
 export type ValidationRule = (
     | { minLength: number }
@@ -129,24 +129,6 @@ export type FieldErrors = Record<string, string[]>;
 export type ValidationMode = 'partial' | 'complete';
 
 /**
- * Lookups handed to a field validator for async checks (uniqueness,
- * references). Exposes the sanctioned reads for the field's resource
- * (built on the entry repository for entries; per-domain reads elsewhere). The
- * common uniqueness case is the one-line `isUnique` helper.
- */
-export type FieldLookups = {
-    /** True when no other record of the same resource holds `value` for `field`. */
-    isUnique: (field: Field, value: unknown) => Promise<boolean>;
-    /**
-     * The entry type each id resolves to, for the relationship target-type
-     * check. Ids with no entry row are simply absent. Optional: a caller with no
-     * entry access (the admin, a plugin's own reads) omits it and the check is
-     * skipped rather than guessed.
-     */
-    entryTypes?: (ids: string[]) => Promise<Map<string, string>>;
-};
-
-/**
  * Context passed to a `FieldValidator`. Resource-generic — works for entries, media,
  * users, and settings, not just entries. Cross-field rules read siblings off
  * `values`; the current record is available raw on `resource.record`.
@@ -174,8 +156,15 @@ export type FieldValidationContext = {
     validation: ValidationMode;
     resource: { kind: ResourceType; record: unknown };
     user: User | null;
-    /** Lookups for async checks. */
-    lookups: FieldLookups;
+    /** True when no other record of the same resource holds `value` for `field`. */
+    isUnique: (field: Field, value: unknown) => Promise<boolean>;
+    /**
+     * The entry type each id resolves to, for the relationship target-type
+     * check. Ids with no entry row are simply absent. Optional: a caller with no
+     * entry access (the admin, a plugin's own reads) omits it and the check is
+     * skipped rather than guessed.
+     */
+    entryTypes?: (ids: string[]) => Promise<Map<string, string>>;
 };
 
 /**
@@ -210,7 +199,15 @@ export type ResourceValidationContext = {
     validation: ValidationMode;
     resource: { kind: ResourceType; record: unknown };
     user: User | null;
-    lookups: FieldLookups;
+    /** True when no other record of the same resource holds `value` for `field`. */
+    isUnique: (field: Field, value: unknown) => Promise<boolean>;
+    /**
+     * The entry type each id resolves to, for the relationship target-type
+     * check. Ids with no entry row are simply absent. Optional: a caller with no
+     * entry access (the admin, a plugin's own reads) omits it and the check is
+     * skipped rather than guessed.
+     */
+    entryTypes?: (ids: string[]) => Promise<Map<string, string>>;
 };
 
 /**

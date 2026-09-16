@@ -188,7 +188,7 @@ fields.text('sku', {
         {
             custom: async (ctx) => {
                 if (typeof ctx.value !== 'string') return true;
-                const taken = !(await ctx.reads.isUnique(ctx.field, ctx.value));
+                const taken = !(await ctx.isUnique(ctx.field, ctx.value));
                 return taken ? 'That SKU is already in use' : true;
             },
         },
@@ -199,7 +199,7 @@ fields.text('sku', {
 The context carries `value`, `values` (the field's siblings, for cross-field
 rules), `field`, `path`, `operation` (`'create'` or `'update'`), `stage`
 (`'save'` or `'publish'`, so a rule can relax itself on a draft), `host`,
-`user`, and `reads` for database lookups.
+`user`, and `isUnique` for the uniqueness check.
 
 `values` is scoped to the field's own container, not the whole record — a rule
 on a field inside a repeater item sees that item's siblings.

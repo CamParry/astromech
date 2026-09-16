@@ -4,7 +4,7 @@
  * on the server; data-dependent checks are skipped.
  */
 
-import type { Field, FieldErrors, FieldLookups, ValidationMode } from 'astromech';
+import type { Field, FieldErrors, ValidationMode } from 'astromech';
 import { safeParseFields } from 'astromech/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -13,7 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
  * a relationship's target-type check need a DB read the browser cannot make.
  * None is surfaced as "pending" — the server re-runs them all on submit.
  */
-const CLIENT_LOOKUPS: FieldLookups = { isUnique: () => Promise.resolve(true) };
+const CLIENT_IS_UNIQUE = (): Promise<boolean> => Promise.resolve(true);
 
 export type FieldValidationHandle = {
     /** What the UI should render: server errors, overlaid by revealed client ones. */
@@ -94,7 +94,7 @@ export function useFieldValidation({
                 validation,
                 resource: { kind: 'entry', record: null },
                 user: null,
-                lookups: CLIENT_LOOKUPS,
+                isUnique: CLIENT_IS_UNIQUE,
                 collectWarnings: true,
             }
         );

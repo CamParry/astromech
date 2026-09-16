@@ -36,7 +36,7 @@ function ctx(value: unknown): FieldValidationContext {
         validation: 'complete',
         resource: { kind: 'entry', record: null },
         user: null,
-        lookups: { isUnique: async () => true },
+        isUnique: async () => true,
     };
 }
 
@@ -45,7 +45,7 @@ function fakeCtx() {
         operation: 'create' as const,
         resource: { kind: 'entry' as const, record: null },
         user: null,
-        lookups: { isUnique: async () => true },
+        isUnique: async () => true,
     };
 }
 
@@ -456,18 +456,19 @@ describe('validateReference', () => {
     // The type check runs only where `entryTypes` is supplied. Existence never
     // decides a reference: a dangling id is pruned by the write pipeline.
     describe('target type', () => {
-        const entryTypes = (rows: Record<string, string>) => ({
-            isUnique: async () => true,
-            entryTypes: async (ids: string[]) =>
-                new Map(ids.filter((id) => id in rows).map((id) => [id, rows[id]!])),
-        });
+        const typesOf =
+            (rows: Record<string, string>) =>
+            async (ids: string[]): Promise<Map<string, string>> =>
+                new Map(
+                    ids.filter((id) => id in rows).map((id) => [id, rows[id]!] as const)
+                );
 
         it('accepts an id of the declared target type', async () => {
             expect(
                 await validateReference({
                     ...ctx('abc'),
                     field: single,
-                    lookups: entryTypes({ abc: 'post' }),
+                    entryTypes: typesOf({ abc: 'post' }),
                 })
             ).toBe(true);
         });
@@ -477,7 +478,7 @@ describe('validateReference', () => {
                 await validateReference({
                     ...ctx('abc'),
                     field: single,
-                    lookups: entryTypes({ abc: 'author' }),
+                    entryTypes: typesOf({ abc: 'author' }),
                 })
             ).toBe('"f" expects a post, but "abc" is a author');
         });
@@ -487,7 +488,7 @@ describe('validateReference', () => {
                 await validateReference({
                     ...ctx(['a', 'b']),
                     field: many,
-                    lookups: entryTypes({ a: 'post', b: 'author' }),
+                    entryTypes: typesOf({ a: 'post', b: 'author' }),
                 })
             ).toBe('"f" expects a post, but "b" is a author');
         });
@@ -497,17 +498,16 @@ describe('validateReference', () => {
                 await validateReference({
                     ...ctx('gone'),
                     field: single,
-                    lookups: entryTypes({}),
+                    entryTypes: typesOf({}),
                 })
             ).toBe(true);
         });
 
-        it('skips the check when reads supply no entryTypes', async () => {
+        it('skips the check when the caller supplies no entryTypes', async () => {
             expect(
                 await validateReference({
                     ...ctx('abc'),
                     field: single,
-                    lookups: { isUnique: async () => true },
                 })
             ).toBe(true);
         });
@@ -517,7 +517,7 @@ describe('validateReference', () => {
                 await validateReference({
                     ...ctx('abc'),
                     field: { name: 'f', type: 'media' },
-                    lookups: entryTypes({ abc: 'post' }),
+                    entryTypes: typesOf({ abc: 'post' }),
                 })
             ).toBe(true);
         });
@@ -527,7 +527,7 @@ describe('validateReference', () => {
                 await validateReference({
                     ...ctx('abc'),
                     field: { name: 'f', type: 'relationship' },
-                    lookups: entryTypes({ abc: 'post' }),
+                    entryTypes: typesOf({ abc: 'post' }),
                 })
             ).toBe(true);
         });

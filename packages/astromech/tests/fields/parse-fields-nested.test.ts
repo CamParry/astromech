@@ -19,7 +19,7 @@ function fakeCtx(operation: 'create' | 'update' = 'create', validation?: Validat
         ...(validation !== undefined ? { validation } : {}),
         resource: { kind: 'entry' as const, record: {} },
         user: null,
-        lookups: { isUnique: async () => true },
+        isUnique: async () => true,
     };
 }
 

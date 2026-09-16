@@ -2,6 +2,7 @@ import type { JsonObject, User } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
+import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { transaction } from '@/database/transaction';
 import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
 import { flattenFieldNodes } from '@/fields/flatten';
@@ -11,10 +12,10 @@ import { requireRole } from '@/permissions/roles';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { UserNotFoundError } from '../errors';
 import { resolveUserLocale } from '../internal/locale';
-import { createUserLookups } from '../internal/lookups';
 import { readUser } from '../internal/read-user';
 import { syncUserRelationships } from '../internal/relationships';
 import { toUser } from '../internal/to-user';
+import { userIsUnique } from '../internal/unique';
 import { createUserRepository } from '../repository';
 import { updateUserSchema } from '../schema';
 
@@ -69,7 +70,8 @@ export const updateUser = defineServiceMethod({
                 operation: 'update',
                 resource: { kind: 'user', record: toUser(base) },
                 user: ctx.user,
-                lookups: createUserLookups(repository, { locale, excludeId: id }),
+                isUnique: userIsUnique(repository, { locale, excludeId: id }),
+                entryTypes: (ids) => existingEntryTypes(ids),
                 coerceOnly: new Set(patchedNames),
                 ...(config.users.validate ? { validate: config.users.validate } : {}),
             });
