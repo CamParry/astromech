@@ -34,7 +34,7 @@ unknown id')`, `it('answers 405 for POST')`. Not `it('should reject …')`, and
 ## Mocks
 
 - **Mock the leaf module, not a barrel**, and only at a real boundary: the
-  session, the AI SDK, the network. `vi.mock('@/users/session')` is the model.
+  session, the AI SDK, the network. `vi.mock('@/auth/session')` is the model.
 - **A mock of a module other files import, `vi.resetModules()`, a stubbed
   global, or a write to `globalThis.__astromech` makes the file isolated.** Core
   and the admin each keep their own list, described in their `AGENTS.md`. One

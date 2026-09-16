@@ -10,9 +10,9 @@ import { createTestDb, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService, usersService } from '@/app-context/services';
+import { getAuth } from '@/auth/better-auth';
 import { transaction } from '@/database/transaction';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
-import { getAuth } from '@/users/auth';
 
 const EMAIL = 'reset@test.dev';
 

@@ -21,6 +21,11 @@ import type { MigrationProvider } from 'kysely/migration';
 import { migrateToLatest } from '@astromech/schema-engine';
 import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import {
+    claimFirstAdmin,
+    FIRST_ADMIN_CLAIM_LEASE_MS,
+    releaseFirstAdminClaim,
+} from '@/auth/first-admin-claim';
 import { d1 } from '@/database/drivers/d1';
 import { assertForeignKeysEnforced } from '@/database/migrations';
 import { clearEnvSource } from '@/env';
@@ -29,11 +34,6 @@ import {
     resetBindings,
     resolveBinding,
 } from '@/integrations/cloudflare/bindings';
-import {
-    claimFirstAdmin,
-    FIRST_ADMIN_CLAIM_LEASE_MS,
-    releaseFirstAdminClaim,
-} from '@/users/internal/first-admin-claim';
 
 /** Test-only schema; deliberately unrelated to the app's `DB` type. */
 type TestSchema = {

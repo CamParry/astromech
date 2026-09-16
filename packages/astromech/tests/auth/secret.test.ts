@@ -6,8 +6,8 @@
 
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { assertAuthSecret, getAuth } from '@/auth/better-auth';
 import { clearEnvSource, setEnvSource } from '@/env';
-import { assertAuthSecret, getAuth } from '@/users/auth';
 
 const SECRET = 'auth-secret-test-0123456789abcdef0123';
 

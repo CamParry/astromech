@@ -25,7 +25,7 @@ import {
 } from '@/database/table-snapshot';
 import { cronTable, relationshipsTable } from '@/database/tables';
 import { entriesTable, entryContentTable } from '@/entries/tables';
-import { rolesTable } from '@/users/tables';
+import { rolesTable } from '@/permissions/tables';
 
 describe('toSnakeCase', () => {
     it('converts camelCase keys to snake_case identifiers', () => {

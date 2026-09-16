@@ -62,6 +62,12 @@ export default defineConfig({
                     branches: 56,
                     statements: 89,
                 },
+                'src/auth/**': {
+                    lines: 97,
+                    functions: 99,
+                    branches: 89,
+                    statements: 95,
+                },
                 'src/codegen/**': {
                     lines: 95,
                     functions: 97,
@@ -197,10 +203,10 @@ export default defineConfig({
                     statements: 99,
                 },
                 'src/users/**': {
-                    lines: 92,
-                    functions: 96,
-                    branches: 84,
-                    statements: 91,
+                    lines: 98,
+                    functions: 97,
+                    branches: 88,
+                    statements: 96,
                 },
                 'src/utilities/**': {
                     lines: 60,

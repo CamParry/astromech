@@ -1,23 +1,17 @@
 import type { Table, TableInsert, TableSelect } from '@/database/define-table';
+// `export { x } from '...'` (below) re-exports without binding `x` locally —
+// these value imports are ONLY so `CORE_TABLES` (bottom of file) can
+// reference the tables; the `export {...} from` blocks stay the public
+// re-export surface.
+import { accountsTable, sessionsTable, verificationsTable } from '@/auth/tables';
 import { defineTable } from '@/database/define-table';
 import { entriesTable, entryContentTable, entryVersionsTable } from '@/entries/tables';
 import { globalContentTable, globalsTable, globalVersionsTable } from '@/globals/tables';
 import { mediaContentTable, mediaTable, mediaVersionsTable } from '@/media/tables';
 import { notificationsTable } from '@/notifications/tables';
+import { rolesTable } from '@/permissions/tables';
 import { settingsTable } from '@/settings/tables';
-// `export { x } from '...'` (below) re-exports without binding `x` locally —
-// these value imports are ONLY so `CORE_TABLES` (bottom of file) can
-// reference the tables; the `export {...} from` blocks stay the public
-// re-export surface.
-import {
-    accountsTable,
-    rolesTable,
-    sessionsTable,
-    userContentTable,
-    usersTable,
-    userVersionsTable,
-    verificationsTable,
-} from '@/users/tables';
+import { userContentTable, usersTable, userVersionsTable } from '@/users/tables';
 
 /**
  * Aggregate schema surface for Astromech: re-exports every table's
@@ -25,16 +19,14 @@ import {
  * and `verifications` included.
  */
 
+export { rolesTable, type RoleRow, type NewRoleRow } from '@/permissions/tables';
+
+export { sessionsTable, accountsTable, verificationsTable } from '@/auth/tables';
+
 export {
-    rolesTable,
     usersTable,
-    sessionsTable,
-    accountsTable,
-    verificationsTable,
     userContentTable,
     userVersionsTable,
-    type RoleRow,
-    type NewRoleRow,
     type UserTableRow,
     type NewUserTableRow,
     type UserContentRow,

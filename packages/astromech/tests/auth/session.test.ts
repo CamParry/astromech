@@ -11,9 +11,9 @@ import { signInTestUser } from '@tests/auth';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { usersService } from '@/app-context/services';
+import { getAuth } from '@/auth/better-auth';
+import { getSession } from '@/auth/session';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
-import { getAuth } from '@/users/auth';
-import { getSession } from '@/users/session';
 import { log } from '@/utilities/log';
 
 let db: Kysely<DB>;

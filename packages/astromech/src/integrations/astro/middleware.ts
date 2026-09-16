@@ -7,8 +7,8 @@
 import type { MiddlewareHandler } from 'astro';
 import { rawConfig } from 'virtual:astromech/config';
 import { createAstromech } from '@/astromech';
+import { assertAuthSecret } from '@/auth/better-auth';
 import { runWithRequest } from '@/request-context/request-context';
-import { assertAuthSecret } from '@/users/auth';
 
 export const onRequest: MiddlewareHandler = async (context, next) => {
     // Before the application is created, so a site missing its secret serves

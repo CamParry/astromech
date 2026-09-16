@@ -7,6 +7,7 @@
 import type { BuiltInRoleSlug } from '@/permissions/roles';
 import type { Auth, BetterAuthOptions } from 'better-auth';
 import { APIError, betterAuth, getCurrentAdapter } from 'better-auth';
+import { claimFirstAdmin, releaseFirstAdminClaim } from '@/auth/first-admin-claim';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { getConfig } from '@/config/registry';
 import { getDatabaseDriverOrThrow } from '@/database/driver-registry';
@@ -16,10 +17,6 @@ import { resolveEnv, resolveNodeEnv } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { createRegistry } from '@/registry';
-import {
-    claimFirstAdmin,
-    releaseFirstAdminClaim,
-} from '@/users/internal/first-admin-claim';
 import { log } from '@/utilities/log';
 
 const authRegistry = createRegistry<Auth<BetterAuthOptions>>('auth', {

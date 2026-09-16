@@ -16,10 +16,10 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
+import { getSession } from '@/auth/session';
 import { noInput } from '@/services/define-service-method';
-import { getSession } from '@/users/session';
 
-vi.mock('@/users/session', () => ({ getSession: vi.fn() }));
+vi.mock('@/auth/session', () => ({ getSession: vi.fn() }));
 
 const mockGetSession = vi.mocked(getSession);
 

@@ -1,10 +1,7 @@
 /**
- * The users tables. `users` is better-auth's account row — it writes it with
- * its own queries, so the descriptor describes its on-disk format
- * rather than defining it. `sessions`, `accounts` and `verifications` are
- * better-auth's in the same way. `user_content` and `user_versions` are ours: one
- * row per locale of what the site's own fields say about a user, and snapshots of
- * one of those rows.
+ * The users tables. `users` is better-auth's account row, so the descriptor
+ * describes its on-disk format rather than defining it. `user_content` holds one
+ * row per locale of what the site's own fields say, and `user_versions` snapshots one.
  */
 
 import type { TableInsert, TableSelect } from '@/database/define-table';
@@ -22,47 +19,6 @@ export const usersTable = defineTable('users', ({ col }) => ({
     role: col.text({ notNull: true }),
     createdAt: col.timestamp({ notNull: true, defaultNow: true }),
     updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
-}));
-
-/**
- * better-auth's sessions, accounts and verifications. Like `users`, these
- * describe what its adapter writes: on SQLite it stores every timestamp as
- * ISO-8601 TEXT, and it mints its own ids.
- */
-export const sessionsTable = defineTable('sessions', ({ col }) => ({
-    id: col.id({ format: 'uuid' }),
-    expiresAt: col.timestamp({ notNull: true }),
-    token: col.text({ notNull: true, unique: true }),
-    createdAt: col.timestamp({ notNull: true }),
-    updatedAt: col.timestamp({ notNull: true }),
-    ipAddress: col.text(),
-    userAgent: col.text(),
-    userId: col.reference(() => usersTable, { notNull: true, onDelete: 'cascade' }),
-}));
-
-export const accountsTable = defineTable('accounts', ({ col }) => ({
-    id: col.id({ format: 'uuid' }),
-    accountId: col.text({ notNull: true }),
-    providerId: col.text({ notNull: true }),
-    userId: col.reference(() => usersTable, { notNull: true, onDelete: 'cascade' }),
-    accessToken: col.text(),
-    refreshToken: col.text(),
-    idToken: col.text(),
-    accessTokenExpiresAt: col.timestamp(),
-    refreshTokenExpiresAt: col.timestamp(),
-    scope: col.text(),
-    password: col.text(),
-    createdAt: col.timestamp({ notNull: true }),
-    updatedAt: col.timestamp({ notNull: true }),
-}));
-
-export const verificationsTable = defineTable('verifications', ({ col }) => ({
-    id: col.id({ format: 'uuid' }),
-    identifier: col.text({ notNull: true }),
-    value: col.text({ notNull: true }),
-    expiresAt: col.timestamp({ notNull: true }),
-    createdAt: col.timestamp(),
-    updatedAt: col.timestamp(),
 }));
 
 export const userContentTable = defineTable(
@@ -112,17 +68,3 @@ export type NewUserContentRow = TableInsert<typeof userContentTable>;
 
 export type UserVersionRow = TableSelect<typeof userVersionsTable>;
 export type NewUserVersionRow = TableInsert<typeof userVersionsTable>;
-
-// roles table (defineTable) — RBAC is ours, not a better-auth model
-
-export const rolesTable = defineTable('roles', ({ col }) => ({
-    slug: col.text({ primaryKey: true }),
-    name: col.text({ notNull: true }),
-    permissions: col.json<string[]>({ notNull: true }),
-    isBuiltIn: col.boolean({ notNull: true, default: false }),
-    createdAt: col.timestamp({ notNull: true, defaultNow: true }),
-    updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
-}));
-
-export type RoleRow = TableSelect<typeof rolesTable>;
-export type NewRoleRow = TableInsert<typeof rolesTable>;

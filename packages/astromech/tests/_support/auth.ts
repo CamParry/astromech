@@ -6,7 +6,7 @@
 import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
 import { createTestUser } from '@tests/harness';
-import { getAuth } from '@/users/auth';
+import { getAuth } from '@/auth/better-auth';
 
 const TEST_PASSWORD = 'password123';
 

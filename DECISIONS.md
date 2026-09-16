@@ -428,6 +428,21 @@ services directly, tolerating the entries/runtime mutual reference because it
 resolves at call time. Rejected: a shared `AstromechClient` contract, and
 dependency-inversion ports between the runtime and the modules.
 
+**Authentication is its own module.** `auth/` holds the better-auth wiring,
+session resolution, the first-admin claim the closed sign-up takes, and
+better-auth's `sessions`, `accounts` and `verifications` tables. It sits beside
+the content modules and imports `users` to read the row a session names; `users`
+never imports `auth`, so the dependency runs one way. The peers split it the same
+way: Payload keeps an `auth` directory in its core package, Ghost keeps one under
+its server services with `session` nested inside it, and Keystone ships auth as a
+package of its own, `@keystone-6/auth`. The `roles` table moved to `permissions/`
+in the same change, because RBAC is ours rather than a better-auth model.
+Rejected: keeping auth inside `users/`, which is what Strapi's admin package does
+with `auth.ts` and `user.ts` as siblings in one services folder — a session, an
+account and a verification are not users, and the two files that read them were
+the only ones in a content module needing an exception to the rule against
+reading the config registry and the request store ambiently.
+
 **Nothing enforces the layer model.** dependency-cruiser cost more than it
 caught: three ports guarding no real cycle, eight exemptions and hand-written
 rules, and `no-circular` excluding the modules. The layer list stays as

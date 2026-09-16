@@ -9,15 +9,15 @@ import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { usersService } from '@/app-context/services';
-import { getDefaultContentLocale } from '@/config/content-locale';
-import { decodeWith } from '@/database/codec';
-import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
-import { getAuth } from '@/users/auth';
+import { getAuth } from '@/auth/better-auth';
 import {
     claimFirstAdmin,
     FIRST_ADMIN_CLAIM_KEY,
     FIRST_ADMIN_CLAIM_LEASE_MS,
-} from '@/users/internal/first-admin-claim';
+} from '@/auth/first-admin-claim';
+import { getDefaultContentLocale } from '@/config/content-locale';
+import { decodeWith } from '@/database/codec';
+import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { createUserRepository } from '@/users/repository';
 import { usersTable } from '@/users/tables';
 

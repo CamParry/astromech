@@ -11,17 +11,17 @@ import type { Kysely, Updateable } from 'kysely';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getSession } from '@/auth/session';
 import { registerCronJob } from '@/cron/registry';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/tables';
 import { globals } from '@/registry';
 import { runWithRequest } from '@/request-context/request-context';
 import { cronRouter } from '@/transport/http/routes/cron';
-import { getSession } from '@/users/session';
 
 // Mock getSession so tests control the session branch without a real
 // Better Auth stack.
-vi.mock('@/users/session', () => ({
+vi.mock('@/auth/session', () => ({
     getSession: vi.fn(),
 }));
 

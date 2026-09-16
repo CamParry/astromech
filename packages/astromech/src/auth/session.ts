@@ -1,17 +1,17 @@
 /**
- * Session resolution: the single place a Better Auth session is turned into
- * an Astromech identity (full user row + resolved role). Lives in the
- * `users` domain; `request-context/` is its one caller.
+ * Session resolution: the single place a Better Auth session is turned into an
+ * Astromech identity (full user row + resolved role). It reads the users
+ * repository; `users` never imports `auth`. `request-context/` is its one caller.
  */
 
 import type { Role, User } from '@/types/index';
+import { getAuth } from '@/auth/better-auth';
 import { getConfig } from '@/config/registry';
 import { resolveRole } from '@/permissions/roles';
+import { readUser } from '@/users/internal/read-user';
+import { toUser } from '@/users/internal/to-user';
+import { createUserRepository } from '@/users/repository';
 import { log } from '@/utilities/log';
-import { getAuth } from './auth';
-import { readUser } from './internal/read-user';
-import { toUser } from './internal/to-user';
-import { createUserRepository } from './repository';
 
 /** What Better Auth's `getSession` resolves to — null when there is no session. */
 type GetSessionResult = Awaited<

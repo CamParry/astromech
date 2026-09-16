@@ -85,7 +85,7 @@ export async function getCurrentRole(): Promise<Role | null> {
  * of which resolve when this module is loaded at Astro's config time.
  */
 async function resolveIdentity(ctx: RequestContext): Promise<void> {
-    const { getSession } = await import('@/users/session');
+    const { getSession } = await import('@/auth/session');
     const resolved = await getSession(ctx.request.headers);
     ctx.user = resolved?.user ?? null;
     ctx.role = resolved?.role ?? null;

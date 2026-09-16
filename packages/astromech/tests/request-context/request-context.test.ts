@@ -10,6 +10,7 @@
 import type { User } from '@/types/index';
 import { adminRole } from '@tests/fixtures';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getSession } from '@/auth/session';
 import {
     getCurrentRole,
     getCurrentUser,
@@ -17,9 +18,8 @@ import {
     runWithContext,
     runWithRequest,
 } from '@/request-context/request-context';
-import { getSession } from '@/users/session';
 
-vi.mock('@/users/session', () => ({ getSession: vi.fn() }));
+vi.mock('@/auth/session', () => ({ getSession: vi.fn() }));
 
 const mockGetSession = vi.mocked(getSession);
 

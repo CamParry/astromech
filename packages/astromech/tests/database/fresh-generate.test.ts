@@ -18,12 +18,12 @@ import { setupTestConfig } from '@tests/harness';
 import { getMigrations } from 'better-auth/db/migration';
 import { CamelCasePlugin, Kysely, sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { getAuth } from '@/auth/better-auth';
 import { loadAppMigrations } from '@/database/app-migrations';
 import { setDatabaseDriver } from '@/database/driver-registry';
 import { generateMigrations } from '@/database/generate';
 import { setDb } from '@/database/registry';
 import { CORE_TABLES } from '@/database/tables';
-import { getAuth } from '@/users/auth';
 
 let siteDir: string;
 let client: Client;

@@ -8,7 +8,7 @@
 
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { getAuth } from '@/users/auth';
+import { getAuth } from '@/auth/better-auth';
 
 // `getAuth()` builds once and memoises into the registry slot, so the slot is
 // cleared and the config put in place before any test in this file asks for it.

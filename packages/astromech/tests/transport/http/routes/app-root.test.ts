@@ -13,10 +13,10 @@ import { adminRole } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usersService } from '@/app-context/services';
+import { getSession } from '@/auth/session';
 import { createHttpApp } from '@/transport/http/app';
-import { getSession } from '@/users/session';
 
-vi.mock('@/users/session', () => ({ getSession: vi.fn() }));
+vi.mock('@/auth/session', () => ({ getSession: vi.fn() }));
 
 const mockGetSession = vi.mocked(getSession);
 
