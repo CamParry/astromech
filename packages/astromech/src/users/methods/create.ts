@@ -8,7 +8,7 @@ import { flattenFieldNodes } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { requireRole } from '@/permissions/roles';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { indexUserRelationships } from '../internal/relationships';
+import { syncUserRelationships } from '../internal/relationships';
 import { toUser } from '../internal/to-user';
 import { createUserRepository } from '../repository';
 import { createUserSchema } from '../schema';
@@ -60,7 +60,7 @@ export const createUser = defineServiceMethod({
                 },
                 { fields, createdBy: userId, updatedBy: userId }
             );
-            await indexUserRelationships(ctx.config, row.id);
+            await syncUserRelationships(ctx.config, row.id);
             return row;
         });
         return toUser(created);

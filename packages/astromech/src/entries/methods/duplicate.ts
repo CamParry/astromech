@@ -11,7 +11,7 @@ import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
 import { asEntry, getEntryOfType, getEntryResource } from '../internal/records';
-import { indexEntryRelationships } from '../internal/relationships';
+import { syncEntryRelationships } from '../internal/relationships';
 import { getEntryRepository } from '../repository/registry';
 import { duplicateOverridesSchema } from '../schema';
 
@@ -72,7 +72,7 @@ export const duplicateEntry = defineServiceMethod({
             }
 
             // Once, at the end: the index is per entry and reads every locale back.
-            await indexEntryRelationships(ctx.config, first, first.fields, type);
+            await syncEntryRelationships(ctx.config, first, first.fields, type);
             // Re-read so `locales` names every copied locale, not just the first.
             return asEntry(
                 await getEntryOfType(ctx.config, repository, type, first.id, firstLocale)

@@ -54,7 +54,7 @@ export type IncomingRelationship = {
 };
 
 /**
- * One relationships-index edge pointing at a media item — a row of the media
+ * One reference in the index pointing at a media item — a row of the media
  * "used by" panel. The media mirror of {@link IncomingRelationship}, widened to
  * carry the source kind because a media file can be referenced by an entry, a
  * user or another media record.
@@ -65,7 +65,7 @@ export type MediaUsage = {
     sourceTitle: string;
     /**
      * entry | user | media — what holds the reference. Duplicated from
-     * `fields/relationship-edges.ts`'s `TargetKind` because a pure leaf may not
+     * `fields/references.ts`'s `TargetKind` because a pure leaf may not
      * import `fields/`.
      */
     sourceKind: 'entry' | 'user' | 'media';

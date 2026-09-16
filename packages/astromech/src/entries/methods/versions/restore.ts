@@ -5,7 +5,7 @@ import { defineServiceMethod } from '@/services/define-service-method';
 import { CapabilityError, EntryNotFoundError } from '../../errors';
 import { entryGate } from '../../internal/access';
 import { asEntry, getEntryOfType } from '../../internal/records';
-import { indexEntryRelationships } from '../../internal/relationships';
+import { syncEntryRelationships } from '../../internal/relationships';
 import { uniqueSlugIfChanged } from '../../internal/slug';
 import { snapshotVersion } from '../../internal/versions';
 import { getEntryRepository } from '../../repository/registry';
@@ -69,7 +69,7 @@ export const restoreEntryVersion = defineServiceMethod({
                     fields: restoredFields,
                 }
             );
-            await indexEntryRelationships(ctx.config, row, restoredFields, type);
+            await syncEntryRelationships(ctx.config, row, restoredFields, type);
             return row;
         });
 

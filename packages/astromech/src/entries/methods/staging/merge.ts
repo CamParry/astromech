@@ -7,7 +7,7 @@ import { CapabilityError } from '../../errors';
 import { entryGate } from '../../internal/access';
 import { assertCapability, isVersioningEnabled } from '../../internal/entry-type';
 import { asEntry, asRecord, getEntryOfType } from '../../internal/records';
-import { indexEntryRelationships } from '../../internal/relationships';
+import { syncEntryRelationships } from '../../internal/relationships';
 import { toStoredFields } from '../../internal/stored-fields';
 import { snapshotVersion } from '../../internal/versions';
 import { getEntryRepository } from '../../repository/registry';
@@ -86,10 +86,10 @@ export const mergeStagedEntry = defineServiceMethod({
                 { title: staged.title, fields: mergedFields }
             );
 
-            // 3. Cleanup: discard the staged row before re-indexing, so the edges
-            //    it held on its own do not survive the merge.
+            // 3. Cleanup: discard the staged row before re-indexing, so the
+            //    references it held on its own do not survive the merge.
             await staging.delete({ id, locale: canonical.locale });
-            await indexEntryRelationships(ctx.config, updated, mergedFields, type);
+            await syncEntryRelationships(ctx.config, updated, mergedFields, type);
 
             return asEntry(updated);
         });

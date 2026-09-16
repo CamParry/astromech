@@ -6,7 +6,7 @@
 
 import type { Field } from 'astromech';
 import { fileURLToPath } from 'node:url';
-import { collectRelationshipEdges } from 'astromech';
+import { findReferences } from 'astromech';
 import { libsql } from 'astromech/database/libsql';
 import * as schema from 'astromech/database/schema';
 import { hashPassword } from 'better-auth/crypto';
@@ -687,15 +687,15 @@ async function insertEntries(rows: Record<string, unknown>[]): Promise<void> {
 /** Derive the relationships index from every seeded entry's field data. */
 async function indexRelationships(): Promise<void> {
     const rows = seededEntries.flatMap((entry) =>
-        collectRelationshipEdges(entryFields(entry.type), entry.fields).map((edge) =>
+        findReferences(entryFields(entry.type), entry.fields).map((reference) =>
             schema.encodeWith(schema.relationshipsTable, {
                 sourceId: entry.id,
                 sourceKind: 'entry' as const,
                 sourceType: entry.type,
-                schemaPath: edge.schemaPath,
-                instancePath: edge.instancePath,
-                targetId: edge.targetId,
-                targetKind: edge.targetKind,
+                schemaPath: reference.schemaPath,
+                instancePath: reference.instancePath,
+                targetId: reference.targetId,
+                targetKind: reference.targetKind,
                 sourceStaged: false,
             })
         )
@@ -717,7 +717,7 @@ function entryFields(type: string): Field[] {
     return Array.isArray(fields) ? fields : [...fields.main, ...(fields.sidebar ?? [])];
 }
 
-/** Stored block instances carry their own `_id`; edge paths address items by it. */
+/** Stored block instances carry their own `_id`; instance paths address items by it. */
 function blockId(): string {
     return crypto.randomUUID();
 }

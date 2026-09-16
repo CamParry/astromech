@@ -135,8 +135,8 @@ describe('mediaService.usedBy', () => {
 
         expect(usage.map((row) => row.sourceId)).toEqual([canonical.id]);
         expect(usage[0]?.sourceTitle).toBe('Canonical');
-        // Only the staged row holds this reference, so the edge is staged — the
-        // flag is per edge, not per entry.
+        // Only the staged row holds this reference, so it is staged — the flag
+        // is per reference, not per entry.
         expect(usage[0]?.sourceStaged).toBe(true);
     });
 

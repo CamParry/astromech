@@ -13,7 +13,7 @@ import { UserNotFoundError } from '../errors';
 import { resolveUserLocale } from '../internal/locale';
 import { createUserLookups } from '../internal/lookups';
 import { readUser } from '../internal/read-user';
-import { indexUserRelationships } from '../internal/relationships';
+import { syncUserRelationships } from '../internal/relationships';
 import { toUser } from '../internal/to-user';
 import { createUserRepository } from '../repository';
 import { updateUserSchema } from '../schema';
@@ -120,7 +120,7 @@ export const updateUser = defineServiceMethod({
                     fields,
                     patchedFieldNames: patchedNames,
                 });
-                await indexUserRelationships(ctx.config, id);
+                await syncUserRelationships(ctx.config, id);
             }
         });
 

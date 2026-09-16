@@ -1,11 +1,11 @@
 /**
  * Relationship index repository — the only place Kysely touches the
  * relationships table. Every write is a wholesale replace of one source's
- * edge set (DELETE then chunked INSERT), never a set-diff.
+ * references (DELETE then chunked INSERT), never a set-diff.
  */
 import type { RelationshipRow } from '@/database/tables';
 import type { Db } from '@/database/types';
-import type { RelationshipEdge, TargetKind } from '@/fields/relationship-edges';
+import type { FieldReference, TargetKind } from '@/fields/references';
 import { relationshipsTable } from '@/database/tables';
 import { createRepository } from './create-repository';
 
@@ -23,22 +23,22 @@ export type RelationshipSource = {
 };
 
 /**
- * An edge with the one source column a caller may vary row by row. `staged`
+ * A reference with the one source column a caller may vary row by row. `staged`
  * overrides `RelationshipSource.staged`: an entry's canonical and staged content
- * rows are a single source, so only the edges the staged row alone holds are
- * staged. Absent means "whatever the source says".
+ * rows are a single source, so only the references the staged row alone holds
+ * are staged. Absent means "whatever the source says".
  */
-export type IndexedEdge = RelationshipEdge & { staged?: boolean };
+export type IndexedReference = FieldReference & { staged?: boolean };
 
 /**
- * One source and the edges its stored field data holds. What a domain's rebuild
- * collector yields; lives here so the domains and boot (which composes them)
- * share one shape. A source with no edges is still a source — it is how the
- * drift check sees rows left behind by data that no longer references anything.
+ * One source and the references its stored field data holds. What a domain's
+ * rebuild collector yields; lives here so the domains and boot (which composes
+ * them) share one shape. A source with no references is still a source — it is
+ * how the drift check sees rows left behind by data that references nothing.
  */
 export type RelationshipIndexSource = {
     source: RelationshipSource;
-    edges: IndexedEdge[];
+    references: IndexedReference[];
 };
 
 /**
@@ -52,33 +52,33 @@ export function createRelationshipRepository(db?: Db) {
     const repository = createRepository(relationshipsTable, db);
 
     /**
-     * Replace every edge recorded for one source. The delete covers the whole
-     * source rather than a field at a time: there is then no "did this field go
-     * away" case to get wrong, which is the failure mode a per-field replace has.
+     * Replace every reference recorded for one source. The delete covers the
+     * whole source rather than a field at a time: there is then no "did this
+     * field go away" case to get wrong, which a per-field replace gets wrong.
      */
     async function replaceForSource(
         source: RelationshipSource,
-        edges: IndexedEdge[]
+        references: IndexedReference[]
     ): Promise<void> {
         await repository.deleteMany({ sourceId: source.id, sourceKind: source.kind });
-        if (edges.length === 0) return;
+        if (references.length === 0) return;
 
-        const rows = edges.map((edge) => ({
+        const rows = references.map((reference) => ({
             sourceId: source.id,
             sourceKind: source.kind,
             sourceType: source.type ?? null,
-            schemaPath: edge.schemaPath,
-            instancePath: edge.instancePath,
-            targetId: edge.targetId,
-            targetKind: edge.targetKind,
-            sourceStaged: edge.staged ?? source.staged ?? false,
+            schemaPath: reference.schemaPath,
+            instancePath: reference.instancePath,
+            targetId: reference.targetId,
+            targetKind: reference.targetKind,
+            sourceStaged: reference.staged ?? source.staged ?? false,
         }));
         for (let i = 0; i < rows.length; i += INSERT_CHUNK_ROWS) {
             await repository.createMany(rows.slice(i, i + INSERT_CHUNK_ROWS));
         }
     }
 
-    /** Every edge recorded for one source, in no particular order. */
+    /** Every reference recorded for one source, in no particular order. */
     async function findBySource(
         sourceId: string,
         sourceKind: TargetKind
@@ -87,7 +87,7 @@ export function createRelationshipRepository(db?: Db) {
     }
 
     /**
-     * Every edge pointing at one target. `includeStaged` is the delete-time
+     * Every reference pointing at one target. `includeStaged` is the delete-time
      * question — a pending merge that references the target still counts, even
      * though a reverse lookup for display would not show it.
      */
@@ -106,7 +106,7 @@ export function createRelationshipRepository(db?: Db) {
     }
 
     /**
-     * Every stored edge, optionally narrowed to one entry type. The rebuild and
+     * Every stored reference, optionally narrowed to one entry type. The rebuild and
      * drift reads use it: they must see rows whose source no longer exists, so
      * they cannot enumerate by source.
      */
@@ -117,7 +117,7 @@ export function createRelationshipRepository(db?: Db) {
         });
     }
 
-    /** Drop one source's edges — its row is gone, so its edges are meaningless. */
+    /** Drop one source's references — its row is gone, so they are meaningless. */
     async function deleteBySource(
         sourceId: string,
         sourceKind: TargetKind
@@ -126,7 +126,7 @@ export function createRelationshipRepository(db?: Db) {
     }
 
     /**
-     * Drop every edge involving a resource, in both directions. Deleting a
+     * Drop every reference involving a resource, in both directions. Deleting a
      * target does not rewrite the field data that references it — the dangling
      * id stays until that source is next written — but the index must not keep
      * claiming a reference to a row that no longer exists.

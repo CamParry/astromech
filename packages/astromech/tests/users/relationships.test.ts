@@ -2,7 +2,7 @@
  * The relationship index over a translatable user.
  *
  * The index is keyed on the user, not on one of their content rows, so every
- * locale contributes: a write to `fr` must not replace `en`'s edges with its
+ * locale contributes: a write to `fr` must not replace `en`'s references with its
  * own, and a rebuild must derive exactly what the write path stored.
  */
 
@@ -80,7 +80,7 @@ describe('user relationships across locales', () => {
         expect(await credits()).toEqual([postA, postB].sort());
     });
 
-    it('keeps the other locale’s edge when one locale drops its reference', async () => {
+    it('keeps the other locale’s reference when one locale drops its own', async () => {
         await usersService.update({ id, data: { fields: { credit: postA } } });
         await usersService.update({
             id,
@@ -116,7 +116,7 @@ describe('user relationships across locales', () => {
         expect(rebuilt).toEqual(written);
     });
 
-    it('gives a user with no content row a source with no edges', async () => {
+    it('gives a user with no content row a source with no references', async () => {
         const noContentId = await insertAccountOnlyUser();
 
         await rebuildRelationshipIndex();

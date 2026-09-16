@@ -92,7 +92,7 @@ describe('createStaged', () => {
         expect(staged.fields.body).toBe('orig');
         // Shares the canonical slug (allowed by the partial unique index).
         expect(staged.slug).toBe('live');
-        // The entry's edges are unchanged: both rows hold the same reference.
+        // The entry's references are unchanged: both rows hold the same one.
         expect(await relationTargets(canonical.id)).toEqual([target.id]);
         expect(await relationStagedFlags(canonical.id)).toEqual([false]);
     });

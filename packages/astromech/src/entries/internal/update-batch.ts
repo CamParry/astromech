@@ -22,7 +22,7 @@ import {
 import { getEntryRepository } from '../repository/registry';
 import { createEntrySchema, updateEntrySchema } from '../schema';
 import { asEntry, asRecord, findEntryOfType, getEntryOfType } from './records';
-import { indexEntryRelationships } from './relationships';
+import { syncEntryRelationships } from './relationships';
 import { deriveSlug, uniqueSlugIfChanged } from './slug';
 import { toStoredFields } from './stored-fields';
 import { propagateSharedFields } from './translatable';
@@ -279,7 +279,7 @@ async function updateOne(params: {
         staging ? await staging.update(ref, write) : await repository.update(ref, write)
     );
     if (fields) {
-        await indexEntryRelationships(config, entry, fields, entryType.id);
+        await syncEntryRelationships(config, entry, fields, entryType.id);
         // A staged row is not one of the entry's locales, so its shared fields
         // stay with it until the merge.
         if (!staging) {
@@ -356,7 +356,7 @@ async function planTranslation(params: {
     };
 }
 
-/** Write the planned translation and fold its edges into the entry's index. */
+/** Write the planned translation and fold its references into the entry's index. */
 async function writeTranslation(params: {
     config: ResolvedConfig;
     repository: EntryRepository;
@@ -367,7 +367,7 @@ async function writeTranslation(params: {
 }): Promise<Entry> {
     const { config, repository, type, id, locale, write } = params;
     const entry = asEntry(await repository.update({ id, locale }, write));
-    await indexEntryRelationships(config, entry, write.fields, type);
+    await syncEntryRelationships(config, entry, write.fields, type);
     return entry;
 }
 

@@ -192,7 +192,7 @@ describe('purgeTrashedBefore', () => {
 
 describe('trashPurgeJob', () => {
     // Relationship rows have no FK to `entries`, so nothing else would clear
-    // them: a purged entry would keep both the edges it owned and the edges
+    // them: a purged entry would keep both the references it held and the ones
     // pointing at it forever.
     it('leaves no relationship rows for a purged entry, in either direction', async () => {
         const doomed = await entryRepository.create({
@@ -250,7 +250,7 @@ describe('trashPurgeJob', () => {
         ).toBeNull();
         expect(await relationships.findBySource(doomed.id, 'entry')).toEqual([]);
         expect(await relationships.findByTarget(doomed.id, 'entry')).toEqual([]);
-        // Only edges touching the purged id go: the survivor keeps the rest.
+        // Only references touching the purged id go: the survivor keeps the rest.
         const kept = await relationships.findBySource(survivor.id, 'entry');
         expect(kept.map((row) => row.targetId)).toEqual([survivor.id]);
     });

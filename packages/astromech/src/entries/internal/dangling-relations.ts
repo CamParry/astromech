@@ -4,16 +4,13 @@
  * FIELD values, not the derived `relationships` index (`internal/relationships.ts`).
  */
 
-import type { RelationshipDeclaration, TargetKind } from '@/fields/relationship-edges';
+import type { RelationshipDeclaration, TargetKind } from '@/fields/references';
 import type { Field } from '@/types/fields';
 import type { JsonObject, ResolvedConfig } from '@/types/index';
 import { existingResourceIds } from '@/database/repository/resource-existence';
 import { resolveEntryType } from '@/entries/entry-types';
 import { parseInstancePath } from '@/fields/field-path';
-import {
-    collectRelationshipDeclarations,
-    collectRelationshipEdges,
-} from '@/fields/relationship-edges';
+import { collectRelationshipDeclarations, findReferences } from '@/fields/references';
 import { RESERVED_KEY } from '@/fields/reserved-keys';
 import { getEntryRepository, hasCustomTable } from '../repository/registry';
 
@@ -32,22 +29,24 @@ export async function pruneDanglingRelations(
     definitions: Field[],
     values: JsonObject
 ): Promise<{ values: JsonObject; dropped: number }> {
-    const edges = collectRelationshipEdges(definitions, values);
-    if (edges.length === 0) return { values, dropped: 0 };
+    const references = findReferences(definitions, values);
+    if (references.length === 0) return { values, dropped: 0 };
 
     const prunable = prunableSchemaPaths(config, definitions);
-    const candidates = edges.filter((edge) => prunable.has(edge.schemaPath));
+    const candidates = references.filter((reference) =>
+        prunable.has(reference.schemaPath)
+    );
     if (candidates.length === 0) return { values, dropped: 0 };
 
     const aliveByKind = new Map<TargetKind, Set<string>>();
     for (const kind of TARGET_KINDS) {
-        const ofKind = candidates.filter((edge) => edge.targetKind === kind);
+        const ofKind = candidates.filter((reference) => reference.targetKind === kind);
         if (ofKind.length === 0) continue;
         aliveByKind.set(
             kind,
             await existingResourceIds(
                 kind,
-                ofKind.map((edge) => edge.targetId)
+                ofKind.map((reference) => reference.targetId)
             )
         );
     }
@@ -66,8 +65,10 @@ export async function pruneDanglingRelations(
     const aliveByTarget = new Map<string, Set<string>>();
     for (const [target, read] of readByTarget) {
         const ids = candidates
-            .filter((edge) => readsByPath.get(edge.schemaPath)?.has(target) === true)
-            .map((edge) => edge.targetId);
+            .filter(
+                (reference) => readsByPath.get(reference.schemaPath)?.has(target) === true
+            )
+            .map((reference) => reference.targetId);
         if (ids.length === 0) continue;
         aliveByTarget.set(target, await read(ids));
     }
@@ -75,17 +76,21 @@ export async function pruneDanglingRelations(
     // An id survives if ANY check that applies to its path reports it existing:
     // one schema path can declare several targets, and only all of them missing
     // it makes the reference really dead.
-    const dead = candidates.filter((edge) => {
-        if (aliveByKind.get(edge.targetKind)?.has(edge.targetId) === true) return false;
-        for (const target of readsByPath.get(edge.schemaPath)?.keys() ?? []) {
-            if (aliveByTarget.get(target)?.has(edge.targetId) === true) return false;
+    const dead = candidates.filter((reference) => {
+        if (aliveByKind.get(reference.targetKind)?.has(reference.targetId) === true) {
+            return false;
+        }
+        for (const target of readsByPath.get(reference.schemaPath)?.keys() ?? []) {
+            if (aliveByTarget.get(target)?.has(reference.targetId) === true) return false;
         }
         return true;
     });
     if (dead.length === 0) return { values, dropped: 0 };
 
     const next = structuredClone(values);
-    for (const edge of dead) dropId(next, edge.instancePath, edge.targetId);
+    for (const reference of dead) {
+        dropId(next, reference.instancePath, reference.targetId);
+    }
     return { values: next, dropped: dead.length };
 }
 

@@ -5,7 +5,7 @@ import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { UserNotFoundError } from '../../errors';
 import { resolveUserLocale } from '../../internal/locale';
-import { indexUserRelationships } from '../../internal/relationships';
+import { syncUserRelationships } from '../../internal/relationships';
 import { toUser } from '../../internal/to-user';
 import { createUserRepository } from '../../repository';
 
@@ -41,7 +41,7 @@ export const restoreUserVersion = defineServiceMethod({
         const updated = await transaction(async () => {
             await snapshotVersion(repository.versions, current, ctx.user);
             const row = await repository.update({ id, locale }, { fields });
-            await indexUserRelationships(ctx.config, id);
+            await syncUserRelationships(ctx.config, id);
             return row;
         });
 

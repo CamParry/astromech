@@ -1,5 +1,5 @@
 /**
- * Relationship edge extraction — derives the relationships index from field
+ * Reference extraction — derives the relationships index from field
  * data via `fieldType.children()`. Only ever run this on data that has been
  * through `parseFields`; `children()` mints ids and is non-deterministic on raw input.
  */
@@ -16,8 +16,8 @@ import { RESERVED_KEY } from '@/fields/reserved-keys';
  */
 export type TargetKind = 'entry' | 'user' | 'media';
 
-/** One row of the index, minus the source columns the caller owns. */
-export type RelationshipEdge = {
+/** One id a relation field holds, and where in the field data it sits. */
+export type FieldReference = {
     /** `sections[].gallery` — what a query matches on. */
     schemaPath: string;
     /** `sections[a1].gallery` — for deep-linking; never pattern-matched. */
@@ -35,7 +35,7 @@ function targetKindOf(field: Field): TargetKind {
     return field.target === 'users' ? 'user' : 'entry';
 }
 
-/** A relation value is one id or a list of them; anything else holds no edge. */
+/** A relation value is one id or a list of them; anything else holds no reference. */
 function targetIdsOf(value: unknown): string[] {
     const raw = Array.isArray(value) ? value : [value];
     return raw.filter((id): id is string => typeof id === 'string' && id !== '');
@@ -45,7 +45,7 @@ function walk(
     definitions: Field[],
     values: Record<string, unknown>,
     parentSegments: readonly FieldPathSegment[],
-    out: RelationshipEdge[]
+    out: FieldReference[]
 ): void {
     for (const field of flattenFieldNodes(definitions)) {
         const fieldType = getFieldType(field.type);
@@ -83,22 +83,22 @@ function walk(
 }
 
 /**
- * Every relationship edge held in `values`, in declaration order.
+ * Every reference held in `values`, in declaration order.
  *
  * Duplicates are collapsed: the index is keyed on
  * (source, instancePath, target), so the same id listed twice in one
- * multi-relation is one edge, not a primary-key violation.
+ * multi-relation is one reference, not a primary-key violation.
  */
-export function collectRelationshipEdges(
+export function findReferences(
     definitions: Field[],
     values: Record<string, unknown>
-): RelationshipEdge[] {
-    const collected: RelationshipEdge[] = [];
+): FieldReference[] {
+    const collected: FieldReference[] = [];
     walk(definitions, values, [], collected);
 
     const seen = new Set<string>();
-    return collected.filter((edge) => {
-        const key = `${edge.instancePath}\u0000${edge.targetId}\u0000${edge.targetKind}`;
+    return collected.filter((reference) => {
+        const key = `${reference.instancePath}\u0000${reference.targetId}\u0000${reference.targetKind}`;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;

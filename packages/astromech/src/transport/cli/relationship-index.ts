@@ -1,11 +1,11 @@
 import type { RelationshipIndexSource } from '@/database/repository/relationships';
 import type { RelationshipRow } from '@/database/tables';
-import type { TargetKind } from '@/fields/relationship-edges';
+import type { TargetKind } from '@/fields/references';
 import { getConfig } from '@/config/registry';
 import { createRelationshipRepository } from '@/database/repository/relationships';
-import { collectEntryRelationshipSources } from '@/entries/internal/relationships';
-import { collectMediaRelationshipSources } from '@/media/internal/relationships';
-import { collectUserRelationshipSources } from '@/users/internal/relationships';
+import { allEntryRelationships } from '@/entries/internal/relationships';
+import { allMediaRelationships } from '@/media/internal/relationships';
+import { allUserRelationships } from '@/users/internal/relationships';
 
 /**
  * Relationships index repair — rebuild and drift check.
@@ -35,7 +35,7 @@ export type DriftReport = {
     mismatched: { stored: RelationshipRow; computed: RelationshipRow }[];
 };
 
-/** Recompute every scoped source's edges and replace its rows. */
+/** Recompute every scoped source's references and replace its rows. */
 export async function rebuildRelationshipIndex(
     opts?: RelationshipIndexScope
 ): Promise<RebuildReport> {
@@ -43,11 +43,11 @@ export async function rebuildRelationshipIndex(
     const repository = createRelationshipRepository();
 
     let rowsWritten = 0;
-    for (const { source, edges } of sources) {
+    for (const { source, references } of sources) {
         // Per source rather than one bulk write, so the chunking that keeps an
         // INSERT under D1's 100-bound-parameter cap keeps applying.
-        await repository.replaceForSource(source, edges);
-        rowsWritten += edges.length;
+        await repository.replaceForSource(source, references);
+        rowsWritten += references.length;
     }
 
     // Read AFTER the replaces: what is left over then belongs to sources that no
@@ -75,17 +75,17 @@ export async function checkRelationshipIndex(
 ): Promise<DriftReport> {
     const sources = await collectSources(opts);
     const computed = new Map<string, RelationshipRow>();
-    for (const { source, edges } of sources) {
-        for (const edge of edges) {
+    for (const { source, references } of sources) {
+        for (const reference of references) {
             const row: RelationshipRow = {
                 sourceId: source.id,
                 sourceKind: source.kind,
                 sourceType: source.type ?? null,
-                schemaPath: edge.schemaPath,
-                instancePath: edge.instancePath,
-                targetId: edge.targetId,
-                targetKind: edge.targetKind,
-                sourceStaged: edge.staged ?? source.staged ?? false,
+                schemaPath: reference.schemaPath,
+                instancePath: reference.instancePath,
+                targetId: reference.targetId,
+                targetKind: reference.targetKind,
+                sourceStaged: reference.staged ?? source.staged ?? false,
             };
             computed.set(rowKey(row), row);
         }
@@ -129,12 +129,12 @@ async function collectSources(
 ): Promise<RelationshipIndexSource[]> {
     const config = getConfig();
     if (opts?.type !== undefined) {
-        return collectEntryRelationshipSources(config, { type: opts.type });
+        return allEntryRelationships(config, { type: opts.type });
     }
     return [
-        ...(await collectEntryRelationshipSources(config)),
-        ...(await collectUserRelationshipSources(config)),
-        ...(await collectMediaRelationshipSources(config)),
+        ...(await allEntryRelationships(config)),
+        ...(await allUserRelationships(config)),
+        ...(await allMediaRelationships(config)),
     ];
 }
 

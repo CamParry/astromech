@@ -1,55 +1,55 @@
 /**
- * Relationship indexing (entries policy): derive an entry's edges from the
+ * Relationship indexing (entries policy): derive an entry's references from the
  * content it now holds and replace its rows in the index, plus the rebuild-side
  * collector that enumerates every entry as a source.
  */
 
 import type {
-    IndexedEdge,
+    IndexedReference,
     RelationshipIndexSource,
 } from '@/database/repository/relationships';
-import type { RelationshipEdge } from '@/fields/relationship-edges';
+import type { FieldReference } from '@/fields/references';
 import type { JsonObject, ResolvedConfig } from '@/types/index';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { entriesTable, entryContentTable } from '@/database/tables';
 import { qualifyEntryType, resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
-import { collectRelationshipEdges } from '@/fields/relationship-edges';
+import { findReferences } from '@/fields/references';
 import { getEntryRepository, hasCustomTable } from '../repository/registry';
 
 /**
  * Re-index one entry. The index is keyed on the entry, so every locale it holds
  * contributes: a write to one locale re-reads the rest rather than replacing
- * their edges with its own.
+ * their references with its own.
  */
-export async function indexEntryRelationships(
+export async function syncEntryRelationships(
     config: ResolvedConfig,
     entry: { id: string },
     fields: JsonObject,
     type: string
 ): Promise<void> {
-    const edges = entryEdges(config, type, fields);
-    if (edges === null) return;
+    const written = entryReferences(config, type, fields);
+    if (written === null) return;
 
     // A custom-table type has no `entry_content` rows: its single row is the
     // whole entry, so the fields just written are all there is to index.
-    const all = hasCustomTable(type)
-        ? edges
-        : await storedEntryEdges(config, entry.id, type);
+    const references = hasCustomTable(type)
+        ? written
+        : await storedEntryReferences(config, entry.id, type);
 
     await createRelationshipRepository().replaceForSource(
         { id: entry.id, kind: 'entry', type, staged: false },
-        all
+        references
     );
 }
 
 /**
- * Every entry that could hold a relationship, with the edges its stored content
- * holds: all types, all locales, trashed rows included. Never re-derive from raw
- * input — item ids are minted by `parseFields`.
+ * Every entry that could hold a relationship, with the references its stored
+ * content holds: all types, all locales, trashed rows included. Never re-derive
+ * from raw input — item ids are minted by `parseFields`.
  */
-export async function collectEntryRelationshipSources(
+export async function allEntryRelationships(
     config: ResolvedConfig,
     options?: { type?: string }
 ): Promise<RelationshipIndexSource[]> {
@@ -60,57 +60,60 @@ export async function collectEntryRelationshipSources(
 }
 
 /**
- * The edges declared by `type`'s schema and held in `fields`, or null when
+ * The references declared by `type`'s schema and held in `fields`, or null when
  * no such type is configured — the write seam skips those, the rebuild reports
  * them as a source holding nothing so their stale rows read as drift.
  */
-function entryEdges(
+function entryReferences(
     config: ResolvedConfig,
     type: string,
     fields: JsonObject
-): RelationshipEdge[] | null {
+): FieldReference[] | null {
     const entryType = resolveEntryType(config, type);
     if (!entryType) return null;
-    return collectRelationshipEdges(flattenEntryFields(entryType.fields), fields);
+    return findReferences(flattenEntryFields(entryType.fields), fields);
 }
 
 /**
- * The edges every content row of one entry holds. Staged rows count: a pending
- * merge that references something is a reason not to delete it.
+ * The references every content row of one entry holds. Staged rows count: a
+ * pending merge that references something is a reason not to delete it.
  */
-async function storedEntryEdges(
+async function storedEntryReferences(
     config: ResolvedConfig,
     entryId: string,
     type: string
-): Promise<IndexedEdge[]> {
+): Promise<IndexedReference[]> {
     const rows = await createRepository(entryContentTable).findMany({
         where: { entryId },
     });
-    return entryContentEdges(config, type, rows);
+    return entryContentReferences(config, type, rows);
 }
 
 /**
- * One edge per (instancePath, target) across an entry's content rows: two
+ * One reference per (instancePath, target) across an entry's content rows: two
  * locales holding the same reference are one row, and the index's primary key
- * would reject the second. An edge any canonical row carries is canonical; one
- * only a staged row carries is staged, so a pending merge's new reference
+ * would reject the second. A reference any canonical row carries is canonical;
+ * one only a staged row carries is staged, so a pending merge's new reference
  * blocks a delete without appearing in a reverse lookup.
  *
  * The one place the rule lives — the write seam and the rebuild both call it.
  */
-function entryContentEdges(
+function entryContentReferences(
     config: ResolvedConfig,
     type: string,
     rows: readonly { fields: unknown; stagedFor: string | null }[]
-): IndexedEdge[] {
-    const byKey = new Map<string, IndexedEdge>();
+): IndexedReference[] {
+    const byKey = new Map<string, IndexedReference>();
     for (const row of rows) {
         const staged = row.stagedFor !== null;
-        for (const edge of entryEdges(config, type, (row.fields ?? {}) as JsonObject) ??
-            []) {
-            const key = `${edge.instancePath}\0${edge.targetKind}\0${edge.targetId}`;
+        for (const reference of entryReferences(
+            config,
+            type,
+            (row.fields ?? {}) as JsonObject
+        ) ?? []) {
+            const key = `${reference.instancePath}\0${reference.targetKind}\0${reference.targetId}`;
             const held = byKey.get(key);
-            if (held === undefined) byKey.set(key, { ...edge, staged });
+            if (held === undefined) byKey.set(key, { ...reference, staged });
             else if (!staged) held.staged = false;
         }
     }
@@ -142,16 +145,20 @@ async function entriesTableEntrySources(
 
     return entries.map((entry) => ({
         // An entry with a staged content row is still a live entry, so an entry
-        // source is never itself staged; the per-edge flag carries staging.
+        // source is never itself staged; the per-reference flag carries staging.
         source: { id: entry.id, kind: 'entry' as const, type: entry.type, staged: false },
-        edges: entryContentEdges(config, entry.type, rowsByEntry.get(entry.id) ?? []),
+        references: entryContentReferences(
+            config,
+            entry.type,
+            rowsByEntry.get(entry.id) ?? []
+        ),
     }));
 }
 
 /**
  * Sources for entry types backed by their own repository (`tableRepository`).
  * Their rows are not in the `entries` table but they are indexed on write, so
- * leaving them out would report every one of their edges as drift.
+ * leaving them out would report every one of their references as drift.
  */
 async function customTableEntrySources(
     config: ResolvedConfig,
@@ -171,7 +178,7 @@ async function customTableEntrySources(
         for (const row of rows) {
             collected.push({
                 source: { id: row.id, kind: 'entry', type, staged: row.staged },
-                edges: entryEdges(config, type, row.fields) ?? [],
+                references: entryReferences(config, type, row.fields) ?? [],
             });
         }
     }

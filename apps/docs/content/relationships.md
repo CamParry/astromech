@@ -58,7 +58,7 @@ and it is yours to decide what to show instead.
 
 `where: { references }` compares entry ids too, so it answers for the entry
 across every locale. `incomingRelationships` returns entry ids in `sourceId`,
-one row per edge, with `sourceTitle` read in the default locale.
+one row per reference, with `sourceTitle` read in the default locale.
 
 ## Querying the reverse direction
 
@@ -100,7 +100,8 @@ delete-time information. A forward read never touches it.
 
 The consequence worth knowing: **the index is a function of your schema and
 your data, so changing the schema does not update it.** Adding a relationship
-field to an existing container leaves every existing row missing those edges.
+field to an existing container leaves every existing row missing those
+references.
 Nothing repairs this at startup — that would be expensive, surprising, and
 would paper over the drift instead of reporting it. Rebuild explicitly:
 

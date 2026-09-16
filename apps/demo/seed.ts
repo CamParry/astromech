@@ -7,7 +7,7 @@
 import type { Field, JsonObject } from 'astromech';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { redirectsTable } from '@astromech/redirects/tables';
-import { collectRelationshipEdges, createAstromech, encodeWith } from 'astromech';
+import { createAstromech, encodeWith, findReferences } from 'astromech';
 import { libsql } from 'astromech/database/libsql';
 import * as schema from 'astromech/database/schema';
 import { contentVersion, readImageDimensions, sharp } from 'astromech/media/image/sharp';
@@ -202,27 +202,27 @@ const INDEX_CHUNK_ROWS = 12;
 
 /** Derive the relationships index from every seeded entry's field data. */
 async function indexRelationships(): Promise<void> {
-    // An entry's edges are the union over its locales, deduplicated on the
+    // An entry's references are the union over its locales, deduplicated on the
     // index key — every locale of an entry shares its id, so a translation that
     // keeps a reference would otherwise collide on the primary key.
     const seen = new Set<string>();
     const rows = seededEntries.flatMap((entry) =>
-        collectRelationshipEdges(entryFields(entry.type), entry.fields)
-            .filter((edge) => {
-                const key = `${entry.id}|${edge.instancePath}|${edge.targetId}|${edge.targetKind}`;
+        findReferences(entryFields(entry.type), entry.fields)
+            .filter((reference) => {
+                const key = `${entry.id}|${reference.instancePath}|${reference.targetId}|${reference.targetKind}`;
                 if (seen.has(key)) return false;
                 seen.add(key);
                 return true;
             })
-            .map((edge) =>
+            .map((reference) =>
                 schema.encodeWith(schema.relationshipsTable, {
                     sourceId: entry.id,
                     sourceKind: 'entry' as const,
                     sourceType: entry.type,
-                    schemaPath: edge.schemaPath,
-                    instancePath: edge.instancePath,
-                    targetId: edge.targetId,
-                    targetKind: edge.targetKind,
+                    schemaPath: reference.schemaPath,
+                    instancePath: reference.instancePath,
+                    targetId: reference.targetId,
+                    targetKind: reference.targetKind,
                     sourceStaged: false,
                 })
             )

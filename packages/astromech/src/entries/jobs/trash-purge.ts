@@ -21,7 +21,7 @@ export const trashPurgeJob: CronJob = {
 
         const purged =
             await createEntryMaintenanceRepository(db).purgeTrashedBefore(cutoff);
-        // Both directions: the edges a purged entry owned, and the edges other
+        // Both directions: the references a purged entry held, and the ones other
         // entries still record as pointing at it.
         const relationships = createRelationshipRepository(db);
         for (const id of purged) {

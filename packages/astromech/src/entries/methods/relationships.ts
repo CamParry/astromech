@@ -2,7 +2,7 @@
  * Reverse lookup for the delete modal: the entries that reference this one.
  * Reads the relationships index, then loads each source through its OWN type's
  * repository. Both sides of the index are entry ids, so a source referencing
- * this entry from two of its locales is one edge.
+ * this entry from two of its locales is one reference.
  */
 
 import type { EntryRepository, EntryRow } from '../repository/types';
@@ -14,7 +14,7 @@ import { entryGate } from '../internal/access';
 import { getEntryResource } from '../internal/records';
 import { getEntryRepository } from '../repository/registry';
 
-/** One row per index edge: a source referencing the target twice is two rows. */
+/** One row per reference: a source referencing the target twice is two rows. */
 export const listIncomingRelationships = defineServiceMethod({
     summary: 'List the entries that reference an entry.',
     input: z.object({ type: z.string(), id: z.string() }),

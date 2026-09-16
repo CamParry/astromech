@@ -86,7 +86,7 @@ export function useRestoreMediaVersion(
 }
 
 /**
- * Read-only: the index edges pointing at this media item. Rows are
+ * Read-only: the index references pointing at this media item. Rows are
  * index-shaped, so the caller resolves display titles itself.
  */
 export function useMediaUsage(id: string, enabled = true) {

@@ -2,7 +2,7 @@
  * The relationship index over a translatable media item.
  *
  * The index is keyed on the item, not on one of its content rows, so every
- * locale contributes: a write to `fr` must not replace `en`'s edges with its
+ * locale contributes: a write to `fr` must not replace `en`'s references with its
  * own, and a rebuild must derive exactly what the write path stored.
  */
 
@@ -73,7 +73,7 @@ describe('media relationships across locales', () => {
         expect(await credits()).toEqual([postA, postB].sort());
     });
 
-    it('keeps the other locale’s edge when one locale drops its reference', async () => {
+    it('keeps the other locale’s reference when one locale drops its own', async () => {
         await mediaService.update({ id, data: { fields: { credit: postA } } });
         await mediaService.update({
             id,

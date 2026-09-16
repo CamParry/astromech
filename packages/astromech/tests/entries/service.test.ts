@@ -957,7 +957,7 @@ describe('relationships', () => {
     });
 
     // The old subsystem skipped falsy values, so clearing a relation left its
-    // row behind. A write replaces the whole source's edge set.
+    // row behind. A write replaces every reference the source holds.
     it('drops the index row when the relation is cleared', async () => {
         const target = await api.create({ type: 'post', data: { title: 'Target' } });
         const src = await api.create({

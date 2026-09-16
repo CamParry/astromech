@@ -225,11 +225,11 @@ async function remapStoredIds(db: Kysely<unknown>): Promise<void> {
 
 /**
  * Re-point the derived relationships index at entry ids on both ends. Canonical
- * sources go first so a staged row that carries the same edge collapses into
- * theirs; `sourceStaged` then marks only the edges no canonical row has.
+ * sources go first so a staged row carrying the same reference collapses into
+ * theirs; `sourceStaged` then marks only the references no canonical row has.
  */
 async function remapRelationships(db: Kysely<unknown>): Promise<void> {
-    // `OR REPLACE` because two locales of one entry can collapse onto one edge,
+    // `OR REPLACE` because two locales of one entry can collapse onto one reference,
     // which the composite primary key would otherwise reject.
     await sql`
         UPDATE OR REPLACE \`relationships\`
@@ -252,7 +252,7 @@ async function remapRelationships(db: Kysely<unknown>): Promise<void> {
         )
     `.execute(db);
 
-    // `OR IGNORE`: where the canonical row already carries the edge, the staged
+    // `OR IGNORE`: where the canonical row already carries the reference, the staged
     // row's copy loses and is dropped below with anything else left on a dead id.
     await sql`
         UPDATE OR IGNORE \`relationships\`

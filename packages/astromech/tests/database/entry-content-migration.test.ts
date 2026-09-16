@@ -217,7 +217,7 @@ beforeEach(async () => {
     `.execute(db);
 
     // The page points at the dying `en` row; the canonical and its staged row
-    // share one edge, and the staged row carries a second one alone.
+    // share one reference, and the staged row carries a second one alone.
     await insertRelationship({
         sourceId: PAGE,
         sourceType: 'page',
@@ -312,8 +312,8 @@ describe('0001_entry_content', () => {
         expect(JSON.parse(version?.fields ?? '{}')).toEqual({ related: [DE] });
     });
 
-    it('remaps both ends of the index and marks the staged-only edge', async () => {
-        const edges = await rows<{
+    it('remaps both ends of the index and marks the staged-only reference', async () => {
+        const references = await rows<{
             source_id: string;
             instance_path: string;
             target_id: string;
@@ -323,7 +323,7 @@ describe('0001_entry_content', () => {
                 'FROM relationships ORDER BY instance_path, source_id'
         );
 
-        expect(edges).toEqual([
+        expect(references).toEqual([
             {
                 source_id: DE,
                 instance_path: 'links.0',

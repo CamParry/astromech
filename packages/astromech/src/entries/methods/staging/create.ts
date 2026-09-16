@@ -6,7 +6,7 @@ import { CapabilityError, StagedEntryExistsError } from '../../errors';
 import { entryGate } from '../../internal/access';
 import { assertCapability } from '../../internal/entry-type';
 import { asEntry, getEntryOfType } from '../../internal/records';
-import { indexEntryRelationships } from '../../internal/relationships';
+import { syncEntryRelationships } from '../../internal/relationships';
 import { getEntryRepository } from '../../repository/registry';
 
 /**
@@ -64,7 +64,7 @@ export const createStagedEntry = defineServiceMethod({
                     updatedBy: user?.id ?? null,
                 }
             );
-            await indexEntryRelationships(ctx.config, row, canonical.fields, type);
+            await syncEntryRelationships(ctx.config, row, canonical.fields, type);
             return row;
         });
 

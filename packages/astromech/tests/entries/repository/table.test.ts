@@ -400,7 +400,7 @@ describe('list – where filters', () => {
 
 describe('list – references', () => {
     /** Record `sourceId` as referencing `targetId` at `to`, as the write path does. */
-    async function indexEdge(
+    async function indexReference(
         sourceId: string,
         sourceType: string,
         targetId: string
@@ -421,8 +421,8 @@ describe('list – references', () => {
             fields: { from: '/b', to: '/y' },
         });
         await repository.create({ type: 'link', fields: { from: '/c', to: '/z' } });
-        await indexEdge(hit.id, 'link', 'T1');
-        await indexEdge(miss.id, 'link', 'T2');
+        await indexReference(hit.id, 'link', 'T1');
+        await indexReference(miss.id, 'link', 'T2');
 
         const res = await repository.list({
             type: 'link',
@@ -438,7 +438,7 @@ describe('list – references', () => {
             type: 'link',
             fields: { from: '/a', to: '/x' },
         });
-        await indexEdge(row.id, 'other', 'T1');
+        await indexReference(row.id, 'other', 'T1');
 
         const res = await repository.list({
             type: 'link',
@@ -454,7 +454,7 @@ describe('list – references', () => {
             type: 'link',
             fields: { from: '/a', to: '/x' },
         });
-        await indexEdge(hit.id, 'link', 'T1');
+        await indexReference(hit.id, 'link', 'T1');
 
         const res = await repository.list({
             type: ['link'],

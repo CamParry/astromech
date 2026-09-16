@@ -135,9 +135,10 @@ on its normal public route. It authorizes only, and never widens what the
 response contains.
 
 **Relationship.** A link from one resource to another, authored as a field and
-recorded as an edge in a derived index. Field data is the source of truth, and
-the index is rebuildable from it and read only for reverse lookups, filtering and
-deletion.
+recorded in a derived index. One index row is one reference: one id a relation
+field holds, from a source record to a target record. Field data is the source of
+truth, and the index is rebuildable from it and read only for reverse lookups,
+filtering and deletion.
 
 **Repository.** The database-access unit: reads and writes over one table.
 Distinct from storage.
@@ -157,6 +158,10 @@ Declared once, and read by every transport.
 re-exports of the browser-safe helpers the admin reads, imported as
 `astromech/shared`. The fetch client is a separate entry point, and every other
 import of core from the browser is type-only.
+
+**Source record and target record.** The two ends of one reference, and what the
+index's columns are named for: the source record holds the relation field, and
+the target record is what it points at.
 
 **Staged entry.** A prepared future change to one locale of a live entry, edited
 and previewed on its own and merged deliberately. It shares its entry's id, so a

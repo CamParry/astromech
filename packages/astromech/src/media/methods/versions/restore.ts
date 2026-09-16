@@ -5,7 +5,7 @@ import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { MediaNotFoundError } from '../../errors';
 import { resolveMediaLocale } from '../../internal/locale';
-import { indexMediaRelationships } from '../../internal/relationships';
+import { syncMediaRelationships } from '../../internal/relationships';
 import { toMedia } from '../../internal/to-media';
 import { createMediaRepository } from '../../repository';
 
@@ -52,7 +52,7 @@ export const restoreMediaVersion = defineServiceMethod({
                     fields,
                 }
             );
-            await indexMediaRelationships(ctx.config, id);
+            await syncMediaRelationships(ctx.config, id);
             return row;
         });
 

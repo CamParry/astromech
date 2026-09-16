@@ -9,7 +9,7 @@ export type JsonArray = JsonValue[];
 
 /**
  * What carries fields and runs the field pipeline — an entry, a global, a user
- * or a media item. `TargetKind` (`fields/relationship-edges.ts`) is the
+ * or a media item. `TargetKind` (`fields/references.ts`) is the
  * relation-eligible subset.
  */
 export type ResourceType = 'entry' | 'global' | 'user' | 'media';

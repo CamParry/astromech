@@ -16,8 +16,8 @@ import { MediaNotFoundError } from '../errors';
 import { createMediaRepository } from '../repository';
 
 /**
- * Every relationships-index edge pointing at this media item — one row per
- * edge, so a source using the same file at two paths yields two rows. Titles
+ * Every reference in the index pointing at this media item — one row per
+ * reference, so a source using the same file at two paths yields two rows. Titles
  * resolve here so this returns the same shape as `entries.incomingRelationships`.
  */
 export const listMediaUsage = defineServiceMethod({
@@ -39,14 +39,14 @@ export const listMediaUsage = defineServiceMethod({
         const titles = await resolveSourceTitles(ctx.config, rows);
         return rows
             .map(
-                (edge): MediaUsage => ({
-                    sourceId: edge.sourceId,
-                    sourceKind: edge.sourceKind,
-                    sourceType: edge.sourceType,
-                    sourceTitle: titles.get(sourceTitleKey(edge)) ?? '',
-                    schemaPath: edge.schemaPath,
-                    instancePath: edge.instancePath,
-                    sourceStaged: edge.sourceStaged,
+                (reference): MediaUsage => ({
+                    sourceId: reference.sourceId,
+                    sourceKind: reference.sourceKind,
+                    sourceType: reference.sourceType,
+                    sourceTitle: titles.get(sourceTitleKey(reference)) ?? '',
+                    schemaPath: reference.schemaPath,
+                    instancePath: reference.instancePath,
+                    sourceStaged: reference.sourceStaged,
                 })
             )
             .sort(compareUsage);

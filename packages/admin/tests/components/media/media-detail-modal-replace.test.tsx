@@ -37,7 +37,7 @@ const ITEM: Media = {
 };
 
 /**
- * Two edges, so the confirm's count is neither zero nor the singular form.
+ * Two references, so the confirm's count is neither zero nor the singular form.
  * User sources, so the usage panel needs no entry-type labels from the
  * admin-config shim to render them.
  */

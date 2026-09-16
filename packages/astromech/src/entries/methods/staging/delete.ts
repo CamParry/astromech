@@ -4,7 +4,7 @@ import { CapabilityError } from '../../errors';
 import { entryGate } from '../../internal/access';
 import { assertCapability } from '../../internal/entry-type';
 import { getEntryOfType } from '../../internal/records';
-import { indexEntryRelationships } from '../../internal/relationships';
+import { syncEntryRelationships } from '../../internal/relationships';
 import { getEntryRepository } from '../../repository/registry';
 
 /**
@@ -38,6 +38,6 @@ export const deleteStagedEntry = defineServiceMethod({
         if (!staged) throw new Error(`No staged change for entry '${id}'`);
         await staging.delete({ id, locale: canonical.locale });
         // The entry keeps its other content, so this re-derives rather than deletes.
-        await indexEntryRelationships(ctx.config, canonical, canonical.fields, type);
+        await syncEntryRelationships(ctx.config, canonical, canonical.fields, type);
     },
 });

@@ -18,7 +18,7 @@ export type MediaUsagePanelProps = {
     mediaId: string;
 };
 
-/** One heading's worth of rows: all the edges from one kind (and entry type). */
+/** One heading's worth of rows: all the references from one kind (and entry type). */
 type UsageGroup = {
     key: string;
     sourceKind: MediaUsage['sourceKind'];

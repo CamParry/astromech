@@ -13,7 +13,7 @@ import { MediaNotFoundError } from '../errors';
 import { resolveMediaLocale } from '../internal/locale';
 import { createMediaLookups } from '../internal/lookups';
 import { readMedia } from '../internal/read-media';
-import { indexMediaRelationships } from '../internal/relationships';
+import { syncMediaRelationships } from '../internal/relationships';
 import { toMedia } from '../internal/to-media';
 import { createMediaRepository } from '../repository';
 import { updateMediaSchema } from '../schema';
@@ -129,7 +129,7 @@ export const updateMedia = defineServiceMethod({
                     fields,
                     patchedFieldNames: patchedNames,
                 });
-                await indexMediaRelationships(config, id);
+                await syncMediaRelationships(config, id);
             }
             return row;
         });

@@ -114,11 +114,8 @@ export { parseRichText } from '@/fields/rich-text/parse';
  * entries outside the normal operations (a seed, a rebuild) needs the same
  * pure traversal core uses rather than a second, drifting copy of it.
  */
-export {
-    collectRelationshipEdges,
-    collectRelationshipSchemaPaths,
-} from '@/fields/relationship-edges';
-export type { RelationshipEdge, TargetKind } from '@/fields/relationship-edges';
+export { findReferences, collectRelationshipSchemaPaths } from '@/fields/references';
+export type { FieldReference, TargetKind } from '@/fields/references';
 /**
  * The AI context formatter ships from the plugin-authoring surface as well
  * as `astromech/methods`: a plugin building a chat request needs it, and

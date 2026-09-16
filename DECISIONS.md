@@ -670,8 +670,8 @@ repository seam on every content module, four more internal contracts that no
 caller has asked for.
 
 **Every id in the relationships index is unique across resources, custom tables
-included.** Both sides of the index rely on it: a source's edges are replaced by
-its id and kind, and `findByTarget` and `incomingRelationships` match on
+included.** Both sides of the index rely on it: a source's references are
+replaced by its id and kind, and `findByTarget` and `incomingRelationships` match on
 `targetId` alone. Entries, media and custom-table rows take ULIDs and users take
 UUIDs, so `tableRepository` refuses an `idColumn` not declared with `col.id()`.
 Rejected: adding `sourceType` to the index key, which fixes sources but not
