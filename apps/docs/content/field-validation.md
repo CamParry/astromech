@@ -197,9 +197,11 @@ fields.text('sku', {
 ```
 
 The context carries `value`, `values` (the field's siblings, for cross-field
-rules), `field`, `path`, `operation` (`'create'` or `'update'`), `stage`
-(`'save'` or `'publish'`, so a rule can relax itself on a draft), `host`,
-`user`, and `isUnique` for the uniqueness check.
+rules), `field`, `path`, `operation` (`'create'` or `'update'`), `validation`
+(`'partial'` on a draft save, `'complete'` otherwise, so a rule can relax itself
+on a draft), `resource` (the kind being written and the record as it stands),
+`user`, `isUnique` for the uniqueness check, and `entryTypes` when the caller
+can read entries.
 
 `values` is scoped to the field's own container, not the whole record — a rule
 on a field inside a repeater item sees that item's siblings.
