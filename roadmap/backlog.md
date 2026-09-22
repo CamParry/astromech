@@ -14,10 +14,7 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 
 ### Fields
 
-- [ ] Codegen can emit an invalid `.d.ts`: hoisted tree aliases are named `${Field}TreeNode` with no entry-type prefix, so two types with a tree field of the same name collide, and entry-type keys are not passed through `propertyKey()`. `codegen/type-generator.ts` also keeps its own relation list and group/repeater/tree/blocks switch instead of `FieldType.isRelation` and `children`
 - [ ] `columns.field(name, { sortable: true })` sends a sort the entries repository refuses with a 400 (`UnknownSortKeyError`), and `entries-list-page.tsx` re-sorts each page in the browser by string comparison. Implement field sort in the repository or drop `sortable`; delete the client sort either way
-
-- [ ] Duplicate data-field names are rejected across an entry type's flattened field tree, but the check does not descend into `blocks[].fields` — two fields with the same name inside one block type still pass. Extending it there also extends the structural `tabs`/`tab` rules into blocks, which is a behaviour change of its own
 
 ### Search
 
