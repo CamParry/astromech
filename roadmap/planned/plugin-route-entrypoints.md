@@ -76,3 +76,22 @@ Whether a plugin should be able to import core's runtime at all, or whether
 records the argument for one rule with no exceptions; this item is the argument
 for the host's own mechanism. They are genuinely in tension and the answer is
 not obvious.
+
+## Outcome, 2026-09-22
+
+Closures stay. The mount-order defect that made raw routes unreachable was
+fixed on its own (`createPluginsRouter()` builds the router after plugins
+register), and with it gone the case for entrypoints is weak: the `virtual:`
+reason above is stale, since domain services read registries rather than
+`virtual:` modules; no route has a dependency that fails in plain Node; and
+hooks, services and cron stay closures regardless, so entrypoints would add a
+second mechanism. `ctx.options` is not needed, because a closure already
+captures its options.
+
+- [ ] Record the choice in `DECISIONS.md` (entrypoints rejected, with the
+      reasons above) and rewrite the stale `virtual:` reasoning in
+      `DECISIONS.md` ("`ctx` is the only bridge"), `ARCHITECTURE.md` ("Plugin
+      runtime boundary") and `apps/docs/plugins/authoring.md`.
+- [ ] Extend `check:install` to pack `@astromech/backups` and call one raw
+      route, so a plugin installed from npm is covered.
+- [ ] Then delete this file (`roadmap/completed/ai-integration.md` links to it).

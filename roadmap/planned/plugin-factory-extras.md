@@ -38,3 +38,28 @@ Note that a scaffold locks in conventions, so it should not be written until
 the `definePluginTable` question is settled — see the rejected `defineTable`
 rename in the completed file, which stays rejected until `PluginDB` gains a
 real consumer.
+
+## Design, settled 2026-09-22
+
+A plugin declares `helpers: Record<string, PluginHelper>`, where a helper is
+`(plugin: ResolvedPluginIdentity, ...args) => unknown`. `definePlugin` builds
+the no-options definition eagerly, resolves its identity, and hangs each helper
+off the factory with the identity applied, so a site calls `seo.section()`
+typed as `(options?: SeoSectionOptions) => Field`. A helper key that collides
+with `permissions` or a function built-in throws. `permissions` reads
+`identity.permissionNamespace`.
+
+- [ ] Implement in `types/plugins.ts` and `plugins/define-plugin.ts`; move
+      seo's `fields/groups.ts` to `helpers/section.ts`, delete `SEO_PACKAGE`
+      and the `seoSection` export, and update the demo config, seed and seo
+      README.
+- [ ] Delete `pluginNamespace`/`PluginNamespace` from the `astromech` root.
+- [ ] `DECISIONS.md`: the helpers entry (rejected: status quo imports, a
+      Payload-style config transform, a second `definePlugin` argument, a
+      curried helper factory, a Proxy) and a `definePluginTable` entry closing
+      that question, since `AstromechPluginTables` is the consumer that settled
+      it. `TERMINOLOGY.md`: "plugin helper".
+- [ ] Move the `plugin:new` section to its own `planned/plugin-scaffolding.md`;
+      it waits until the authoring surface stops moving.
+- [ ] Per-plugin permission accessors (`forms.entryPermissions('form', …)`)
+      stay out of scope.
