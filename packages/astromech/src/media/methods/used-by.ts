@@ -102,18 +102,33 @@ async function resolveSourceTitles(
 
     // A name or an email is all a title needs, so the account row is enough.
     const accounts = createUserRepository(config).accounts;
-    for (const userId of userIds) {
-        const user = await accounts.findOne({ id: userId });
-        if (user !== null) titles.set(`user ${userId}`, user.name || user.email);
+    for (const ids of chunks(userIds)) {
+        for (const user of await accounts.findMany({ where: { id: { in: ids } } })) {
+            titles.set(`user ${user.id}`, user.name || user.email);
+        }
     }
 
-    const mediaRepository = createMediaRepository(config);
-    for (const mediaId of mediaIds) {
-        const item = await mediaRepository.get(mediaId);
-        if (item !== null) titles.set(`media ${mediaId}`, item.filename);
+    // The filename lives on the file row, so the content join is not needed.
+    const files = createMediaRepository(config).files;
+    for (const ids of chunks(mediaIds)) {
+        for (const item of await files.findMany({ where: { id: { in: ids } } })) {
+            titles.set(`media ${item.id}`, item.filename);
+        }
     }
 
     return titles;
+}
+
+/** D1 caps a query at 100 bound parameters, and each id binds one. */
+const ID_CHUNK = 100;
+
+/** The ids in slices small enough for one `IN (…)` each. */
+function chunks(ids: ReadonlySet<string>): string[][] {
+    const all = Array.from(ids);
+    const slices: string[][] = [];
+    for (let i = 0; i < all.length; i += ID_CHUNK)
+        slices.push(all.slice(i, i + ID_CHUNK));
+    return slices;
 }
 
 /** Kind+id, NUL-joined so no id can spell another kind's key. */

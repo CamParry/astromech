@@ -8,6 +8,7 @@ import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService, mediaService, usersService } from '@/app-context/services';
+import { createRelationshipRepository } from '@/database/repository/relationships';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 
@@ -160,6 +161,57 @@ describe('mediaService.usedBy', () => {
                 instancePath: 'avatar',
                 sourceStaged: false,
             },
+        ]);
+    });
+
+    // Titles for user and media sources load in one read per kind, not one per
+    // source, so several of each must still come back named and in order.
+    it('names several user and media sources, and leaves a missing one untitled', async () => {
+        const mediaId = await createMedia('target.png');
+        const users = await Promise.all(
+            ['Ada', 'Grace', 'Linus'].map((name) =>
+                usersService.create({
+                    data: {
+                        email: `${name.toLowerCase()}@test.dev`,
+                        name,
+                        fields: { avatar: mediaId },
+                    },
+                })
+            )
+        );
+        // No media field type sits on media itself, so the index rows for media
+        // sources are written directly. The last source id has no row at all.
+        const mediaSources = [
+            await createMedia('first.png'),
+            await createMedia('second.png'),
+            'missing-media',
+        ];
+        const relationships = createRelationshipRepository();
+        for (const sourceId of mediaSources) {
+            await relationships.replaceForSource({ id: sourceId, kind: 'media' }, [
+                {
+                    schemaPath: 'credit',
+                    instancePath: 'credit',
+                    targetId: mediaId,
+                    targetKind: 'media',
+                },
+            ]);
+        }
+
+        const usage = await mediaService.usedBy({ id: mediaId });
+
+        const titleOf = (sourceId: string) =>
+            usage.find((row) => row.sourceId === sourceId)?.sourceTitle;
+        expect(usage).toHaveLength(6);
+        expect(users.map((user) => titleOf(user.id))).toEqual(['Ada', 'Grace', 'Linus']);
+        expect(mediaSources.map(titleOf)).toEqual(['first.png', 'second.png', '']);
+        expect(usage.map((row) => row.sourceKind)).toEqual([
+            'media',
+            'media',
+            'media',
+            'user',
+            'user',
+            'user',
         ]);
     });
 
