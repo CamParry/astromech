@@ -26,10 +26,10 @@ Tick a line when its work lands, and delete this file once every line is ticked.
 - [ ] Naming drift between modules, shared helpers copied per module, admin
       casts and copy-pasted staging controls, dead exports and stale doc paths:
       `planned/naming-and-structure-consistency.md`.
-- [ ] The five copies of the layout-type list, the private-field leak through
+- [x] The five copies of the layout-type list, the private-field leak through
       nested layout fields, `private` on a layout field doing nothing, and
       `searchable`/`translatable` ignored inside groups:
-      `planned/named-layout-fields.md`.
+      `roadmap/completed/named-layout-fields.md`.
 - [ ] No consumer for a `col.reference` resolver, and the one-at-a-time lookups
       in `media/methods/used-by.ts`: `planned/col-reference-resolution.md`.
 - [ ] Plugin raw routes kept as closures, and the stale `virtual:` reasoning:
@@ -58,6 +58,15 @@ Tick a line when its work lands, and delete this file once every line is ticked.
       `global-edit-page.tsx` sequences publish, unpublish and schedule calls
       itself, so any other client must repeat it. `globals.update` should
       accept `status` and `publishedAt`, as entries do.
+
+- [ ] **A named boxed group at the root has nowhere to show its own error.**
+      It renders as a `Panel` rather than through `FormField`, so an error on
+      the group itself (such as `required`) is not displayed.
+- [ ] **The `media.fields` and `users.fields` trees are never validated** at
+      resolve time; the structural and flag rules run only on entry types and
+      globals.
+- [ ] **A raw unnamed `tab` without a `label` shows an empty title.** The
+      builder requires the label; a hand-written object does not.
 
 ## Duplication with no other home
 
