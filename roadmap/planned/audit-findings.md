@@ -41,9 +41,10 @@ read at review, and studying where a pattern repeats before changing it.
 - [ ] The unused `settings` module: `planned/remove-settings-module.md`.
 - [ ] Plugin raw routes kept as closures, and the stale `virtual:` reasoning:
       `planned/plugin-route-entrypoints.md`.
-- [ ] No consumer for a `col.reference` resolver, and the one-at-a-time lookups
-      in `media/methods/used-by.ts`: `planned/col-reference-resolution.md`.
-- [ ] Scheduled publish times shift by the timezone offset on every save
+- [x] The one-at-a-time lookups in `media/methods/used-by.ts`, now batched.
+      The `col.reference` resolver stays deferred until something consumes it:
+      `planned/col-reference-resolution.md`.
+- [x] Scheduled publish times shift by the timezone offset on every save
       (`entry-edit-page.tsx`, `global-edit-page.tsx`); use
       `formatDatetimeForInput`.
 - [x] Named layout fields: `roadmap/completed/named-layout-fields.md`.
