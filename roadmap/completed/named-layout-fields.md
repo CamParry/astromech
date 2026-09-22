@@ -1,9 +1,18 @@
 # Layout fields taking a name, and `group` vs `section`
 
-**Status:** planned, not designed. Split out of the naming pass so it survives
-that spec's deletion; the vocabulary it builds on is "layout field" in
-`DECISIONS.md`. It is a behaviour change with
-a stored-data migration, not a rename, and it needs its own session.
+Split out of the naming pass so it survived that spec's deletion; the
+vocabulary it builds on is "layout field" in `DECISIONS.md`.
+
+## Outcome
+
+A name on a structural field is always a data key, after Payload's named and
+unnamed `group`. `group(name, …)` nests and `group({ … })` draws a box, which
+replaced `section`; a named `accordion` or `tab` wraps an unboxed named group;
+`tabs()` takes no name. No stored-data migration was needed: every name that
+existed was either inert or already a data key. `DECISIONS.md` ("A name on a
+structural field is always a data key") has the alternatives it beat, and
+`apps/docs/content/fields.md` the named-versus-unnamed table. The sections
+below are the question as it was first posed.
 
 Today `section`, `accordion` and `tab` take a name that is inert — never a data
 key. The direction worth exploring is the opposite of dropping that parameter:
