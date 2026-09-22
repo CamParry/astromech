@@ -53,8 +53,8 @@ model.
 - [ ] Admin: `field-error-summary.ts`, `utilities/defaults.ts` and
       `rendering/resolve.ts` use the shared traversal. Show an error on a root
       named boxed group, and require a label on a raw unnamed `tab`.
-- [ ] Guard: a `no-restricted-syntax` rule refusing `.type` compared with a
-      core container or layout literal outside `packages/astromech/src/fields/`
-      and `packages/admin/src/components/fields/`, and a fixture plugin
-      container type carried through parse, codegen, visibility, references and
-      the relationships index.
+- [ ] Guard: a fixture plugin container type carried through parse, codegen,
+      visibility, references and the relationships index, and a drift-report
+      pattern for `.type` compared with a core container or layout literal
+      outside `packages/astromech/src/fields/` and
+      `packages/admin/src/components/fields/`.

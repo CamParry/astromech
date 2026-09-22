@@ -7,9 +7,9 @@ them by root cause and orders the work. Tick a line when its file moves to
 `completed/`, and delete this file once every line is ticked.
 
 The findings share one pattern: consistency has been restored by periodic
-sweeps (17 of them in `roadmap/completed/`) rather than built in, so each drift
-returned. Every file below therefore ends with a guard, a type, lint rule or
-test that makes the next copy fail.
+sweeps (17 of them in `roadmap/completed/`) rather than kept, so each drift
+returned. `planned/conventions-and-drift.md` holds the answer: a drift report
+read at review, and studying where a pattern repeats before changing it.
 
 ## By root cause
 
@@ -35,9 +35,9 @@ test that makes the next copy fail.
 - [ ] **Admin pages share no composition.** Copied staging controls, 16
       mutation bodies, a duplicate key factory, a stale dashboard, the missing
       AI-context globals case: `planned/admin-resource-views.md`.
-- [ ] **Rules live in prose only.** Test-only exports, no typed lint, retired
-      words, lookup verbs, names, stale comments:
-      `planned/enforced-conventions.md`.
+- [ ] **Drift goes unnoticed until a sweep.** The drift report, test-only
+      exports, typed lint, retired words, lookup verbs, names, stale comments:
+      `planned/conventions-and-drift.md`.
 - [ ] The unused `settings` module: `planned/remove-settings-module.md`.
 - [ ] Plugin raw routes kept as closures, and the stale `virtual:` reasoning:
       `planned/plugin-route-entrypoints.md`.
@@ -57,11 +57,11 @@ At most two branches run at once.
 2. `field-tree-traversal.md` in the next free slot.
 3. After `services`: `remove-settings-module.md`, then `one-service-handle.md`,
    then `route-table-handlers.md`. `resource-module-shape.md` can start once
-   `services` lands. The knip and typed-lint items of `enforced-conventions.md`
-   need nothing and can fill a gap.
+   `services` lands. The drift report and the tooling items of `conventions-and-drift.md`
+   need nothing else and go first, so they report on every later branch.
 4. After field traversal: `plugin-types-in-core-registries.md`, then
    `plugin-factory-extras.md` (it rewrites seo's `fields/groups.ts`).
 5. After resources, the service handle and plugin types:
    `admin-resource-views.md`.
-6. Last: the naming items in `enforced-conventions.md`, since the admin pages
+6. Last: the naming items in `conventions-and-drift.md`, since the admin pages
    are rewritten first.

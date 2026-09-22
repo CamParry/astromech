@@ -41,10 +41,9 @@ and read query keys and mutations from one factory per resource.
 - [ ] `useListController` for the entries list; users and media adopt it where
       the shape matches.
 - [ ] The five large pages become compositions of the above.
-- [ ] Guard: `@tanstack/eslint-plugin-query`; a `no-restricted-syntax` rule
-      refusing a literal `queryKey` array outside `hooks/use-query-keys.ts`;
-      the `ui` skill gains a rule that a page composes controllers, and logic
-      a second page needs becomes a hook.
+- [ ] Guard: the recommended rules of `@tanstack/eslint-plugin-query`, and a
+      drift-report pattern for a literal `queryKey` array outside
+      `hooks/use-query-keys.ts`.
 
 Depends on `resource-module-shape.md` (`globals.update` with status),
 `one-service-handle.md` and `plugin-types-in-core-registries.md`.

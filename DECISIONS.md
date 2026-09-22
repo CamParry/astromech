@@ -821,6 +821,14 @@ it measures, and a change that raises a directory's coverage raises its
 threshold. Rejected: one global number, because an average hides a directory
 near zero behind well-covered ones.
 
+**Drift is reported, not enforced.** A second copy of a helper, a cast or a
+query key is found by a report read at review (`pnpm run report:drift`),
+and review decides whether to share it, schedule it or keep it. Rejected: lint
+bans on code shapes and a count that may only fall, which would repeat what
+dependency-cruiser did to the layer model, forcing awkward structure to satisfy
+a rule; and periodic clean-up passes, 17 of which aligned the code once each
+while the drift came back.
+
 **knip checks for unused files, exports and dependencies.** `pnpm run check:unused`
 runs it over the whole workspace with the config in `knip.json`, as Astro and
 better-auth do. Its first run found a live bug beside the dead code: plugin email

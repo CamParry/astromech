@@ -33,10 +33,8 @@ remain.
       `global-edit-page.tsx` and `version-history.tsx`.
 - [ ] Record in the `code` skill that `defineService` returns
       `ServiceDefinition` because `XService` is the bound interface.
-- [ ] Guard: `no-restricted-syntax` refusing `as unknown as` outside an
-      allowlist (`database/codec.ts`, `database/drivers/**`,
-      `database/repository/create-repository.ts`,
-      `content/repository/content-table.ts`, `services/json.ts`,
-      `auth/better-auth.ts`, the facade file).
+- [ ] Guard: the drift report's `as unknown as` count falls to the few files
+      that genuinely need one (the database codec and drivers, the repository
+      factories, `services/json.ts`, `auth/better-auth.ts`, the facade file).
 
 Depends on `explicit-app-context.md` and `remove-settings-module.md`.

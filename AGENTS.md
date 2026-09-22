@@ -63,6 +63,7 @@ Every document answers one question and has one home. A fact lives in exactly on
 - **Delegate coding implementation to sub-agents.** The main thread plans, decides, and reviews; the edits are written by a `coder` sub-agent. Make edits directly only for trivial one-liners, or when correcting a delegated agent.
 - **Give the agent the whole plan** — file paths, exact code changes, expected outcomes — so it can execute without re-researching the codebase.
 - **Verify what comes back.** Re-run the gate yourself; a sub-agent's report of a clean typecheck is not evidence, and one that contradicts a known test baseline is a red flag.
+- **Study a pattern before changing it.** Before introducing or changing a pattern, find where it already repeats. Change every copy, record the rest in a `roadmap/` file, or say why this one differs. A defect fix asks where else the same defect can occur.
 - **Don't commit while sub-agents are still writing in the same worktree.** The pre-commit hook stashes repo-wide and can clobber their in-flight edits.
 - **Reflect on focus shifts.** When the focus of work changes significantly, pause: are there lessons that belong in a skill? Does a `roadmap/` file need to move between `planned/`, `in-progress/` and `completed/`, or a new one to be added?
 - **No time estimates.**
