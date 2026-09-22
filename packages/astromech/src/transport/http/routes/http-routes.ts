@@ -67,7 +67,7 @@ export type MountedRoute = HttpRouteSpec & { base: string };
  * uses, URL-encoded into the `:type` segment.
  *
  * The bulk routes take the wire's `ids` where the method takes `id`, so each
- * carries `wireNames`. Six rows are bespoke; `transport/http/routes/entries.ts`
+ * carries `wireNames`. Two rows are bespoke; `transport/http/routes/entries.ts`
  * records the reason against each handler.
  */
 export const ENTRIES_ROUTE_SPECS = [
@@ -89,7 +89,6 @@ export const ENTRIES_ROUTE_SPECS = [
         id: 'entries.create',
         status: 201,
         bodyKey: 'data',
-        handler: 'bespoke',
     },
     {
         verb: 'post',
@@ -97,7 +96,6 @@ export const ENTRIES_ROUTE_SPECS = [
         id: 'entries.update',
         wireNames: { id: 'ids' },
         queryArgs: ['locale', 'staged'],
-        handler: 'bespoke',
         client: 'list',
     },
     {
@@ -106,7 +104,6 @@ export const ENTRIES_ROUTE_SPECS = [
         id: 'entries.update',
         bodyKey: 'data',
         queryArgs: ['locale', 'staged'],
-        handler: 'bespoke',
     },
     {
         verb: 'post',
@@ -223,7 +220,6 @@ export const ENTRIES_ROUTE_SPECS = [
         id: 'entries.createStaged',
         status: 201,
         queryArgs: ['locale'],
-        handler: 'bespoke',
     },
     {
         verb: 'get',
@@ -263,8 +259,8 @@ export const ENTRIES_ROUTE_SPECS = [
  * bare for a host global, `<namespace>/<key>` for a plugin's, URL-encoded into
  * the `:key` segment.
  *
- * Two rows are bespoke; `transport/http/routes/globals.ts` records the reason
- * against each handler.
+ * One row is bespoke; `transport/http/routes/globals.ts` records the reason
+ * against its handler.
  */
 export const GLOBALS_ROUTE_SPECS = [
     { verb: 'get', path: '/:key', id: 'globals.get', handler: 'bespoke' },
@@ -306,7 +302,6 @@ export const GLOBALS_ROUTE_SPECS = [
         id: 'globals.createStaged',
         status: 201,
         queryArgs: ['locale'],
-        handler: 'bespoke',
     },
     {
         verb: 'get',

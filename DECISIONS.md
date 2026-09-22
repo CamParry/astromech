@@ -94,7 +94,7 @@ Live choices and what each one beat. An entry is here because the losing option 
 
 **Multi-id writes over REST are `POST` action routes**, `POST /entries/:type/bulk-<action>` with `ids` in the body, as in Strapi's admin API. Most actions have no HTTP method, and a `DELETE` body has no defined meaning. Rejected: `PATCH`/`DELETE` on the collection (Directus), `where` in the query string (Payload), and one batch endpoint, which moves permission checks out of the route table.
 
-**A service method is one object: access, schemas, effect hints, capability and handler together**, declared the same way in core and plugins, like tRPC procedures. Rejected: a contract catalogue keyed by name apart from the handlers, which lets a schema drift from its handler.
+**A service method is one object: access, schemas, effect hints, capability and handler together**, declared the same way in core and plugins, like tRPC procedures. `defineService.bind()` checks the capability `requires` names before the handler runs. Rejected: a contract catalogue keyed by name apart from the handlers, which lets a schema drift from its handler, and an `assertCapability` call in each handler, which some handlers lacked and the REST routes repeated.
 
 **A handler receives an explicit `AppContext`; nothing below a method reads the request store.** The transport builds one context per request, and the CLI and cron get a system context. Only the transaction scope stays ambient. Prior art: Keystone's `context`, Payload's `req`. Rejected: ambient reads (`getCurrentUser()`, `getConfig()`), and Hono's `context-storage` hybrid, because an escape hatch is a second dialect and an ambient read cannot tell which plugin is asking.
 

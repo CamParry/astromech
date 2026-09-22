@@ -5,7 +5,7 @@ import { resolveEntryType } from '@/entries/entry-types';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { CapabilityError } from '../../errors';
 import { entryGate } from '../../internal/access';
-import { assertCapability, isVersioningEnabled } from '../../internal/entry-type';
+import { isVersioningEnabled } from '../../internal/entry-type';
 import { asEntry, asRecord, getEntryOfType } from '../../internal/records';
 import { syncEntryRelationships } from '../../internal/relationships';
 import { toStoredFields } from '../../internal/stored-fields';
@@ -32,7 +32,6 @@ export const mergeStagedEntry = defineServiceMethod({
         const { type, id } = params;
 
         const repository = getEntryRepository(type);
-        assertCapability(ctx.config, type, 'staging');
         const { staging } = repository;
         if (!staging) throw new CapabilityError(type, 'staging');
 

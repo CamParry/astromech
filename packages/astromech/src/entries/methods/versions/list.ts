@@ -8,8 +8,8 @@ import { getEntryRepository } from '../../repository/registry';
 
 /**
  * Lists the saved versions of one locale of an entry. Returns an empty array
- * when the type keeps no version history. Throws if the entry does not exist,
- * has no row in that locale, or is the wrong type.
+ * when the type's repository keeps no version store. Throws if the entry does
+ * not exist, has no row in that locale, or is the wrong type.
  */
 export const listEntryVersions = defineServiceMethod({
     summary: 'List the version history of an entry.',

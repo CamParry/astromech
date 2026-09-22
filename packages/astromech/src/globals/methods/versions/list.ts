@@ -15,10 +15,7 @@ export const listGlobalVersions = defineServiceMethod({
     requires: 'versioning',
     mutates: false,
     async handler(params, ctx): Promise<GlobalVersion[]> {
-        const { repository, current } = await requireCanonical(ctx.config, {
-            ...params,
-            capability: 'versioning',
-        });
+        const { repository, current } = await requireCanonical(ctx.config, params);
 
         const rows = await repository.versions.list(current.contentId);
         return rows.map((row) => ({

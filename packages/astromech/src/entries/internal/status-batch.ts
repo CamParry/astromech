@@ -9,18 +9,13 @@
 import type { AppContext, Entry } from '@/types/index';
 import { parseInput } from '@/errors/validation';
 import { scheduleEntrySchema } from '../schema';
-import { assertCapability } from './entry-type';
 import { updateEntryBatch } from './update-batch';
 
-/**
- * Publishes a batch of entries by moving them to `published`. Throws if the
- * type does not support statuses.
- */
+/** Publishes a batch of entries by moving them to `published`. */
 export async function publishEntryBatch(
     params: { type: string; ids: readonly string[]; locale?: string | undefined },
     ctx: AppContext
 ): Promise<Entry[]> {
-    assertCapability(ctx.config, params.type, 'statuses');
     return updateEntryBatch(
         {
             type: params.type,
@@ -33,15 +28,11 @@ export async function publishEntryBatch(
     );
 }
 
-/**
- * Unpublishes a batch of entries by moving them to `unpublished`. Throws if the
- * type does not support statuses.
- */
+/** Unpublishes a batch of entries by moving them to `unpublished`. */
 export async function unpublishEntryBatch(
     params: { type: string; ids: readonly string[]; locale?: string | undefined },
     ctx: AppContext
 ): Promise<Entry[]> {
-    assertCapability(ctx.config, params.type, 'statuses');
     return updateEntryBatch(
         {
             type: params.type,
@@ -55,8 +46,8 @@ export async function unpublishEntryBatch(
 }
 
 /**
- * Schedules a batch of entries to publish at `publishedAt`. Throws if the type
- * does not support statuses, or a 422 when the date fails validation.
+ * Schedules a batch of entries to publish at `publishedAt`. Throws a 422 when
+ * the date fails validation.
  */
 export async function scheduleEntryBatch(
     params: {
@@ -67,7 +58,6 @@ export async function scheduleEntryBatch(
     },
     ctx: AppContext
 ): Promise<Entry[]> {
-    assertCapability(ctx.config, params.type, 'statuses');
     const validated = parseInput(scheduleEntrySchema, {
         publishedAt: params.publishedAt,
     });

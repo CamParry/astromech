@@ -61,6 +61,27 @@ export function assertCapability(
 }
 
 /**
+ * Enforce the capability a method requires of the global a call's `input`
+ * names. An undeclared key is left to the method, which answers it with a 404.
+ */
+export function assertRequiredCapability(
+    config: ResolvedConfig,
+    input: unknown,
+    capability: string
+): void {
+    const key =
+        typeof input === 'object' && input !== null
+            ? (input as { key?: unknown }).key
+            : undefined;
+    const global = typeof key === 'string' ? findGlobal(config, key) : undefined;
+    if (!global) return;
+    if (!isGlobalCapability(capability)) {
+        throw new Error(`'${capability}' is not a global capability.`);
+    }
+    assertCapability(global, capability);
+}
+
+/**
  * The locale a call addresses. A non-translatable global lives in the default
  * content locale alone, so any other locale is a caller error rather than a
  * silent write to the wrong row.
@@ -97,20 +118,15 @@ export type CanonicalGlobal = {
 };
 
 /**
- * Resolve a call to the global, the locale and the canonical row it addresses,
- * asserting `capability` first. Every operation but `update` needs a row that
- * already exists: only a write may create one.
+ * Resolve a call to the global, the locale and the canonical row it addresses.
+ * Every operation but `update` needs a row that already exists: only a write
+ * may create one.
  */
 export async function requireCanonical(
     config: ResolvedConfig,
-    params: {
-        key: string;
-        locale?: string | undefined;
-        capability?: GlobalCapability;
-    }
+    params: { key: string; locale?: string | undefined }
 ): Promise<CanonicalGlobal> {
     const global = resolveGlobal(config, params.key);
-    if (params.capability) assertCapability(global, params.capability);
     const locale = resolveLocale(config, global, params.locale);
 
     const repository = globalRepository(config);

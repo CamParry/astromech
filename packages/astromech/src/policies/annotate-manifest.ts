@@ -1,7 +1,7 @@
 /**
  * Annotate a method manifest for one role — "which of these may I call?"
- * ADVISORY UX ONLY: not the security boundary — `scopeMethods`/`scopeEntries`
- * in `policies/scoped-services.ts` are, and hold regardless of this.
+ * ADVISORY UX ONLY: not the security boundary — `scopeMethods`
+ * in `policies/scoped-services.ts` is, and holds regardless of this.
  */
 
 import type { ManifestMethod, Permission, Role } from '@/types/index';

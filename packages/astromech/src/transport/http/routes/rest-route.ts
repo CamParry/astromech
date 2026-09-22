@@ -41,6 +41,13 @@ export type RestHandlers = {
     /** The query string this route accepts. Documented, and validated first. */
     query?: z.ZodObject;
     /**
+     * The request schema the route's document declares for its body, checked
+     * after the precondition and answered in OpenAPIHono's validator envelope.
+     * The method still parses its own input; this only keeps the 400 a
+     * generated client expects for a body outside the documented operation.
+     */
+    body?: (c: Context<Env>) => z.ZodType;
+    /**
      * Checks run before the body is read, in place of the catalogue's permission
      * check, so a route that declares one makes its own access check. A Response
      * short-circuits the route.
@@ -141,6 +148,13 @@ async function handleRestRoute(
         if (denied) return denied;
     } else if (!permissionsFor(c.var.role).allowsMethod(contract)) {
         return forbidden(c);
+    }
+
+    if (route.body !== undefined) {
+        const json: unknown = await c.req.json().catch(() => undefined);
+        if (json === undefined) return badRequest(c, 'Invalid JSON body');
+        const parsed = route.body(c).safeParse(json);
+        if (!parsed.success) return requestSchemaError(c, parsed.error);
     }
 
     let args: unknown;

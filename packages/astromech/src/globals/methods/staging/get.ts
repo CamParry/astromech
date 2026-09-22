@@ -15,10 +15,7 @@ export const getStagedGlobal = defineServiceMethod({
     requires: 'staging',
     mutates: false,
     async handler(params, ctx): Promise<Global | null> {
-        const { repository, id, locale } = await requireCanonical(ctx.config, {
-            ...params,
-            capability: 'staging',
-        });
+        const { repository, id, locale } = await requireCanonical(ctx.config, params);
         const staged = await repository.staging.getByCanonical(id, locale);
         return staged ? asGlobal(staged) : null;
     },

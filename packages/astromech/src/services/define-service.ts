@@ -17,7 +17,18 @@ import { parseMethodInput } from '@/services/parse-method-input';
 type AssembledMethod = {
     name: string;
     input: ServiceMethodContract['input'];
+    requires?: string;
     handler: (input: unknown, ctx: AppContext & MethodContext) => unknown;
+};
+
+/** How a service checks the capability a method `requires` of the call's target. */
+type DefineServiceOptions = {
+    /**
+     * Throw when the target `input` names does not declare `capability`. Called
+     * before the input is parsed, so a target that does not resolve is left for
+     * the handler to refuse.
+     */
+    assertRequires?: (capability: string, input: unknown, ctx: AppContext) => void;
 };
 
 /**
@@ -27,7 +38,8 @@ type AssembledMethod = {
  */
 export function defineService<S extends object>(
     name: string,
-    methods: MethodsFor<S>
+    methods: MethodsFor<S>,
+    options: DefineServiceOptions = {}
 ): ServiceDefinition<S> {
     const catalogue = methods as unknown as Record<string, AssembledMethod>;
     for (const [key, method] of Object.entries(catalogue)) {
@@ -45,8 +57,12 @@ export function defineService<S extends object>(
                 const withMethod = Object.create(ctx, {
                     method: { value: { name: method.name }, enumerable: true },
                 }) as AppContext & MethodContext;
-                bound[key] = (input) =>
-                    method.handler(parseMethodInput(method, input), withMethod);
+                bound[key] = (input) => {
+                    if (method.requires !== undefined) {
+                        options.assertRequires?.(method.requires, input, ctx);
+                    }
+                    return method.handler(parseMethodInput(method, input), withMethod);
+                };
             }
             return bound as S;
         },

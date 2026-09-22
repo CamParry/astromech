@@ -164,18 +164,20 @@ describe('trash capability', () => {
     });
 });
 
-// versioning (lenient — returns [] for versioning-off types)
+// versioning — `versions` requires it, like every capability-gated method
 
-describe('versioning leniency', () => {
-    it('versions returns [] for versioning-off type', async () => {
+describe('versioning', () => {
+    it('versions throws CapabilityError on a versioning-off type', async () => {
         const id = await createEntry('noversioning');
-        const result = await entriesService.versions({ type: 'noversioning', id });
-        expect(result).toEqual([]);
+        await expect(
+            entriesService.versions({ type: 'noversioning', id })
+        ).rejects.toBeInstanceOf(CapabilityError);
     });
 
-    it('versions returns [] for nostatuses type (also versioning-off)', async () => {
+    it('versions throws CapabilityError on nostatuses type (also versioning-off)', async () => {
         const id = await createEntry('nostatuses');
-        const result = await entriesService.versions({ type: 'nostatuses', id });
-        expect(result).toEqual([]);
+        await expect(
+            entriesService.versions({ type: 'nostatuses', id })
+        ).rejects.toBeInstanceOf(CapabilityError);
     });
 });

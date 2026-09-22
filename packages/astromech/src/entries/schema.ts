@@ -78,9 +78,6 @@ export function updateEntrySchema({ titled }: { titled: boolean }) {
     return schema.openapi('UpdateEntry');
 }
 
-/** Titled-type update schema, for the bulk paths that address no single type. */
-export const titledUpdateEntrySchema = updateEntrySchema({ titled: true });
-
 const sortDirection = z.enum(['asc', 'desc']);
 
 const sortObject = z.record(z.string(), sortDirection);

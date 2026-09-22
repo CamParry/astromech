@@ -24,7 +24,6 @@ export const restoreGlobalVersion = defineServiceMethod({
         const { repository, id, locale, current } = await requireCanonical(ctx.config, {
             key: params.key,
             locale: params.locale,
-            capability: 'versioning',
         });
 
         const version = await repository.versions.get(params.versionId);

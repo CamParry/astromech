@@ -529,13 +529,19 @@ describe('versioning (on)', () => {
 });
 
 describe('versioning (off)', () => {
-    it('creates no versions on update and versions() returns []', async () => {
+    it('creates no versions on update, and versions() is refused', async () => {
         const n = await api.create({
             type: 'note',
             data: { title: 'N', fields: { body: 'a' } },
         });
         await api.update({ type: 'note', id: n.id, data: { fields: { body: 'b' } } });
-        expect(await api.versions({ type: 'note', id: n.id })).toEqual([]);
+        expect(await getDb().selectFrom('entryVersions').selectAll().execute()).toEqual(
+            []
+        );
+        await expect(api.versions({ type: 'note', id: n.id })).rejects.toMatchObject({
+            name: 'CapabilityError',
+            capability: 'versioning',
+        });
     });
 });
 

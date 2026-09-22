@@ -4,8 +4,10 @@
  * every policy lives there or in `internal/**`.
  */
 
+import type { Capability } from './capabilities';
 import type { EntriesService, Entry, EntryUpdateParams } from '@/types/index';
 import { defineService } from '@/services/define-service';
+import { assertCapability, typeOf } from './internal/entry-type';
 import { createEntry } from './methods/create';
 import { deleteEntries } from './methods/delete';
 import { duplicateEntry } from './methods/duplicate';
@@ -59,26 +61,33 @@ export type EntriesMethods = Omit<
     }): Promise<Entry | Entry[]>;
 };
 
-export const entriesDefinition = defineService<EntriesMethods>('entries', {
-    query: queryEntries,
-    get: getEntry,
-    create: createEntry,
-    update: updateEntries,
-    duplicate: duplicateEntry,
-    trash: trashEntries,
-    restore: restoreEntries,
-    delete: deleteEntries,
-    emptyTrash,
-    versions: listEntryVersions,
-    restoreVersion: restoreEntryVersion,
-    publish: publishEntries,
-    unpublish: unpublishEntries,
-    schedule: scheduleEntries,
-    incomingRelationships: listIncomingRelationships,
-    createStaged: createStagedEntry,
-    getStaged: getStagedEntry,
-    mergeStaged: mergeStagedEntry,
-    deleteStaged: deleteStagedEntry,
-    issuePreviewToken,
-    revokePreviewToken,
-});
+export const entriesDefinition = defineService<EntriesMethods>(
+    'entries',
+    {
+        query: queryEntries,
+        get: getEntry,
+        create: createEntry,
+        update: updateEntries,
+        duplicate: duplicateEntry,
+        trash: trashEntries,
+        restore: restoreEntries,
+        delete: deleteEntries,
+        emptyTrash,
+        versions: listEntryVersions,
+        restoreVersion: restoreEntryVersion,
+        publish: publishEntries,
+        unpublish: unpublishEntries,
+        schedule: scheduleEntries,
+        incomingRelationships: listIncomingRelationships,
+        createStaged: createStagedEntry,
+        getStaged: getStagedEntry,
+        mergeStaged: mergeStagedEntry,
+        deleteStaged: deleteStagedEntry,
+        issuePreviewToken,
+        revokePreviewToken,
+    },
+    {
+        assertRequires: (capability, input, ctx) =>
+            assertCapability(ctx.config, typeOf(input), capability as Capability),
+    }
+);

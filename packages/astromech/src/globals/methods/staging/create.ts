@@ -22,7 +22,6 @@ export const createStagedGlobal = defineServiceMethod({
         const { repository, id, locale, current } = await requireCanonical(ctx.config, {
             key: params.key,
             locale: params.locale,
-            capability: 'staging',
         });
 
         const existing = await repository.staging.getByCanonical(id, locale);

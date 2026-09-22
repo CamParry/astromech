@@ -6,6 +6,7 @@
 
 import type { GlobalsService } from '@/types/index';
 import { defineService } from '@/services/define-service';
+import { assertRequiredCapability } from './internal/global';
 import { getGlobal } from './methods/get';
 import { createStagedGlobal } from './methods/staging/create';
 import { deleteStagedGlobal } from './methods/staging/delete';
@@ -16,16 +17,23 @@ import { updateGlobal } from './methods/update';
 import { listGlobalVersions } from './methods/versions/list';
 import { restoreGlobalVersion } from './methods/versions/restore';
 
-export const globalsDefinition = defineService<GlobalsService>('globals', {
-    get: getGlobal,
-    update: updateGlobal,
-    publish: publishGlobal,
-    unpublish: unpublishGlobal,
-    schedule: scheduleGlobal,
-    versions: listGlobalVersions,
-    restoreVersion: restoreGlobalVersion,
-    createStaged: createStagedGlobal,
-    getStaged: getStagedGlobal,
-    mergeStaged: mergeStagedGlobal,
-    deleteStaged: deleteStagedGlobal,
-});
+export const globalsDefinition = defineService<GlobalsService>(
+    'globals',
+    {
+        get: getGlobal,
+        update: updateGlobal,
+        publish: publishGlobal,
+        unpublish: unpublishGlobal,
+        schedule: scheduleGlobal,
+        versions: listGlobalVersions,
+        restoreVersion: restoreGlobalVersion,
+        createStaged: createStagedGlobal,
+        getStaged: getStagedGlobal,
+        mergeStaged: mergeStagedGlobal,
+        deleteStaged: deleteStagedGlobal,
+    },
+    {
+        assertRequires: (capability, input, ctx) =>
+            assertRequiredCapability(ctx.config, input, capability),
+    }
+);

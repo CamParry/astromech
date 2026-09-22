@@ -7,25 +7,18 @@
  */
 import type { HttpRouteSpec } from './http-routes';
 import type { RestRoute } from './rest-route';
-import type { GlobalCapability } from '@/globals/internal/global';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { GlobalsService, GlobalUpdateData, ResolvedGlobal } from '@/types/index';
+import type { GlobalsService, ResolvedGlobal } from '@/types/index';
 import type { Context } from 'hono';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { globalsService } from '@/app-context/services';
 import { getConfig } from '@/config/registry';
 import { CapabilityError } from '@/entries/errors';
-import { findGlobal, isGlobalCapability } from '@/globals/internal/global';
-import { createStagedGlobalSchema } from '@/globals/schema';
+import { findGlobal } from '@/globals/internal/global';
 import { globalsDefinition } from '@/globals/service';
 import { resolveAccess } from '@/permissions/access';
 import { permissionsFor } from '@/permissions/permissions-for';
-import {
-    errorResponse,
-    forbidden,
-    fromZodError,
-    notFound,
-} from '@/transport/http/middleware/errors';
+import { errorResponse, forbidden, notFound } from '@/transport/http/middleware/errors';
 import { GLOBALS_ROUTE_SPECS } from './http-routes';
 import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 
@@ -91,6 +84,20 @@ export const GLOBALS_ROUTES: RestRoute[] = attachHandlers(GLOBALS_ROUTE_SPECS, {
         args: (c) => ({ ...contentArgs(c), versionId: param(c, 'versionId') }),
         precondition: globalAccess(),
     },
+    // The body is optional: an absent one stages a copy of the canonical row,
+    // and a `data` key patches over it.
+    'post /:key/staged': {
+        args: async (c) => {
+            const body: Record<string, unknown> = await c.req
+                .json<Record<string, unknown>>()
+                .catch(() => ({}));
+            return {
+                ...contentArgs(c),
+                ...(body['data'] !== undefined ? { data: body['data'] } : {}),
+            };
+        },
+        precondition: globalAccess(),
+    },
     'get /:key/staged': { args: contentArgs, precondition: globalAccess() },
     'post /:key/staged/merge': { args: contentArgs, precondition: globalAccess() },
     'delete /:key/staged': { args: contentArgs, precondition: globalAccess() },
@@ -125,9 +132,9 @@ function flag(c: Context<Env>, name: string): boolean {
 }
 
 /**
- * The three checks a globals route makes before its body is read: the
- * per-(key, action) permission, the global's existence, then the capability the
- * method needs the declaration to carry.
+ * The two checks a globals route makes before its body is read: the
+ * per-(key, action) permission, then the global's existence. The capability a
+ * method requires is the method's own check.
  *
  * The order is what it decides, not the outcome — the scoped handle refuses the
  * call whatever this returns. An undeclared key answers 403 to an
@@ -137,56 +144,28 @@ function flag(c: Context<Env>, name: string): boolean {
 function globalAccess(): (c: Context<Env>, route: RestRoute) => Response | null {
     return (c, route) => {
         const method = route.id.slice(route.id.indexOf('.') + 1) as GlobalMethodName;
-        return globalPrecondition(c, method);
+        const key = param(c, 'key');
+        const declared = globalsDefinition.catalogue[method];
+        const access = resolveAccess(declared.access, { key });
+        if (!permissionsFor(c.var.role).allowsAccess(access)) return forbidden(c);
+
+        if (!findGlobal(getConfig(), key))
+            return notFound(c, `Global '${key}' not found`);
+        return null;
     };
 }
 
-/** {@link globalAccess}, for the bespoke handlers that make the same checks. */
-function globalPrecondition(c: Context<Env>, method: GlobalMethodName): Response | null {
-    const key = param(c, 'key');
-    const declared = globalsDefinition.catalogue[method];
-    if (!permissionsFor(c.var.role).allowsAccess(resolveAccess(declared.access, { key })))
-        return forbidden(c);
-
-    const global = findGlobal(getConfig(), key);
-    if (!global) return notFound(c, `Global '${key}' not found`);
-
-    const requires = capabilityRequired(declared.requires, method);
-    if (requires !== undefined && !global.capabilities[requires]) {
-        return errorResponse(c, new CapabilityError(key, requires, 'Global'));
-    }
-    return stagedFlagDenied(c, global);
-}
-
 /**
- * A method's `requires` as a global capability. It is typed `string` on the
- * common method shape, so a value no global can declare is a wiring error rather
- * than something to pass over.
- */
-function capabilityRequired(
-    requires: string | undefined,
-    method: GlobalMethodName
-): GlobalCapability | undefined {
-    if (requires === undefined) return undefined;
-    if (!isGlobalCapability(requires)) {
-        throw new Error(
-            `globals.${method} requires '${requires}', which is not a global capability.`
-        );
-    }
-    return requires;
-}
-
-/**
- * The 409 a `?staged=true` request answers when the global does not declare
- * `staging`. `get` and `update` reach the staged row through a flag rather than
- * through a method of their own, so no contract requirement covers them.
+ * The 409 a `?staged=true` read answers when the global does not declare
+ * `staging`. `get` reaches the staged row through a flag rather than through a
+ * method of its own, so no contract requirement covers it.
  */
 function stagedFlagDenied(c: Context<Env>, global: ResolvedGlobal): Response | null {
     if (!flag(c, 'staged') || global.capabilities.staging) return null;
     return errorResponse(c, new CapabilityError(global.id, 'staging', 'Global'));
 }
 
-/** The two handlers the table cannot express, each with the reason. */
+/** The handler the table cannot express, with the reason. */
 function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
     // GET /globals/:key
     // Not in the table: the read permission is conditional. A `public` global's
@@ -224,34 +203,6 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         });
         if (result === null) return notFound(c, `Global '${key}' not found`);
         return c.json({ data: result });
-    });
-
-    // POST /globals/:key/staged
-    // Not in the table yet: it calls the service unscoped, behind the
-    // precondition. A `StagedGlobalExistsError` is `onError`'s 409.
-    router.post('/:key/staged', async (c) => {
-        const denied = globalPrecondition(c, 'createStaged');
-        if (denied) return denied;
-
-        // The body is optional — an absent one stages a copy of the canonical
-        // row, and a `data` key patches over it. Validated here rather than by
-        // the generic mount, which this route does not go through.
-        const body: Record<string, unknown> = await c.req
-            .json<Record<string, unknown>>()
-            .catch(() => ({}));
-        const args = createStagedGlobalSchema.safeParse({
-            ...contentArgs(c),
-            ...(body['data'] !== undefined ? { data: body['data'] } : {}),
-        });
-        if (!args.success) return fromZodError(c, args.error);
-
-        const { key, locale, data } = args.data;
-        const global = await globalsService.createStaged({
-            key,
-            ...(locale !== undefined ? { locale } : {}),
-            ...(data !== undefined ? { data: data as GlobalUpdateData } : {}),
-        });
-        return c.json({ data: global }, 201);
     });
 }
 

@@ -2,13 +2,12 @@ import type { AppContext } from '@/types/index';
 import { transaction } from '@/database/transaction';
 import { BulkOperationError, CapabilityError } from '../errors';
 import { getEntryRepository } from '../repository/registry';
-import { assertCapability } from './entry-type';
 import { asEntry, getEntryResources } from './records';
 
 /**
  * Soft-delete a batch of entries, atomically, firing the entry delete hooks
  * around the write. Trashing is resource-level: every locale of an entry goes
- * with it. Throws if the type does not support trash.
+ * with it. `trash` declares `requires: 'trash'`, so the type keeps a bin.
  *
  * Batch-only: `methods/trash.ts` reaches it through `fromBatch`.
  */
@@ -18,7 +17,6 @@ export async function trashEntryBatch(
 ): Promise<void> {
     const { type, ids } = params;
     const repository = getEntryRepository(type);
-    assertCapability(ctx.config, type, 'trash');
     const { trash } = repository;
     if (!trash) throw new CapabilityError(type, 'trash');
     const entries = await getEntryResources(ctx.config, repository, type, ids);

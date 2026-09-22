@@ -73,10 +73,7 @@ async function writeStatus(
     user: User | null,
     write: (current: GlobalRow) => ContentWrite
 ): Promise<Global> {
-    const { repository, id, locale, current } = await requireCanonical(config, {
-        ...params,
-        capability: 'statuses',
-    });
+    const { repository, id, locale, current } = await requireCanonical(config, params);
 
     const row = await repository.update(
         { id, locale },

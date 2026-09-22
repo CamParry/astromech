@@ -14,10 +14,7 @@ export const deleteStagedGlobal = defineServiceMethod({
     requires: 'staging',
     mutates: true,
     async handler(params, ctx): Promise<void> {
-        const { repository, id, locale } = await requireCanonical(ctx.config, {
-            ...params,
-            capability: 'staging',
-        });
+        const { repository, id, locale } = await requireCanonical(ctx.config, params);
         const staged = await repository.staging.getByCanonical(id, locale);
         if (!staged) throw new Error(`No staged change for global '${params.key}'`);
         await repository.staging.delete({ id, locale });

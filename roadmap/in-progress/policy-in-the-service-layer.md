@@ -10,7 +10,7 @@ workstream.
 
 ## Defects this fixes
 
-- [ ] **Publish can be escalated.** Only `PUT /entries/:type/:id` and
+- [x] **Publish can be escalated.** Only `PUT /entries/:type/:id` and
       `bulk-update` demand the publish permission for `status: 'published'`
       (`publishEscalation` in `transport/http/routes/entries.ts`).
       `POST /entries/:type`, RPC `entries.<type>.create|update`, the tool loop
@@ -56,7 +56,7 @@ workstream.
       (`entries/repository/entries-table.ts`, `registry.ts`,
       `entries/internal/preview.ts`); users, media and globals read the
       configured default.
-- [ ] **`scopeEntries` has drifted from `scopeMethods`**
+- [x] **`scopeEntries` has drifted from `scopeMethods`**
       (`policies/scoped-services.ts`): it skips `sessionScoped`/`requireSubject`,
       and `if (resolved.kind !== 'permission') continue` lets an
       `'authenticated'` rule through for an anonymous caller.
@@ -70,13 +70,15 @@ workstream.
       delete the route-level `capabilityDenied` copies and the per-route
       catches in `rest-route.ts`, `rpc.ts` and `routes/plugins.ts`. Error bodies
       stay byte-identical for REST.
-- [ ] Turn the bespoke entry and global routes (`POST /:type`, `PUT /:type/:id`,
+- [x] Turn the bespoke entry and global routes (`POST /:type`, `PUT /:type/:id`,
       `bulk-update`, `POST /:type/:id/staged`, `POST /globals/:key/staged`) into
       route-table rows once they carry no policy of their own.
-- [ ] Enforce a method's `requires` capability once in `defineService.bind`,
+- [x] Enforce a method's `requires` capability once in `defineService.bind`,
       and delete the manual `assertCapability` calls in `entries/methods/**`,
-      `entries/internal/*-batch.ts` and `globals/methods/**`.
-- [ ] Express the entries per-type and `full` gate in `entryGate` and scope
+      `entries/internal/*-batch.ts` and `globals/methods/**`. The two left in
+      `globals.get` and `globals.update` check the `staged` flag, which no
+      `requires` can state.
+- [x] Express the entries per-type and `full` gate in `entryGate` and scope
       entries with `scopeMethods`; delete `scopeEntries`.
 - [ ] CLI commands boot through `createAstromech` (except `db:*`) and call
       methods through `callMethod(…, 'trusted')`; one "create credential

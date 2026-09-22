@@ -3,7 +3,6 @@
  * handed this instead of the raw domain services, so authority is a property
  * of the handle, not of checks each caller remembered to write. Fails CLOSED.
  */
-import type { EntryMethodName } from '@/entries/catalogue';
 import type { Permissions } from '@/permissions/permissions-for';
 import type {
     EntriesService,
@@ -12,7 +11,6 @@ import type {
     NotificationsService,
     PluginServiceNamespace,
     Role,
-    ServiceMethodAccess,
     ServiceMethodContract,
     SettingsService,
     UsersService,
@@ -32,7 +30,6 @@ import { globalsDefinition } from '@/globals/service';
 import { mediaDefinition } from '@/media/service';
 import { notificationsDefinition } from '@/notifications/service';
 import { deniedPermission, resolveAccess } from '@/permissions/access';
-import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/core-permissions';
 import { permissionsFor } from '@/permissions/permissions-for';
 import {
     getPluginIdentities,
@@ -120,95 +117,6 @@ export function scopeMethods<S extends object>(
     return scoped as S;
 }
 
-/**
- * The entry types one call targets, or null when the call names none.
- * `query` accepts a list (cross-type listing), and a call must hold the
- * permission for EVERY type it touches — not just one in the list.
- */
-function targetedTypes(input: unknown): string[] | null {
-    if (typeof input !== 'object' || input === null) return null;
-    const type = (input as { type?: unknown }).type;
-
-    if (typeof type === 'string') return type.length > 0 ? [type] : null;
-    if (!Array.isArray(type) || type.length === 0) return null;
-    if (type.some((t) => typeof t !== 'string' || t.length === 0)) return null;
-    return type as string[];
-}
-
-/**
- * Does this call ask for the full (admin) shape rather than the public one?
- * `full` is a second axis of authority no per-type permission covers, checked
- * for every method so growing the option can't silently grow a bypass.
- */
-function wantsFullShape(input: unknown): boolean {
-    if (typeof input !== 'object' || input === null) return false;
-    return (input as { full?: unknown }).full === true;
-}
-
-/**
- * Scope the entries service: its permission is per (type, action)
- * (`entry:posts:update` ≠ `entry:pages:update`), so the check is the method's
- * own `access` rule resolved once per type the call targets, rather than one
- * fixed contract.
- */
-export function scopeEntries(
-    service: EntriesService,
-    permissions: Permissions
-): EntriesService {
-    const scoped: ServiceRecord = {};
-
-    for (const [key, value] of Object.entries(service as unknown as ServiceRecord)) {
-        if (typeof value !== 'function') {
-            scoped[key] = value;
-            continue;
-        }
-        const fn = value as ServiceFn;
-        const id = `entries.${key}`;
-        const declared = entriesDefinition.catalogue[key as EntryMethodName] as
-            | { access: ServiceMethodAccess<never> }
-            | undefined;
-
-        scoped[key] = (...args: unknown[]): unknown => {
-            if (declared === undefined) throw new PermissionDeniedError(id, null);
-
-            const types = targetedTypes(args[0]);
-            if (types === null) {
-                throw new PermissionDeniedError(
-                    id,
-                    null,
-                    'was called without an entry type, so the permission it needs cannot be derived.'
-                );
-            }
-
-            for (const type of types) {
-                // The rule reads `type` off the input, so a cross-type call is
-                // resolved once per type rather than once for the list.
-                const resolved = resolveAccess(declared.access, {
-                    ...(args[0] as object),
-                    type,
-                });
-                if (!permissions.allowsAccess(resolved)) {
-                    throw new PermissionDeniedError(
-                        id,
-                        deniedPermission(resolved, permissions.allows)
-                    );
-                }
-            }
-
-            if (
-                wantsFullShape(args[0]) &&
-                !permissions.allows(PERMISSION_ENTRY_READ_FULL)
-            ) {
-                throw new PermissionDeniedError(id, PERMISSION_ENTRY_READ_FULL);
-            }
-
-            return fn.apply(service, args);
-        };
-    }
-
-    return scoped as unknown as EntriesService;
-}
-
 /** A plugin's methods as the scoped handle exposes them. */
 type PluginMethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
 
@@ -291,10 +199,15 @@ export function scopedServices(role: Role | null | undefined): ScopedServices {
             permissions,
             'settings'
         ),
-        entries: scopeEntries(entriesService, permissions),
-        // Plain `scopeMethods`: a global's permission depends on the `key` in
-        // the call, and its contract says so in the function form — including
-        // the `full`/`staged` gate `scopeEntries` has to apply by hand.
+        // An entry's and a global's permissions depend on the call's `type` or
+        // `key`, and each contract states that in the function form, the
+        // `full` and publish gates included.
+        entries: scopeMethods(
+            entriesService,
+            entriesDefinition.catalogue,
+            permissions,
+            'entries'
+        ),
         globals: scopeMethods(
             globalsService,
             globalsDefinition.catalogue,

@@ -18,7 +18,14 @@ export function isVersioningEnabled(config: ResolvedConfig, type: string): boole
     );
 }
 
-/** Enforce a type's configured capability set. */
+/** The type one call's input names, or the empty type when it names none. */
+export function typeOf(input: unknown): string {
+    if (typeof input !== 'object' || input === null) return '';
+    const { type } = input as { type?: unknown };
+    return typeof type === 'string' ? type : '';
+}
+
+/** Enforce a type's configured capability set. An unknown type is left to the caller. */
 export function assertCapability(
     config: ResolvedConfig,
     type: string,

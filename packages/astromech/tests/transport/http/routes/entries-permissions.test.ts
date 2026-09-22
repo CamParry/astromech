@@ -1,12 +1,9 @@
 /**
  * The permission matrix of `routes/entries.ts`: which `entry:post:<action>` each
- * route demands, and what it answers to a role that lacks it.
- *
- * Enforcement moves to `scopedServices` later, so this is the record that the
- * move changed nothing — including the two things the scoped handle does not
- * derive: the publish escalation on an `update` carrying `status: 'published'`,
- * and the fact that the permission is checked BEFORE the entry type is
- * resolved on every route, the cross-type `POST /query` included.
+ * route demands, and what it answers to a role that lacks it — including the
+ * publish grant a write carrying `status: 'published'` demands, and the fact
+ * that the permission is checked BEFORE the entry type is resolved on every
+ * route, the cross-type `POST /query` included.
  */
 
 import type { EntryAction } from '@/permissions/entry-permission';
@@ -179,7 +176,18 @@ describe('every entries route demands one entry action', () => {
     });
 });
 
-describe('the publish escalation on update', () => {
+describe('the publish escalation on a write', () => {
+    it('403s POST with status: published when the role holds create but not publish', async () => {
+        const res = await request(
+            roleWith(['entry:post:read', 'entry:post:create']),
+            '/post',
+            json({ title: 'Live', slug: 'live', status: 'published' })
+        );
+        expect(res.status).toBe(403);
+        const { data } = await api.query({ type: 'post', full: true });
+        expect(data.map((entry) => entry.slug)).toEqual(['subject']);
+    });
+
     it('403s PUT with status: published when the role holds update but not publish', async () => {
         const res = await request(
             roleWith(['entry:post:read', 'entry:post:update']),

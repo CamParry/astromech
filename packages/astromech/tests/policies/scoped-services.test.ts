@@ -21,10 +21,11 @@ import type {
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
+import { entriesDefinition } from '@/entries/service';
 import { PermissionDeniedError } from '@/errors/permission';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { annotateManifest } from '@/policies/annotate-manifest';
-import { scopedServices, scopeEntries, scopeMethods } from '@/policies/scoped-services';
+import { scopedServices, scopeMethods } from '@/policies/scoped-services';
 import { runWithContext } from '@/request-context/request-context';
 import { noInput } from '@/services/define-service-method';
 
@@ -220,11 +221,16 @@ function makeEntriesStub() {
     };
 }
 
-/** The stub is a slice of `EntriesService`; the wrapper only reads its keys. */
+/**
+ * The stub is a slice of `EntriesService`, scoped against the real entries
+ * catalogue, whose access rules derive the permission from the call.
+ */
 function scopeStub(stub: object, actingRole: Role | undefined): Record<string, never> {
-    return scopeEntries(
+    return scopeMethods(
         stub as unknown as EntriesService,
-        permissionsFor(actingRole)
+        entriesDefinition.catalogue,
+        permissionsFor(actingRole),
+        'entries'
     ) as unknown as Record<string, never>;
 }
 
@@ -233,7 +239,7 @@ function call(scoped: Record<string, never>, key: string, input: unknown): unkno
     return (scoped[key] as unknown as (i: unknown) => unknown)(input);
 }
 
-describe('scopeEntries', () => {
+describe('scopeMethods over the entries catalogue', () => {
     it('derives the permission per entry type', async () => {
         const stub = makeEntriesStub();
         const scoped = scopeStub(stub, role('entry:posts:update'));
@@ -262,7 +268,7 @@ describe('scopeEntries', () => {
 
     it('refuses a call with a missing or blank type rather than guessing one', () => {
         const stub = makeEntriesStub();
-        const scoped = scopeStub(stub, role('*'));
+        const scoped = scopeStub(stub, role('entry:posts:update'));
 
         expect(() => call(scoped, 'update', { id: '1' })).toThrow(PermissionDeniedError);
         expect(() => call(scoped, 'update', { type: '', id: '1' })).toThrow(

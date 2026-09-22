@@ -24,7 +24,7 @@ export const mergeStagedGlobal = defineServiceMethod({
     async handler(params, ctx): Promise<Global> {
         const { global, repository, id, locale, current } = await requireCanonical(
             ctx.config,
-            { ...params, capability: 'staging' }
+            params
         );
 
         const staged = await repository.staging.getByCanonical(id, locale);

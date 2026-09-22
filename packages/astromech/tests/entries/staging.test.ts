@@ -242,7 +242,9 @@ describe('mergeStaged', () => {
 
         const merged = await api.mergeStaged({ type: 'note', id: canonical.id });
         expect(merged.fields.body).toBe('b');
-        expect(await api.versions({ type: 'note', id: canonical.id })).toEqual([]);
+        expect(await getDb().selectFrom('entryVersions').selectAll().execute()).toEqual(
+            []
+        );
     });
 
     it('throws when there is no staged change to merge', async () => {

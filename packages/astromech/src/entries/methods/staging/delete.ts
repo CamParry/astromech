@@ -2,7 +2,6 @@ import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { CapabilityError } from '../../errors';
 import { entryGate } from '../../internal/access';
-import { assertCapability } from '../../internal/entry-type';
 import { getEntryOfType } from '../../internal/records';
 import { syncEntryRelationships } from '../../internal/relationships';
 import { getEntryRepository } from '../../repository/registry';
@@ -24,7 +23,6 @@ export const deleteStagedEntry = defineServiceMethod({
     async handler(params, ctx): Promise<void> {
         const { type, id } = params;
         const repository = getEntryRepository(type);
-        assertCapability(ctx.config, type, 'staging');
         const { staging } = repository;
         if (!staging) throw new CapabilityError(type, 'staging');
         const canonical = await getEntryOfType(

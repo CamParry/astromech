@@ -1,7 +1,6 @@
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
-import { assertCapability } from '../../internal/entry-type';
 import { generatePreviewSecret, hashPreviewToken } from '../../internal/preview';
 import { getEntryResource } from '../../internal/records';
 import { getEntryRepository } from '../../repository/registry';
@@ -29,7 +28,6 @@ export const issuePreviewToken = defineServiceMethod({
     mutates: true,
     async handler(params, ctx): Promise<{ token: string }> {
         const { type, id } = params;
-        assertCapability(ctx.config, type, 'staging');
         const repository = getEntryRepository(type);
         const canonical = await getEntryResource(ctx.config, repository, type, id);
         if (canonical.staged) {
@@ -66,7 +64,6 @@ export const revokePreviewToken = defineServiceMethod({
     mutates: true,
     async handler(params, ctx): Promise<void> {
         const { type, id } = params;
-        assertCapability(ctx.config, type, 'staging');
         const repository = getEntryRepository(type);
         await getEntryResource(ctx.config, repository, type, id);
         await repository.previewToken?.clear(id);

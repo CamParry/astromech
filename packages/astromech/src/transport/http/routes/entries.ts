@@ -3,44 +3,25 @@
  *
  * Every entry type is served here, addressed by the type id the entries
  * service itself uses — bare for a root type, qualified for a plugin type.
- * The 30 routes live in `http-routes.ts`; six get a bespoke handler.
+ * The 30 routes live in `http-routes.ts`; two get a bespoke handler.
  */
 import type { ContractCatalogue, RestRoute } from './rest-route';
-import type { Capability } from '@/entries/capabilities';
 import type { EntryMethodName } from '@/entries/catalogue';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type {
-    EntryQueryParams,
-    EntryUpdateData,
-    JsonObject,
-    ResolvedEntryType,
-    SortDirection,
-} from '@/types/index';
+import type { EntryQueryParams, ResolvedEntryType, SortDirection } from '@/types/index';
 import type { Context } from 'hono';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { entriesService } from '@/app-context/services';
 import { getConfig } from '@/config/registry';
 import { entryCatalogue } from '@/entries/catalogue';
 import { resolveEntryType } from '@/entries/entry-types';
-import { CapabilityError } from '@/entries/errors';
-import {
-    createEntrySchema,
-    titledUpdateEntrySchema,
-    updateEntrySchema,
-} from '@/entries/schema';
+import { createEntrySchema, updateEntrySchema } from '@/entries/schema';
 import { entriesDefinition } from '@/entries/service';
 import { resolveAccess } from '@/permissions/access';
 import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/core-permissions';
 import { entryPermission } from '@/permissions/entry-permission';
 import { permissionsFor } from '@/permissions/permissions-for';
-import {
-    badRequest,
-    errorResponse,
-    forbidden,
-    fromZodError,
-    notFound,
-    requestSchemaError,
-} from '@/transport/http/middleware/errors';
+import { badRequest, forbidden, notFound } from '@/transport/http/middleware/errors';
 import { ENTRIES_ROUTE_SPECS } from './http-routes';
 import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 
@@ -50,14 +31,16 @@ type Env = { Variables: AuthVariables };
  * Build the entries router. There is exactly ONE in production; this is a
  * factory so tests can mount an isolated instance.
  *
- * The table mounts first: `DELETE /:type/trash` has to be matched before the
- * bespoke `DELETE /:type/:id` that would otherwise swallow it.
+ * Hono matches in registration order, so the cross-type `POST /query` mounts
+ * before the table's `POST /:type` would take it, and the table before the
+ * bespoke `DELETE /:type/:id` would swallow `DELETE /:type/trash`.
  */
 export function createEntriesRouter(): OpenAPIHono<Env> {
     const router = new OpenAPIHono<Env>();
+    mountCrossTypeQuery(router);
     mountRestRoutes(router, DOCUMENTED_CONTRACTS, ENTRIES_ROUTES);
     documentBespokeRoutes(router, DOCUMENTED_CONTRACTS, ENTRIES_ROUTE_SPECS);
-    mountBespokeRoutes(router);
+    mountTrashOrDelete(router);
     return router;
 }
 
@@ -99,6 +82,30 @@ export const ENTRIES_ROUTES: RestRoute[] = attachHandlers(ENTRIES_ROUTE_SPECS, {
     },
     'post /:type/query': {
         args: queryBodyArgs,
+        precondition: entryAccess(),
+    },
+    // The documented body is the type's own create schema, so a titled type
+    // with no title answers the validator's 400 before the method runs.
+    'post /:type': {
+        args: async (c) => ({ type: param(c, 'type'), data: await c.req.json() }),
+        body: (c) => createEntrySchema({ titled: isTitled(c) }),
+        precondition: entryAccess(),
+    },
+    'post /:type/bulk-update': {
+        args: async (c) => ({ ...(await localisedBulkArgs(c)), ...stagedArg(c) }),
+        precondition: entryAccess(),
+    },
+    // `locale` addresses which translation is written, and a locale with no
+    // content row yet is created; `staged` writes the staged change. The
+    // documented body is the titleless envelope; a titled type's empty title is
+    // the method's 422.
+    'put /:type/:id': {
+        args: async (c) => ({
+            ...contentArgs(c),
+            ...stagedArg(c),
+            data: await c.req.json(),
+        }),
+        body: () => updateEntrySchema({ titled: false }),
         precondition: entryAccess(),
     },
     'post /:type/bulk-trash': { args: bulkArgs, precondition: entryAccess() },
@@ -146,6 +153,7 @@ export const ENTRIES_ROUTES: RestRoute[] = attachHandlers(ENTRIES_ROUTE_SPECS, {
     // Forward versioning (staged entries). Each is gated on the `staging`
     // capability its contract declares, so a misconfigured type answers 409
     // rather than the service's 500.
+    'post /:type/:id/staged': { args: contentArgs, precondition: entryAccess() },
     'get /:type/:id/staged': { args: contentArgs, precondition: entryAccess() },
     'post /:type/:id/staged/merge': { args: contentArgs, precondition: entryAccess() },
     'delete /:type/:id/staged': { args: contentArgs, precondition: entryAccess() },
@@ -182,6 +190,16 @@ function canonicalArgs(c: Context<Env>): { type: string; id: string } {
 function contentArgs(c: Context<Env>): { type: string; id: string; locale?: string } {
     const locale = c.req.query('locale');
     return { ...canonicalArgs(c), ...(locale ? { locale } : {}) };
+}
+
+/** `{ staged: true }` when the query string asks for the staged change. */
+function stagedArg(c: Context<Env>): { staged?: true } {
+    return flag(c, 'staged') ? { staged: true } : {};
+}
+
+/** Whether the route's entry type carries a title. The precondition has resolved it. */
+function isTitled(c: Context<Env>): boolean {
+    return resolveEntryType(getConfig(), param(c, 'type'))?.titleField !== false;
 }
 
 /** A boolean query flag, in the two spellings the wire has always accepted. */
@@ -262,12 +280,6 @@ async function optionalBody(c: Context<Env>): Promise<Record<string, unknown>> {
     return c.req.json<Record<string, unknown>>().catch(() => ({}));
 }
 
-/** One entry type's method catalogue, built once per resolved type. */
-const CONTRACTS_BY_TYPE = new WeakMap<ResolvedEntryType, EntryContracts>();
-
-/** The per-type catalogue, keyed as `EntriesService` keys its methods. */
-type EntryContracts = ReturnType<typeof entryCatalogue>;
-
 /**
  * The catalogue the OpenAPI document is written from. REST addresses a type by
  * path param, so the document describes `{type}` rather than any one type, and
@@ -278,23 +290,10 @@ const DOCUMENTED_CONTRACTS: ContractCatalogue = entryCatalogue({
     titled: true,
 });
 
-/** The method catalogue for `resolved`, addressed as `typeId`. */
-function entryContracts(resolved: ResolvedEntryType, typeId: string): EntryContracts {
-    const cached = CONTRACTS_BY_TYPE.get(resolved);
-    if (cached) return cached;
-
-    const catalogue = entryCatalogue({
-        typeId,
-        titled: resolved.titleField !== false,
-    });
-    CONTRACTS_BY_TYPE.set(resolved, catalogue);
-    return catalogue;
-}
-
 /**
- * The three checks an entries route makes before its body is read: the
- * per-(type, action) permission, the type's existence, then the capability the
- * method's contract requires.
+ * The two checks an entries route makes before its body is read: the
+ * per-(type, action) permission, then the type's existence. The capability a
+ * method requires is the method's own check.
  *
  * The permission is READ here, not enforced here — `scopedServices` refuses the
  * call whatever this returns. What it decides is the ORDER: an unknown type
@@ -318,41 +317,14 @@ function entryPrecondition(c: Context<Env>, method: EntryMethodName): Response |
     )
         return forbidden(c);
 
-    const resolved = resolveEntryType(getConfig(), type);
-    if (!resolved) return notFound(c, `Entry type '${type}' not found`);
-
-    const requires: Capability | undefined = entryContracts(resolved, type)[method]
-        .requires;
-    if (requires !== undefined && !resolved.capabilities[requires]) {
-        return errorResponse(c, new CapabilityError(type, requires));
+    if (!resolveEntryType(getConfig(), type)) {
+        return notFound(c, `Entry type '${type}' not found`);
     }
     return null;
 }
 
-/** The per-field capability gate shared by create, update and bulk-update. */
-function fieldCapabilitiesDenied(
-    c: Context<Env>,
-    type: string,
-    resolved: ResolvedEntryType,
-    data: { status?: unknown; publishedAt?: unknown; slug?: unknown }
-): Response | null {
-    const caps = resolved.capabilities;
-    if (!caps.statuses && (data.status !== undefined || data.publishedAt !== undefined)) {
-        return errorResponse(c, new CapabilityError(type, 'statuses'));
-    }
-    if (!caps.slug && data.slug !== undefined) {
-        return errorResponse(c, new CapabilityError(type, 'slug'));
-    }
-    return null;
-}
-
-const bulkUpdateSchema = z.object({
-    ids: z.array(z.string().min(1)).min(1),
-    data: titledUpdateEntrySchema,
-});
-
-/** The six handlers the table cannot express, each with the reason. */
-function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
+/** The cross-type query, which the table cannot express. */
+function mountCrossTypeQuery(router: OpenAPIHono<Env>): void {
     // POST /entries/query (cross-type)
     // Not in the table: `type` arrives in the body and may be a list, and an
     // absent one answers a hand-rolled `invalid_input` 400 outside ApiErrorCode.
@@ -398,127 +370,10 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
             })
         );
     });
+}
 
-    // POST /entries/:type
-    // Not in the table: a per-FIELD capability 409 — `status`/`publishedAt` need
-    // `statuses` and `slug` needs `slug`, which no contract states.
-    router.post('/:type', async (c) => {
-        const { type } = c.req.param();
-        const denied = entryPrecondition(c, 'create');
-        if (denied) return denied;
-
-        const resolved = resolveEntryType(getConfig(), type) as ResolvedEntryType;
-        const raw = await c.req.json().catch(() => undefined);
-        if (raw === undefined) return badRequest(c, 'Invalid JSON body');
-
-        const parsed = createEntrySchema({
-            titled: resolved.titleField !== false,
-        }).safeParse(raw);
-        // The per-type body schema answers the same envelope OpenAPIHono's
-        // request validator did, so a titled type behaves as it always has.
-        if (!parsed.success) return requestSchemaError(c, parsed.error);
-
-        const refused = fieldCapabilitiesDenied(c, type, resolved, parsed.data);
-        if (refused) return refused;
-
-        const { title, slug, fields, status, publishedAt, locale } = parsed.data;
-
-        const entry = await entriesService.create({
-            type,
-            data: {
-                ...(title !== undefined && { title }),
-                ...(slug !== undefined && { slug }),
-                ...(locale !== undefined && { locale }),
-                ...(fields !== undefined && { fields: fields as JsonObject }),
-                ...(status !== undefined && { status }),
-                ...(publishedAt !== undefined && { publishedAt }),
-            },
-        });
-
-        return c.json({ data: entry }, 201);
-    });
-
-    // POST /entries/:type/bulk-update
-    // Not in the table: the per-field capability 409, plus `status: 'published'`
-    // demanding the publish permission on an update method.
-    router.post('/:type/bulk-update', async (c) => {
-        const { type } = c.req.param();
-        const denied = entryPrecondition(c, 'update');
-        if (denied) return denied;
-
-        const resolved = resolveEntryType(getConfig(), type) as ResolvedEntryType;
-        const raw = await c.req.json().catch(() => undefined);
-        if (raw === undefined) return badRequest(c, 'Invalid JSON body');
-
-        const parsed = bulkUpdateSchema.safeParse(raw);
-        if (!parsed.success) return fromZodError(c, parsed.error);
-
-        const { ids, data } = parsed.data;
-        const refused = fieldCapabilitiesDenied(c, type, resolved, data);
-        if (refused) return refused;
-
-        const escalated = publishEscalation(c, type, data.status);
-        if (escalated) return escalated;
-
-        const locale = c.req.query('locale');
-        const entries = await entriesService.update({
-            type,
-            id: ids,
-            ...(locale ? { locale } : {}),
-            ...(flag(c, 'staged') ? { staged: true } : {}),
-            data: data as EntryUpdateData,
-        });
-        return c.json({ data: entries });
-    });
-
-    // PUT /entries/:type/:id
-    // Not in the table: the same per-field capability 409 and publish escalation.
-    router.put('/:type/:id', async (c) => {
-        const { type, id } = c.req.param();
-        const denied = entryPrecondition(c, 'update');
-        if (denied) return denied;
-
-        const resolved = resolveEntryType(getConfig(), type) as ResolvedEntryType;
-        const raw = await c.req.json().catch(() => undefined);
-        if (raw === undefined) return badRequest(c, 'Invalid JSON body');
-
-        // Two stages, as this route has always had: the request schema the
-        // document declares answers 400, and the per-type schema answers 422.
-        const envelope = updateEntrySchema({ titled: false }).safeParse(raw);
-        if (!envelope.success) return requestSchemaError(c, envelope.error);
-
-        const parsed = updateEntrySchema({
-            titled: resolved.titleField !== false,
-        }).safeParse(raw);
-        if (!parsed.success) return fromZodError(c, parsed.error);
-
-        const refused = fieldCapabilitiesDenied(c, type, resolved, parsed.data);
-        if (refused) return refused;
-
-        const escalated = publishEscalation(c, type, parsed.data.status);
-        if (escalated) return escalated;
-
-        const { title, slug, fields, status, publishedAt } = parsed.data;
-        // `locale` addresses which translation is written — a locale with no
-        // content row yet is created — and `staged` writes the staged change.
-        const locale = c.req.query('locale');
-        const entry = await entriesService.update({
-            type,
-            id,
-            ...(locale ? { locale } : {}),
-            ...(flag(c, 'staged') ? { staged: true } : {}),
-            data: {
-                ...(title !== undefined && { title }),
-                ...(slug !== undefined && { slug }),
-                ...(fields !== undefined && { fields: fields as JsonObject }),
-                ...(status !== undefined && { status }),
-                ...(publishedAt !== undefined && { publishedAt }),
-            },
-        });
-
-        return c.json({ data: entry });
-    });
-
+/** The soft delete, which the table cannot express. */
+function mountTrashOrDelete(router: OpenAPIHono<Env>): void {
     // DELETE /entries/:type/:id (soft delete)
     // Not in the table: the method id is chosen at request time from the type's
     // `trash` capability — trash it if the type keeps a bin, delete it if not.
@@ -534,33 +389,6 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         await call({ type, id });
         return c.json({ success: true });
     });
-
-    // POST /entries/:type/:id/staged
-    // Not in the table yet: it calls the service unscoped, behind the
-    // precondition. A `StagedEntryExistsError` is `onError`'s 409.
-    router.post('/:type/:id/staged', async (c) => {
-        const denied = entryPrecondition(c, 'createStaged');
-        if (denied) return denied;
-
-        const entry = await entriesService.createStaged(contentArgs(c));
-        return c.json({ data: entry }, 201);
-    });
-}
-
-/**
- * Publishing through an update. `scopedServices` derives `entry:<type>:update`
- * from the method, and cannot see that this particular payload makes the entry
- * live — so the publish grant is demanded here.
- */
-function publishEscalation(
-    c: Context<Env>,
-    type: string,
-    status: string | undefined
-): Response | null {
-    if (status !== 'published') return null;
-    return permissionsFor(c.var.role).allows(entryPermission(type, 'publish'))
-        ? null
-        : forbidden(c);
 }
 
 /** The entries router, mounted at `/entries`. Serves every entry type. */

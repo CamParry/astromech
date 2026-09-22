@@ -4,7 +4,6 @@ import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { CapabilityError } from '../errors';
 import { entryGate } from '../internal/access';
-import { assertCapability } from '../internal/entry-type';
 import { fromBatch } from '../internal/from-batch';
 import { trashEntryBatch } from '../internal/trash-batch';
 import { getEntryRepository } from '../repository/registry';
@@ -47,10 +46,9 @@ export const emptyTrash = defineServiceMethod({
     mutates: true,
     destructive: true,
     idempotent: true,
-    async handler(params, ctx): Promise<void> {
+    async handler(params): Promise<void> {
         const { type } = params;
         const repository = getEntryRepository(type);
-        assertCapability(ctx.config, type, 'trash');
         const { trash } = repository;
         if (!trash) throw new CapabilityError(type, 'trash');
 

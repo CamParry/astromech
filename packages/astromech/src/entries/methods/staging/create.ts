@@ -4,7 +4,6 @@ import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { CapabilityError, StagedEntryExistsError } from '../../errors';
 import { entryGate } from '../../internal/access';
-import { assertCapability } from '../../internal/entry-type';
 import { asEntry, getEntryOfType } from '../../internal/records';
 import { syncEntryRelationships } from '../../internal/relationships';
 import { getEntryRepository } from '../../repository/registry';
@@ -27,7 +26,6 @@ export const createStagedEntry = defineServiceMethod({
         const { type, id } = params;
 
         const repository = getEntryRepository(type);
-        assertCapability(ctx.config, type, 'staging');
         const { staging } = repository;
         if (!staging) throw new CapabilityError(type, 'staging');
 
