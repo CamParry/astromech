@@ -74,5 +74,5 @@ It passed the gate. Review caught it, not the tests.
   extends the structural `tabs`/`tab` rules into blocks, which is a behaviour
   change of its own. Recorded in `backlog.md`.
 - `tabs()` hardcoding `name: 'tabs'` is untouched. It is harmless while layout
-  names are inert, and `planned/named-layout-fields.md` owns the question of
+  names are inert, and `roadmap/in-progress/named-layout-fields.md` owns the question of
   whether a layout field should take a name that means something.

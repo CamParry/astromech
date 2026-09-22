@@ -121,7 +121,7 @@ it was real and the misattribution is the useful part.
       `repeater-field.tsx` carry: seed once when real data arrives, never resync
       after, or an in-progress edit is clobbered by the last-saved value.
 - The `tabs()` hardcoded-name item moved to
-  `roadmap/planned/named-layout-fields.md` on 2026-08-16 — it must not be fixed
+  `roadmap/in-progress/named-layout-fields.md` on 2026-08-16 — it must not be fixed
   in isolation, because that design decides what a layout field's name means,
   and it was the last open item keeping this file from `completed/`.
 - [x] **`json` renders empty for a stored value, then commits `null` over it.**
