@@ -75,10 +75,10 @@ export default defineConfig({
             thresholds: {
                 'src/*.{ts,tsx}': { lines: 7, functions: 13, branches: 0, statements: 7 },
                 'src/components/**': {
-                    lines: 45,
-                    functions: 42,
-                    branches: 42,
-                    statements: 44,
+                    lines: 48,
+                    functions: 44,
+                    branches: 45,
+                    statements: 47,
                 },
                 'src/context/**': {
                     lines: 60,
