@@ -6,18 +6,20 @@
  * permission. These pin the three access branches, the two 404s, and the fact
  * that RPC returns the handler's result with no envelope around it.
  *
- * The router mounts its raw routes at import time, so every test re-imports the
- * module after registering the plugin set — the same dance
- * `entries-mounted.test.ts` does.
+ * `createPluginsRouter` reads the registered raw routes when it is called, so
+ * every test registers the plugin set and then builds a fresh router.
  */
 
 import type { AstromechConfig, PluginDefinition, Role, User } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { getSession } from '@/auth/session';
+import { runWithRequest } from '@/request-context/request-context';
 import { noInput } from '@/services/define-service-method';
+import { onError } from '@/transport/http/middleware/errors';
+import { createPluginsRouter } from '@/transport/http/routes/plugins';
 
 vi.mock('@/auth/session', () => ({ getSession: vi.fn() }));
 
@@ -89,18 +91,14 @@ function roleWith(permissions: string[]): Role {
     };
 }
 
-/** Re-evaluate the router so its import-time raw-route mounts see the plugin. */
+/** Register the probe plugin, then build the router over it. */
 async function freshApp(): Promise<OpenAPIHono> {
     await createTestDb();
     setupTestConfig(configWithProbe());
-    vi.resetModules();
-    const { pluginsRouter } = await import('@/transport/http/routes/plugins');
-    const { runWithRequest } = await import('@/request-context/request-context');
-    const { onError } = await import('@/transport/http/middleware/errors');
     const app = new OpenAPIHono();
     app.onError(onError);
     app.use('*', (c, next) => runWithRequest(c.req.raw, () => next()));
-    app.route('/plugins', pluginsRouter);
+    app.route('/plugins', createPluginsRouter());
     return app;
 }
 
@@ -120,10 +118,6 @@ function signIn(permissions: string[] | null): void {
 beforeEach(() => {
     mockGetSession.mockReset();
     signIn(null);
-});
-
-afterEach(() => {
-    vi.resetModules();
 });
 
 describe('POST /plugins/:name/:method — access branches', () => {
@@ -226,6 +220,9 @@ describe('POST /plugins/:name/:method — resolution failures', () => {
 
 describe('raw routes', () => {
     it('serves a public raw route at /plugins/:serviceKey:path', async () => {
+        // The router module is imported at the top of this file, before any
+        // plugin registers, as it is in the serving process. A router that read
+        // the raw routes at import time would find none and answer 404 here.
         const app = await freshApp();
         const res = await app.request('/plugins/probe/raw-public');
         expect(res.status).toBe(200);

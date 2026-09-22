@@ -260,6 +260,24 @@ export async function expectAdminWorks(
         console.log(
             '  ok  the backups plugin page renders its own component in the admin'
         );
+
+        // A plugin's raw route, called with the admin's session. Only the
+        // backups handler answers with this body: an unmounted route falls
+        // through to the API's own 404, whose body names the route instead.
+        const downloadUrl = `${admin}/api/plugins/backups/runs/nope/download`;
+        const download = await page.request.get(downloadUrl, {
+            timeout: REQUEST_TIMEOUT_MS,
+        });
+        const downloadBody = await download.text();
+        if (
+            download.status() !== 404 ||
+            downloadBody !== JSON.stringify({ error: 'Backup run not found' })
+        ) {
+            throw new Error(
+                `GET ${downloadUrl} returned ${download.status()} ${downloadBody}, expected 404 from the backups plugin's raw route`
+            );
+        }
+        console.log(`  ok  404 GET ${downloadUrl} (the plugin raw route is mounted)`);
     }
 
     const reported = failOnWarnings ? 'warnings or errors' : 'errors';

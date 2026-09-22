@@ -24,9 +24,10 @@
 // creates a post through the REST API with the page's session cookie, and opens
 // that post's edit page. Last it opens the backups plugin's page, whose own
 // component reads the admin's React context, which only works when the plugin
-// and the admin share one copy of the kit. That covers the app shell, one list,
-// one edit form and one plugin page. The other pages under `pages/_protected`
-// are not loaded here. The browser steps are `scripts/admin-browser-check.mjs`,
+// and the admin share one copy of the kit, and calls the plugin's download raw
+// route with the session. That covers the app shell, one list, one edit form,
+// one plugin page and one plugin raw route. The other pages under
+// `pages/_protected` are not loaded here. The browser steps are `scripts/admin-browser-check.mjs`,
 // which `check:install` runs too.
 //
 // Slow (a full Astro build plus a browser), so it is run on demand and in CI,
@@ -99,6 +100,14 @@ async function main() {
         `${base}/cms/api/entries/post`,
         401,
         'the API rejects an anonymous read'
+    );
+    // A plugin's raw route answers 401 to an anonymous caller. An unmounted one
+    // answers 401 too, from the API-wide `requireAuth` it falls through to, so
+    // the browser step's signed-in request is what proves the route is mounted.
+    await expectStatus(
+        `${base}/cms/api/plugins/backups/runs/nope/download`,
+        401,
+        'a plugin raw route rejects an anonymous download'
     );
 
     const evaluations = server.output.match(/\[demo] config evaluated/g)?.length ?? 0;

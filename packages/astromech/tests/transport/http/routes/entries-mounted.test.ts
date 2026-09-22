@@ -8,7 +8,7 @@
  *     (Better Auth sessions are out of scope), so the test focuses on the
  *     permission DERIVED from the qualified id, end-to-end against the real DB.
  *     `entry:*` must not reach a plugin entry — that would be an escalation.
- *  2. The composed `pluginsRouter` serves no entries subtree, while its
+ *  2. The composed plugins router serves no entries subtree, while its
  *     `public` RPC method stays reachable.
  */
 
@@ -16,9 +16,10 @@ import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { AstromechConfig, PluginDefinition, Role, User } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { noInput } from '@/services/define-service-method';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
+import { createPluginsRouter } from '@/transport/http/routes/plugins';
 
 const widgetsPlugin: PluginDefinition = {
     package: 'widgets',
@@ -250,19 +251,11 @@ describe('plugin entry types on the entries router — permission matrix + CRUD'
     });
 });
 
-describe('composed pluginsRouter — no entries subtree', () => {
-    afterEach(() => {
-        vi.resetModules();
-    });
-
+describe('composed plugins router — no entries subtree', () => {
     async function freshPluginsRouter() {
         await createTestDb();
         setupTestConfig(configWithWidgets());
-        // Re-evaluate the module so its import-time mounts read the freshly
-        // registered plugin set.
-        vi.resetModules();
-        const mod = await import('@/transport/http/routes/plugins');
-        return mod.pluginsRouter;
+        return createPluginsRouter();
     }
 
     it('no longer serves a per-plugin entries route', async () => {

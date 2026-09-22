@@ -45,7 +45,6 @@ export const isolatedTests = [
     'tests/transport/http/client/methods.test.ts',
     'tests/transport/http/routes/app-root.test.ts',
     'tests/transport/http/routes/cron.test.ts',
-    'tests/transport/http/routes/entries-mounted.test.ts',
     'tests/transport/http/routes/plugins-contract.test.ts',
     'tests/transport/http/routes/rpc-parity.test.ts',
     'tests/transport/mcp/parity.test.ts',

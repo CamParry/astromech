@@ -26,7 +26,7 @@ import { entryTypesRouter } from './routes/entry-types';
 import { globalsRouter } from './routes/globals';
 import { mediaRouter } from './routes/media';
 import { notificationsRouter } from './routes/notifications';
-import { pluginsRouter } from './routes/plugins';
+import { createPluginsRouter } from './routes/plugins';
 import { rpcRouter } from './routes/rpc';
 import { settingsRouter } from './routes/settings';
 import { usersRouter } from './routes/users';
@@ -158,7 +158,7 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
 
     // Plugin RPC + raw routes enforce access per-method (incl. public), so
     // they mount before the API-wide requireAuth.
-    app.route(`${api}/plugins`, pluginsRouter);
+    app.route(`${api}/plugins`, createPluginsRouter());
 
     // CRON poke — enforces its own auth (admin session OR bearer secret), so it
     // mounts before the API-wide requireAuth to allow sessionless external pokes.
