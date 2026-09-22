@@ -8,7 +8,6 @@
 import type { ContractCatalogue, RestRoute } from './rest-route';
 import type { Capability } from '@/entries/capabilities';
 import type { EntryMethodName } from '@/entries/catalogue';
-import type { ResolvedAccess } from '@/permissions/access';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type {
     EntryQueryParams,
@@ -300,7 +299,10 @@ function entryAccess(): (c: Context<Env>, route: RestRoute) => Response | null {
 function entryPrecondition(c: Context<Env>, method: EntryMethodName): Response | null {
     const type = param(c, 'type');
     const declared = entriesDefinition.catalogue[method];
-    if (accessDenied(c, resolveAccess(declared.access, { type }))) return forbidden(c);
+    if (
+        !permissionsFor(c.var.role).allowsAccess(resolveAccess(declared.access, { type }))
+    )
+        return forbidden(c);
 
     const resolved = resolveEntryType(getConfig(), type);
     if (!resolved) return notFound(c, `Entry type '${type}' not found`);
@@ -311,13 +313,6 @@ function entryPrecondition(c: Context<Env>, method: EntryMethodName): Response |
         return capabilityDenied(c, type, requires);
     }
     return null;
-}
-
-/** Whether the caller falls short of what a method's resolved access demands. */
-function accessDenied(c: Context<Env>, access: ResolvedAccess): boolean {
-    if (access.kind === 'public') return false;
-    if (access.kind === 'authenticated') return !c.var.user;
-    return !permissionsFor(c.var.role).allows(access.permission);
 }
 
 /** The 409 a method gated on a capability the entry type lacks answers with. */

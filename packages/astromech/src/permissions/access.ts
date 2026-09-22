@@ -7,11 +7,11 @@
 import type { Permission, ServiceMethodAccess } from '@/types/index';
 import { resolvePluginPermission } from '@/plugins/runtime/plugin-identity';
 
-/** What `access` demands of this one call. */
+/** What `access` demands of this one call: every one of `permissions`, when it names any. */
 export type ResolvedAccess =
     | { kind: 'public' }
     | { kind: 'authenticated' }
-    | { kind: 'permission'; permission: Permission };
+    | { kind: 'permission'; permissions: readonly Permission[] };
 
 /**
  * Resolve `access` against `input`. `namespace` is the plugin's permission
@@ -28,13 +28,17 @@ export function resolveAccess(
     if (access === 'authenticated') return { kind: 'authenticated' };
 
     if (typeof access === 'function') {
-        const permission = (access as (input: unknown) => Permission | null)(input);
-        return permission === null
-            ? { kind: 'public' }
-            : { kind: 'permission', permission };
+        const demanded = (
+            access as (input: unknown) => Permission | readonly Permission[] | null
+        )(input);
+        if (demanded === null) return { kind: 'public' };
+        return {
+            kind: 'permission',
+            permissions: typeof demanded === 'string' ? [demanded] : demanded,
+        };
     }
 
-    if (typeof access === 'string') return { kind: 'permission', permission: access };
+    if (typeof access === 'string') return { kind: 'permission', permissions: [access] };
 
     if (namespace === undefined) {
         throw new Error(
@@ -45,6 +49,20 @@ export function resolveAccess(
     }
     return {
         kind: 'permission',
-        permission: resolvePluginPermission(namespace, access.permission) as Permission,
+        permissions: [
+            resolvePluginPermission(namespace, access.permission) as Permission,
+        ],
     };
+}
+
+/**
+ * The first permission `access` demands that `allows` refuses, or null when it
+ * demands none the caller lacks. What a refusal names as the missing grant.
+ */
+export function deniedPermission(
+    access: ResolvedAccess,
+    allows: (permission: Permission) => boolean
+): Permission | null {
+    if (access.kind !== 'permission') return null;
+    return access.permissions.find((permission) => !allows(permission)) ?? null;
 }

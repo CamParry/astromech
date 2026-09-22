@@ -1,11 +1,11 @@
 /**
  * Config-derived helpers shared across entry operations: the versioning lookup
- * and the capability assertion. Both read the resolved config, which the
- * caller hands them.
+ * and the capability assertions. Each reads the resolved config or type, which
+ * the caller hands it.
  */
 
 import type { Capability } from '@/entries/capabilities';
-import type { ResolvedConfig } from '@/types/index';
+import type { ResolvedConfig, ResolvedEntryType } from '@/types/index';
 import { resolveEntryType } from '@/entries/entry-types';
 import { CapabilityError } from '../errors';
 import { getEntryRepository } from '../repository/registry';
@@ -27,5 +27,25 @@ export function assertCapability(
     const capabilities = resolveEntryType(config, type)?.capabilities;
     if (capabilities && !capabilities[capability]) {
         throw new CapabilityError(type, capability);
+    }
+}
+
+/**
+ * Refuse a write payload naming a column the type does not keep: `status` and
+ * `publishedAt` need `statuses`, and `slug` needs `slug`.
+ */
+export function assertWritableFields(
+    entryType: ResolvedEntryType,
+    data: { status?: unknown; publishedAt?: unknown; slug?: unknown }
+): void {
+    const { capabilities } = entryType;
+    if (
+        !capabilities.statuses &&
+        (data.status !== undefined || data.publishedAt !== undefined)
+    ) {
+        throw new CapabilityError(entryType.id, 'statuses');
+    }
+    if (!capabilities.slug && data.slug !== undefined) {
+        throw new CapabilityError(entryType.id, 'slug');
     }
 }

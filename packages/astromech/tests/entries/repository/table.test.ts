@@ -668,15 +668,15 @@ describe('entries-service integration', () => {
     it('query honors searchFields from type config', async () => {
         await entriesService.create({
             type: 'links/link',
-            data: { fields: { from: '/hello', to: '/world' }, status: 'published' },
+            data: { fields: { from: '/hello', to: '/world' } },
         });
         await entriesService.create({
             type: 'links/link',
-            data: { fields: { from: '/foo', to: '/bar' }, status: 'published' },
+            data: { fields: { from: '/foo', to: '/bar' } },
         });
         await entriesService.create({
             type: 'links/link',
-            data: { fields: { from: '/baz', to: '/hello-page' }, status: 'published' },
+            data: { fields: { from: '/baz', to: '/hello-page' } },
         });
 
         const res = await entriesService.query({

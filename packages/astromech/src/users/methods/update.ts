@@ -11,6 +11,7 @@ import { mergePatch, projectToSchema } from '@/fields/values';
 import { requireRole } from '@/permissions/roles';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { UserNotFoundError } from '../errors';
+import { assertKeepsAnAdmin } from '../internal/last-admin';
 import { resolveUserLocale } from '../internal/locale';
 import { readUser } from '../internal/read-user';
 import { syncUserRelationships } from '../internal/relationships';
@@ -23,7 +24,7 @@ import { updateUserSchema } from '../schema';
  * Update a user's profile, role and custom fields. `name`, `email` and `role`
  * are the account row and are written whatever the locale; `fields` addresses
  * one locale's content row, and a locale with none gets one seeded from the
- * default-locale row with the patch applied over it.
+ * default-locale row with the patch applied over it. Demoting the last admin is refused.
  */
 export const updateUser = defineServiceMethod({
     summary:
@@ -49,7 +50,15 @@ export const updateUser = defineServiceMethod({
         if (!base) throw new UserNotFoundError({ id });
 
         const config = ctx.config;
-        if (data.role !== undefined) requireRole(config, data.role);
+        if (data.role !== undefined) {
+            requireRole(config, data.role);
+            await assertKeepsAnAdmin(
+                repository,
+                base,
+                data.role,
+                'Cannot remove the last administrator'
+            );
+        }
 
         const definitions = flattenFieldNodes(config.users.fields);
         const patch = data.fields;

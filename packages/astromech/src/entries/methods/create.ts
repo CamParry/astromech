@@ -7,6 +7,7 @@ import { parseInput, ValidationError } from '@/errors/validation';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { UnknownEntryTypeError } from '../errors';
 import { entryGate } from '../internal/access';
+import { assertWritableFields } from '../internal/entry-type';
 import { asEntry } from '../internal/records';
 import { syncEntryRelationships } from '../internal/relationships';
 import { deriveSlug } from '../internal/slug';
@@ -33,6 +34,7 @@ export const createEntry = defineServiceMethod({
             throw new UnknownEntryTypeError(type);
         }
 
+        assertWritableFields(entryType, data);
         const repository = getEntryRepository(type);
         const user = ctx.user;
 

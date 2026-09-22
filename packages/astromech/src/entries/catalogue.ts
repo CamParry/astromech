@@ -48,7 +48,8 @@ export function entryCatalogue(params: {
             const name = key as EntryMethodName;
             // The shared declaration states the permission as a function of the
             // call's `type`, which nothing reading a catalogue can evaluate — it
-            // guards before any argument object exists. Fixed to this type here.
+            // guards before any argument object exists. Fixed to this type here,
+            // where a bare `{ type }` names exactly one permission.
             const resolved = resolveAccess(method.access, { type: typeId });
             return [
                 name,
@@ -57,7 +58,7 @@ export function entryCatalogue(params: {
                     summary: entryMethodSummary(name, label),
                     access:
                         resolved.kind === 'permission'
-                            ? resolved.permission
+                            ? resolved.permissions[0]
                             : resolved.kind,
                     input: schemas[name],
                     ...(method.requires !== undefined

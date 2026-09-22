@@ -8,7 +8,6 @@
 import type { HttpRouteSpec } from './http-routes';
 import type { RestRoute } from './rest-route';
 import type { GlobalCapability } from '@/globals/internal/global';
-import type { ResolvedAccess } from '@/permissions/access';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { GlobalsService, GlobalUpdateData, ResolvedGlobal } from '@/types/index';
 import type { Context } from 'hono';
@@ -141,7 +140,8 @@ function globalAccess(): (c: Context<Env>, route: RestRoute) => Response | null 
 function globalPrecondition(c: Context<Env>, method: GlobalMethodName): Response | null {
     const key = param(c, 'key');
     const declared = globalsDefinition.catalogue[method];
-    if (accessDenied(c, resolveAccess(declared.access, { key }))) return forbidden(c);
+    if (!permissionsFor(c.var.role).allowsAccess(resolveAccess(declared.access, { key })))
+        return forbidden(c);
 
     const global = findGlobal(getConfig(), key);
     if (!global) return notFound(c, `Global '${key}' not found`);
@@ -151,13 +151,6 @@ function globalPrecondition(c: Context<Env>, method: GlobalMethodName): Response
         return capabilityDenied(c, key, requires);
     }
     return stagedFlagDenied(c, global);
-}
-
-/** Whether the caller falls short of what a method's resolved access demands. */
-function accessDenied(c: Context<Env>, access: ResolvedAccess): boolean {
-    if (access.kind === 'public') return false;
-    if (access.kind === 'authenticated') return !c.var.user;
-    return !permissionsFor(c.var.role).allows(access.permission);
 }
 
 /**
@@ -227,7 +220,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
             full,
             staged,
         });
-        if (accessDenied(c, access)) return forbidden(c);
+        if (!permissionsFor(c.var.role).allowsAccess(access)) return forbidden(c);
         if (!global) return notFound(c, `Global '${key}' not found`);
         const refused = stagedFlagDenied(c, global);
         if (refused) return refused;

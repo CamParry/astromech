@@ -14,7 +14,7 @@ export type Permissions = {
     allows(permission: Permission): boolean;
     /**
      * True if the role meets `access`, already resolved for one call: public is
-     * always met, authenticated needs a role, and a permission needs that permission.
+     * always met, authenticated needs a role, and permissions need every one of them.
      */
     allowsAccess(access: ResolvedAccess): boolean;
     /**
@@ -36,7 +36,7 @@ export function permissionsFor(role: Role | null | undefined): Permissions {
     const allowsAccess = (access: ResolvedAccess): boolean => {
         if (access.kind === 'public') return true;
         if (access.kind === 'authenticated') return role != null;
-        return allows(access.permission);
+        return access.permissions.every(allows);
     };
 
     return {

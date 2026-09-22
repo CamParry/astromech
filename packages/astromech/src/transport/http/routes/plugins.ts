@@ -40,8 +40,7 @@ function enforceAccess(
     if (!user) return unauthorized(c);
     if (resolved.kind === 'authenticated') return null;
 
-    const permissions = permissionsFor(c.var.role);
-    if (!permissions.allows(resolved.permission)) return forbidden(c);
+    if (!permissionsFor(c.var.role).allowsAccess(resolved)) return forbidden(c);
     return null;
 }
 

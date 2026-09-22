@@ -21,6 +21,7 @@ import {
 } from '../errors';
 import { getEntryRepository } from '../repository/registry';
 import { createEntrySchema, updateEntrySchema } from '../schema';
+import { assertWritableFields } from './entry-type';
 import { asEntry, asRecord, findEntryOfType, getEntryOfType } from './records';
 import { syncEntryRelationships } from './relationships';
 import { deriveSlug, uniqueSlugIfChanged } from './slug';
@@ -59,6 +60,8 @@ export async function updateEntryBatch(
     if (!entryType) {
         throw new UnknownEntryTypeError(params.type);
     }
+
+    assertWritableFields(entryType, params.data);
 
     // A single slug across many ids would violate (type, locale) uniqueness.
     if (params.ids.length > 1 && params.data.slug !== undefined) {

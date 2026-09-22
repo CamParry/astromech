@@ -1,7 +1,7 @@
 /**
  * `create` honours the `slug` capability on every path, not only over HTTP: a
- * plugin, the local transport or MCP creating a `slug: false` entry gets no slug,
- * derived or explicit. A slug needs both the capability and a source.
+ * plugin, the local transport or MCP creating a `slug: false` entry derives no
+ * slug, and an explicit one is refused. A slug needs both the capability and a source.
  */
 
 import type { AstromechConfig } from '@/types/index';
@@ -40,12 +40,10 @@ describe('a titled type with slug off', () => {
         expect(entry.slug).toBeNull();
     });
 
-    it('ignores an explicit slug rather than storing it', async () => {
-        const entry = await api.create({
-            type: 'note',
-            data: { title: 'My Note', slug: 'my-note' },
-        });
-        expect(entry.slug).toBeNull();
+    it('refuses an explicit slug rather than storing it', async () => {
+        await expect(
+            api.create({ type: 'note', data: { title: 'My Note', slug: 'my-note' } })
+        ).rejects.toMatchObject({ name: 'CapabilityError', capability: 'slug' });
     });
 
     it('does not collide when two entries share a title', async () => {
@@ -77,8 +75,9 @@ describe('a titled type with slug on is unaffected', () => {
 });
 
 describe('a titleless type with slug off', () => {
-    it('ignores an explicit slug', async () => {
-        const entry = await api.create({ type: 'snippet', data: { slug: 'a-snippet' } });
-        expect(entry.slug).toBeNull();
+    it('refuses an explicit slug', async () => {
+        await expect(
+            api.create({ type: 'snippet', data: { slug: 'a-snippet' } })
+        ).rejects.toMatchObject({ name: 'CapabilityError', capability: 'slug' });
     });
 });

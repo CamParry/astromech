@@ -1,6 +1,7 @@
 /**
  * The errors the users operations throw, mirroring `media/errors.ts`: a
- * not-found the HTTP layer maps to 404, and a validation failure it maps to 422.
+ * not-found the HTTP layer maps to 404, a validation failure it maps to 422, and
+ * the last-admin refusal it maps to 400.
  */
 
 import type { FieldErrors } from '@/types/fields';
@@ -37,5 +38,16 @@ export class UserValidationError extends ValidationError {
         const { issues } = ValidationError.fromFieldErrors(fields, messages);
         super(issues, fields, messages);
         this.name = 'UserValidationError';
+    }
+}
+
+/**
+ * Thrown by a write that would leave the site with no user holding the `admin`
+ * role: demoting or deleting the last one.
+ */
+export class LastAdminError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'LastAdminError';
     }
 }

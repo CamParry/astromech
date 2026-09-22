@@ -120,7 +120,6 @@ describe('redirects — own-table repository', () => {
             type: REDIRECT,
             data: {
                 fields: { from: '/old', to: '/new', status: '301', enabled: true },
-                status: 'published',
             },
         });
 
@@ -149,14 +148,12 @@ describe('redirects — lookup', () => {
             type: REDIRECT,
             data: {
                 fields: { from: '/match', to: '/dest', status: '302', enabled: true },
-                status: 'published',
             },
         });
         await redirectEntriesService().create({
             type: REDIRECT,
             data: {
                 fields: { from: '/off', to: '/nope', status: '301', enabled: false },
-                status: 'published',
             },
         });
     });

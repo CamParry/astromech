@@ -160,6 +160,9 @@ reading or updating their own user row passes without `users:read` or
 `users:update`. `versions` and `restoreVersion` have no such rule and always
 need the permission, even for the caller's own row.
 
+`update` and `delete` refuse to take the `admin` role from the only user
+holding it, whether the call comes from the admin, the CLI, MCP or a plugin.
+
 Grant them in a role like any other permission:
 
 ```ts

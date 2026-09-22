@@ -63,7 +63,7 @@ workstream.
 
 ## The work
 
-- [ ] Move the publish check, the field-capability checks and the last-admin
+- [x] Move the publish check, the field-capability checks and the last-admin
       guard into the methods (or `scopeEntries` where the check needs the
       role), so every transport inherits them.
 - [ ] Give domain errors a `status` and `code` and map them once in `onError`;

@@ -31,7 +31,7 @@ import { PermissionDeniedError } from '@/errors/permission';
 import { globalsDefinition } from '@/globals/service';
 import { mediaDefinition } from '@/media/service';
 import { notificationsDefinition } from '@/notifications/service';
-import { resolveAccess } from '@/permissions/access';
+import { deniedPermission, resolveAccess } from '@/permissions/access';
 import { PERMISSION_ENTRY_READ_FULL } from '@/permissions/core-permissions';
 import { permissionsFor } from '@/permissions/permissions-for';
 import {
@@ -71,15 +71,6 @@ async function requireSubject(id: string): Promise<void> {
     }
 }
 
-/** The permission a contract demands for `input`, or null if it demands none. */
-function resolvePermission(
-    contract: ServiceMethodContract,
-    input: unknown
-): string | null {
-    const resolved = resolveAccess(contract.access, input);
-    return resolved.kind === 'permission' ? resolved.permission : null;
-}
-
 /**
  * Wrap every method of `service` in its declared permission check. A denied
  * method still EXISTS on the returned object and throws, rather than
@@ -106,8 +97,12 @@ export function scopeMethods<S extends object>(
             if (contract === undefined) throw new PermissionDeniedError(id, null);
 
             const input = args[0];
-            if (!permissions.allowsMethod(contract, input)) {
-                throw new PermissionDeniedError(id, resolvePermission(contract, input));
+            const resolved = resolveAccess(contract.access, input);
+            if (!permissions.allowsAccess(resolved)) {
+                throw new PermissionDeniedError(
+                    id,
+                    deniedPermission(resolved, permissions.allows)
+                );
             }
             // Called on the service so a method reaching for a sibling through
             // `this` keeps working. Only the session-scoped branch is async,
@@ -192,9 +187,11 @@ export function scopeEntries(
                     ...(args[0] as object),
                     type,
                 });
-                if (resolved.kind !== 'permission') continue;
-                if (!permissions.allows(resolved.permission)) {
-                    throw new PermissionDeniedError(id, resolved.permission);
+                if (!permissions.allowsAccess(resolved)) {
+                    throw new PermissionDeniedError(
+                        id,
+                        deniedPermission(resolved, permissions.allows)
+                    );
                 }
             }
 
@@ -241,7 +238,7 @@ function scopePlugins(permissions: Permissions): PluginServiceNamespace {
                 if (!permissions.allowsAccess(resolved)) {
                     throw new PermissionDeniedError(
                         id,
-                        resolved.kind === 'permission' ? resolved.permission : null
+                        deniedPermission(resolved, permissions.allows)
                     );
                 }
                 const invoke = pluginServices[identity.serviceKey]?.[key];

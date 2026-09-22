@@ -21,7 +21,7 @@ describe('resolveAccess', () => {
     it('answers the permission for a bare core permission', () => {
         expect(resolveAccess('settings:read', undefined)).toEqual({
             kind: 'permission',
-            permission: 'settings:read',
+            permissions: ['settings:read'],
         });
     });
 
@@ -30,7 +30,7 @@ describe('resolveAccess', () => {
 
         expect(resolveAccess(access, { key: 'settings' })).toEqual({
             kind: 'permission',
-            permission: 'settings:read',
+            permissions: ['settings:read'],
         });
     });
 
@@ -41,14 +41,14 @@ describe('resolveAccess', () => {
     it('resolves the object form under the plugin namespace it is given', () => {
         expect(resolveAccess({ permission: 'view' }, undefined, 'seo')).toEqual({
             kind: 'permission',
-            permission: 'plugin:seo:view',
+            permissions: ['plugin:seo:view'],
         });
     });
 
     it('passes a namespaced key in the object form through unchanged', () => {
         expect(resolveAccess({ permission: 'settings:read' }, undefined, 'seo')).toEqual({
             kind: 'permission',
-            permission: 'settings:read',
+            permissions: ['settings:read'],
         });
     });
 

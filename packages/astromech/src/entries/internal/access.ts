@@ -21,7 +21,29 @@ function typeOf(input: unknown): string {
     return typeof type === 'string' ? type : '';
 }
 
-/** The gate for a method whose action is the same for every call. */
+/**
+ * The gate for a method acting as `action`. A write whose payload makes the
+ * entry live (`status: 'published'` in `data`, or in `duplicate`'s `overrides`)
+ * demands the type's publish permission as well, whichever method carries it.
+ */
 export function entryGate(action: EntryAction): ServiceMethodAccess {
-    return (input) => entryPermission(typeOf(input), action);
+    return (input) => {
+        const type = typeOf(input);
+        const demanded = entryPermission(type, action);
+        return action !== 'publish' && publishesOnWrite(input)
+            ? [demanded, entryPermission(type, 'publish')]
+            : demanded;
+    };
+}
+
+/** Whether a write's payload sets `status: 'published'`. */
+function publishesOnWrite(input: unknown): boolean {
+    if (typeof input !== 'object' || input === null) return false;
+    const { data, overrides } = input as { data?: unknown; overrides?: unknown };
+    return [data, overrides].some(
+        (payload) =>
+            typeof payload === 'object' &&
+            payload !== null &&
+            (payload as { status?: unknown }).status === 'published'
+    );
 }

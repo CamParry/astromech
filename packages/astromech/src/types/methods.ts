@@ -25,14 +25,14 @@ export type ServiceMethodEffect = {
  * What a method demands of its caller. `'authenticated'` holds when the caller
  * has a role, `Permission` is the bare core form, `{ permission }` is the plugin
  * form resolved under the plugin's namespace, and the function form answers per
- * input — `null` for none.
+ * input: `null` for none, or a list the caller must hold every one of.
  */
 export type ServiceMethodAccess<Input = unknown> =
     | 'public'
     | 'authenticated'
     | Permission
     | { permission: string }
-    | ((input: Input) => Permission | null);
+    | ((input: Input) => Permission | readonly Permission[] | null);
 
 /**
  * The two core forms of {@link ServiceMethodAccess}: a fixed permission string,
@@ -41,7 +41,7 @@ export type ServiceMethodAccess<Input = unknown> =
  */
 export type PermissionRule<Input = unknown> =
     | Permission
-    | ((input: Input) => Permission | null);
+    | ((input: Input) => Permission | readonly Permission[] | null);
 
 /** The one fact a handler learns about itself: the id it was assembled under. */
 export type MethodContext = {
