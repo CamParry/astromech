@@ -21,19 +21,25 @@ visible where it happens and leaves the judgement to review.
 
 ## The drift report
 
-- [ ] `pnpm run report:drift` (`scripts/report-drift.mjs`): reads
-      `git diff <base>...HEAD` (base `main` by default) and prints, per
-      pattern, the lines a branch adds and removes. Starting patterns:
+- [x] `pnpm run report:drift` (`scripts/report-drift.mjs`): diffs the merge
+      base of `--base` (default `main`) and HEAD against the working tree, so
+      uncommitted work counts, and prints, per pattern, the lines a branch
+      adds and removes in `packages/*/src`, `packages/plugins/*/src` and
+      `apps/*/src`, tests excluded. A match the same file also removes is an
+      edited line and is counted but not listed. Starting patterns:
       `as unknown as`; a literal `queryKey: [` outside
       `hooks/use-query-keys.ts`; `.type` compared with a core container or
       layout literal outside the fields directories; a comment saying code
-      mirrors another module; a new `class …NotFoundError`; `collection` as an
-      identifier. The pattern list is a plain array in the script, so adding
-      one is a one-line change. It exits 0 whatever it finds.
-- [ ] Copies: the same report runs `jscpd` over `packages/*/src` and lists
-      only clones with a side in a file the branch touched, so existing
-      duplication stays quiet until someone works near it.
-- [ ] `verify` does not run it. It runs at review, before a branch merges,
+      mirrors another module; a new `class …NotFoundError` or
+      `class …ValidationError`; `collection` as an identifier. The pattern
+      list is a plain array in the script, so adding one is a one-line
+      change. It exits 0 whatever it finds.
+- [x] Copies: the same report runs `jscpd` (defaults, 5 lines and 50 tokens,
+      import statements ignored) over the same source directories and lists
+      only clones with a side on a line the branch added, so existing
+      duplication stays quiet until someone touches it. `--no-copies` skips
+      it.
+- [x] `verify` does not run it. It runs at review, before a branch merges,
       and its output goes in the merge summary with a decision for each item:
       share it now, add it to a roadmap file, or leave it with a reason.
 
