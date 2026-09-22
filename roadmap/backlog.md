@@ -11,6 +11,7 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 ### Admin
 
 - [ ] Investigate admin-page composition — one page rendering **both** a managed form and custom widgets (Sanity-style view tabs, or a custom component mounting managed form regions via a `useSettingsForm` hook). `AdminPage` XOR-validates `fields`/`component` today and was deliberately left open so this is additive (from `completed/unified-admin-pages.md`)
+- [ ] `useAuthorNames` fetches every user (`limit: 'all'`); replace it with a batched, `users:read`-gated `users.names({ ids })` when user counts warrant it.
 
 ### Fields
 
