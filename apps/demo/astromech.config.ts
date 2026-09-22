@@ -206,10 +206,10 @@ export default defineConfig({
             fields: [
                 fields.tabs({
                     fields: [
-                        fields.tab('general', {
+                        fields.tab({
                             label: 'General',
                             fields: [
-                                fields.section('brand', {
+                                fields.group({
                                     label: 'Brand',
                                     fields: [
                                         fields.text('siteName', {
@@ -222,7 +222,7 @@ export default defineConfig({
                                         }),
                                     ],
                                 }),
-                                fields.section('footer', {
+                                fields.group({
                                     label: 'Footer',
                                     fields: [
                                         fields.textarea('footerText', {
@@ -236,10 +236,10 @@ export default defineConfig({
                                 }),
                             ],
                         }),
-                        fields.tab('navigation', {
+                        fields.tab({
                             label: 'Navigation',
                             fields: [
-                                fields.section('social', {
+                                fields.group({
                                     label: 'Social',
                                     fields: [
                                         fields.repeater('socials', {
@@ -248,10 +248,7 @@ export default defineConfig({
                                                 fields.text('platform', {
                                                     label: 'Platform',
                                                 }),
-                                                fields.url('url', {
-                                                    label: 'URL',
-                                                    translatable: false,
-                                                }),
+                                                fields.url('url', { label: 'URL' }),
                                             ],
                                         }),
                                     ],
@@ -278,11 +275,11 @@ export default defineConfig({
                     fields.blocks('content', { blocks: blockCatalog }),
                     fields.tabs({
                         fields: [
-                            fields.tab('seo', { label: 'SEO', fields: [seoSection()] }),
-                            fields.tab('social', {
+                            fields.tab({ label: 'SEO', fields: [seoSection()] }),
+                            fields.tab({
                                 label: 'Social',
                                 fields: [
-                                    fields.section('og', {
+                                    fields.group({
                                         label: 'Open Graph',
                                         fields: [
                                             fields.text('ogTitle', {
@@ -304,7 +301,7 @@ export default defineConfig({
                     }),
                 ],
                 sidebar: [
-                    fields.section('settings', {
+                    fields.group({
                         label: 'Settings',
                         fields: [
                             fields.relationship('parent', {
@@ -344,7 +341,7 @@ export default defineConfig({
                     seoSection(),
                 ],
                 sidebar: [
-                    fields.section('taxonomy', {
+                    fields.group({
                         label: 'Taxonomy',
                         fields: [
                             fields.media('featured_image', {

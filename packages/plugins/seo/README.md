@@ -32,11 +32,12 @@ export default defineConfig({
 Attachment is explicit composition — the plugin never injects fields. Every
 entry type whose `fields` include `seoSection()` is part of the plugin's
 _footprint_; the overview dashboard and the `sitemap` method cover exactly
-those types. Drop `seoSection()` inside a `fields.tab(...)` to give it its own
-tab on the edit page.
+those types. Drop `seoSection()` inside an unnamed tab,
+`fields.tab({ label: 'SEO', fields: [seoSection()] })`, to give it its own tab
+on the edit page. A named tab would store the group under the tab's name.
 
 ```ts
-seoSection({ label: 'Search' }); // section heading; defaults to a localized "SEO"
+seoSection({ label: 'Search' }); // group heading; defaults to a localized "SEO"
 ```
 
 ## Paths

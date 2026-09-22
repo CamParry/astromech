@@ -39,7 +39,7 @@ export const formEntryType: EntryType = {
     fields: [
         fields.tabs({
             fields: [
-                fields.tab('fields', {
+                fields.tab({
                     label: 'Fields',
                     fields: [
                         fields.boolean('enabled', {
@@ -52,7 +52,7 @@ export const formEntryType: EntryType = {
                         }),
                     ],
                 }),
-                fields.tab('notifications', {
+                fields.tab({
                     label: 'Notifications',
                     fields: [
                         // `private: true` keeps recipients and copy off public
@@ -65,7 +65,7 @@ export const formEntryType: EntryType = {
                         }),
                     ],
                 }),
-                fields.tab('spam', {
+                fields.tab({
                     label: 'Spam',
                     fields: [
                         fields.boolean('spamProtection', {

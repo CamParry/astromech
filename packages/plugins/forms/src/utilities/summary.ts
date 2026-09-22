@@ -1,6 +1,6 @@
 /** The submission list's one human-readable column. */
 
-import type { Field } from 'astromech';
+import type { DataField } from 'astromech';
 import { toValueRows } from './values';
 
 const SUMMARY_MAX_LENGTH = 120;
@@ -12,7 +12,7 @@ const SUMMARY_ROWS = 3;
  * cell kind can summarise a JSON blob.
  */
 export function buildSummary(
-    definitions: Field[],
+    definitions: DataField[],
     values: Record<string, unknown>
 ): string {
     const text = toValueRows(definitions, values)

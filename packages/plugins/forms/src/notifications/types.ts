@@ -4,7 +4,7 @@
  */
 
 import type { ValueRow } from '../utilities/values';
-import type { Block, Entry, Field, PluginContext } from 'astromech';
+import type { Block, DataField, Entry, PluginContext } from 'astromech';
 
 /**
  * One stored notification block instance. `_type` selects the provider and the
@@ -20,7 +20,7 @@ export type StoredNotification = {
 /** Everything a provider needs about the submission it is reporting. */
 export type NotificationContext = {
     form: Entry;
-    definitions: Field[];
+    definitions: DataField[];
     values: Record<string, unknown>;
     /** Submitted values paired with their field labels, in field order. */
     rows: ValueRow[];

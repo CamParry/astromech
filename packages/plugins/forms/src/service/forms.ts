@@ -6,7 +6,7 @@
 import type { FormsAfterSubmitPayload, FormsBeforeSubmitPayload } from '../hooks/events';
 import type { SpamProvider } from '../spam/types';
 import type { FormsOptions, SubmissionMeta } from '../types';
-import type { Field, FieldErrors } from 'astromech';
+import type { DataField, FieldErrors } from 'astromech';
 import { defineServiceMethod, z } from 'astromech';
 import { safeParseFields } from 'astromech/fields';
 import { compileFormFields } from '../fields/compile';
@@ -23,7 +23,7 @@ export type PublicForm = {
     slug: string;
     title: string;
     /** Exactly the fields `submit` will validate against. */
-    fields: Field[];
+    fields: DataField[];
     /** Present only when the site configured a provider AND the form uses it. Never carries the secret key. */
     spam?: { provider: string; siteKey: string };
 };

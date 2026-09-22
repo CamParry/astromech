@@ -5,16 +5,16 @@
  */
 
 import type { FormFieldKind, StoredFormField } from '../types';
-import type { Field, Label, SelectOption, ValidationRule } from 'astromech';
+import type { DataField, Label, SelectOption, ValidationRule } from 'astromech';
 import * as fields from 'astromech/fields';
 
 /**
  * A form's stored blocks as a flat list of leaf fields — a submission is a flat
  * map of values. Anything unusable is skipped rather than thrown.
  */
-export function compileFormFields(stored: unknown): Field[] {
+export function compileFormFields(stored: unknown): DataField[] {
     if (!Array.isArray(stored)) return [];
-    const compiled: Field[] = [];
+    const compiled: DataField[] = [];
     for (const instance of stored) {
         if (!isUsable(instance)) continue;
         const field = compileOne(instance);
@@ -24,7 +24,7 @@ export function compileFormFields(stored: unknown): Field[] {
 }
 
 /** One block instance as a leaf field, or `null` for an unknown `_type`. */
-function compileOne(stored: StoredFormField): Field | null {
+function compileOne(stored: StoredFormField): DataField | null {
     const name = stored.name as string;
     const kind = stored._type as FormFieldKind;
     const base = baseOptions(stored);

@@ -5,7 +5,7 @@
  */
 
 import type { NotificationContext, StoredNotification } from './types';
-import type { Entry, Field, PluginContext } from 'astromech';
+import type { DataField, Entry, PluginContext } from 'astromech';
 import { entryFields } from '../utilities/form-entry';
 import { toValueRows } from '../utilities/values';
 import { mergeTagValues } from './merge-tags';
@@ -16,7 +16,7 @@ export const NOTIFICATIONS_FIELD = 'notifications';
 /** Deliver every enabled notification on the form for one submission. */
 export async function sendNotifications(
     form: Entry,
-    definitions: Field[],
+    definitions: DataField[],
     values: Record<string, unknown>,
     ctx: PluginContext
 ): Promise<void> {

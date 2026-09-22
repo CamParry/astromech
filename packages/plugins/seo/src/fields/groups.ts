@@ -7,7 +7,7 @@
 
 import type { Field, Label, MessageRef } from 'astromech';
 import { pluginNamespace, t } from 'astromech';
-import { group, section, text, textarea } from 'astromech/fields';
+import { group, text, textarea } from 'astromech/fields';
 import { SEO_FIELD_NAME, SEO_PACKAGE } from '../types';
 import { SEO_DESCRIPTION_RANGE, SEO_TITLE_RANGE } from '../utilities/length';
 
@@ -25,32 +25,26 @@ function tKey(key: string): MessageRef {
 }
 
 /**
- * Field-section factory — compose into an entry type's `fields`. Renders a
- * titled `section` wrapping an unboxed `group` that namespaces the data
- * under `SEO_FIELD_NAME`; the group carries the data key, the section presents.
+ * Field-section factory — compose into an entry type's `fields`. Returns a
+ * titled `group` that stores its fields under `SEO_FIELD_NAME`.
  */
 export function seoSection(options?: SeoSectionOptions): Field {
-    return section('seoSection', {
+    return group(SEO_FIELD_NAME, {
         label: options?.label ?? tKey('seo.sectionTitle'),
         fields: [
-            group(SEO_FIELD_NAME, {
-                boxed: false,
-                fields: [
-                    text('title', {
-                        label: tKey('field.titleLabel'),
-                        count: SEO_TITLE_RANGE,
-                    }),
-                    textarea('description', {
-                        label: tKey('field.descriptionLabel'),
-                        count: SEO_DESCRIPTION_RANGE,
-                    }),
-                    {
-                        name: 'preview',
-                        type: 'seo-preview',
-                        label: tKey('field.previewCaption'),
-                    },
-                ],
+            text('title', {
+                label: tKey('field.titleLabel'),
+                count: SEO_TITLE_RANGE,
             }),
+            textarea('description', {
+                label: tKey('field.descriptionLabel'),
+                count: SEO_DESCRIPTION_RANGE,
+            }),
+            {
+                name: 'preview',
+                type: 'seo-preview',
+                label: tKey('field.previewCaption'),
+            },
         ],
     });
 }
