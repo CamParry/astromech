@@ -205,8 +205,8 @@ through `users: { translatable: true }`; versioning is always on.
 `fields/field-type-registry.ts` holds one `FieldType` per type name, carrying
 its `build`, `coerce`, `validate` and `tsType`. The pipeline is
 `coerce → default → validate`, recursing through nested fields (`group`,
-`repeater`, `blocks`, `tree`) and passing through layout fields (`section`,
-`tabs`, `accordion`), which store nothing. The admin renders a form from the
+`repeater`, `blocks`, `tree`) and passing through layout fields (an unnamed
+`group`, `accordion`, `tabs`, `tab`), which store nothing. The admin renders a form from the
 same field definitions.
 
 `fields/parse-fields.ts` runs that pipeline for all four resources — entry,

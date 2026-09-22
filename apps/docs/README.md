@@ -42,6 +42,9 @@ This is a living reference; it grows as the project does.
 - [content/entry-types.md](content/entry-types.md) — declaring entry types: the
   `entries` record, and `defineEntryType` for splitting a type into its own
   module.
+- [content/fields.md](content/fields.md) — every field builder: the options
+  each field takes, the data, nested and layout fields, and how a name on
+  `group`, `accordion` or `tab` decides whether its fields store under that name.
 - [content/globals.md](content/globals.md) — declaring globals: the `globals`
   array and `defineGlobal`, reading one from a site or a plugin, translation,
   versions, publishing and scheduling, staged changes, and the per-global

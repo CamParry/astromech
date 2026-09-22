@@ -47,7 +47,11 @@ So the plan amends the decision with two columns on `entry_content`:
 The FTS table is external content over `title`, `slug` and `search_text` with
 `content_rowid='search_key'`, and its triggers never change when the config
 does. Rich text contributes its text leaves, one space per block; nested
-`group`, `repeater` and `blocks` fields are walked.
+`group`, `repeater` and `blocks` fields are walked. The walk has to descend into
+named groups rather than read only the top-level keys: a named `tab` or
+`accordion` stores its fields in one, so a site's top-level text can sit at
+`seo.title`. `searchable` itself is refused below a nested field, so a default
+that widens it must decide what it means for those fields.
 
 Trash is filtered through the existing join to `entries` in the query, not by
 gating the triggers (`deletedAt` lives on `entries`, and trash never touches

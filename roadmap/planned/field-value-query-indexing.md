@@ -56,6 +56,11 @@ expressions anywhere.
       expressible; expression indexes are the gap.
 - [ ] Query builder: emit the declared expression for `where` / `sort` on a
       declared field; keep throwing for undeclared ones.
+- [ ] The JSON path comes from the field's schema path, not its bare name. A
+      field inside a named `group`, or a named `tab` or `accordion` (each wraps
+      a named group), is stored at `$.seo.title`; one inside a layout field
+      stays at `$.title`. `flattenFieldNodes` gives the top-level keys and
+      `formatSchemaPath` the nested ones.
 - [ ] Multi-valued fields (arrays) are out of scope — SQLite has no multi-value
       index; an array of references is the relationships index's job.
 - [ ] Postgres (planned driver) wants a genuinely different strategy (GIN

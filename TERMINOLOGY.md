@@ -94,9 +94,10 @@ request arrives and where the config lives; a **runtime integration**
 an entry point that is not an HTTP request. Not "adapter", which Astro already
 uses for its deploy targets.
 
-**Layout field.** A field that draws structure and stores nothing: sections,
-tabs, accordions. Its own name never appears in a data path, so data stays flat
-underneath it.
+**Layout field.** A structural field with no name: an unnamed group, an
+accordion, a tab, or tabs. It draws structure and stores nothing, so the fields
+under it store in its parent's data. A name is always a data key: the same
+field given a name nests its fields under it.
 
 **Media item.** One uploaded file and what editors say about it. The file
 (`filename`, mime type, size, dimensions, metadata) lives on the `media` row and
@@ -114,7 +115,8 @@ the content modules. Modules keep to their boundaries but do call each other, so
 are not "domains" in the bounded-context sense.
 
 **Nested field.** A field that owns one data key and nests its children's values
-under it: groups, repeaters, blocks, trees. Everything that is neither nested nor
+under it: named groups, repeaters, blocks, trees. A named accordion or tab is a
+layout field wrapped around a named group. Everything that is neither nested nor
 layout is a leaf, holding one value.
 
 **Permission.** The vocabulary of what may be done to what. A policy is what

@@ -33,6 +33,9 @@ property unset. (A plugin's entry types are the exception: they live in an
 array on the plugin definition, so each one self-declares `type` — see
 [plugins/authoring.md](../plugins/authoring.md).)
 
+The field builders, and how grouping and layout fields decide where values are
+stored, are in [fields.md](fields.md).
+
 ## Updating entries
 
 `Astromech.entries.update()` takes a **patch**, not a replacement. A field the

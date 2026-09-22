@@ -26,6 +26,18 @@ generated, data is hand-authored, and plugins ship self-contained journals.
 Rejected: a `findMany(qb => …)` builder callback (use `kysely()`), and `populate`
 on `reference` columns — if one ever ships it must be `resolveRefs`/`withRefs`.
 
+**A name on a structural field is always a data key.** A `group`, `accordion`
+or `tab` given a name nests its fields under it; without one it only draws a
+surface. This is Payload's named and unnamed `group` and its named tabs. A named
+accordion or tab is built as a wrapper around an unboxed named group, so group
+is the one structural field that nests data and no walker learns a new node
+kind. Rejected: a separate `section` type for the presentational box (two types
+for one toggle), a `nest` flag (a name that sometimes means nothing), inert
+names on layout fields (a name that reads as a key and is not one), the name
+inside options (breaks the `type(name, options)` shape every data field has),
+and teaching every walker (the pipeline, codegen, references, visibility,
+defaults) to handle a named tab natively.
+
 **`relationships` is a derived index, never a forward read.** It rebuilds from
 field data, which is what makes polymorphism and non-atomic writes safe; order
 lives only in field data, and paths key on `_id`. Rejected: `populate` (leaks
@@ -856,9 +868,9 @@ plain name would: they arrive with the wrong model and have to unlearn it.
   modules, and the shelf below them has no group name. Rejected: "domains" (DDD
   bounded-context freight), "infrastructure", "primitives", and "ports" for the
   `PluginContext` members.
-- **layout field** — the presentational half of the field types (`section`,
-  `tabs`, `tab`, `accordion`), after Payload. Data-bearing nesting types are just
-  nested fields. Rejected: "chrome" and "container" as category words.
+- **layout field** — a structural field with no name (an unnamed `group`,
+  `accordion`, `tab`, and `tabs`), after Payload. Data-bearing nesting types are
+  just nested fields. Rejected: "chrome" and "container" as category words.
 - **merge tag** — a `{{token}}` in a form email. Rejected: "placeholder", taken
   by a field's input hint.
 - **policies/** — Laravel and Pundit-style authorization policies, over
