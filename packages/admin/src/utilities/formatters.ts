@@ -22,9 +22,10 @@ function formatDateForInput(value: unknown): string {
 }
 
 /**
- * Format a datetime value for datetime-local input (YYYY-MM-DDTHH:MM)
+ * Format a datetime value for a `datetime-local` input (YYYY-MM-DDTHH:MM) in
+ * local time, the zone `new Date(inputValue)` reads it back in.
  */
-function formatDatetimeForInput(value: unknown): string {
+export function formatDatetimeForInput(value: unknown): string {
     if (!value) return '';
 
     const date = value instanceof Date ? value : new Date(value as string);

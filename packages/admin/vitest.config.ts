@@ -31,6 +31,11 @@ const setupFiles = ['tests/_support/dom-setup.ts'];
 // cache, and nothing here needs a process of its own.
 const pool = 'threads';
 
+// Files that must run in a zone with a non-zero UTC offset, so a UTC/local
+// mix-up shows as drift wherever the suite runs (CI runners default to UTC).
+// They get child processes: a worker thread ignores a `TZ` set at runtime.
+const timezoneTests = ['tests/utilities/formatters.test.ts'];
+
 const projects = [
     {
         resolve: { alias },
@@ -43,7 +48,7 @@ const projects = [
             isolate: false,
             include,
             setupFiles,
-            exclude: [...defaultExclude, ...isolatedTests],
+            exclude: [...defaultExclude, ...isolatedTests, ...timezoneTests],
         },
     },
     {
@@ -54,6 +59,17 @@ const projects = [
             pool,
             include: isolatedTests,
             setupFiles,
+        },
+    },
+    {
+        resolve: { alias },
+        test: {
+            name: 'admin-timezone',
+            environment: 'node',
+            pool: 'forks',
+            include: timezoneTests,
+            setupFiles,
+            env: { TZ: 'America/Los_Angeles' },
         },
     },
 ];

@@ -32,6 +32,7 @@ import { scopedGlobalKeys } from '../../hooks/use-query-keys';
 import { EntryNamespaceProvider, namespaceForScope } from '../../i18n/entry-namespace';
 import { resolveLabel } from '../../i18n/labels';
 import { defaultContentLocale } from '../../utilities/content-locale';
+import { formatDatetimeForInput } from '../../utilities/formatters';
 import { globalEditPath, globalVersionsPath } from '../../utilities/global-admin-path';
 import { EntryFieldColumn } from '../entries/entry-fields-renderer';
 import { EntryFormErrors } from '../entries/entry-form-errors';
@@ -204,10 +205,7 @@ function GlobalEditPageBody({
         namespace,
         defaultValues: {
             status: global?.status ?? ('unpublished' as EntryStatus),
-            publishedAt:
-                global?.publishedAt != null
-                    ? new Date(global.publishedAt).toISOString().slice(0, 16)
-                    : '',
+            publishedAt: formatDatetimeForInput(global?.publishedAt),
             fields: (global?.fields as Record<string, unknown>) ?? {},
         },
         hasSlug: false,

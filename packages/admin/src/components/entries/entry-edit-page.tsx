@@ -46,6 +46,7 @@ import { resolveAdminEntryType, resolveForm } from '../../rendering/resolve';
 import { defaultContentLocale } from '../../utilities/content-locale';
 import { formatDatetime } from '../../utilities/dates';
 import { entryEditPath, entryVersionsPath } from '../../utilities/entry-admin-path';
+import { formatDatetimeForInput } from '../../utilities/formatters';
 import {
     FieldErrorsProvider,
     FieldWarningsProvider,
@@ -215,10 +216,7 @@ function EntryEditPageBody({
             title: entry?.title ?? '',
             slug: entry?.slug ?? '',
             status: entry?.status ?? ('unpublished' as EntryStatus),
-            publishedAt:
-                entry?.publishedAt != null
-                    ? new Date(entry.publishedAt).toISOString().slice(0, 16)
-                    : '',
+            publishedAt: formatDatetimeForInput(entry?.publishedAt),
             fields: (entry?.fields as Record<string, unknown>) ?? {},
         },
         hasSlug,
