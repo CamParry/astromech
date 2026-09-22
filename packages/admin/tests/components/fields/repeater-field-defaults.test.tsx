@@ -9,13 +9,13 @@
  * land. `RepeaterField` seeds them at the point the item is added.
  */
 
-import type { Field } from '@/types/index';
+import type { DataField } from '@/types/index';
 import { act, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import '@/admin/rendering/register-fields';
 import { FormField } from '@/admin/components/fields/form-field';
 
-const socials: Field = {
+const socials: DataField = {
     name: 'socials',
     type: 'repeater',
     fields: [

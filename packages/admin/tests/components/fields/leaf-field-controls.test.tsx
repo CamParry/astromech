@@ -10,7 +10,7 @@
  * and the late-value case in each block is what proves that.
  */
 
-import type { Field } from '@/types/index';
+import type { DataField } from '@/types/index';
 import { act, render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
@@ -33,7 +33,7 @@ type Mounted = {
  * Mount one leaf `FormField` under a value holder, so a commit feeds straight
  * back into the control the way the entry form's `fields` state does.
  */
-function mountField(field: Field, value: unknown): Mounted {
+function mountField(field: DataField, value: unknown): Mounted {
     const commits: Commit[] = [];
     let push!: (value: unknown) => void;
 
@@ -70,7 +70,7 @@ function control<T extends HTMLElement>(selector: string): T {
 // The text-shaped inputs — one control, one string
 
 /** `[field, stored value, what the author types, what that commits]`. */
-const TEXT_INPUTS: [Field, string, string, unknown][] = [
+const TEXT_INPUTS: [DataField, string, string, unknown][] = [
     [{ name: 'headline', type: 'text' }, 'Stored', 'Typed', 'Typed'],
     [{ name: 'excerpt', type: 'textarea' }, 'Stored', 'Typed', 'Typed'],
     [{ name: 'email', type: 'email' }, 'a@b.test', 'c@d.test', 'c@d.test'],
@@ -124,7 +124,7 @@ describe.each(TEXT_INPUTS)('%o', (field, stored, typed, committed) => {
 // number — the one text-shaped input that does not commit a string
 
 describe('number', () => {
-    const field: Field = { name: 'rank', type: 'number' };
+    const field: DataField = { name: 'rank', type: 'number' };
 
     it('renders the stored number and commits a number back', async () => {
         const user = userEvent.setup();
@@ -147,7 +147,7 @@ describe('number', () => {
 });
 
 describe('boolean', () => {
-    const field: Field = { name: 'featured', type: 'boolean' };
+    const field: DataField = { name: 'featured', type: 'boolean' };
 
     it('renders the stored flag and commits the toggled one', async () => {
         const user = userEvent.setup();
@@ -164,7 +164,7 @@ describe('boolean', () => {
 // select and multiselect — a Base UI popup, not a native <select>
 
 describe('select', () => {
-    const field: Field = {
+    const field: DataField = {
         name: 'category',
         type: 'select',
         options: ['news', 'guides'],
@@ -187,7 +187,7 @@ describe('select', () => {
 });
 
 describe('multiselect', () => {
-    const field: Field = {
+    const field: DataField = {
         name: 'tags',
         type: 'multiselect',
         options: ['news', 'guides'],
@@ -214,7 +214,7 @@ describe('multiselect', () => {
 });
 
 describe('checkbox-group', () => {
-    const field: Field = {
+    const field: DataField = {
         name: 'topics',
         type: 'checkbox-group',
         options: ['news', 'guides'],
@@ -237,7 +237,7 @@ describe('checkbox-group', () => {
 });
 
 describe('radio-group', () => {
-    const field: Field = {
+    const field: DataField = {
         name: 'layout',
         type: 'radio-group',
         options: ['wide', 'narrow'],
@@ -262,7 +262,7 @@ describe('radio-group', () => {
 // range and color — value in, no local copy
 
 describe('range', () => {
-    const field: Field = { name: 'weight', type: 'range', min: 0, max: 10 };
+    const field: DataField = { name: 'weight', type: 'range', min: 0, max: 10 };
 
     it('renders the stored number and shows a later one', () => {
         const f = mountField(field, 4);
@@ -281,7 +281,7 @@ describe('range', () => {
 });
 
 describe('color', () => {
-    const field: Field = { name: 'accent', type: 'color' };
+    const field: DataField = { name: 'accent', type: 'color' };
 
     // The swatch is `react-colorful`, driven by pointer drags on a gradient that
     // has no layout under happy-dom, so only the display side is checked here.

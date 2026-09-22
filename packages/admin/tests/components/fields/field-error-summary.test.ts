@@ -27,8 +27,7 @@ const definitions: Field[] = [
     { name: 'meta_description', type: 'text' },
     // A layout field holds no data, so it never appears in a path.
     {
-        name: 'main',
-        type: 'tabs',
+        type: 'group',
         fields: [
             {
                 name: 'seo',

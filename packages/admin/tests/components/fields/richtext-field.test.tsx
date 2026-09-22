@@ -6,7 +6,7 @@
  * each edit as a document under the bare field name.
  */
 
-import type { Field } from '@/types/index';
+import type { DataField } from '@/types/index';
 import type { JSONContent } from '@tiptap/core';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -53,12 +53,12 @@ describe('coerceToDoc', () => {
 
 type Commit = { name: string; value: unknown };
 
-const body: Field = { name: 'body', type: 'richtext' };
+const body: DataField = { name: 'body', type: 'richtext' };
 
 /** Render the field and collect every `onChange` it fires, oldest first. */
 function mount(
     value: unknown,
-    options: { field?: Field; disabled?: boolean } = {}
+    options: { field?: DataField; disabled?: boolean } = {}
 ): Commit[] {
     const commits: Commit[] = [];
     render(

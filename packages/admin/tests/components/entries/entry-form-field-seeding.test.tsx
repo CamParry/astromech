@@ -39,11 +39,11 @@ beforeAll(async () => {
     });
 });
 
-/** The demo's `seoSection()`: a section wrapping an unboxed group. */
+/** The demo's `seoSection()`: a named group, drawn as a titled panel. */
 const SEO_GROUP: Field = {
     name: 'seo',
     type: 'group',
-    boxed: false,
+    label: 'SEO',
     fields: [
         { name: 'title', type: 'text', label: 'Meta title' },
         { name: 'description', type: 'textarea', label: 'Meta description' },

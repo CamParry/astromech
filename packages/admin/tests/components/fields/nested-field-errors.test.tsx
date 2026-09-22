@@ -9,7 +9,7 @@
  * can never match a nested key, so the error would exist and stay invisible.
  */
 
-import type { Field } from '@/types/index';
+import type { DataField } from '@/types/index';
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import '@/admin/rendering/register-fields';
@@ -18,7 +18,7 @@ import { FormField } from '@/admin/components/fields/form-field';
 
 /** Render one FormField under an error map and return the resulting HTML. */
 function renderField(
-    field: Field,
+    field: DataField,
     value: unknown,
     errors: Record<string, string[]>
 ): string {
@@ -58,7 +58,7 @@ describe('FormField error lookup', () => {
 });
 
 describe('group field errors', () => {
-    const seo: Field = {
+    const seo: DataField = {
         name: 'seo',
         type: 'group',
         fields: [
@@ -84,7 +84,7 @@ describe('group field errors', () => {
     });
 
     it('nests through a group inside a group', () => {
-        const outer: Field = {
+        const outer: DataField = {
             name: 'meta',
             type: 'group',
             fields: [seo],
@@ -103,7 +103,7 @@ describe('group field errors', () => {
 // repeater / blocks / tree — item selectors address by `_id`, not index
 
 describe('repeater field errors', () => {
-    const links: Field = {
+    const links: DataField = {
         name: 'links',
         type: 'repeater',
         fields: [{ name: 'label', type: 'text' }],
@@ -130,7 +130,7 @@ describe('repeater field errors', () => {
 });
 
 describe('blocks field errors', () => {
-    const content: Field = {
+    const content: DataField = {
         name: 'content',
         type: 'blocks',
         blocks: [{ type: 'hero', fields: [{ name: 'heading', type: 'text' }] }],
@@ -157,7 +157,7 @@ describe('blocks field errors', () => {
 });
 
 describe('tree field errors', () => {
-    const nav: Field = {
+    const nav: DataField = {
         name: 'nav',
         type: 'tree',
         fields: [{ name: 'label', type: 'text' }],

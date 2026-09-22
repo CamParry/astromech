@@ -1,8 +1,8 @@
-import type { Field } from 'astromech';
+import type { DataField } from 'astromech';
 import { countStatus } from 'astromech/shared';
 import { clsx } from 'clsx';
 
-type CountSetting = NonNullable<Field['count']>;
+type CountSetting = NonNullable<DataField['count']>;
 
 /**
  * Advisory character counter rendered beneath `text`/`textarea` controls when

@@ -16,7 +16,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { formatInstancePath, parseInstancePath } from 'astromech/shared';
+import { parseInstancePath } from 'astromech/shared';
 import { clsx } from 'clsx';
 import {
     ChevronDown,
@@ -31,7 +31,7 @@ import {
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { buildDefaultValues } from '../../utilities/defaults';
-import { FormField } from './form-field';
+import { FieldList } from '../entries/entry-fields-renderer';
 import { InlineTitle } from './inline-title';
 import './repeater-field.css';
 
@@ -214,24 +214,15 @@ function SortableRepeaterItem({
                             itemDisabled && 'am-repeater-item-content-disabled'
                         )}
                     >
-                        {fields.map((subField) => (
-                            <FormField
-                                key={subField.name}
-                                field={subField}
-                                value={item[subField.name]}
-                                name={formatInstancePath([
-                                    ...itemSegments,
-                                    { kind: 'field', name: subField.name },
-                                ])}
-                                // `name` is the full path (error lookup, sibling
-                                // reads); the container keys its item by the BARE
-                                // sub-field name, so the reported name is dropped.
-                                onChange={(_path, fieldValue) =>
-                                    onFieldChange(subField.name, fieldValue)
-                                }
-                                {...(disabled !== undefined ? { disabled } : {})}
-                            />
-                        ))}
+                        <FieldList
+                            nodes={fields}
+                            scope={{
+                                values: item,
+                                onChange: onFieldChange,
+                                segments: itemSegments,
+                            }}
+                            disabled={disabled}
+                        />
                     </div>
                 </Collapsible.Panel>
             </Collapsible.Root>

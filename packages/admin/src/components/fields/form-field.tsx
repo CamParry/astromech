@@ -1,4 +1,4 @@
-import type { Field } from 'astromech';
+import type { DataField } from 'astromech';
 import React from 'react';
 import { useLabel } from '../../i18n/entry-namespace';
 import { getFieldComponent } from '../../rendering/field-registry';
@@ -10,7 +10,7 @@ import { FieldWrapper } from './field-wrapper';
 import { hasPluginFieldType, PluginField } from './plugin-field';
 
 export type FormFieldProps = {
-    field: Field;
+    field: DataField;
     value: unknown;
     name?: string;
     onChange: (name: string, value: unknown) => void;
@@ -72,9 +72,9 @@ export function FormField({
     const warning = useFieldWarning(path);
 
     // An unboxed group draws nothing itself — pure data nesting. It renders
-    // its sub-fields inline with no label or box; pair it with a `section` for a
-    // heading/surface. No wrapper here means no blur reporter either — its
-    // children each carry their own.
+    // its sub-fields inline with no label or box; wrap it in an unnamed group
+    // for a heading and surface. No wrapper here means no blur reporter
+    // either — its children each carry their own.
     if (field.type === 'group' && field.boxed === false) {
         return <FieldPathProvider path={path}>{control}</FieldPathProvider>;
     }

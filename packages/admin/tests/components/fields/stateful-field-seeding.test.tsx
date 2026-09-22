@@ -15,7 +15,7 @@
  * effect. All four are checked here at the component level.
  */
 
-import type { Field } from '@/types/index';
+import type { DataField } from '@/types/index';
 import { act, render, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
@@ -38,7 +38,7 @@ type Mounted = {
  * Mount one `FormField` whose value starts undefined, as the fetching entry
  * leaves it, and can be replaced later.
  */
-function mountField(field: Field, value: unknown): Mounted {
+function mountField(field: DataField, value: unknown): Mounted {
     const commits: Commit[] = [];
     let push!: (value: unknown) => void;
 
@@ -78,7 +78,7 @@ function input(name: string): HTMLInputElement {
 }
 
 describe('blocks on a fetched entry', () => {
-    const content: Field = {
+    const content: DataField = {
         name: 'content',
         type: 'blocks',
         blocks: [
@@ -141,7 +141,7 @@ describe('blocks on a fetched entry', () => {
 });
 
 describe('tree on a fetched entry', () => {
-    const nav: Field = {
+    const nav: DataField = {
         name: 'nav',
         type: 'tree',
         fields: [
@@ -213,7 +213,7 @@ describe('tree on a fetched entry', () => {
 // json, which snapshots its text behind its own re-seed guard
 
 describe('json on a fetched entry', () => {
-    const data: Field = { name: 'data', type: 'json' };
+    const data: DataField = { name: 'data', type: 'json' };
 
     it('renders the stored JSON when the value is already there', () => {
         mountField(data, { alpha: 1 });
@@ -244,7 +244,7 @@ describe('json on a fetched entry', () => {
 // richtext, which seeds the TipTap document from an effect
 
 describe('richtext on a fetched entry', () => {
-    const body: Field = { name: 'body', type: 'richtext' };
+    const body: DataField = { name: 'body', type: 'richtext' };
     const doc = {
         type: 'doc',
         content: [

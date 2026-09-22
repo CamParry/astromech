@@ -11,7 +11,7 @@
  * an author-editable copy, so neither needs the containers' re-seed guard.
  */
 
-import type { Field } from '@/types/index';
+import type { DataField } from '@/types/index';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -65,7 +65,7 @@ type Mounted = {
 };
 
 /** Mount one `FormField` whose value can be replaced after the first render. */
-function mountField(field: Field, value: unknown): Mounted {
+function mountField(field: DataField, value: unknown): Mounted {
     const commits: { name: string; value: unknown }[] = [];
     let push!: (value: unknown) => void;
 
@@ -117,8 +117,8 @@ function hidden(name: string): HTMLInputElement {
 }
 
 describe('media on a fetched entry', () => {
-    const cover: Field = { name: 'cover', type: 'media' };
-    const gallery: Field = { name: 'gallery', type: 'media', multiple: true };
+    const cover: DataField = { name: 'cover', type: 'media' };
+    const gallery: DataField = { name: 'gallery', type: 'media', multiple: true };
 
     function item(id: string, filename: string): Record<string, unknown> {
         return {
@@ -191,7 +191,7 @@ describe('media on a fetched entry', () => {
 });
 
 describe('relationship on a fetched entry', () => {
-    const author: Field = { name: 'author', type: 'relationship', target: 'author' };
+    const author: DataField = { name: 'author', type: 'relationship', target: 'author' };
 
     const OPTIONS = [
         { id: 'a1', title: 'Ada Lovelace', slug: 'ada' },

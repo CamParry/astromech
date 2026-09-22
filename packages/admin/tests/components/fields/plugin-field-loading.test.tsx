@@ -11,7 +11,7 @@
  * which the loading form and an entry with no stored value look alike from.
  */
 
-import type { BaseFieldProps, Field } from '@/types/index';
+import type { BaseFieldProps, DataField } from '@/types/index';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
@@ -91,7 +91,7 @@ type Mounted = {
 };
 
 /** Mount one plugin `FormField` whose value can be replaced after mount. */
-function mountField(field: Field, value: unknown): Mounted {
+function mountField(field: DataField, value: unknown): Mounted {
     const commits: { name: string; value: unknown }[] = [];
     let push!: (value: unknown) => void;
 

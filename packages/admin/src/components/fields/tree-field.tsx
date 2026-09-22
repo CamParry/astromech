@@ -17,7 +17,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { formatInstancePath, parseInstancePath } from 'astromech/shared';
+import { parseInstancePath } from 'astromech/shared';
 import { clsx } from 'clsx';
 import {
     ChevronDown,
@@ -34,7 +34,7 @@ import {
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTreeField } from '../../hooks/use-tree-field';
-import { FormField } from './form-field';
+import { FieldList } from '../entries/entry-fields-renderer';
 import './tree-field.css';
 
 // Lock dragging to the vertical axis — sortable strategy governs reordering
@@ -320,21 +320,16 @@ function SortableTreeNode({
                                 nodeDisabled && 'am-tree-node-content-disabled'
                             )}
                         >
-                            {fields.map((subField) => (
-                                <FormField
-                                    key={subField.name}
-                                    field={subField}
-                                    value={node[subField.name]}
-                                    name={formatInstancePath([
-                                        ...nodeSegments,
-                                        { kind: 'field', name: subField.name },
-                                    ])}
-                                    onChange={(_n, v) =>
-                                        onUpdateField(node._id, subField.name, v)
-                                    }
-                                    {...(disabled !== undefined ? { disabled } : {})}
-                                />
-                            ))}
+                            <FieldList
+                                nodes={fields}
+                                scope={{
+                                    values: node,
+                                    onChange: (fieldName, value) =>
+                                        onUpdateField(node._id, fieldName, value),
+                                    segments: nodeSegments,
+                                }}
+                                disabled={disabled}
+                            />
                         </div>
 
                         {/* Per-node children (recursive) */}

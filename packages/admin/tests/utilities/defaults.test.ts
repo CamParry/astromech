@@ -31,11 +31,10 @@ describe('buildDefaultValues', () => {
 
     it('unwraps layout fields', () => {
         const values = buildDefaultValues([
-            field({
-                name: 'main',
-                type: 'section',
+            {
+                type: 'group',
                 fields: [field({ name: 'subject', type: 'text', defaultValue: 'Hello' })],
-            }),
+            },
         ]);
 
         expect(values).toEqual({ subject: 'Hello' });

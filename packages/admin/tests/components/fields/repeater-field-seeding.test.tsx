@@ -11,14 +11,14 @@
  * edit in progress. `useBlocksField` and `useTreeField` carry the same guard.
  */
 
-import type { Field } from '@/types/index';
+import type { DataField } from '@/types/index';
 import type { ReactElement } from 'react';
 import { act, render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import '@/admin/rendering/register-fields';
 import { FormField } from '@/admin/components/fields/form-field';
 
-const socials: Field = {
+const socials: DataField = {
     name: 'socials',
     type: 'repeater',
     fields: [{ name: 'url', type: 'text' }],

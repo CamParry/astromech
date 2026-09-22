@@ -1,6 +1,6 @@
 import type { BlockWithId } from '../../hooks/use-blocks-field';
 import type { DragEndEvent, Modifier } from '@dnd-kit/core';
-import type { BaseFieldProps, Block, Field } from 'astromech';
+import type { BaseFieldProps, Block } from 'astromech';
 import { Collapsible } from '@base-ui/react';
 import {
     closestCenter,
@@ -17,7 +17,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { formatInstancePath, parseInstancePath } from 'astromech/shared';
+import { parseInstancePath } from 'astromech/shared';
 import { clsx } from 'clsx';
 import {
     ChevronDown,
@@ -33,7 +33,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBlocksField } from '../../hooks/use-blocks-field';
 import { useLabel } from '../../i18n/entry-namespace';
-import { FormField } from './form-field';
+import { FieldList } from '../entries/entry-fields-renderer';
 import { InlineTitle } from './inline-title';
 import './blocks-field.css';
 
@@ -251,21 +251,16 @@ function SortableBlock({
                             block._disabled === true && 'am-blocks-block-content-disabled'
                         )}
                     >
-                        {(blockDef?.fields ?? []).map((subField: Field) => (
-                            <FormField
-                                key={subField.name}
-                                field={subField}
-                                value={block[subField.name]}
-                                name={formatInstancePath([
-                                    ...blockSegments,
-                                    { kind: 'field', name: subField.name },
-                                ])}
-                                onChange={(_fieldName, fieldValue) =>
-                                    onFieldChange(block._id, subField.name, fieldValue)
-                                }
-                                {...(disabled !== undefined ? { disabled } : {})}
-                            />
-                        ))}
+                        <FieldList
+                            nodes={blockDef?.fields ?? []}
+                            scope={{
+                                values: block,
+                                onChange: (fieldName, value) =>
+                                    onFieldChange(block._id, fieldName, value),
+                                segments: blockSegments,
+                            }}
+                            disabled={disabled}
+                        />
                     </div>
                 </Collapsible.Panel>
             </Collapsible.Root>

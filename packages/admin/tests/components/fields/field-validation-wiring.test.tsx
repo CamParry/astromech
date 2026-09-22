@@ -14,7 +14,7 @@
  * the author never performed on it.
  */
 
-import type { Field } from '@/types/index';
+import type { DataField } from '@/types/index';
 import { act, render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import '@/admin/rendering/register-fields';
@@ -31,7 +31,7 @@ type Mounted = {
     unmount: () => void;
 };
 
-function mountField(field: Field, value: unknown): Mounted {
+function mountField(field: DataField, value: unknown): Mounted {
     const changed: string[] = [];
     const blurred: string[] = [];
     const { container: host, unmount } = render(
@@ -99,7 +99,7 @@ describe('change reporting', () => {
     });
 
     it('should report a group sub-field change under its dotted path', () => {
-        const quote: Field = {
+        const quote: DataField = {
             name: 'quote',
             type: 'group',
             fields: [{ name: 'text', type: 'text' }],
@@ -116,7 +116,7 @@ describe('change reporting', () => {
     });
 
     it('should report a repeater sub-field change keyed by the item id', () => {
-        const items: Field = {
+        const items: DataField = {
             name: 'items',
             type: 'repeater',
             fields: [{ name: 'link', type: 'text' }],
@@ -146,7 +146,7 @@ describe('blur reporting', () => {
     });
 
     it('should report only the innermost path when a nested field blurs', () => {
-        const items: Field = {
+        const items: DataField = {
             name: 'items',
             type: 'repeater',
             fields: [{ name: 'link', type: 'text' }],
@@ -162,7 +162,7 @@ describe('blur reporting', () => {
     });
 
     it('should report only the innermost path through two levels of nesting', () => {
-        const sections: Field = {
+        const sections: DataField = {
             name: 'sections',
             type: 'repeater',
             fields: [

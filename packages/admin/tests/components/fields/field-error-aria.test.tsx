@@ -14,7 +14,7 @@
  * this walks the registry rather than checking one representative field.
  */
 
-import type { Field } from '@/types/index';
+import type { DataField } from '@/types/index';
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import '@/admin/rendering/register-fields';
@@ -24,7 +24,7 @@ import { FormField } from '@/admin/components/fields/form-field';
 type Mounted = { host: HTMLElement; unmount: () => void };
 
 /** Mount one `FormField` whose only field is in error. */
-function mountWithError(field: Field, value: unknown): Mounted {
+function mountWithError(field: DataField, value: unknown): Mounted {
     const { container, unmount } = render(
         <FieldErrorsProvider value={{ [field.name]: ['Something is wrong'] }}>
             <FormField field={field} value={value} onChange={() => undefined} />
@@ -65,7 +65,7 @@ describe('field error markup', () => {
  * `richtext` is excluded because its control is ProseMirror's contenteditable,
  * which needs a real layout engine to mount.
  */
-const CASES: { field: Field; value: unknown }[] = [
+const CASES: { field: DataField; value: unknown }[] = [
     { field: { name: 'f', type: 'text' }, value: '' },
     { field: { name: 'f', type: 'textarea' }, value: '' },
     { field: { name: 'f', type: 'number' }, value: null },

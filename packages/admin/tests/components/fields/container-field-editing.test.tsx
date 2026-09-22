@@ -16,7 +16,7 @@
  * passes while the field is broken.
  */
 
-import type { Field } from '@/types/index';
+import type { DataField } from '@/types/index';
 import { act, render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import '@/admin/rendering/register-fields';
@@ -37,7 +37,7 @@ type Mounted = {
 };
 
 /** Mount one container `FormField` and capture what it commits. */
-function mountField(field: Field, value: unknown): Mounted {
+function mountField(field: DataField, value: unknown): Mounted {
     const commits: Commit[] = [];
     const { container: host, unmount } = render(
         <FormField
@@ -93,7 +93,7 @@ function pathShapedKeys(obj: Record<string, unknown>): string[] {
 }
 
 describe('repeater sub-field editing', () => {
-    const socials: Field = {
+    const socials: DataField = {
         name: 'socials',
         type: 'repeater',
         fields: [
@@ -161,7 +161,7 @@ describe('repeater sub-field editing', () => {
 });
 
 describe('group sub-field editing', () => {
-    const quote: Field = {
+    const quote: DataField = {
         name: 'quote',
         type: 'group',
         fields: [
@@ -200,7 +200,7 @@ describe('group sub-field editing', () => {
 });
 
 describe('blocks sub-field editing', () => {
-    const content: Field = {
+    const content: DataField = {
         name: 'content',
         type: 'blocks',
         blocks: [
@@ -258,7 +258,7 @@ describe('blocks sub-field editing', () => {
 });
 
 describe('tree sub-field editing', () => {
-    const nav: Field = {
+    const nav: DataField = {
         name: 'nav',
         type: 'tree',
         fields: [
@@ -322,7 +322,7 @@ describe('tree sub-field editing', () => {
 // nesting — the recursion, not just one level
 
 describe('group nested in a repeater item', () => {
-    const people: Field = {
+    const people: DataField = {
         name: 'people',
         type: 'repeater',
         fields: [
@@ -371,7 +371,7 @@ describe('group nested in a repeater item', () => {
 });
 
 describe('repeater nested in a repeater item', () => {
-    const sections: Field = {
+    const sections: DataField = {
         name: 'sections',
         type: 'repeater',
         fields: [

@@ -6,14 +6,14 @@
  * key the value carries. Both are checked here against the real validator.
  */
 
-import type { Field, FieldValidationContext } from '@/types/index';
+import type { DataField, FieldValidationContext } from '@/types/index';
 import { act, render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import '@/admin/rendering/register-fields';
 import { FormField } from '@/admin/components/fields/form-field';
 import { validateLink } from '@/fields/built-in-rules';
 
-const cta: Field = { name: 'cta', type: 'link' };
+const cta: DataField = { name: 'cta', type: 'link' };
 
 type Mounted = {
     /** Type into the input rendered for the given control name. */

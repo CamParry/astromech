@@ -1,6 +1,6 @@
 /* Group field — a labelled cluster of sub-fields sharing one nested data key.
    Base is layout only (matches the field-list rhythm); `--boxed` adds the
-   surrounding surface. Authors drop the box with `group({ container: false })`. */
+   surrounding surface. Authors drop the box with `group(name, { boxed: false })`. */
 .am-group-field {
     display: flex;
     flex-direction: column;

@@ -4,7 +4,7 @@
  * the schema author actually wrote. Pure module — no React, no DOM.
  */
 
-import type { Field, FieldErrors, Label } from 'astromech';
+import type { DataField, Field, FieldErrors, Label } from 'astromech';
 import type { TFunction } from 'i18next';
 import { flattenFieldNodes, parseInstancePath } from 'astromech/shared';
 import { titleCase } from '../../i18n/labels';
@@ -19,7 +19,7 @@ const CHAIN_SEPARATOR = ' → ';
 const LIST_SEPARATOR = ', ';
 
 /** The declared label of a field, or the same fallback its own label renders. */
-function labelOf(field: Field): Label {
+function labelOf(field: DataField): Label {
     return field.label ?? titleCase(field.name);
 }
 
@@ -28,7 +28,7 @@ function labelOf(field: Field): Label {
  * is unresolvable. A `blocks` item's type lives in the value, not the path,
  * so every block definition is a candidate; the step is safe only when they agree.
  */
-function childrenOf(field: Field): Field[] | null {
+function childrenOf(field: DataField): DataField[] | null {
     if (field.fields !== undefined) return flattenFieldNodes(field.fields);
     if (field.blocks !== undefined) {
         return field.blocks.flatMap((block) => flattenFieldNodes(block.fields));
@@ -53,7 +53,7 @@ export function fieldLabelPathForError(
     }
 
     const labels: Label[] = [];
-    let candidates: Field[] | null = flattenFieldNodes(definitions);
+    let candidates: DataField[] | null = flattenFieldNodes(definitions);
 
     for (const segment of segments) {
         // An item id names a row, not a definition; the definition is the same

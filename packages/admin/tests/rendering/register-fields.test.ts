@@ -3,12 +3,7 @@ import { CORE_FIELD_TYPES } from '@/types/index';
 import '@/admin/rendering/register-fields';
 import { getFieldComponent } from '@/admin/rendering/field-registry';
 
-const LAYOUT_CONTAINERS_NOT_IN_REGISTRY = new Set([
-    'accordion',
-    'tab',
-    'section',
-    'tabs',
-]);
+const LAYOUT_CONTAINERS_NOT_IN_REGISTRY = new Set(['accordion', 'tab', 'tabs']);
 
 const REGISTERED_FIELD_TYPES = CORE_FIELD_TYPES.filter(
     (type) => !LAYOUT_CONTAINERS_NOT_IN_REGISTRY.has(type)
