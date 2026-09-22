@@ -9,6 +9,7 @@
  */
 
 import type {
+    DataField,
     EntryStatus,
     Field,
     JsonObject,
@@ -16,6 +17,7 @@ import type {
     RichTextAllow,
 } from '@/types/index';
 import type { JSONContent } from '@tiptap/core';
+import { flattenFieldNodes } from '@/fields/flatten';
 import { PUBLIC_STRIPPED_KEYS, RESERVED_KEY } from '@/fields/reserved-keys';
 import { renderRichText } from '@/fields/rich-text/render';
 
@@ -116,12 +118,12 @@ function structuralStrip(value: JsonValue): JsonValue {
 }
 
 /**
- * Build a map from field name → Field for quick lookup.
- * Only includes data-bearing top-level fields (not layout fields).
+ * Map each data field in one value scope by name. The input is flattened here,
+ * so every recursion path unwraps layout fields and inherits their `private`.
  */
-function fieldMap(fields: Field[]): Map<string, Field> {
-    const map = new Map<string, Field>();
-    for (const f of fields) {
+function fieldMap(fields: Field[]): Map<string, DataField> {
+    const map = new Map<string, DataField>();
+    for (const f of flattenFieldNodes(fields)) {
         map.set(f.name, f);
     }
     return map;

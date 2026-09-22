@@ -80,6 +80,73 @@ describe('private field projection', () => {
     });
 });
 
+describe('private fields under layout fields', () => {
+    it('strips every field inside a private unnamed group', () => {
+        const fields: Field[] = [
+            { name: 'title', type: 'text' },
+            { type: 'group', private: true, fields: [{ name: 'notes', type: 'text' }] },
+        ];
+        const entry = publishedEntry({ fields: { title: 'Hello', notes: 'internal' } });
+        expect(applyVisibility(entry, publicOpts(fields))?.fields).toEqual({
+            title: 'Hello',
+        });
+    });
+
+    it('strips a private field under a layout field inside a named group', () => {
+        const fields: Field[] = [
+            {
+                name: 'meta',
+                type: 'group',
+                fields: [
+                    {
+                        type: 'group',
+                        fields: [
+                            { name: 'shown', type: 'text' },
+                            { name: 'hidden', type: 'text', private: true },
+                        ],
+                    },
+                ],
+            },
+        ];
+        const entry = publishedEntry({
+            fields: { meta: { shown: 'yes', hidden: 'no' } },
+        });
+        expect(applyVisibility(entry, publicOpts(fields))?.fields).toEqual({
+            meta: { shown: 'yes' },
+        });
+    });
+
+    it('strips a private field under a layout field inside a block', () => {
+        const fields: Field[] = [
+            {
+                name: 'body',
+                type: 'blocks',
+                blocks: [
+                    {
+                        type: 'hero',
+                        fields: [
+                            {
+                                type: 'accordion',
+                                label: 'More',
+                                fields: [{ name: 'hidden', type: 'text', private: true }],
+                            },
+                            { name: 'heading', type: 'text' },
+                        ],
+                    },
+                ],
+            },
+        ];
+        const entry = publishedEntry({
+            fields: {
+                body: [{ _id: 'b1', _type: 'hero', heading: 'Hi', hidden: 'no' }],
+            },
+        });
+        expect(applyVisibility(entry, publicOpts(fields))?.fields).toEqual({
+            body: [{ _id: 'b1', _type: 'hero', heading: 'Hi' }],
+        });
+    });
+});
+
 // (b) _disabled item removed; _disabled/_title deleted on survivors; _type/_id kept
 
 describe('structural strip (_disabled items)', () => {
