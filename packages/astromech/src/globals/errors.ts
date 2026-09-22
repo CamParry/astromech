@@ -4,6 +4,7 @@
  */
 
 import type { FieldErrors } from '@/types/fields';
+import { ApiError } from '@/errors/api-error';
 import { ValidationError } from '@/errors/validation';
 
 /**
@@ -11,7 +12,7 @@ import { ValidationError } from '@/errors/validation';
  * row where an operation requires one. The HTTP layer maps it to a 404; `get`
  * answers null for a declared-but-unsaved global rather than throwing.
  */
-export class GlobalNotFoundError extends Error {
+export class GlobalNotFoundError extends ApiError {
     public readonly key: string;
     public readonly locale: string | undefined;
 
@@ -19,7 +20,8 @@ export class GlobalNotFoundError extends Error {
         super(
             args.locale === undefined
                 ? `Global '${args.key}' is not declared`
-                : `Global '${args.key}' not found in locale '${args.locale}'`
+                : `Global '${args.key}' not found in locale '${args.locale}'`,
+            { status: 404, code: 'NOT_FOUND' }
         );
         this.name = 'GlobalNotFoundError';
         this.key = args.key;
@@ -45,14 +47,19 @@ export class GlobalValidationError extends ValidationError {
  * change. The key and locale are the whole address of the existing staged row,
  * so the admin needs no second id to redirect to it.
  */
-export class StagedGlobalExistsError extends Error {
+export class StagedGlobalExistsError extends ApiError {
     public readonly key: string;
     public readonly locale: string;
 
     constructor(args: { key: string; locale: string }) {
         super(
             `Global '${args.key}' already has a staged change for locale ` +
-                `'${args.locale}'`
+                `'${args.locale}'`,
+            {
+                status: 409,
+                code: 'staged_global_exists',
+                details: { locale: args.locale },
+            }
         );
         this.name = 'StagedGlobalExistsError';
         this.key = args.key;

@@ -18,6 +18,7 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { noInput } from '@/services/define-service-method';
+import { onError } from '@/transport/http/middleware/errors';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
 import { createPluginsRouter } from '@/transport/http/routes/plugins';
 
@@ -62,6 +63,7 @@ function roleWith(permissions: string[]): Role {
 /** Mount the entries router in isolation, with an injected role. */
 function mountedApp(role: Role): OpenAPIHono<{ Variables: AuthVariables }> {
     const app = new OpenAPIHono<{ Variables: AuthVariables }>();
+    app.onError(onError);
     app.use('/entries/*', async (c, next) => {
         c.set('user', fakeUser);
         c.set('role', role);

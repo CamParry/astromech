@@ -53,7 +53,17 @@ const testPlugin: PluginDefinition = {
 };
 
 function testConfig(): AstromechConfig {
-    return { ...makeTestConfig(), plugins: [testPlugin] };
+    return {
+        ...makeTestConfig(),
+        globals: [
+            {
+                key: 'site',
+                label: 'Site',
+                fields: [{ name: 'title', type: 'text', label: 'Title' }],
+            },
+        ],
+        plugins: [testPlugin],
+    };
 }
 
 let manifest: MethodManifest;
@@ -239,6 +249,62 @@ describe('POST /rpc/:id', () => {
         const body = (await res.json()) as ErrorBody;
         expect(body.error.code).toBe('BAD_REQUEST');
         expect(body.error.message).toContain('trashed reads require the full shape');
+    });
+
+    it('409s a staged write to a global without staging, as REST does', async () => {
+        const app = await freshApp();
+        const res = await call(app, 'globals.update', {
+            key: 'site',
+            staged: true,
+            data: { fields: { title: 'x' } },
+        });
+        expect(res.status).toBe(409);
+        const body = (await res.json()) as ErrorBody;
+        expect(body.error.code).toBe('capability_not_supported');
+        expect(body.error.message).toBe(
+            'Global "site" does not support capability: staging'
+        );
+    });
+
+    it('409s a status on an entry type without statuses', async () => {
+        const app = await freshApp();
+        const res = await call(app, 'entries.snippet.create', {
+            data: { status: 'published' },
+        });
+        expect(res.status).toBe(409);
+        expect(((await res.json()) as ErrorBody).error.code).toBe(
+            'capability_not_supported'
+        );
+    });
+
+    it('403s an update that publishes without the publish grant', async () => {
+        const app = await freshApp(roleWith(['entry:post:read', 'entry:post:update']));
+        const entry = await entriesService.create({ type: 'post', data: { title: 'A' } });
+        const res = await call(app, 'entries.post.update', {
+            id: entry.id,
+            data: { status: 'published' },
+        });
+        expect(res.status).toBe(403);
+        expect(((await res.json()) as ErrorBody).error.message).toContain(
+            'entry:post:publish'
+        );
+    });
+
+    it('400s demoting the last admin', async () => {
+        const app = await freshApp();
+        const admin = await usersService.create({
+            data: { email: 'admin@test.dev', name: 'Admin', role: 'admin' },
+        });
+        const res = await call(app, 'users.update', {
+            id: admin.id,
+            data: { role: 'editor' },
+        });
+        expect(res.status).toBe(400);
+        const body = (await res.json()) as ErrorBody;
+        expect(body.error).toMatchObject({
+            code: 'BAD_REQUEST',
+            message: 'Cannot remove the last administrator',
+        });
     });
 
     it('401s without a session', async () => {

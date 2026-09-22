@@ -4,6 +4,7 @@
  */
 
 import type { FieldErrors } from '@/types/fields';
+import { ApiError } from '@/errors/api-error';
 import { ValidationError } from '@/errors/validation';
 
 /**
@@ -11,7 +12,7 @@ import { ValidationError } from '@/errors/validation';
  * no content row where an operation requires one. `get` answers null for an
  * unknown id rather than throwing.
  */
-export class MediaNotFoundError extends Error {
+export class MediaNotFoundError extends ApiError {
     public readonly id: string;
     public readonly locale: string | undefined;
 
@@ -19,7 +20,8 @@ export class MediaNotFoundError extends Error {
         super(
             args.locale === undefined
                 ? `Media '${args.id}' not found`
-                : `Media '${args.id}' not found in locale '${args.locale}'`
+                : `Media '${args.id}' not found in locale '${args.locale}'`,
+            { status: 404, code: 'NOT_FOUND' }
         );
         this.name = 'MediaNotFoundError';
         this.id = args.id;

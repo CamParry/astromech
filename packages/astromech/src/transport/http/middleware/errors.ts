@@ -4,34 +4,16 @@
  * Provides canonical error response format and handlers for Hono.
  */
 
+import type { ApiErrorCode } from '@/errors/api-error';
 import type { Context, ErrorHandler, NotFoundHandler } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { ZodError, ZodIssue } from 'zod';
 import { HTTPException } from 'hono/http-exception';
-import {
-    BulkOperationError,
-    CustomTableCrossTypeQueryError,
-    EntryNotFoundError,
-    InvalidReferencesFilterError,
-    PublicTrashedReadError,
-    UnknownSortKeyError,
-    UnknownWhereKeyError,
-} from '@/entries/errors';
+import { BulkOperationError } from '@/entries/errors';
 import { resolveNodeEnv } from '@/env';
+import { ApiError } from '@/errors/api-error';
+import { PermissionDeniedError } from '@/errors/permission';
 import { ValidationError } from '@/errors/validation';
-import { GlobalNotFoundError } from '@/globals/errors';
-import { MediaNotFoundError } from '@/media/errors';
-import { UserNotFoundError } from '@/users/errors';
-
-type ApiErrorCode =
-    | 'NOT_FOUND'
-    | 'UNAUTHORIZED'
-    | 'FORBIDDEN'
-    | 'VALIDATION_FAILED'
-    | 'CONFLICT'
-    | 'INTERNAL_ERROR'
-    | 'BAD_REQUEST'
-    | 'METHOD_NOT_ALLOWED';
 
 export type ApiErrorDetails = {
     fields?: Record<string, string[]>;
@@ -66,6 +48,11 @@ function apiError(
     );
 }
 
+/** The response an `ApiError` answers with: its own status, code and details. */
+export function errorResponse(c: Context, err: ApiError): Response {
+    return apiError(c, err.status, err.code, err.message, err.details);
+}
+
 export function notFound(c: Context, message = 'Not found'): Response {
     return apiError(c, 404, 'NOT_FOUND', message);
 }
@@ -74,8 +61,12 @@ export function unauthorized(c: Context, message = 'Authentication required'): R
     return apiError(c, 401, 'UNAUTHORIZED', message);
 }
 
-export function forbidden(c: Context, message = 'Insufficient permissions'): Response {
-    return apiError(c, 403, 'FORBIDDEN', message);
+export function forbidden(
+    c: Context,
+    message = 'Insufficient permissions',
+    code: ApiErrorCode = 'FORBIDDEN'
+): Response {
+    return apiError(c, 403, code, message);
 }
 
 export function badRequest(
@@ -161,8 +152,8 @@ function fieldErrorsFrom(err: ValidationError): Record<string, string[]> {
 }
 
 /**
- * Hono's app-level error handler: canonicalises HTTPException, the three
- * not-found errors, the entries query-input errors, ValidationError (bare, or
+ * Hono's app-level error handler: canonicalises HTTPException, every
+ * `ApiError` under the status and code it carries, ValidationError (bare, or
  * wrapped by a batch write's BulkOperationError) and unknown errors alike.
  *
  * `GlobalValidationError` and `MediaValidationError` need no case of their own:
@@ -170,30 +161,16 @@ function fieldErrorsFrom(err: ValidationError): Record<string, string[]> {
  */
 export const onError: ErrorHandler = (err, c) => {
     if (err instanceof HTTPException) {
-        return apiError(c, err.status, 'INTERNAL_ERROR', err.message);
+        return apiError(c, err.status, codeForStatus(err.status), err.message);
     }
 
-    if (
-        err instanceof EntryNotFoundError ||
-        err instanceof GlobalNotFoundError ||
-        err instanceof MediaNotFoundError ||
-        err instanceof UserNotFoundError
-    ) {
-        return notFound(c, err.message);
+    // A refusal of a caller who never signed in is a missing session, not a
+    // missing grant.
+    if (err instanceof PermissionDeniedError && c.get('user') === undefined) {
+        return unauthorized(c);
     }
 
-    // A malformed `entries.query` is the caller's to fix, whether it arrived over
-    // REST or over RPC, so it answers 400 rather than the catch-all 500. A public
-    // read of trashed entries is one: a public read never returns trashed rows.
-    if (
-        err instanceof UnknownWhereKeyError ||
-        err instanceof UnknownSortKeyError ||
-        err instanceof InvalidReferencesFilterError ||
-        err instanceof CustomTableCrossTypeQueryError ||
-        err instanceof PublicTrashedReadError
-    ) {
-        return badRequest(c, err.message);
-    }
+    if (err instanceof ApiError) return errorResponse(c, err);
 
     if (err instanceof ValidationError) {
         return validationFailed(c, fieldErrorsFrom(err), err.form);
@@ -218,6 +195,28 @@ export const onError: ErrorHandler = (err, c) => {
     console.error('[Astromech API]', err);
     return apiError(c, 500, 'INTERNAL_ERROR', message);
 };
+
+/** The code an `HTTPException` answers with, read off its status. */
+function codeForStatus(status: number): ApiErrorCode {
+    switch (status) {
+        case 400:
+            return 'BAD_REQUEST';
+        case 401:
+            return 'UNAUTHORIZED';
+        case 403:
+            return 'FORBIDDEN';
+        case 404:
+            return 'NOT_FOUND';
+        case 405:
+            return 'METHOD_NOT_ALLOWED';
+        case 409:
+            return 'CONFLICT';
+        case 422:
+            return 'VALIDATION_FAILED';
+        default:
+            return status < 500 ? 'BAD_REQUEST' : 'INTERNAL_ERROR';
+    }
+}
 
 export const onNotFound: NotFoundHandler = (c) => {
     return notFound(c, `Route ${c.req.method} ${c.req.path} not found`);

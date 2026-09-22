@@ -347,13 +347,7 @@ export const USERS_ROUTE_SPECS = [
         handler: 'bespoke',
         queryArgs: ['locale'],
     },
-    {
-        verb: 'delete',
-        path: '/:id',
-        id: 'users.delete',
-        envelope: 'success',
-        handler: 'bespoke',
-    },
+    { verb: 'delete', path: '/:id', id: 'users.delete', envelope: 'success' },
     {
         verb: 'get',
         path: '/:id/versions',

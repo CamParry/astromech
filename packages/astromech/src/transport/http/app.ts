@@ -19,7 +19,7 @@ import { handleMediaRequest } from '@/media/serving/handler';
 import { runWithContext } from '@/request-context/request-context';
 import { getClientAddress } from '@/transport/http/client-address';
 import { requireAuth } from './middleware/auth';
-import { fromZodError, onError, onNotFound } from './middleware/errors';
+import { forbidden, fromZodError, onError, onNotFound } from './middleware/errors';
 import { cronRouter } from './routes/cron';
 import { entriesRouter } from './routes/entries';
 import { entryTypesRouter } from './routes/entry-types';
@@ -145,9 +145,11 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
         if (!parsed.success) return fromZodError(c, parsed.error);
 
         const result = await createFirstAdmin(parsed.data);
-        // Better Auth's own refusal body, so the admin reads one shape from
-        // both. It creates no session: the admin signs in straight after.
-        if (result === 'closed') return c.json(SIGN_UP_CLOSED, 403);
+        // Better Auth's refusal code, in the API's own envelope. It creates no
+        // session: the admin signs in straight after.
+        if (result === 'closed') {
+            return forbidden(c, SIGN_UP_CLOSED.message, SIGN_UP_CLOSED.code);
+        }
         return c.json({ success: true });
     });
 

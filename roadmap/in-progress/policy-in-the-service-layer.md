@@ -16,16 +16,16 @@ workstream.
       `POST /entries/:type`, RPC `entries.<type>.create|update`, the tool loop
       and MCP do not, so a role that may create or update but not publish can
       publish.
-- [ ] **Field-capability 409s are REST-only.** `fieldCapabilitiesDenied`
+- [x] **Field-capability 409s are REST-only.** `fieldCapabilitiesDenied`
       (`routes/entries.ts`) refuses `status`/`publishedAt` on a type without
       statuses and `slug` on a type without slugs; `entries/methods/create.ts`
       and `entries/internal/update-batch.ts` accept them.
-- [ ] **The last-admin guard is REST-only.** It lives in
+- [x] **The last-admin guard is REST-only.** It lives in
       `transport/http/routes/users.ts` (`PATCH` and `DELETE /users/:id`), so
       `users.update`/`users.delete` over RPC, the CLI or MCP can demote or delete
       the last admin. The route also re-parses `updateUserSchema`, which
       `bind()` already did.
-- [ ] **Domain errors answer 500.** `onError` (`transport/http/middleware/errors.ts`)
+- [x] **Domain errors answer 500.** `onError` (`transport/http/middleware/errors.ts`)
       maps a hand-kept `instanceof` list that omits `CapabilityError`,
       `PermissionDeniedError`, `UnknownEntryTypeError` and the two
       `Staged*ExistsError`s. REST hides it with per-route catches; RPC does not
@@ -33,7 +33,7 @@ workstream.
       Every `HTTPException` also gets `INTERNAL_ERROR` whatever its status, and
       `SIGN_UP_CLOSED` (`transport/http/app.ts`) answers outside the error
       envelope with a code missing from `ApiErrorCode`.
-- [ ] **Cross-type `POST /entries/query` 500s on bad input**: an unmapped
+- [x] **Cross-type `POST /entries/query` 500s on bad input**: an unmapped
       `ZodError` from `entrySortSchema.parse` and an uncaught `c.req.json()`.
 - [ ] **Most CLI commands never boot the app.** Only `index:rebuild` and
       `validate` call `createAstromech`; the rest use `transport/cli/config.ts`
@@ -66,7 +66,7 @@ workstream.
 - [x] Move the publish check, the field-capability checks and the last-admin
       guard into the methods (or `scopeEntries` where the check needs the
       role), so every transport inherits them.
-- [ ] Give domain errors a `status` and `code` and map them once in `onError`;
+- [x] Give domain errors a `status` and `code` and map them once in `onError`;
       delete the route-level `capabilityDenied` copies and the per-route
       catches in `rest-route.ts`, `rpc.ts` and `routes/plugins.ts`. Error bodies
       stay byte-identical for REST.

@@ -1,9 +1,11 @@
+import { ApiError } from '@/errors/api-error';
+
 /**
  * The refusal a scoped service handle throws. Distinct from a validation
  * failure: nothing was wrong with the call — the caller's role simply was not
  * handed the method.
  */
-export class PermissionDeniedError extends Error {
+export class PermissionDeniedError extends ApiError {
     /** Dotted method id, e.g. `users.create` or `entries.publish`. */
     readonly method: string;
     /**
@@ -23,7 +25,10 @@ export class PermissionDeniedError extends Error {
             permission === null
                 ? 'carries no method descriptor, so a scoped handle cannot grant it.'
                 : `requires "${permission}".`;
-        super(`Permission denied: "${method}" ${detail ?? reason}`);
+        super(`Permission denied: "${method}" ${detail ?? reason}`, {
+            status: 403,
+            code: 'FORBIDDEN',
+        });
         this.name = 'PermissionDeniedError';
         this.method = method;
         this.permission = permission;

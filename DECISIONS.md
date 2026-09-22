@@ -102,6 +102,8 @@ Live choices and what each one beat. An entry is here because the losing option 
 
 **Input is validated at the method, not at the transport.** `bind()` and the plugin service proxy parse each call against the method's `input`, so in-process calls, hooks, jobs and HTTP get one check. Rejected: parsing at each transport edge, which leaves in-process callers unchecked.
 
+**An error a caller causes carries its own status and code.** Each extends `ApiError`, and `onError` answers every one from those two fields, so REST, RPC and plugin RPC answer an error the same way; a scoped-handle refusal answers 401 without a signed-in user and 403 with one. Rejected: an `instanceof` list in `onError` beside catches in single routes, which drifted (RPC answered 500 for a refusal REST caught).
+
 **A method's input types come from its `input` schema**: the handler sees `z.output`, a caller passes `z.input`. Rejected: a hand-written type per payload reconciled by a cast, which drifts silently. One cast remains in `services/json.ts`, where `z.json()` would emit a recursive schema the manifest and OpenAPI generator cannot use.
 
 **A method whose subject is the caller declares `sessionScoped`.** The handler reads `ctx.user`, and the scoped handle refuses the call when nobody is signed in; no permission is needed to act on your own rows. Rejected: a `sessionArgument: 'userId'` field, and injecting `userId` into the input, which the method's parse strips.

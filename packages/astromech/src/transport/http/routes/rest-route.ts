@@ -5,7 +5,6 @@ import type { OpenAPIHono } from '@hono/zod-openapi';
 import type { Context } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from '@hono/zod-openapi';
-import { PermissionDeniedError } from '@/errors/permission';
 import { ValidationError } from '@/errors/validation';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { scopedServices } from '@/policies/scoped-services';
@@ -160,10 +159,9 @@ async function handleRestRoute(
         }
         return respond(c, route, result);
     } catch (error) {
-        // The scoped handle refuses by throwing; every other error is onError's.
-        if (error instanceof PermissionDeniedError) return forbidden(c);
         // The method parses its own input, so its 422 arrives here rather than
-        // from an edge parse — rendered under the names the caller sent.
+        // from an edge parse — rendered under the names the caller sent. Every
+        // other error, the scoped handle's refusal included, is onError's.
         if (isMethodInputError(error)) {
             return fromZodError(c, error, route.bodyKey, route.wireNames);
         }
@@ -320,7 +318,7 @@ function renameShape(
  * `ValidationError` too, but carries `fields`, and its names are already the
  * caller's — so it goes to `onError` untouched.
  */
-function isMethodInputError(error: unknown): error is ValidationError {
+export function isMethodInputError(error: unknown): error is ValidationError {
     return error instanceof ValidationError && error.fields === undefined;
 }
 

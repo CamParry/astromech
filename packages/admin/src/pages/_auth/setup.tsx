@@ -66,8 +66,10 @@ function SetupPage() {
             });
 
             if (!res.ok) {
-                const data = (await res.json().catch(() => ({}))) as { message?: string };
-                throw new Error(data.message ?? 'Setup failed');
+                const data = (await res.json().catch(() => ({}))) as {
+                    error?: { message?: string };
+                };
+                throw new Error(data.error?.message ?? 'Setup failed');
             }
 
             // Otherwise the cached answer sends a signed-out admin back here from login.

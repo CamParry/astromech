@@ -5,7 +5,7 @@
  */
 import type { RestRoute } from './rest-route';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { JsonObject, SortDirection, UserQueryParams } from '@/types/index';
+import type { SortDirection, UserQueryParams, UserUpdateData } from '@/types/index';
 import type { Context } from 'hono';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { usersService } from '@/app-context/services';
@@ -16,11 +16,14 @@ import {
     fromZodError,
     notFound,
 } from '@/transport/http/middleware/errors';
-import { createUserRepository } from '@/users/repository';
-import { updateUserSchema } from '@/users/schema';
 import { usersDefinition } from '@/users/service';
 import { USERS_ROUTE_SPECS } from './http-routes';
-import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
+import {
+    attachHandlers,
+    documentBespokeRoutes,
+    isMethodInputError,
+    mountRestRoutes,
+} from './rest-route';
 
 type Env = { Variables: AuthVariables };
 
@@ -44,6 +47,7 @@ export const USERS_ROUTES: RestRoute[] = attachHandlers(USERS_ROUTE_SPECS, {
     'post /': {
         args: async (c) => ({ data: await c.req.json<Record<string, unknown>>() }),
     },
+    'delete /:id': { args: (c) => ({ id: c.req.param('id') ?? '' }) },
     'get /:id/versions': { args: contentArgs },
     'post /:id/versions/:versionId/restore': {
         args: (c) => ({ ...contentArgs(c), versionId: c.req.param('versionId') ?? '' }),
@@ -98,71 +102,36 @@ router.get('/:id', async (c) => {
 });
 
 // PUT /users/:id — bespoke
-// Not in the table: self-access, a `role` change that still demands
-// `users:update`, and the last-admin guard — which is a second repository call.
+// Not in the table: self-access, and a `role` change that still demands
+// `users:update`. The method parses the body and guards the last admin; its
+// input failure is reported under the wire's names, as the table's routes do.
 router.put('/:id', async (c) => {
     const { id, locale } = contentArgs(c);
     const permissions = permissionsFor(c.var.role);
-    const currentUser = c.var.user;
     const canUpdateUsers = permissions.allowsMethod(usersDefinition.catalogue.update);
-    const isSelf = currentUser.id === id;
+    const isSelf = c.var.user.id === id;
 
     if (!canUpdateUsers && !isSelf) return forbidden(c);
 
-    const raw = await c.req.json();
-    const parsed = updateUserSchema.safeParse(raw);
-    if (!parsed.success) return fromZodError(c, parsed.error);
+    const raw = await c.req.json<unknown>().catch(() => undefined);
+    if (raw === undefined) return badRequest(c, 'Invalid JSON body');
+    const changesRole =
+        typeof raw === 'object' &&
+        raw !== null &&
+        (raw as { role?: unknown }).role !== undefined;
+    if (changesRole && !canUpdateUsers) return forbidden(c);
 
-    const { email, name, fields, role } = parsed.data;
-
-    // Prevent self-role change or role change without users:update permission
-    if (role !== undefined) {
-        if (!canUpdateUsers) return forbidden(c);
-
-        // Last-admin check: if changing away from 'admin', ensure it's not the last one
-        const targetUser = await usersService.get({ id });
-        if (targetUser && targetUser.role === 'admin' && role !== 'admin') {
-            const adminCount = await createUserRepository().accounts.count({
-                role: 'admin',
-            });
-            if (adminCount <= 1) {
-                return badRequest(c, 'Cannot remove the last administrator');
-            }
-        }
+    try {
+        const user = await usersService.update({
+            id,
+            ...(locale ? { locale } : {}),
+            data: raw as UserUpdateData,
+        });
+        return c.json({ data: user });
+    } catch (error) {
+        if (isMethodInputError(error)) return fromZodError(c, error, 'data');
+        throw error;
     }
-
-    const user = await usersService.update({
-        id,
-        ...(locale ? { locale } : {}),
-        data: {
-            ...(email !== undefined && { email }),
-            ...(name !== undefined && { name }),
-            ...(fields !== undefined && { fields: fields as JsonObject }),
-            ...(role !== undefined && { role }),
-        },
-    });
-    return c.json({ data: user });
-});
-
-// DELETE /users/:id — bespoke
-// Not in the table: the last-admin guard, a second repository call no contract
-// can state.
-router.delete('/:id', async (c) => {
-    const { id } = c.req.param();
-    const permissions = permissionsFor(c.var.role);
-    if (!permissions.allowsMethod(usersDefinition.catalogue.delete)) return forbidden(c);
-
-    // Last-admin check
-    const targetUser = await usersService.get({ id });
-    if (targetUser && targetUser.role === 'admin') {
-        const adminCount = await createUserRepository().accounts.count({ role: 'admin' });
-        if (adminCount <= 1) {
-            return badRequest(c, 'Cannot delete the last administrator');
-        }
-    }
-
-    await usersService.delete({ id });
-    return c.json({ success: true });
 });
 
 export { router as usersRouter };

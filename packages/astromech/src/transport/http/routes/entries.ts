@@ -22,10 +22,9 @@ import { entriesService } from '@/app-context/services';
 import { getConfig } from '@/config/registry';
 import { entryCatalogue } from '@/entries/catalogue';
 import { resolveEntryType } from '@/entries/entry-types';
-import { StagedEntryExistsError } from '@/entries/errors';
+import { CapabilityError } from '@/entries/errors';
 import {
     createEntrySchema,
-    entrySortSchema,
     titledUpdateEntrySchema,
     updateEntrySchema,
 } from '@/entries/schema';
@@ -36,6 +35,7 @@ import { entryPermission } from '@/permissions/entry-permission';
 import { permissionsFor } from '@/permissions/permissions-for';
 import {
     badRequest,
+    errorResponse,
     forbidden,
     fromZodError,
     notFound,
@@ -243,6 +243,20 @@ async function localisedBulkArgs(c: Context<Env>): Promise<Record<string, unknow
     return { ...(await bulkArgs(c)), ...(locale ? { locale } : {}) };
 }
 
+/**
+ * The entry types a cross-type query body names: a non-empty string, or a
+ * non-empty list of them. Null for anything else, the body itself included.
+ */
+function bodyTypes(body: unknown): string[] | null {
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) return null;
+    const type = (body as { type?: unknown }).type;
+    const types = Array.isArray(type) ? (type as unknown[]) : [type];
+    if (types.length === 0) return null;
+    return types.every((t) => typeof t === 'string' && t.length > 0)
+        ? (types as string[])
+        : null;
+}
+
 /** A JSON body that need not be there — an absent one means "no options". */
 async function optionalBody(c: Context<Env>): Promise<Record<string, unknown>> {
     return c.req.json<Record<string, unknown>>().catch(() => ({}));
@@ -310,23 +324,9 @@ function entryPrecondition(c: Context<Env>, method: EntryMethodName): Response |
     const requires: Capability | undefined = entryContracts(resolved, type)[method]
         .requires;
     if (requires !== undefined && !resolved.capabilities[requires]) {
-        return capabilityDenied(c, type, requires);
+        return errorResponse(c, new CapabilityError(type, requires));
     }
     return null;
-}
-
-/** The 409 a method gated on a capability the entry type lacks answers with. */
-function capabilityDenied(c: Context<Env>, type: string, capability: string): Response {
-    return c.json(
-        {
-            error: {
-                code: 'capability_not_supported',
-                message: `Entry type "${type}" does not support capability: ${capability}`,
-                status: 409,
-            },
-        },
-        409
-    );
 }
 
 /** The per-field capability gate shared by create, update and bulk-update. */
@@ -338,9 +338,11 @@ function fieldCapabilitiesDenied(
 ): Response | null {
     const caps = resolved.capabilities;
     if (!caps.statuses && (data.status !== undefined || data.publishedAt !== undefined)) {
-        return capabilityDenied(c, type, 'statuses');
+        return errorResponse(c, new CapabilityError(type, 'statuses'));
     }
-    if (!caps.slug && data.slug !== undefined) return capabilityDenied(c, type, 'slug');
+    if (!caps.slug && data.slug !== undefined) {
+        return errorResponse(c, new CapabilityError(type, 'slug'));
+    }
     return null;
 }
 
@@ -354,17 +356,14 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
     // POST /entries/query (cross-type)
     // Not in the table: `type` arrives in the body and may be a list, and an
     // absent one answers a hand-rolled `invalid_input` 400 outside ApiErrorCode.
+    // The rest of the body is the method's to parse, so a bad field is its 422.
     router.post('/query', async (c) => {
         const permissions = permissionsFor(c.var.role);
-        const body = await c.req.json<EntryQueryParams & Record<string, unknown>>();
-        const typeParam = body.type;
-        const types = Array.isArray(typeParam)
-            ? Array.from(typeParam)
-            : typeParam
-              ? [typeParam as string]
-              : [];
+        const body = await c.req.json<unknown>().catch(() => undefined);
+        if (body === undefined) return badRequest(c, 'Invalid JSON body');
+        const types = bodyTypes(body);
 
-        if (types.length === 0) {
+        if (types === null) {
             return c.json(
                 {
                     error: {
@@ -386,18 +385,16 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
             }
         }
 
-        const wantsFull = body['full'] === true;
+        const wantsFull = (body as Record<string, unknown>)['full'] === true;
         if (wantsFull && !permissions.allows(PERMISSION_ENTRY_READ_FULL)) {
             return forbidden(c);
         }
 
-        const sort = entrySortSchema.parse(body.sort);
         return c.json(
             await entriesService.query({
-                ...body,
+                ...(body as EntryQueryParams),
                 type: types,
                 full: wantsFull,
-                ...(sort !== undefined ? { sort } : {}),
             })
         );
     });
@@ -539,31 +536,14 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
     });
 
     // POST /entries/:type/:id/staged
-    // Not in the table: `StagedEntryExistsError` answers a 409 carrying
-    // `details.locale`. Every other throw is re-raised for `onError`.
+    // Not in the table yet: it calls the service unscoped, behind the
+    // precondition. A `StagedEntryExistsError` is `onError`'s 409.
     router.post('/:type/:id/staged', async (c) => {
         const denied = entryPrecondition(c, 'createStaged');
         if (denied) return denied;
 
-        try {
-            const entry = await entriesService.createStaged(contentArgs(c));
-            return c.json({ data: entry }, 201);
-        } catch (error) {
-            if (!(error instanceof StagedEntryExistsError)) return raise(error);
-            // The 409 carries the locale, which with the id addresses the
-            // staged row the admin redirects to.
-            return c.json(
-                {
-                    error: {
-                        code: 'staged_entry_exists',
-                        message: error.message,
-                        status: 409,
-                        details: { locale: error.locale },
-                    },
-                },
-                409
-            );
-        }
+        const entry = await entriesService.createStaged(contentArgs(c));
+        return c.json({ data: entry }, 201);
     });
 }
 
@@ -581,11 +561,6 @@ function publishEscalation(
     return permissionsFor(c.var.role).allows(entryPermission(type, 'publish'))
         ? null
         : forbidden(c);
-}
-
-/** Re-throw, as an expression, so a declined error map reads as one line. */
-function raise(error: unknown): never {
-    throw error;
 }
 
 /** The entries router, mounted at `/entries`. Serves every entry type. */

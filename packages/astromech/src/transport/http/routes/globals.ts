@@ -14,13 +14,18 @@ import type { Context } from 'hono';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { globalsService } from '@/app-context/services';
 import { getConfig } from '@/config/registry';
-import { StagedGlobalExistsError } from '@/globals/errors';
+import { CapabilityError } from '@/entries/errors';
 import { findGlobal, isGlobalCapability } from '@/globals/internal/global';
 import { createStagedGlobalSchema } from '@/globals/schema';
 import { globalsDefinition } from '@/globals/service';
 import { resolveAccess } from '@/permissions/access';
 import { permissionsFor } from '@/permissions/permissions-for';
-import { forbidden, fromZodError, notFound } from '@/transport/http/middleware/errors';
+import {
+    errorResponse,
+    forbidden,
+    fromZodError,
+    notFound,
+} from '@/transport/http/middleware/errors';
 import { GLOBALS_ROUTE_SPECS } from './http-routes';
 import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 
@@ -148,7 +153,7 @@ function globalPrecondition(c: Context<Env>, method: GlobalMethodName): Response
 
     const requires = capabilityRequired(declared.requires, method);
     if (requires !== undefined && !global.capabilities[requires]) {
-        return capabilityDenied(c, key, requires);
+        return errorResponse(c, new CapabilityError(key, requires, 'Global'));
     }
     return stagedFlagDenied(c, global);
 }
@@ -178,25 +183,7 @@ function capabilityRequired(
  */
 function stagedFlagDenied(c: Context<Env>, global: ResolvedGlobal): Response | null {
     if (!flag(c, 'staged') || global.capabilities.staging) return null;
-    return capabilityDenied(c, global.id, 'staging');
-}
-
-/** The 409 a method gated on a capability the global lacks answers with. */
-function capabilityDenied(
-    c: Context<Env>,
-    key: string,
-    capability: GlobalCapability
-): Response {
-    return c.json(
-        {
-            error: {
-                code: 'capability_not_supported',
-                message: `Global "${key}" does not support capability: ${capability}`,
-                status: 409,
-            },
-        },
-        409
-    );
+    return errorResponse(c, new CapabilityError(global.id, 'staging', 'Global'));
 }
 
 /** The two handlers the table cannot express, each with the reason. */
@@ -240,8 +227,8 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
     });
 
     // POST /globals/:key/staged
-    // Not in the table: `StagedGlobalExistsError` answers a 409 carrying
-    // `details.locale`. Every other throw is re-raised for `onError`.
+    // Not in the table yet: it calls the service unscoped, behind the
+    // precondition. A `StagedGlobalExistsError` is `onError`'s 409.
     router.post('/:key/staged', async (c) => {
         const denied = globalPrecondition(c, 'createStaged');
         if (denied) return denied;
@@ -259,29 +246,12 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         if (!args.success) return fromZodError(c, args.error);
 
         const { key, locale, data } = args.data;
-        try {
-            const global = await globalsService.createStaged({
-                key,
-                ...(locale !== undefined ? { locale } : {}),
-                ...(data !== undefined ? { data: data as GlobalUpdateData } : {}),
-            });
-            return c.json({ data: global }, 201);
-        } catch (error) {
-            if (!(error instanceof StagedGlobalExistsError)) throw error;
-            // The 409 carries the locale, which with the key addresses the
-            // staged row the admin redirects to.
-            return c.json(
-                {
-                    error: {
-                        code: 'staged_global_exists',
-                        message: error.message,
-                        status: 409,
-                        details: { locale: error.locale },
-                    },
-                },
-                409
-            );
-        }
+        const global = await globalsService.createStaged({
+            key,
+            ...(locale !== undefined ? { locale } : {}),
+            ...(data !== undefined ? { data: data as GlobalUpdateData } : {}),
+        });
+        return c.json({ data: global }, 201);
     });
 }
 

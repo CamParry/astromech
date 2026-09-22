@@ -263,6 +263,36 @@ describe('POST /query — the cross-type route', () => {
         expect(res.status).toBe(400);
     });
 
+    it('400s a body that is not JSON', async () => {
+        const res = await request(roleWith(['*']), '/query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{not json',
+        });
+        expect(res.status).toBe(400);
+        const body = (await res.json()) as { error: { code: string } };
+        expect(body.error.code).toBe('BAD_REQUEST');
+    });
+
+    it('400s a type list naming something other than a string', async () => {
+        const res = await request(roleWith(['*']), '/query', json({ type: ['post', 1] }));
+        expect(res.status).toBe(400);
+    });
+
+    it('422s a field the method input rejects', async () => {
+        const res = await request(
+            roleWith(['*']),
+            '/query',
+            json({ type: 'post', page: 'two' })
+        );
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as {
+            error: { code: string; details: { fields: Record<string, string[]> } };
+        };
+        expect(body.error.code).toBe('VALIDATION_FAILED');
+        expect(Object.keys(body.error.details.fields)).toEqual(['page']);
+    });
+
     it('demands read on EVERY named type', async () => {
         const res = await request(
             roleWith(['entry:post:read']),

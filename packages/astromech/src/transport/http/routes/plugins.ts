@@ -8,7 +8,6 @@ import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { ResolvedPluginIdentity, ServiceMethodAccess } from '@/types/index';
 import type { Context } from 'hono';
 import { Hono } from 'hono';
-import { PermissionDeniedError } from '@/errors/permission';
 import { resolveAccess } from '@/permissions/access';
 import { permissionsFor } from '@/permissions/permissions-for';
 import {
@@ -94,15 +93,10 @@ export function createPluginsRouter(): Hono<PluginEnv> {
         }
 
         const body = await c.req.json().catch(() => undefined);
-        let result: unknown;
-        try {
-            result = await scopedServices(c.var.role ?? null).plugins[name]?.[method]?.(
-                body
-            );
-        } catch (error) {
-            if (!(error instanceof PermissionDeniedError)) throw error;
-            return c.var.user ? forbidden(c) : unauthorized(c);
-        }
+        // A refusal reaches `onError`: 401 without a session, 403 with one.
+        const result = await scopedServices(c.var.role ?? null).plugins[name]?.[method]?.(
+            body
+        );
         // Build the JSON Response directly: c.json's generic chokes on the
         // recursive JsonValue type. RPC returns the raw handler result.
         return new Response(JSON.stringify(result ?? null), {

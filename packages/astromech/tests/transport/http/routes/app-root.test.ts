@@ -167,8 +167,8 @@ describe('POST /setup', () => {
         const res = await setup(app, firstAdmin);
 
         expect(res.status).toBe(403);
-        const body = (await res.json()) as { code?: string };
-        expect(body.code).toBe('SIGN_UP_CLOSED');
+        const body = (await res.json()) as { error: { code: string; status: number } };
+        expect(body.error).toMatchObject({ code: 'SIGN_UP_CLOSED', status: 403 });
         const users = await usersService.query({ limit: 'all' });
         expect(users.data.map((user) => user.email)).toEqual(['taken@test.dev']);
     });

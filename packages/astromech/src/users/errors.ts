@@ -5,6 +5,7 @@
  */
 
 import type { FieldErrors } from '@/types/fields';
+import { ApiError } from '@/errors/api-error';
 import { ValidationError } from '@/errors/validation';
 
 /**
@@ -12,7 +13,7 @@ import { ValidationError } from '@/errors/validation';
  * content row where an operation requires one. `get` answers null for an
  * unknown id rather than throwing.
  */
-export class UserNotFoundError extends Error {
+export class UserNotFoundError extends ApiError {
     public readonly id: string;
     public readonly locale: string | undefined;
 
@@ -20,7 +21,8 @@ export class UserNotFoundError extends Error {
         super(
             args.locale === undefined
                 ? `User '${args.id}' not found`
-                : `User '${args.id}' not found in locale '${args.locale}'`
+                : `User '${args.id}' not found in locale '${args.locale}'`,
+            { status: 404, code: 'NOT_FOUND' }
         );
         this.name = 'UserNotFoundError';
         this.id = args.id;
@@ -45,9 +47,9 @@ export class UserValidationError extends ValidationError {
  * Thrown by a write that would leave the site with no user holding the `admin`
  * role: demoting or deleting the last one.
  */
-export class LastAdminError extends Error {
+export class LastAdminError extends ApiError {
     constructor(message: string) {
-        super(message);
+        super(message, { status: 400, code: 'BAD_REQUEST' });
         this.name = 'LastAdminError';
     }
 }
