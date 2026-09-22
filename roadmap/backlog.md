@@ -76,7 +76,7 @@ not be re-derived.
 - [ ] A frontend form component/helper. v1 deliberately exposes data only (`forms.get`) and lets the site author own the markup, following the redirects precedent — revisit if hand-rendering proves tedious in practice
 - [ ] Per-form success redirect, once there is a frontend story to redirect within
 - [ ] A read-only entry flag in core, so `forms/submission` can express "written by the API, never hand-authored" directly instead of relying on a site granting read+delete and withholding create+update
-- [ ] More notification providers now the seam exists (`DECISIONS.md`) — Slack, Mailchimp, a generic webhook. Each is one file in `notifications/providers/` plus a `registry.ts` entry; the editor block and the delivery come as a pair
+- [ ] More notification providers now the seam exists — Slack, Mailchimp, a generic webhook. Each is one file in `notifications/providers/` plus a `registry.ts` entry; the editor block and the delivery come as a pair
 - [ ] Notification providers are a closed built-in list. A site can write a `SpamProvider` and pass it through config, but there is no equivalent option for a `NotificationProvider` — the registry is compiled in. Open it up if a site needs a kind we don't ship
 
 ### `@astromech/backups` follow-ups

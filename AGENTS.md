@@ -1,120 +1,88 @@
 # AGENTS.md
 
-Astromech is a lightweight TypeScript CMS — a framework-agnostic core plus an Astro integration, built on TanStack Router and Hono. Read `ARCHITECTURE.md` before changing anything structural: it holds the layer model and the big-picture shape of each subsystem. When it disagrees with the code, the code wins — fix the file.
+Astromech is a lightweight TypeScript CMS: a framework-agnostic core plus an Astro integration. Read `ARCHITECTURE.md` before any structural change. When a doc disagrees with the code, the code wins: fix the doc.
 
-Nested `AGENTS.md` files cover `packages/astromech`, `packages/admin`, `packages/plugins`, `apps/demo` and `apps/docs`. The closest one to the file being edited wins.
+Nested `AGENTS.md` files cover `packages/astromech`, `packages/admin`, `packages/plugins`, `apps/demo`, `apps/demo-cloudflare` and `apps/docs`. The closest one to the file being edited wins.
 
 ## Where things live
 
-`packages/*` is published to npm, `apps/*` is deployed and never published.
+`packages/*` is published to npm; `apps/*` is never published. `apps/demo` is the app to run and browser-verify against. `ARCHITECTURE.md` ("Repository layout") lists every package.
 
-- **`packages/astromech`** — the published core. **`packages/admin`** is `@astromech/admin`, the admin app and component kit that core depends on. **`packages/schema-engine`**, **`packages/plugins/*`** (assistant, backups, forms, menus, redirects, seo) — the rest of the published surface.
-- **`apps/demo`** — the app to run and browser-verify against, on Node. **`apps/demo-cloudflare`** — the same core on Workers, the smallest site that touches D1, R2, edge image transforms and Cron Triggers. **`apps/docs`** — user-facing guides.
-- **`ARCHITECTURE.md`** — where code lives and what it may import. **`TERMINOLOGY.md`** — what a term means today. **`DECISIONS.md`** — why it beat the alternatives.
-- **`roadmap/`** — one file per feature, status by directory (`planned/` → `in-progress/` → `completed/`).
-- **`specs/`** — in-flight designs only. Delete a spec once its work ships; never link to one from durable docs or code.
+- `ARCHITECTURE.md`: where code lives and what it may import. `TERMINOLOGY.md`: what a term means. `DECISIONS.md`: why a choice beat the alternatives.
+- `roadmap/`: one file per feature, status by directory (`planned/`, `in-progress/`, `completed/`).
+- `specs/`: in-flight designs, deleted once the work ships.
 
 ## Commands and the gate
 
-Before a change lands, `pnpm run verify` passes. It runs the gate in stages, overlapping everything that can overlap; `pnpm run verify:fast` runs just the build-free part (the packages' typechecks, their tests, lint and `check:unused`) and is the loop to run while working; `pnpm run verify:runtime` runs only the version-sensitive subset (the tests and the two boot checks) over a declaration-free build, and is what CI runs on the second Node version. All three report a time per check and print the output of only what failed. The husky pre-commit hook runs lint-staged (eslint --fix + prettier) on touched files, then `check:exports` and `check:docs`. **Never `--no-verify`.** If the hook fails, fix the cause.
+Run `pnpm run verify:fast` while working (typecheck, tests, lint, `check:unused`; no build). Run `pnpm run verify` before a change lands. `pnpm run verify:runtime` is the version-sensitive subset CI runs on the floor Node version. **Never `--no-verify`**: if the pre-commit hook fails, fix the cause.
 
-The table below is every check. `verify` runs all but four: `format:check` and `lint:css` fall to the pre-commit hook (and CI's backstop job), `check:config` is a standalone probe for when the config path is edited, since `astro sync` and the boot checks already force its failure, and `check:install` needs the npm registry while the rest of the gate runs offline, so CI runs it as a job of its own.
+`verify` runs every check below except four: `format:check` and `lint:css` (the hook runs them), `check:config` (run it when you edit the config path) and `check:install` (needs the npm registry, so CI runs it separately).
 
-| Command                          | Checks                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm run typecheck`             | `tsc` across every published package's sources and tests, then `astro sync && tsc --noEmit` in both demo apps, the only places the generated types are consumed as a site consumes them. Every project is incremental, writing its `tsBuildInfoFile` into its own `node_modules` (so a `tsup` clean of `dist/` cannot wipe it), so a warm run costs about half a cold one                                                                                                                                                                                                                                                                                     |
-| `pnpm run test:run`              | vitest across `packages/schema-engine/tests/`, `packages/astromech/tests/`, `packages/admin/tests/` and the plugins' `tests/`. Core's and the admin's suites run under v8 coverage, and each fails when a top-level directory of its package's `src` falls below its threshold in that package's `vitest.config.ts`. The assistant suite needs `build` first                                                                                                                                                                                                                                                                                                  |
-| `pnpm run build`                 | tsup. If the DTS worker runs out of memory, raise `NODE_OPTIONS=--max-old-space-size`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `pnpm run lint`                  | eslint over every published package's `src` and `tests` (and a plugin's `migrations`, and core's `scripts/`), then over the root `scripts/`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `pnpm run lint:css`              | stylelint over `packages/admin/src/styles/`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `pnpm run format:check`          | prettier over the repo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `pnpm run check:config`          | loads the demo config the way Astro does, catching a config-time import that reaches a domain service                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `pnpm run check:node-imports`    | imports each plugin-facing subpath of core, then each published plugin's entry, in plain Node from built `dist`, and checks each plugin exports the factory a site calls. Runs after `build`                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `pnpm run check:exports`         | asserts `exports` and `publishConfig.exports` name the same subpaths and resolve into the same tree                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `pnpm run check:docs`            | resolves every repo-relative link and backticked path in markdown against the files git tracks, so a gitignored or build-output file never counts. Skips `specs/` and `roadmap/planned/`                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `pnpm run check:unused`          | knip over the whole workspace, with the config in `knip.json`: unused files, exports and dependencies, and imports a package does not declare. Needs no build and no generated route tree                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `pnpm run check:boot`            | builds `apps/demo`, boots the built server against a scratch database, and asserts `/` 200, `/cms` 200, `/cms/api/entries/post` 401 and one config evaluation, then loads `/cms` in headless chromium, asserts the admin app mounts its unauthenticated screen, reaches first-run setup from `/cms` and completes it, asserts the first user holds `admin` and a second sign-up is refused with `SIGN_UP_CLOSED`, and loads the app shell, the `post` entries list, a new post's edit page and the backups plugin's page, failing on any browser error after sign-in. Guards against a stale `dist` first, so build the packages before running it standalone |
-| `pnpm run check:boot:cloudflare` | builds `apps/demo-cloudflare` and serves it on workerd through wrangler's local emulation, asserting the same three routes plus a `scheduled()` tick. No Cloudflare account, no network                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `pnpm run check:install`         | packs core, the admin and the schema engine, installs the tarballs into a scratch site with the command in `apps/docs/installation.md` (npm by default, `-- --package-manager pnpm` for pnpm), writes the guide's config files and runs its `astromech` commands, then runs `check:boot`'s browser flow under `astro dev` and again against the built server. Fails on a deprecated package, a warning line from `astro dev` or `astro build`, or a browser console warning, outside the script's allowlists. Needs the npm registry and a current `build`                                                                                                    |
-| `pnpm run report:drift`          | not a check: prints where a branch adds a known drift pattern (the list is at the top of `scripts/report-drift.mjs`) or a copy overlapping lines it added. Diffs the merge base with `--base` (default `main`) against the working tree, and always exits 0. `--no-copies` skips the copy scan                                                                                                                                                                                                                                                                                                                                                                |
+| Command                          | Checks                                                                                                     |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `pnpm run typecheck`             | `tsc` over every package, then `astro sync && tsc --noEmit` in both demo apps                              |
+| `pnpm run test:run`              | vitest over every package, with per-directory coverage thresholds; the assistant suite needs `build` first |
+| `pnpm run build`                 | tsup (out of memory: see `packages/astromech/AGENTS.md`)                                                   |
+| `pnpm run lint`                  | eslint over packages and scripts                                                                           |
+| `pnpm run lint:css`              | stylelint over the admin's styles                                                                          |
+| `pnpm run format:check`          | prettier over the repo                                                                                     |
+| `pnpm run check:config`          | loads both demo configs the way Astro does                                                                 |
+| `pnpm run check:node-imports`    | imports core's plugin-facing subpaths and each plugin in plain Node; needs `build`                         |
+| `pnpm run check:exports`         | `exports` and `publishConfig.exports` agree                                                                |
+| `pnpm run check:docs`            | every repo-relative link and backticked path in markdown resolves                                          |
+| `pnpm run check:unused`          | knip: unused files, exports and dependencies, and undeclared imports                                       |
+| `pnpm run check:boot`            | boots the built demo and drives the admin in chromium; needs `build`                                       |
+| `pnpm run check:boot:cloudflare` | serves `apps/demo-cloudflare` on workerd (see its `AGENTS.md`)                                             |
+| `pnpm run check:install`         | installs packed tarballs into a scratch site per `apps/docs/installation.md`                               |
+| `pnpm run report:drift`          | not a check: lists drift patterns and copies a branch adds; always exits 0                                 |
 
-- **Neither boot check is in the pre-commit hook** (a full build is far too slow for one). They are the only way a defect in the serving process is visible. CI runs both — the gate job on the Active LTS through `verify`, the runtime job on the floor Node version through `verify:runtime`. Run `check:boot` by hand after anything that touches boot, the config path or the injected middleware, and `check:boot:cloudflare` after anything touching bindings, the environment or the Worker entry — it is the only check that runs the runtime outside Node.
-- **Table changes are covered by a drift test.** `packages/astromech/tests/database/drift.test.ts` diffs the committed `apps/demo/migrations/snapshot.json` against the live `CORE_TABLES`; when it fails, run `pnpm run db:generate` and commit the result. It covers core tables only — a plugin's own tables are not in `CORE_TABLES`, so it says nothing about them.
-- **pnpm is the package manager**, pinned by `packageManager` in the root `package.json`. `npm install` here builds a flat tree that hides undeclared dependencies, which is the failure mode pnpm exists to catch — so every package declares what it imports.
-- **`pnpm-workspace.yaml` holds the workspace globs and the hoist list.** `publicHoistPattern` is not a convenience: a server dependency Vite cannot resolve from the app root gets inlined into the build instead of externalised, and anything loading a native binding by dynamic `require` breaks at request time when that happens. It hoists `libsql` and `@libsql/*` for that reason and nothing else. The admin's browser dependencies are not hoisted: `packages/astromech/src/integrations/astro/vite.ts` renders `optimizeDeps.include` from the admin's list in `packages/admin/src/vite.ts`, naming each one through the packages that reach it (`astromech > @astromech/admin > lucide-react`), so it resolves the same way in a site installed from npm.
-- **`scripts/verify.mjs` decides the stage boundaries, and neither reason is arbitrary**: anything reading `dist` waits for `build`, and `typecheck` gets a stage of its own because `tsr generate` and the TanStack Router Vite plugin in each app build all write the admin package's `routeTree.gen.ts`. The two boot checks then run together, after the admin's `routes:generate` stage primes that file — the generator skips the write when the content is unchanged, so both app builds read it and neither writes.
+Each script's header has the detail.
+
+- **Run the boot checks by hand.** Neither is in the pre-commit hook, and they are the only checks that see a defect in the serving process. Run `check:boot` after touching boot, the config path or the injected middleware, and `check:boot:cloudflare` after touching bindings, the environment or the Worker entry.
+- **A core table change needs a migration.** `packages/astromech/tests/database/drift.test.ts` diffs `apps/demo/migrations/snapshot.json` against `CORE_TABLES`. When it fails, run `pnpm run db:generate` and commit the result. It does not cover plugin tables.
+- **Use pnpm**, never `npm install`: a flat tree hides undeclared dependencies. Every package declares what it imports.
 - Other commands: `format`, `db:generate`, `db:init`.
-
-## Documentation
-
-Every document answers one question and has one home. A fact lives in exactly one file; everywhere else links to it. The `docs` skill has the full contract and loads when markdown is edited — these are the rules that decide where a paragraph goes:
-
-- **`ARCHITECTURE.md` and `TERMINOLOGY.md` are a map of the present.** Present tense only. If a sentence needs "was", "used to", "no longer", "renamed from" or a date, it is history: delete it, or keep the reasoning in `DECISIONS.md` in the present tense.
-- **`DECISIONS.md` holds the why** — one entry per live choice, what it beat, and nothing that the code already says. It is current state, edited when a choice is reversed; the history is `git log -p DECISIONS.md`.
-- **`roadmap/` holds the work.** Status is the directory, never a field in the file.
-- **`specs/` holds in-flight design**, deleted on ship. Nothing durable may link to a spec.
-- **`apps/docs/` is user-facing**, and a page is a how-to, a reference, or an explanation — not two at once.
-- **`pnpm run check:docs`** verifies every repo-relative link and backticked path in markdown resolves. It runs in the gate.
 
 ## Workflow
 
-**Clarify → delegate → verify.**
-
-- **Clarify before acting.** If a task is ambiguous, or the right approach depends on an unclear requirement, ask — don't assume and proceed.
-- **Delegate coding implementation to sub-agents.** The main thread plans, decides, and reviews; the edits are written by a `coder` sub-agent. Make edits directly only for trivial one-liners, or when correcting a delegated agent.
-- **Give the agent the whole plan** — file paths, exact code changes, expected outcomes — so it can execute without re-researching the codebase.
-- **Verify what comes back.** Re-run the gate yourself; a sub-agent's report of a clean typecheck is not evidence, and one that contradicts a known test baseline is a red flag.
-- **Study a pattern before changing it.** Before introducing or changing a pattern, find where it already repeats. Change every copy, record the rest in a `roadmap/` file, or say why this one differs. A defect fix asks where else the same defect can occur.
+- **Clarify before acting.** If a task is ambiguous, or the approach depends on an unclear requirement, ask.
+- **Delegate implementation to a sub-agent.** The main thread plans, decides and reviews. Edit directly only for a trivial one-liner or to correct a sub-agent.
+- **Give the sub-agent the whole plan**: file paths, exact changes and expected outcomes, so it does not re-research the codebase.
+- **Verify what comes back.** Re-run the gate yourself. A sub-agent's report of a clean run is not evidence.
+- **Study a pattern before changing it.** Find where it already repeats. Change every copy, record the rest in a `roadmap/` file, or say why this one differs. A defect fix asks where else the same defect can occur.
 - **Run `pnpm run report:drift` before a branch merges**, and give each item a decision in the merge summary: share it now, add it to a `roadmap/` file, or leave it with a reason.
-- **Don't commit while sub-agents are still writing in the same worktree.** The pre-commit hook stashes repo-wide and can clobber their in-flight edits.
-- **Reflect on focus shifts.** When the focus of work changes significantly, pause: are there lessons that belong in a skill? Does a `roadmap/` file need to move between `planned/`, `in-progress/` and `completed/`, or a new one to be added?
+- **Don't commit while sub-agents are writing in the same worktree.** The pre-commit hook stashes repo-wide and can clobber their edits.
+- **When the focus of work shifts**, check whether a lesson belongs in a skill and whether a `roadmap/` file needs to move.
 - **No time estimates.**
 
 ## Branches and worktrees
 
-**Implement on a branch, in a worktree.** Anything beyond a trivial edit gets its own branch checked out in its own worktree — never build a feature directly in the main checkout. Only `main` may be worked on in the main checkout.
-
-Create the worktree by hand from a verified base, and run a non-isolated agent scoped to that path. The Agent tool's `isolation: worktree` forks from an unpredictable base and has landed work on the wrong one.
-
-**Worktrees live outside the checkout**, at `../Astromech-worktrees/<branch>`. A worktree nested inside the repo inherits the main checkout's `node_modules` and `dist` through Node's parent-directory resolution, so its build passes with no deps installed and `apps/demo` serves main's code rather than the branch's. From a sibling path the same import fails with `MODULE_NOT_FOUND`, which is the point — the failure is loud instead of silent.
-
-**A new worktree needs three things before it can verify itself**, because a checkout carries only tracked files:
-
-- `pnpm install` — nothing resolves without it.
-- **A copy of the demo app's `.env` file.** It is gitignored, so it does not travel, and without it the demo boot and the assistant fail in ways that don't name the cause.
-- `pnpm run build` — its own `dist`, not main's.
-
-`pnpm run check:boot` needs nothing further: it makes a scratch database under `tmpdir` and takes a free port from the OS, so worktrees can run it concurrently. Only `pnpm run dev` collides — `apps/demo/astro.config.mjs` pins port 4323, so pass `-- --port <n>` when a second worktree wants a dev server.
-
-Nothing in this project is live yet — it's in active development. Optimise for a small, current, honest set of branches, not for isolating half-built work.
-
-- **One branch per active workstream, and no more than two active at once.** Multi-workstream features (WS1, WS2, WS3…) get _one_ branch with a commit per workstream — never a branch per workstream. Stacked branch-per-workstream is what produced four labels pointing at the same three commits.
-- **Land on main early.** Prefer merging partial work to main behind an unticked `roadmap/` checkbox over holding a long-lived feature branch. A branch more than ~10 commits behind main is a liability: the rebase cost grows faster than the isolation is worth, and nothing is deployed, so there's no release to protect.
-- **Commit or stash the main working tree before launching work in a worktree.** Worktrees fork from the last commit — copying their output back will silently overwrite anything uncommitted.
-- **A worktree's directory name must match its branch name.** A mismatch is how branches get lost and how the wrong one gets merged.
-- **Remove a worktree as soon as its work is merged or parked.** Don't leave clean worktrees lying around.
-- **Never leave uncommitted work in a worktree at the end of a session.** Commit it as `wip(scope): …` with a body saying what's unfinished and what it depends on, rather than leaving it loose.
-- **Push every surviving branch to `origin` at the end of a session.** Local-only branches are unbacked-up work.
-- **Delete a branch once its commits are contained elsewhere** — verify with `git merge-base --is-ancestor <branch> <keeper>` before deleting, never by eye.
-- **Keep `roadmap/` status on `main`.** A roadmap file that only exists on a feature branch can't report that branch's status. If a branch is building something, its roadmap file belongs on main and moves between `planned/`, `in-progress/`, and `completed/` as the branch progresses.
+- **Anything beyond a trivial edit gets its own branch, in its own worktree.** Only `main` is worked on in the main checkout.
+- **Create the worktree by hand from a verified base**, and run a non-isolated agent scoped to it. The Agent tool's `isolation: worktree` forks from an unpredictable base.
+- **Worktrees live at `../Astromech-worktrees/<branch>`**, and the directory name matches the branch. A worktree nested inside the repo silently resolves main's `node_modules` and `dist`.
+- **A new worktree needs `pnpm install`, a copy of the demo app's `.env` (gitignored) and `pnpm run build`** before it can verify itself. `check:boot` is safe to run in several worktrees at once; a second `pnpm run dev` needs `-- --port <n>`.
+- **Commit or stash the main working tree before starting worktree work.** A worktree forks from the last commit, and copying its output back overwrites uncommitted changes.
+- **At most two active branches.** A multi-workstream feature gets one branch with a commit per workstream.
+- **Land on main early.** Nothing is deployed, so merge partial work behind an unticked `roadmap/` checkbox rather than keep a long-lived branch.
+- **Keep `roadmap/` status on main.** A branch's roadmap file lives on main and moves directories as the branch progresses.
+- **At the end of a session**, commit loose work as `wip(scope): …` with a body saying what is unfinished, push every surviving branch, and remove merged or parked worktrees.
+- **Delete a branch only after `git merge-base --is-ancestor <branch> <keeper>` confirms** its commits are contained elsewhere.
 
 ## Naming
 
-Astromech should read as if written by someone fluent in the existing web ecosystem — not as a private dialect a contributor has to be taught. **Use the established, commonly understood word wherever one exists.** Almost everything here has a well-worn name in the Astro / TanStack / Hono / Payload / Strapi / Drizzle world already; reach for that name before inventing one. If you can't recall the convention, look it up rather than picking whatever reads best in the moment.
+Use the established word from the Astro, TanStack, Hono, Payload, Strapi and Drizzle world. If you can't recall the convention, look it up. A name a stranger guesses correctly on first read has done its job.
 
-Before adopting a term, check what it already means to a web developer:
+- **Don't reuse a word taken in-domain.** "Bus", bare "context", "adapter", "middleware", "hook", "store", "provider", "signal", "engine", "pipeline", "kernel", "orchestrator", "gateway", "broker" and "manager" carry specific meanings. Use one only when the thing is one and you can name the prior art in a sentence.
+- **Don't name a quality or a vibe**: "ambient", "smart", "unified", "intelligent", "fabric". Wanting one is a sign the thing isn't understood yet.
+- **Don't coin unless nothing fits.** A coinage gets a `TERMINOLOGY.md` entry saying what it means and what it was chosen over.
+- **The same applies to identifiers and to prose**: comments, commit messages, reviews and docs. Prefer the plain word over one methodology's jargon.
 
-- **Don't reuse a word that's taken in-domain.** "Bus" means _event bus_ (`emit`/`subscribe`); bare "context" means React context; "adapter", "middleware", "hook", "store", "provider", "signal", "engine", "pipeline", "kernel", "orchestrator", "gateway", "broker" and "manager" all carry specific expectations. Using one is fine when the thing genuinely **is** that thing and you can name the prior art in one sentence — "Laravel's `HttpKernel`, a request handler" is an answer; "it sounds core-ish" isn't. A colliding name costs the reader more than a plain one: they arrive with the wrong mental model and have to unlearn it.
-- **Don't name a quality, a vibe, or an outcome.** "Ambient", "awareness", "insight", "smart", "unified", "holistic", "seamless", "intelligent" and "fabric" sound technical while carrying no information. These are the names most likely to get reached for when the thing isn't yet clearly understood — treat wanting one as a signal to go and understand the thing.
-- **Don't coin unless nothing fits.** Every coinage is vocabulary every future reader must be taught. When one is genuinely unavoidable, it gets a `TERMINOLOGY.md` entry stating what it means and what it was chosen over.
-- **Prefer boring and literal to clever.** A name that a stranger guesses correctly on first read has done its job.
+Record a contested name's alternatives in `TERMINOLOGY.md` (what it means) or `DECISIONS.md` (why it won; "Reserved words" when the word is taken).
 
-The same thinking governs every identifier — functions, variables, files, types, config keys. The `code` skill has the conventions.
+## Documentation
 
-**It governs prose too**, not just things that get named: explanations, commit messages, review comments, docs. Use the word a working developer already recognises, or the one established in the specific niche being worked in. Reach for the plain word over a term of art from one methodology's dialect, and be especially wary of dialect that collides with a meaning the word already has here — say "experiment" or "throwaway test", not "spike", which in this domain reads as a jump in traffic or latency.
-
-Where a name was contested, record the comparison rather than just the winner — `TERMINOLOGY.md` for what a term means today, `DECISIONS.md` for why it beat the alternatives, under "Reserved words" when the point is that the word is taken.
+A fact lives in one file; everywhere else links to it. `ARCHITECTURE.md` and `TERMINOLOGY.md` describe the present, in the present tense. `DECISIONS.md` holds the why. Roadmap status is the directory. Nothing durable links to a spec. The `docs` skill has the full contract.
 
 ## Conventions
 
-TypeScript, React, CSS and documentation rules live in the skills — `code`, `ui`, `api`, `css`, `docs` — which load automatically for the files they cover. Don't duplicate them here.
+Code, UI, API, CSS, docs and testing rules live in the skills under `.claude/skills/` (`code`, `ui`, `api`, `css`, `docs`, `testing`), which load for the files they cover. Don't repeat them here.

@@ -1,20 +1,10 @@
 # Astromech Architecture
 
-The big-picture map for working on the CMS: what the parts are, where they
-live, and the few rules that hold between them. Detail lives in the code and
-the types (`packages/astromech/src/types/`); when this file and the code
-disagree, the code wins, so fix the file. Why things are this way is in
-`DECISIONS.md`. How to use Astromech is in `apps/docs/`.
+Where the parts live and the rules between them. The contracts are the types in `packages/astromech/src/types/`; when this file and the code disagree, fix the file.
 
 ## What it is
 
-Astromech is a lightweight TypeScript CMS: a framework-agnostic core plus an
-Astro integration. The integration injects three things into a site: the admin
-SPA, an HTTP API, and a middleware that boots the application on first request.
-Sites read content in templates through the in-process application or the
-typed fetch client.
-
-It runs on Node and on Cloudflare Workers with equal standing: every backend has a driver for each (`libsql` and `d1`, `filesystem`/`s3` and `r2`, `interval` and `cloudflareCron`), and nothing in core assumes one runtime. Further runtimes and frameworks are added the same way. SSR only. Node 22 is the floor.
+A framework-agnostic core plus an Astro integration, which injects the admin SPA, an HTTP API, and a middleware that boots the application on the first request. It runs on Node and on Cloudflare Workers with equal standing: every backend has a driver for each, and nothing in core assumes one. SSR only.
 
 ## Repository layout
 
@@ -24,7 +14,7 @@ It runs on Node and on Cloudflare Workers with equal standing: every backend has
 packages/
 ├── astromech/        # the `astromech` core package (layout below)
 ├── admin/            # @astromech/admin: the admin app, the component kit and its Vite helper
-├── schema-engine/    # @astromech/schema-engine — table diffing and DDL rendering
+├── schema-engine/    # @astromech/schema-engine: table diffing and DDL rendering
 └── plugins/          # first-party plugins, one published package each:
                       # assistant · backups · forms · menus · redirects · seo
 apps/
@@ -33,7 +23,7 @@ apps/
 └── docs/             # user-facing documentation
 ```
 
-## The core package
+## The layer model
 
 `packages/astromech/src/` is one directory per module. Imports point down this list; modules on the same line may read one another. Nothing enforces this mechanically.
 
@@ -51,260 +41,94 @@ content                                              the shared content reposito
 plugins · config · database · storage · fields ·     the modules those build on
   permissions · hooks · request-context · email ·
   ai · cron
-types · services · utilities · env · errors ·        pure leaves
-  registry.ts
+types · services · utilities · errors ·              pure leaves
+  env.ts · registry.ts
 ```
 
-- **`astromech.ts`** is the composition root: `createAstromech` resolves the
-  config, wires the drivers, and composes the content services onto the
-  application instance. `plugins/runtime/plugin-runtime.ts` is the other half of
-  the composition root: `createPluginContext` assembles the plugin `ctx` from
-  the same content services, so it imports them the way `astromech.ts` does.
-  `app-context/app-context.ts` builds the `AppContext` a method receives,
-  `app-context/services.ts` holds the bound form of each content module's
-  definition, and `createPluginContext` layers the plugin members over it.
-  `exports/` holds the re-export barrels, one per published subpath except
-  two that name a source file directly: `./media/Image` and
-  `./routes/handler.ts`. Nothing else in `src/`
-  re-exports — inside the package every import names the file that declares
-  the symbol.
-- **`integrations/`** holds two kinds of glue side by side. A **framework
-  integration** answers how a request arrives and where the config lives:
-  `astro/` is the Vite config, with the admin package's share merged in, the
-  virtual modules (`virtual:astromech/config`, `virtual:astromech/admin-config`),
-  the injected routes (admin shell, API, media) and the boot middleware. A **runtime
-  integration** answers where environment values come from and whether the host
-  has an entry point that is not an HTTP request: `cloudflare/` builds the
-  Worker entry and looks up bindings. A runtime only gets a directory when it
-  needs one — Node and Vercel need no code.
-- **`codegen/`** generates the site's entry types and the method manifest.
-- **`transport/`** is every way a call arrives: Hono routes and middleware in
-  `http/`, the CLI, the dev-only MCP server, and `tools/`, the tool surface the
-  MCP server and the AI tool-loop share. `cli/` and `mcp/` are process entry
-  points of their own, each booting the application through `astromech.ts`, so
-  they sit above the composition root; `http/` and `tools/` are what it calls.
-  A transport that names a method by manifest id (RPC, the AI tool-loop, MCP,
-  the CLI) calls it through `callMethod`; REST and plugin RPC name the domain
-  and method in the URL and call the scoped handle directly. Transports hold
-  no business logic.
-- **`policies/`** decides what a role may call. `scopedServices(role)` wraps the
-  core services and every plugin method, and refuses a call the role lacks; it
-  is the one way an untrusted caller (REST, RPC, plugin RPC, the AI tool-loop)
-  reaches a service. `callMethod` turns a manifest method into a call on that
-  handle, or on the raw services for a trusted caller. Trusted paths (the
-  application instance used in SSR and hooks, `ctx.plugins`, the CLI, the MCP
-  server) skip the handle.
-- **The content modules** (`entries`, `globals`, `media`, `users`, `settings`, `notifications`) own the business verbs. Each has a `service.ts` that assembles its `methods/` into a `defineService` definition, a `tables.ts` (its `defineTable` tables and row types), and a `schema.ts` holding the Zod request schemas its methods share. Those schemas are also where the module's input types come from: a method's handler parameter is the parsed shape (`z.output`) and the domain input types in `types/services.ts` are the call shape (`z.input`) of the same schema. A method file exports one `defineServiceMethod` object holding that verb's access rule, its input and output schemas, its effect hints, the capability its target must declare, and the handler. The definition's catalogue is what the method manifest, `policies/scoped-services.ts` and the REST mount read; `entries/catalogue.ts` fixes that catalogue per entry type, since an entry method's permission and schemas vary with the type. `app-context/services.ts` binds each definition to the current request's context to make the callable service (`app.globals`, the raw trusted form), so a content module never imports the composition root. A handler receives an `AppContext` and reaches the user, the config, the hooks and its sibling services through it, and its input has already been parsed against the method's own `input` schema by `defineService.bind()`, whatever called it; helpers in `internal/` take the config, the user or the context as parameters, and a lint rule refuses a content module reading the request store or the config registry. They are siblings: one may call another's service, but reaches tables through `database/tables.ts`. `entries`, `globals`, `media` and `users` build on a shelf module of their own, `content/`, which holds the shared content repository over `{ table, contentTable, versionsTable }`, the translatable, versioning and visibility helpers both need, and the relationship-index policy users and media share.
-- **`auth/`** holds the better-auth wiring (`better-auth.ts`), session
-  resolution (`session.ts`), first-run setup's write of the first admin
-  (`setup.ts`) and better-auth's own tables (`tables.ts`). It sits
-  beside the content modules rather than inside `users`, and imports `users` to
-  read the user row a session names; `users` never imports `auth`.
-- **The modules below them** (`database`, `storage`, `fields`, `config`, `permissions`, `hooks`, `request-context`, `email`, `ai`, `cron`, and `plugins` — the `define*` authoring API and every `runtime/` file except `plugin-runtime.ts`) are what the content modules build on. Each does one thing and holds no business logic.
+- **Composition root.** `createAstromech` in `astromech.ts` resolves the config, wires the drivers and composes the content services onto the application instance. `createPluginContext` in `plugins/runtime/plugin-runtime.ts` builds the plugin `ctx` from the same services. `createAppContext` in `app-context/app-context.ts` builds the `AppContext` a method receives, and `app-context/services.ts` binds each content module's definition to the current request with `bindCurrent`.
+- **`exports/`** holds one barrel per published subpath. Only it and `types/index.ts` are barrels; everywhere else an import names the file that declares the symbol.
+- **`integrations/`**: `astro/` is the framework integration (Vite config, virtual modules, injected routes, boot middleware); `cloudflare/` is the runtime integration (the Worker entry and binding lookup). `TERMINOLOGY.md` defines the two kinds.
+- **`codegen/`** generates the site's entry types, the method manifest and the plugin client manifest.
+- **`transport/`** is every way a call arrives: Hono routes in `http/`, the CLI, the dev-only MCP server, and `tools/`, the tool surface MCP and the AI tool-loop share. `cli/` and `mcp/` boot the application themselves, so they sit above the composition root. Transports hold no business logic.
+- **`policies/`** decides what a role may call. `scopedServices(role)` wraps the core services and every plugin method and refuses a call the role lacks; every untrusted caller (REST, RPC, plugin RPC, the AI tool-loop) goes through it. Trusted paths (SSR, hooks, `ctx.plugins`, the CLI, MCP) use the raw services. A caller that names a method by manifest id goes through `callMethod`; REST and plugin RPC call the scoped handle directly.
+- **`auth/`** holds the better-auth wiring, session resolution, first-run setup and better-auth's own tables. It imports `users` to read the user a session names; `users` never imports `auth`.
+- **The modules below them** hold no business logic. `plugins/` here means the `define*` authoring API and every `runtime/` file except `plugin-runtime.ts`.
 - **Leaves** import only other leaves and third-party packages. A small pure file (a constant, a type, a function over its arguments) may sit inside any module and still be imported from any layer.
+
+### Content modules
+
+`entries`, `globals`, `media`, `users`, `settings` and `notifications` own the business verbs. Each has a `service.ts` that assembles its `methods/` into a `defineService` definition, and a `tables.ts`; most also have a `schema.ts` of shared Zod request schemas. A method file exports one `defineServiceMethod` object: access rule, input and output schemas, effect hints, the capability its target must declare, and the handler. The method manifest, `policies/scoped-services.ts` and the REST mount all read that catalogue; `entries/catalogue.ts` fixes it per entry type, because an entry method's permission and schemas vary with the type.
+
+A handler reaches the user, config, hooks and sibling services through its `AppContext`, never the request store, config registry or hook runner (lint enforces this). `defineService.bind()` has already parsed its input. One content module may call another's service, but reaches tables through `database/tables.ts`. A content module does not import the composition root; `media/serving/handler.ts` is the one exception.
+
+`content/` holds the shared repository over `{ table, contentTable, versionsTable }`, the translatable, versioning and visibility helpers, and the relationship-index policy that users and media share.
 
 ## The admin package
 
-`packages/admin` is `@astromech/admin`: the React SPA (TanStack Router), the
-component kit that core's `astromech/ui` subpaths re-export, and a Node-side
-Vite helper. `astromech/astro` injects the admin into every site, so core
-depends on the admin package and a site installs core alone.
-
-The admin ships as source. The site's Vite compiles it after core's integration
-has registered the virtual modules it imports
-(`virtual:astromech/admin-config` and `virtual:astromech/plugins/components`),
-so plugin components and the admin share one copy of the kit and one React.
-`createAdminViteConfig()` in `packages/admin/src/vite.ts` takes the icon names
-in the admin config and returns what core's
-Vite config merges: the `astromech/ui` aliases onto admin source, the packages
-the admin imports in the browser (core renders them into
-`optimizeDeps.include`, with the packages each plugin lists in
-`admin.optimizeDeps.include`), the TanStack Router plugin, which splits each
-route into its own chunk, a plugin serving `virtual:astromech/admin-icons` (the
-Lucide icons those names pick out), and the absolute path of
-`packages/admin/src/shell.astro`, which the admin route serves under the
-configured `basePath`. tsup builds only what plain Node loads: that helper and
-the four `astromech/ui` entries.
-
-Every import inside the admin is relative, and it talks to the server only
-through the fetch client. "The browser boundary" below says what it may import
-from core. Its one global, `globalThis.__astromechAdmin`, belongs to the UI
-instance guard and is declared in the guard's file.
+`@astromech/admin` is the React SPA, the component kit behind `astromech/ui`, and a Vite helper. Core depends on it, so a site installs core alone. It ships as source and the site's Vite compiles it, so plugin components and the admin share one kit and one React. `packages/admin/AGENTS.md` has the rest.
 
 ## The environment
 
-Every environment read goes through `env/`. `resolveEnv(name)` returns the value
-or `undefined`, and `getEnvRecord()` builds the record the plugin `ctx` exposes.
-A runtime integration declares its
-own source with `setEnvSource`, which is how a Cloudflare Worker's `env` — string
-vars and object bindings in one object — reaches `resolveEnv` and
-`resolveBinding` alike. The admin package is exempt: it reads `import.meta.env.DEV`,
-which Vite replaces at build time, and never imports server modules.
+Every environment read goes through `src/env.ts`: `resolveEnv(name)` returns the value or `undefined`, and `getEnvRecord()` builds the record on `ctx.env`. A runtime integration sets its own source with `setEnvSource`; that is how a Worker's `env` (string vars and bindings in one object) reaches `resolveEnv` and `resolveBinding`, which lives in `integrations/cloudflare/bindings.ts`. The admin is exempt: it reads only `import.meta.env.DEV`, which Vite replaces at build time.
 
 ## Drivers and registries
 
-Every swappable backend is a **driver**: a plain object the site's config names
-and core calls through a fixed interface. Database (`libsql`, `d1`), storage
-(`filesystem`, `r2`, `s3`), email (`console`, `resend`, `smtp`), scheduler
-(`interval`, `cloudflareCron`, `webhook`), and the AI models follow the same
-pattern. The `DatabaseDriver` interface carries optional capabilities (`dump`,
-`restore`) that callers feature-detect rather than switching on dialect.
+Every swappable backend is a **driver**: a plain object the site's config names and core calls through a fixed interface.
 
-Each module keeps its driver in its own **registry**, built on
-`registry.ts` over the single `globalThis.__astromech` namespace. There is no
-central context object, and no module-scope singletons: the package can be
-loaded more than once in a process (two builds, source and dist resolution,
-Vite aliases), and the global is the only namespace every copy shares. Config
-follows the same rule: `createAstromech` stores the resolved config once and
-every reader calls `getConfig()` at call time, never at module scope. A lint
-rule refuses a call to `getConfig()` or `getAstromech()` outside a function.
+| Backend   | Drivers                                 | Source                                                                 |
+| --------- | --------------------------------------- | ---------------------------------------------------------------------- |
+| Database  | `libsql`, `d1`                          | `database/drivers/`                                                    |
+| Storage   | `filesystem`, `s3`, `r2`                | `storage/drivers/`                                                     |
+| Email     | `consoleEmail`, `resend`, `smtp`        | `email/drivers/`                                                       |
+| Scheduler | `interval`, `webhook`, `cloudflareCron` | `cron/drivers/`, published as `astromech/scheduler/*`                  |
+| Images    | `sharp`, `cloudflareImages`             | `media/serving/image/drivers/`, published as `astromech/media/image/*` |
+
+AI models follow the same pattern. Optional capabilities (`dump`, `restore` on `DatabaseDriver`) are feature-detected, not switched on dialect.
+
+Each module keeps its driver in its own **registry**, built on `registry.ts` over the single `globalThis.__astromech` namespace. There are no module-scope singletons: the package can load more than once in a process (two builds, source and dist, Vite aliases), and the global is the only namespace every copy shares. Config follows the same rule: `createAstromech` stores it once, and readers call `getConfig()` at call time.
 
 ## Entries and fields
 
-An **entry type** is declared in the site config with `defineEntryType`: a
-name, its fields, slug rules, admin columns, and which features it enables.
-An entry of any type lives in three tables, declared in
-`entries/tables.ts`: `entries` holds what is unique per item and shared across
-its locales (`type`, the preview token, `deletedAt`), `entry_content` holds one
-row per locale of what editors author (title, slug, `fields` as JSON, status),
-and `entry_versions` snapshots a content row. `entries/repository/entries-table.ts`
-reads the first two joined and `entries/repository/versions.ts` owns the third;
-field values are typed in the site by codegen. The entry id is the id every
-caller uses, and locale is a parameter beside it. Versions, staging, preview
-tokens, trash, statuses, translation and relationships are entries features, in
-`entries/methods/`. The `relationships` table is a derived
-index over field data, one row per reference, rebuildable from it.
+An **entry type** is declared with `defineEntryType`. Entry features (versions, staging, preview tokens, trash, statuses, translation, relationships) live in `entries/methods/`. Callers use the entry id, with locale as a separate parameter.
 
-A **media item** lives in the same three tables, declared in `media/tables.ts`:
-`media` holds the file (`filename`, `mimeType`, `size`, `width`, `height`,
-`metadata`), `media_content` holds one row per locale of the title, alt text,
-caption and `fields`, and `media_versions` snapshots a content row.
-`media/repository.ts` composes the shared content repository with the queries
-only media has: the library list with its filename search, mime buckets and sort
-allow-list over the resource row's columns, and the overlay that reads a page's
-content rows in the requested locale. The bytes are in the storage driver under a
-key derived from the media id, never from a URL. Translation opts in through
-`media: { translatable: true }`; versioning is always on, and a media item
-declares no statuses, staging or trash.
+### Resources
 
-A **user** lives across the same three tables, declared in `users/tables.ts`:
-`users` is the account row, which better-auth owns. First-run setup writes the
-first one through better-auth, and the users service
-writes every later one; `user_content` holds one row per locale of the site's own
-`fields`; `user_versions` snapshots a content row. `name`, `email` and `role`
-are written whatever the locale, while `fields` addresses one locale. A session,
-an account and a verification are better-auth's own rows rather than the user,
-so they are declared in `auth/tables.ts`.
-Deleting a user leaves the rest to the database: each reference to `users`
-declares `onDelete: 'set null'` (author columns) or `'cascade'` (sessions,
-accounts, content rows, notifications), and the migration runner refuses a
-database that does not enforce foreign keys. Translation opts in
-through `users: { translatable: true }`; versioning is always on.
+Entries, media items and users each live in three tables: a resource row (what is shared across locales), a content row per locale (what editors author, including `fields` as JSON), and a versions table that snapshots content rows. `content/repository/versions.ts` owns versions for all three. The differences:
 
-**Fields** are shared by entry types, globals and plugin tables. `fields/builder.ts` is the authoring API (`fields.text(...)`), and
-`fields/field-type-registry.ts` holds one `FieldType` per type name, carrying
-its `build`, `coerce`, `validate` and `tsType`. The pipeline is
-`coerce → default → validate`, recursing through nested fields (`group`,
-`repeater`, `blocks`, `tree`) and passing through layout fields (an unnamed
-`group`, `accordion`, `tabs`, `tab`), which store nothing. The admin renders a form from the
-same field definitions.
+- **Entries** (`entries/tables.ts`): the resource row holds `type`, the preview token and `deletedAt`; the content row holds title, slug and status. `entries/repository/entries-table.ts` reads the two joined.
+- **Media** (`media/tables.ts`): the resource row holds the file and its metadata; the bytes are in the storage driver under a key derived from the media id. `media/repository.ts` adds the library list queries. No statuses, staging or trash.
+- **Users** (`users/tables.ts`): better-auth owns the `users` row. First-run setup writes the first one through better-auth and the users service writes the rest. `name`, `email` and `role` ignore locale. Sessions, accounts and verifications are better-auth's rows, in `auth/tables.ts`.
 
-`fields/parse-fields.ts` runs that pipeline for all four resources — entry,
-global, media item and user.
-`parseFields` returns the coerced values and throws a 422; `safeParseFields`
-returns what reported instead, for the callers that display errors rather than
-reject. An entry write reaches it through `entries/internal/stored-fields.ts`,
-which merges or inherits first and prunes dead relation ids after. Two
-unrelated checks are both spelled `validate`: a field type's own, on its
-`FieldType`, and the author's whole-resource function, declared on the entry
-type, the global, `media` or `users`. The Zod parse over request input
-around the fields is `parseInput`, in `errors/validation.ts`.
+Media and users opt into translation with `media: { translatable: true }` and `users: { translatable: true }`; versioning is always on. Deleting a user leaves the rest to the database: each reference to `users` declares `onDelete: 'set null'` or `'cascade'`, and the migration runner refuses a database that does not enforce foreign keys. The `relationships` table is a derived index over field data.
 
-`TERMINOLOGY.md` defines the vocabulary (entry vs custom-table type, relation
-vs relationship, staging, preview token).
+### Fields
+
+Fields are shared by entry types, globals, media, users and plugin tables. `fields/builder.ts` is the authoring API (`fields.text(...)`), and `fields/field-type-registry.ts` holds one `FieldType` per type name with its `build`, `coerce`, `validate` and `tsType`. `fields/parse-fields.ts` runs `coerce → default → validate`, recursing through nested fields and passing through layout fields, which store nothing. `parseFields` throws a 422; `safeParseFields` returns the report instead. An entry write reaches it through `entries/internal/stored-fields.ts`, which merges or inherits first and prunes dead relation ids after. The Zod parse of the request around the fields is `parseInput`, in `errors/validation.ts`.
 
 ## Database and migrations
 
-`database/` wraps Kysely. Tables are declared with `defineTable` (core) and
-`definePluginTable` (plugins); `database/tables.ts` aggregates every core
-table. Migrations are an **app artifact**: `astromech db:generate` diffs the
-declared tables against `snapshot.json` in the app's migrations folder (the
-config's `migrationsDir`, `./migrations` by default, resolved against the
-working directory) and writes a new migration there, and `astromech db:init`
-applies them. A plugin runs `astromech plugin:generate` against its own tables and
-ships its own chain, which the app merges with `mergeMigrationProviders`. A
-no-op `db:generate` doubles as the CI drift check.
+`database/` wraps Kysely. Core tables are declared with `defineTable` and gathered in `database/tables.ts`; plugins use `definePluginTable`. Migrations are an app artifact: `astromech db:generate` diffs the declared tables against `snapshot.json` in the config's `migrationsDir` and writes a migration there, and `astromech db:init` applies the chain. A plugin generates its own chain with `astromech plugin:generate`. Core merges the plugin chains into the app's with `mergeMigrationProviders` from `@astromech/schema-engine`, in `database/migrations.ts` and the `db:init` command. At boot, `checkMigrationDrift` warns when the database is behind the chain. `packages/astromech/tests/database/drift.test.ts` checks the committed demo snapshot against the core tables.
 
 ## Plugins
 
-A plugin is a separate npm package that registers tables, routes, service
-methods, hooks, cron jobs and admin pages through a `PluginContext` (`ctx`),
-which is the `AppContext` every service method receives plus the plugin layer
-(`ctx.plugin`, `ctx.storage`, `ctx.plugins`, and `ctx.config` as the restricted
-view). Everything a plugin needs from the platform is on `ctx`: the content services (`ctx.entries`, `ctx.media`, …), plus plugin-scoped handles on the backends, each narrower than the driver behind it: `ctx.storage` (keys prefixed `plugin/<alias>/`), `ctx.email`, `ctx.database` (`dialect`, plus `dump`/`restore` when the driver has them), and `ctx.config`, an explicit allow-list projection of the resolved config. A new platform feature is added to `ctx`, or as a pure function exported from the root `astromech` barrel, never as a subpath a plugin imports.
+A plugin is a separate npm package that registers tables, routes, service methods, hooks, cron jobs and admin pages through its `PluginContext` (`ctx`). `ctx` is the `AppContext` every method receives (the content services, `ctx.db`, `ctx.email`, `ctx.database`, `ctx.methods`, `ctx.runHook`, `ctx.env`), plus the plugin layer: `ctx.plugin` (its identity), `ctx.storage` (keys prefixed `plugin/<alias>/`), `ctx.plugins` (other plugins' services, when any are registered) and `ctx.config`, an allow-listed view of the resolved config. The types are in `types/app-context.ts` and `types/plugins.ts`.
 
 ### Plugin runtime boundary
 
-A plugin package may import `astromech`, `astromech/ui` and `astromech/ui/app`,
-and nothing else from core. The `astromech/ui` subpaths are one-line re-exports
-of the admin package's, so a plugin names core and never `@astromech/admin`. The site's `astromech.config.ts` is evaluated
-twice: once in plain Node at config time (route registration, codegen,
-migrations) and once in the Vite SSR graph that serves requests. So a plugin's
-entry must load under plain Node, where `virtual:` modules do not exist.
-`astromech/ui/app` reaches the virtual modules, so only a plugin's
-source-shipped `./admin/*` components may import it, never its entry.
-`pnpm run check:node-imports` verifies the plugin-facing subpaths load in Node.
+A plugin imports only published `astromech` subpaths that load in plain Node, such as `astromech`, `astromech/fields`, `astromech/columns`, `astromech/email` and `astromech/ui`, and never `@astromech/admin`. The site's `astromech.config.ts` is evaluated twice: once in plain Node at config time (route registration, codegen, migrations) and once in the Vite SSR graph that serves requests. `virtual:` modules exist only in the second. `astromech/ui/app` reaches them, so only a plugin's source-shipped `./admin/*` components may import it, never its entry. `pnpm run check:node-imports` imports core's plugin-facing subpaths and every published plugin's entry in plain Node.
 
-The plugin runtime (`plugins/runtime/`) registers hooks into `hooks/`, the one
-hook runner. A hook handler's throw propagates to the caller.
+The plugin runtime registers hooks into `hooks/`, the one hook runner. A hook handler's throw propagates to the caller.
 
 ## The browser boundary
 
-The admin runs in the browser, and reaches core through three entries and
-nothing else: `astromech/shared`, named re-exports of the browser-safe values
-it uses from `fields/`, `utilities/` and a few files in `entries/` and `media/`;
-`astromech/fetch`, the fetch client; and type-only imports from `astromech`,
-which erase. A service or a driver would pull the config and every backend into
-the client bundle, so a lint rule refuses any `@/` import and any other
-`astromech/*` subpath from `packages/admin/src/`. Code only the admin uses
-lives in the admin package, not in core's leaves. The site's Vite build aliases `astromech/shared` and
-`astromech/fetch` to source, as it does `astromech/ui`, so the admin and every
-other browser caller share one instance of each. It resolves core's own `@/`
-specifiers only for files inside core's `src`, so a site's own `@/` paths reach
-the site.
+The admin runs in the browser and reaches core through three entries only: `astromech/shared` (browser-safe values), `astromech/fetch` (the fetch client), and type-only imports from `astromech`. A service or driver would pull the config and every backend into the client bundle, so a lint rule refuses any other core import from `packages/admin/src/`. The site's Vite aliases `astromech/shared`, `astromech/fetch` and `astromech/ui*` to source, so every browser caller shares one instance of each. It resolves core's `@/` specifiers only for files inside core's `src`, so a site's own `@/` paths reach the site.
 
-Two checks cover it. `packages/astromech/tests/exports/shared-browser.test.ts`
-bundles the two entries for the browser and fails on a Node builtin or on a core
-file outside its allowlist, which names by path each file it permits outside
-`fields/`, `utilities/`, `errors/` and `types/`. `pnpm run check:boot` loads the
-built admin in a headless browser.
+`packages/astromech/tests/exports/shared-browser.test.ts` bundles the two entries for the browser and fails on a Node builtin or on a core file outside its allowlist. `pnpm run check:boot` loads the built admin in a headless browser.
 
 ## Scheduler
 
-Cadence lives in the `_astromech_cron` table, not in deploy config, so an admin
-edit takes effect on the next tick. A `SchedulerDriver` only triggers a tick;
-`cron/runner.ts` evaluates which jobs are due and runs each in its own
-try/catch. The table doubles as the lock against concurrent ticks.
+Cadence lives in the `_astromech_cron` table, not in deploy config, so an admin edit takes effect on the next tick. A `SchedulerDriver` only triggers a tick; `cron/runner.ts` decides which jobs are due and runs each in its own try/catch. The table is also the lock against concurrent ticks.
 
 ## Public entry points
 
-Consumers import subpaths, never deep into `src/`. `exports` in
-`packages/astromech/package.json` is canonical; in the repo the Astro-loaded
-subpaths resolve to `src/` so a core edit reaches `apps/demo` without a
-rebuild, and `publishConfig.exports` restores the `dist/` map for npm.
-`pnpm run check:exports` keeps the two in step, in core and in
-`packages/admin/package.json`. The ones to know: `astromech`
-(core helpers, types and the plugin-authoring API), `astromech/astro`,
-`astromech/fetch`, `astromech/shared` (the browser-safe values the admin
-reads), `astromech/ui` (the component kit, re-exported from
-`@astromech/admin`), `astromech/middleware`, `astromech/methods` (the server-side
-manifest and dispatch surface, core-internal in practice), `astromech/fields`,
-`astromech/database/schema`, `astromech/storage/{filesystem,r2,s3}`,
-`astromech/cloudflare`, and the `astromech` CLI bin.
-
-## Further reading
-
-- `AGENTS.md` — the gate commands and the workflow.
-- `packages/astromech/src/types/` — the precise contracts.
-- `TERMINOLOGY.md` — what a term means. `DECISIONS.md` — why.
-- `apps/docs/` — user-facing guides.
+Consumers import subpaths, never deep into `src/`. `exports` in `packages/astromech/package.json` is the list; `publishConfig.exports` is what npm gets, and `pnpm run check:exports` keeps the two in step. In the repo nearly every subpath resolves to `dist/`, so a core change needs `pnpm run build` before `apps/demo` sees it. Three point at source: `./middleware` (in the repo only), and `./routes/handler.ts` and `./media/Image`, which the site's Vite compiles in both maps. The package also ships the `astromech` CLI bin.

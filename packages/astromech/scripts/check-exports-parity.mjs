@@ -2,8 +2,8 @@
  * Gate step, two checks over the `exports` maps of each package that keeps
  * two: core and the admin. Needs no build.
  *
- * Keys, between the maps: the repo `exports` map points the Vite-loaded
- * subpaths at `src` so an edit reaches `apps/demo` with no rebuild, and
+ * Keys, between the maps: the repo `exports` map may point a Vite-loaded
+ * subpath at `src` so an edit reaches `apps/demo` with no rebuild, and
  * `publishConfig.exports` restores the `dist` map npm consumers get. Two maps
  * means a new subpath can be added to one and forgotten in the other, which npm
  * would only reveal after a publish — so the key sets must match exactly.

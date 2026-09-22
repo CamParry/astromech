@@ -1,10 +1,14 @@
 # Full-Text Search Indexing
 
-**Direction is locked:** a derived **FTS5 external-content index**, kept in
-sync by triggers, not a `search_index` column queried with `LIKE`.
-`DECISIONS.md` has the reasoning and the rejected alternatives: no surveyed CMS
-searches its content tables at scale, external content stores no second copy of
-the text, and ranking, prefix matching and snippets come with FTS5.
+**Direction is locked:** a derived **FTS5 external-content index** over
+`entry_content`, kept in sync by triggers, with a per-field `searchable` flag, so
+it indexes one locale per row. No surveyed CMS searches its content tables at
+scale, external content stores no second copy of the text, and ranking, prefix
+matching and snippets come with FTS5. Rejected: a `search_index` text column
+queried with `LIKE` (the WordPress and Directus anti-pattern, and what today's
+`title LIKE ? OR slug LIKE ?` search is), indexing rendered output, and an
+external search engine in core. When this ships, the choice gets a
+`DECISIONS.md` entry.
 
 ## Waiting on a decision: D1 export
 
@@ -75,7 +79,7 @@ filtered out by the existing `stagedFor IS NULL`.
        is given. Custom-table types, users and media keep `LIKE`.
 5. [ ] `astromech entries:reindex [--check]`: recompute `searchText`, run
        `'rebuild'`; `--check` runs `integrity-check` and compares `searchText`.
-6. [ ] Docs: `DECISIONS.md` (the amendment), `ARCHITECTURE.md`, `apps/docs`.
+6. [ ] Docs: a `DECISIONS.md` entry for the design as built, `ARCHITECTURE.md`, `apps/docs`.
 
 Search changes from substring to token and prefix matching: "ogr" stops
 finding "blogroll".

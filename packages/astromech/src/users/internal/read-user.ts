@@ -1,8 +1,8 @@
 /**
  * Reading one user, with the fallback a user read promises: the asked locale,
  * then the default locale, then the account row alone. The last step is here
- * because better-auth mints `users` rows outside Astromech's write path, so a
- * user can exist with no content row at all, and a session must not fail on a
+ * because a `users` row written outside setup and the users service (by a
+ * migration or by hand) has no content row, and a session must not fail on a
  * profile nobody has written.
  */
 

@@ -4,9 +4,8 @@ Editorial identity as a first-party **entry type** that relates to a user, rathe
 onto `users`. Split out of `completed/relationships-model.md`, which unblocked it rather than
 contained it.
 
-**Status:** not started. The model is already decided —
-`DECISIONS.md` §"Editorial identity lives on a profile entry,
-not on `users`". This file holds the build shape and the questions still open.
+**Status:** not started. The model is decided, and the next section records
+it; the rest of this file holds the build shape and the questions still open.
 
 ## Why an entry, not user fields
 

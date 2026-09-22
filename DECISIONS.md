@@ -1,902 +1,166 @@
 # Decisions
 
-What was chosen, and what it beat. Present tense: this file describes what holds
-now, and is edited when a choice is reversed. The history of every reversal is
-`git log -p DECISIONS.md`, and the argument as originally written is in the
-commit that made the change.
-
-An entry earns its place when the losing option is invisible in the code and
-attractive enough that someone would reach for it again. A landed rename, a file
-that moved, a rule the linter enforces: the code already says it, so it is not
-here. Rules you apply while writing code are in the skills; what a term means
-today is in `TERMINOLOGY.md`; where code lives is in `ARCHITECTURE.md`.
-
-Nothing here is binding. It is evidence, so a settled question is not re-argued
-from scratch — never so a better option can be refused. When something better is
-known, edit the entry and say what changed in the commit.
+Live choices and what each one beat. An entry is here because the losing option is invisible in the code and tempting enough to be reached for again; when a choice is reversed the entry is rewritten, and `git log -p DECISIONS.md` holds the history. Nothing here is binding: it stops a settled question being re-argued from scratch, never a better option being taken.
 
 ## Data and schema
 
-**The migration generator is ours, and total.** No Atlas, no drizzle-kit. A
-rename is a drop plus an add, always: no rename detection, ever. SQLite rebuilds
-whole tables under `defer_foreign_keys`, not `foreign_keys=OFF`. Generation
-errors on conflict and warns on destruction, but never prompts, and runs under
-Node only; the application migrates through Kysely's `Migrator`. Schema is
-generated, data is hand-authored, and plugins ship self-contained journals.
-Rejected: a `findMany(qb => …)` builder callback (use `kysely()`), and `populate`
-on `reference` columns — if one ever ships it must be `resolveRefs`/`withRefs`.
+**The migration generator is ours, and total.** A rename is always a drop plus an add, with no rename detection. SQLite rebuilds whole tables under `defer_foreign_keys`, not `foreign_keys=OFF`. Generation errors on conflict and warns on destruction but never prompts, and runs under Node only; the application migrates through Kysely's `Migrator`. Data migrations are hand-written, and plugins ship self-contained journals. Rejected: Atlas and drizzle-kit.
 
-**A name on a structural field is always a data key.** A `group`, `accordion`
-or `tab` given a name nests its fields under it; without one it only draws a
-surface. This is Payload's named and unnamed `group` and its named tabs. A named
-accordion or tab is built as a wrapper around an unboxed named group, so group
-is the one structural field that nests data and no walker learns a new node
-kind. Rejected: a separate `section` type for the presentational box (two types
-for one toggle), a `nest` flag (a name that sometimes means nothing), inert
-names on layout fields (a name that reads as a key and is not one), the name
-inside options (breaks the `type(name, options)` shape every data field has),
-and teaching every walker (the pipeline, codegen, references, visibility,
-defaults) to handle a named tab natively.
+**A name on a structural field is always a data key.** A named `group`, `accordion` or `tab` nests its fields under that name; without one it only draws a surface, as with Payload's groups. A named accordion or tab wraps a named group, so no walker learns a new node kind. Rejected: a separate `section` type, a `nest` flag, inert names on layout fields, the name inside options (it breaks the `type(name, options)` shape), and teaching every walker about named tabs.
 
-**`relationships` is a derived index, never a forward read.** It rebuilds from
-field data, which is what makes polymorphism and non-atomic writes safe; order
-lives only in field data, and paths key on `_id`. Rejected: `populate` (leaks
-through relation traversal), any `onDelete` (cascade and set-null are
-unimplementable against a JSON blob, restrict refused on principle), filtering
-into a target's own fields, taxonomy tables, and mirror-on-write symmetry. A
-declared reverse field is deferred rather than refused; if it returns it keys on
-the forward field path, not the relation name. Editorial identity is a `profile`
-entry linking to `users`.
+**`relationships` is a derived index, never a forward read.** It rebuilds from field data, which makes polymorphism and non-atomic writes safe; order lives only in field data, and paths key on `_id`. A reference to a target that no longer exists is dropped on the holder's next write, not rejected by validation. Rejected: `populate` (if reference resolution ships, it is `resolveRefs`/`withRefs`), any `onDelete` (nothing to act on inside a JSON blob), filtering into a target's own fields, taxonomy tables, and mirror-on-write symmetry. A declared reverse field is deferred, not refused; if it returns it keys on the forward field path.
 
-**Author columns are `ON DELETE set null`, cleared in the app.**
-`entries.createdBy`/`updatedBy`, the same pair on `entry_content`,
-`entry_versions.createdBy`, and every other author column in core (including
-`settings.updatedBy`) reference `users` and go null when that user is deleted:
-content outlives its author, and the column already means "the acting user, if
-known". Rejected: reassigning to another user (WordPress's model, too heavy for
-a "who touched this row" stamp, and Astromech has no ownership concept to
-reassign to), cascade (deletes the content), and restrict (blocks a legitimate
-user removal). The database carries out the `set null`, as the entry on
-deleting a user below explains. This is a
-column FK, unlike the `relationships` index above whose dangling ids are field
-data with nothing to act on.
+**Deleting a user is left to the database's foreign keys, and author columns go null.** Every column referencing `users` declares its `onDelete`: author columns `set null`, since content outlives its author and `createdBy` means the acting user, not an owner; sessions, accounts, content rows and plugin rows `cascade`. The migration runner refuses a database whose `PRAGMA foreign_keys` is off, since a client cannot turn it on for remote libSQL. Rejected: reassigning content (WordPress's model; there is no ownership here), cascade or restrict on author columns, and clearing them by hand, which repeats the database's work and is not atomic on D1.
 
-**Every resource is its own three tables, not rows in one shared table.** An
-entry is `entries` (what is unique per item and shared across its locales),
-`entry_content` (one row per locale of what editors author) and `entry_versions`
-(snapshots of a content row), so the FK from content to its owner is real and no
-discriminator column is needed. Prior art: Drupal's `node`/`node_field_data` and
-Craft's `elements`/`elements_sites`. Rejected: one shared table holding entries,
-users, media and globals as typed rows, which needs a reserved id prefix,
-suppression in the admin config, the API routes, the permission vocabulary and
-the relation targets, a polymorphic owner column with no FK, and an orphan check
-to cover for it. Also rejected: renaming that table to `documents` or `elements`,
-words already refused below.
+**Every resource is its own three tables, not rows in one shared table.** An entry is `entries`, `entry_content` (one row per locale) and `entry_versions`, so the owner FK is real and no discriminator is needed, as in Drupal's `node`/`node_field_data`. Rejected: one shared table for all resources, which needs a reserved id prefix and a polymorphic owner column with no FK.
 
-**`_content`, not `_locales`.** It names what the table holds, `entry_versions`
-reads as versions of `entry_content` where "versions of locales" does not, and
-it reads right on a single-language site. Rejected: Payload's `_locales`, whose
-table holds only the localized fields with the rest on the base row, so the name
-does not transfer.
+**One id per entry, with locale as a parameter.** `entries.id` is the id in every URL, call, relation and version list; a content row's `ContentRowId` never crosses the service boundary. Rejected: one id per locale grouped by a `localeGroup`, where every translation has to re-point each relation (WPML's failure mode).
 
-**One id per entry, with locale as a parameter.** `entries.id` is the id in
-every URL, service call, relation, version list and preview URL; a content row's
-id is branded `ContentRowId` and never crosses the service boundary. Switching
-locale changes an argument, never the id. Rejected: one id per locale row
-grouped by an opaque `localeGroup`, under which a relation names one language's
-row and every translation has to re-point it, which is WPML's failure mode.
+**Trash is resource-level.** `deletedAt` sits on `entries`, so trashing takes every locale. Rejected: `deletedAt` per content row with a `cascadeLocales` flag, which made "trash this entry" and "remove this translation" one call.
 
-**Trash is resource-level.** `deletedAt` sits on `entries`, so trashing takes
-every locale with it and `trash`, `restore`, `delete` and `emptyTrash` take no
-locale. Rejected: `deletedAt` per content row with an opt-in `cascadeLocales`
-flag, which made "trash this entry" and "remove this translation" the same call
-with an argument between them.
+**`type` is copied onto `entry_content`**, because the indexes `(type, locale, slug)` and `(type, locale, status)` cannot reach across the join. It is the one accepted denormalization. Rejected: slug uniqueness in application code (Craft's answer).
 
-**`type` is copied onto `entry_content`.** The slug-unique index
-`(type, locale, slug)` and the list index `(type, locale, status)` cannot reach
-across the join to `entries`. It is the one accepted denormalization. Rejected:
-enforcing slug uniqueness in application code, which is Craft's answer, to keep
-the column single-homed.
+**A preview token is two columns on `entries`**: one hashed token per entry, authorizing every locale. Rejected: an `entry_preview_tokens` table, which nothing needs until someone wants a token audit trail.
 
-**A preview token is two columns on `entries`.** `previewToken` (the hash,
-unique) and `previewTokenExpiresAt`: one token per entry, authorizing every
-locale, with the locale picked by the preview URL. Rejected: an
-`entry_preview_tokens` satellite, a one-to-one table whose own created columns
-nothing read. Wanting a token audit trail is the signal to bring a table back.
+**`update` with a locale that has no content row creates it.** That is how a translation is made, as with Payload's `update` and `locale`: shared fields come from the default locale and `create` validation runs on the result. Rejected: a `createTranslation` method, a second write path for the same row.
 
-**`update` with a locale that has no content row creates it.** That is how a
-translation is made: shared fields are inherited from the default locale and
-`create` validation runs on the merged result. Payload works the same way, where
-`update` with a `locale` writes that locale whether or not it existed. Rejected:
-a dedicated `createTranslation` method, a second write path for the same row, and
-duplicating the entry into a translation group, which `duplicate` no longer does
-(it copies an entry, not a locale).
+**A repository answers exact reads; fallback is the service's.** `get` on the users and media repositories returns the row asked for, or null; the fallback chain lives in `readUser` and `readMedia`. A one-off account question uses the table repository (`users.accounts.count({ role: 'admin' })`). Rejected: a named repository method per question, which hides read policy behind a name.
 
-**A repository answers exact reads; fallback is the service's.** `get` on the
-users and media repositories returns the row asked for, or null. The chain a
-read promises (the asked locale, then the default locale, then for users the
-account row alone) lives in `readUser` and `readMedia`, beside the methods that
-call them. A one-off question about an account goes through the exposed table
-repository (`users.accounts.count({ role: 'admin' })`) rather than a named
-method per question. Rejected: a method per question on the repository, which
-grew `countByRole`, `ids` and `idsByRole` and put read policy behind a name that
-did not say so.
+**`globals` is an array of self-contained `defineGlobal` objects, not a name-keyed record**, so host and plugin globals have one shape. Rejected: a `Record<string, GlobalConfig>` mirroring `entries`, and a fields mode on `admin.pages`, which puts a field tree behind a route rather than a resource.
 
-**The word is `globals`.** Payload (`globals: []`), Craft ("Global Sets") and
-Statamic ("Globals") share it for editor-owned, exactly-one, site-wide content.
-Rejected: "single types" (Strapi; two words, and it names the constraint on a
-type rather than the thing), "singletons" (Sanity and Directus; names the
-constraint, and a stranger does not guess it), and "settings" or "options"
-(WordPress; "settings" is reserved for operator config and the key-value table
-keeps the name).
+**A media read falls back to the default locale; entries and globals do not.** A file is one file and media has no publish state, so a library in `fr` hiding every untranslated upload would be useless; `Media.locale` names the row the content came from. Entries and globals carry status per locale, and a borrowed row would misreport it. Rejected: returning `null`, and returning empty content, which makes untranslated alt text look deliberately blank.
 
-**A global's identifier is `key`, not `slug`.** `slug` is editor-authored,
-per-locale and appears in URLs, unique per `(type, locale)`; a global's
-identifier is developer-written, locale-invariant and never in a URL, so it
-pairs with `type` on entry types. Rejected: Craft and Statamic's "handle", which
-is precise but not a word a reader guesses.
+**A media translation starts as a copy of the default-locale row**, so the read keeps its shape when the row is created. An entry's translation starts empty because title and slug are per-locale by definition. Rejected: an empty row, and creating every locale's row up front.
 
-**`globals` is an array of self-contained `defineGlobal` objects, not a
-name-keyed record.** A global carries its own `key`, so host and plugin globals
-have one shape and a global moves between them unchanged. A key declared twice
-in one array is a crash-loud `resolveConfig` error naming both declarations.
-Rejected: a `Record<string, GlobalConfig>` mirroring `entries` (it splits the
-identifier from the object and gives plugin globals a second shape), and a
-fields mode on `admin.pages`, which put a field tree behind a route rather than
-behind a resource.
+**`Media.updatedAt` is the file's last change, not the content row's.** It is the cache-buster on image URLs, so a caption edit must not move it. Rejected: the content row's timestamp, and exposing both on `Media`.
 
-**A media read falls back to the default locale; entries and globals do not.**
-`media.get` and `media.query` in a locale with no content row return the item
-with the default locale's content, and `Media.locale` names the row the content
-came from. A file is one file, and media carries no publish state for a fallback
-to misreport, so a library listing in `fr` that hid every untranslated upload
-would be useless. Entries and globals do not fall back: each of their locales
-carries its own status and staged change, so borrowing another locale's row
-would report a publish state that locale does not have. `Media.locales` says
-which rows exist, so the admin can still offer to add one. Prior art: Drupal's
-file entities fall back the same way. Rejected: returning `null`, and returning
-the item with empty content, which makes an untranslated alt text look
-deliberately blank.
+**A user row without a content row reads as empty content.** A `users` row written outside setup and the users service has no `user_content` row, and its owner must still sign in: reads answer `fields: {}`, and the first `update` creates the row. Rejected: an inner join, which locks the user out, and inserting on read, which puts a write in a read path.
 
-**A media translation starts as a copy of the default-locale row.** The first
-`media.update` to a locale with no row inserts one seeded with that row's
-`title`, `alt`, `caption` and `fields`, then applies the patch, so the read does
-not change shape at the moment the row is created, which is what the fallback
-promised. An entry starts a translation empty because a title and a slug are
-per-locale by definition; alt text is the same text until someone translates it.
-Rejected: an empty row (it turns a fallback read into a blank one on first
-save), and creating every locale's row up front.
+**First-run setup writes the first admin itself, and sign-up is closed.** `POST /setup` is unauthenticated and creates the first `admin`, as Ghost, Strapi and Payload do; later accounts are created by an admin, and Better Auth's own sign-up always refuses. The gate is one `INSERT … WHERE NOT EXISTS (SELECT 1 FROM users)`, atomic on SQLite and D1, so the losing racer gets `SIGN_UP_CLOSED`. Rejected: counting users in the sign-up hook (the count and insert are separate statements), a row lock (neither SQLite nor D1 has `SELECT … FOR UPDATE`), and open sign-up with a default role (`editor` would grant content access to anyone with the URL).
 
-**`Media.updatedAt` is the file's last change, not the content row's.** It is
-the cache-buster the admin appends to every image URL, so it has to move when
-the file is replaced and stay put when only the caption is edited; `replace`
-writes `updatedBy` on the resource row for the same reason. A global exposes its
-content row's `updatedAt` because a global has no file. `MediaVersion` and the
-content row keep their own timestamps for anything that wants the edit time.
-Rejected: the content row's timestamp (a caption edit would bust every cached
-variant), and a second field on `Media` for each, which asks every caller to
-know which one it wants.
+**An unknown entries-list `where` or sort key throws.** `UnknownWhereKeyError` and `UnknownSortKeyError` name the key, for the entries table and custom tables alike. Rejected: ignoring it, which silently answers every row or the default order, and warning, because output is server-rendered and nobody reads the log.
 
-**A user row without a content row reads as empty content.** better-auth mints
-`users` rows outside Astromech's write path, and the hook that adds the
-default-locale `user_content` row runs after that insert, so a provider added
-later may not run it. A session must not fail on a profile nobody has written:
-`get` and `query` answer with `fields: {}`, the default locale and no locales,
-and the first `update` creates the row. Rejected: a strict inner join, which
-locks a user out of their own profile, and a lazy insert on read, which puts a
-write in a read path.
+**A transaction is a scope, not a handle passed by hand.** `transaction(fn)` keeps the Kysely handle in `AsyncLocalStorage`, so `getDb()` resolves it and repositories join without a `db` parameter. A nested call joins the outer scope. Hooks and fire-and-forget work stay outside it. Rejected: threading explicit handles, savepoints, and a transaction-aware repository.
 
-**Only a user's `fields` are versioned.** `name`, `email`, `image` and `role`
-are the account row, which better-auth and the roles machinery own; a version
-of a profile is a version of what the site's own fields say, not of an account
-change that machinery already tracks.
+**D1 degrades to sequential writes rather than refusing to boot.** It declares `supportsTransactions: false`, and `transaction()` then runs `fn` without one, so no call site handles it. Rejected: a boot-time capability gate, since nothing declares that a site needs atomicity and the partial writes are recoverable.
 
-**First-run setup writes the first admin itself, and sign-up is closed.**
-`POST /setup` is unauthenticated and creates the first account as `admin`, with
-its credential row and its content row, the way Ghost's
-`/authentication/setup`, Strapi's `register-admin` and Payload's
-`first-register` do. Every later account is created by an admin through the
-users service. The gate is one statement — `INSERT INTO users (…) SELECT …
-WHERE NOT EXISTS (SELECT 1 FROM users)` — which SQLite and D1 both run
-atomically, so two setups arriving together create one user and the loser is
-answered `SIGN_UP_CLOSED`, with no lock and no transaction. Better Auth's
-`databaseHooks.user.create.before` throws that refusal unconditionally, because
-nothing creates an account through Better Auth. Anyone who can reach an install
-with no users can still finish setup first. Rejected: counting users in the
-sign-up hook, where the count and Better Auth's insert are separate statements
-with nothing between them; a claim row in `settings` taken with a
-conflict-ignoring insert and held on a 60-second lease, which the conditional
-insert replaces (an install still holding an `astromech.first-admin-claim` row
-simply stops reading it); Strapi's row lock (`SELECT … FOR UPDATE`), which
-neither SQLite nor D1 has; and open sign-up with a least-privileged default
-role, since the built-in `editor` grants content access to anyone with the URL.
+**better-auth queries through the app's Kysely instance, with its plugins stripped.** Kysely runs one query at a time per instance on a local libSQL file, so a second instance for better-auth fails with `SQLITE_BUSY` during an app transaction; `withoutPlugins()` drops `CamelCasePlugin`, which would rename the keys better-auth reads. Rejected: a separate dialect, a busy timeout (it blocks the event loop inside libSQL's synchronous call), and a better-auth `transaction` option (D1 has none, and it would block its hooks' queries).
 
-**Deleting a user leaves its references to the database's foreign keys.**
-Every column that references `users` declares its `onDelete`, and the
-migrations render it: `set null` clears the 19 author columns, and `cascade`
-removes sessions, accounts, content rows and notifications. A plugin table
-declares its reference the same way, as the assistant's sessions and approvals
-do with `cascade`. libSQL's native
-binding and sqld are built with foreign keys on by default, and D1 enforces
-them, so the migration runner reads `PRAGMA foreign_keys` and refuses a
-database where it is off rather than let a delete leave dangling ids. A client
-cannot turn enforcement on for a remote libSQL database, since each query runs
-on a new stream. Rejected: clearing the author columns by hand before the
-delete, which repeated the database's own work in 19 updates and was not
-atomic with the delete on D1, whose `transaction()` runs no transaction; and
-keeping it only for a driver that does not enforce, which would still leave
-that driver's cascades undone.
+**The `where` DSL is the repository's stable contract; `kysely()` is not.** Core stays inside `createRepository`'s typed methods, so the DSL grows to meet it: `or` takes `Where` clauses, `and` waits for a caller, and `contains` escapes `%`, `_` and `\` where `like` is verbatim. `kysely()` covers the rest (aggregates, expression filters) with no compatibility promise, named for the engine so the coupling is greppable, like `payload.db.drizzle`. Rejected: `query()`, which hides the coupling; a `findMany(qb => …)` builder callback; and escaping at call sites, which needs an `ESCAPE` clause the caller cannot emit.
 
-**Filtering entries by field data rides declared expression indexes** over
-`json_extract(fields, '$.path')` on `entry_content`, with the index DDL and the
-query SQL emitted from one declaration. Undeclared field filters throw. Rejected:
-generated columns on the shared content table (no precedent, and it killed Craft
-2-4), a typed EAV lookup table, and silent unindexed JSON scans.
-
-**Search is a derived FTS5 external-content table** (`content='entry_content'`,
-trigger-synced, per-field `searchable`), so it indexes one locale per row. Rejected: a `search_index` text column
-queried with `LIKE` (the WordPress and Directus anti-pattern), indexing rendered
-output, and an external engine in core.
-
-**An unrecognised entries-list `where` key throws `UnknownWhereKeyError`.**
-Dropping it silently returned every row. Rejected: warning instead, because the
-output is server-rendered and nobody reads the log.
-
-**A transaction is a scope, not a handle passed by hand.** `transaction(fn)` in
-`database/` stores the Kysely handle in `AsyncLocalStorage`, so `getDb()`
-resolves it and repositories join automatically: no `db` parameter, no
-`txRepository`. Nesting joins the outer scope. Hooks and fire-and-forget work
-stay outside it. Rejected: threading explicit handles, savepoints, and a
-transaction-aware repository.
-
-**better-auth queries through the app's Kysely instance, with its plugins
-stripped.** On a local libsql file, Kysely's `SqliteAdapter` runs one query at a
-time per instance, so a second instance for better-auth brings a second lock,
-and its writes fail with `SQLITE_BUSY` while an app transaction is open.
-`getInstance().withoutPlugins()` keeps the one lock and drops `CamelCasePlugin`,
-which renames the snake_case keys better-auth reads its rows by. better-auth gets
-no `transaction` option: D1 has no interactive transactions, and one held on the
-shared instance would block any app query its hooks make. Rejected: a separate
-dialect per driver for better-auth (the `SQLITE_BUSY` above), and a busy
-timeout, whose wait runs inside libsql's synchronous call and blocks the event
-loop, so the transaction holding the lock cannot commit.
-
-**The `where` DSL is the repository's stable contract; `kysely()` is not.** Core
-code stays inside `createRepository`'s typed methods, so the DSL grows to meet it
-rather than call sites dropping to raw SQL. `kysely()` hands out the Kysely
-handle, the table key and the DSL's own `where` compiler for what is left over:
-aggregates, and expression filters such as the media mime buckets. It is named
-for the engine on purpose — the coupling is greppable, and Kysely types reach the
-published surface only through its return type — and it carries no compatibility
-promise. Rejected: `query()`, which collided with query-as-operation and hid the
-coupling, and a deprecated alias for it, since nothing is live. Prior art:
-`payload.db.drizzle` and `strapi.db.connection`.
-
-**What the `where` DSL grew, and what each name beat.** `or` takes an array of
-full `Where` clauses, OR-ed together and then ANDed with sibling keys; a branch is
-an ordinary `Where`, so nesting falls out of the recursion. There is no `and`,
-because sibling keys already AND and no call site needs `(A OR B) AND (C OR D)` —
-Payload ships both, we grow on demand. `contains` takes plain text and escapes
-`%`, `_` and `\` into a `LIKE … ESCAPE '\'`, so a search for `100%` matches that
-literal text; `like` stays a verbatim pattern. Rejected: escaping at each call
-site, which cannot work without an ESCAPE clause the caller has no way to emit,
-and which every future caller would have to remember. `pluck(column, params)` is
-Knex's and Rails' name, chosen over a `select` param on `findMany` whose return
-type would turn conditional for one caller. `createMany(rows, { onConflict:
-'ignore' })` takes Prisma's method name but spells the option as the SQL it emits
-rather than Prisma's `skipDuplicates`.
-
-**Every mutating entry operation takes `ids` and returns the batch.** A single id
-is a batch of one, so single writes are atomic; explicit-id batches are atomic,
-return their rows, and travel in the request body. `entries/service.ts` is the
-only overload adapter and unwraps `BulkOperationError` for one id, while the HTTP
-error handler looks through the envelope for a `ValidationError` cause and
-answers 422. Best-effort `{ docs, errors }` is reserved for filter-addressed
-operations. Rejected: a Prisma-style `update`/`updateMany` split.
-
-**D1 degrades to sequential writes rather than refusing to boot.** It declares
-`supportsTransactions: false`, and the degrade lives inside the repository
-method, not at call sites. Rejected: a boot-time capability gate — nothing
-declares that a site needs atomicity, so every D1 site would fail to boot, and
-the partial writes are recoverable.
-
-**`users` has a descriptor that describes better-auth's format, not one that
-imposes ours.** ISO-8601 TEXT timestamps and 32-character alphanumeric ids, with
-a baseline-DDL parity test as the proof they agree. `sessions`, `accounts` and
-`verifications` stay hand-authored on `LEGACY_CODECS`. Rejected: teaching the
-parser to accept both timestamp formats.
-
-**`createdBy` is the acting user who wrote the row**, pairing with `createdAt`,
-not the author of the content the row holds. It is `getCurrentUser()?.id`, null
-outside a request, and carries a live FK to `users` — so a test harness injecting
-an identity must seed the user row.
+**Every mutating entry operation is a batch, and one id is a batch of one.** So single writes are atomic, and an explicit-id batch is atomic and travels in the request body. `fromBatch` adapts each method to `id: string | readonly string[]` and unwraps `BulkOperationError` for one id. Best-effort `{ docs, errors }` is for filter-addressed operations only. Rejected: a Prisma-style `update`/`updateMany` split.
 
 ## Config, boot and packaging
 
-**The server loads the config as a module.** The Astro integration takes a path,
-`virtual:astromech/config` re-exports the author's module, and boot happens in
-the injected middleware, so drivers, models and `{ custom: fn }` rules reach the
-serving process. Rejected: copying live values into registries at boot, which
-only worked in dev because a build-time boot left the deployed registries empty.
-The cost is two config evaluations, one of which boots.
+**The server loads the config as a module.** The Astro integration takes a path, `virtual:astromech/config` re-exports the author's module, and boot runs in the injected middleware, so drivers, models and `{ custom: fn }` rules reach the serving process. The cost is two config evaluations. Rejected: copying live values into registries at build time, which leaves the deployed registries empty.
 
-**A moved config is found with `--config`, and the migrations folder is a config
-key.** A site that keeps its config outside the project root passes the same
-path to the integration (`configFile`) and to the CLI (`--config`).
-`migrationsDir` names the app's migrations folder, `./migrations` by default, and
-resolves against the working directory like every other path in the config.
-Rejected: the CLI reading `astro.config.mjs`, which would tie the CLI to Astro; a
-`package.json` field, which Prisma removed in 7.0.0; an environment variable,
-which only respells `--config` and cannot come from a `.env` file the config
-itself loads; and resolving the folder next to the config file (Prisma 7's
-rule), which would make it the one path that does not follow the working
-directory, and which the built server cannot do because it does not know where
-the config file was.
+**A moved config is found with `--config`, and the migrations folder is a config key.** The same path goes to the integration (`configFile`) and the CLI; `migrationsDir` resolves against the working directory like every other path. Rejected: the CLI reading `astro.config.mjs` (ties it to Astro), a `package.json` field, an environment variable (it cannot come from a `.env` the config loads), and resolving next to the config file, which the built server cannot do.
 
-**`ctx.config` is an explicit `Pick`, built field by field, never a spread.**
-Live config makes `ctx.config.storage.put` and `ctx.config.email.driver.send`
-working functions that bypass `ctx.storage`'s key prefix. Rejected: extending a
-strip list, which leaves every new field visible by default.
+**`ctx.config` is an explicit `Pick`, never a spread**, because live config would hand a plugin `ctx.config.storage.put`, bypassing `ctx.storage`'s key prefix. Rejected: a strip list, which exposes every new field by default.
 
-**A capability slot holds exactly what the config declared, normalised, with
-nothing glued in from another key.** App-wide shared resources (`db`, `storage`,
-`email`, `media.image`, `ai`, `scheduler`, `plugins`, per-type
-`entries[].storage`) are declared in config and reached from a registry;
-per-entity behaviour (`validate`, `hooks`, `access`, `url`, `condition`) stays in
-config. The registries survive live config because the config module is not
-importable from all four graphs and evaluates twice under `astro dev`.
+**Shared backends are reached through registries, not read off the config.** `db`, `storage`, `email`, `media.image`, `ai`, `scheduler`, `plugins` and per-type `entries[].storage` are declared in config and read from a registry holding exactly what was declared; per-entity behaviour (`validate`, `hooks`, `access`, `url`) stays in config. Rejected: importing the config wherever a backend is needed, since the config module is not importable from all four module graphs and evaluates twice under `astro dev`.
 
-**`exports` resolves `src`, and `publishConfig.exports` restores `dist` at pack
-time**, so a core edit needs no root build (Payload 4's pattern). Within one
-entry, `types` and `default` must resolve into the same tree, enforced by
-`check:exports`; never compare targets across the two maps. Only Vite-loaded
-subpaths can move, because the config half loads in plain Node with no alias and
-no TypeScript. Rejected: pointing `types` at `src` with relative specifiers,
-de-aliasing 825 `@/` specifiers, and Node `#src/*` subpath imports. The site's
-Vite resolves core's `@/` only for importers inside core's `src`, because a
-global alias collides with a site that aliases `@/` to its own `src`: Vite's
-alias plugin stops at the first entry that matches, so one side's imports fail
-to resolve. Rejected: the global alias.
+**Core keeps two export maps.** `publishConfig.exports` is the `dist` map npm consumers get; the repo's `exports` may point a Vite-loaded subpath (`./middleware`, `./routes/handler.ts`, `./media/Image`) at `src`, while anything the config loads in plain Node stays on `dist`. `check:exports` keeps the keys equal and each entry's `types` and `default` in one tree. The site's Vite resolves core's `@/` only for importers inside core. Rejected: Node `#src/*` subpath imports, and a global `@/` alias, which collides with a site aliasing `@/` to its own `src`.
 
-**A dependency reached only through an opt-in subpath is an optional peer, and
-one the site already instantiates is a required peer.** `sharp`,
-`@libsql/client`, `@libsql/kysely-libsql` and `aws4fetch` each back a single
-driver subpath, so they sit in `peerDependencies` with
-`peerDependenciesMeta.optional`: a Workers site installs no `sharp` binary, and
-`check:node-imports` loads each of those subpaths to prove the peer is reachable
-when a site does install it. `react`, `react-dom`, `better-auth` and `kysely`
-are required peers, so the site and the admin share one copy of each; a second
-React is what `packages/admin/src/components/ui/instance-guard.ts` exists to detect, and a
-second `kysely` or `better-auth` splits the query builder types and the session.
-`linkedom` stays a plain dependency because the root export imports it, so every
-site loads it whatever it configures. Rejected: keeping all of them as
-dependencies, which ships tens of megabytes of native binary to sites that never
-transform an image.
+**A dependency reached only through an opt-in subpath is an optional peer, and one the site already instantiates is a required peer.** Each driver's backing package (`sharp`, `@libsql/client`, `aws4fetch`, …) is optional, so a Workers site installs no `sharp` binary; `check:node-imports` proves each one resolves. `react`, `react-dom`, `better-auth` and `kysely` are required, so the site and the admin share one copy (a second React is what `packages/admin/src/components/ui/instance-guard.ts` detects). Rejected: plain dependencies, which ship native binaries to sites that never use them.
 
-**Codegen emits `export type`, not `export interface`**, so a generated field
-type gets an implicit index signature and satisfies `Entry['fields']`. Rejected:
-a hand-added `[k: string]: unknown`, which reopens the type to typos.
+**A plugin types its own tables onto the site's handle** by extending `AstromechPluginTables` in its own source. Rejected: generating declarations into `.astro/`, which buys nothing because a plugin's tables are fixed by its package. Accepted cost: a plugin in the program but not the config still adds its types.
 
-**A plugin types its own tables onto the site's handle.** Each plugin package
-extends `AstromechPluginTables` with `PluginDB` in a `declare module 'astromech'`
-block in its own source, and `DB` extends that interface, so `db` on a site
-carries every plugin's tables without the site naming them. Rejected: generating
-the declarations into `.astro/` from the installed plugins, which buys nothing
-because a plugin's tables are fixed by its package, not by the site's config.
-Accepted cost: a plugin package in the program but not installed in the config
-still adds its table types.
+**Unset `NODE_ENV` means production, and the middleware refuses requests while `BETTER_AUTH_SECRET` is unset.** Better Auth accepts a public default secret whenever `NODE_ENV` is not `production`. Rejected: Hono's `env()`, and refusing in `build()`, which the CLI's `validate`, `index:rebuild` and `mcp` also run.
 
-**Every environment read goes through `src/env.ts`** (`resolveEnv`,
-`getEnvRecord`, `setEnvSource`), Better Auth's secret included, since Better Auth
-alone reads only `process.env`. Unset `NODE_ENV` means production
-(`resolveNodeEnv`), and a Worker with no named scheduler throws. The Astro
-middleware refuses every request in production while `BETTER_AUTH_SECRET` is
-unset, because Better Auth accepts its public default secret whenever `NODE_ENV`
-is not `production`. `integrations/` holds framework and runtime integrations
-side by side; a runtime earns a directory only when its environment or entry
-point is non-standard, so Node and Vercel have none. Rejected: Hono's
-record-returning `env()`; a `RuntimeIntegration` interface for one member; and
-refusing the missing secret in `build()`, which the CLI's `validate`,
-`index:rebuild` and `mcp` also run without signing a session.
-
-**No runtime is declared: the entry a site deploys says which one it is.**
-`createWorkerEntry` supplies the Worker's bindings and nominates
-`cloudflareCron()`, workerd fills `process.env` from wrangler `vars` so
-`resolveEnv` needs no Cloudflare path of its own, and Node needs nothing.
-Rejected: a `runtime` config key, whose strongest job was refusing
-`d1({ binding })` off Workers, a setup that works in Node through wrangler's
-platform proxy; inheriting from Astro's Cloudflare adapter, whose per-request
-environment Astro 6 removed; and importing `env` from `cloudflare:workers` in
-core, which resolves only inside a workerd bundle while core also loads in plain
-Node for the CLI and the build.
+**No runtime is declared: the entry a site deploys says which one it is.** `createWorkerEntry` supplies bindings and nominates `cloudflareCron()`, and workerd fills `process.env` from wrangler `vars`. Rejected: a `runtime` config key, whose main job would be refusing `d1({ binding })` off Workers, which works in Node through wrangler's proxy; a `RuntimeIntegration` interface with one member; and importing `env` from `cloudflare:workers`, which resolves only inside a workerd bundle.
 
 ## Structure and extension
 
-**`ctx` is the only bridge from a plugin to core.** Plugins load in plain Node at
-Astro config time and cannot resolve `virtual:astromech/config`, so a plugin may
-import `astromech` and `astromech/ui` and nothing else; `astromech/methods` is
-core-internal. Rejected: `ssr.noExternal` (tried, no effect), Node module
-customization hooks (process-wide, deprecated, and they yield two copies of
-core), and VS Code-style loader injection (it needs the host to load plugins).
+**`ctx` is the only bridge from a plugin to core's running application.** Plugins load in plain Node at Astro config time and cannot resolve `virtual:astromech/config`, so a plugin imports only published `astromech` subpaths that load in plain Node (`check:node-imports` verifies them) and reaches the booted application through `ctx`. Rejected: `ssr.noExternal` (no effect), Node module customization hooks (process-wide, deprecated, two copies of core), and loader injection (it needs the host to load plugins).
 
-**Core owns tool composition, because it is security-relevant.** The port is one
-async `ctx.methods.tools({ readOnly? })` returning role-filtered,
-scope-dispatching tools. Rejected: a narrow `ctx.methods.dispatch` (four seams,
-four chances to misorder them), and a `globalThis` registry (untyped, and it
-competes with `ctx`).
+**Core owns tool composition, because it is security-relevant.** One synchronous `ctx.methods.tools({ readOnly? })` returns role-filtered, scope-dispatching tools. Rejected: a narrow `ctx.methods.dispatch` (four seams to misorder), and a `globalThis` registry.
 
-**An app-local plugin declares `root: import.meta.url`.** `definePlugin` cannot
-infer its caller's module URL, and the alternatives (stack-trace parsing,
-build-time transforms) mis-resolve silently across bundlers. A published package
-resolves assets through its `./admin/*` exports subpath instead and needs no
-`root`.
+**An app-local plugin declares `root: import.meta.url`**, because `definePlugin` cannot infer its caller's URL. Rejected: stack-trace parsing and build-time transforms, which mis-resolve silently across bundlers.
 
-**The application instance is the in-process surface, and `astromechClient` is a
-REST wrapper typed by the wire.** No shared contract type spans the two: parity
-is kept by a test. `plugins/runtime/plugin-runtime.ts` imports the module
-services directly, tolerating the entries/runtime mutual reference because it
-resolves at call time. Rejected: a shared `AstromechClient` contract, and
-dependency-inversion ports between the runtime and the modules.
+**The application instance is the in-process surface, and `astromechClient` is a REST wrapper typed by the wire.** A test keeps them in parity. `app-context` and `plugin-runtime` reference each other, tolerated because the reference resolves at call time. Rejected: a shared `AstromechClient` contract, and dependency-inversion ports between the two.
 
-**Authentication is its own module.** `auth/` holds the better-auth wiring,
-session resolution, first-run setup's write of the first admin, and
-better-auth's `sessions`, `accounts` and `verifications` tables. It sits beside
-the content modules and imports `users` to read the row a session names; `users`
-never imports `auth`, so the dependency runs one way. The peers split it the same
-way: Payload keeps an `auth` directory in its core package, Ghost keeps one under
-its server services with `session` nested inside it, and Keystone ships auth as a
-package of its own, `@keystone-6/auth`. The `roles` table moved to `permissions/`
-in the same change, because RBAC is ours rather than a better-auth model.
-Rejected: keeping auth inside `users/`, which is what Strapi's admin package does
-with `auth.ts` and `user.ts` as siblings in one services folder — a session, an
-account and a verification are not users, and the two files that read them were
-the only ones in a content module needing an exception to the rule against
-reading the config registry and the request store ambiently.
+**Authentication is its own module.** `auth/` holds the better-auth wiring, sessions, first-run setup and better-auth's tables, and imports `users`, never the reverse. Rejected: auth inside `users/` (Strapi's layout), because a session, an account and a verification are not users.
 
-**Nothing enforces the layer model.** dependency-cruiser cost more than it
-caught: three ports guarding no real cycle, eight exemptions and hand-written
-rules, and `no-circular` excluding the modules. The layer list stays as
-documented convention in `ARCHITECTURE.md`, and the browser boundary rides on
-`check:boot`'s headless load. Rejected: a browser-only config, eslint
-`import/no-cycle`, and case-by-case relaxation.
+**Nothing enforces the layer model.** The layer list in `ARCHITECTURE.md` is convention; the browser boundary is checked by `shared-browser.test.ts` and `check:boot`'s headless load. Rejected: dependency-cruiser, which cost more than it caught (ports guarding no real cycle, a growing exemption list), eslint `import/no-cycle`, and a browser-only config.
 
-**One hook runner, and a throw always propagates.** `hooks/` holds `addHook`
-and `runHook`; a non-`undefined` handler return replaces the payload;
-there is no try/catch, whatever the event is named. Hooks are not a plugin
-concept — the plugin runtime is one subscriber like any other. Rejected: two
-name-keyed dispatchers where a `:before` substring decided failure semantics and
-`after*` throws were swallowed and logged.
+**One hook runner, and a throw always propagates.** `runHook` has no try/catch, whatever the event is named, and a non-`undefined` return replaces the payload; the plugin runtime is one subscriber like any other. Rejected: failure semantics chosen by name, where `:before` hooks throw and `after*` throws are logged.
 
-**A barrel is an entry point, not navigation.** Re-export barrels exist only
-where something outside reads them: `src/exports/` in core and in the admin
-package, one file per published subpath, plus the two under the admin's
-`src/components/` that its Vite helper aliases. Every other import names the file that declares the symbol.
-`src/types/index.ts` is the exception, kept because it is type-only — 359 imports
-that erase at compile time, so there is no runtime graph to shrink. The name
-`index` is reserved for a file something resolves by path — a tsup entry, a Vite
-alias target, a router route page — so a file holding real code takes the name of
-what it holds instead: `src/env.ts` and `src/transport/http/client.ts`, not an
-`index.ts` a directory down. An eslint selector enforces this, and `sideEffects`
-is an array rather than `false`, because the UI barrels' instance guard, the
-admin entry's field and cell registrations, and every admin component's
-stylesheet do have effects; the admin package's manifest names them. Rejected: barrels as intra-package boundaries — 93%
-of imports already went around them, nothing enforced barrel-only entry, and the
-browser boundary needed the opposite. Also rejected: letting a real-code
-`index.ts` keep its name and carrying it as a lint exception, which grew the
-exception list to thirteen paths and taught readers that `index` means nothing in
-particular. The import-time argument that Vite's performance guide, TkDodo and
-Atlassian make did not reproduce here: vitest's aggregate module-import time
-stayed inside its run-to-run variance on both sides, so the reasons above carry
-the change alone.
+**A barrel is an entry point, not navigation.** Barrels exist only where something outside reads them (`src/exports/`, and the admin's aliased component barrels), plus the `src/types/index.ts` aggregate. `index` is reserved for a file resolved by path, so a file of real code is named for what it holds. `sideEffects` is a list because the UI instance guard, field registrations and stylesheets have effects. Rejected: barrels as intra-package boundaries (most imports bypassed them), and keeping real-code `index.ts` files as lint exceptions, which teaches that `index` means nothing.
 
-**The media route answers like a file server, not like the API.** It lives in
-the Hono app for one terminal handler, but its callers are `<img>` tags and CDNs,
-so it keeps none of the API's response shapes. The handler catches its own
-failures: a missing file is a plain-text 404, a failed transform serves the
-original (as Next.js's image optimiser does), and anything else is a plain-text
-500 marked `no-store`. It answers `GET` and `HEAD` and a 405 for anything else.
-Its `Cross-Origin-Resource-Policy` follows `media.access`: `cross-origin` for
-public media, `same-site` for private, where the API keeps `same-origin`.
-Rejected: scoping `onError` away from the media prefix, which splits error
-handling across two places; and `same-origin` for private media, which is not
-access control yet and would break a site serving its pages and its CMS from two
-subdomains.
+**The media route answers like a file server, not like the API.** Its callers are `<img>` tags and CDNs: a missing file is a plain-text 404, a failed transform serves the original (as Next.js does), anything else is a `no-store` 500. `Cross-Origin-Resource-Policy` is `cross-origin` for public media and `same-site` for private. Rejected: scoping `onError` away from the media prefix, and `same-origin` for private media, which is not access control and breaks a CMS on a sibling subdomain.
 
-**A route declares itself.** One table of `(verb, path, method id)` plus wire
-facts is read by the Hono handler, the OpenAPI document and the fetch client;
-only per-route `args` are hand-written, and a bespoke handler says so with
-`handler: 'bespoke'`. `POST /rpc/:id` reaches any method in the manifest.
-Rejected: build-time client codegen, retiring REST in favour of RPC, and retiring
-the hand-written CLI commands.
+**A route declares itself.** One table of `(verb, path, method id)` feeds the Hono handler, the OpenAPI document and the fetch client, and `POST /rpc/:id` reaches any manifest method. Rejected: build-time client codegen, retiring REST for RPC, and retiring the hand-written CLI commands.
 
-**Multi-id writes over REST are `POST` action routes.** Update, trash, delete,
-restore, publish, unpublish and schedule each have a
-`POST /entries/:type/bulk-<action>` route taking the ids as `ids` in the JSON
-body, as Strapi's admin API does (`POST .../actions/bulkDelete`) and Google's
-AIP-235 recommends for batch deletes. Four of the seven have no HTTP method of
-their own, so collection verbs would still need `POST` for most of them, and a
-`DELETE` body has no defined meaning under RFC 9110. Rejected: Directus's
-`PATCH` and `DELETE` on the collection with a body; Payload's `where` in the
-query string, which addresses a filter rather than a list of ids; AIP's
-`:batchDelete` suffix, which few web APIs outside Google use; and one
-JSON:API-style batch endpoint, which moves the per-action permission checks out
-of the route table into a handler.
+**Multi-id writes over REST are `POST` action routes**, `POST /entries/:type/bulk-<action>` with `ids` in the body, as in Strapi's admin API. Most actions have no HTTP method, and a `DELETE` body has no defined meaning. Rejected: `PATCH`/`DELETE` on the collection (Directus), `where` in the query string (Payload), and one batch endpoint, which moves permission checks out of the route table.
 
-**A service method is one object: access, schemas, effect hints, capability and
-handler together.** `defineServiceMethod` declares a verb the same way in core
-and in plugins, and `access` is one union for both: `'public'`,
-`'authenticated'`, a permission string, `{ permission }` resolved under a
-plugin's permission namespace, or a function of the input answering a permission
-or `null`. Rejected: the contract-catalogue split, a verb in one file and its
-metadata in another keyed by the same name, which tied the two together by
-convention alone and let an input schema drift from the handler it described.
-It is oRPC's contract-first shape without oRPC's benefit, since nothing here
-ships a contract to a client package that has no server code. Prior art: tRPC
-and oRPC procedures, Convex `query`/`mutation`.
+**A service method is one object: access, schemas, effect hints, capability and handler together**, declared the same way in core and plugins, like tRPC procedures. Rejected: a contract catalogue keyed by name apart from the handlers, which lets a schema drift from its handler.
 
-**A handler receives an explicit `AppContext`; nothing below a method reads the
-request store.** The store is a transport detail that builds one context per
-request, and the CLI and cron get a system context instead. Rejected: ambient
-reads (`getCurrentUser()`, `getConfig()`), and Hono's `context-storage` hybrid
-of an ambient `getContext()` beside the explicit `c`, because an escape hatch is
-a second dialect, and because an ambient read cannot tell which plugin is
-asking. The transaction scope stays ambient, as the decision that a transaction
-is a scope rather than a handle passed by hand settles: `ctx.db` is a getter
-resolving through the open `transaction(fn)`, so what is explicit here is the
-caller's identity and the app's ports, not the transaction. Prior art:
-Keystone's `context`, Payload's `req`, Directus services built over
-`accountability`.
+**A handler receives an explicit `AppContext`; nothing below a method reads the request store.** The transport builds one context per request, and the CLI and cron get a system context. Only the transaction scope stays ambient. Prior art: Keystone's `context`, Payload's `req`. Rejected: ambient reads (`getCurrentUser()`, `getConfig()`), and Hono's `context-storage` hybrid, because an escape hatch is a second dialect and an ambient read cannot tell which plugin is asking.
 
-**`defineService` takes a keyed record and stamps each method's name; a method
-never states its own name.** The key is a property access the language already
-checks, so a typo cannot mis-name a manifest entry. Rejected: an array of
-self-named methods, on the `defineGlobal` precedent. A global's key is data that
-lands in rows and URLs, so the object has to carry it, while a method's key is
-not. The hand-written service interfaces in `types/` stay and the record is
-checked against them rather than derived from them: deriving an interface from a
-record whose handlers take a context that itself carries that interface is
-self-referential.
+**`defineService` takes a keyed record and stamps each method's name**, so the compiler catches a mis-named method. The record is checked against the hand-written service interfaces in `types/`. Rejected: self-named methods in an array (a method's name is not data, unlike a global's key), and deriving the interfaces from the record, which is self-referential.
 
-**Input is validated at the method, not at the transport.** `defineService.bind()`
-parses the call against the method's own `input` schema before the handler runs,
-and the plugin service proxy does the same for a plugin method, so an in-process
-call, a hook, a job and an HTTP request all get one check. Rejected: parsing at
-each transport edge, which left in-process callers unchecked and led handlers to
-re-parse the slot the edge had already parsed. The cost is that a transport
-wanting wire-named errors maps the thrown `ValidationError` rather than parsing
-itself: the REST route rebases the field paths it reports under `bodyKey` and
-`wireNames` on the way out.
+**Input is validated at the method, not at the transport.** `bind()` and the plugin service proxy parse each call against the method's `input`, so in-process calls, hooks, jobs and HTTP get one check. Rejected: parsing at each transport edge, which leaves in-process callers unchecked.
 
-**A method's input types come from its `input` schema.** `defineServiceMethod`
-reads both sides off it: the handler's parameter is `z.output` (defaults applied,
-ISO strings coerced to dates) and what a caller passes is `z.input`, which is
-what `MethodsFor` checks against the hand-written service interface and what the
-domain input types (`EntryCreateData`, `UserUpdateData`, and the rest) are
-declared as. A service interface therefore states what the schema really accepts,
-so `schedule` takes `publishedAt: Date | string`. Rejected: a hand-written type
-per payload with `as unknown as z.ZodType<T>` on the schema to reconcile the two,
-one per module, which drifted the moment they disagreed: `users.create` defaults
-`role`, and its handler read as optional a key the parse had already set. One
-cast survives, in `services/json.ts`, where `fields` is an open record at runtime
-and `JsonObject` to the type system: `z.json()` types it exactly but emits a
-recursive `anyOf` into the method manifest, and `z.custom<JsonValue>()` is a
-shape the OpenAPI document generator refuses to render.
+**A method's input types come from its `input` schema**: the handler sees `z.output`, a caller passes `z.input`. Rejected: a hand-written type per payload reconciled by a cast, which drifts silently. One cast remains in `services/json.ts`, where `z.json()` would emit a recursive schema the manifest and OpenAPI generator cannot use.
 
-**A method whose subject is the caller declares `sessionScoped`.** The subject
-is `ctx.user`, read by the handler; the scoped handle
-(`policies/scoped-services.ts`) refuses the call when nobody is signed in. No
-permission is declared, because any signed-in caller may act on their own rows.
-Rejected: a general `sessionArgument: 'userId'` field; and injecting `userId`
-into the input, which the method's own parse strips and which put a key the
-schema does not declare onto the call.
+**A method whose subject is the caller declares `sessionScoped`.** The handler reads `ctx.user`, and the scoped handle refuses the call when nobody is signed in; no permission is needed to act on your own rows. Rejected: a `sessionArgument: 'userId'` field, and injecting `userId` into the input, which the method's parse strips.
 
-**An untrusted call reaches a service only through the scoped handle, plugin
-methods included.** `scopedServices(role)` checks a method's declared `access`
-against the role before the call, for core and plugin methods alike.
-`callMethod` (`policies/call-method.ts`) maps a manifest method onto that
-handle, or onto the raw services for a trusted caller, and is what RPC, the AI
-tool-loop, MCP and the CLI call through. Rejected: plugin RPC checking `access`
-in a function of its own, which left the AI tool-loop no way to scope a plugin
-method and so no plugin methods at all. Rejected too: a runtime catalogue of
-Zod input schemas per transport, since each method already parses its own
-input; and a REST catalogue resolved per request so the mount could check an
-entry type's or a global's permission before reading the body, which each of
-those routes' `precondition` already does.
+**An untrusted call reaches a service only through the scoped handle, plugin methods included.** `scopedServices(role)` checks each method's `access`, and `callMethod` maps a manifest method onto it for RPC, the AI tool loop, MCP and the CLI. Rejected: plugin RPC checking `access` itself, which leaves the tool loop no way to scope plugin methods.
 
-**The admin is its own package, `@astromech/admin`, and core depends on it.**
-The admin app, the component kit and the shell page live in `packages/admin`.
-`astromech/astro` injects the admin into every site, so core depends on the
-admin package, as Strapi's and Directus's cores depend on their admin apps, and
-a site installs core alone. `astromech/ui`, `astromech/ui/app`,
-`astromech/ui/layout` and `astromech/ui/fields` stay, as one-line re-exports,
-so no plugin import changes. The admin still ships as source, because a site's
-own admin components join its module graph at build time, and it publishes a
-Node-side Vite helper holding its aliases, the browser packages it pre-bundles,
-the TanStack Router plugin and the shell's path. Imports inside the admin are
-relative. The admin peers on core and links it in the workspace for its built
-kit, so the two packages depend on each other, which pnpm allows with a
-warning. Rejected: sites installing the admin beside core, Payload's model,
-which suits a UI package that no consumer code joins; and an `@admin/*` alias,
-which the site's Vite would have to register too, in a build where the site may
-already use that name.
+**The admin is its own package, `@astromech/admin`, and core depends on it.** `astromech/astro` injects the admin into every site, so a site installs core alone, as with Strapi and Directus. It ships as source because a site's admin components join its build. Rejected: installing the admin beside core (Payload's model), and an `@admin/*` alias the site's Vite would also have to register.
 
-**The admin splits its bundle by route, so `astromech()` comes before `react()`
-in a site's `integrations`.** The TanStack Router plugin's `autoCodeSplitting`
-loads each route's component as its own chunk, and it refuses to run after
-`@vitejs/plugin-react`, whose transform would reach the route files first.
-Astro adds each integration's Vite plugins in list order, so the order is the
-site's to set, and the integration throws a message naming the fix when
-`react()` comes first. Rejected: reordering Vite's resolved plugin list, which
-Vite does not support; splitting the 26 route files by hand into `.lazy.tsx`
-pairs; and raising `chunkSizeWarningLimit`, which hides a 1.6 MB first load
-rather than shrinking it.
+**The admin splits its bundle by route, so `astromech()` comes before `react()`.** TanStack Router's `autoCodeSplitting` must run before `@vitejs/plugin-react`, and Astro orders Vite plugins by integration. Rejected: reordering Vite's plugin list (unsupported), hand-split `.lazy.tsx` routes, and raising `chunkSizeWarningLimit`.
 
-**The admin bundles only the Lucide icons the config names.** Every icon a site
-or plugin sets is a name in the admin config, known when the integration
-builds it, so `virtual:astromech/admin-icons` imports those names alone and an
-unknown name warns at build time and falls back to the default icon. Rejected:
-looking names up in Lucide's `icons` object, which bundles all 475 kB of them;
-and `lucide-react/dynamic`, which emits one chunk per icon in every site's
-build.
+**The admin bundles only the Lucide icons the config names**, through `virtual:astromech/admin-icons`. Rejected: Lucide's `icons` object (every icon), and `lucide-react/dynamic` (a chunk per icon).
 
-**The browser-safe surface is `astromech/shared`, and a bundle test checks
-it.** `src/exports/shared.ts` names each browser-safe value the admin reads, and
-the admin reaches core only through it, `astromech/fetch` and type-only imports
-from `astromech`; a lint rule refuses any `@/` import and any other
-`astromech/*` subpath from `packages/admin/src/`. `packages/astromech/tests/exports/shared-browser.test.ts`
-bundles the two entries for the browser and fails on a Node builtin, or on a
-core file outside `fields/`, `utilities/`, `errors/`, `types/` and the files it
-lists by path. The declared entry and this test replaced the `*.shared.ts`
-filename suffix, which marked a domain file as browser-safe and which nothing
-checked: the entry says which files the browser reaches, the test fails on
-what they import, and a file an entry newly reaches fails the test until it is
-listed, so the suffix carries nothing the test does not.
-A package boundary does not give that
-check by itself: in Directus issue 26613, subpath exports did not stop
-`node:assert` reaching the browser, because nothing checked what was added to
-the shared package. There is no `browser` export condition. On `./shared` it
-changes nothing, and on `.` the Cloudflare server build may resolve it and get
-the browser subset. Rejected: a `@astromech/shared` package, which adds a third
-publishable unit and, as Directus shows, does not enforce itself; a `browser`
-condition, for the reason above; and keeping the suffix, with or without a lint
-rule to police it, which checks a filename rather than what the bundle reaches.
+**The browser-safe surface is `astromech/shared`, and a bundle test checks it.** The admin reaches core only through `astromech/shared`, `astromech/fetch` and type imports; `packages/astromech/tests/exports/shared-browser.test.ts` bundles both for the browser and fails on a Node builtin or an unlisted core file. Rejected: a `@astromech/shared` package (it does not enforce itself, per Directus issue 26613), a `browser` export condition (the Cloudflare server build may pick it up), and a `*.shared.ts` suffix, which checks a filename rather than what the bundle reaches.
 
-**Every entry type persists through a repository, and the default is named for
-its storage.** The default backend is `createEntriesTableRepository` in
-`entries/repository/entries-table.ts`; a plugin gives a type its own table with
-`tableRepository`. "Custom table" is the WordPress term for plugin data outside
-the shared posts table, so it needs no teaching. Rejected: "table-backed type"
-(implies a second kind of thing, when every entry type is backed by a table);
-"built-in repository" ("built-in" means ships-with-core, and both repositories
-ship with core); `default.ts` / `createDefaultEntryRepository` (greps badly and
-collides with default exports, and only reads as "default" from inside the
-registry).
+**No custom-built repositories.** `EntryRepository` is internal; `tableRepository` is the one way to give a type its own storage, and `EntryType['repository']` takes the branded `CustomTableRepository`. Rejected: publishing `EntryRepository`, a compatibility promise nothing needs.
 
-**No custom-built repositories.** `EntryRepository` is an internal seam between
-the entries service and its persistence, not an extension point; `tableRepository`
-is the only supported way to give a type its own storage. `EntryType['repository']`
-is typed to the branded `CustomTableRepository` (the class `tableRepository`
-returns, nominal through a private member), so a structural implementation no
-longer type-checks. Rejected: publishing `EntryRepository` as a public adapter
-surface — a compatibility promise on an internal contract, for a use case nothing
-needs.
+**Only entry types take storage of their own.** Entry types come in open-ended numbers and a plugin's records belong in its own table. Users are the tables Better Auth signs in against, and media has its seam at the bytes (`StorageDriver`), as with Payload's storage adapters. Rejected: a repository seam on every content module.
 
-**Only entry types take storage of their own.** `tableRepository` gives an entry
-type its own table, because entry types are what sites and plugins declare in
-open-ended numbers, and a plugin's own records (form submissions, redirects)
-belong in a table it owns, as a WordPress plugin keeps a custom table. Users,
-media, settings and notifications read and write core's tables directly. Users
-are the tables Better Auth signs in against, so another store for them would
-have to satisfy Better Auth as well as core. Media already has its seam where the
-bytes live: a `StorageDriver` puts files on the filesystem, R2 or S3, and the
-record stays in core so relationships and "used by" can index it. Payload's
-storage adapters and Strapi's upload providers draw the same line. Rejected: a
-repository seam on every content module, four more internal contracts that no
-caller has asked for.
+**Every id in the relationships index is unique across resources, custom tables included**, because `findByTarget` matches on `targetId` alone. Entries, media and custom rows take ULIDs, users UUIDs, and `tableRepository` refuses an `idColumn` not declared with `col.id()`. Rejected: `sourceType` in the key, which fixes sources but not targets.
 
-**Every id in the relationships index is unique across resources, custom tables
-included.** Both sides of the index rely on it: a source's references are
-replaced by its id and kind, and `findByTarget` and `incomingRelationships` match on
-`targetId` alone. Entries, media and custom-table rows take ULIDs and users take
-UUIDs, so `tableRepository` refuses an `idColumn` not declared with `col.id()`.
-Rejected: adding `sourceType` to the index key, which fixes sources but not
-targets and puts a nullable column in the primary key.
-
-**An entry's type is part of its address.** `EntryRepository.get` and
-`anyLocale` take the type with the id, and the entries-table repository answers
-null for a row of another type, so a by-id operation addressed at the wrong type
-throws `EntryNotFoundError` and REST answers 404. Payload and Strapi answer the
-same way for an id from another collection, since each collection is its own
-table. `tableRepository` holds one type, so it ignores the field. Rejected:
-checking the type after the read and throwing a mismatch error, which put the
-check in every by-id operation, answered REST with a 500, and told the caller
-which type the id belongs to; and making `type` optional, which only mattered
-while `EntryRepository` was expected to have implementors outside core.
+**An entry's type is part of its address.** The repository takes the type with the id, and a row of another type reads as not found (404), as in Payload and Strapi. Rejected: a post-read type check, which answers 500 and reveals the id's real type.
 
 ## AI and the assistant
 
-**AI is an optional core capability that hands out a model.** `src/ai/` sits
-beside `email/` and `cron/` with `required: false` and exposes only
-`getAiModels()`; consumers call the AI SDK's generation functions themselves. It
-is in core rather than the assistant plugin because the plugin boundary would put
-it out of reach of other plugins. `AiConfig.model` is
-`Exclude<LanguageModel, string>`, because `wrapLanguageModel` cannot wrap a
-gateway string, and the live model travels through boot, never through the JSON
-virtual config. The chokepoint survives because boot stores wrapped instances.
-Rejected: a `rewrite()`-style facade (the removed `ContentProvider` port's
-failure mode), and a second provider-agnostic layer.
+**AI is an optional core capability that hands out a model.** `src/ai/` exposes `getModel`/`hasModel`, and consumers call the AI SDK themselves; it is in core so every plugin can reach it. `AiConfig.model` is `Exclude<LanguageModel, string>` because `wrapLanguageModel` cannot wrap a gateway string, and the live model travels through boot, never the JSON virtual config. Rejected: a `rewrite()`-style facade, and a second provider-agnostic layer.
 
-**Built on Vercel's AI SDK**, not `@anthropic-ai/sdk` (vendor-locked, no
-`wrapLanguageModel`), not LangChain JS or Mastra (agent frameworks at the wrong
-altitude), not LlamaIndex.TS (RAG-first). The cost accepted is roughly three
-breaking majors a year, kept off the plugin surface. The assistant still refuses
-non-Anthropic models, because tool search with deferred loading has no
-provider-neutral spelling.
+**Built on Vercel's AI SDK**, not `@anthropic-ai/sdk` (vendor-locked, no `wrapLanguageModel`), LangChain JS or Mastra (agent frameworks at the wrong level), or LlamaIndex.TS (RAG-first). The cost is frequent breaking majors, kept off the plugin surface. The assistant still requires Anthropic models, because deferred tool loading has no provider-neutral spelling.
 
-**The assistant transcript carries Anthropic content blocks verbatim in both
-directions**, filtered only at render, because resuming a paused `tool_use` needs
-server-minted ids and unmodified `thinking` blocks. Errors are separate
-`{ kind: 'message' | 'error' }` drawer entries, not blocks. Rejected: the AI
-SDK's UIMessage/ModelMessage split, and a hand-written local block union.
+**The assistant transcript carries Anthropic content blocks verbatim**, filtered only at render, because resuming a paused `tool_use` needs server-minted ids and unmodified `thinking` blocks. Rejected: the AI SDK's UIMessage/ModelMessage split, and a hand-written block union.
 
-**The assistant keeps one resumable session per user, replaced on new chat** —
-not a browsable library, which brings an unbounded table, a retention policy and
-a cross-user disclosure question. "What did the assistant do to my site" belongs
-to an audit trail at the `scopedServices` choke point. Rejected: storing the
-acting role on the session row, a second source of truth.
+**The assistant keeps one resumable session per user, replaced on new chat.** Rejected: a browsable library (unbounded storage, retention, cross-user disclosure), and storing the acting role on the session. "What did the assistant do to my site" belongs to an audit trail at the `scopedServices` choke point.
 
-**An approval is a server-held row, not a value in the transcript.** A mutating
-call pauses into `plugin_assistant_approvals` (user id, `tool_use` id, method,
-arguments), is approved by a separate authenticated request, and executes from
-the row's stored arguments — so a rewritten transcript cannot change what runs.
-Rejected: reusing `policies/confirmation.ts` (the model answers its own
-question), and HMAC-signing the paused turn (no replay protection without server
-state).
+**An approval is a server-held row, not a value in the transcript.** A mutating call pauses into `plugin_assistant_approvals` and runs from the row's stored arguments once a separate request approves it, so a rewritten transcript cannot change what runs. Rejected: `policies/confirmation.ts` (the model answers its own question), and signing the paused turn (no replay protection).
 
-**The assistant loop runs on `streamText` and keeps its own approval gate.** A
-mutating tool declares no `execute`, and that loop halt is the gate.
-`smoothStream` is banned: it drops reasoning `providerMetadata` into the stored
-transcript. Rejected: the AI SDK's built-in tool approvals, because approved
-arguments are re-read from client-posted history and
-`experimental_toolApprovalSecret` gives neither replay protection nor user
-binding.
+**The assistant loop runs on `streamText` with its own approval gate**: a mutating tool declares no `execute`. `smoothStream` is banned because it drops reasoning metadata from the stored transcript. Rejected: the AI SDK's tool approvals, which re-read arguments from client-posted history with no replay protection or user binding.
 
-**Rich text crosses every boundary as HTML**, through `renderRichText` and
-`parseRichText` over one ProseMirror extension set. `parseRichText` throws rather
-than returning empty, because it is a write path. Rejected: segments (cannot
-express structural change, no cross-block context), markdown (loses a link's
-`target`, `rel` and `class`), raw ProseMirror JSON (private format, verbose, and
-models cannot produce it), and `@tiptap/html` (needs `window`, a runtime
-`happy-dom` peer, and a duplicate `@tiptap/core`). The trade: structure
-preservation on translate is prompt plus human review, not a guarantee.
+**Rich text crosses every boundary as HTML**, through `renderRichText` and `parseRichText` over one ProseMirror extension set; `parseRichText` throws rather than returning empty, because it is a write path. Rejected: segments (no structural change), markdown (loses a link's `target`, `rel` and `class`), raw ProseMirror JSON (models cannot produce it), and `@tiptap/html` (needs `window`). The trade: translation preserves structure by prompt and review, not by guarantee.
 
 ## Product shape
 
-**Globals are content, config is code, secrets are env-only, and core ships no
-settings page.** Runtime config and secrets live in `astromech.config.ts` and
-`.env`; editor-owned site-wide values are globals, declared with `defineGlobal`
-and stored in the `globals` tables. `settings` holds only the naked `plugin:*`
-key-value class: no fields, no locales, no statuses. Rejected: a WordPress-style
-General Settings page, and admin-editable secrets.
+**Globals are content, config is code, secrets are env-only, and core ships no settings page.** Config and secrets live in `astromech.config.ts` and `.env`; editor-owned site-wide values are globals. Rejected: a WordPress-style General Settings page, and admin-editable secrets.
 
-**Form notifications are one `notifications` blocks field, and spam protection is
-an open `SpamProvider` contract** with `turnstile()` and `recaptcha()` factories,
-so a site can supply its own. There is no separate confirmation concept: an
-`{{email}}` merge tag in `to` decides the recipient. Rejected: a repeater, which
-cannot vary its shape per notification kind, and an internal-only spam registry.
+**Form notifications are one `notifications` blocks field, and spam protection is an open `SpamProvider` contract** with `turnstile()` and `recaptcha()` factories. An `{{email}}` merge tag in `to` picks the recipient. Rejected: a repeater, which cannot vary its shape per kind, and an internal-only spam registry.
 
 ## Toolchain
 
-**The Node floor is 22.13**, declared by all eight published packages, with
-`target: "node22"` in tsup and `@types/node` on `^22`. pnpm 11 requires it, and
-an untested range is a promise nothing backs. CI runs the floor and the Active
-LTS (22 and 24) for Test and Boot; lint, typecheck and build run on 24 alone,
-since their output does not vary by runtime. `.nvmrc` names 24. Rejected: an
-unverified `>=20.0.0`, and relying on peer-dependency inheritance for the floor.
+**The Node floor is 22.13**, in every published package's `engines`, and CI tests the floor and the Active LTS. Rejected: an unverified `>=20`, and inheriting the floor from peer dependencies.
 
-**Core's and the admin's tests share one module graph per worker.** vitest's default `forks`
-pool rebuilt the graph for every one of 222 files, spending 329 seconds of
-worker CPU on imports against 122 running test bodies, so the suite runs
-`pool: 'threads'` with `isolate: false` and a `tests/_support/isolated-tests.ts`
-list of files that opt back into per-file isolation. Threads alone, isolation
-kept, took the run from 61s to 48s; dropping isolation took it to 32s. Six files
-failed without isolation, every one a `vi.mock` of a module another file had
-already imported. Each package's list holds every file that mocks a module,
-stubs a global or writes a shared global, not only the ones that fail today,
-because a leaked mock can as easily make an unrelated test pass for the wrong
-reason as fail. Each package's `tests/isolation-list.test.ts` runs the same
-check, `packages/astromech/tests/_support/isolation-check.ts`, over its own
-tree, and fails when its list and its files disagree.
-Rejected: vitest's documented `*.non-isolated.test.ts` suffix, which inverts the
-default the wrong way round when 183 of 222 files are safe; `deps.optimizer.ssr`,
-measured slower at 65s; and folding the three package suites into one root
-workspace, which matched three separate invocations to within a second and broke
-`tests/integrations/cloudflare/d1-local-emulation.test.ts`, which finds
-`packages/astromech/wrangler.jsonc` from the working directory.
+**Tests share one module graph per worker.** Core and the admin run `pool: 'threads'` with `isolate: false`; a file that mocks a module or writes a shared global opts back into isolation through `tests/_support/isolated-tests.ts`, which `tests/isolation-list.test.ts` checks. Rejected: the default `forks` pool (it rebuilds the graph per file), vitest's `*.non-isolated.test.ts` suffix (inverted, when most files are safe), and one root workspace (no faster, and it breaks tests that find config from the working directory).
 
-**Coverage thresholds are per directory and only ever raised.** Each top-level
-directory of `packages/astromech/src` has its own lines, functions, branches and
-statements threshold in `packages/astromech/vitest.config.ts`, set one below what
-it measures, and a change that raises a directory's coverage raises its
-threshold. Rejected: one global number, because an average hides a directory
-near zero behind well-covered ones.
+**Coverage thresholds are per directory and only raised.** Rejected: one global number, whose average hides a directory near zero.
 
-**Drift is reported, not enforced.** A second copy of a helper, a cast or a
-query key is found by a report read at review (`pnpm run report:drift`),
-and review decides whether to share it, schedule it or keep it. Rejected: lint
-bans on code shapes and a count that may only fall, which would repeat what
-dependency-cruiser did to the layer model, forcing awkward structure to satisfy
-a rule; and periodic clean-up passes, 17 of which aligned the code once each
-while the drift came back.
+**Drift is reported, not enforced.** `pnpm run report:drift` finds a second copy of a helper, a cast or a query key, and review decides whether to share it, schedule it or keep it. Rejected: lint bans on code shapes and a count that may only fall (they force awkward structure, as dependency-cruiser did), and periodic clean-up passes, after which the drift returns.
 
-**knip checks for unused files, exports and dependencies.** `pnpm run check:unused`
-runs it over the whole workspace with the config in `knip.json`, as Astro and
-better-auth do. Its first run found a live bug beside the dead code: plugin email
-overrides were typed and read but never registered. Rejected: `ts-prune`, which
-is unmaintained, and no check at all.
-
-**`check:install` follows the installation guide on packed tarballs, and its
-fixture is the guide itself.** Every other check runs against workspace links,
-which Vite never pre-bundles, beside a demo whose old baseline migration carried
-tables a new site's `db:generate` did not create. A hand-run packed install found
-both defects that way. The script takes the files, the install command and the
-CLI commands from the fenced blocks in `apps/docs/installation.md`, so the page
-cannot drift from what is tested, and it fails on a warning from the install,
-`astro dev`, `astro build` or the browser console beyond a short commented
-allowlist, since a new user sees each one. It runs in CI under npm and pnpm,
-on every push and weekly, and stays out of `verify` because it needs the npm
-registry. Rejected: a fixture site in the repo, which drifts from the guide; and
-a stage in `verify`, which would stop the gate running offline.
+**`check:install` follows the installation guide on packed tarballs.** Workspace links hide packaging and generator defects, and the script reads its commands from `apps/docs/installation.md`, so the guide cannot drift from what is tested. Rejected: a fixture site, which drifts from the guide, and a stage in `verify`, which would stop the gate running offline.
 
 ## Reserved words
 
-These words are taken. Using one for something else costs a reader more than a
-plain name would: they arrive with the wrong model and have to unlearn it.
+These words are taken; what each term means is in `TERMINOLOGY.md`. This section keeps the rejected alternatives recorded nowhere else.
 
-- **driver** — a pluggable backend owning a connection to an external system
-  (`DatabaseDriver`, `StorageDriver`, `EmailDriver`). Not "adapter", which is
-  reserved for reshaping a mismatched interface internally.
-- **service, method, client, API** — one noun per role, never reused. A service
-  is a module's callable operations, a method is one operation, a client is an
-  assembled consumer object (`astromechClient`), and API means the HTTP surface
-  alone. Wire names keep theirs: `entries.publish`, `AstromechApiError`.
-  Rejected: reviving "SDK", and bare module exports.
-- **storage** — file and blob storage, nothing else. Database access is a
-  **repository** (`createXRepository`, `XRepository`, `EntryRow`). Rejected:
-  `store`, `persistence`, and renaming the file side to `blob/`.
-- **encoded** — a value's form at the driver boundary (`EncodedData`,
-  `EncodedCellBase`); the declared SQL type is **columnType**. Rejected: `column`
-  (taken), and Drizzle's `driverParam` (reads backwards for a select cell).
-- **access** — permission, and nothing else.
-- **resource** — the superordinate noun for the four field-bearing things: entry,
-  global, user, media item. The document validators are resource
-  validators. Rejected: `record` (database-flavoured, already refused for
-  entries), and `document` (collides with a ProseMirror doc).
-- **module** — everything under `src/`; the six business ones are the content
-  modules, and the shelf below them has no group name. Rejected: "domains" (DDD
-  bounded-context freight), "infrastructure", "primitives", and "ports" for the
-  `PluginContext` members.
-- **layout field** — a structural field with no name (an unnamed `group`,
-  `accordion`, `tab`, and `tabs`), after Payload. Data-bearing nesting types are
-  just nested fields. Rejected: "chrome" and "container" as category words.
-- **merge tag** — a `{{token}}` in a form email. Rejected: "placeholder", taken
-  by a field's input hint.
-- **policies/** — Laravel and Pundit-style authorization policies, over
-  `guards/`: NestJS `canActivate` guards misdescribe the advisory and structural
-  ones, and `policies/` pairs with `permissions/`.
-- **tables.ts** — `defineTable` tables live in `<module>/tables.ts`, plural even
-  for a single table, and a plugin's ship from `src/tables/` published as
-  `./tables`. **schema.ts** means Zod request validation only, so a module
-  without validation has no `schema.ts`. Rejected: `schema/` for descriptors,
-  ambiguous with Zod schemas.
-- **type** — an entry type's identifier inside `entries/`. Rejected: `typeName`
-  (inaccurate for a qualified id like `redirects/redirect`), and `typeId`
-  (redundant in-domain).
-- **or** — the boolean combinator in a repository `where` clause, so no table may
-  declare a column called `or`. The compiler reads every other key as a column,
-  which would shadow it; `createRepository` throws at construction rather than
-  letting a query silently drop the filter.
-
-A public subpath names its source directory (`astromech/database/*`,
-`astromech/media/image/*`). `astromech/ui` is the one exception, because "ui" is
-what a plugin author types.
+- **tables.ts / schema.ts**: `defineTable` tables live in `<module>/tables.ts` (plural even for one table), and `schema.ts` holds Zod request validation. Rejected: `schema/` for table descriptors, ambiguous with Zod.
+- **type**: an entry type's identifier. Rejected: `typeName` (wrong for a qualified id like `redirects/redirect`) and `typeId` (redundant).

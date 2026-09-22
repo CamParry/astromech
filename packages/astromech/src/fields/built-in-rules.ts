@@ -162,7 +162,8 @@ export const validateDate: FieldValidator = async (ctx) => {
  * Rejects a populated entry object, which is what a caller writing back an
  * expanded read would send, and a relationship id whose entry is of a type other
  * than the declared `target`. Whether the id resolves is NOT checked: a dangling
- * id is dropped by the write pipeline, not rejected (`DECISIONS.md`).
+ * id is dropped by the write pipeline, not rejected (`DECISIONS.md`,
+ * "`relationships` is a derived index").
  */
 export const validateReference: FieldValidator = async (ctx) => {
     const many = ctx.field.multiple === true;

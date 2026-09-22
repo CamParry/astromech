@@ -4,13 +4,12 @@ Filtering and sorting entries by a value inside their own field data — "all
 posts where `featured` is true", "products ordered by `price`".
 
 **Direction is locked:** per-field **declared expression indexes** over
-`json_extract(fields, '$.path')`, with the index DDL and the query SQL emitted
-from one declaration.
-`DECISIONS.md` has the
-reasoning, the fourteen-CMS survey behind it, and the rejected alternatives
-(promoted generated columns, a typed lookup table, allowing unindexed JSON
-filtering). Table-backed entry types remain the ceiling for a type that
-outgrows the shared table.
+`json_extract(fields, '$.path')` on `entry_content`, with the index DDL and the
+query SQL emitted from one declaration; a filter on an undeclared field throws.
+Rejected: generated columns on the shared content table (no precedent, and they
+sank Craft 2 to 4), a typed EAV lookup table, and silent unindexed JSON scans.
+Table-backed entry types remain the ceiling for a type that outgrows the shared
+table. When this ships, the choice gets a `DECISIONS.md` entry.
 
 ## The state today (all verified)
 
@@ -18,7 +17,7 @@ outgrows the shared table.
   `slug`, `title`, `id`, `references` (`buildListWhere` in
   `packages/astromech/src/entries/repository/entries-table.ts`). Anything
   else throws `UnknownWhereKeyError`
-  (`DECISIONS.md`), and that stays: querying a
+  (`DECISIONS.md`, "An unknown entries-list `where` or sort key throws"), and that stays: querying a
   field with no declared index must throw naming the field path and the
   remediation, never silently full-scan. On D1 an unindexed scan is billed per
   row read against a single-threaded database, so a silent slow success is

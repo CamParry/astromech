@@ -26,8 +26,9 @@ const nonBarrelIndexModules = [
     'pages/.*index',
 ];
 
-// Internal barrels are removed (`decisions/0093`). Only `src/exports/` re-exports
-// one, so every other file names the module that declares the symbol.
+// No internal barrels (DECISIONS.md, "A barrel is an entry point, not navigation").
+// Only `src/exports/` re-exports, so every other file names the module that
+// declares the symbol.
 const noBarrelImport = [
     'ImportDeclaration',
     'ExportNamedDeclaration',
@@ -40,7 +41,7 @@ const noBarrelImport = [
         // slash in the alternation is escaped before it goes into the selector.
         `[source.value!=/\\/(${nonBarrelIndexModules.map((m) => m.replaceAll('/', '\\/')).join('|')})$/]`,
     message:
-        'Internal barrels are removed — import the file that declares the symbol (see decisions/0093).',
+        'Internal barrels are removed — import the file that declares the symbol (see DECISIONS.md, "A barrel is an entry point, not navigation").',
 }));
 
 // Core's globals share one `globalThis.__astromech` namespace, declared once in

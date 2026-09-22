@@ -18,9 +18,8 @@ owner's API key, and it is not what the drawer is for.
 
 **A system prompt shapes the default, it is not a boundary.** The enforcing
 limits are the tool surface, `readOnly` and the permission scope, and all three
-are built. A spend or rate cap is not one of them and is not coming —
-`DECISIONS.md` records why that belongs in the
-provider's dashboard.
+are built. A spend or rate cap is not one of them and is not coming: it belongs in
+the provider's account settings, not in Astromech.
 
 So whatever ships here changes what the model does by default, not what it is
 able to do. Write that into the work rather than discovering it later.

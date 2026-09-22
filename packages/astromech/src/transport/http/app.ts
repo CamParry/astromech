@@ -151,9 +151,9 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
         return c.json({ success: true });
     });
 
-    // A catch-all because Better Auth owns its route surface — see
-    // `DECISIONS.md`. Built
-    // per request: at construction it would open a dialect in the CLI and MCP.
+    // A catch-all because Better Auth owns its route surface, so core does not
+    // list its routes. Built per request: at construction it would open a
+    // dialect in the CLI and MCP.
     app.on(['GET', 'POST'], `${api}/auth/*`, (c) => getAuth().handler(c.req.raw));
 
     // Plugin RPC + raw routes enforce access per-method (incl. public), so
