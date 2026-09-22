@@ -1,6 +1,7 @@
 import type { ResolvedConfig } from '@/types/index';
 import { describe, expect, it } from 'vitest';
 import { generateClientTypes } from '@/codegen/type-generator';
+import { tab, tabs } from '@/fields/builder';
 
 /**
  * Golden baseline locking the EXACT generated output across every data field
@@ -78,12 +79,19 @@ const ALL_FIELDS = [
         fields: [{ name: 'tLabel', type: 'text' }],
     },
     { name: 'fBlocks', type: 'blocks' },
-    // Layout field wrapping data fields — flattened, children keep top-level keys.
+    // Unnamed group wrapping data fields — flattened, children keep top-level keys.
     {
-        name: 'fSection',
-        type: 'section',
+        type: 'group',
         fields: [{ name: 'sInside', type: 'text' }],
     },
+    // A private unnamed group hides every field inside it from the public shape.
+    {
+        type: 'group',
+        private: true,
+        fields: [{ name: 'pInside', type: 'text' }],
+    },
+    // A named tab nests its fields under its name.
+    tabs({ fields: [tab('fTab', { fields: [{ name: 'tabInside', type: 'text' }] })] }),
 ];
 
 describe('type-generator — golden output (all field types, both shapes)', () => {

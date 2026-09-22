@@ -349,8 +349,7 @@ describe('collectRelationshipSchemaPaths', () => {
     it('unwraps layout fields, which hold no data key', () => {
         const defs: Field[] = [
             {
-                name: 'main',
-                type: 'section',
+                type: 'group',
                 fields: [{ name: 'author', type: 'relationship', target: 'people' }],
             },
         ];

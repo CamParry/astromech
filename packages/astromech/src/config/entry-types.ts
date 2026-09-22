@@ -10,11 +10,8 @@ import type {
     ResolvedEntryCapabilities,
     ResolvedEntryType,
 } from '@/types/index';
-import {
-    assertUniqueDataNames,
-    LAYOUT_TYPES,
-    validateFieldTree,
-} from '@/config/validate/field-tree';
+import { assertUniqueDataNames, validateFieldTree } from '@/config/validate/field-tree';
+import { isLayoutField } from '@/fields/flatten';
 
 /**
  * Resolve the capability set for an entry type. When the repository supports a
@@ -98,8 +95,8 @@ export function toResolvedFields(fields: EntryFields | undefined): ResolvedEntry
  */
 function collectSearchable(nodes: Field[], out: string[]): void {
     for (const node of nodes) {
-        if (LAYOUT_TYPES.has(node.type)) {
-            collectSearchable(node.fields ?? [], out);
+        if (isLayoutField(node)) {
+            collectSearchable(node.fields, out);
             continue;
         }
         if (node.searchable === true) out.push(node.name);
@@ -120,8 +117,8 @@ export function toResolvedEntryType(
     assertEntryTypeValid(typeKey, entryType, repositorySupports);
 
     const resolvedFields = toResolvedFields(entryType.fields);
-    validateFieldTree(typeKey, resolvedFields.main, false);
-    validateFieldTree(typeKey, resolvedFields.sidebar, false);
+    validateFieldTree(typeKey, resolvedFields.main);
+    validateFieldTree(typeKey, resolvedFields.sidebar);
     assertUniqueDataNames(typeKey, resolvedFields);
 
     // Derive search from searchable fields if not explicitly set.

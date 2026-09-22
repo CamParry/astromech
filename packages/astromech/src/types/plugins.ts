@@ -17,7 +17,7 @@ import type {
     StorageObject,
 } from './config';
 import type { Permission } from './domain';
-import type { Field, FieldValidator } from './fields';
+import type { DataField, FieldValidator } from './fields';
 import type { PluginHooks } from './hooks';
 import type { ServiceMethod, ToolDefinition } from './methods';
 import type { TypedEntriesService } from './typed-entries';
@@ -271,7 +271,7 @@ export type PluginFieldTypeRegistration = {
      * Return `null` for a presentational field that persists no data (e.g. a
      * preview) so it is omitted from the generated type entirely.
      */
-    typeGen?: (field: Field) => string | null;
+    typeGen?: (field: DataField) => string | null;
     /**
      * Server-side validator — the type-intrinsic rule for this custom field,
      * enforced by the field pipeline on every mutation (not just the browser).

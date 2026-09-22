@@ -5,6 +5,7 @@
 import type { Field, ResolvedEntryFields } from '@/types/fields';
 import type { ResolvedConfig } from '@/types/index';
 import { parseEntryTypeId, resolveEntryType } from '@/entries/entry-types';
+import { isLayoutField } from '@/fields/flatten';
 
 /**
  * Any relationship field whose `target` is qualified (`{plugin}/{type}`) must
@@ -16,7 +17,7 @@ export function assertQualifiedRelationshipTargets(
 ): void {
     const checkNodes = (ownerKey: string, nodes: Field[]): void => {
         for (const field of nodes) {
-            if (field.type === 'relationship') {
+            if (!isLayoutField(field) && field.type === 'relationship') {
                 const target = field.target;
                 if (target && parseEntryTypeId(target)) {
                     if (resolveEntryType(config, target) === undefined) {

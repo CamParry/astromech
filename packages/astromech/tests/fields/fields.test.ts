@@ -9,7 +9,6 @@ import {
     group,
     number,
     relationship,
-    section,
     select,
     t,
     tab,
@@ -136,58 +135,110 @@ describe('field factories — nested fields (name-first, own data key)', () => {
     });
 });
 
-describe('field factories — layout fields (name-first, flat, presentational)', () => {
-    it('section(name, { fields }) — label omitted, derived by the renderer', () => {
-        const result = section('content', { fields: [richtextStub()] });
-        expect(result).toMatchObject({ name: 'content', type: 'section' });
-        expect(result.label).toBeUndefined();
-        expect(result.fields).toHaveLength(1);
-    });
-
-    it('section(name, { label, fields }) — explicit label kept', () => {
-        const result = section('content', {
+describe('field factories — structural fields (a name is always a data key)', () => {
+    it('group({ label, description, fields }) is an unnamed layout field', () => {
+        const result = group({
             label: 'Page Content',
+            description: 'Shown on the page',
             fields: [richtextStub()],
         });
-        expect(result).toMatchObject({
-            name: 'content',
-            type: 'section',
+        expect(result).toEqual({
+            type: 'group',
             label: 'Page Content',
+            description: 'Shown on the page',
+            fields: [richtextStub()],
+        });
+        expect(result.name).toBeUndefined();
+    });
+
+    it('group(name, { boxed: false, fields }) keeps the name as a data key', () => {
+        const result = group('seo', { boxed: false, fields: [text('title')] });
+        expect(result).toEqual({
+            name: 'seo',
+            type: 'group',
+            boxed: false,
+            fields: [{ name: 'title', type: 'text' }],
         });
     });
 
-    it('accordion(name, { collapsed, fields })', () => {
+    it('accordion({ label, collapsed, fields }) stores nothing itself', () => {
+        const result = accordion({
+            label: 'Advanced',
+            collapsed: true,
+            fields: [number('cache_ttl')],
+        });
+        expect(result).toEqual({
+            type: 'accordion',
+            label: 'Advanced',
+            collapsed: true,
+            fields: [{ name: 'cache_ttl', type: 'number' }],
+        });
+    });
+
+    it('accordion(name, …) wraps an unboxed group carrying the name', () => {
         const result = accordion('advanced', {
             collapsed: true,
             fields: [number('cache_ttl')],
         });
-        expect(result).toMatchObject({
-            name: 'advanced',
+        expect(result).toEqual({
             type: 'accordion',
+            label: 'Advanced',
             collapsed: true,
-        });
-        expect(result.label).toBeUndefined();
-    });
-
-    it('tabs({ fields: [tab(...)] })', () => {
-        const result = tabs({
             fields: [
-                tab('content', { label: 'Content', fields: [text('title')] }),
-                tab('seo', { fields: [text('meta')] }),
+                {
+                    name: 'advanced',
+                    type: 'group',
+                    boxed: false,
+                    fields: [{ name: 'cache_ttl', type: 'number' }],
+                },
             ],
         });
+    });
+
+    it('tab(name, { label, fields }) wraps an unboxed group carrying the name', () => {
+        const result = tab('seo', {
+            label: 'SEO',
+            description: 'Search listing',
+            private: true,
+            fields: [text('title')],
+        });
+        expect(result).toEqual({
+            type: 'tab',
+            label: 'SEO',
+            description: 'Search listing',
+            private: true,
+            fields: [
+                {
+                    name: 'seo',
+                    type: 'group',
+                    boxed: false,
+                    label: 'SEO',
+                    fields: [{ name: 'title', type: 'text' }],
+                },
+            ],
+        });
+    });
+
+    it('tabs({ fields: [tab(...)] }) has no name', () => {
+        const result = tabs({
+            fields: [
+                tab({ label: 'Content', fields: [text('title')] }),
+                tab({ label: 'Meta', fields: [text('meta')] }),
+            ],
+        });
+        expect(result.name).toBeUndefined();
         expect(result.type).toBe('tabs');
         expect(result.fields).toHaveLength(2);
-        expect(result.fields?.[0]).toMatchObject({
-            name: 'content',
+        expect(result.fields[0]).toEqual({
             type: 'tab',
             label: 'Content',
+            fields: [{ name: 'title', type: 'text' }],
         });
     });
 
     it('tabs() forwards `private` like its layout siblings', () => {
         const result = tabs({ private: true, fields: [] });
-        expect(result).toMatchObject({ name: 'tabs', type: 'tabs', private: true });
+        expect(result).toEqual({ type: 'tabs', private: true, fields: [] });
     });
 });
 
@@ -197,11 +248,10 @@ describe('t() label descriptor', () => {
     });
 
     it('a layout field carries a `t()` label descriptor in options', () => {
-        const node = section('seo', {
+        const node = group({
             label: t('seo.section'),
             fields: [text('metaTitle')],
         });
-        expect(node.name).toBe('seo');
         expect(node.label).toEqual({ $t: 'seo.section' });
     });
 });

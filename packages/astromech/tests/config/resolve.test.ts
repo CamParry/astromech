@@ -4,11 +4,13 @@ import type {
     AstromechConfig,
     DatabaseDriver,
     EntryType,
+    Field,
     PluginDefinition,
     StorageDriver,
 } from '@/types/index';
 import { describe, expect, it } from 'vitest';
 import { resolveConfig } from '@/config/resolve';
+import { block, blocks, group, repeater, tab, tabs, text, tree } from '@/fields/builder';
 
 const driver: DatabaseDriver = {
     type: 'test',
@@ -262,6 +264,14 @@ describe('resolveConfig undefined fields', () => {
 });
 
 describe('resolveConfig structural validation', () => {
+    const resolvePost = (fields: Field[]) =>
+        resolveConfig({
+            db: driver,
+            storage: storageDriver,
+            entries: { post: { single: 'Post', plural: 'Posts', fields } },
+            plugins: [],
+        });
+
     it('throws when a tab appears outside of tabs', () => {
         expect(() =>
             resolveConfig({
@@ -271,7 +281,7 @@ describe('resolveConfig structural validation', () => {
                     post: {
                         single: 'Post',
                         plural: 'Posts',
-                        fields: [{ name: 'bad', type: 'tab', fields: [] }],
+                        fields: [{ type: 'tab', label: 'Bad', fields: [] }],
                     },
                 },
                 plugins: [],
@@ -290,7 +300,6 @@ describe('resolveConfig structural validation', () => {
                         plural: 'Posts',
                         fields: [
                             {
-                                name: 'myTabs',
                                 type: 'tabs',
                                 fields: [{ name: 'oops', type: 'text' }],
                             },
@@ -334,11 +343,9 @@ describe('resolveConfig structural validation', () => {
                         fields: [
                             { name: 'title', type: 'text' },
                             {
-                                name: 'myTabs',
                                 type: 'tabs',
                                 fields: [
                                     {
-                                        name: 'content',
                                         type: 'tab',
                                         fields: [{ name: 'title', type: 'text' }],
                                     },
@@ -350,7 +357,7 @@ describe('resolveConfig structural validation', () => {
                 plugins: [],
             })
         ).toThrow(
-            /post.*duplicate field name "title".*`main.title` and `main.myTabs.content.title`/
+            /post.*duplicate field name "title".*`main.title` and `main\[1\]\[0\].title`/
         );
     });
 
@@ -400,49 +407,111 @@ describe('resolveConfig structural validation', () => {
         ).toThrow(/post.*duplicate field name "title"/);
     });
 
-    it('allows two `tabs` containers in one array — layout names hold no value', () => {
+    it('allows two `tabs` containers in one array', () => {
         expect(() =>
-            resolveConfig({
-                db: driver,
-                storage: storageDriver,
-                entries: {
-                    post: {
-                        single: 'Post',
-                        plural: 'Posts',
-                        fields: [
-                            { name: 'tabs', type: 'tabs', fields: [] },
-                            { name: 'tabs', type: 'tabs', fields: [] },
-                        ],
-                    },
-                },
-                plugins: [],
-            })
+            resolvePost([
+                tabs({ fields: [tab({ label: 'One', fields: [text('a')] })] }),
+                tabs({ fields: [tab({ label: 'Two', fields: [text('b')] })] }),
+            ])
         ).not.toThrow();
     });
 
-    it('allows two sibling tabs sharing a name', () => {
+    it('throws when a named tab repeats a sibling field name', () => {
         expect(() =>
-            resolveConfig({
-                db: driver,
-                storage: storageDriver,
-                entries: {
-                    post: {
-                        single: 'Post',
-                        plural: 'Posts',
-                        fields: [
-                            {
-                                name: 'myTabs',
-                                type: 'tabs',
-                                fields: [
-                                    { name: 'content', type: 'tab', fields: [] },
-                                    { name: 'content', type: 'tab', fields: [] },
-                                ],
-                            },
-                        ],
-                    },
+            resolvePost([
+                text('seo'),
+                tabs({ fields: [tab('seo', { fields: [text('title')] })] }),
+            ])
+        ).toThrow(
+            /post.*duplicate field name "seo".*`main.seo` and `main\[1\]\[0\].seo`/
+        );
+    });
+
+    it('throws when a raw tab object carries a name', () => {
+        expect(() =>
+            resolvePost([
+                {
+                    type: 'tabs',
+                    fields: [{ name: 'content', type: 'tab', fields: [] }],
                 },
-                plugins: [],
-            })
+            ])
+        ).toThrow(/post.*a `tab` object cannot carry a name \("content"\)/);
+    });
+
+    it('throws when a raw tabs or accordion object carries a name', () => {
+        expect(() => resolvePost([{ name: 'tabs', type: 'tabs', fields: [] }])).toThrow(
+            /`tabs` is never named/
+        );
+        expect(() =>
+            resolvePost([{ name: 'more', type: 'accordion', fields: [] }])
+        ).toThrow(/a `accordion` object cannot carry a name \("more"\)/);
+    });
+
+    it('throws on an unnamed group with `boxed: false`', () => {
+        expect(() =>
+            resolvePost([group({ boxed: false, fields: [text('title')] })])
+        ).toThrow(/post.*unnamed `group` with `boxed: false` does nothing/);
+    });
+
+    it('allows a named group with `boxed: false`', () => {
+        expect(() =>
+            resolvePost([group('seo', { boxed: false, fields: [text('title')] })])
+        ).not.toThrow();
+    });
+
+    it('throws when tabs sit inside a repeater, blocks or tree', () => {
+        const inner = tabs({ fields: [tab({ label: 'A', fields: [text('a')] })] });
+        expect(() => resolvePost([repeater('items', { fields: [inner] })])).toThrow(
+            /post.*`tabs` cannot sit inside a `repeater`/
+        );
+        expect(() =>
+            resolvePost([
+                blocks('body', { blocks: [block('hero', { fields: [inner] })] }),
+            ])
+        ).toThrow(/`tabs` cannot sit inside a `blocks`/);
+        expect(() => resolvePost([tree('menu', { fields: [inner] })])).toThrow(
+            /`tabs` cannot sit inside a `tree`/
+        );
+    });
+
+    it('allows tabs inside a named group', () => {
+        const inner = tabs({ fields: [tab({ label: 'A', fields: [text('a')] })] });
+        expect(() => resolvePost([group('meta', { fields: [inner] })])).not.toThrow();
+    });
+
+    it('throws when a field below a nested field sets translatable or searchable', () => {
+        expect(() =>
+            resolvePost([
+                group('meta', {
+                    fields: [group({ fields: [text('title', { translatable: false })] })],
+                }),
+            ])
+        ).toThrow(
+            /post.*"title" sets `translatable`.*only supported on a top-level field/
+        );
+        expect(() =>
+            resolvePost([
+                repeater('items', { fields: [text('title', { searchable: true })] }),
+            ])
+        ).toThrow(/"title" sets `searchable`/);
+        expect(() =>
+            resolvePost([
+                tabs({
+                    fields: [
+                        tab('seo', { fields: [text('title', { searchable: true })] }),
+                    ],
+                }),
+            ])
+        ).toThrow(/"title" sets `searchable`/);
+    });
+
+    it('allows translatable and searchable under a layout field at the top level', () => {
+        expect(() =>
+            resolvePost([
+                group({
+                    fields: [text('title', { translatable: false, searchable: true })],
+                }),
+            ])
         ).not.toThrow();
     });
 

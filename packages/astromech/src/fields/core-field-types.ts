@@ -4,8 +4,10 @@
  * stored value and reporting nested scopes for the pipeline to recurse into.
  */
 
+import type { GroupOptions } from '@/fields/builder';
 import type {
     ContainerScope,
+    DataField,
     Field,
     FieldPathSegment,
     FieldType,
@@ -96,7 +98,7 @@ function cloneWithId(item: Record<string, unknown>): {
  * is still normalized into `next`, it just gets no scope.
  */
 function arrayChildren(
-    field: Field,
+    field: DataField,
     value: unknown,
     definitionsFor: (item: Record<string, unknown>) => Field[] | null
 ): { next: unknown; scopes: ContainerScope[] } {
@@ -134,7 +136,7 @@ function arrayChildren(
  * a path.
  */
 function treeChildren(
-    field: Field,
+    field: DataField,
     value: unknown
 ): { next: unknown; scopes: ContainerScope[] } {
     if (!Array.isArray(value)) return { next: [], scopes: [] };
@@ -273,7 +275,7 @@ export const coreFieldTypes: FieldType[] = [
     },
     {
         type: 'group',
-        build: (name, options) => group(name, options as Parameters<typeof group>[1]),
+        build: (name, options) => group(name, options as GroupOptions),
         validate: validateGroup,
         tsType: () => null,
         children: (field, value) => {

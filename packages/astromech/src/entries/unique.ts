@@ -1,5 +1,5 @@
 import type { EntryRepository } from './repository/types';
-import type { Field } from '@/types/fields';
+import type { DataField } from '@/types/fields';
 import { uniqueAmongRecords } from '@/fields/unique-among';
 
 /**
@@ -10,7 +10,7 @@ import { uniqueAmongRecords } from '@/fields/unique-among';
 export function entryIsUnique(
     repository: EntryRepository,
     scope: { type: string; locale: string; excludeId?: string | readonly string[] }
-): (field: Field, value: unknown) => Promise<boolean> {
+): (field: DataField, value: unknown) => Promise<boolean> {
     return uniqueAmongRecords({
         load: async () => {
             const { data } = await repository.list({

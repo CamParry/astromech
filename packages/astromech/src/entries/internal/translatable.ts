@@ -4,7 +4,7 @@
  */
 
 import type { EntryRepository } from '../repository/types';
-import type { Field } from '@/types/fields';
+import type { DataField } from '@/types/fields';
 import type { JsonObject, ResolvedEntryType } from '@/types/index';
 import {
     inheritSharedFields as inheritContentFields,
@@ -21,7 +21,7 @@ export async function inheritSharedFields(params: {
     repository: EntryRepository;
     entryType: ResolvedEntryType;
     values: Record<string, unknown>;
-    definitions: Field[];
+    definitions: DataField[];
     /** The entry being translated; absent when the entry is being created. */
     entryId: string | undefined;
     locale: string;

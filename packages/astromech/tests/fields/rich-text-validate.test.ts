@@ -1,4 +1,4 @@
-import type { Field, FieldValidationContext } from '@/types/fields';
+import type { DataField, Field, FieldValidationContext } from '@/types/fields';
 import { describe, expect, it } from 'vitest';
 import { safeParseFields } from '@/fields/parse-fields';
 import { renderRichText } from '@/fields/rich-text/render';
@@ -20,7 +20,7 @@ const heading = {
     ],
 };
 
-function ctx(value: unknown, field: Field): FieldValidationContext {
+function ctx(value: unknown, field: DataField): FieldValidationContext {
     return {
         value,
         values: {},
@@ -228,7 +228,7 @@ describe('validateRichText', () => {
     });
 
     it('reads the allow list off the field definition', async () => {
-        const field: Field = {
+        const field: DataField = {
             name: 'body',
             type: 'richtext',
             allow: { heading: false },

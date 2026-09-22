@@ -1,4 +1,4 @@
-import type { Field } from '@/types/fields';
+import type { DataField } from '@/types/fields';
 import { valuesEqual } from '@/utilities/values-equal';
 
 /**
@@ -16,14 +16,14 @@ export function uniqueAmongRecords<R>(opts: {
      * row can legitimately hold the value being written.
      */
     excludeId?: string | readonly string[] | undefined;
-}): (field: Field, value: unknown) => Promise<boolean> {
+}): (field: DataField, value: unknown) => Promise<boolean> {
     const excluded =
         opts.excludeId === undefined
             ? []
             : typeof opts.excludeId === 'string'
               ? [opts.excludeId]
               : opts.excludeId;
-    return async (field: Field, value: unknown): Promise<boolean> => {
+    return async (field: DataField, value: unknown): Promise<boolean> => {
         const records = await opts.load();
         for (const record of records) {
             const id = opts.getId(record);

@@ -5,13 +5,13 @@
  */
 
 import type { MediaRepository } from '../repository';
-import type { Field } from '@/types/fields';
+import type { DataField } from '@/types/fields';
 import { uniqueAmongRecords } from '@/fields/unique-among';
 
 export function mediaIsUnique(
     repository: Pick<MediaRepository, 'listContent'>,
     scope: { locale: string; excludeId?: string | readonly string[] }
-): (field: Field, value: unknown) => Promise<boolean> {
+): (field: DataField, value: unknown) => Promise<boolean> {
     return uniqueAmongRecords({
         load: async () => repository.listContent(scope.locale),
         getId: (row) => row.id,

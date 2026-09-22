@@ -7,7 +7,7 @@
  */
 
 import type { ContentRef, ContentRow } from './repository/types';
-import type { Field } from '@/types/fields';
+import type { DataField } from '@/types/fields';
 import type { JsonObject } from '@/types/index';
 
 /** The read `inheritSharedFields` needs: one locale of one item. */
@@ -28,7 +28,7 @@ type FieldPropagator = {
  * Empty when the resource itself is not translatable.
  */
 function sharedFieldNames(
-    definitions: readonly Field[],
+    definitions: readonly DataField[],
     names: readonly string[],
     translatable: boolean
 ): string[] {
@@ -46,7 +46,7 @@ function sharedFieldNames(
 export async function inheritSharedFields(params: {
     repository: ContentReader;
     values: Record<string, unknown>;
-    definitions: readonly Field[];
+    definitions: readonly DataField[];
     translatable: boolean;
     /** The item being translated; absent when it is being created. */
     id: string | undefined;
@@ -83,7 +83,7 @@ export async function inheritSharedFields(params: {
  */
 export async function propagateSharedFields(params: {
     translatable: FieldPropagator | undefined;
-    definitions: readonly Field[];
+    definitions: readonly DataField[];
     isTranslatable: boolean;
     record: { id: string; locale: string };
     fields: JsonObject;

@@ -1,9 +1,7 @@
 /**
- * Field system types — field definitions, validation, field categories.
- *
- * An entry's schema is a tree of `Field` nodes. Layout fields are field *types*
- * rather than a separate hierarchy; `TERMINOLOGY.md` states the two categories
- * and their membership.
+ * Field system types — field definitions, validation, field categories. An
+ * entry's schema is a tree of `Field` nodes: a `DataField` stores under its
+ * name, a `LayoutField` has none. `TERMINOLOGY.md` states the categories.
  */
 
 import type { ResourceType, User } from './domain';
@@ -35,8 +33,7 @@ export const CORE_FIELD_TYPES = [
     'radio-group',
     'link',
     'key-value',
-    // Layout fields — presentational, flat data.
-    'section',
+    // Structural only: with no name they are layout fields and store nothing.
     'tabs',
     'tab',
     'accordion',
@@ -138,7 +135,7 @@ export type FieldValidationContext = {
     value: unknown;
     /** Sibling field values, for cross-field rules. */
     values: Record<string, unknown>;
-    field: Field;
+    field: DataField;
     /**
      * Path to the field, as segments — one `field` segment per declared field
      * plus an `item` segment per container item traversed, e.g.
@@ -157,7 +154,7 @@ export type FieldValidationContext = {
     resource: { kind: ResourceType; record: unknown };
     user: User | null;
     /** True when no other record of the same resource holds `value` for `field`. */
-    isUnique: (field: Field, value: unknown) => Promise<boolean>;
+    isUnique: (field: DataField, value: unknown) => Promise<boolean>;
     /**
      * The entry type each id resolves to, for the relationship target-type
      * check. Ids with no entry row are simply absent. Optional: a caller with no
@@ -200,7 +197,7 @@ export type ResourceValidationContext = {
     resource: { kind: ResourceType; record: unknown };
     user: User | null;
     /** True when no other record of the same resource holds `value` for `field`. */
-    isUnique: (field: Field, value: unknown) => Promise<boolean>;
+    isUnique: (field: DataField, value: unknown) => Promise<boolean>;
     /**
      * The entry type each id resolves to, for the relationship target-type
      * check. Ids with no entry row are simply absent. Optional: a caller with no
@@ -251,7 +248,7 @@ export type FieldType = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     build: (name: string, options?: any) => Field;
     /** TS type emitted by codegen for this field, or `null` to omit. */
-    tsType: (field: Field, shape: 'full' | 'public') => string | null;
+    tsType: (field: DataField, shape: 'full' | 'public') => string | null;
     defaultValue?: unknown;
     /** Normalisation applied before validation. */
     coerce?: (value: unknown) => unknown;
@@ -268,7 +265,7 @@ export type FieldType = {
      * minted) plus a flat list of scopes holding live references into it.
      */
     children?: (
-        field: Field,
+        field: DataField,
         value: unknown
     ) => { next: unknown; scopes: ContainerScope[] };
     /** Reserved instance keys this type owns, e.g. `['_id', '_disabled', '_title']`. */
@@ -297,8 +294,11 @@ export type RichTextAllow = {
     textAlign?: boolean;
 };
 
-/** A field declaration — one node in an entry's schema tree. */
-export type Field = {
+/**
+ * A field that stores a value under its `name`. A named `group`, `repeater`,
+ * `blocks` or `tree` is a nested field: its children store under that key.
+ */
+export type DataField = {
     name: string;
     type: AnyFieldType;
     label?: Label;
@@ -311,7 +311,7 @@ export type Field = {
     options?: SelectOption[] | string[];
     target?: string;
     multiple?: boolean;
-    /** Children for layout fields and `group`/`repeater`/`tree`. */
+    /** Children for `group`/`repeater`/`tree`. */
     fields?: Field[];
     min?: number;
     max?: number;
@@ -320,8 +320,7 @@ export type Field = {
     /**
      * `group` only. Whether the group draws a box. When `false` the box AND the
      * label are dropped and the sub-fields render inline, keeping only the
-     * nested data key; wrap it in a `section` when a heading or surface is
-     * wanted. Defaults to `true`.
+     * nested data key. Defaults to `true`.
      */
     boxed?: boolean;
     step?: number;
@@ -358,6 +357,26 @@ export type Field = {
 };
 
 /**
+ * A structural field with no name: it draws a surface and stores nothing, so
+ * its children store in the parent's data. `private` applies to every child.
+ */
+export type LayoutField = {
+    name?: undefined;
+    type: 'group' | 'accordion' | 'tabs' | 'tab';
+    label?: Label;
+    description?: Label;
+    /** `group` only. An unnamed group must draw its box, so only `true` is accepted. */
+    boxed?: boolean;
+    /** `accordion` only. Starts closed when `true`. */
+    collapsed?: boolean;
+    private?: boolean;
+    fields: Field[];
+};
+
+/** A field declaration — one node in an entry's schema tree. A name is always a data key. */
+export type Field = DataField | LayoutField;
+
+/**
  * Top-level entry field declaration. Either a flat list (no layout fields,
  * single column) or an explicit two-column split. The *shape* signals the layout —
  * there is no `layout()` helper.
@@ -376,7 +395,7 @@ export type ResolvedEntryFields = {
 export type BaseFieldProps = {
     name: string;
     value: unknown;
-    field: Field;
+    field: DataField;
     required?: boolean;
     onChange: (name: string, value: unknown) => void;
     disabled?: boolean;

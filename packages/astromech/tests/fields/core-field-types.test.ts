@@ -3,9 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { getFieldType } from '@/fields/field-type-registry';
 import { CORE_FIELD_TYPES } from '@/types/fields';
 
-const LAYOUT_TYPES = new Set(['section', 'tabs', 'tab', 'accordion']);
+/** Structural types that only ever appear unnamed, so no field type backs them. */
+const LAYOUT_ONLY_TYPES = new Set(['tabs', 'tab', 'accordion']);
 
-const DATA_TYPES = CORE_FIELD_TYPES.filter((t) => !LAYOUT_TYPES.has(t));
+const DATA_TYPES = CORE_FIELD_TYPES.filter((t) => !LAYOUT_ONLY_TYPES.has(t));
 
 describe('core field types', () => {
     it('every data type is registered', () => {
@@ -14,8 +15,8 @@ describe('core field types', () => {
         }
     });
 
-    it('layout types are not registered', () => {
-        for (const type of LAYOUT_TYPES) {
+    it('layout-only types are not registered', () => {
+        for (const type of LAYOUT_ONLY_TYPES) {
             expect(
                 getFieldType(type),
                 `unexpected field type for layout "${type}"`

@@ -3,10 +3,11 @@
  * Everything here must bundle for the browser; `tests/exports/shared-browser.test.ts` checks it.
  */
 
+export type { DataField, LayoutField } from '@/types/fields';
 export { countStatus } from '@/fields/count';
 export { formatInstancePath, parseInstancePath } from '@/fields/field-path';
 export { getFieldType } from '@/fields/field-type-registry';
-export { flattenEntryFields, flattenFieldNodes } from '@/fields/flatten';
+export { flattenEntryFields, flattenFieldNodes, isLayoutField } from '@/fields/flatten';
 export { safeParseFields } from '@/fields/parse-fields';
 export { buildRichTextExtensions } from '@/fields/rich-text/extensions';
 export { parseEntryTypeId, qualifyEntryType } from '@/entries/entry-types';

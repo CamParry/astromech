@@ -1,10 +1,10 @@
-import type { Field } from '@/types/fields';
+import type { DataField } from '@/types/fields';
 import { describe, expect, it } from 'vitest';
 import { uniqueAmongRecords } from '@/fields/unique-among';
 
 type TestRecord = { id: string; fields: Record<string, unknown> };
 
-function makeField(name: string): Field {
+function makeField(name: string): DataField {
     return { name, type: 'text' };
 }
 

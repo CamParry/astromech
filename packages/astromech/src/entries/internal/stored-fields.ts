@@ -6,7 +6,7 @@
 
 import type { EntryRepository } from '../repository/types';
 import type { EntryRecord } from './records';
-import type { Field } from '@/types/fields';
+import type { DataField } from '@/types/fields';
 import type {
     Entry,
     EntryStatus,
@@ -119,7 +119,7 @@ type PreparedWrite = {
 
 async function prepareWrite(
     input: StoredFieldsInput,
-    definitions: Field[]
+    definitions: DataField[]
 ): Promise<PreparedWrite> {
     if (input.kind === 'create') {
         const { repository, entryType } = input;

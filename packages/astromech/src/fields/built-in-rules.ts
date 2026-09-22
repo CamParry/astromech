@@ -4,7 +4,7 @@
  * Pure functions — no DB imports. Consumed by core-field-types.ts.
  */
 
-import type { Field, FieldValidationContext, FieldValidator } from '@/types/fields';
+import type { DataField, FieldValidationContext, FieldValidator } from '@/types/fields';
 import { slugify } from '@/utilities/strings';
 import { isUnsafeHref } from './rich-text/safe-links';
 
@@ -87,7 +87,7 @@ export const validateKeyValue: FieldValidator = async (ctx) => {
 // choice — select, radio-group, multiselect, checkbox-group
 
 /** The field's declared option values, as a set. */
-function optionValues(field: Field): Set<string> {
+function optionValues(field: DataField): Set<string> {
     const options = field.options ?? [];
     return new Set(options.map((o) => (typeof o === 'string' ? o : o.value)));
 }

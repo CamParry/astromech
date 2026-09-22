@@ -5,6 +5,7 @@
  */
 
 import type {
+    DataField,
     Field,
     FieldErrors,
     FieldPathSegment,
@@ -32,7 +33,7 @@ function isEmpty(v: unknown): boolean {
  * left to the formatter, so the message names the offending field instead of
  * surfacing as a bare path error from deep in the stack.
  */
-function fieldErrorPath(segments: readonly FieldPathSegment[], field: Field): string {
+function fieldErrorPath(segments: readonly FieldPathSegment[], field: DataField): string {
     if (!isValidFieldName(field.name)) {
         const reason =
             field.name === ''
@@ -183,7 +184,7 @@ type FieldChecks = { error: string | null; warning: string | null };
  * field's error message, or `null`.
  */
 function checkCompleteness(
-    field: Field,
+    field: DataField,
     fieldType: FieldType | undefined,
     value: unknown,
     ctx: ScopeContext
@@ -213,7 +214,7 @@ function checkCompleteness(
  * severity wins.
  */
 async function checkCorrectness(
-    field: Field,
+    field: DataField,
     fieldType: FieldType | undefined,
     fieldCtx: FieldValidationContext,
     ctx: ScopeContext

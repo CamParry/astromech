@@ -4,7 +4,7 @@
  * through `parseFields`; `children()` mints ids and is non-deterministic on raw input.
  */
 
-import type { Field, FieldPathSegment } from '@/types/fields';
+import type { DataField, Field, FieldPathSegment } from '@/types/fields';
 import { formatInstancePath, formatSchemaPath } from '@/fields/field-path';
 import { getFieldType } from '@/fields/field-type-registry';
 import { flattenFieldNodes } from '@/fields/flatten';
@@ -30,7 +30,7 @@ export type FieldReference = {
  * What a relation field points at. `media` fields are relations too — the old
  * subsystem ignored them, which is why no media row was ever written.
  */
-function targetKindOf(field: Field): TargetKind {
+function targetKindOf(field: DataField): TargetKind {
     if (field.type === 'media') return 'media';
     return field.target === 'users' ? 'user' : 'entry';
 }
@@ -187,7 +187,7 @@ function walkSchema(
  * The ids `children()` mints are discarded — `formatSchemaPath` collapses an
  * item segment to `[]`.
  */
-function probeValue(field: Field): unknown {
+function probeValue(field: DataField): unknown {
     return field.blocks !== undefined
         ? field.blocks.map((block) => ({ [RESERVED_KEY.type]: block.type }))
         : [{}];

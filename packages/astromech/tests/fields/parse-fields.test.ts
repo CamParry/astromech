@@ -1,6 +1,7 @@
 import type { ResourceType } from '@/types/domain';
 import type { Field, FieldValidationContext, ValidationMode } from '@/types/fields';
 import { describe, expect, it, vi } from 'vitest';
+import { group, tab, tabs } from '@/fields/builder';
 import { registerFieldType } from '@/fields/field-type-registry';
 import { safeParseFields } from '@/fields/parse-fields';
 
@@ -847,33 +848,22 @@ describe('rule: custom', () => {
 });
 
 describe('layout flattening', () => {
-    it('section wrapping a required field → error keyed by inner field name', async () => {
+    it('an unnamed group wrapping a required field → error keyed by inner field name', async () => {
         const { errors } = await safeParseFields(
             {},
-            [
-                field({
-                    name: 'meta',
-                    type: 'section',
-                    fields: [field({ name: 'title', type: 'text', required: true })],
-                }),
-            ],
+            [group({ fields: [field({ name: 'title', type: 'text', required: true })] })],
             fakeCtx()
         );
-        expect(errors.title).toEqual(['This field is required']);
-        expect(errors.meta).toBeUndefined();
+        expect(errors).toEqual({ title: ['This field is required'] });
     });
 
-    it('nested sections are fully unwrapped', async () => {
+    it('nested unnamed groups are fully unwrapped', async () => {
         const { errors } = await safeParseFields(
             {},
             [
-                field({
-                    name: 'outer',
-                    type: 'section',
+                group({
                     fields: [
-                        field({
-                            name: 'inner',
-                            type: 'section',
+                        group({
                             fields: [
                                 field({ name: 'deep', type: 'text', required: true }),
                             ],
@@ -883,7 +873,32 @@ describe('layout flattening', () => {
             ],
             fakeCtx()
         );
-        expect(errors.deep).toEqual(['This field is required']);
+        expect(errors).toEqual({ deep: ['This field is required'] });
+    });
+
+    it('a named tab nests its fields, and their errors carry its name', async () => {
+        const { values, errors } = await safeParseFields(
+            { seo: { title: 'x' } },
+            [
+                tabs({
+                    fields: [
+                        tab('seo', {
+                            fields: [
+                                field({ name: 'title', type: 'text' }),
+                                field({
+                                    name: 'description',
+                                    type: 'text',
+                                    required: true,
+                                }),
+                            ],
+                        }),
+                    ],
+                }),
+            ],
+            fakeCtx()
+        );
+        expect(values).toEqual({ seo: { title: 'x' } });
+        expect(errors).toEqual({ 'seo.description': ['This field is required'] });
     });
 });
 
@@ -929,10 +944,13 @@ describe('unknown keys', () => {
         const { values } = await safeParseFields(
             { title: 'hello', stray: 1 },
             [
-                field({
-                    name: 'main',
-                    type: 'tabs',
-                    fields: [field({ name: 'title', type: 'text' })],
+                tabs({
+                    fields: [
+                        tab({
+                            label: 'Main',
+                            fields: [field({ name: 'title', type: 'text' })],
+                        }),
+                    ],
                 }),
             ],
             fakeCtx()

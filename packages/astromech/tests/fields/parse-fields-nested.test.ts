@@ -133,13 +133,12 @@ describe('group', () => {
                     name: 'seo',
                     type: 'group',
                     fields: [
-                        field({
-                            name: 'panel',
-                            type: 'section',
+                        {
+                            type: 'group',
                             fields: [
                                 field({ name: 'title', type: 'text', required: true }),
                             ],
-                        }),
+                        },
                     ],
                 }),
             ],

@@ -5,6 +5,7 @@
  */
 
 import type {
+    DataField,
     Field,
     FieldType,
     PluginDefinition,
@@ -13,6 +14,7 @@ import type {
     ResolvedEntryFields,
 } from '@/types/index';
 import { getFieldType } from '@/fields/field-type-registry';
+import { flattenFieldNodes } from '@/fields/flatten';
 import { RESERVED_KEY_META } from '@/fields/reserved-keys';
 
 /**
@@ -24,12 +26,6 @@ function toPascalCase(name: string): string {
         .replace(/[-_](.)/g, (_, char: string) => char.toUpperCase())
         .replace(/^(.)/, (_, char: string) => char.toUpperCase());
 }
-
-/**
- * Layout field types — presentational, no stored value. Their children
- * are flattened into the parent data level (no key nesting).
- */
-const LAYOUT_TYPES = new Set(['section', 'tabs', 'tab', 'accordion']);
 
 /**
  * Field types that produce a relation (populate-able) value.
@@ -60,22 +56,18 @@ function propertyKey(name: string): string {
 }
 
 /**
- * Walk a Field[] and return all data-bearing nodes, with layout fields
- * (section/tabs/tab/accordion) flattened in-place. When `shape === 'public'`,
- * fields marked `private: true` are excluded.
+ * The data fields of one value scope, layout fields flattened in place. When
+ * `shape === 'public'`, private fields (including those under a private layout
+ * field) are excluded.
  */
-function collectDataFields(fields: Field[], shape: 'full' | 'public' = 'full'): Field[] {
-    const result: Field[] = [];
-    for (const field of fields) {
-        if (LAYOUT_TYPES.has(field.type)) {
-            // Flatten layout field children at the same level.
-            result.push(...collectDataFields(field.fields ?? [], shape));
-        } else {
-            if (shape === 'public' && field.private === true) continue;
-            result.push(field);
-        }
-    }
-    return result;
+function collectDataFields(
+    fields: Field[],
+    shape: 'full' | 'public' = 'full'
+): DataField[] {
+    const dataFields = flattenFieldNodes(fields);
+    return shape === 'public'
+        ? dataFields.filter((field) => field.private !== true)
+        : dataFields;
 }
 
 /**
@@ -102,19 +94,16 @@ function buildObjectLines(
 }
 
 /**
- * Map a Field to its TypeScript type string for the Fields type. Returns
- * null for layout fields (flattened before this is reached) and unrecognised
- * types. `hoisted` collects named aliases for self-referential (tree) types.
+ * Map a data field to its TypeScript type string for the Fields type. Returns
+ * null for unrecognised types. `hoisted` collects named aliases for
+ * self-referential (tree) types.
  */
 function fieldToTsType(
-    field: Field,
+    field: DataField,
     pluginFieldTypes: Map<string, PluginFieldTypeRegistration>,
     hoisted?: string[],
     shape: 'full' | 'public' = 'full'
 ): string | null {
-    // Layout fields are flattened by collectDataFields before we reach here.
-    if (LAYOUT_TYPES.has(field.type)) return null;
-
     const pluginType = pluginFieldTypes.get(field.type);
     if (pluginType) {
         // No typeGen → JsonValue. A typeGen returning null opts out entirely
@@ -205,7 +194,7 @@ function fieldToTsType(
  * between `…Fields` and `…FieldsPublic` target references.
  */
 function fieldToRelationType(
-    field: Field,
+    field: DataField,
     knownCollections: Set<string>,
     qualifiedTargetMap: Map<string, string> = new Map<string, string>(),
     shape: 'full' | 'public' = 'full'

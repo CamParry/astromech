@@ -61,6 +61,10 @@ export type PostsFields = {
   fTree?: FTreeTreeNode[];
   fBlocks?: Array<import('astromech').JsonObject & { _id: string; _type: string; _disabled?: boolean; _title?: string; }>;
   sInside?: string;
+  pInside?: string;
+  fTab?: {
+  tabInside?: string;
+};
 };
 
 export type FTreePublicTreeNode = {
@@ -105,6 +109,9 @@ export type PostsFieldsPublic = {
   fTree?: FTreePublicTreeNode[];
   fBlocks?: Array<import('astromech').JsonObject & { _id: string; _type: string; }>;
   sInside?: string;
+  fTab?: {
+  tabInside?: string;
+};
 };
 
 export type PostsRelations = {

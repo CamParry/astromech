@@ -6,7 +6,7 @@
  */
 
 import type { GlobalRow, GlobalsRepository } from '../repository/globals-table';
-import type { Field, Global, JsonObject, ResolvedGlobal, User } from '@/types/index';
+import type { DataField, Global, JsonObject, ResolvedGlobal, User } from '@/types/index';
 import { inheritSharedFields } from '@/content/translatable';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { entryValidationMode } from '@/entries/validation-mode';
@@ -19,7 +19,7 @@ import { mergePatch, projectToSchema } from '@/fields/values';
  * The uniqueness check for a global. A global has exactly one row per locale, so
  * there is nothing to scan against and it always answers true.
  */
-export function globalIsUnique(): (field: Field, value: unknown) => Promise<boolean> {
+export function globalIsUnique(): (field: DataField, value: unknown) => Promise<boolean> {
     return uniqueAmongRecords<never>({
         load: async () => [],
         getId: () => undefined,

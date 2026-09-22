@@ -58,8 +58,8 @@ export function toResolvedGlobal(id: string, config: GlobalConfig): ResolvedGlob
     assertGlobalValid(id, config);
 
     const fields = toResolvedFields(config.fields);
-    validateFieldTree(id, fields.main, false);
-    validateFieldTree(id, fields.sidebar, false);
+    validateFieldTree(id, fields.main);
+    validateFieldTree(id, fields.sidebar);
     assertUniqueDataNames(id, fields);
 
     const { key: _key, fields: _fields, ...rest } = config;
