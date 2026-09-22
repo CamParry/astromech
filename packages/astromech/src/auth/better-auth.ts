@@ -4,15 +4,11 @@
  * must already be filled; the built instance is held in a registry.
  */
 
-import type { BuiltInRoleSlug } from '@/permissions/roles';
 import type { Auth, BetterAuthOptions } from 'better-auth';
-import { APIError, betterAuth, getCurrentAdapter } from 'better-auth';
-import { claimFirstAdmin, releaseFirstAdminClaim } from '@/auth/first-admin-claim';
-import { getDefaultContentLocale } from '@/config/content-locale';
+import { APIError, betterAuth } from 'better-auth';
+import { SIGN_UP_CLOSED } from '@/auth/setup';
 import { getConfig } from '@/config/registry';
 import { getDatabaseDriverOrThrow } from '@/database/driver-registry';
-import { createRepository } from '@/database/repository/create-repository';
-import { userContentTable } from '@/database/tables';
 import { resolveEnv, resolveNodeEnv } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
@@ -72,32 +68,11 @@ function buildAuth(): Auth<BetterAuthOptions> {
         databaseHooks: {
             user: {
                 create: {
-                    // The first account gets `admin`; once any user exists, every
-                    // Better Auth sign-up is refused. Admins create the rest
-                    // through the users service, which does not run this hook.
-                    before: async (user, context) => {
-                        // The adapter Better Auth's own insert uses next.
-                        const { adapter } =
-                            context?.context ?? (await getAuth().$context);
-                        const current = await getCurrentAdapter(adapter);
-                        await assertFirstSignUp(() => current.count({ model: 'user' }));
-                        return {
-                            data: { ...user, role: 'admin' satisfies BuiltInRoleSlug },
-                        };
-                    },
-                    // better-auth inserts the account row with its own queries,
-                    // not through the users service, so the default-locale
-                    // content row that every other create path writes is
-                    // written here.
-                    after: async (user: { id: string }) => {
-                        await createRepository(userContentTable).create({
-                            userId: user.id,
-                            locale: getDefaultContentLocale(),
-                            fields: {},
-                        });
-                        // A user exists now, so the count refuses every later
-                        // sign-up and the claim is no longer needed.
-                        await releaseFirstAdminClaim();
+                    // Every account is written by first-run setup or by the
+                    // users service, and neither runs this hook, so Better
+                    // Auth's own sign-up is refused whatever the database holds.
+                    before: () => {
+                        throw new APIError('FORBIDDEN', SIGN_UP_CLOSED);
                     },
                 },
             },
@@ -110,10 +85,9 @@ function buildAuth(): Auth<BetterAuthOptions> {
                 updatedAt: 'updated_at',
             },
             additionalFields: {
-                // better-auth builds its own inserts, not through the users
-                // service, so the role column is declared here. `input: false`
-                // stops a sign-up body naming its own role; `create.before`
-                // sets the one written.
+                // better-auth reads the role off the user row a session names,
+                // so the column is declared here. `input: false` keeps it off
+                // every better-auth write path.
                 role: {
                     type: 'string',
                     input: false,
@@ -187,28 +161,4 @@ function buildAuth(): Auth<BetterAuthOptions> {
             },
         },
     }) as unknown as Auth<BetterAuthOptions>;
-}
-
-/**
- * Refuse a sign-up unless it is the first account. Better Auth runs no
- * transaction, so two sign-ups on an empty install can both count zero; only
- * the one holding the first-admin claim goes on.
- */
-async function assertFirstSignUp(countUsers: () => Promise<number>): Promise<void> {
-    if ((await countUsers()) > 0) throw signUpClosed();
-    if (!(await claimFirstAdmin(new Date()))) throw signUpClosed();
-    // Another sign-up may have finished and released its claim between the
-    // first count and ours. Releasing is safe: a user exists, so every later
-    // sign-up is refused at its first count, and one already past it re-counts.
-    if ((await countUsers()) > 0) {
-        await releaseFirstAdminClaim();
-        throw signUpClosed();
-    }
-}
-
-function signUpClosed(): APIError {
-    return new APIError('FORBIDDEN', {
-        code: 'SIGN_UP_CLOSED',
-        message: 'Sign-up is closed. Ask an administrator to create your account.',
-    });
 }

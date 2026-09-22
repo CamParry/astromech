@@ -1,8 +1,8 @@
 /**
  * A new site's first `db:generate` and `db:init`: generate from `CORE_TABLES`
  * into an empty directory, apply the chain through the loader `db:init` uses,
- * and sign up through Better Auth against the result. The demo's chain cannot
- * stand in for this, because it was not generated from an empty directory.
+ * and run first-run setup and a sign-in against the result. The demo's chain
+ * cannot stand in for this, because it was not generated from an empty directory.
  */
 
 import type { DB } from '@/database/types';
@@ -19,6 +19,7 @@ import { getMigrations } from 'better-auth/db/migration';
 import { CamelCasePlugin, Kysely, sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getAuth } from '@/auth/better-auth';
+import { createFirstAdmin } from '@/auth/setup';
 import { loadAppMigrations } from '@/database/app-migrations';
 import { setDatabaseDriver } from '@/database/driver-registry';
 import { generateMigrations } from '@/database/generate';
@@ -92,11 +93,14 @@ describe('a fresh generate from CORE_TABLES', () => {
         expect(toBeAdded).toEqual([]);
     });
 
-    it('lets the first sign-up in as admin, then closes sign-up', async () => {
+    it('takes the first admin through setup, and refuses a sign-up', async () => {
         const auth = getAuth();
-        await auth.api.signUpEmail({
-            body: { email: 'first@test.dev', password: 'password123', name: 'First' },
+        const created = await createFirstAdmin({
+            email: 'first@test.dev',
+            password: 'password123',
+            name: 'First',
         });
+        expect(created).toBe('created');
 
         const user = await db
             .selectFrom('users')
@@ -105,6 +109,11 @@ describe('a fresh generate from CORE_TABLES', () => {
             .executeTakeFirstOrThrow();
         expect(user.role).toBe('admin');
 
+        // Signing in writes the session row, so the generated `sessions` table
+        // is exercised by the flow a new site runs.
+        await auth.api.signInEmail({
+            body: { email: 'first@test.dev', password: 'password123' },
+        });
         const { rows } = await sql<{ kind: string }>`
             SELECT typeof(expires_at) AS kind FROM sessions WHERE user_id = ${user.id}
         `.execute(db);

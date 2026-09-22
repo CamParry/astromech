@@ -112,7 +112,7 @@ describe('the Better Auth catch-all', () => {
         expect(body.code).toBe('INVALID_EMAIL');
     });
 
-    it('answers 403 to a sign-up once a user exists', async () => {
+    it('answers 403 to a sign-up, on an empty install and once a user exists', async () => {
         const app = await freshApp();
         const signUp = (email: string) =>
             app.request(`${api}/auth/sign-up/email`, {
@@ -121,7 +121,9 @@ describe('the Better Auth catch-all', () => {
                 body: JSON.stringify({ email, password: 'password123', name: 'Sign Up' }),
             });
 
-        expect((await signUp('first@test.dev')).status).toBe(200);
+        const empty = await signUp('first@test.dev');
+        expect(empty.status).toBe(403);
+        await usersService.create({ data: { email: 'first@test.dev', name: 'First' } });
         const res = await signUp('second@test.dev');
 
         expect(res.status).toBe(403);
@@ -129,6 +131,58 @@ describe('the Better Auth catch-all', () => {
         expect(body.code).toBe('SIGN_UP_CLOSED');
         const users = await usersService.query({ limit: 'all' });
         expect(users.data.map((user) => user.email)).toEqual(['first@test.dev']);
+    });
+});
+
+describe('POST /setup', () => {
+    const setup = (app: OpenAPIHono, body: unknown) =>
+        app.request(`${api}/setup`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+
+    const firstAdmin = {
+        name: 'First',
+        email: 'first@test.dev',
+        password: 'password123',
+    };
+
+    it('creates the first admin with no session', async () => {
+        const app = await freshApp();
+
+        const res = await setup(app, firstAdmin);
+
+        expect(res.status).toBe(200);
+        const users = await usersService.query({ limit: 'all' });
+        expect(users.data.map((user) => [user.email, user.role])).toEqual([
+            ['first@test.dev', 'admin'],
+        ]);
+    });
+
+    it('answers 403 SIGN_UP_CLOSED once a user exists', async () => {
+        const app = await freshApp();
+        await usersService.create({ data: { email: 'taken@test.dev', name: 'Taken' } });
+
+        const res = await setup(app, firstAdmin);
+
+        expect(res.status).toBe(403);
+        const body = (await res.json()) as { code?: string };
+        expect(body.code).toBe('SIGN_UP_CLOSED');
+        const users = await usersService.query({ limit: 'all' });
+        expect(users.data.map((user) => user.email)).toEqual(['taken@test.dev']);
+    });
+
+    it('answers 422 for a password under eight characters', async () => {
+        const app = await freshApp();
+
+        const res = await setup(app, { ...firstAdmin, password: 'short' });
+
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as { error: { details: { fields: object } } };
+        expect(Object.keys(body.error.details.fields)).toEqual(['password']);
+        const users = await usersService.query({ limit: 'all' });
+        expect(users.data).toEqual([]);
     });
 });
 

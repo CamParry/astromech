@@ -58,7 +58,7 @@ function SetupPage() {
         setIsSubmitting(true);
 
         try {
-            const res = await fetch(`${__ASTROMECH_BASE_PATH__}/api/auth/sign-up/email`, {
+            const res = await fetch(`${__ASTROMECH_BASE_PATH__}/api/setup`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },

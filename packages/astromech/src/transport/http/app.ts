@@ -13,12 +13,13 @@ import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 import { usersService } from '@/app-context/services';
 import { getAuth } from '@/auth/better-auth';
+import { createFirstAdmin, firstAdminSchema, SIGN_UP_CLOSED } from '@/auth/setup';
 import { resolveNodeEnv } from '@/env';
 import { handleMediaRequest } from '@/media/serving/handler';
 import { runWithContext } from '@/request-context/request-context';
 import { getClientAddress } from '@/transport/http/client-address';
 import { requireAuth } from './middleware/auth';
-import { onError, onNotFound } from './middleware/errors';
+import { fromZodError, onError, onNotFound } from './middleware/errors';
 import { cronRouter } from './routes/cron';
 import { entriesRouter } from './routes/entries';
 import { entryTypesRouter } from './routes/entry-types';
@@ -133,6 +134,21 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
     app.get(`${api}/setup/check`, async (c) => {
         const result = await usersService.query({ limit: 'all' });
         return c.json({ needsSetup: result.data.length === 0 });
+    });
+
+    // Not in a route table either, and unauthenticated for the same reason:
+    // before the first user there is no role to hold a grant. The write refuses
+    // itself once a user exists, so nothing else guards this.
+    app.post(`${api}/setup`, async (c) => {
+        const body = await c.req.json().catch(() => null);
+        const parsed = firstAdminSchema.safeParse(body);
+        if (!parsed.success) return fromZodError(c, parsed.error);
+
+        const result = await createFirstAdmin(parsed.data);
+        // Better Auth's own refusal body, so the admin reads one shape from
+        // both. It creates no session: the admin signs in straight after.
+        if (result === 'closed') return c.json(SIGN_UP_CLOSED, 403);
+        return c.json({ success: true });
     });
 
     // A catch-all because Better Auth owns its route surface — see

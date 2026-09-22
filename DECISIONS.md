@@ -179,27 +179,25 @@ are the account row, which better-auth and the roles machinery own; a version
 of a profile is a version of what the site's own fields say, not of an account
 change that machinery already tracks.
 
-**Sign-up is closed once a user exists.** First-run setup creates the first
-account as `admin`, and every later account is created by an admin through the
-users service, as Payload's `first-register` and Strapi's `register-admin` do.
-The guard is Better Auth's `databaseHooks.user.create.before`, which every
-Better Auth sign-up path runs through and the users service does not. Its count
-and Better Auth's insert are separate statements with no transaction between
-them, so a sign-up on an empty install first takes a claim row in `settings`
-with one conflict-ignoring insert, then counts again while holding it; two
-racing sign-ups get one `admin` and one `SIGN_UP_CLOSED`. The claim is deleted
-once the user exists, and one older than a minute can be taken over, so a
-sign-up that dies between the claim and the insert does not close setup for
-good. Anyone who can reach an install with no users can still finish setup
-first. Rejected: open sign-up with a least-privileged default role (the
-built-in `editor` still grants content access to anyone with the URL); Better
-Auth's `disableSignUp` plus a setup endpoint of our own (setup would have to
-write the credential account itself); Strapi's row lock (`FOR UPDATE`), which
-SQLite and D1 do not have; a fixed id, a unique marker column or a role the
-insert computes, each of which fails the losing insert with Better Auth's
-generic 422 rather than `SIGN_UP_CLOSED`; and deleting the later admin in the
-`after` hook, which runs once the session exists and leaves two admins if the
-process dies first.
+**First-run setup writes the first admin itself, and sign-up is closed.**
+`POST /setup` is unauthenticated and creates the first account as `admin`, with
+its credential row and its content row, the way Ghost's
+`/authentication/setup`, Strapi's `register-admin` and Payload's
+`first-register` do. Every later account is created by an admin through the
+users service. The gate is one statement — `INSERT INTO users (…) SELECT …
+WHERE NOT EXISTS (SELECT 1 FROM users)` — which SQLite and D1 both run
+atomically, so two setups arriving together create one user and the loser is
+answered `SIGN_UP_CLOSED`, with no lock and no transaction. Better Auth's
+`databaseHooks.user.create.before` throws that refusal unconditionally, because
+nothing creates an account through Better Auth. Anyone who can reach an install
+with no users can still finish setup first. Rejected: counting users in the
+sign-up hook, where the count and Better Auth's insert are separate statements
+with nothing between them; a claim row in `settings` taken with a
+conflict-ignoring insert and held on a 60-second lease, which the conditional
+insert replaces (an install still holding an `astromech.first-admin-claim` row
+simply stops reading it); Strapi's row lock (`SELECT … FOR UPDATE`), which
+neither SQLite nor D1 has; and open sign-up with a least-privileged default
+role, since the built-in `editor` grants content access to anyone with the URL.
 
 **Deleting a user leaves its references to the database's foreign keys.**
 Every column that references `users` declares its `onDelete`, and the
@@ -429,7 +427,7 @@ resolves at call time. Rejected: a shared `AstromechClient` contract, and
 dependency-inversion ports between the runtime and the modules.
 
 **Authentication is its own module.** `auth/` holds the better-auth wiring,
-session resolution, the first-admin claim the closed sign-up takes, and
+session resolution, first-run setup's write of the first admin, and
 better-auth's `sessions`, `accounts` and `verifications` tables. It sits beside
 the content modules and imports `users` to read the row a session names; `users`
 never imports `auth`, so the dependency runs one way. The peers split it the same

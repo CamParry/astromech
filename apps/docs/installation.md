@@ -158,10 +158,10 @@ Open `http://localhost:4321/cms`. The admin is served at `/cms` and its API at
 `/cms/api`. To move both, set `basePath` in your config.
 
 While the database has no users, the admin shows a setup screen. Enter your
-name, email and a password. That first account gets the `admin` role, and
-sign-up then closes: any later sign-up is refused with the code
-`SIGN_UP_CLOSED`. An admin adds everyone else from the admin's Users screen, or
-with `astromech users:create`.
+name, email and a password. Setup creates that first account with the `admin`
+role, and it is the only way to create one without signing in: a sign-up is
+refused with the code `SIGN_UP_CLOSED`. An admin adds everyone else from the
+admin's Users screen, or with `astromech users:create`.
 
 Finish setup before the site is public. Until the first account exists, anyone
 who can reach `/cms` can create it.

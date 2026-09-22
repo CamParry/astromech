@@ -21,11 +21,7 @@ import type { MigrationProvider } from 'kysely/migration';
 import { migrateToLatest } from '@astromech/schema-engine';
 import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import {
-    claimFirstAdmin,
-    FIRST_ADMIN_CLAIM_LEASE_MS,
-    releaseFirstAdminClaim,
-} from '@/auth/first-admin-claim';
+import { insertFirstUser } from '@/auth/setup';
 import { d1 } from '@/database/drivers/d1';
 import { assertForeignKeysEnforced } from '@/database/migrations';
 import { clearEnvSource } from '@/env';
@@ -48,7 +44,7 @@ const OWNED_TABLES = [
     'round_trip',
     'migrated',
     'introspected',
-    'settings',
+    'users',
     'kysely_migration',
     'kysely_migration_lock',
 ];
@@ -149,28 +145,37 @@ describe('d1() against local emulation', () => {
         expect(deleteResult?.numDeletedRows).toBe(2n);
     });
 
-    // The first-admin claim reads D1's `meta.changes` as the row count of an
-    // ignored insert and of a compare-and-set update.
-    it('takes the first-admin claim once, and takes over an expired one', async () => {
-        // The app's `settings` DDL, less the foreign key to a `users` table
-        // this file does not create.
-        await sql`CREATE TABLE settings (
-            key TEXT PRIMARY KEY NOT NULL,
-            value TEXT,
-            updated_at TEXT NOT NULL,
-            updated_by TEXT
+    // First-run setup's gate, on the driver with no interactive transactions:
+    // the conditional insert stands alone there, and D1's `meta.changes` is how
+    // its row count comes back.
+    it('inserts the first user once, and nothing on a second call', async () => {
+        // The app's `users` DDL, less the unique index this case does not need.
+        await sql`CREATE TABLE users (
+            id TEXT PRIMARY KEY NOT NULL,
+            email TEXT NOT NULL,
+            name TEXT NOT NULL,
+            email_verified INTEGER DEFAULT 0 NOT NULL,
+            image TEXT,
+            role TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
         )`.execute(db);
         const appDb = db as unknown as Db;
-        const now = new Date();
-        const expired = new Date(now.getTime() + FIRST_ADMIN_CLAIM_LEASE_MS);
 
-        expect(await claimFirstAdmin(now, appDb)).toBe(true);
-        expect(await claimFirstAdmin(now, appDb)).toBe(false);
-        expect(await claimFirstAdmin(expired, appDb)).toBe(true);
-        expect(await claimFirstAdmin(expired, appDb)).toBe(false);
+        const first = await insertFirstUser(
+            { email: 'first@test.dev', name: 'First', role: 'admin' },
+            appDb
+        );
+        const second = await insertFirstUser(
+            { email: 'second@test.dev', name: 'Second', role: 'admin' },
+            appDb
+        );
 
-        await releaseFirstAdminClaim(appDb);
-        expect(await claimFirstAdmin(now, appDb)).toBe(true);
+        expect([first, second]).toEqual([true, false]);
+        const { rows } = await sql<{ email: string }>`
+            SELECT email FROM users
+        `.execute(db);
+        expect(rows.map((row) => row.email)).toEqual(['first@test.dev']);
     });
 
     // The migration runner reads `PRAGMA foreign_keys`, and D1 answers only the
