@@ -35,7 +35,7 @@ vi.mock('@/transport/tools/scoped-tools', () => ({
 const config: ResolvedConfig = {
     basePath: '/cms',
     resolvedRoles: {},
-    entries: {
+    entryTypes: {
         posts: {
             id: 'posts',
             single: 'Post',
@@ -77,8 +77,6 @@ const config: ResolvedConfig = {
         },
     },
     globals: {},
-    pluginEntries: {},
-    pluginGlobals: {},
     adminPages: [],
     trash: { enabled: true, retentionDays: 30 },
     publicSettingKeys: [],

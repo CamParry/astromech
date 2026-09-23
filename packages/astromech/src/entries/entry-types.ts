@@ -1,10 +1,6 @@
 /**
- * Entry type identity helpers.
- *
- * Root (user) entry types use bare ids (`post`). Plugin-contributed entry types
- * are namespaced as `{plugin}/{type}` and live in `ResolvedConfig.pluginEntries`
- * rather than flat-merging into root `entries`. These helpers parse, qualify,
- * and resolve a type id against the right map.
+ * Entry type ids. A site's type is addressed by its bare key (`post`), a
+ * plugin's by `{plugin}/{type}`; both live in `ResolvedConfig.entryTypes`.
  */
 
 import type { ResolvedConfig, ResolvedEntryType } from '@/types/index';
@@ -21,21 +17,20 @@ export function parseEntryTypeId(id: string): { plugin: string; type: string } |
     return { plugin: id.slice(0, index), type: id.slice(index + 1) };
 }
 
-/** Build the qualified id for a plugin entry type: `{plugin}/{type}`. */
+/** Build the id a plugin's entry type or global is addressed by: `{plugin}/{name}`. */
 export function qualifyEntryType(plugin: string, type: string): string {
     return `${plugin}${QUALIFIED_SEPARATOR}${type}`;
 }
 
 /**
- * Resolve a type id against root entries (bare id) or pluginEntries (qualified).
- * Bare ids behave exactly like `config.entries[id]`. Returns undefined when the
- * plugin or type is unknown.
+ * The entry type an id names, the site's or a plugin's, or undefined. An own
+ * property only, so `constructor` names nothing.
  */
 export function resolveEntryType(
-    config: Pick<ResolvedConfig, 'entries' | 'pluginEntries'>,
+    config: Pick<ResolvedConfig, 'entryTypes'>,
     typeId: string
 ): ResolvedEntryType | undefined {
-    const parsed = parseEntryTypeId(typeId);
-    if (!parsed) return config.entries[typeId];
-    return config.pluginEntries[parsed.plugin]?.[parsed.type];
+    return Object.hasOwn(config.entryTypes, typeId)
+        ? config.entryTypes[typeId]
+        : undefined;
 }

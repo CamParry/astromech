@@ -9,7 +9,7 @@ import { ResourceValidationError } from '@/errors/resource';
 import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { readGate } from '../internal/access';
-import { asGlobal, globalRepository, resolveGlobal } from '../internal/global';
+import { asGlobal, getDeclaredGlobal, globalRepository } from '../internal/global';
 import { localised } from '../schema';
 
 /**
@@ -27,7 +27,7 @@ export const getGlobal = defineServiceMethod({
     access: readGate,
     mutates: false,
     async handler(params, ctx): Promise<Global | null> {
-        const global = resolveGlobal(ctx.config, params.key);
+        const global = getDeclaredGlobal(ctx.config, params.key);
         const locale = resolveResourceLocale(
             RESOURCE_SPECS.global,
             ctx.config,

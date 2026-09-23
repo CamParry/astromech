@@ -32,7 +32,7 @@ async function enabledRules(
 export const slugChangeHook: Hook = defineHook(
     'entry:afterUpdate',
     async (event, ctx) => {
-        const template = ctx.config.entries[event.type]?.url;
+        const template = ctx.config.entryTypes[event.type]?.url;
         if (!template) return;
 
         const from = resolveEntryPath(template, event.entry);

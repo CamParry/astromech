@@ -257,8 +257,10 @@ export type ResolvedEntryCapabilities = {
 };
 
 export type ResolvedEntryType = Omit<EntryType, 'repository' | 'fields' | 'type'> & {
-    /** The addressable id: the root `entries` key, or `{plugin}/{type}` for plugin types. */
+    /** The addressable id: the site's `entries` key, or `{plugin}/{type}` for a plugin's. */
     id: string;
+    /** The namespace of the plugin that declares the type; absent for the site's own. */
+    plugin?: string;
     capabilities: ResolvedEntryCapabilities;
     titleField: 'title' | false;
     fields: ResolvedEntryFields;
@@ -313,6 +315,8 @@ export type ResolvedGlobalCapabilities = {
 export type ResolvedGlobal = Omit<GlobalConfig, 'key' | 'fields'> & {
     /** Bare `key` for a host global, `<namespace>/<key>` for a plugin's. */
     id: string;
+    /** The namespace of the plugin that declares the global; absent for the site's own. */
+    plugin?: string;
     capabilities: ResolvedGlobalCapabilities;
     fields: ResolvedEntryFields;
 };
@@ -528,28 +532,19 @@ export type TrustProxy = boolean | number;
  */
 export type ResolvedConfig = Omit<
     AstromechConfig,
-    'db' | 'storage' | 'email' | 'scheduler' | 'ai' | 'plugins' | 'globals'
+    'db' | 'storage' | 'email' | 'scheduler' | 'ai' | 'plugins' | 'entries' | 'globals'
 > & {
     basePath: string;
     mediaRoute: string;
     migrationsDir: string;
-    entries: Record<string, ResolvedEntryType>;
-    /** Host-declared globals, keyed by bare key. Always present. */
+    /** Every entry type, the site's and each plugin's, keyed by id. */
+    entryTypes: Record<string, ResolvedEntryType>;
+    /** Every global, the site's and each plugin's, keyed by id. */
     globals: Record<string, ResolvedGlobal>;
     /** Always present — `access` defaults to `'public'`. */
     media: ResolvedMediaConfig;
     /** Always present — `fields` defaults to empty and `translatable` to false. */
     users: ResolvedUsersConfig;
-    /**
-     * Plugin-contributed entry types, namespaced by plugin name → bare type →
-     * resolved config. Always present (empty when no plugins contribute types).
-     */
-    pluginEntries: Record<string, Record<string, ResolvedEntryType>>;
-    /**
-     * Plugin-contributed globals, namespaced by plugin name → bare key →
-     * resolved config. Always present (empty when no plugins contribute one).
-     */
-    pluginGlobals: Record<string, Record<string, ResolvedGlobal>>;
     adminPages: ResolvedAdminPage[];
     trash: Required<TrashConfig>;
     /**

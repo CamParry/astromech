@@ -55,6 +55,7 @@ import { decodeWith, encodeWith } from '@/database/codec';
 import { setDatabaseDriver } from '@/database/driver-registry';
 import { setDb } from '@/database/registry';
 import { userContentTable, usersTable } from '@/database/tables';
+import { registerEntryRepositories } from '@/entries/repository/registry';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { runInRequestScope } from '@/request-scope/request-scope';
@@ -227,6 +228,7 @@ export function setupTestConfig(
     const resolved = resolveConfig(config);
     setConfig(resolved);
     registerPlugins(config.plugins ?? [], resolved);
+    registerEntryRepositories(config);
     return resolved;
 }
 
@@ -259,6 +261,7 @@ export function registerTestPlugins(
     resolved: ResolvedConfig
 ): void {
     registerPlugins(plugins, resolved);
+    registerEntryRepositories({ entries: {}, plugins });
 }
 
 /**

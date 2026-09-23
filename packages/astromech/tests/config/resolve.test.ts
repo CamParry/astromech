@@ -85,8 +85,8 @@ describe('resolveConfig migrationsDir', () => {
     });
 });
 
-describe('resolveConfig pluginEntries', () => {
-    it('resolves plugin entry types into the namespaced map (not root entries)', () => {
+describe('resolveConfig plugin entry types', () => {
+    it('resolves plugin entry types into the one map under their qualified id', () => {
         const resolved = resolveConfig(
             baseConfig([
                 {
@@ -96,13 +96,14 @@ describe('resolveConfig pluginEntries', () => {
             ])
         );
 
-        expect(resolved.entries.redirect).toBeUndefined();
-        expect(resolved.pluginEntries.redirects?.redirect).toBeDefined();
-        expect(resolved.pluginEntries.redirects?.redirect?.capabilities).toBeDefined();
-        expect(resolved.pluginEntries.redirects?.redirect?.titleField).toBe('title');
+        expect(resolved.entryTypes['redirect']).toBeUndefined();
+        const redirect = resolved.entryTypes['redirects/redirect'];
+        expect(redirect).toMatchObject({ id: 'redirects/redirect', plugin: 'redirects' });
+        expect(redirect?.capabilities).toBeDefined();
+        expect(redirect?.titleField).toBe('title');
     });
 
-    it('keys pluginEntries by the derived namespace, scope and all', () => {
+    it('qualifies plugin entry types by the derived namespace, scope and all', () => {
         const resolved = resolveConfig(
             baseConfig([
                 {
@@ -112,13 +113,24 @@ describe('resolveConfig pluginEntries', () => {
             ])
         );
 
-        expect(resolved.pluginEntries.acme_redirects?.redirect).toBeDefined();
-        expect(resolved.pluginEntries.redirects).toBeUndefined();
+        expect(resolved.entryTypes['acme_redirects/redirect']).toBeDefined();
+        expect(resolved.entryTypes['redirects/redirect']).toBeUndefined();
     });
 
-    it('always present even with no plugins', () => {
+    it('leaves the site types unowned', () => {
         const resolved = resolveConfig(baseConfig([]));
-        expect(resolved.pluginEntries).toEqual({});
+        for (const entryType of Object.values(resolved.entryTypes)) {
+            expect(entryType.plugin).toBeUndefined();
+        }
+    });
+
+    it('rejects a site entry type key holding the qualified separator', () => {
+        expect(() =>
+            resolveConfig({
+                ...baseConfig([]),
+                entries: { 'redirects/redirect': entryType('Redirect') },
+            })
+        ).toThrow(/must not contain "\/"/);
     });
 
     it('strips the live repository instance so the whole config is JSON-serialisable', () => {
@@ -138,7 +150,7 @@ describe('resolveConfig pluginEntries', () => {
             ])
         );
 
-        const item = resolved.pluginEntries.store?.item as Record<string, unknown>;
+        const item = resolved.entryTypes['store/item'] as Record<string, unknown>;
         expect('repository' in item).toBe(false);
         expect(() => JSON.stringify(resolved)).not.toThrow();
     });
@@ -185,14 +197,14 @@ describe('resolveConfig flat fields', () => {
 
     it('resolves a flat fields array to { main, sidebar: [] }', () => {
         const resolved = resolveConfig(flatConfig());
-        expect(resolved.entries['post']?.fields.main).toHaveLength(2);
-        expect(resolved.entries['post']?.fields.sidebar).toEqual([]);
-        expect(resolved.entries['post']?.fields.main[0]?.name).toBe('from');
+        expect(resolved.entryTypes['post']?.fields.main).toHaveLength(2);
+        expect(resolved.entryTypes['post']?.fields.sidebar).toEqual([]);
+        expect(resolved.entryTypes['post']?.fields.main[0]?.name).toBe('from');
     });
 
     it('fields in resolved are plain objects', () => {
         const resolved = resolveConfig(flatConfig());
-        const field = resolved.entries['post']?.fields.main[0] as
+        const field = resolved.entryTypes['post']?.fields.main[0] as
             | Record<string, unknown>
             | undefined;
         expect(typeof field?.['build']).toBe('undefined');
@@ -200,12 +212,12 @@ describe('resolveConfig flat fields', () => {
 
     it('derives search from searchable fields', () => {
         const resolved = resolveConfig(flatConfig());
-        expect(resolved.entries.post?.search).toEqual(['to']);
+        expect(resolved.entryTypes.post?.search).toEqual(['to']);
     });
 
     it('explicit search wins over derived', () => {
         const resolved = resolveConfig(flatConfig({ search: ['from'] }));
-        expect(resolved.entries.post?.search).toEqual(['from']);
+        expect(resolved.entryTypes.post?.search).toEqual(['from']);
     });
 });
 
@@ -226,10 +238,10 @@ describe('resolveConfig { main, sidebar } fields shape', () => {
             },
             plugins: [],
         });
-        expect(resolved.entries['post']?.fields.main).toHaveLength(1);
-        expect(resolved.entries['post']?.fields.sidebar).toHaveLength(1);
-        expect(resolved.entries['post']?.fields.main[0]?.name).toBe('body');
-        expect(resolved.entries['post']?.fields.sidebar[0]?.name).toBe('author');
+        expect(resolved.entryTypes['post']?.fields.main).toHaveLength(1);
+        expect(resolved.entryTypes['post']?.fields.sidebar).toHaveLength(1);
+        expect(resolved.entryTypes['post']?.fields.main[0]?.name).toBe('body');
+        expect(resolved.entryTypes['post']?.fields.sidebar[0]?.name).toBe('author');
     });
 
     it('sidebar defaults to [] when omitted from { main } shape', () => {
@@ -245,7 +257,7 @@ describe('resolveConfig { main, sidebar } fields shape', () => {
             },
             plugins: [],
         });
-        expect(resolved.entries['post']?.fields.sidebar).toEqual([]);
+        expect(resolved.entryTypes['post']?.fields.sidebar).toEqual([]);
     });
 });
 
@@ -259,7 +271,7 @@ describe('resolveConfig undefined fields', () => {
             },
             plugins: [],
         });
-        expect(resolved.entries['post']?.fields).toEqual({ main: [], sidebar: [] });
+        expect(resolved.entryTypes['post']?.fields).toEqual({ main: [], sidebar: [] });
     });
 });
 
@@ -690,14 +702,16 @@ describe('resolveConfig globals', () => {
             ])
         );
 
-        expect(resolved.pluginGlobals['seo']?.['settings']?.id).toBe('seo/settings');
+        expect(resolved.globals['seo/settings']).toMatchObject({
+            id: 'seo/settings',
+            plugin: 'seo',
+        });
     });
 
-    it('always produces both maps, empty when nothing is declared', () => {
+    it('produces an empty map when nothing is declared', () => {
         const resolved = resolveConfig(baseConfig([]));
 
         expect(resolved.globals).toEqual({});
-        expect(resolved.pluginGlobals).toEqual({});
     });
 
     it('does not leave the authored globals array on the resolved config', () => {

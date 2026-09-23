@@ -74,7 +74,8 @@ describe('pluginFieldTypes', () => {
 describe('generateClientTypes with plugin field types', () => {
     const config = {
         basePath: '/cms',
-        entries: {
+        globals: {},
+        entryTypes: {
             posts: {
                 single: 'Post',
                 plural: 'Posts',
@@ -143,14 +144,14 @@ describe('generateClientTypes with plugin field types', () => {
 describe('generateClientTypes — plugin entry types', () => {
     const baseConfig = {
         basePath: '/cms',
-        entries: {
+        globals: {},
+        entryTypes: {
             posts: {
                 single: 'Post',
                 plural: 'Posts',
                 fields: { main: [], sidebar: [] },
             },
         },
-        pluginEntries: {},
         trash: { enabled: true, retentionDays: 30 },
     } as unknown as ResolvedConfig;
 
@@ -181,42 +182,45 @@ describe('generateClientTypes — plugin entry types', () => {
 
     const configWithPluginEntries = {
         ...baseConfig,
-        pluginEntries: {
-            redirects: {
-                redirect: {
-                    single: 'Redirect',
-                    plural: 'Redirects',
-                    fields: redirectFields,
-                },
+        entryTypes: {
+            ...baseConfig.entryTypes,
+            'redirects/redirect': {
+                single: 'Redirect',
+                plural: 'Redirects',
+                fields: redirectFields,
             },
         },
     } as unknown as ResolvedConfig;
 
-    it('generates the PluginRedirectsRedirectFields type', () => {
+    it('generates the RedirectsRedirectFields type from the qualified id', () => {
         const output = generateClientTypes(configWithPluginEntries);
-        expect(output).toContain('export type PluginRedirectsRedirectFields = {');
+        expect(output).toContain('export type RedirectsRedirectFields = {');
         expect(output).toContain('from: string;');
         expect(output).toContain('to: string;');
         expect(output).toContain('status?: string;');
         expect(output).toContain('enabled?: boolean;');
     });
 
-    it('generates PluginRedirectsRedirectRelations type', () => {
+    it('generates RedirectsRedirectRelations type', () => {
         const output = generateClientTypes(configWithPluginEntries);
-        expect(output).toContain('export type PluginRedirectsRedirectRelations =');
+        expect(output).toContain('export type RedirectsRedirectRelations =');
     });
 
-    it('uses plugin entry prefix comment marker', () => {
+    it('augments AstromechEntryTypes under the qualified id, as a site type is', () => {
         const output = generateClientTypes(configWithPluginEntries);
         expect(output).toContain(
-            '// --- Plugin entry: redirects/redirect (PluginRedirectsRedirect) ---'
+            '    "redirects/redirect": { fields: RedirectsRedirectFields; fieldsPublic: RedirectsRedirectFieldsPublic; relations: RedirectsRedirectRelations };'
+        );
+        expect(output).toContain(
+            '// --- Entry type: redirects/redirect (RedirectsRedirect) ---'
         );
     });
 
-    it('resolves qualified relation target to plugin Fields type', () => {
+    it('resolves a qualified relation target to the plugin Fields type, public shape included', () => {
         const configWithRelation = {
             ...configWithPluginEntries,
-            entries: {
+            entryTypes: {
+                ...configWithPluginEntries.entryTypes,
                 posts: {
                     single: 'Post',
                     plural: 'Posts',
@@ -237,43 +241,40 @@ describe('generateClientTypes — plugin entry types', () => {
 
         const output = generateClientTypes(configWithRelation);
         expect(output).toContain(
-            "import('astromech').TypedEntry<PluginRedirectsRedirectFields>"
+            "import('astromech').TypedEntry<RedirectsRedirectFields>"
         );
-    });
-
-    it('empty pluginEntries produces output identical to baseline (regression)', () => {
-        const baseline = generateClientTypes(baseConfig);
-        const withEmpty = generateClientTypes({
-            ...baseConfig,
-            pluginEntries: {},
-        } as unknown as ResolvedConfig);
-        expect(withEmpty).toBe(baseline);
     });
 
     it('PascalCases hyphenated plugin/type names into the Fields type name', () => {
         const configWithHyphenated = {
             ...baseConfig,
-            pluginEntries: {
-                'my-plugin': {
-                    'some-type': {
-                        single: 'Some Type',
-                        plural: 'Some Types',
-                        fields: {
-                            main: [
-                                {
-                                    name: 'title',
-                                    type: 'text' as const,
-                                    label: 'Title',
-                                },
-                            ],
-                            sidebar: [],
-                        },
+            entryTypes: {
+                'my-plugin/some-type': {
+                    single: 'Some Type',
+                    plural: 'Some Types',
+                    fields: {
+                        main: [{ name: 'title', type: 'text' as const, label: 'Title' }],
+                        sidebar: [],
                     },
                 },
             },
         } as unknown as ResolvedConfig;
 
         const output = generateClientTypes(configWithHyphenated);
-        expect(output).toContain('export type PluginMyPluginSomeTypeFields = {');
+        expect(output).toContain('export type MyPluginSomeTypeFields = {');
+    });
+
+    it('throws when two ids generate the same type name', () => {
+        const colliding = {
+            ...baseConfig,
+            entryTypes: {
+                redirects_redirect: { fields: { main: [], sidebar: [] } },
+                'redirects/redirect': { fields: { main: [], sidebar: [] } },
+            },
+        } as unknown as ResolvedConfig;
+
+        expect(() => generateClientTypes(colliding)).toThrow(
+            /"redirects_redirect" and "redirects\/redirect" both generate/
+        );
     });
 });

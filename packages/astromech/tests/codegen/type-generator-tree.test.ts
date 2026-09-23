@@ -4,7 +4,7 @@ import { generateClientTypes } from '@/codegen/type-generator';
 
 function makeConfig(fields: object[]): ResolvedConfig {
     return {
-        entries: {
+        entryTypes: {
             pages: {
                 fields: {
                     main: fields as never,
@@ -16,7 +16,6 @@ function makeConfig(fields: object[]): ResolvedConfig {
         pages: {},
         locales: [],
         defaultLocale: 'en',
-        pluginEntries: {},
     } as unknown as ResolvedConfig;
 }
 
@@ -119,7 +118,7 @@ describe('type-generator — hoisted names', () => {
     it('gives two entry types with the same tree field distinct node types', () => {
         const config = {
             ...makeConfig([menu]),
-            entries: {
+            entryTypes: {
                 header: { fields: { main: [menu], sidebar: [] } },
                 footer: { fields: { main: [menu], sidebar: [] } },
             },
@@ -147,7 +146,7 @@ describe('type-generator — hoisted names', () => {
     it('quotes an entry-type key that is not an identifier', () => {
         const config = {
             ...makeConfig([]),
-            entries: { 'case-study': { fields: { main: [], sidebar: [] } } },
+            entryTypes: { 'case-study': { fields: { main: [], sidebar: [] } } },
         } as unknown as ResolvedConfig;
 
         expect(generateClientTypes(config)).toContain(

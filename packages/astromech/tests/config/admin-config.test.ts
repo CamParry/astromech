@@ -57,7 +57,7 @@ const baseConfig = (
 describe('toAdminEntryType', () => {
     it('maps required fields correctly', () => {
         const resolved = resolveConfig(baseConfig());
-        const postEntry = resolved.entries['post'];
+        const postEntry = resolved.entryTypes['post'];
         if (!postEntry) throw new Error('post entry not resolved');
 
         const admin = toAdminEntryType(postEntry);
@@ -76,7 +76,7 @@ describe('toAdminEntryType', () => {
 
     it('omits icon when absent', () => {
         const resolved = resolveConfig(baseConfig());
-        const postEntry = resolved.entries['post'];
+        const postEntry = resolved.entryTypes['post'];
         if (!postEntry) throw new Error('post entry not resolved');
 
         const admin = toAdminEntryType(postEntry);
@@ -91,7 +91,7 @@ describe('toAdminEntryType', () => {
                 post: { ...entryType('Post'), icon: 'FileText' },
             },
         });
-        const postEntry = resolved.entries['post'];
+        const postEntry = resolved.entryTypes['post'];
         if (!postEntry) throw new Error('post entry not resolved');
 
         const admin = toAdminEntryType(postEntry);
@@ -101,7 +101,7 @@ describe('toAdminEntryType', () => {
 
     it('omits views, defaultView, gridFields, search when absent', () => {
         const resolved = resolveConfig(baseConfig());
-        const postEntry = resolved.entries['post'];
+        const postEntry = resolved.entryTypes['post'];
         if (!postEntry) throw new Error('post entry not resolved');
 
         const admin = toAdminEntryType(postEntry);
@@ -132,8 +132,8 @@ describe('toAdminEntryType', () => {
                 },
             })
         );
-        const link = resolved.entries['link'];
-        const post = resolved.entries['post'];
+        const link = resolved.entryTypes['link'];
+        const post = resolved.entryTypes['post'];
         if (!link || !post) throw new Error('entries not resolved');
 
         expect(toAdminEntryType(link).customTable).toBe(true);
@@ -158,7 +158,7 @@ describe('toAdminEntryType — optional members', () => {
                 },
             },
         });
-        const postEntry = resolved.entries['post'];
+        const postEntry = resolved.entryTypes['post'];
         if (!postEntry) throw new Error('post entry not resolved');
 
         expect(toAdminEntryType(postEntry)).toMatchObject({

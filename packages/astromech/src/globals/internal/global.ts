@@ -11,8 +11,8 @@ import { assertCapability } from '@/content/capabilities';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { ResourceNotFoundError } from '@/errors/resource';
-import { findGlobal } from '../find-global';
 import { createGlobalsRepository } from '../repository/globals-table';
+import { resolveGlobal } from '../resolve-global';
 
 /** Every capability a global may declare, for narrowing a bare string to one. */
 export const GLOBAL_CAPABILITIES = [
@@ -30,9 +30,9 @@ export function isGlobalCapability(value: string): value is GlobalCapability {
     return (GLOBAL_CAPABILITIES as readonly string[]).includes(value);
 }
 
-/** {@link findGlobal}, throwing for a key nothing declares. */
-export function resolveGlobal(config: ResolvedConfig, key: string): ResolvedGlobal {
-    const global = findGlobal(config, key);
+/** {@link resolveGlobal}, throwing for a key nothing declares. */
+export function getDeclaredGlobal(config: ResolvedConfig, key: string): ResolvedGlobal {
+    const global = resolveGlobal(config, key);
     if (!global) throw new ResourceNotFoundError('global', { id: key });
     return global;
 }
@@ -50,7 +50,7 @@ export function assertRequiredCapability(
         typeof input === 'object' && input !== null
             ? (input as { key?: unknown }).key
             : undefined;
-    const global = typeof key === 'string' ? findGlobal(config, key) : undefined;
+    const global = typeof key === 'string' ? resolveGlobal(config, key) : undefined;
     if (!global) return;
     if (!isGlobalCapability(capability)) {
         throw new Error(`'${capability}' is not a global capability.`);
@@ -82,7 +82,7 @@ export async function requireCanonical(
     config: ResolvedConfig,
     params: { key: string; locale?: string | undefined }
 ): Promise<CanonicalGlobal> {
-    const global = resolveGlobal(config, params.key);
+    const global = getDeclaredGlobal(config, params.key);
     const locale = resolveResourceLocale(
         RESOURCE_SPECS.global,
         config,

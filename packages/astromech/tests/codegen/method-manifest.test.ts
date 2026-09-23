@@ -111,15 +111,9 @@ function parseManifest(plugins: PluginDefinition[] = [testPlugin]) {
     };
 }
 
-function findMethod(
-    methods: Record<string, unknown>[],
-    name: string,
-    entryType?: string
-) {
+function findMethod(methods: Record<string, unknown>[], name: string, typeId?: string) {
     return methods.find(
-        (m) =>
-            m['name'] === name &&
-            (entryType === undefined || m['entryType'] === entryType)
+        (m) => m['name'] === name && (typeId === undefined || m['typeId'] === typeId)
     );
 }
 
@@ -284,12 +278,12 @@ describe('generateMethodManifest — globals', () => {
 });
 
 describe('generateMethodManifest — root entries', () => {
-    it('should emit entries.query for root type posts with namespace root', () => {
+    it('should emit entries.query for root type posts, owned by no plugin', () => {
         const { methods } = parseManifest([]);
         const m = findMethod(methods, 'entries.query', 'posts');
         expect(m).toBeDefined();
         expect(m?.['source']).toBe('entries');
-        expect(m?.['namespace']).toBe('root');
+        expect(m?.['plugin']).toBeUndefined();
     });
 
     it('should set permission to entry:<type>:read for entries.query', () => {
@@ -345,7 +339,7 @@ describe('generateMethodManifest — root entries', () => {
 
     it('should omit the versioning-gated methods for non-versioned type pages', () => {
         const { methods } = parseManifest([]);
-        const pagesMethods = methods.filter((m) => m['entryType'] === 'pages');
+        const pagesMethods = methods.filter((m) => m['typeId'] === 'pages');
         const names = pagesMethods.map((m) => m['name']);
         expect(names).toContain('entries.query');
         expect(names).toContain('entries.get');
@@ -366,7 +360,7 @@ describe('generateMethodManifest — root entries', () => {
 
     it('should give every root entry method an input schema naming its type', () => {
         const { methods } = parseManifest([]);
-        const postMethods = methods.filter((m) => m['entryType'] === 'posts');
+        const postMethods = methods.filter((m) => m['typeId'] === 'posts');
         expect(postMethods.length).toBeGreaterThan(0);
         for (const m of postMethods) {
             const input = m['input'] as { properties?: Record<string, unknown> };
@@ -445,39 +439,34 @@ describe('generateMethodManifest — staged-entry methods', () => {
 describe('generateMethodManifest — plugin entries', () => {
     it('should emit entries.query for plugin entry type widget', () => {
         const { methods } = parseManifest();
-        const m = findMethod(methods, 'entries.query', 'widget');
+        const m = findMethod(methods, 'entries.query', 'test_my_plugin/widget');
         expect(m).toBeDefined();
         expect(m?.['source']).toBe('entries');
     });
 
-    it('should set namespace to the plugin permissionNamespace for plugin entries', () => {
-        const { methods } = parseManifest();
-        const m = findMethod(methods, 'entries.query', 'widget');
-        // @test/my-plugin → test_my_plugin
-        expect(m?.['namespace']).toBe('test_my_plugin');
-    });
-
     it('should set plugin field for plugin entry methods', () => {
         const { methods } = parseManifest();
-        const m = findMethod(methods, 'entries.query', 'widget');
+        const m = findMethod(methods, 'entries.query', 'test_my_plugin/widget');
         expect(m?.['plugin']).toBe('test_my_plugin');
     });
 
     it('should set permission using pluginEntryPermission format', () => {
         const { methods } = parseManifest();
-        const m = findMethod(methods, 'entries.create', 'widget');
+        const m = findMethod(methods, 'entries.create', 'test_my_plugin/widget');
         expect(m?.['permission']).toBe('plugin:test_my_plugin:entry:widget:create');
     });
 
     it('should set permission using read action for entries.get on plugin entries', () => {
         const { methods } = parseManifest();
-        const m = findMethod(methods, 'entries.get', 'widget');
+        const m = findMethod(methods, 'entries.get', 'test_my_plugin/widget');
         expect(m?.['permission']).toBe('plugin:test_my_plugin:entry:widget:read');
     });
 
     it('should name the QUALIFIED type in a plugin entry method input', () => {
         const { methods } = parseManifest();
-        const input = findMethod(methods, 'entries.get', 'widget')?.['input'] as {
+        const input = findMethod(methods, 'entries.get', 'test_my_plugin/widget')?.[
+            'input'
+        ] as {
             properties?: Record<string, unknown>;
         };
         expect(input?.properties?.['type']).toEqual({

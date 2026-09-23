@@ -5,6 +5,8 @@
  */
 
 import type { EntryRepository } from './types';
+import type { AstromechConfig } from '@/types/index';
+import { declaredEntryTypes } from '@/config/entry-types';
 import { createKeyedRegistry, createRegistry } from '@/registry';
 import { createEntriesTableRepository } from './entries-table';
 
@@ -40,9 +42,14 @@ export function hasCustomTable(type: string): boolean {
 }
 
 /**
- * Clear all per-type repository overrides. Called at the start of `registerPlugins`
- * so repeated registrations (notably in tests) don't leak stale plugin repositories.
+ * Mount the repository every declared entry type names, the site's and each
+ * plugin's, under its id, after clearing the previous boot's.
  */
-export function resetEntryRepositoryOverrides(): void {
+export function registerEntryRepositories(
+    config: Pick<AstromechConfig, 'entries' | 'plugins'>
+): void {
     overrides.clear();
+    for (const { id, entryType } of declaredEntryTypes(config)) {
+        if (entryType.repository) overrides.set(id, entryType.repository);
+    }
 }

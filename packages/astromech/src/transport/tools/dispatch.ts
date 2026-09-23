@@ -33,11 +33,9 @@ function toolNameFor(manifest: ManifestMethod): string {
         case 'plugin':
             return `plugins_${manifest.serviceKey}_${manifest.method}`;
         case 'entries':
-            // Root types are addressed bare; a plugin type keeps its namespace,
-            // so two plugins declaring a `page` type do not collide.
-            return manifest.namespace === 'root'
-                ? `entries_${manifest.entryType}_${manifest.method}`
-                : `entries_${manifest.namespace}_${manifest.entryType}_${manifest.method}`;
+            // The type id keeps a plugin type's namespace, so two plugins
+            // declaring a `page` type do not collide.
+            return `entries_${manifest.typeId.replaceAll('/', '_')}_${manifest.method}`;
     }
 }
 

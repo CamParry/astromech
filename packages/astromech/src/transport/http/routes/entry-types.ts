@@ -21,10 +21,10 @@ const router = new OpenAPIHono<Env>();
 // GET /entry-types — bespoke
 // No method id, and the response is a bare array rather than an envelope.
 router.get('/', (c) => {
-    const { entries } = getConfig();
+    const { entryTypes } = getConfig();
     const permissions = permissionsFor(c.var.ctx.role);
 
-    const meta = Object.entries(entries)
+    const meta = Object.entries(entryTypes)
         .filter(([type]) => permissions.allows(entryPermission(type, 'read')))
         .map(([type, config]) => ({
             type,

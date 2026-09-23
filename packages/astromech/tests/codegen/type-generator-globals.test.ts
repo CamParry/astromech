@@ -2,20 +2,15 @@ import type { ResolvedConfig } from '@/types/index';
 import { describe, expect, it } from 'vitest';
 import { generateClientTypes } from '@/codegen/type-generator';
 
-function makeConfig(
-    globals: Record<string, object>,
-    pluginGlobals: Record<string, Record<string, object>> = {}
-): ResolvedConfig {
+function makeConfig(globals: Record<string, object>): ResolvedConfig {
     return {
-        entries: {
+        entryTypes: {
             posts: { fields: { main: [{ name: 'title', type: 'text' }], sidebar: [] } },
         },
         globals,
-        pluginGlobals,
         pages: {},
         locales: [],
         defaultLocale: 'en',
-        pluginEntries: {},
     } as unknown as ResolvedConfig;
 }
 
@@ -44,13 +39,9 @@ describe('type-generator — globals', () => {
     });
 
     it('emits a fields type per plugin global, keyed by its qualified id', () => {
-        const output = generateClientTypes(
-            makeConfig({}, { seo: { settings: siteFields } })
-        );
+        const output = generateClientTypes(makeConfig({ 'seo/settings': siteFields }));
 
-        expect(output).toContain(
-            '// --- Plugin global: seo/settings (SeoSettingsGlobal) ---'
-        );
+        expect(output).toContain('// --- Global: seo/settings (SeoSettingsGlobal) ---');
         expect(output).toContain('export type SeoSettingsGlobalFields = {');
         expect(output).toContain('"seo/settings": { fields: SeoSettingsGlobalFields };');
     });

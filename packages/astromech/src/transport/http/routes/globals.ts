@@ -13,7 +13,7 @@ import type { Context } from 'hono';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { getConfig } from '@/config/registry';
 import { CapabilityError } from '@/errors/capability';
-import { findGlobal } from '@/globals/find-global';
+import { resolveGlobal } from '@/globals/resolve-global';
 import { globalsDefinition } from '@/globals/service';
 import { resolveAccess } from '@/permissions/access';
 import { permissionsFor } from '@/permissions/permissions-for';
@@ -148,7 +148,7 @@ function globalAccess(): (c: Context<Env>, route: RestRoute) => Response | null 
         const access = resolveAccess(declared.access, { key });
         if (!permissionsFor(c.var.ctx.role).allowsAccess(access)) return forbidden(c);
 
-        if (!findGlobal(getConfig(), key))
+        if (!resolveGlobal(getConfig(), key))
             return notFound(c, `Global '${key}' not found`);
         return null;
     };
@@ -176,7 +176,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         const full = flag(c, 'full');
         const staged = flag(c, 'staged');
 
-        const global = findGlobal(getConfig(), key);
+        const global = resolveGlobal(getConfig(), key);
         // Permission before existence for every read but a public one: a 404 an
         // unpermitted caller can read is a global enumeration. A public global's
         // existence is not a secret, so its plain read skips the gate.

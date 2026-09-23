@@ -1,7 +1,7 @@
 /**
- * A plugin's global is addressed by its qualified key (`<namespace>/<key>`) and
- * resolves against `pluginGlobals` alone, so a host global with the same bare
- * name is a different global with rows of its own.
+ * A plugin's global is addressed by its qualified key (`<namespace>/<key>`), so
+ * a host global with the same bare name is a different global with rows of its
+ * own.
  */
 
 import type { AstromechConfig, PluginDefinition } from '@/types/index';

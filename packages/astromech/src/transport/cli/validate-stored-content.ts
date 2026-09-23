@@ -6,22 +6,12 @@
 
 import type { ScannedRow } from '@/content/unique';
 import type { FieldErrors } from '@/types/fields';
-import type {
-    AppContext,
-    EntryStatus,
-    JsonObject,
-    ResolvedGlobal,
-    ResourceType,
-} from '@/types/index';
+import type { AppContext, EntryStatus, JsonObject, ResourceType } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { definitionsOf, fieldParseContext } from '@/content/write-fields';
 import { createRepository } from '@/database/repository/create-repository';
-import {
-    QUALIFIED_SEPARATOR,
-    qualifyEntryType,
-    resolveEntryType,
-} from '@/entries/entry-types';
+import { resolveEntryType } from '@/entries/entry-types';
 import { listEntryRows } from '@/entries/internal/records';
 import { getEntryRepository, hasCustomTable } from '@/entries/repository/registry';
 import { entriesTable, entryContentTable } from '@/entries/tables';
@@ -150,15 +140,9 @@ async function checkEntries(
     }
 }
 
-/** Entry types whose rows live outside the `entries` table, plugin types qualified. */
+/** Entry types whose rows live outside the `entries` table, the site's and each plugin's. */
 function customTableEntryTypes(ctx: AppContext, type: string | undefined): string[] {
-    const configured = [
-        ...Object.keys(ctx.config.entries),
-        ...Object.entries(ctx.config.pluginEntries).flatMap(([plugin, types]) =>
-            Object.keys(types).map((name) => qualifyEntryType(plugin, name))
-        ),
-    ];
-    return configured
+    return Object.keys(ctx.config.entryTypes)
         .filter(hasCustomTable)
         .filter((candidate) => type === undefined || candidate === type);
 }
@@ -202,17 +186,7 @@ async function checkContentRows(
  * row to report on.
  */
 async function checkGlobals(ctx: AppContext, report: ValidationReport): Promise<void> {
-    const declared: [string, ResolvedGlobal][] = [
-        ...Object.entries(ctx.config.globals),
-        ...Object.entries(ctx.config.pluginGlobals).flatMap(([plugin, globals]) =>
-            Object.entries(globals).map(([key, global]): [string, ResolvedGlobal] => [
-                `${plugin}${QUALIFIED_SEPARATOR}${key}`,
-                global,
-            ])
-        ),
-    ];
-
-    for (const [key, global] of declared) {
+    for (const [key, global] of Object.entries(ctx.config.globals)) {
         for (const locale of locales(ctx, global.capabilities.translatable)) {
             const row = await ctx.globals.get({ key, locale, full: true });
             if (row === null) continue;

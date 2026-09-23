@@ -56,16 +56,13 @@ function entry(
     method: string,
     rest: Partial<EntriesManifestMethod> & Pick<EntriesManifestMethod, 'mutates'>
 ): EntriesManifestMethod {
-    const entryType = rest.entryType ?? 'post';
-    const namespace = rest.namespace ?? 'root';
+    const typeId = rest.typeId ?? 'post';
     return {
-        id: `entries.${namespace}.${entryType}.${method}`,
+        id: `entries.${typeId}.${method}`,
         name: `entries.${method}`,
         source: 'entries',
         method,
-        typeId: entryType,
-        entryType,
-        namespace,
+        typeId,
         permission: null,
         destructive: false,
         idempotent: false,
@@ -266,8 +263,6 @@ describe('buildTools', () => {
             methods: [
                 entry('get', {
                     summary: 'Get a "redirect" entry.',
-                    entryType: 'redirect',
-                    namespace: 'redirects',
                     typeId: 'redirects/redirect',
                     mutates: false,
                     input: idSchema(),

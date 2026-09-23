@@ -11,7 +11,7 @@ import type {
     ResourceValidator,
 } from '@/types/index';
 import { resolveEntryType } from '@/entries/entry-types';
-import { findGlobal } from '@/globals/find-global';
+import { resolveGlobal } from '@/globals/resolve-global';
 import { MEDIA_SORT_FIELDS } from '@/types/query';
 
 /**
@@ -63,14 +63,14 @@ export const RESOURCE_SPECS: {
         kind: 'global',
         name: (key) => `Global '${key ?? ''}'`,
         fields: (config, key) => {
-            const global = findGlobal(config, key ?? '');
+            const global = resolveGlobal(config, key ?? '');
             return global ? [...global.fields.main, ...global.fields.sidebar] : [];
         },
         translatable: (config, key) =>
-            findGlobal(config, key ?? '')?.capabilities.translatable === true,
+            resolveGlobal(config, key ?? '')?.capabilities.translatable === true,
         hasStatuses: (config, key) =>
-            findGlobal(config, key ?? '')?.capabilities.statuses === true,
-        validate: (config, key) => findGlobal(config, key ?? '')?.validate,
+            resolveGlobal(config, key ?? '')?.capabilities.statuses === true,
+        validate: (config, key) => resolveGlobal(config, key ?? '')?.validate,
         sortable: [],
         versionedColumns: [],
     },

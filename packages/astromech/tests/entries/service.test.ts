@@ -19,7 +19,7 @@ import { getDb } from '@/database/registry';
 import { entriesTable } from '@/database/tables';
 import {
     getEntryRepository,
-    resetEntryRepositoryOverrides,
+    registerEntryRepositories,
     setEntryRepository,
 } from '@/entries/repository/registry';
 import { ResourceNotFoundError } from '@/errors/resource';
@@ -1081,7 +1081,7 @@ describe('a single id rethrows the underlying error, unwrapped', () => {
     }
 
     afterEach(() => {
-        resetEntryRepositoryOverrides();
+        registerEntryRepositories({ entries: {} });
     });
 
     it('update', async () => {

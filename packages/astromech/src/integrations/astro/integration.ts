@@ -83,7 +83,7 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
                     `Admin UI: ${resolvedConfig.basePath}, API: ${resolvedConfig.basePath}/api`
                 );
                 logger.info(
-                    `Entry types: ${Object.keys(resolvedConfig.entries).join(', ')}`
+                    `Entry types: ${Object.keys(resolvedConfig.entryTypes).join(', ')}`
                 );
             },
 

@@ -90,10 +90,8 @@ export type PluginLogger = {
  */
 export type PluginConfigView = Pick<
     ResolvedConfig,
-    | 'entries'
-    | 'pluginEntries'
+    | 'entryTypes'
     | 'globals'
-    | 'pluginGlobals'
     | 'adminPages'
     | 'admin'
     | 'media'
@@ -107,7 +105,7 @@ export type PluginConfigView = Pick<
     | 'timezone'
     | 'roles'
 > & {
-    /** Entry type names whose field groups contain a field of the given name. */
+    /** Ids of the entry types, the site's and each plugin's, with a field of the given name. */
     entryTypesWithField(fieldName: string): string[];
 };
 

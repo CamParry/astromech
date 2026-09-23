@@ -3,21 +3,14 @@
  * reads. Orchestration only — each step lives in its own module beside this one.
  */
 
-import type {
-    AstromechConfig,
-    ResolvedAdminPage,
-    ResolvedConfig,
-    ResolvedEntryType,
-} from '@/types/index';
+import type { AstromechConfig, ResolvedAdminPage, ResolvedConfig } from '@/types/index';
 import { resolveAdminPage } from '@/config/admin-pages';
-import { toResolvedEntryType } from '@/config/entry-types';
+import { resolveEntryTypes } from '@/config/entry-types';
 import { resolveGlobals } from '@/config/globals';
-import { assertPluginsValid, resolvePluginEntries } from '@/config/plugin-entries';
-import { resolvePluginGlobals } from '@/config/plugin-globals';
+import { assertPluginsValid } from '@/config/plugins';
 import { resolvePublicSettingKeys } from '@/config/public-settings';
 import { assertMediaAccessCompatible } from '@/config/validate/media-access';
-import { assertQualifiedRelationshipTargets } from '@/config/validate/relationships';
-import { ALL_CAPABILITIES } from '@/entries/capabilities';
+import { assertRelationshipTargets } from '@/config/validate/relationships';
 import { assertUniqueDataNames, validateFieldTree } from '@/fields/field-tree';
 import { setPluginFieldTypes } from '@/fields/field-type-registry';
 import { resolveRoles } from '@/permissions/roles';
@@ -31,21 +24,9 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     // types up in the same registry as core's.
     setPluginFieldTypes(pluginFieldTypes(plugins));
 
-    const entries: Record<string, ResolvedEntryType> = {};
-    for (const [typeKey, entryType] of Object.entries(config.entries)) {
-        entries[typeKey] = toResolvedEntryType(
-            typeKey,
-            entryType,
-            entryType.repository?.supports ?? ALL_CAPABILITIES
-        );
-    }
-
-    const pluginEntries = resolvePluginEntries(plugins);
-
-    const globals = resolveGlobals(config.globals);
-    const pluginGlobals = resolvePluginGlobals(plugins);
-
-    assertQualifiedRelationshipTargets({ entries, pluginEntries });
+    const entryTypes = resolveEntryTypes(config);
+    const globals = resolveGlobals(config);
+    assertRelationshipTargets(entryTypes);
 
     const adminPages: ResolvedAdminPage[] = (config.admin?.pages ?? []).map(
         resolveAdminPage
@@ -68,9 +49,9 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     // `PluginConfigView`, so it is dropped here rather than only in the type.
     const { image: _image, ...media } = config.media ?? {};
 
-    // The registry-held modules, `plugins` and the authored `globals` array are
-    // destructured out to match `ResolvedConfig`'s `Omit`, so the strip holds at
-    // runtime too — the resolved `globals` map replaces the array below.
+    // The registry-held modules, `plugins` and the authored `entries` and
+    // `globals` are destructured out to match `ResolvedConfig`'s `Omit`, so the
+    // strip holds at runtime too; the resolved maps replace them below.
     const {
         db: _db,
         storage: _storage,
@@ -78,6 +59,7 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
         scheduler: _scheduler,
         ai: _ai,
         plugins: _plugins,
+        entries: _entries,
         globals: _globals,
         ...rest
     } = config;
@@ -97,10 +79,8 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
             ...(config.users?.validate ? { validate: config.users.validate } : {}),
             translatable: config.users?.translatable ?? false,
         },
-        entries,
+        entryTypes,
         globals,
-        pluginEntries,
-        pluginGlobals,
         adminPages,
         trash: {
             enabled: config.trash?.enabled ?? true,

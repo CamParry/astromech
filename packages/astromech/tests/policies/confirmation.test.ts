@@ -45,8 +45,6 @@ function entryMethod(
         source: 'entries',
         method: name,
         typeId: type,
-        entryType: type,
-        namespace: 'root',
         permission: `entry:${type}:${name}`,
         mutates: effect.mutates,
         destructive: effect.destructive ?? false,

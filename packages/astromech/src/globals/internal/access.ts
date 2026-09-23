@@ -8,7 +8,7 @@ import type { GlobalAction } from '@/permissions/global-permission';
 import type { PermissionRule } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { globalPermission } from '@/permissions/global-permission';
-import { findGlobal } from '../find-global';
+import { resolveGlobal } from '../resolve-global';
 
 /**
  * The key one call names. A call with no key is not refused here: it resolves to
@@ -43,7 +43,7 @@ export const readGate: PermissionRule = (input) => {
     // The one config read left under `globals/`: an access rule is a function of
     // the input alone, called before a method's handler and so before there is a
     // `ctx` to take the config from.
-    if (!wantsPrivateShape(input) && findGlobal(getConfig(), key)?.public === true) {
+    if (!wantsPrivateShape(input) && resolveGlobal(getConfig(), key)?.public === true) {
         return null;
     }
     return globalPermission(key, 'read');

@@ -9,7 +9,6 @@ import type { ServiceMethodContract } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { sortSchema } from '@/content/list';
 import { isCapability } from '@/entries/capabilities';
-import { parseEntryTypeId } from '@/entries/entry-types';
 import { resolveAccess } from '@/permissions/access';
 import {
     createEntrySchema,
@@ -38,9 +37,6 @@ export function entryCatalogue(params: {
 }): Record<EntryMethodName, ServiceMethodContract & { requires?: Capability }> {
     const { typeId, titled } = params;
 
-    // Summaries name the BARE type: a plugin type's qualified id is an address,
-    // not a label.
-    const label = parseEntryTypeId(typeId)?.type ?? typeId;
     const schemas = entryInputSchemas(typeId, titled);
 
     return Object.fromEntries(
@@ -55,7 +51,7 @@ export function entryCatalogue(params: {
                 name,
                 {
                     ...method,
-                    summary: entryMethodSummary(name, label),
+                    summary: entryMethodSummary(name, typeId),
                     access:
                         resolved.kind === 'permission'
                             ? resolved.permissions[0]

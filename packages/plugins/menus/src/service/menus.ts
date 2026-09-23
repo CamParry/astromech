@@ -31,7 +31,7 @@ async function resolveEntryRef(
 ): Promise<string | null> {
     // Try each type with a URL template, since the relationship field stores
     // only the id; a type that does not hold it answers null.
-    for (const [type, config] of Object.entries(ctx.config.entries)) {
+    for (const [type, config] of Object.entries(ctx.config.entryTypes)) {
         if (!config.url) continue;
         // The reader's locale first; an entry with no row for it falls back to
         // the default locale, so a menu never loses an item to a missing

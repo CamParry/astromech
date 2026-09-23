@@ -103,7 +103,6 @@ const docFields: Field[] = [
     { name: 'owner', type: 'relationship', label: 'Owner', target: 'users' },
     { name: 'link', type: 'relationship', label: 'Link', target: 'links/link' },
     { name: 'note', type: 'relationship', label: 'Note', target: 'links/note' },
-    { name: 'ghost', type: 'relationship', label: 'Ghost', target: 'not-a-type' },
     {
         name: 'sections',
         type: 'repeater',
@@ -268,19 +267,6 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
         expect(updated.fields.note).toBe('01JQZZZZZZZZZZZZZZZZZZZZZZ');
     });
 
-    // A plugin dropped from the config takes its entry types with it, and its
-    // rows may sit in a table this check never reads. Unlocatable is not dead.
-    it('keeps a reference whose target names no configured entry type', async () => {
-        const doc = await api.create({
-            type: 'doc',
-            data: { title: 'Doc', fields: { ghost: '01JQZZZZZZZZZZZZZZZZZZZZZZ' } },
-        });
-
-        const updated = await touch(doc.id);
-
-        expect(updated.fields.ghost).toBe('01JQZZZZZZZZZZZZZZZZZZZZZZ');
-    });
-
     it('drops a dead media id and a dead user id', async () => {
         const mediaId = await createMedia();
         const user = await usersService.create({
@@ -381,6 +367,22 @@ describe('pruneDanglingRelations (directly)', () => {
             expect(kept).toEqual({ values: { link: link.id }, dropped: 0 });
             expect(dropped).toEqual({ values: { link: null }, dropped: 1 });
         });
+    });
+
+    // Boot refuses an entry type naming an unknown target, but the prune also
+    // runs over declarations the config never checked. Unlocatable is not dead.
+    it('keeps a reference whose target names no configured entry type', async () => {
+        const ghost: Field = {
+            name: 'ghost',
+            type: 'relationship',
+            label: 'Ghost',
+            target: 'not-a-type',
+        };
+        const values: JsonObject = { ghost: '01JQZZZZZZZZZZZZZZZZZZZZZZ' };
+
+        const result = await pruneDanglingRelations(config, [ghost], values);
+
+        expect(result).toEqual({ values, dropped: 0 });
     });
 
     it('reports how many ids it dropped', async () => {

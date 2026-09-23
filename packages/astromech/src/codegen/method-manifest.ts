@@ -16,12 +16,12 @@ import type {
     PluginManifestMethod,
     ResolvedConfig,
     ResolvedEntryCapabilities,
+    ResolvedEntryType,
     ServiceMethodAccess,
     ServiceMethodContract,
 } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { entryCatalogue } from '@/entries/catalogue';
-import { qualifyEntryType } from '@/entries/entry-types';
 import { globalsDefinition } from '@/globals/service';
 import { mediaDefinition } from '@/media/service';
 import { notificationsDefinition } from '@/notifications/service';
@@ -135,23 +135,12 @@ function buildCoreMethods(): CoreManifestMethod[] {
     return methods;
 }
 
-function buildEntriesMethods(
-    config: ResolvedConfig,
-    plugins: PluginDefinition[]
-): EntriesManifestMethod[] {
+function buildEntriesMethods(config: ResolvedConfig): EntriesManifestMethod[] {
     const methods: EntriesManifestMethod[] = [];
 
-    // Build plugin name → permissionNamespace map for plugin entry types.
-    const pluginNsMap = new Map<string, string>();
-    for (const def of plugins) {
-        const identity = resolvePluginIdentity(def);
-        pluginNsMap.set(identity.namespace, identity.permissionNamespace);
-    }
-
-    // Root entry types — addressed by their bare id.
-    for (const [type, entryType] of Object.entries(config.entries)) {
+    for (const entryType of Object.values(config.entryTypes)) {
         const catalogue = entryCatalogue({
-            typeId: type,
+            typeId: entryType.id,
             titled: entryType.titleField !== false,
         });
         for (const [name, contract] of Object.entries(catalogue)) {
@@ -160,41 +149,7 @@ function buildEntriesMethods(
             if (!methodCapabilityMet(contract.requires, entryType.capabilities)) {
                 continue;
             }
-
-            methods.push(
-                projectEntryMethod(contract, name, {
-                    typeId: type,
-                    entryType: type,
-                    namespace: 'root',
-                })
-            );
-        }
-    }
-
-    // Plugin entry types — addressed by their qualified id (`<namespace>/<type>`).
-    for (const [pluginName, types] of Object.entries(config.pluginEntries)) {
-        const permissionNamespace = pluginNsMap.get(pluginName) ?? pluginName;
-        for (const [type, entryType] of Object.entries(types)) {
-            const typeId = qualifyEntryType(pluginName, type);
-            const catalogue = entryCatalogue({
-                typeId,
-                titled: entryType.titleField !== false,
-            });
-            for (const [name, contract] of Object.entries(catalogue)) {
-                // Same capability gating as root entry types.
-                if (!methodCapabilityMet(contract.requires, entryType.capabilities)) {
-                    continue;
-                }
-
-                methods.push(
-                    projectEntryMethod(contract, name, {
-                        typeId,
-                        entryType: type,
-                        namespace: permissionNamespace,
-                        plugin: pluginName,
-                    })
-                );
-            }
+            methods.push(projectEntryMethod(contract, name, entryType));
         }
     }
 
@@ -208,29 +163,22 @@ function buildEntriesMethods(
 function projectEntryMethod(
     contract: ServiceMethodContract,
     name: string,
-    placement: {
-        typeId: string;
-        entryType: string;
-        namespace: string;
-        plugin?: string;
-    }
+    entryType: ResolvedEntryType
 ): EntriesManifestMethod {
     const method: EntriesManifestMethod = {
-        id: `entries.${placement.typeId}.${name}`,
+        id: `entries.${entryType.id}.${name}`,
         name: `entries.${name}`,
         summary: contract.summary,
         source: 'entries',
         method: name,
-        typeId: placement.typeId,
-        entryType: placement.entryType,
-        namespace: placement.namespace,
+        typeId: entryType.id,
         permission: staticPermission(contract),
         mutates: contract.mutates,
         destructive: contract.destructive ?? false,
         idempotent: contract.idempotent ?? false,
     };
-    if (placement.plugin !== undefined) {
-        method.plugin = placement.plugin;
+    if (entryType.plugin !== undefined) {
+        method.plugin = entryType.plugin;
     }
     method.input = toJSONSchema(contract.input, 'input');
     return method;
@@ -297,7 +245,7 @@ export function generateMethodManifest(
 ): MethodManifest {
     const methods: ManifestMethod[] = [
         ...buildCoreMethods(),
-        ...buildEntriesMethods(config, plugins),
+        ...buildEntriesMethods(config),
         ...buildPluginServiceMethods(plugins),
     ];
 

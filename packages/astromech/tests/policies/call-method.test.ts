@@ -71,8 +71,6 @@ const postsQuery: EntriesManifestMethod = {
     source: 'entries',
     method: 'query',
     typeId: 'post',
-    entryType: 'post',
-    namespace: 'root',
     permission: 'entry:post:read',
     mutates: false,
     destructive: false,

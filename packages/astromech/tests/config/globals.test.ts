@@ -2,6 +2,7 @@ import type { GlobalConfig } from '@/types/index';
 import { describe, expect, it } from 'vitest';
 import { defineGlobal } from '@/config/define-global';
 import { resolveGlobals, toResolvedGlobal } from '@/config/globals';
+import { definePlugin } from '@/plugins/define-plugin';
 
 const site = (overrides: Partial<GlobalConfig> = {}): GlobalConfig =>
     defineGlobal({
@@ -107,19 +108,56 @@ describe('assertGlobalValid — via toResolvedGlobal', () => {
 
 describe('resolveGlobals', () => {
     it('returns an empty map when nothing is declared', () => {
-        expect(resolveGlobals(undefined)).toEqual({});
+        expect(resolveGlobals({})).toEqual({});
     });
 
     it('keys the resolved globals by their bare key', () => {
-        const resolved = resolveGlobals([site(), site({ key: 'footer' })]);
+        const resolved = resolveGlobals({ globals: [site(), site({ key: 'footer' })] });
 
         expect(Object.keys(resolved)).toEqual(['site', 'footer']);
         expect(resolved['footer']?.id).toBe('footer');
     });
 
     it('rejects a duplicate key, naming both positions', () => {
-        expect(() => resolveGlobals([site(), site({ label: 'Site again' })])).toThrow(
+        expect(() =>
+            resolveGlobals({ globals: [site(), site({ label: 'Site again' })] })
+        ).toThrow(
             /the site config declares the global key "site" twice \(globals\[0\] and globals\[1\]\)/
+        );
+    });
+
+    it('keys a plugin global by <namespace>/<key>, in the same map, owned by the plugin', () => {
+        const seo = definePlugin({
+            package: '@astromech/seo',
+            globals: [site({ key: 'settings' })],
+        })();
+        const backups = definePlugin({
+            package: '@astromech/backups',
+            globals: [site({ key: 'settings' })],
+        })();
+
+        const resolved = resolveGlobals({ globals: [site()], plugins: [seo, backups] });
+
+        expect(Object.keys(resolved)).toEqual([
+            'site',
+            'seo/settings',
+            'backups/settings',
+        ]);
+        expect(resolved['seo/settings']).toMatchObject({
+            id: 'seo/settings',
+            plugin: 'seo',
+        });
+        expect(resolved['site']?.plugin).toBeUndefined();
+    });
+
+    it('rejects a key declared twice within one plugin, naming the package', () => {
+        const plugin = definePlugin({
+            package: '@astromech/seo',
+            globals: [site({ key: 'settings' }), site({ key: 'settings' })],
+        })();
+
+        expect(() => resolveGlobals({ plugins: [plugin] })).toThrow(
+            /plugin "@astromech\/seo" declares the global key "settings" twice/
         );
     });
 });

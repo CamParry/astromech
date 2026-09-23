@@ -17,7 +17,7 @@ function makeConfig(
     extra: Record<string, unknown> = {}
 ): ResolvedConfig {
     return {
-        entries: {
+        entryTypes: {
             posts: { fields: { main: mainFields as never, sidebar: [] } },
             categories: {
                 fields: { main: [{ name: 'name', type: 'text' }], sidebar: [] },
@@ -27,7 +27,6 @@ function makeConfig(
         pages: {},
         locales: [],
         defaultLocale: 'en',
-        pluginEntries: {},
         ...extra,
     } as unknown as ResolvedConfig;
 }

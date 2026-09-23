@@ -53,7 +53,7 @@ async function resolveDefaultOgImage(ctx: PluginContext): Promise<string | null>
 
 /** Resolve an entry's front-end path from its type's `url` template, or null. */
 function entryPath(ctx: PluginContext, type: string, entry: Entry): string | null {
-    const template = ctx.config.entries[type]?.url;
+    const template = ctx.config.entryTypes[type]?.url;
     return template ? resolveEntryPath(template, entry) : null;
 }
 

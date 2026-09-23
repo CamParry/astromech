@@ -177,7 +177,7 @@ describe('a plugin container field type', () => {
 
     it('keeps its fields flattened into no parent namespace', () => {
         const resolved = setupTestConfig(configWithCards());
-        const showcase = resolved.entries['showcase'];
+        const showcase = resolved.entryTypes['showcase'];
         expect(
             showcase && flattenEntryFields(showcase.fields).map((f) => f.name)
         ).toEqual(['cards']);

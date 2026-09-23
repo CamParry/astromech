@@ -1,7 +1,7 @@
 /**
  * Integration: the entries service resolves QUALIFIED plugin type ids
- * (`{plugin}/{type}`) against `ResolvedConfig.pluginEntries` and round-trips
- * CRUD through the entries-table repository, storing the qualified id in the `type`
+ * (`{plugin}/{type}`) from `ResolvedConfig.entryTypes` and round-trips CRUD
+ * through the entries-table repository, storing the qualified id in the `type`
  * column. Root types are unaffected.
  */
 

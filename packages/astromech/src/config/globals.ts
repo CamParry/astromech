@@ -1,15 +1,43 @@
 /**
- * Resolving authored globals: each one's capabilities and field tree, and the
- * uniqueness of the keys within one array.
+ * Resolving authored globals, the site's and every plugin's, into one map keyed
+ * by id: each one's capabilities and field tree, and unique keys per array.
  */
 
 import type {
+    AstromechConfig,
     GlobalConfig,
     ResolvedGlobal,
     ResolvedGlobalCapabilities,
 } from '@/types/index';
 import { toResolvedFields } from '@/config/entry-types';
+import { qualifyEntryType } from '@/entries/entry-types';
 import { assertUniqueDataNames, validateFieldTree } from '@/fields/field-tree';
+import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
+
+/**
+ * Resolve the site's globals under their own keys and each plugin's under
+ * `<namespace>/<key>`, into the one map the runtime reads.
+ */
+export function resolveGlobals(
+    config: Pick<AstromechConfig, 'globals' | 'plugins'>
+): Record<string, ResolvedGlobal> {
+    const resolved: Record<string, ResolvedGlobal> = {};
+    const site = config.globals ?? [];
+    assertUniqueGlobalKeys('the site config', site);
+    for (const global of site) {
+        resolved[global.key] = toResolvedGlobal(global.key, global);
+    }
+    for (const plugin of config.plugins ?? []) {
+        const globals = plugin.globals ?? [];
+        assertUniqueGlobalKeys(`plugin "${plugin.package}"`, globals);
+        const { namespace } = resolvePluginIdentity(plugin);
+        for (const global of globals) {
+            const id = qualifyEntryType(namespace, global.key);
+            resolved[id] = toResolvedGlobal(id, global, namespace);
+        }
+    }
+    return resolved;
+}
 
 /** Characters a global key may not contain: both are id separators. */
 const GLOBAL_KEY_FORBIDDEN = /[/:]/;
@@ -54,7 +82,11 @@ function assertGlobalValid(id: string, config: GlobalConfig): void {
  * Resolve one global. `id` is the addressable id — the bare key for a host
  * global, `<namespace>/<key>` for a plugin's — and is used in error messages.
  */
-export function toResolvedGlobal(id: string, config: GlobalConfig): ResolvedGlobal {
+export function toResolvedGlobal(
+    id: string,
+    config: GlobalConfig,
+    plugin?: string
+): ResolvedGlobal {
     assertGlobalValid(id, config);
 
     const fields = toResolvedFields(config.fields);
@@ -67,6 +99,7 @@ export function toResolvedGlobal(id: string, config: GlobalConfig): ResolvedGlob
     return {
         ...rest,
         id,
+        ...(plugin !== undefined ? { plugin } : {}),
         fields,
         capabilities: toResolvedGlobalCapabilities(config),
     };
@@ -88,18 +121,4 @@ export function assertUniqueGlobalKeys(owner: string, globals: GlobalConfig[]): 
         }
         seen.set(global.key, index);
     }
-}
-
-/** Resolve the host config's globals into the keyed map the runtime reads. */
-export function resolveGlobals(
-    globals: GlobalConfig[] | undefined
-): Record<string, ResolvedGlobal> {
-    if (globals === undefined) return {};
-    assertUniqueGlobalKeys('the site config', globals);
-
-    const resolved: Record<string, ResolvedGlobal> = {};
-    for (const global of globals) {
-        resolved[global.key] = toResolvedGlobal(global.key, global);
-    }
-    return resolved;
 }

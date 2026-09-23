@@ -1,50 +1,45 @@
 /**
- * Boot-time validation that every qualified relationship target resolves.
+ * Boot-time validation that every relationship target an entry type declares
+ * resolves.
  */
 
 import type { Field, ResolvedEntryFields } from '@/types/fields';
-import type { ResolvedConfig } from '@/types/index';
-import { parseEntryTypeId, resolveEntryType } from '@/entries/entry-types';
+import type { ResolvedEntryType } from '@/types/index';
 import { getFieldType } from '@/fields/field-type-registry';
 import { fieldAffectsData } from '@/fields/flatten';
 import { traverseFields } from '@/fields/traverse';
 
+/** Targets that are resources rather than entry types. */
+const RESOURCE_TARGETS = new Set(['users', 'media']);
+
 /**
- * Any relationship field whose `target` is qualified (`{plugin}/{type}`) must
- * resolve against the fully-built `{entries, pluginEntries}`. Bare targets
- * are not checked here. Crashes loud, naming the entry type, field, target.
+ * Every relationship field's `target` must be `users`, `media` or a declared
+ * entry type id, the site's or a plugin's. Crashes loud, naming the entry type,
+ * field and target.
  */
-export function assertQualifiedRelationshipTargets(
-    config: Pick<ResolvedConfig, 'entries' | 'pluginEntries'>
+export function assertRelationshipTargets(
+    entryTypes: Record<string, ResolvedEntryType>
 ): void {
-    const checkNodes = (ownerKey: string, nodes: Field[]): void => {
+    const checkNodes = (owner: string, nodes: Field[]): void => {
         traverseFields(nodes, ({ field }) => {
             const target = fieldAffectsData(field) ? field.target : undefined;
             if (target === undefined || getFieldType(field.type)?.isRelation !== true) {
                 return;
             }
-            if (
-                parseEntryTypeId(target) &&
-                resolveEntryType(config, target) === undefined
-            ) {
+            if (!RESOURCE_TARGETS.has(target) && !Object.hasOwn(entryTypes, target)) {
                 throw new Error(
-                    `Astromech entry type "${ownerKey}": relationship field ` +
+                    `Astromech entry type "${owner}": relationship field ` +
                         `"${field.name}" targets unknown entry type "${target}".`
                 );
             }
         });
     };
-    const check = (ownerKey: string, fields: ResolvedEntryFields): void => {
-        checkNodes(ownerKey, fields.main);
-        checkNodes(ownerKey, fields.sidebar);
+    const check = (owner: string, fields: ResolvedEntryFields): void => {
+        checkNodes(owner, fields.main);
+        checkNodes(owner, fields.sidebar);
     };
 
-    for (const [typeKey, entryType] of Object.entries(config.entries)) {
-        check(typeKey, entryType.fields);
-    }
-    for (const [plugin, types] of Object.entries(config.pluginEntries)) {
-        for (const [type, entryType] of Object.entries(types)) {
-            check(`${plugin}/${type}`, entryType.fields);
-        }
+    for (const [id, entryType] of Object.entries(entryTypes)) {
+        check(id, entryType.fields);
     }
 }

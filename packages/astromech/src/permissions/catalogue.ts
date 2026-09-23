@@ -9,14 +9,8 @@ import type { EntryAction } from '@/permissions/entry-permission';
 import type { GlobalAction } from '@/permissions/global-permission';
 import type { PluginDefinition, ResolvedConfig } from '@/types/index';
 import { CORE_PERMISSIONS } from '@/permissions/core-permissions';
-import {
-    pluginEntryPermission,
-    rootEntryPermission,
-} from '@/permissions/entry-permission';
-import {
-    pluginGlobalPermission,
-    rootGlobalPermission,
-} from '@/permissions/global-permission';
+import { entryPermission } from '@/permissions/entry-permission';
+import { globalPermission } from '@/permissions/global-permission';
 import {
     resolvePluginIdentity,
     resolvePluginPermission,
@@ -80,16 +74,6 @@ const SOURCE_ORDER: Record<PermissionCatalogueEntry['source'], number> = {
     plugin: 3,
 };
 
-/** Plugin namespace → permissionNamespace, for plugin-mounted resources. */
-function pluginNamespaceMap(plugins: PluginDefinition[]): Map<string, string> {
-    const map = new Map<string, string>();
-    for (const def of plugins) {
-        const identity = resolvePluginIdentity(def);
-        map.set(identity.namespace, identity.permissionNamespace);
-    }
-    return map;
-}
-
 function buildCorePermissions(): PermissionCatalogueEntry[] {
     // Widened: `CORE_PERMISSIONS` infers literal declarations, so an entry
     // without a description has no `description` property to read.
@@ -108,81 +92,30 @@ function buildCorePermissions(): PermissionCatalogueEntry[] {
     });
 }
 
-function buildEntryPermissions(
-    config: ResolvedConfig,
-    plugins: PluginDefinition[]
-): PermissionCatalogueEntry[] {
-    const entries: PermissionCatalogueEntry[] = [];
-
-    const pluginNsMap = pluginNamespaceMap(plugins);
-
-    // Root entry types
-    for (const [type, entryType] of Object.entries(config.entries)) {
-        for (const { action, requires } of ENTRY_ACTIONS) {
-            if (!actionCapabilityMet(requires, entryType.capabilities)) continue;
-            entries.push({
-                permission: rootEntryPermission(type, action),
-                label: entryPermissionLabel(action, type),
-                source: 'entry',
-                owner: type,
-            });
-        }
-    }
-
-    // Plugin entry types
-    for (const [pluginName, types] of Object.entries(config.pluginEntries)) {
-        const permissionNamespace = pluginNsMap.get(pluginName) ?? pluginName;
-        for (const [type, entryType] of Object.entries(types)) {
-            for (const { action, requires } of ENTRY_ACTIONS) {
-                if (!actionCapabilityMet(requires, entryType.capabilities)) continue;
-                entries.push({
-                    permission: pluginEntryPermission(permissionNamespace, type, action),
-                    label: entryPermissionLabel(action, type),
-                    source: 'entry',
-                    owner: `${pluginName}/${type}`,
-                });
-            }
-        }
-    }
-
-    return entries;
+function buildEntryPermissions(config: ResolvedConfig): PermissionCatalogueEntry[] {
+    return Object.values(config.entryTypes).flatMap((entryType) =>
+        ENTRY_ACTIONS.filter(({ requires }) =>
+            actionCapabilityMet(requires, entryType.capabilities)
+        ).map(({ action }) => ({
+            permission: entryPermission(entryType.id, action),
+            label: entryPermissionLabel(action, entryType.id),
+            source: 'entry' as const,
+            owner: entryType.id,
+        }))
+    );
 }
 
-function buildGlobalPermissions(
-    config: ResolvedConfig,
-    plugins: PluginDefinition[]
-): PermissionCatalogueEntry[] {
-    const entries: PermissionCatalogueEntry[] = [];
-    const pluginNsMap = pluginNamespaceMap(plugins);
-
-    for (const [key, global] of Object.entries(config.globals)) {
-        for (const { action, requires } of GLOBAL_ACTIONS) {
-            if (!actionCapabilityMet(requires, global.capabilities)) continue;
-            entries.push({
-                permission: rootGlobalPermission(key, action),
-                label: globalPermissionLabel(action, key),
-                source: 'global',
-                owner: key,
-            });
-        }
-    }
-
-    for (const [pluginName, globals] of Object.entries(config.pluginGlobals)) {
-        const permissionNamespace = pluginNsMap.get(pluginName) ?? pluginName;
-        for (const [key, global] of Object.entries(globals)) {
-            for (const { action, requires } of GLOBAL_ACTIONS) {
-                if (!actionCapabilityMet(requires, global.capabilities)) continue;
-                entries.push({
-                    permission: pluginGlobalPermission(permissionNamespace, key, action),
-                    label: globalPermissionLabel(action, key),
-                    source: 'global',
-                    owner: `${pluginName}/${key}`,
-                });
-            }
-        }
-    }
-
-    return entries;
+function buildGlobalPermissions(config: ResolvedConfig): PermissionCatalogueEntry[] {
+    return Object.values(config.globals).flatMap((global) =>
+        GLOBAL_ACTIONS.filter(({ requires }) =>
+            actionCapabilityMet(requires, global.capabilities)
+        ).map(({ action }) => ({
+            permission: globalPermission(global.id, action),
+            label: globalPermissionLabel(action, global.id),
+            source: 'global' as const,
+            owner: global.id,
+        }))
+    );
 }
 
 function buildPluginPermissions(plugins: PluginDefinition[]): PermissionCatalogueEntry[] {
@@ -215,8 +148,8 @@ export function buildPermissionCatalogue(
 ): PermissionCatalogueEntry[] {
     const catalogue = [
         ...buildCorePermissions(),
-        ...buildEntryPermissions(config, plugins),
-        ...buildGlobalPermissions(config, plugins),
+        ...buildEntryPermissions(config),
+        ...buildGlobalPermissions(config),
         ...buildPluginPermissions(plugins),
     ];
 

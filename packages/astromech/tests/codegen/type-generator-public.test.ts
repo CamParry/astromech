@@ -4,7 +4,7 @@ import { generateClientTypes } from '@/codegen/type-generator';
 
 function makeConfig(mainFields: object[], sidebarFields: object[] = []): ResolvedConfig {
     return {
-        entries: {
+        entryTypes: {
             posts: {
                 fields: {
                     main: mainFields as never,
@@ -16,7 +16,6 @@ function makeConfig(mainFields: object[], sidebarFields: object[] = []): Resolve
         pages: {},
         locales: [],
         defaultLocale: 'en',
-        pluginEntries: {},
     } as unknown as ResolvedConfig;
 }
 
@@ -199,7 +198,7 @@ describe('type-generator — public relations reference FieldsPublic', () => {
         // The public shape's relations are composed at the TypedEntriesService overload level.
         // Here we just verify the Relations type still references the full Fields.
         const config = {
-            entries: {
+            entryTypes: {
                 posts: {
                     fields: {
                         main: [
@@ -220,7 +219,6 @@ describe('type-generator — public relations reference FieldsPublic', () => {
             pages: {},
             locales: [],
             defaultLocale: 'en',
-            pluginEntries: {},
         } as unknown as ResolvedConfig;
 
         const output = generateClientTypes(config);

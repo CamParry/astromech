@@ -24,19 +24,11 @@ import { systemAppContext } from '@/app-context/app-context';
 import { registerCronJob } from '@/cron/registry';
 import { kyselyTableKey, registerTableCodec } from '@/database/codec';
 import { clearEmailOverrides, registerEmailOverride } from '@/email/email-overrides';
-import { qualifyEntryType } from '@/entries/entry-types';
-import {
-    resetEntryRepositoryOverrides,
-    setEntryRepository,
-} from '@/entries/repository/registry';
 import { getEnvRecord } from '@/env';
 import { flattenEntryFields } from '@/fields/flatten';
 import { addHook, clearHooks } from '@/hooks/hooks';
 import { notify } from '@/notifications/service';
-import {
-    pluginEntryTypes,
-    resolvePluginIdentity,
-} from '@/plugins/runtime/plugin-identity';
+import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import { pluginServicesFor } from '@/plugins/runtime/plugin-services';
 import { isTable } from '@/plugins/runtime/plugin-tables';
 import { createPluginTrackingRepository } from '@/plugins/runtime/plugin-tracking-repository';
@@ -86,9 +78,8 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
     s.identities = [];
     s.service = new Map();
     s.rawRoutes = [];
-    // Drop stale plugin repositories, hooks and email overrides before
-    // re-registering (test setups re-run this).
-    resetEntryRepositoryOverrides();
+    // Drop stale hooks and email overrides before re-registering (test setups
+    // re-run this).
     clearHooks();
     clearEmailOverrides();
 
@@ -119,16 +110,6 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
 
         for (const route of def.rawRoutes ?? []) {
             s.rawRoutes.push({ identity, route });
-        }
-
-        // Register per-type custom repositories under the qualified id.
-        for (const [type, entryType] of pluginEntryTypes(def)) {
-            if (entryType.repository) {
-                setEntryRepository(
-                    qualifyEntryType(identity.namespace, type),
-                    entryType.repository
-                );
-            }
         }
     }
 }
@@ -261,10 +242,8 @@ function makeConfigView(
     config: Omit<PluginConfigView, 'entryTypesWithField'>
 ): PluginConfigView {
     return {
-        entries: config.entries,
-        pluginEntries: config.pluginEntries,
+        entryTypes: config.entryTypes,
         globals: config.globals,
-        pluginGlobals: config.pluginGlobals,
         adminPages: config.adminPages,
         media: config.media,
         users: config.users,
@@ -278,7 +257,7 @@ function makeConfigView(
         ...(config.locales ? { locales: config.locales } : {}),
         ...(config.defaultLocale ? { defaultLocale: config.defaultLocale } : {}),
         entryTypesWithField(fieldName: string): string[] {
-            return Object.entries(config.entries)
+            return Object.entries(config.entryTypes)
                 .filter(([, entryType]) =>
                     flattenEntryFields(entryType.fields).some(
                         (field) => field.name === fieldName
@@ -347,10 +326,8 @@ export function createPluginContext(
 function emptyConfig(): Omit<PluginConfigView, 'entryTypesWithField'> {
     return {
         basePath: '/cms',
-        entries: {},
-        pluginEntries: {},
+        entryTypes: {},
         globals: {},
-        pluginGlobals: {},
         adminPages: [],
         trash: { enabled: true, retentionDays: 30 },
         publicSettingKeys: [],

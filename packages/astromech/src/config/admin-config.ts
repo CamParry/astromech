@@ -73,7 +73,15 @@ export function buildAdminConfig(
     return {
         plugins: (config.plugins ?? []).map((p) => {
             const identity = resolvePluginIdentity(p);
-            const pluginEntries = resolvedConfig.pluginEntries[identity.namespace] ?? {};
+            const owned = <T extends { id: string; plugin?: string }>(
+                map: Record<string, T>
+            ): [string, T][] =>
+                Object.values(map)
+                    .filter((value) => value.plugin === identity.namespace)
+                    .map((value) => [
+                        value.id.slice(identity.namespace.length + 1),
+                        value,
+                    ]);
             return {
                 namespace: identity.namespace,
                 serviceKey: identity.serviceKey,
@@ -81,15 +89,16 @@ export function buildAdminConfig(
                 permissionNamespace: identity.permissionNamespace,
                 nav: derivePluginNav(identity, p),
                 entries: Object.fromEntries(
-                    Object.entries(pluginEntries).map(([name, entryType]) => [
+                    owned(resolvedConfig.entryTypes).map(([name, entryType]) => [
                         name,
                         toAdminEntryType(entryType),
                     ])
                 ),
                 globals: Object.fromEntries(
-                    Object.entries(
-                        resolvedConfig.pluginGlobals[identity.namespace] ?? {}
-                    ).map(([key, global]) => [key, toAdminGlobal(global)])
+                    owned(resolvedConfig.globals).map(([key, global]) => [
+                        key,
+                        toAdminGlobal(global),
+                    ])
                 ),
                 pages: derivePluginPages(identity, p) as ResolvedAdminPage[],
             };
@@ -111,16 +120,14 @@ export function buildAdminConfig(
         defaultLocale: resolvedConfig.defaultLocale ?? 'en',
         roles: Object.entries(resolvedRoles).map(([slug, r]) => ({ slug, name: r.name })),
         entries: Object.fromEntries(
-            Object.entries(resolvedConfig.entries).map(([name, entryType]) => [
-                name,
-                toAdminEntryType(entryType),
-            ])
+            Object.entries(resolvedConfig.entryTypes)
+                .filter(([, entryType]) => entryType.plugin === undefined)
+                .map(([name, entryType]) => [name, toAdminEntryType(entryType)])
         ),
         globals: Object.fromEntries(
-            Object.entries(resolvedConfig.globals).map(([key, global]) => [
-                key,
-                toAdminGlobal(global),
-            ])
+            Object.entries(resolvedConfig.globals)
+                .filter(([, global]) => global.plugin === undefined)
+                .map(([key, global]) => [key, toAdminGlobal(global)])
         ),
         pages: resolvedConfig.adminPages,
     };

@@ -14,7 +14,7 @@ import { mergeContentReferences } from '@/content/relationships';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { entriesTable, entryContentTable } from '@/database/tables';
-import { qualifyEntryType, resolveEntryType } from '@/entries/entry-types';
+import { resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
 import { findReferences } from '@/fields/references';
 import { getEntryRepository, hasCustomTable } from '../repository/registry';
@@ -170,12 +170,7 @@ async function customTableEntrySources(
     return collected;
 }
 
-/** Every entry type id in the resolved config; plugin types qualified. */
+/** Every entry type id in the resolved config, the site's and each plugin's. */
 function configuredEntryTypes(config: ResolvedConfig): string[] {
-    return [
-        ...Object.keys(config.entries),
-        ...Object.entries(config.pluginEntries).flatMap(([plugin, types]) =>
-            Object.keys(types).map((type) => qualifyEntryType(plugin, type))
-        ),
-    ];
+    return Object.keys(config.entryTypes);
 }

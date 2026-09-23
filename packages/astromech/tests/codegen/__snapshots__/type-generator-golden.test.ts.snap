@@ -13,7 +13,7 @@ declare module 'astromech' {
   }
 }
 
-// --- Collection: posts (Posts) ---
+// --- Entry type: posts (Posts) ---
 
 export type PostsFTreeTreeNode = {
   _id: string;
@@ -121,7 +121,7 @@ export type PostsRelations = {
   fRelMulti: import('astromech').TypedEntry<CategoriesFields>[];
 };
 
-// --- Collection: categories (Categories) ---
+// --- Entry type: categories (Categories) ---
 
 export type CategoriesFields = {
   name?: string;

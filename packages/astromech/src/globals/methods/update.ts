@@ -18,7 +18,7 @@ import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resourc
 import { parseInput } from '@/errors/validation';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../internal/access';
-import { asGlobal, globalRepository, resolveGlobal } from '../internal/global';
+import { asGlobal, getDeclaredGlobal, globalRepository } from '../internal/global';
 import { syncGlobalRelationships } from '../internal/relationships';
 import { toStoredFields } from '../internal/stored-fields';
 import { localised, updateGlobalSchema } from '../schema';
@@ -47,7 +47,7 @@ export const updateGlobal = defineServiceMethod({
     mutates: true,
     idempotent: true,
     async handler(params, ctx): Promise<Global> {
-        const global = resolveGlobal(ctx.config, params.key);
+        const global = getDeclaredGlobal(ctx.config, params.key);
         const staged = params.staged === true;
         if (staged) assertCapability('global', global, 'staging');
         const locale = resolveResourceLocale(

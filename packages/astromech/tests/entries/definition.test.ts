@@ -120,7 +120,7 @@ describe('entryCatalogue', () => {
 
         expect(catalogue.update.access).toBe('plugin:redirects:entry:redirect:update');
         expect(catalogue.update.summary).toBe(
-            'Update a "redirect" entry. Fields merge: omitted fields keep their ' +
+            'Update a "redirects/redirect" entry. Fields merge: omitted fields keep their ' +
                 'current value, and arrays are replaced whole.'
         );
     });

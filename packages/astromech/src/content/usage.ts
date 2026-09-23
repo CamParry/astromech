@@ -11,7 +11,7 @@ import { createRelationshipRepository } from '@/database/repository/relationship
 import { mediaTable, usersTable } from '@/database/tables';
 import { getEntryResource } from '@/entries/internal/records';
 import { getEntryRepository } from '@/entries/repository/registry';
-import { findGlobal } from '@/globals/find-global';
+import { resolveGlobal } from '@/globals/resolve-global';
 
 /**
  * Every reference pointing at one target, one row per reference: a source using
@@ -64,7 +64,7 @@ async function loadSourceTitles(
             ids.add(row.sourceId);
             entryIdsByType.set(row.sourceType, ids);
         } else if (row.sourceKind === 'global' && row.sourceType !== null) {
-            const label = findGlobal(config, row.sourceType)?.label;
+            const label = resolveGlobal(config, row.sourceType)?.label;
             titles.set(
                 sourceKey(row),
                 typeof label === 'string' ? label : row.sourceType

@@ -107,7 +107,6 @@ function fieldToTsType(
 function fieldToRelationType(
     field: DataField,
     knownCollections: Set<string>,
-    qualifiedTargetMap: Map<string, string> = new Map<string, string>(),
     shape: 'full' | 'public' = 'full'
 ): string | null {
     if (!RELATION_TYPES.has(field.type)) return null;
@@ -127,12 +126,8 @@ function fieldToRelationType(
         single = "import('astromech').User";
     } else if (field.target === 'media') {
         single = "import('astromech').Media";
-    } else if (qualifiedTargetMap.has(field.target)) {
-        // Qualified target: `plugin/type` → resolved plugin Fields type
-        const fieldsName = qualifiedTargetMap.get(field.target) ?? 'never';
-        single = `import('astromech').TypedEntry<${fieldsName}>`;
     } else if (knownCollections.has(field.target)) {
-        const pascal = toPascalCase(field.target);
+        const pascal = typeNamePrefix(field.target);
         const fieldsName =
             shape === 'public' ? `${pascal}FieldsPublic` : `${pascal}Fields`;
         single = `import('astromech').TypedEntry<${fieldsName}>`;
@@ -153,8 +148,7 @@ type CollectionTypeBlock = {
 function generateCollectionTypes(
     collectionKey: string,
     fields: ResolvedEntryFields,
-    knownCollections: Set<string>,
-    qualifiedTargetMap: Map<string, string> = new Map<string, string>()
+    knownCollections: Set<string>
 ): CollectionTypeBlock {
     const pascal = toPascalCase(collectionKey);
     const fieldsName = `${pascal}Fields`;
@@ -204,12 +198,7 @@ function generateCollectionTypes(
     // Build Relations type (only populate-able fields from flat top-level data fields)
     const relationLines: string[] = [];
     for (const field of allFields) {
-        const relType = fieldToRelationType(
-            field,
-            knownCollections,
-            qualifiedTargetMap,
-            'full'
-        );
+        const relType = fieldToRelationType(field, knownCollections, 'full');
         if (relType === null) continue;
         relationLines.push(`  ${propertyKey(field.name)}: ${relType};`);
     }
@@ -223,120 +212,27 @@ function generateCollectionTypes(
 }
 
 /**
- * Derive the type-name prefix for a global: the pascal-cased key plus
- * `Global`, so `generateCollectionTypes` names its fields type
- * `<Key>GlobalFields`.
+ * The type-name prefix for an entry type or global id: the pascal-cased id,
+ * a plugin's namespace included, e.g. `redirects/redirect` → `RedirectsRedirect`.
  */
-function globalPrefix(key: string): string {
-    return `${toPascalCase(key)}Global`;
+function typeNamePrefix(id: string): string {
+    return toPascalCase(id.replaceAll('/', '_'));
 }
-
-/** Derive the type-name prefix for a plugin's global, e.g. `seo/settings` → `SeoSettingsGlobal`. */
-function pluginGlobalPrefix(pluginName: string, key: string): string {
-    return `${toPascalCase(pluginName)}${toPascalCase(key)}Global`;
-}
-
-type GlobalBlock = {
-    /** The global's addressable id — bare key, or `<namespace>/<key>`. */
-    globalId: string;
-    prefix: string;
-    fieldsType: string;
-};
 
 /**
- * Generate the fields type for every host and plugin global. Relations inside
- * a global resolve their targets exactly as a collection's do, so the same
- * known-collection and qualified-target maps are passed through.
+ * Claim a type-name prefix for `id`, throwing when another id already has it:
+ * two declarations of one generated name would not compile.
  */
-function generateGlobalBlocks(
-    config: ResolvedConfig,
-    knownCollections: Set<string>,
-    qualifiedTargetMap: Map<string, string>
-): GlobalBlock[] {
-    const blocks: GlobalBlock[] = [];
-
-    const emit = (globalId: string, prefix: string, fields: ResolvedEntryFields) => {
-        const block = generateCollectionTypes(
-            prefix,
-            fields,
-            knownCollections,
-            qualifiedTargetMap
+function claimPrefix(taken: Map<string, string>, prefix: string, id: string): string {
+    const holder = taken.get(prefix);
+    if (holder !== undefined) {
+        throw new Error(
+            `Astromech codegen: "${holder}" and "${id}" both generate the type name ` +
+                `prefix "${prefix}". Rename one of them.`
         );
-        blocks.push({ globalId, prefix, fieldsType: block.fieldsType });
-    };
-
-    for (const [key, global] of Object.entries(config.globals ?? {})) {
-        emit(key, globalPrefix(key), global.fields);
     }
-
-    for (const [pluginName, globals] of Object.entries(config.pluginGlobals ?? {})) {
-        for (const [key, global] of Object.entries(globals)) {
-            emit(
-                `${pluginName}/${key}`,
-                pluginGlobalPrefix(pluginName, key),
-                global.fields
-            );
-        }
-    }
-
-    return blocks;
-}
-
-/** Derive the type-name prefix for a plugin entry type. */
-function pluginEntryPrefix(pluginName: string, typeName: string): string {
-    return `Plugin${toPascalCase(pluginName)}${toPascalCase(typeName)}`;
-}
-
-type PluginEntryBlock = {
-    pluginName: string;
-    typeName: string;
-    fieldsType: string;
-    fieldsPublicType: string;
-    relationsType: string;
-};
-
-/**
- * Generate per-plugin entry types (`Fields`/`FieldsPublic`/`Relations`), so
- * a root collection's relationship field can target a qualified plugin entry
- * type (`redirects/redirect`). Empty array when there are no plugin entries.
- */
-function generatePluginEntryBlocks(
-    pluginEntries: Record<string, Record<string, { fields: ResolvedEntryFields }>>,
-    knownCollections: Set<string>,
-    qualifiedTargetMap: Map<string, string>
-): PluginEntryBlock[] {
-    const blocks: PluginEntryBlock[] = [];
-
-    for (const [pluginName, types] of Object.entries(pluginEntries)) {
-        for (const [typeName, entryType] of Object.entries(types)) {
-            const prefix = pluginEntryPrefix(pluginName, typeName);
-
-            // Reuse collection codegen with plugin-prefixed type names.
-            // collectionKey === prefix → pascal === prefix (already PascalCase),
-            // so the generated names are `${prefix}Fields` / `${prefix}Relations`.
-            const block = generateCollectionTypes(
-                prefix,
-                entryType.fields,
-                knownCollections,
-                qualifiedTargetMap
-            );
-
-            blocks.push({
-                pluginName,
-                typeName,
-                fieldsType: block.fieldsType,
-                fieldsPublicType: block.fieldsPublicType,
-                relationsType: block.relationsType,
-            });
-
-            // Register qualified target so other fields can reference it.
-            // For full shape, map to the full Fields type.
-            // For public shape, callers use the public variant directly.
-            qualifiedTargetMap.set(`${pluginName}/${typeName}`, `${prefix}Fields`);
-        }
-    }
-
-    return blocks;
+    taken.set(prefix, id);
+    return prefix;
 }
 
 /**
@@ -370,96 +266,56 @@ export function generateClientTypes(
     config: ResolvedConfig,
     plugins: PluginDefinition[] = []
 ): string {
-    const collectionKeys = Object.keys(config.entries);
-    const knownCollections = new Set(collectionKeys);
+    const knownCollections = new Set(Object.keys(config.entryTypes));
+    const taken = new Map<string, string>();
 
-    // Build a qualified-target map so root collection relation fields can
-    // reference plugin entry types (e.g. target: 'redirects/redirect').
-    // Pre-populate with all plugin entry keys so forward references work.
-    const qualifiedTargetMap = new Map<string, string>();
-    const pluginEntriesInput = config.pluginEntries ?? {};
-    for (const [pluginName, types] of Object.entries(pluginEntriesInput)) {
-        for (const typeName of Object.keys(types)) {
-            qualifiedTargetMap.set(
-                `${pluginName}/${typeName}`,
-                `${pluginEntryPrefix(pluginName, typeName)}Fields`
-            );
-        }
-    }
-
-    const blocks = Object.entries(config.entries).map(([key, entryType]) =>
-        generateCollectionTypes(
-            key,
+    const entryBlocks = Object.entries(config.entryTypes).map(([id, entryType]) => ({
+        id,
+        ...generateCollectionTypes(
+            claimPrefix(taken, typeNamePrefix(id), id),
             entryType.fields,
-            knownCollections,
-            qualifiedTargetMap
-        )
-    );
+            knownCollections
+        ),
+    }));
 
-    const augmentationLines = blocks
-        .map(({ collectionKey }) => {
-            const pascal = toPascalCase(collectionKey);
-            return `    ${propertyKey(collectionKey)}: { fields: ${pascal}Fields; fieldsPublic: ${pascal}FieldsPublic; relations: ${pascal}Relations };`;
+    const globalBlocks = Object.entries(config.globals).map(([id, global]) => {
+        const prefix = claimPrefix(taken, `${typeNamePrefix(id)}Global`, id);
+        return {
+            id,
+            prefix,
+            fieldsType: generateCollectionTypes(prefix, global.fields, knownCollections)
+                .fieldsType,
+        };
+    });
+
+    const augmentationLines = entryBlocks
+        .map(({ id, collectionKey }) => {
+            return `    ${propertyKey(id)}: { fields: ${collectionKey}Fields; fieldsPublic: ${collectionKey}FieldsPublic; relations: ${collectionKey}Relations };`;
         })
         .join('\n');
 
-    const collectionTypeBlocks = blocks
-        .map(({ collectionKey, fieldsType, fieldsPublicType, relationsType }) => {
-            const pascal = toPascalCase(collectionKey);
-            return [
-                `// --- Collection: ${collectionKey} (${pascal}) ---`,
+    const entryTypeBlocks = entryBlocks
+        .map(({ id, collectionKey, fieldsType, fieldsPublicType, relationsType }) =>
+            [
+                `// --- Entry type: ${id} (${collectionKey}) ---`,
                 '',
                 fieldsType,
                 '',
                 fieldsPublicType,
                 '',
                 relationsType,
-            ].join('\n');
-        })
+            ].join('\n')
+        )
         .join('\n\n');
-
-    // Generate plugin entry type blocks
-    const pluginEntryBlocks = generatePluginEntryBlocks(
-        pluginEntriesInput,
-        knownCollections,
-        qualifiedTargetMap
-    );
-
-    const pluginEntryTypeBlocks = pluginEntryBlocks
-        .map((block) => {
-            const prefix = pluginEntryPrefix(block.pluginName, block.typeName);
-            return [
-                `// --- Plugin entry: ${block.pluginName}/${block.typeName} (${prefix}) ---`,
-                '',
-                block.fieldsType,
-                '',
-                block.fieldsPublicType,
-                '',
-                block.relationsType,
-            ].join('\n');
-        })
-        .join('\n\n');
-
-    const globalBlocks = generateGlobalBlocks(
-        config,
-        knownCollections,
-        qualifiedTargetMap
-    );
 
     const globalAugmentationLines = globalBlocks
-        .map(
-            ({ globalId, prefix }) =>
-                `    ${propertyKey(globalId)}: { fields: ${prefix}Fields };`
-        )
+        .map(({ id, prefix }) => `    ${propertyKey(id)}: { fields: ${prefix}Fields };`)
         .join('\n');
 
     const globalTypeBlocks = globalBlocks
-        .map(({ globalId, prefix, fieldsType }) => {
-            const label = globalId.includes('/') ? 'Plugin global' : 'Global';
-            return [`// --- ${label}: ${globalId} (${prefix}) ---`, '', fieldsType].join(
-                '\n'
-            );
-        })
+        .map(({ id, prefix, fieldsType }) =>
+            [`// --- Global: ${id} (${prefix}) ---`, '', fieldsType].join('\n')
+        )
         .join('\n\n');
 
     const parts: string[] = [
@@ -474,12 +330,8 @@ export function generateClientTypes(
         '  }',
         '}',
         '',
-        collectionTypeBlocks,
+        entryTypeBlocks,
     ];
-
-    if (pluginEntryTypeBlocks) {
-        parts.push('', pluginEntryTypeBlocks);
-    }
 
     if (globalTypeBlocks) {
         parts.push('', globalTypeBlocks);

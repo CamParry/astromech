@@ -77,7 +77,7 @@ beforeEach(async () => {
 });
 
 describe('GET /entry-types', () => {
-    it('returns a bare array — no { data } envelope', async () => {
+    it('returns a bare array of every type, plugin types included — no { data } envelope', async () => {
         const res = await app().request('/entry-types');
         expect(res.status).toBe(200);
         const body = (await res.json()) as TypeMeta[];
@@ -88,6 +88,7 @@ describe('GET /entry-types', () => {
             'snippet',
             'card',
             'bookmark',
+            'widgets/widget',
         ]);
     });
 
@@ -101,10 +102,10 @@ describe('GET /entry-types', () => {
         expect(post?.capabilities['statuses']).toBe(true);
     });
 
-    it('lists no plugin entry type — the handler reads config.entries only', async () => {
+    it('lists a plugin entry type under its qualified id, as the item route serves it', async () => {
         const res = await app().request('/entry-types');
         const body = (await res.json()) as TypeMeta[];
-        expect(body.some((t) => t.type.includes('widget'))).toBe(false);
+        expect(body.find((t) => t.type === 'widgets/widget')?.single).toBe('Widget');
     });
 
     it('reports titleField: false for a titleless type', async () => {

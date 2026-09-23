@@ -44,7 +44,7 @@ import { checkMigrationDrift } from '@/database/migrations';
 import { setDb } from '@/database/registry';
 import { setEmailDriver } from '@/email/registry';
 import { entryJobs } from '@/entries/jobs/entry-jobs';
-import { setEntryRepository } from '@/entries/repository/registry';
+import { registerEntryRepositories } from '@/entries/repository/registry';
 import { AstromechError } from '@/errors/astromech-error';
 import { defaultImageWidths, normaliseWidths } from '@/media/image-widths';
 import { setImageConfig } from '@/media/serving/image/registry';
@@ -170,12 +170,7 @@ async function build(config: AstromechConfig): Promise<Astromech> {
 
     // Plugin runtime
     registerPlugins(plugins, resolved);
-    // Host entry types declaring their own repository, mounted after
-    // `registerPlugins` because that opens by clearing every override. Keyed by
-    // the bare type name; plugin types are qualified instead.
-    for (const [type, entryType] of Object.entries(config.entries)) {
-        if (entryType.repository) setEntryRepository(type, entryType.repository);
-    }
+    registerEntryRepositories(config);
     // The method manifest those plugins dispatch from, generated here because
     // this is the only site holding both the resolved config and the raw
     // `PluginDefinition[]`, which `ResolvedConfig` strips.

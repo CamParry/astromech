@@ -22,10 +22,10 @@ const entryType = (id: string, single: string): ResolvedEntryType => ({
     titleField: 'title',
 });
 
-const config: Pick<ResolvedConfig, 'entries' | 'pluginEntries'> = {
-    entries: { post: entryType('post', 'Post') },
-    pluginEntries: {
-        redirects: { redirect: entryType('redirects/redirect', 'Redirect') },
+const config: Pick<ResolvedConfig, 'entryTypes'> = {
+    entryTypes: {
+        post: entryType('post', 'Post'),
+        'redirects/redirect': entryType('redirects/redirect', 'Redirect'),
     },
 };
 
@@ -56,14 +56,16 @@ describe('qualifyEntryType', () => {
 });
 
 describe('resolveEntryType', () => {
-    it('resolves bare ids against root entries', () => {
-        expect(resolveEntryType(config, 'post')).toBe(config.entries.post);
+    it('resolves a site id and a plugin id from the one map', () => {
+        expect(resolveEntryType(config, 'post')).toBe(config.entryTypes['post']);
+        expect(resolveEntryType(config, 'redirects/redirect')).toBe(
+            config.entryTypes['redirects/redirect']
+        );
     });
 
-    it('resolves qualified ids against pluginEntries', () => {
-        expect(resolveEntryType(config, 'redirects/redirect')).toBe(
-            config.pluginEntries.redirects?.redirect
-        );
+    it('names nothing by an inherited property', () => {
+        expect(resolveEntryType(config, 'constructor')).toBeUndefined();
+        expect(resolveEntryType(config, 'toString')).toBeUndefined();
     });
 
     it('returns undefined for unknown bare ids', () => {

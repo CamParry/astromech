@@ -267,17 +267,11 @@ export type EntriesManifestMethod = ManifestMethodBase & {
     /** Key on `EntriesService`, e.g. `publish`. */
     method: string;
     /**
-     * The type id the service is actually called with: bare for a root type
-     * (`posts`), qualified for a plugin type (`redirects/redirect`). Carried
-     * rather than re-derived from `namespace` + `entryType` — those are a permission
-     * namespace and a label, and re-deriving an identifier is how they drift.
+     * The type id the service is called with: bare for a site type (`posts`),
+     * qualified for a plugin's (`redirects/redirect`).
      */
     typeId: string;
-    /** Bare wire type, e.g. `posts`. */
-    entryType: string;
-    /** `'root'`, or the owning plugin's permission namespace. */
-    namespace: string;
-    /** Plugin namespace this entry type belongs to; absent for root types. */
+    /** Plugin namespace this entry type belongs to; absent for the site's types. */
     plugin?: string;
 };
 
