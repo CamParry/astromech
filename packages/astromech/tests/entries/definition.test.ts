@@ -4,8 +4,7 @@
  * context's user with no request store in play.
  */
 
-import type { EntriesMethods } from '@/entries/service';
-import type { Entry, Role } from '@/types/index';
+import type { EntriesService, Entry, Role } from '@/types/index';
 import {
     createTestDb,
     createTestUser,
@@ -26,7 +25,7 @@ const admin: Role = {
 };
 
 /** The capability each method needs the entry type to declare; absent means none. */
-const REQUIRES: Record<keyof EntriesMethods, string | undefined> = {
+const REQUIRES: Record<keyof EntriesService, string | undefined> = {
     query: undefined,
     get: undefined,
     create: undefined,
@@ -51,7 +50,7 @@ const REQUIRES: Record<keyof EntriesMethods, string | undefined> = {
 };
 
 /** The permission one entry type's catalogue fixes each method to. */
-const PERMISSIONS: Record<keyof EntriesMethods, string> = {
+const PERMISSIONS: Record<keyof EntriesService, string> = {
     query: 'entry:posts:read',
     get: 'entry:posts:read',
     create: 'entry:posts:create',
@@ -94,7 +93,7 @@ describe('the catalogue', () => {
 
     it('declares the capability each method needs the type to carry', () => {
         for (const [key, requires] of Object.entries(REQUIRES)) {
-            const method = entriesDefinition.catalogue[key as keyof EntriesMethods];
+            const method = entriesDefinition.catalogue[key as keyof EntriesService];
             expect(method.requires, key).toBe(requires);
         }
     });
@@ -111,7 +110,7 @@ describe('entryCatalogue', () => {
         const catalogue = entryCatalogue({ typeId: 'posts', titled: true });
 
         for (const [key, permission] of Object.entries(PERMISSIONS)) {
-            expect(catalogue[key as keyof EntriesMethods].access, key).toBe(permission);
+            expect(catalogue[key as keyof EntriesService].access, key).toBe(permission);
         }
     });
 

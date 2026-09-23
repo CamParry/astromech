@@ -3,9 +3,8 @@
  * permission, schemas and capability gating all vary with the entry type, so the
  * manifest generator and the REST mount call this factory once per type.
  */
-import type { EntriesMethods } from './service';
 import type { Capability } from '@/entries/capabilities';
-import type { ServiceMethodContract } from '@/types/index';
+import type { EntriesService, ServiceMethodContract } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { sortSchema } from '@/content/list';
 import { isCapability } from '@/entries/capabilities';
@@ -20,7 +19,7 @@ import {
 import { entriesDefinition } from './service';
 
 /** A key on `EntriesService` — the manifest name is `entries.<key>`. */
-export type EntryMethodName = keyof EntriesMethods;
+export type EntryMethodName = keyof EntriesService;
 
 /**
  * The full method catalogue for one entry type, keyed as `EntriesService` keys

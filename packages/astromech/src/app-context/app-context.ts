@@ -72,9 +72,7 @@ export function createAppContext(input: AppContextInput): AppContext {
         role,
         clientAddress,
         get entries(): EntriesService {
-            // `EntriesMethods` collapses the overload pairs the interface
-            // declares; `entries/service.ts` says why the cast is here.
-            entries ??= entriesDefinition.bind(context) as unknown as EntriesService;
+            entries ??= entriesDefinition.bind(context);
             return entries;
         },
         get globals(): GlobalsService {

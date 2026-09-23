@@ -104,7 +104,12 @@ export type EntryUpdateParams = {
 /** Overrides accepted by `duplicate`; `locale` copies that locale alone. */
 export type EntryDuplicateOverrides = z.input<typeof duplicateOverridesSchema>;
 
-/** The entries domain's service contract — unified, type-scoped, options-object. */
+/**
+ * The entries domain's service contract: unified, type-scoped, options-object.
+ * The five methods that take one id or a list answer to match, and each ends
+ * with a union signature for a caller holding either. `defineService` reads a
+ * method's types off that last signature.
+ */
 export type EntriesService = {
     query(
         params: EntryQueryParams & { type: string | readonly string[] }
@@ -126,6 +131,7 @@ export type EntriesService = {
 
     update(params: EntryUpdateParams & { id: string }): Promise<Entry>;
     update(params: EntryUpdateParams & { id: readonly string[] }): Promise<Entry[]>;
+    update(params: EntryUpdateParams): Promise<Entry | Entry[]>;
 
     duplicate(params: {
         type: string;
@@ -137,6 +143,10 @@ export type EntriesService = {
 
     restore(params: { type: string; id: string }): Promise<Entry>;
     restore(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
+    restore(params: {
+        type: string;
+        id: string | readonly string[];
+    }): Promise<Entry | Entry[]>;
 
     delete(params: { type: string; id: string | readonly string[] }): Promise<void>;
 
@@ -160,6 +170,11 @@ export type EntriesService = {
         id: readonly string[];
         locale?: string;
     }): Promise<Entry[]>;
+    publish(params: {
+        type: string;
+        id: string | readonly string[];
+        locale?: string;
+    }): Promise<Entry | Entry[]>;
 
     unpublish(params: { type: string; id: string; locale?: string }): Promise<Entry>;
     unpublish(params: {
@@ -167,6 +182,11 @@ export type EntriesService = {
         id: readonly string[];
         locale?: string;
     }): Promise<Entry[]>;
+    unpublish(params: {
+        type: string;
+        id: string | readonly string[];
+        locale?: string;
+    }): Promise<Entry | Entry[]>;
 
     /** `publishedAt` is a `Date`, or the offset ISO string one is coerced from. */
     schedule(params: {
@@ -181,6 +201,12 @@ export type EntriesService = {
         publishedAt: Date | string;
         locale?: string;
     }): Promise<Entry[]>;
+    schedule(params: {
+        type: string;
+        id: string | readonly string[];
+        publishedAt: Date | string;
+        locale?: string;
+    }): Promise<Entry | Entry[]>;
 
     /** Every reference to this entry, from any resource. */
     usedBy(params: { type: string; id: string }): Promise<Usage[]>;

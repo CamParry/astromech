@@ -5,7 +5,7 @@
  */
 
 import type { Capability } from './capabilities';
-import type { EntriesService, Entry, EntryUpdateParams } from '@/types/index';
+import type { EntriesService } from '@/types/index';
 import { defineService } from '@/services/define-service';
 import { assertTypeCapability, typeOf } from './internal/entry-type';
 import { createEntry } from './methods/create';
@@ -26,42 +26,7 @@ import { listEntryUsage } from './methods/used-by';
 import { listEntryVersions } from './methods/versions/list';
 import { restoreEntryVersion } from './methods/versions/restore';
 
-/**
- * `EntriesService` with each overload pair collapsed to its union — the shape
- * the handlers implement. `MethodsFor<S>` reads a method's parameter and result
- * off its LAST overload, so the five that answer an `Entry` for one id and an
- * `Entry[]` for a list have to state both here for the catalogue to be checked
- * against something true. `createAppContext` (`app-context/app-context.ts`)
- * casts back.
- */
-export type EntriesMethods = Omit<
-    EntriesService,
-    'update' | 'restore' | 'publish' | 'unpublish' | 'schedule'
-> & {
-    update(params: EntryUpdateParams): Promise<Entry | Entry[]>;
-    restore(params: {
-        type: string;
-        id: string | readonly string[];
-    }): Promise<Entry | Entry[]>;
-    publish(params: {
-        type: string;
-        id: string | readonly string[];
-        locale?: string;
-    }): Promise<Entry | Entry[]>;
-    unpublish(params: {
-        type: string;
-        id: string | readonly string[];
-        locale?: string;
-    }): Promise<Entry | Entry[]>;
-    schedule(params: {
-        type: string;
-        id: string | readonly string[];
-        publishedAt: Date | string;
-        locale?: string;
-    }): Promise<Entry | Entry[]>;
-};
-
-export const entriesDefinition = defineService<EntriesMethods>(
+export const entriesDefinition = defineService<EntriesService>(
     'entries',
     {
         query: queryEntries,
