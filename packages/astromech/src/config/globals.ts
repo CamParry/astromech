@@ -9,7 +9,7 @@ import type {
     ResolvedGlobalCapabilities,
 } from '@/types/index';
 import { toResolvedFields } from '@/config/entry-types';
-import { assertUniqueDataNames, validateFieldTree } from '@/config/validate/field-tree';
+import { assertUniqueDataNames, validateFieldTree } from '@/fields/field-tree';
 
 /** Characters a global key may not contain: both are id separators. */
 const GLOBAL_KEY_FORBIDDEN = /[/:]/;
@@ -58,9 +58,10 @@ export function toResolvedGlobal(id: string, config: GlobalConfig): ResolvedGlob
     assertGlobalValid(id, config);
 
     const fields = toResolvedFields(config.fields);
-    validateFieldTree(id, fields.main);
-    validateFieldTree(id, fields.sidebar);
-    assertUniqueDataNames(id, fields);
+    const owner = `global "${id}"`;
+    validateFieldTree(owner, fields.main);
+    validateFieldTree(owner, fields.sidebar);
+    assertUniqueDataNames(owner, fields);
 
     const { key: _key, fields: _fields, ...rest } = config;
     return {

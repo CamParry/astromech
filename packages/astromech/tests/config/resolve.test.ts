@@ -347,6 +347,7 @@ describe('resolveConfig structural validation', () => {
                                 fields: [
                                     {
                                         type: 'tab',
+                                        label: 'Content',
                                         fields: [{ name: 'title', type: 'text' }],
                                     },
                                 ],
@@ -513,6 +514,49 @@ describe('resolveConfig structural validation', () => {
                 }),
             ])
         ).not.toThrow();
+    });
+
+    it('throws when a raw unnamed tab or accordion has no label', () => {
+        expect(() =>
+            resolvePost([{ type: 'tabs', fields: [{ type: 'tab', fields: [] }] }])
+        ).toThrow(/post.*unnamed `tab` needs a `label`/);
+        expect(() => resolvePost([{ type: 'accordion', fields: [] }])).toThrow(
+            /unnamed `accordion` needs a `label`/
+        );
+    });
+
+    it('throws when two fields in one block write the same key', () => {
+        expect(() =>
+            resolvePost([
+                blocks('body', {
+                    blocks: [block('hero', { fields: [text('title'), text('title')] })],
+                }),
+            ])
+        ).toThrow(/post.*duplicate field name "title".*`body\[\].title`/);
+    });
+
+    it('allows two block types to declare the same field name', () => {
+        expect(() =>
+            resolvePost([
+                blocks('body', {
+                    blocks: [
+                        block('hero', { fields: [text('title')] }),
+                        block('quote', { fields: [text('title')] }),
+                    ],
+                }),
+            ])
+        ).not.toThrow();
+    });
+
+    it('validates the media and users field trees', () => {
+        const withFields = (key: 'media' | 'users', fields: Field[]) =>
+            resolveConfig({ ...baseConfig([]), [key]: { fields } });
+        expect(() => withFields('media', [text('alt'), text('alt')])).toThrow(
+            /Astromech media: duplicate field name "alt"/
+        );
+        expect(() =>
+            withFields('users', [{ type: 'tab', label: 'Bio', fields: [] }])
+        ).toThrow(/Astromech users: `tab` must be a direct child of `tabs`/);
     });
 
     it('allows the same name at different nesting levels', () => {

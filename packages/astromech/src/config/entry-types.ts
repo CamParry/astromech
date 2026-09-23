@@ -4,14 +4,14 @@
  */
 
 import type { Capability } from '@/entries/capabilities';
-import type { EntryFields, Field, ResolvedEntryFields } from '@/types/fields';
+import type { EntryFields, ResolvedEntryFields } from '@/types/fields';
 import type {
     EntryType,
     ResolvedEntryCapabilities,
     ResolvedEntryType,
 } from '@/types/index';
-import { assertUniqueDataNames, validateFieldTree } from '@/config/validate/field-tree';
-import { isLayoutField } from '@/fields/flatten';
+import { assertUniqueDataNames, validateFieldTree } from '@/fields/field-tree';
+import { flattenFieldNodes } from '@/fields/flatten';
 
 /**
  * Resolve the capability set for an entry type. When the repository supports a
@@ -89,21 +89,6 @@ export function toResolvedFields(fields: EntryFields | undefined): ResolvedEntry
 }
 
 /**
- * Collect names of fields flagged `searchable`. Recurses through layout
- * fields (their children are top-level data) but not nested fields
- * (`group`/`repeater`/`blocks`), whose child names are not top-level keys.
- */
-function collectSearchable(nodes: Field[], out: string[]): void {
-    for (const node of nodes) {
-        if (isLayoutField(node)) {
-            collectSearchable(node.fields, out);
-            continue;
-        }
-        if (node.searchable === true) out.push(node.name);
-    }
-}
-
-/**
  * Resolve a single entry type: validate capabilities and titleField
  * (crash-loud on mismatch) and strip the live `repository` instance. `typeKey`
  * is stamped onto the result as `id`, used in error messages.
@@ -117,16 +102,21 @@ export function toResolvedEntryType(
     assertEntryTypeValid(typeKey, entryType, repositorySupports);
 
     const resolvedFields = toResolvedFields(entryType.fields);
-    validateFieldTree(typeKey, resolvedFields.main);
-    validateFieldTree(typeKey, resolvedFields.sidebar);
-    assertUniqueDataNames(typeKey, resolvedFields);
+    const owner = `entry type "${typeKey}"`;
+    validateFieldTree(owner, resolvedFields.main);
+    validateFieldTree(owner, resolvedFields.sidebar);
+    assertUniqueDataNames(owner, resolvedFields);
 
     // Derive search from searchable fields if not explicitly set.
     let resolvedSearch = entryType.search;
     if (resolvedSearch === undefined) {
-        const searchableNames: string[] = [];
-        collectSearchable(resolvedFields.main, searchableNames);
-        collectSearchable(resolvedFields.sidebar, searchableNames);
+        // Top-level fields only: a nested field's children are not top-level keys.
+        const searchableNames = [
+            ...flattenFieldNodes(resolvedFields.main),
+            ...flattenFieldNodes(resolvedFields.sidebar),
+        ]
+            .filter((field) => field.searchable === true)
+            .map((field) => field.name);
         if (searchableNames.length > 0) resolvedSearch = searchableNames;
     }
 

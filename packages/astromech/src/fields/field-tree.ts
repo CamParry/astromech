@@ -1,67 +1,36 @@
 /**
  * Structural validation of an authored field tree, and the duplicate-name guard
- * that keeps one value namespace from writing the same key twice.
+ * that keeps one value namespace from writing the same key twice. Both run on
+ * `traverseFields` and ask each field's type what it is.
  */
 
 import type { DataField, Field, ResolvedEntryFields } from '@/types/fields';
-import { isLayoutField } from '@/fields/flatten';
+import { getFieldType } from './field-type-registry';
+import { fieldAffectsData, isLayoutField } from './flatten';
+import { traverseFields } from './traverse';
 
 type DataFieldPath = { field: DataField; path: string };
 
-/** Where a node sits: under `tabs`, inside an item container, below a nested field. */
-type TreePosition = {
-    insideTabs: boolean;
-    /** The nearest enclosing `repeater`, `blocks` or `tree`, if any. */
-    itemContainer: string | undefined;
-    /** Whether any enclosing field stores its children under its own key. */
-    nested: boolean;
-};
-
-const ITEM_CONTAINERS = new Set(['repeater', 'blocks', 'tree']);
-
-/** Structural types a raw object may not name: only the builder nests them. */
-const UNNAMED_TYPES = new Set(['tabs', 'tab', 'accordion']);
-
 /**
- * Structural-rule validation, crash-loud naming the entry type: `tab` sits only
- * directly inside `tabs`, which holds nothing else and never sits in an item
- * container; names and flags that would silently do nothing are rejected.
+ * Structural-rule validation, crash-loud naming the owner (`entry type "post"`,
+ * `global "footer"`, `media`, `users`): `tab` sits only directly inside `tabs`,
+ * which holds nothing else and never sits in an item container; an unnamed tab
+ * or accordion has a label; names and flags that would do nothing are rejected.
  */
-export function validateFieldTree(typeKey: string, nodes: Field[]): void {
-    walkTree(typeKey, nodes, {
-        insideTabs: false,
-        itemContainer: undefined,
-        nested: false,
+export function validateFieldTree(owner: string, nodes: Field[]): void {
+    traverseFields(nodes, ({ field, ancestors }) => {
+        assertNodeValid(`Astromech ${owner}:`, field, ancestors);
     });
 }
 
-function walkTree(typeKey: string, nodes: Field[], position: TreePosition): void {
-    for (const node of nodes) {
-        assertNodeValid(typeKey, node, position);
-        if (isLayoutField(node)) {
-            walkTree(typeKey, node.fields, {
-                ...position,
-                insideTabs: node.type === 'tabs',
-            });
-            continue;
-        }
-        const childPosition: TreePosition = {
-            insideTabs: false,
-            itemContainer: ITEM_CONTAINERS.has(node.type)
-                ? node.type
-                : position.itemContainer,
-            nested: true,
-        };
-        if (node.fields !== undefined) walkTree(typeKey, node.fields, childPosition);
-        for (const block of node.blocks ?? []) {
-            walkTree(typeKey, block.fields, childPosition);
-        }
-    }
-}
-
-function assertNodeValid(typeKey: string, node: Field, position: TreePosition): void {
-    const prefix = `Astromech entry type "${typeKey}":`;
-    if (node.name !== undefined && UNNAMED_TYPES.has(node.type)) {
+function assertNodeValid(prefix: string, node: Field, ancestors: readonly Field[]): void {
+    const fieldType = getFieldType(node.type);
+    const parent = ancestors.at(-1);
+    if (
+        node.name !== undefined &&
+        fieldType?.layout === true &&
+        fieldType.affectsData === false
+    ) {
         throw new Error(
             `${prefix} a \`${node.type}\` object cannot carry a name ("${node.name}"). ` +
                 (node.type === 'tabs'
@@ -76,20 +45,30 @@ function assertNodeValid(typeKey: string, node: Field, position: TreePosition): 
                 'name to store its fields under that key, or drop `boxed: false`.'
         );
     }
-    if (node.type === 'tab' && !position.insideTabs) {
+    if (
+        isLayoutField(node) &&
+        (node.type === 'tab' || node.type === 'accordion') &&
+        node.label === undefined
+    ) {
+        throw new Error(
+            `${prefix} an unnamed \`${node.type}\` needs a \`label\` to show its editors.`
+        );
+    }
+    if (node.type === 'tab' && parent?.type !== 'tabs') {
         throw new Error(`${prefix} \`tab\` must be a direct child of \`tabs\`.`);
     }
-    if (position.insideTabs && node.type !== 'tab') {
+    if (parent?.type === 'tabs' && node.type !== 'tab') {
         throw new Error(
             `${prefix} \`tabs\` may only contain \`tab\` children (got "${node.type}").`
         );
     }
-    if (node.type === 'tabs' && position.itemContainer !== undefined) {
+    const itemContainer = [...ancestors].reverse().find(isItemContainer);
+    if (node.type === 'tabs' && itemContainer !== undefined) {
         throw new Error(
-            `${prefix} \`tabs\` cannot sit inside a \`${position.itemContainer}\`.`
+            `${prefix} \`tabs\` cannot sit inside a \`${itemContainer.type}\`.`
         );
     }
-    if (isLayoutField(node) || !position.nested) return;
+    if (!fieldAffectsData(node) || !ancestors.some(fieldAffectsData)) return;
     for (const flag of ['translatable', 'searchable'] as const) {
         if (node[flag] !== undefined) {
             throw new Error(
@@ -101,19 +80,31 @@ function assertNodeValid(typeKey: string, node: Field, position: TreePosition): 
     }
 }
 
+/** A data field whose nested scopes repeat once per item. */
+function isItemContainer(node: Field): boolean {
+    if (!fieldAffectsData(node)) return false;
+    const scopes = getFieldType(node.type)?.subFields?.(node) ?? [];
+    return scopes.some((scope) => scope.repeats);
+}
+
 /**
- * Reject two data fields that write the same key. The value namespace is
- * flat — layout fields are unwrapped and `main`/`sidebar` share one value
- * object, so a name repeated at any depth would overwrite silently.
+ * Reject two data fields that write the same key. Layout fields are unwrapped
+ * and `main`/`sidebar` share one value object, so each value namespace (the
+ * root, and every scope a nested field declares, block by block) is checked.
  */
-export function assertUniqueDataNames(
-    typeKey: string,
-    fields: ResolvedEntryFields
-): void {
-    assertUniqueInNamespace(typeKey, [
+export function assertUniqueDataNames(owner: string, fields: ResolvedEntryFields): void {
+    const prefix = `Astromech ${owner}:`;
+    assertUniqueInNamespace(prefix, [
         ...dataFieldsWithPath(fields.main, 'main'),
         ...dataFieldsWithPath(fields.sidebar, 'sidebar'),
     ]);
+    traverseFields([...fields.main, ...fields.sidebar], ({ field, schemaPath }) => {
+        if (!fieldAffectsData(field)) return;
+        for (const scope of getFieldType(field.type)?.subFields?.(field) ?? []) {
+            const path = scope.repeats ? `${schemaPath}[]` : schemaPath;
+            assertUniqueInNamespace(prefix, dataFieldsWithPath(scope.fields, path));
+        }
+    });
 }
 
 /**
@@ -127,27 +118,23 @@ function dataFieldsWithPath(nodes: Field[], path: string): DataFieldPath[] {
             out.push(...dataFieldsWithPath(node.fields, `${path}[${index}]`));
             continue;
         }
-        out.push({ field: node, path: `${path}.${node.name}` });
+        if (fieldAffectsData(node))
+            out.push({ field: node, path: `${path}.${node.name}` });
     }
     return out;
 }
 
-/** Throw on a repeated name, naming both paths, then check each nested namespace. */
-function assertUniqueInNamespace(typeKey: string, fields: DataFieldPath[]): void {
+/** Throw on a repeated name, naming both paths. */
+function assertUniqueInNamespace(prefix: string, fields: DataFieldPath[]): void {
     const seen = new Map<string, string>();
     for (const { field, path } of fields) {
         const first = seen.get(field.name);
         if (first !== undefined) {
             throw new Error(
-                `Astromech entry type "${typeKey}": duplicate field name ` +
-                    `"${field.name}" — \`${first}\` and \`${path}\` write the same key.`
+                `${prefix} duplicate field name "${field.name}" — \`${first}\` and ` +
+                    `\`${path}\` write the same key.`
             );
         }
         seen.set(field.name, path);
-        // A nested field (group/repeater/blocks) owns one key and nests its
-        // children, so its subtree is a namespace of its own.
-        if (field.fields) {
-            assertUniqueInNamespace(typeKey, dataFieldsWithPath(field.fields, path));
-        }
     }
 }

@@ -18,6 +18,7 @@ import { resolvePublicSettingKeys } from '@/config/public-settings';
 import { assertMediaAccessCompatible } from '@/config/validate/media-access';
 import { assertQualifiedRelationshipTargets } from '@/config/validate/relationships';
 import { ALL_CAPABILITIES } from '@/entries/capabilities';
+import { assertUniqueDataNames, validateFieldTree } from '@/fields/field-tree';
 import { resolveRoles } from '@/permissions/roles';
 
 /** Resolve the config with defaults and plugin merging. */
@@ -46,6 +47,14 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     );
 
     const publicSettingKeys = resolvePublicSettingKeys(config.publicSettings);
+
+    for (const [owner, fields] of [
+        ['media', config.media?.fields ?? []],
+        ['users', config.users?.fields ?? []],
+    ] as const) {
+        validateFieldTree(owner, fields);
+        assertUniqueDataNames(owner, { main: fields, sidebar: [] });
+    }
 
     const mediaAccess = config.media?.access ?? 'public';
     assertMediaAccessCompatible(mediaAccess, config.media?.image?.driver.name);
