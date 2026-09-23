@@ -100,37 +100,20 @@ type EntryTableRowProps = RowActionsProps & {
     authorNames: Map<string, string>;
 };
 
-export function EntryTableRow({
-    entry,
-    isTrash,
-    type,
-    basePath,
-    canDelete,
-    hasTrashCap,
-    onRestore,
-    onConfirmDelete,
-    onDuplicate,
-    selected,
-    onToggleSelect,
-    columns,
-    navigate,
-    rowLabels,
-    configuredLocales,
-    authorNames,
-}: EntryTableRowProps): React.ReactElement {
-    const { t } = useTranslation();
-    const items = buildRowItems({
+export function EntryTableRow(props: EntryTableRowProps): React.ReactElement {
+    const {
         entry,
         isTrash,
-        type,
         basePath,
-        canDelete,
-        hasTrashCap,
-        onRestore,
-        onConfirmDelete,
-        onDuplicate,
-        rowLabels,
-    });
+        selected,
+        onToggleSelect,
+        columns,
+        navigate,
+        configuredLocales,
+        authorNames,
+    } = props;
+    const { t } = useTranslation();
+    const items = buildRowItems(props);
     const { onContextMenu, contextMenuNode } = useContextMenu(items);
     const ctx: CellRenderContext = { basePath, configuredLocales, isTrash, authorNames };
 
@@ -194,37 +177,20 @@ type EntryCardProps = RowActionsProps & {
     authorNames: Map<string, string>;
 };
 
-export function EntryCard({
-    entry,
-    isTrash,
-    type,
-    basePath,
-    canDelete,
-    hasTrashCap,
-    onRestore,
-    onConfirmDelete,
-    onDuplicate,
-    columns,
-    columnLabel,
-    navigate,
-    rowLabels,
-    hasTitle,
-    configuredLocales,
-    authorNames,
-}: EntryCardProps): React.ReactElement {
-    const { t } = useTranslation();
-    const items = buildRowItems({
+export function EntryCard(props: EntryCardProps): React.ReactElement {
+    const {
         entry,
         isTrash,
-        type,
         basePath,
-        canDelete,
-        hasTrashCap,
-        onRestore,
-        onConfirmDelete,
-        onDuplicate,
-        rowLabels,
-    });
+        columns,
+        columnLabel,
+        navigate,
+        hasTitle,
+        configuredLocales,
+        authorNames,
+    } = props;
+    const { t } = useTranslation();
+    const items = buildRowItems(props);
     const { onContextMenu, contextMenuNode } = useContextMenu(items);
     const ctx: CellRenderContext = { basePath, configuredLocales, isTrash, authorNames };
 

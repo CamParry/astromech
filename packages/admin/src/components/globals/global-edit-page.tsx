@@ -17,11 +17,10 @@ import { resolveLabel } from '../../i18n/labels';
 import { defaultContentLocale } from '../../utilities/content-locale';
 import { globalBasePath, globalEditPath } from '../../utilities/global-admin-path';
 import { EntryFormLayout, FieldColumn, StatusField } from '../entries/entry-form-fields';
-import { EditBanners, StagingControls, VersionsLink } from '../entries/staging-controls';
+import { EditActions, EditBanners, VersionsLink } from '../entries/staging-controls';
 import { NotFoundPage } from '../layout/not-found-page';
 import { LocaleSwitcher } from '../translations/locale-switcher';
 import { Breadcrumb } from '../ui/breadcrumb';
-import { Button } from '../ui/button';
 import {
     Page,
     PageContent,
@@ -126,17 +125,7 @@ function GlobalEditBody({
                                 compact
                             />
                         )}
-                        {!isStaged && <StagingControls controller={controller} />}
-                        {!isReadOnly && (
-                            <Button
-                                variant={isStaged ? 'secondary' : 'primary'}
-                                onClick={controller.handleSave}
-                                loading={controller.saveMutation.isPending}
-                            >
-                                {t('common.update')}
-                            </Button>
-                        )}
-                        {isStaged && <StagingControls controller={controller} />}
+                        <EditActions controller={controller} />
                     </PageHeaderActions>
                 </PageHeader>
 

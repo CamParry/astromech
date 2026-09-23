@@ -55,7 +55,7 @@ seed the input through `formatDatetimeForInput`.
 - **`useEditController({ resource, id, locale, staged })`** loads the
   canonical row or its staged change, builds the form values and the one
   `update` payload (status only on a canonical write), and exposes staging
-  create, merge and discard with their confirms. `StagingControls`,
+  create, merge and discard with their confirms. `EditActions`,
   `StagingBanner`, `VersionsLink` and the form fields (`TitleField`,
   `SlugField`, `StatusField` over `PublishPanel`, `FieldColumn`) are shared by
   the entry and global edit pages and the create page.
@@ -80,7 +80,8 @@ seed the input through `formatDatetimeForInput`.
       files only map params, and an unknown id renders `NotFoundPage`.
 - [x] `useEditController(resource, target)`: loading canonical or staged, one
       form codec, one `update` carrying status, staging create, merge and
-      discard. Shared `StagingControls` and `PublishPanel`. The resource is
+      discard. Shared `StagingControls` and `PublishPanel` (as `EditActions`,
+      which holds Update and the staging controls, and `StatusField`). The resource is
       `entryEditResource` or `globalEditResource`; the staged entry view shows
       Discard as a button, as the global one did, instead of a menu item.
 - [x] `useListController` for the entries list; users and media adopt it where

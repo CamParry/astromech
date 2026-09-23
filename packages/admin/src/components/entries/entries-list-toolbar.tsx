@@ -1,17 +1,15 @@
 /**
  * The entries list toolbar's controls: the status and locale filters, the
- * column menu and the list/grid toggle.
+ * column menu.
  */
 
 import type { StatusFilter } from '../../hooks/use-list-controller';
-import type { ViewMode } from '../../types/media';
 import { Menu } from '@base-ui/react/menu';
-import { Check, LayoutGrid, LayoutList, SlidersHorizontal } from 'lucide-react';
+import { Check, SlidersHorizontal } from 'lucide-react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { LOCALE_FILTER_ALL } from '../../hooks/use-list-controller';
 import { Select } from '../ui/select';
-import { ToggleGroup } from '../ui/toggle-group';
 
 /** The status filter, offering only what the type's statuses and trash allow. */
 export function StatusFilterSelect({
@@ -122,34 +120,5 @@ export function ColumnsMenu({
                 </Menu.Positioner>
             </Menu.Portal>
         </Menu.Root>
-    );
-}
-
-/** The list/grid toggle. */
-export function ViewModeToggle({
-    value,
-    onChange,
-}: {
-    value: ViewMode;
-    onChange: (value: ViewMode) => void;
-}): React.ReactElement {
-    const { t } = useTranslation();
-    return (
-        <ToggleGroup
-            value={value}
-            onValueChange={onChange}
-            items={[
-                {
-                    value: 'grid',
-                    icon: <LayoutGrid size={15} />,
-                    label: t('common.gridView'),
-                },
-                {
-                    value: 'list',
-                    icon: <LayoutList size={15} />,
-                    label: t('common.listView'),
-                },
-            ]}
-        />
     );
 }

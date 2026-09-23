@@ -46,7 +46,7 @@ import {
     TitleField,
 } from './entry-form-fields';
 import { entryLabel } from './entry-label';
-import { EditBanners, StagingControls, VersionsLink } from './staging-controls';
+import { EditActions, EditBanners, VersionsLink } from './staging-controls';
 
 type EntryEditPageProps = {
     /** Entry type id: `post`, or `forms/form` for a plugin's. */
@@ -224,17 +224,7 @@ function EntryEditBody({
                                 />
                             </Tooltip>
                         )}
-                        {!isStaged && <StagingControls controller={controller} />}
-                        {!isReadOnly && (
-                            <Button
-                                variant={isStaged ? 'secondary' : 'primary'}
-                                onClick={controller.handleSave}
-                                loading={controller.saveMutation.isPending}
-                            >
-                                {t('common.update')}
-                            </Button>
-                        )}
-                        {isStaged && <StagingControls controller={controller} />}
+                        <EditActions controller={controller} />
                         {!isReadOnly && !isStaged && (
                             <Menu.Root>
                                 <Menu.Trigger

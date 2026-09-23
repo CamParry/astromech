@@ -29,6 +29,7 @@ import { Link } from '../../rendering/cells/link';
 import { fieldTypeOf, resolveTable } from '../../rendering/resolve';
 import { entryEditPath, entryTypeBasePath } from '../../utilities/entry-admin-path';
 import { NotFoundPage } from '../layout/not-found-page';
+import { ViewModeToggle } from '../layout/view-mode-toggle';
 import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
 import { useConfirm } from '../ui/confirm';
@@ -45,7 +46,6 @@ import {
     ColumnsMenu,
     LocaleFilterSelect,
     StatusFilterSelect,
-    ViewModeToggle,
 } from './entries-list-toolbar';
 import { EntryCard, EntryTableRow } from './entry-list-items';
 

@@ -1,9 +1,10 @@
 import type { SortDirection } from '../../../components/ui/table';
 import type { MediaBrowserQuery, MediaSortKey, TypeFilter } from '../../../types/media';
 import { createFileRoute } from '@tanstack/react-router';
-import { LayoutGrid, LayoutList, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { ViewModeToggle } from '../../../components/layout/view-mode-toggle';
 import { MediaDetailModal } from '../../../components/media/media-detail-modal';
 import { MediaEmpty } from '../../../components/media/media-empty';
 import { MediaFilters } from '../../../components/media/media-filters';
@@ -22,7 +23,6 @@ import {
     PageTitle,
 } from '../../../components/ui/page';
 import { Pagination } from '../../../components/ui/pagination';
-import { ToggleGroup } from '../../../components/ui/toggle-group';
 import { Toolbar, ToolbarEnd, ToolbarStart } from '../../../components/ui/toolbar';
 import { UploadButton } from '../../../components/ui/upload-button';
 import { useAiContext } from '../../../context/ai-context';
@@ -206,22 +206,7 @@ function MediaIndexPage(): React.ReactElement {
                             </ToolbarStart>
 
                             <ToolbarEnd>
-                                <ToggleGroup
-                                    value={viewMode}
-                                    onValueChange={setViewMode}
-                                    items={[
-                                        {
-                                            value: 'grid',
-                                            icon: <LayoutGrid size={15} />,
-                                            label: t('common.gridView'),
-                                        },
-                                        {
-                                            value: 'list',
-                                            icon: <LayoutList size={15} />,
-                                            label: t('common.listView'),
-                                        },
-                                    ]}
-                                />
+                                <ViewModeToggle value={viewMode} onChange={setViewMode} />
                             </ToolbarEnd>
                         </Toolbar>
 

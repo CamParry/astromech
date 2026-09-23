@@ -1,7 +1,7 @@
 /**
- * The staging pieces the entry and global edit pages share: the header
- * controls that stage, open, merge or discard a staged change, the banner on
- * a staged row, the read-only banner and the link to the version history.
+ * The pieces the entry and global edit pages share around the form: the
+ * header's update and staging controls, the staged and read-only banners, and
+ * the link to the version history.
  */
 
 import type { EditController } from '../../hooks/use-edit-controller';
@@ -13,39 +13,58 @@ import { Button } from '../ui/button';
 import { Panel } from '../ui/panel';
 
 /**
- * On the canonical row: "Stage change", or "View staged" when one exists. On
- * the staged row: Merge (needs publish) and Discard.
+ * The header's write controls. On the canonical row: "Stage change" (or "View
+ * staged" when one exists), then Update. On the staged row: Update, then Merge
+ * (needs publish) and Discard.
  */
-export function StagingControls({
+export function EditActions({
     controller,
 }: {
     controller: EditController;
-}): React.ReactElement | null {
+}): React.ReactElement {
     const { t } = useTranslation();
     const { staging, isStaged, isReadOnly, canPublish, paths } = controller;
-    if (!staging.enabled) return null;
+    const update = !isReadOnly && (
+        <Button
+            variant={isStaged ? 'secondary' : 'primary'}
+            onClick={controller.handleSave}
+            loading={controller.saveMutation.isPending}
+        >
+            {t('common.update')}
+        </Button>
+    );
+    if (!staging.enabled) return <>{update}</>;
 
     if (!isStaged) {
-        if (isReadOnly) return null;
-        return staging.stagedChange !== null ? (
-            <Link to={paths.staged} className="am-btn am-btn-secondary am-btn-md">
-                <Layers size={16} />
-                {t('staging.viewStaged')}
-            </Link>
-        ) : (
-            <Button
-                variant="secondary"
-                icon={<Layers size={16} />}
-                onClick={staging.create}
-                loading={staging.isCreating}
-            >
-                {t('staging.stageChange')}
-            </Button>
+        return (
+            <>
+                {!isReadOnly &&
+                    (staging.stagedChange !== null ? (
+                        <Link
+                            to={paths.staged}
+                            className="am-btn am-btn-secondary am-btn-md"
+                        >
+                            <Layers size={16} />
+                            {t('staging.viewStaged')}
+                        </Link>
+                    ) : (
+                        <Button
+                            variant="secondary"
+                            icon={<Layers size={16} />}
+                            onClick={staging.create}
+                            loading={staging.isCreating}
+                        >
+                            {t('staging.stageChange')}
+                        </Button>
+                    ))}
+                {update}
+            </>
         );
     }
 
     return (
         <>
+            {update}
             {canPublish && (
                 <Button
                     variant="primary"
