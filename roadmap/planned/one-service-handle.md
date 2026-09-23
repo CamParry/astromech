@@ -53,9 +53,10 @@ function takes no `shape` option.
 - [x] Declare the entries definition against `EntriesService` so `bind` needs
       no cast: each of the five one-or-many methods ends with a union
       signature, which `MethodsFor` reads. `EntriesMethods` goes.
-- [ ] `astromech/fetch` exports `astromechUntypedClient` for the admin; delete
+- [x] `astromech/fetch` exports `astromechUntypedClient` for the admin; delete
       `api` from the entry and global bindings and hook scopes, and the nine
-      casts. **Public API** (additive).
+      casts. The admin uses it for every call, so it holds one client.
+      **Public API** (additive).
 - [ ] One typed `Link` (`rendering/cells/link.ts`) for `entry-edit-page.tsx`,
       `global-edit-page.tsx` and `version-history.tsx`.
 - [ ] Record in the `code` skill that `defineService` returns

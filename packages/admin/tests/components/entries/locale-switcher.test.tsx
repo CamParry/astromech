@@ -26,6 +26,22 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { LocaleSwitcher } from '@/admin/components/translations/locale-switcher';
 import { ToastProvider } from '@/admin/components/ui/toast';
 
+// The page calls entries through the client; each test sets the stub.
+const client = vi.hoisted(() => ({ entries: undefined as unknown }));
+
+vi.mock('astromech/fetch', async (importOriginal) => {
+    const real = await importOriginal<{ astromechUntypedClient: object }>();
+    return {
+        ...real,
+        astromechUntypedClient: {
+            ...real.astromechUntypedClient,
+            get entries() {
+                return client.entries;
+            },
+        },
+    };
+});
+
 const TYPE = 'caseStudy';
 const ID = 'cs1';
 const BASE_PATH = `/entries/${TYPE}`;
@@ -57,6 +73,7 @@ function mountSwitcher(options: {
     api: EntriesService;
     onSelectMissing?: (locale: string) => void;
 }) {
+    client.entries = options.api;
     const rootRoute = createRootRoute({ component: () => <Outlet /> });
     const switcherRoute = createRoute({
         getParentRoute: () => rootRoute,
@@ -70,7 +87,6 @@ function mountSwitcher(options: {
                 defaultLocale="en"
                 basePath={BASE_PATH}
                 type={TYPE}
-                scope={{ api: options.api }}
                 {...(options.onSelectMissing !== undefined
                     ? { onSelectMissing: options.onSelectMissing }
                     : {})}

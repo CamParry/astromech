@@ -32,6 +32,22 @@ import { AiContextProvider } from '@/admin/context/ai-context';
 import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
 import '@/admin/rendering/register-fields';
 
+// The page calls globals through the client; each test sets the stub.
+const client = vi.hoisted(() => ({ globals: undefined as unknown }));
+
+vi.mock('astromech/fetch', async (importOriginal) => {
+    const real = await importOriginal<{ astromechUntypedClient: object }>();
+    return {
+        ...real,
+        astromechUntypedClient: {
+            ...real.astromechUntypedClient,
+            get globals() {
+                return client.globals;
+            },
+        },
+    };
+});
+
 // The shim declares one locale; the switcher needs two to have anywhere to go.
 vi.mock('virtual:astromech/admin-config', () => ({
     default: { defaultLocale: 'en', locales: ['en', 'fr'] },
@@ -159,8 +175,8 @@ function mountPage(options: {
     permissions?: string[];
     initialUrl?: string;
 }) {
+    client.globals = options.api;
     const binding: GlobalsBinding = {
-        api: options.api,
         key: KEY,
         cacheScope: '',
         config: options.config,

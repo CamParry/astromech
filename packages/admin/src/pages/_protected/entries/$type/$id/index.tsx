@@ -5,9 +5,7 @@
  */
 
 import type { EntriesBinding } from '../../../../../components/entries/binding';
-import type { EntriesService } from 'astromech';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { astromechClient } from 'astromech/fetch';
 import { entryPermission } from 'astromech/shared';
 import React from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -23,7 +21,6 @@ function EntryEditRoutePage(): React.ReactElement {
     const { type, id } = Route.useParams();
     const { locale, staged } = Route.useSearch();
     const binding: EntriesBinding = {
-        api: astromechClient.entries as unknown as EntriesService,
         type,
         cacheScope: '',
         config: adminConfig.entryTypes[type],

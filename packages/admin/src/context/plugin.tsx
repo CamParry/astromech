@@ -5,7 +5,7 @@
  */
 
 import { useNavigate } from '@tanstack/react-router';
-import { astromechClient } from 'astromech/fetch';
+import { astromechUntypedClient } from 'astromech/fetch';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConfirm } from '../components/ui/confirm';
@@ -17,7 +17,7 @@ export type PluginUiIdentity = {
     namespace: string;
     /**
      * The plugin's derived service key, e.g. `acmeSeo` — the
-     * `astromechClient.plugins.*` property. Supplied by the renderer rather
+     * `astromechUntypedClient.plugins.*` property. Supplied by the renderer rather
      * than derived here, since namespace → service key is lossy to invert.
      */
     serviceKey: string;
@@ -63,7 +63,7 @@ export function useAstromechPlugin() {
          * (streaming) route URL by hand; RPC methods are already bound on `service`.
          */
         serviceKey: identity.serviceKey,
-        service: (astromechClient.plugins as Record<string, unknown>)[
+        service: (astromechUntypedClient.plugins as Record<string, unknown>)[
             identity.serviceKey
         ],
         toast,

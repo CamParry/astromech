@@ -92,6 +92,8 @@ Live choices and what each one beat. An entry is here because the losing option 
 
 **The application instance is the in-process surface, and `astromechClient` is a REST wrapper typed by the wire.** A test keeps them in parity. `app-context` and `plugin-runtime` reference each other, tolerated because the reference resolves at call time. Rejected: a shared `AstromechClient` contract, and dependency-inversion ports between the two.
 
+**The admin calls `astromechUntypedClient`**, the same object as `astromechClient` with `entries` and `globals` typed as the wide services, because it addresses entry types and globals by runtime strings. The name follows tRPC's `createTRPCUntypedClient` and this codebase's `Typed*` facades. Rejected: casting the typed client back in each admin route, which left nine copies of one cast.
+
 **Authentication is its own module.** `auth/` holds the better-auth wiring, sessions, first-run setup and better-auth's tables, and imports `users`, never the reverse. Rejected: auth inside `users/` (Strapi's layout), because a session, an account and a verification are not users.
 
 **Nothing enforces the layer model.** The layer list in `ARCHITECTURE.md` is convention; the browser boundary is checked by `shared-browser.test.ts` and `check:boot`'s headless load. Rejected: dependency-cruiser, which cost more than it caught (ports guarding no real cycle, a growing exemption list), eslint `import/no-cycle`, and a browser-only config.

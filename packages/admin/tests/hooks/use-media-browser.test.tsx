@@ -17,7 +17,7 @@ import { useMediaBrowser } from '@/admin/hooks/use-media-browser';
 const { mediaQuery } = vi.hoisted(() => ({ mediaQuery: vi.fn() }));
 
 vi.mock('astromech/fetch', () => ({
-    astromechClient: { media: { query: mediaQuery } },
+    astromechUntypedClient: { media: { query: mediaQuery } },
 }));
 
 const ITEM: Media = {

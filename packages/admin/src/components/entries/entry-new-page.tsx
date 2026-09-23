@@ -7,6 +7,7 @@
 import type { EntriesBinding } from './binding';
 import type { Entry, EntryUpdateData } from 'astromech';
 import { useNavigate } from '@tanstack/react-router';
+import { astromechUntypedClient } from 'astromech/fetch';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -77,7 +78,7 @@ function CreateLocaleModal({
             locale: defaultLocale,
             limit: 'all',
         },
-        { api: binding.api, cacheScope: binding.cacheScope }
+        { cacheScope: binding.cacheScope }
     );
 
     const sourceEntries = sourceList?.data ?? [];
@@ -202,7 +203,7 @@ export function EntryNewPage({
     /** Requested locale from the route search params; defaults to default locale. */
     requestedLocale: string | undefined;
 }): React.ReactElement {
-    const { type, api, cacheScope, config: entryType, basePath } = binding;
+    const { type, cacheScope, config: entryType, basePath } = binding;
     const navigate = useNavigate();
     const { toast } = useToast();
     const { t } = useTranslation();
@@ -268,14 +269,14 @@ export function EntryNewPage({
 
     function writeEntry(payload: EntryUpdateData): Promise<Entry> {
         if (chosenEntryId !== null) {
-            return api.update({
+            return astromechUntypedClient.entries.update({
                 type,
                 id: chosenEntryId,
                 locale: requestedLocale,
                 data: payload,
             });
         }
-        return api.create({
+        return astromechUntypedClient.entries.create({
             type,
             data: { ...payload, ...(hasI18n ? { locale: requestedLocale } : {}) },
         });
@@ -298,7 +299,7 @@ export function EntryNewPage({
     function handleChooseTranslate(source: Entry): void {
         // Add the requested locale to the source entry. An empty patch is
         // enough: the missing row inherits the source's own columns.
-        void api
+        void astromechUntypedClient.entries
             .update({ type, id: source.id, locale: requestedLocale, data: {} })
             .then((entry) => {
                 toast({

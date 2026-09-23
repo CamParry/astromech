@@ -13,6 +13,7 @@ import type { Global } from 'astromech';
 import { useStore } from '@tanstack/react-form';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link as RouterLink, useNavigate } from '@tanstack/react-router';
+import { astromechUntypedClient } from 'astromech/fetch';
 import { ArrowLeft, GitMerge, Layers, Trash2 } from 'lucide-react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -103,8 +104,8 @@ function GlobalEditPageBody({
     locale: string;
     staged: boolean;
 }): React.ReactElement {
-    const { key, api, cacheScope, config, basePath } = binding;
-    const scope = { api, cacheScope };
+    const { key, cacheScope, config, basePath } = binding;
+    const scope = { cacheScope };
     const namespace = namespaceForScope(cacheScope);
     const { toast } = useToast();
     const { t } = useTranslation();
@@ -165,7 +166,7 @@ function GlobalEditPageBody({
      */
     function writeGlobal(payload: EntryPayload): Promise<Global> {
         const { fields, status, publishedAt } = payload;
-        return api.update({
+        return astromechUntypedClient.globals.update({
             key,
             locale,
             staged: isStaged,

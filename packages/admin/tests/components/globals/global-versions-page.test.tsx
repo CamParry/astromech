@@ -35,6 +35,22 @@ import { ToastProvider } from '@/admin/components/ui/toast';
 import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
 import { queryKeys } from '@/admin/hooks/use-query-keys';
 
+// The page calls globals through the client; each test sets the stub.
+const client = vi.hoisted(() => ({ globals: undefined as unknown }));
+
+vi.mock('astromech/fetch', async (importOriginal) => {
+    const real = await importOriginal<{ astromechUntypedClient: object }>();
+    return {
+        ...real,
+        astromechUntypedClient: {
+            ...real.astromechUntypedClient,
+            get globals() {
+                return client.globals;
+            },
+        },
+    };
+});
+
 const KEY = 'site';
 const BASE_PATH = `/globals/${KEY}`;
 
@@ -79,8 +95,8 @@ function mountPage() {
         get: vi.fn(async () => null),
     } as unknown as GlobalsService;
 
+    client.globals = api;
     const binding: GlobalsBinding = {
-        api,
         key: KEY,
         cacheScope: '',
         config: CONFIG,

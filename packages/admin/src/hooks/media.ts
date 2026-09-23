@@ -11,7 +11,7 @@ import {
     useQuery,
     useQueryClient,
 } from '@tanstack/react-query';
-import { astromechClient } from 'astromech/fetch';
+import { astromechUntypedClient } from 'astromech/fetch';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../components/ui/toast';
 import { queryKeys } from './use-query-keys';
@@ -19,7 +19,7 @@ import { queryKeys } from './use-query-keys';
 export function useMediaQuery(params?: MediaQueryParams) {
     return useQuery({
         queryKey: queryKeys.media.list(params as Record<string, unknown>),
-        queryFn: () => astromechClient.media.query(params),
+        queryFn: () => astromechUntypedClient.media.query(params),
     });
 }
 
@@ -31,7 +31,7 @@ function mediaItemQueryOptions(id: string, locale?: string) {
     return queryOptions({
         queryKey: queryKeys.media.detail(id, locale),
         queryFn: () =>
-            astromechClient.media.get({
+            astromechUntypedClient.media.get({
                 id,
                 ...(locale !== undefined ? { locale } : {}),
             }),
@@ -46,7 +46,7 @@ export function useMediaItem(id: string, enabled = true, locale?: string) {
 function mediaVersionsQueryOptions(id: string, locale: string) {
     return queryOptions({
         queryKey: queryKeys.media.versions(id, locale),
-        queryFn: () => astromechClient.media.versions({ id, locale }),
+        queryFn: () => astromechUntypedClient.media.versions({ id, locale }),
     });
 }
 
@@ -66,7 +66,7 @@ export function useRestoreMediaVersion(
 
     return useMutation({
         mutationFn: (versionId: string) =>
-            astromechClient.media.restoreVersion({ id, locale, versionId }),
+            astromechUntypedClient.media.restoreVersion({ id, locale, versionId }),
         onSuccess: () => {
             // The versions key sits under the detail prefix, so one
             // invalidation covers the item's locales and their versions.
@@ -89,7 +89,7 @@ export function useRestoreMediaVersion(
 export function useMediaUsage(id: string, enabled = true) {
     return useQuery({
         queryKey: queryKeys.media.usedBy(id),
-        queryFn: () => astromechClient.media.usedBy({ id }),
+        queryFn: () => astromechUntypedClient.media.usedBy({ id }),
         enabled,
     });
 }
@@ -109,7 +109,7 @@ export function useUpdateMedia(
 
     return useMutation({
         mutationFn: (data: Record<string, unknown>) =>
-            astromechClient.media.update({
+            astromechUntypedClient.media.update({
                 id,
                 ...(locale !== undefined ? { locale } : {}),
                 data,
@@ -141,7 +141,7 @@ export function useReplaceMedia(id: string, options?: { onSuccess?: () => void }
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: (file: File) => astromechClient.media.replace({ id, file }),
+        mutationFn: (file: File) => astromechUntypedClient.media.replace({ id, file }),
         onSuccess: () => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.media.detailPrefix(id),
@@ -166,7 +166,7 @@ export function useDeleteMedia(options?: { id?: string; onSuccess?: () => void }
 
     return useMutation({
         mutationFn: (id?: string) =>
-            astromechClient.media.delete({ id: (options?.id ?? id) as string }),
+            astromechUntypedClient.media.delete({ id: (options?.id ?? id) as string }),
         onSuccess: () => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.media.all() });
             toast({ message: t('media.deleted'), variant: 'success' });
@@ -197,7 +197,7 @@ export function useBulkDeleteMedia(options?: {
             const deletedIds: string[] = [];
             for (const id of ids) {
                 try {
-                    await astromechClient.media.delete({ id });
+                    await astromechUntypedClient.media.delete({ id });
                     deletedIds.push(id);
                 } catch {
                     // Keep going: the remaining ids are still deletable.

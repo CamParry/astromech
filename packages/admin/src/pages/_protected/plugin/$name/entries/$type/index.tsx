@@ -4,9 +4,7 @@
  * plugin/type falls back to the standard not-found UI.
  */
 
-import type { EntriesService } from 'astromech';
 import { createFileRoute } from '@tanstack/react-router';
-import { astromechClient } from 'astromech/fetch';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -22,8 +20,7 @@ import { useAiContext } from '../../../../../../context/ai-context';
 function PluginEntryListPage(): React.ReactElement {
     const { name, type } = Route.useParams();
     const { t } = useTranslation();
-    const api = astromechClient.entries as unknown as EntriesService;
-    const binding = buildPluginEntriesBinding(adminConfig, name, type, api);
+    const binding = buildPluginEntriesBinding(adminConfig, name, type);
     // The binding carries the qualified type id the entries service addresses.
     useAiContext(
         binding !== null

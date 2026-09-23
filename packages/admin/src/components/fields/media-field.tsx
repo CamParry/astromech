@@ -1,6 +1,6 @@
 import type { MediaBrowserQuery } from '../../types/media';
 import type { BaseFieldProps } from 'astromech';
-import { astromechClient } from 'astromech/fetch';
+import { astromechUntypedClient } from 'astromech/fetch';
 import {
     ChevronDown,
     ChevronUp,
@@ -102,7 +102,7 @@ export function MediaField({
         }
 
         setIsLoadingItems(true);
-        Promise.all(ids.map((id) => astromechClient.media.get({ id })))
+        Promise.all(ids.map((id) => astromechUntypedClient.media.get({ id })))
             .then((items) => {
                 setSelectedIds(ids);
                 setSelectedItems(items.filter(Boolean) as MediaItem[]);

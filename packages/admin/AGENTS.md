@@ -8,4 +8,5 @@ The published `@astromech/admin`: the admin SPA, the component kit behind core's
 - **A new browser dependency** goes in the admin's `dependencies` and, as a bare specifier, in the `dependencies` list in `src/vite.ts`; core's integration renders it into the site's `optimizeDeps.include`. `tests/vite.test.ts` fails when `src` imports a package the list misses.
 - **`routeTree.gen.ts` is generated and gitignored.** `pnpm -F @astromech/admin routes:generate` writes it; `typecheck` runs that first.
 - **Tests live in `tests/`, mirroring `src/`**, and run with `pnpm -F @astromech/admin test:run`. They import the admin as `@/admin/...` and core as `@/...`. The module-isolation rule is core's (`packages/astromech/AGENTS.md`), with this package's own `tests/_support/isolated-tests.ts`.
+- **The admin calls the server through `astromechUntypedClient`** from `astromech/fetch`, never `astromechClient`: it addresses entry types and globals by runtime strings, which the typed facades cannot narrow.
 - **A test mocks the client as `astromech/fetch`**, the specifier admin source imports.

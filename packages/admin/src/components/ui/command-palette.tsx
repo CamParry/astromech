@@ -9,7 +9,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Dialog } from '@base-ui/react/dialog';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { astromechClient } from 'astromech/fetch';
+import { astromechUntypedClient } from 'astromech/fetch';
 import { entryPermission } from 'astromech/shared';
 import { Image, LayoutDashboard, Puzzle, Users } from 'lucide-react';
 import React, {
@@ -266,7 +266,7 @@ export function CommandPalette(): React.ReactElement {
 
             /** Run each batch as its own request and merge the rows. */
             const searchEntries = (
-                entries: typeof astromechClient.entries,
+                entries: typeof astromechUntypedClient.entries,
                 batches: (string | string[])[]
             ): Promise<Entry[]> =>
                 Promise.all(
@@ -279,19 +279,19 @@ export function CommandPalette(): React.ReactElement {
                 ).then((chunks) => chunks.flat());
 
             const entriesPromise = searchEntries(
-                astromechClient.entries,
+                astromechUntypedClient.entries,
                 queryBatches(readableTypes, adminConfig.entryTypes)
             );
 
             const usersPromise: Promise<User[]> = canReadUsers()
-                ? astromechClient.users
+                ? astromechUntypedClient.users
                       .query({ search: q2, limit: 5 })
                       .then((r) => r.data)
                       .catch(() => [])
                 : Promise.resolve([]);
 
             const mediaPromise: Promise<Media[]> = canReadMedia()
-                ? astromechClient.media
+                ? astromechUntypedClient.media
                       .query({ search: q2, limit: 5 })
                       .then((r) => r.data)
                       .catch(() => [])

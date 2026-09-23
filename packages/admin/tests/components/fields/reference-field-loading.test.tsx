@@ -29,7 +29,7 @@ const { mediaGet, entriesQuery } = vi.hoisted(() => ({
 }));
 
 vi.mock('astromech/fetch', () => ({
-    astromechClient: {
+    astromechUntypedClient: {
         media: { get: mediaGet, query: vi.fn() },
         entries: { query: entriesQuery },
     },

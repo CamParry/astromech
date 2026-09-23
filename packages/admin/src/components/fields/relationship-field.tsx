@@ -1,5 +1,5 @@
 import type { BaseFieldProps } from 'astromech';
-import { astromechClient } from 'astromech/fetch';
+import { astromechUntypedClient } from 'astromech/fetch';
 import { useEffect, useState } from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
 import { MultiSelect } from '../ui/multi-select';
@@ -27,7 +27,7 @@ export function RelationshipField({
 
     useEffect(() => {
         if (!target) return;
-        astromechClient.entries
+        astromechUntypedClient.entries
             .query({ type: target, limit: 'all' })
             .then((result) => {
                 setOptions(

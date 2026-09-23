@@ -23,7 +23,7 @@ const { versions, restoreVersion } = vi.hoisted(() => ({
 }));
 
 vi.mock('astromech/fetch', () => ({
-    astromechClient: { media: { versions, restoreVersion } },
+    astromechUntypedClient: { media: { versions, restoreVersion } },
 }));
 
 beforeAll(async () => {

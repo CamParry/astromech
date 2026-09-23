@@ -11,6 +11,9 @@
  * do those things disagree, so it cannot drift.
  */
 export const isolatedTests = [
+    'tests/components/globals/global-versions-page.test.tsx',
+    'tests/components/entries/locale-switcher.test.tsx',
+    'tests/components/entries/entry-edit-cache-invalidation.test.tsx',
     'tests/components/entries/entry-edit-locale-switch.test.tsx',
     'tests/components/entries/entry-edit-meta.test.tsx',
     'tests/components/globals/global-edit-page.test.tsx',

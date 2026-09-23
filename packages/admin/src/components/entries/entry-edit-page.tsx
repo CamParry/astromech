@@ -10,6 +10,7 @@ import { Menu } from '@base-ui/react/menu';
 import { useStore } from '@tanstack/react-form';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link as RouterLink, useNavigate } from '@tanstack/react-router';
+import { astromechUntypedClient } from 'astromech/fetch';
 import { resolveEntryUrl } from 'astromech/shared';
 import {
     ArrowLeft,
@@ -126,8 +127,8 @@ function EntryEditPageBody({
     locale: string;
     staged: boolean;
 }): React.ReactElement {
-    const { type, api, cacheScope, config: entryType, basePath } = binding;
-    const scope = { api, cacheScope };
+    const { type, cacheScope, config: entryType, basePath } = binding;
+    const scope = { cacheScope };
     const { toast } = useToast();
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -222,8 +223,22 @@ function EntryEditPageBody({
         hasSlug,
         hasStatuses,
         readOnly: isReadOnly,
-        saveFn: (data) => api.update({ type, id, locale, staged: isStaged, data }),
-        publishFn: (data) => api.update({ type, id, locale, staged: isStaged, data }),
+        saveFn: (data) =>
+            astromechUntypedClient.entries.update({
+                type,
+                id,
+                locale,
+                staged: isStaged,
+                data,
+            }),
+        publishFn: (data) =>
+            astromechUntypedClient.entries.update({
+                type,
+                id,
+                locale,
+                staged: isStaged,
+                data,
+            }),
         onSuccess: (updated) => {
             const keys = scopedEntryKeys(cacheScope);
             // Seed the cache with the saved entry before invalidating, so the
@@ -266,7 +281,7 @@ function EntryEditPageBody({
         ...scope,
         onSuccess: () => void navigate({ to: canonicalPath }),
     });
-    const issueToken = useIssuePreviewToken(type, id, scope);
+    const issueToken = useIssuePreviewToken(type, id);
     const revokeToken = useRevokePreviewToken(type, id, scope);
 
     const previewUrl =

@@ -12,7 +12,11 @@
 
 import type { Entry, Media, Notification, User } from '@/types/index';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AstromechApiError, astromechClient as client } from '@/transport/http/client';
+import {
+    AstromechApiError,
+    astromechUntypedClient,
+    astromechClient as client,
+} from '@/transport/http/client';
 
 type Request = { url: string; method: string; body: unknown };
 
@@ -56,6 +60,12 @@ beforeEach(() => {
 
 afterEach(() => {
     vi.unstubAllGlobals();
+});
+
+describe('astromechUntypedClient', () => {
+    it('is the typed client, with the wide entries and globals types', () => {
+        expect(astromechUntypedClient).toBe(client);
+    });
 });
 
 const entry = { id: 'e1', type: 'post', title: 'One' } as unknown as Entry;

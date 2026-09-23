@@ -49,6 +49,22 @@ import type {
     User,
 } from '@/types/index';
 
+// The page calls entries through the client; each test sets the stub.
+const client = vi.hoisted(() => ({ entries: undefined as unknown }));
+
+vi.mock('astromech/fetch', async (importOriginal) => {
+    const real = await importOriginal<{ astromechUntypedClient: object }>();
+    return {
+        ...real,
+        astromechUntypedClient: {
+            ...real.astromechUntypedClient,
+            get entries() {
+                return client.entries;
+            },
+        },
+    };
+});
+
 // The shim declares one locale; the switcher needs two to have anywhere to go.
 vi.mock('virtual:astromech/admin-config', () => ({
     default: { defaultLocale: 'en', locales: ['en', 'fr'] },
@@ -186,8 +202,8 @@ function makeApi() {
 }
 
 function mountApp(queryClient: QueryClient, api: EntriesService) {
+    client.entries = api;
     const binding: EntriesBinding = {
-        api,
         type: TYPE,
         cacheScope: '',
         config: ENTRY_TYPE_CONFIG,

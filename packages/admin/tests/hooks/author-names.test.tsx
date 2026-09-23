@@ -16,7 +16,7 @@ import { useAuthorNames } from '@/admin/hooks/author-names';
 const { queryUsers } = vi.hoisted(() => ({ queryUsers: vi.fn() }));
 
 vi.mock('astromech/fetch', () => ({
-    astromechClient: { users: { query: queryUsers } },
+    astromechUntypedClient: { users: { query: queryUsers } },
 }));
 
 afterEach(() => {

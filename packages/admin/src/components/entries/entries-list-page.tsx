@@ -436,8 +436,8 @@ export function EntriesListPage({
 }: {
     binding: EntriesBinding;
 }): React.ReactElement {
-    const { type, api, cacheScope, config: entryType, basePath } = binding;
-    const scope = { api, cacheScope };
+    const { type, cacheScope, config: entryType, basePath } = binding;
+    const scope = { cacheScope };
     const navigate = useNavigate();
     const { toast } = useToast();
     const { t } = useTranslation();

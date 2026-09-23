@@ -9,7 +9,7 @@ import {
     useQuery,
     useQueryClient,
 } from '@tanstack/react-query';
-import { astromechClient } from 'astromech/fetch';
+import { astromechUntypedClient } from 'astromech/fetch';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../components/ui/toast';
 import { queryKeys } from './use-query-keys';
@@ -17,7 +17,7 @@ import { queryKeys } from './use-query-keys';
 export function useUsersQuery(params?: UserQueryParams, options?: { enabled?: boolean }) {
     return useQuery({
         queryKey: queryKeys.users.list(params as Record<string, unknown>),
-        queryFn: () => astromechClient.users.query(params),
+        queryFn: () => astromechUntypedClient.users.query(params),
         enabled: options?.enabled ?? true,
     });
 }
@@ -30,7 +30,7 @@ export function userQueryOptions(id: string, locale?: string) {
     return queryOptions({
         queryKey: queryKeys.users.detail(id, locale),
         queryFn: () =>
-            astromechClient.users.get({
+            astromechUntypedClient.users.get({
                 id,
                 ...(locale !== undefined ? { locale } : {}),
             }),
@@ -45,7 +45,7 @@ export function useUser(id: string, locale?: string) {
 function userVersionsQueryOptions(id: string, locale: string) {
     return queryOptions({
         queryKey: queryKeys.users.versions(id, locale),
-        queryFn: () => astromechClient.users.versions({ id, locale }),
+        queryFn: () => astromechUntypedClient.users.versions({ id, locale }),
     });
 }
 
@@ -65,7 +65,7 @@ export function useRestoreUserVersion(
 
     return useMutation({
         mutationFn: (versionId: string) =>
-            astromechClient.users.restoreVersion({ id, locale, versionId }),
+            astromechUntypedClient.users.restoreVersion({ id, locale, versionId }),
         onSuccess: () => {
             // The versions key sits under the detail prefix, so one
             // invalidation covers the user's locales and their versions.
@@ -90,7 +90,8 @@ export function useCreateUser(options?: { onSuccess?: (user: User) => void }) {
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: (data: UserCreateData) => astromechClient.users.create({ data }),
+        mutationFn: (data: UserCreateData) =>
+            astromechUntypedClient.users.create({ data }),
         onSuccess: (user) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.users.all() });
             toast({ message: t('users.updated'), variant: 'success' });
@@ -124,7 +125,7 @@ export function useUpdateUser(
 
     return useMutation({
         mutationFn: (data: UserUpdateData) =>
-            astromechClient.users.update({
+            astromechUntypedClient.users.update({
                 id,
                 ...(locale !== undefined ? { locale } : {}),
                 data,
@@ -159,7 +160,7 @@ export function useDeleteUser(options?: { id?: string; onSuccess?: () => void })
 
     return useMutation({
         mutationFn: (id?: string) =>
-            astromechClient.users.delete({ id: (options?.id ?? id) as string }),
+            astromechUntypedClient.users.delete({ id: (options?.id ?? id) as string }),
         onSuccess: () => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.users.all() });
             toast({ message: t('users.deleted'), variant: 'success' });

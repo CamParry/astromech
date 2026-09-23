@@ -4,9 +4,7 @@
  * hook fetches instead.
  */
 
-import type { EntriesService } from 'astromech';
 import { createFileRoute } from '@tanstack/react-router';
-import { astromechClient } from 'astromech/fetch';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -20,8 +18,7 @@ function PluginEntryEditPage(): React.ReactElement {
     const { name, type, id } = Route.useParams();
     const { locale, staged } = Route.useSearch();
     const { t } = useTranslation();
-    const api = astromechClient.entries as unknown as EntriesService;
-    const binding = buildPluginEntriesBinding(adminConfig, name, type, api);
+    const binding = buildPluginEntriesBinding(adminConfig, name, type);
     if (!binding) {
         return (
             <Page>

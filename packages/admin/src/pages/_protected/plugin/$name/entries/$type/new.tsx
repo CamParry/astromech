@@ -5,9 +5,7 @@
  * Carries the `locale` search param through.
  */
 
-import type { EntriesService } from 'astromech';
 import { createFileRoute } from '@tanstack/react-router';
-import { astromechClient } from 'astromech/fetch';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -24,8 +22,7 @@ function PluginEntryNewPage(): React.ReactElement {
     const { name, type } = Route.useParams();
     const search = Route.useSearch();
     const { t } = useTranslation();
-    const api = astromechClient.entries as unknown as EntriesService;
-    const binding = buildPluginEntriesBinding(adminConfig, name, type, api);
+    const binding = buildPluginEntriesBinding(adminConfig, name, type);
     if (!binding) {
         return (
             <Page>

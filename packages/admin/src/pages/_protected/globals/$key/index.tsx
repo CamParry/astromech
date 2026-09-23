@@ -6,7 +6,6 @@
 
 import type { GlobalsBinding } from '../../../../components/globals/binding';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { astromechClient } from 'astromech/fetch';
 import { globalPermission } from 'astromech/shared';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -37,7 +36,6 @@ function GlobalEditRoutePage(): React.ReactElement {
         );
     }
     const binding: GlobalsBinding = {
-        api: astromechClient.globals,
         key,
         cacheScope: '',
         config,

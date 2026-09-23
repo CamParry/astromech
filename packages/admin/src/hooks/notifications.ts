@@ -3,7 +3,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { astromechClient } from 'astromech/fetch';
+import { astromechUntypedClient } from 'astromech/fetch';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../components/ui/toast';
 import { queryKeys } from './use-query-keys';
@@ -11,7 +11,7 @@ import { queryKeys } from './use-query-keys';
 export function useNotifications(params?: Record<string, unknown>, enabled = true) {
     return useQuery({
         queryKey: queryKeys.notifications.list(params),
-        queryFn: () => astromechClient.notifications.list(),
+        queryFn: () => astromechUntypedClient.notifications.list(),
         enabled,
     });
 }
@@ -19,7 +19,7 @@ export function useNotifications(params?: Record<string, unknown>, enabled = tru
 export function useNotificationCount() {
     return useQuery({
         queryKey: queryKeys.notifications.count(),
-        queryFn: () => astromechClient.notifications.count(),
+        queryFn: () => astromechUntypedClient.notifications.count(),
         refetchInterval: 30_000,
         refetchOnWindowFocus: true,
     });
@@ -29,7 +29,7 @@ export function useDismiss() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (id: string) => astromechClient.notifications.dismiss({ id }),
+        mutationFn: (id: string) => astromechUntypedClient.notifications.dismiss({ id }),
         onSuccess: () => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.notifications.all(),
@@ -47,7 +47,7 @@ export function useDismissAll() {
     const { t } = useTranslation();
 
     return useMutation({
-        mutationFn: () => astromechClient.notifications.dismissAll(),
+        mutationFn: () => astromechUntypedClient.notifications.dismissAll(),
         onSuccess: () => {
             void queryClient.invalidateQueries({
                 queryKey: queryKeys.notifications.all(),

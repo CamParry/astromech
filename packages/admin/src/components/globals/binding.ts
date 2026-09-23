@@ -5,14 +5,12 @@
  * `components/entries/binding.ts`.
  */
 
-import type { AdminConfig, AdminGlobal, GlobalsService } from 'astromech';
+import type { AdminConfig, AdminGlobal } from 'astromech';
 import { globalPermission, qualifyEntryType } from 'astromech/shared';
 
 export type GlobalAction = 'read' | 'update' | 'publish';
 
 export type GlobalsBinding = {
-    /** Globals client bound to the binding's base path. */
-    api: GlobalsService;
     /** Wire key: bare for a host global (`site`), qualified for a plugin's (`seo/settings`). */
     key: string;
     /** Cache scope: `''` (host) or the plugin name. Namespaces react-query keys. */
@@ -36,8 +34,7 @@ export type GlobalsBinding = {
 export function buildPluginGlobalsBinding(
     config: Pick<AdminConfig, 'globals'>,
     name: string,
-    key: string,
-    api: GlobalsService
+    key: string
 ): GlobalsBinding | null {
     const globalId = qualifyEntryType(name, key);
     const global = Object.hasOwn(config.globals, globalId)
@@ -45,7 +42,6 @@ export function buildPluginGlobalsBinding(
         : undefined;
     if (global?.plugin !== name) return null;
     return {
-        api,
         key: globalId,
         cacheScope: name,
         config: global,

@@ -4,9 +4,7 @@
  * the plugin route.
  */
 import type { EntriesBinding } from '../../../../components/entries/binding';
-import type { EntriesService } from 'astromech';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { astromechClient } from 'astromech/fetch';
 import { entryPermission } from 'astromech/shared';
 import React from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -22,7 +20,6 @@ function EntryIndexPage(): React.ReactElement {
         { depth: 0 }
     );
     const binding: EntriesBinding = {
-        api: astromechClient.entries as unknown as EntriesService,
         type,
         cacheScope: '',
         config: adminConfig.entryTypes[type],

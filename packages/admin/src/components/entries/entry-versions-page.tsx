@@ -24,10 +24,10 @@ export function EntryVersionsPage({
     /** Locale from the route search params; defaults to the default content locale. */
     locale: string | undefined;
 }): React.ReactElement {
-    const { type, api, cacheScope, config: entryType, basePath } = binding;
+    const { type, cacheScope, config: entryType, basePath } = binding;
     const locale = localeProp ?? defaultContentLocale();
     const editPath = entryEditPath(basePath, id, { locale });
-    const scope = { api, cacheScope };
+    const scope = { cacheScope };
     const { t } = useTranslation();
     const navigate = useNavigate();
 

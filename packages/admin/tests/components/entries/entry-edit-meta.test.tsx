@@ -34,10 +34,20 @@ vi.mock('virtual:astromech/admin-config', () => ({
     default: { defaultLocale: 'en', locales: ['en'] },
 }));
 
-const { queryUsers } = vi.hoisted(() => ({ queryUsers: vi.fn() }));
+// The page calls entries and users through the client; each test sets the
+// entries stub.
+const { queryUsers, client } = vi.hoisted(() => ({
+    queryUsers: vi.fn(),
+    client: { entries: undefined as unknown },
+}));
 
 vi.mock('astromech/fetch', () => ({
-    astromechClient: { users: { query: queryUsers } },
+    astromechUntypedClient: {
+        users: { query: queryUsers },
+        get entries() {
+            return client.entries;
+        },
+    },
 }));
 
 afterEach(() => {
@@ -98,8 +108,8 @@ function mountPage(entry: Entry): void {
         get: vi.fn(async () => entry),
         update: vi.fn(),
     } as unknown as EntriesService;
+    client.entries = api;
     const binding: EntriesBinding = {
-        api,
         type: TYPE,
         cacheScope: '',
         config: ENTRY_TYPE_CONFIG,

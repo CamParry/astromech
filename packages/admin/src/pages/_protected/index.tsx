@@ -5,7 +5,7 @@
 import type { Entry } from 'astromech';
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { astromechClient } from 'astromech/fetch';
+import { astromechUntypedClient } from 'astromech/fetch';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -42,7 +42,8 @@ function StatCard({
 }): React.ReactElement {
     const { data, isLoading } = useQuery({
         queryKey: ['collection-count', collectionKey],
-        queryFn: () => astromechClient.entries.query({ type: collectionKey, limit: 1 }),
+        queryFn: () =>
+            astromechUntypedClient.entries.query({ type: collectionKey, limit: 1 }),
     });
 
     const total = data?.pagination?.total ?? 0;
@@ -84,7 +85,7 @@ function useRecentEntries(): RecentActivityResult {
         queryFn: async () => {
             const results = await Promise.all(
                 collectionKeys.map(async (key) => {
-                    const result = await astromechClient.entries.query({
+                    const result = await astromechUntypedClient.entries.query({
                         type: key,
                         limit: 5,
                         sort: { updatedAt: 'desc' },

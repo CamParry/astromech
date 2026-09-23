@@ -24,10 +24,10 @@ export function GlobalVersionsPage({
     /** Locale from the route search params; defaults to the default content locale. */
     locale: string | undefined;
 }): React.ReactElement {
-    const { key, api, cacheScope, config, basePath } = binding;
+    const { key, cacheScope, config, basePath } = binding;
     const locale = localeProp ?? defaultContentLocale();
     const editPath = globalEditPath(basePath, { locale });
-    const scope = { api, cacheScope };
+    const scope = { cacheScope };
     const { t } = useTranslation();
     const navigate = useNavigate();
 

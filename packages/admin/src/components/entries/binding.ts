@@ -4,14 +4,12 @@
  * behavioural divergence.
  */
 
-import type { AdminConfig, EntriesService } from 'astromech';
+import type { AdminConfig } from 'astromech';
 import { entryPermission, qualifyEntryType } from 'astromech/shared';
 
 export type EntryAction = 'read' | 'create' | 'update' | 'delete' | 'publish';
 
 export type EntriesBinding = {
-    /** Entries client bound to the binding's base path. */
-    api: EntriesService;
     /** Wire type id: bare for a root type (`post`), qualified for a plugin type (`redirects/redirect`). */
     type: string;
     /** Cache scope: `''` (root) or the plugin name. Namespaces react-query keys. */
@@ -36,8 +34,7 @@ export type EntriesBinding = {
 export function buildPluginEntriesBinding(
     config: Pick<AdminConfig, 'entryTypes'>,
     name: string,
-    type: string,
-    api: EntriesService
+    type: string
 ): EntriesBinding | null {
     const typeId = qualifyEntryType(name, type);
     const entryType = Object.hasOwn(config.entryTypes, typeId)
@@ -45,7 +42,6 @@ export function buildPluginEntriesBinding(
         : undefined;
     if (entryType?.plugin !== name) return null;
     return {
-        api,
         type: typeId,
         cacheScope: name,
         config: entryType,

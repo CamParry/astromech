@@ -5,7 +5,6 @@
  */
 
 import { createFileRoute } from '@tanstack/react-router';
-import { astromechClient } from 'astromech/fetch';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -19,8 +18,7 @@ function PluginGlobalVersionsPage(): React.ReactElement {
     const { name, key } = Route.useParams();
     const { locale } = Route.useSearch();
     const { t } = useTranslation();
-    const api = astromechClient.globals;
-    const binding = buildPluginGlobalsBinding(adminConfig, name, key, api);
+    const binding = buildPluginGlobalsBinding(adminConfig, name, key);
     if (!binding) {
         return (
             <Page>
