@@ -76,7 +76,7 @@ visible where it happens and leaves the judgement to review.
 
 - [ ] Retire `collection` for an entry type and `record` for an entry: rename
       the 120+ `collection` identifiers and `EntryRecord`.
-- [ ] Lookup verbs: swap `findGlobal` and `resolveGlobal`; `requireCanonical`
+- [ ] Lookup verbs: `requireCanonical`
       and `requireRole` become `get*` or `assert*` outside middleware;
       `getSession` returns null; add the `find*` returns-null rule to the
       `code` skill and apply it (`readUser`, `readMedia`).

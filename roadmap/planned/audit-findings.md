@@ -30,8 +30,8 @@ read at review, and studying where a pattern repeats before changing it.
       staging, locale, uniqueness and error code; globals missing from the
       relationships index; sort allow-lists; globals' status run in the
       browser: `completed/resource-module-shape.md`.
-- [ ] **Plugin contributions take a parallel path** through config, codegen,
-      permissions and the admin: `planned/plugin-types-in-core-registries.md`.
+- [x] **Plugin contributions take a parallel path** through config, codegen,
+      permissions and the admin: `completed/plugin-types-in-core-registries.md`.
 - [ ] **Admin pages share no composition.** Copied staging controls, 16
       mutation bodies, a duplicate key factory, a stale dashboard, the missing
       AI-context globals case: `planned/admin-resource-views.md`.

@@ -758,9 +758,11 @@ const global = await ctx.globals.get({
 ```
 
 `ctx.config` sits alongside it, and is a projection of the site's resolved
-config rather than the whole of it: the route prefixes, entry types, admin
-pages, locales, trash, timezone, and `entryTypesWithField(name)` for the entry
-types carrying one of your fields. `storage`, `email` and `media.image` are
+config rather than the whole of it: the route prefixes, `entryTypes` and
+`globals` (the site's and every plugin's in one map each, keyed by id, each
+carrying `plugin` when a plugin declares it), admin pages, locales, trash,
+timezone, and `entryTypesWithField(name)` for the entry types carrying one of
+your fields. `storage`, `email` and `media.image` are
 absent, so reach those capabilities through the ports below rather than looking
 for a driver on the config.
 

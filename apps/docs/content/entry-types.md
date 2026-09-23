@@ -30,8 +30,9 @@ The record key (`tag`) is the type name — it is what `Astromech.entries.query(
 type: 'tag' })`, the admin route `/cms/entries/tag`, and the generated
 `Fields` types all use. Root-config entry types therefore leave the `type`
 property unset. (A plugin's entry types are the exception: they live in an
-array on the plugin definition, so each one self-declares `type` — see
-[plugins/authoring.md](../plugins/authoring.md).)
+array on the plugin definition, so each one self-declares `type`, and is
+addressed as `<namespace>/<type>` — see
+[plugins/authoring.md](../plugins/authoring.md). A root key may not contain `/`.)
 
 The field builders, and how grouping and layout fields decide where values are
 stored, are in [fields.md](fields.md).

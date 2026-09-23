@@ -34,7 +34,12 @@ and read query keys and mutations from one factory per resource.
       `hooks/entries.ts`'s bodies become one table; bulk restore sends one
       request.
 - [ ] `useAdminEntryType(typeId)` replaces `EntriesBinding` and
-      `GlobalsBinding`; the core and plugin route files only map params.
+      `GlobalsBinding`; the core and plugin route files only map params. It
+      reads `AdminConfig.entryTypes[typeId]` (or `globals[id]`), which already
+      holds every type and global keyed by id with `plugin?`, and permissions
+      come from `entryPermission`/`globalPermission` in `astromech/shared`.
+      The `/plugin/$name/…` routes stay; `pluginEntryRouteParams` and
+      `pluginGlobalRouteParams` already find the owner through the config.
 - [ ] `useEditController(resource, target)`: loading canonical or staged, one
       form codec, one `update` carrying status, staging create, merge and
       discard. Shared `StagingControls` and `PublishPanel`.
