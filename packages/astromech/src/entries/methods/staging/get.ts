@@ -1,10 +1,9 @@
 import type { Entry } from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { CapabilityError } from '@/errors/capability';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
-import { asEntry, getEntryOfType } from '../../internal/records';
-import { getEntryRepository } from '../../repository/registry';
+import { asEntry } from '../../internal/records';
+import { resolveStagingTarget } from '../../internal/staging';
 
 /**
  * Returns the staged copy of one locale of an entry, or null if none exists.
@@ -21,18 +20,8 @@ export const getStagedEntry = defineServiceMethod({
     requires: 'staging',
     mutates: false,
     async handler(params, ctx): Promise<Entry | null> {
-        const { type, id } = params;
-        const repository = getEntryRepository(type);
-        const { staging } = repository;
-        if (!staging) throw new CapabilityError('entry', type, 'staging');
-        const canonical = await getEntryOfType(
-            ctx.config,
-            repository,
-            type,
-            id,
-            params.locale
-        );
-        const staged = await staging.getByCanonical(id, canonical.locale);
+        const { staging, canonical } = await resolveStagingTarget(ctx.config, params);
+        const staged = await staging.getByCanonical(params.id, canonical.locale);
         return staged ? asEntry(staged) : null;
     },
 });

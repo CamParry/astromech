@@ -11,6 +11,7 @@ import type {
 } from '@/types/index';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
+import { requireStagedChange } from '@/content/staging';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { patchedFieldNames } from '@/content/write-fields';
@@ -381,7 +382,7 @@ async function getStagedRecord(
     id: string,
     locale: string
 ): Promise<EntryRecord> {
-    const row = await staging.getByCanonical(id, locale);
-    if (!row) throw new ResourceNotFoundError('entry', { id, locale, staged: true });
-    return asRecord(row);
+    return asRecord(
+        await requireStagedChange(staging, 'entry', { rowId: id, id, locale })
+    );
 }

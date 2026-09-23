@@ -1,8 +1,8 @@
 import type { Global } from '@/types/index';
 import { RESOURCE_SPECS } from '@/content/resources';
+import { requireStagedChange } from '@/content/staging';
 import { snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
-import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
 import { asGlobal, requireCanonical } from '../../internal/global';
@@ -29,14 +29,11 @@ export const mergeStagedGlobal = defineServiceMethod({
             params
         );
 
-        const staged = await repository.staging.getByCanonical(id, locale);
-        if (!staged) {
-            throw new ResourceNotFoundError('global', {
-                id: params.key,
-                locale,
-                staged: true,
-            });
-        }
+        const staged = await requireStagedChange(repository.staging, 'global', {
+            rowId: id,
+            id: params.key,
+            locale,
+        });
 
         // Merging is the promotion moment: editing the staged row validates at
         // the draft stage (it is unpublished), so this is the first write where

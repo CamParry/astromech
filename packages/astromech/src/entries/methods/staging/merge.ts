@@ -1,17 +1,16 @@
 import type { Entry } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { RESOURCE_SPECS } from '@/content/resources';
+import { requireStagedChange } from '@/content/staging';
 import { snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
-import { CapabilityError } from '@/errors/capability';
-import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
 import { isVersioningEnabled } from '../../internal/entry-type';
-import { asEntry, asRecord, getEntryOfType } from '../../internal/records';
+import { asEntry, asRecord } from '../../internal/records';
 import { syncEntryRelationships } from '../../internal/relationships';
+import { resolveStagingTarget } from '../../internal/staging';
 import { toStoredFields } from '../../internal/stored-fields';
-import { getEntryRepository } from '../../repository/registry';
 
 /**
  * Merges a staged change into the canonical content row it was made from:
@@ -31,27 +30,17 @@ export const mergeStagedEntry = defineServiceMethod({
     mutates: true,
     async handler(params, ctx): Promise<Entry> {
         const { type, id } = params;
-
-        const repository = getEntryRepository(type);
-        const { staging } = repository;
-        if (!staging) throw new CapabilityError('entry', type, 'staging');
-
-        const canonical = await getEntryOfType(
+        const { repository, staging, canonical } = await resolveStagingTarget(
             ctx.config,
-            repository,
-            type,
-            id,
-            params.locale
+            params
         );
-        const stagedRow = await staging.getByCanonical(id, canonical.locale);
-        if (!stagedRow) {
-            throw new ResourceNotFoundError('entry', {
+        const staged = asRecord(
+            await requireStagedChange(staging, 'entry', {
+                rowId: id,
                 id,
                 locale: canonical.locale,
-                staged: true,
-            });
-        }
-        const staged = asRecord(stagedRow);
+            })
+        );
 
         // Merging is the promotion moment: editing the staged row validates at the
         // draft stage (it is unpublished), so this is the first write where the

@@ -16,6 +16,7 @@ import type {
     JoinedWhere,
     OwnerFilter,
 } from './types';
+import type { ListPage, SortClause } from '@/content/list';
 import type { Table } from '@/database/define-table';
 import type { GenericDb } from '@/database/repository/create-repository';
 import type { JsonObject } from '@/types/index';
@@ -233,6 +234,27 @@ export function createContentRepository<
             for (const row of await rows(raw)) byId.set(row.id, row);
         }
         return read.map((row) => byId.get(row.id) ?? row);
+    }
+
+    /**
+     * A page of the joined read under `where`, ordered by resource-row columns,
+     * each row read in `locale` where it has one. Omit `page` for every match.
+     */
+    async function list(params: {
+        where: JoinedWhere;
+        orderBy: readonly SortClause[];
+        page?: ListPage | undefined;
+        locale?: string | undefined;
+    }): Promise<R[]> {
+        let q = joined().where(params.where);
+        for (const { field, direction } of params.orderBy) {
+            q = q.orderBy(`${ownerKey}.${field}`, direction);
+        }
+        if (params.page) q = q.limit(params.page.limit).offset(params.page.offset);
+        const read = await rows(await q.execute());
+        const { locale } = params;
+        if (locale === undefined || locale === defaultLocale()) return read;
+        return overlayLocale(read, locale);
     }
 
     async function one(raw: Record<string, unknown> | undefined): Promise<R | null> {
@@ -495,6 +517,6 @@ export function createContentRepository<
         translatable,
         staging,
         versions: versionsRepository,
-        query: { db, ownerKey, contentKey, joined, count, rows, overlayLocale },
+        query: { db, ownerKey, contentKey, joined, count, rows, overlayLocale, list },
     };
 }

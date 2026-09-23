@@ -151,17 +151,14 @@ export function createMediaRepository(config?: ResolvedConfig) {
         page?: ListPage,
         locale?: string
     ): Promise<MediaRow[]> {
-        let q = content.query.joined().where(filter(params));
-        const order = buildOrderBy(RESOURCE_SPECS.media.sortable, params?.sort, [
-            { field: 'createdAt', direction: 'desc' },
-        ]);
-        for (const { field, direction } of order) {
-            q = q.orderBy(`${ownerKey}.${field}`, direction);
-        }
-        if (page) q = q.limit(page.limit).offset(page.offset);
-        const rows = await content.query.rows(await q.execute());
-        if (locale === undefined || locale === defaultLocale) return rows;
-        return content.query.overlayLocale(rows, locale);
+        return content.query.list({
+            where: filter(params),
+            orderBy: buildOrderBy(RESOURCE_SPECS.media.sortable, params?.sort, [
+                { field: 'createdAt', direction: 'desc' },
+            ]),
+            page,
+            locale,
+        });
     }
 
     async function count(params?: MediaQueryParams): Promise<number> {

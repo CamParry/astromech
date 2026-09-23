@@ -23,8 +23,7 @@ export const queryKeys = {
         staged: (collection: string, id: string, locale: string) =>
             ['entries', collection, 'staged', id, locale] as const,
         /** What references one entry, from any resource. */
-        usedBy: (collection: string, id: string) =>
-            ['entries', collection, 'used-by', id] as const,
+        usedBy: (type: string, id: string) => ['entries', type, 'used-by', id] as const,
     },
 
     // Globals

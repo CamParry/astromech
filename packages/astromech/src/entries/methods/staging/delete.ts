@@ -1,11 +1,9 @@
 import { z } from '@hono/zod-openapi';
-import { CapabilityError } from '@/errors/capability';
-import { ResourceNotFoundError } from '@/errors/resource';
+import { requireStagedChange } from '@/content/staging';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
-import { getEntryOfType } from '../../internal/records';
 import { syncEntryRelationships } from '../../internal/relationships';
-import { getEntryRepository } from '../../repository/registry';
+import { resolveStagingTarget } from '../../internal/staging';
 
 /**
  * Discards the staged copy of one locale of an entry, dropping the index rows
@@ -23,24 +21,12 @@ export const deleteStagedEntry = defineServiceMethod({
     mutates: true,
     async handler(params, ctx): Promise<void> {
         const { type, id } = params;
-        const repository = getEntryRepository(type);
-        const { staging } = repository;
-        if (!staging) throw new CapabilityError('entry', type, 'staging');
-        const canonical = await getEntryOfType(
-            ctx.config,
-            repository,
-            type,
+        const { staging, canonical } = await resolveStagingTarget(ctx.config, params);
+        await requireStagedChange(staging, 'entry', {
+            rowId: id,
             id,
-            params.locale
-        );
-        const staged = await staging.getByCanonical(id, canonical.locale);
-        if (!staged) {
-            throw new ResourceNotFoundError('entry', {
-                id,
-                locale: canonical.locale,
-                staged: true,
-            });
-        }
+            locale: canonical.locale,
+        });
         await staging.delete({ id, locale: canonical.locale });
         // The entry keeps its other content, so this re-derives rather than deletes.
         await syncEntryRelationships(ctx.config, canonical, canonical.fields, type);

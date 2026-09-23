@@ -9,6 +9,7 @@
  * above them.
  */
 
+import type { ListPage, SortClause } from '@/content/list';
 import type { Table, TableSelect } from '@/database/define-table';
 import type { GenericDb } from '@/database/repository/create-repository';
 import type { Db } from '@/database/types';
@@ -182,6 +183,16 @@ export type ContentRepository<R extends ContentRow, V extends Table = Table> = {
         rows(raw: Record<string, unknown>[]): Promise<R[]>;
         /** Each row replaced by its `locale` row where it has one. */
         overlayLocale(rows: R[], locale: string): Promise<R[]>;
+        /**
+         * A page of the join under `where`, ordered by resource-row columns and
+         * read in `locale` where each row has one; no `page` reads every match.
+         */
+        list(params: {
+            where: JoinedWhere;
+            orderBy: readonly SortClause[];
+            page?: ListPage | undefined;
+            locale?: string | undefined;
+        }): Promise<R[]>;
     };
 };
 
