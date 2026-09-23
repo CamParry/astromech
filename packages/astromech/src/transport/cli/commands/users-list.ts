@@ -1,27 +1,31 @@
 import type { QueryResult, User } from '@/types/index';
 import { defineCommand } from 'citty';
-import { bootApplication } from '../config';
+import { configArgs, jsonArgs } from '../common-args';
+import { withApplication } from '../config';
 import { callCoreMethod } from '../methods';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
+import { printResult } from '../output';
 
 export default defineCommand({
     meta: { name: 'users:list', description: 'List all users' },
-    args: {
-        config: { type: 'string', description: 'Path to astromech.config.ts' },
-        ...allowRemoteArgs,
-    },
-    async run({ args }) {
-        await bootApplication(args.config, toAllowRemoteOption(args));
-        const result = await callCoreMethod<QueryResult<User>>('users.query', {
-            limit: 'all',
-        });
-        const users = result.data;
-        if (users.length === 0) {
-            console.log('No users found.');
-            return;
-        }
-        for (const u of users) {
-            console.log(`${u.id}  ${u.email}  ${u.name ?? ''}  ${u.role ?? ''}`);
-        }
-    },
+    args: { ...jsonArgs, ...configArgs },
+    run: ({ args }) =>
+        withApplication(args, async () => {
+            const { data } = await callCoreMethod<QueryResult<User>>('users.query', {
+                limit: 'all',
+            });
+            printResult(data, {
+                json: args.json,
+                text: () => {
+                    if (data.length === 0) {
+                        console.log('No users found.');
+                        return;
+                    }
+                    for (const u of data) {
+                        console.log(
+                            `${u.id}  ${u.email}  ${u.name ?? ''}  ${u.role ?? ''}`
+                        );
+                    }
+                },
+            });
+        }),
 });

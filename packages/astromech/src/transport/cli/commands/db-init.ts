@@ -4,14 +4,13 @@ import { loadAppMigrations, resolveMigrationsDir } from '@/database/app-migratio
 import { assertForeignKeysEnforced } from '@/database/migrations';
 import { collectPluginMigrations } from '@/database/plugin-migrations';
 import { getDb } from '@/database/registry';
+import { configArgs, toAllowRemoteOption } from '../common-args';
 import { loadConfig } from '../config';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
     meta: { name: 'db:init', description: 'Run database migrations' },
     args: {
-        config: { type: 'string', description: 'Path to astromech.config.ts' },
-        ...allowRemoteArgs,
+        ...configArgs,
     },
     async run({ args }) {
         // `resolveConfig` strips `plugins`, so the raw config gives the plugin

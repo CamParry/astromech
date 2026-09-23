@@ -12,6 +12,8 @@ import { setConfig } from '@/config/registry';
 import { resolveConfig } from '@/config/resolve';
 import { setDb } from '@/database/registry';
 import { log } from '@/utilities/log';
+import { toAllowRemoteOption } from './common-args';
+import { describeCallError, printError } from './output';
 
 /** The remote-database guard every command that opens the database takes. */
 type LoadOptions = { allowRemote?: boolean };
@@ -28,6 +30,22 @@ export async function bootApplication(
     const config = await loadConfigFile(process.cwd(), configPath);
     assertLocalDatabase(config, options?.allowRemote === true);
     return createAstromech({ config });
+}
+
+/**
+ * Boot the application from the command's `--config` and `--allow-remote`, then
+ * run `body`. Any error is reported the one way every command reports one:
+ * `{ error }` on stderr under `--json`, `Error: …` otherwise, with exit code 1.
+ */
+export async function withApplication(
+    args: { config?: string | undefined; 'allow-remote'?: boolean; json?: boolean },
+    body: (app: Astromech) => Promise<void>
+): Promise<void> {
+    try {
+        await body(await bootApplication(args.config, toAllowRemoteOption(args)));
+    } catch (error) {
+        printError(describeCallError(error), { json: args.json === true });
+    }
 }
 
 /**

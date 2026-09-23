@@ -1,9 +1,10 @@
 import type { User } from '@/types/index';
 import { defineCommand } from 'citty';
-import { bootApplication } from '../config';
+import { configArgs, jsonArgs } from '../common-args';
+import { withApplication } from '../config';
 import { callCoreMethod } from '../methods';
-import { describeCallError, printError } from '../output';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
+import { printResult } from '../output';
+import { ask } from '../prompt';
 
 export default defineCommand({
     meta: { name: 'users:create', description: 'Create a new user' },
@@ -12,35 +13,33 @@ export default defineCommand({
         email: { type: 'string', description: 'Email address' },
         password: { type: 'string', description: 'Password' },
         role: { type: 'string', description: 'Role slug', default: 'admin' },
-        json: { type: 'boolean', default: false, description: 'Report errors as JSON' },
-        config: { type: 'string', description: 'Path to astromech.config.ts' },
-        ...allowRemoteArgs,
+        ...jsonArgs,
+        ...configArgs,
     },
-    async run({ args }) {
-        try {
-            await bootApplication(args.config, toAllowRemoteOption(args));
-
-            let { name, email, password } = args;
-            if (!name || !email || !password) {
-                const readline = await import('node:readline/promises');
-                const rl = readline.createInterface({
-                    input: process.stdin,
-                    output: process.stdout,
-                });
-                name = name || (await rl.question('Name: '));
-                email = email || (await rl.question('Email: '));
-                password = password || (await rl.question('Password: '));
-                rl.close();
-            }
+    run: ({ args }) =>
+        withApplication(args, async () => {
+            // Prompt for whichever of the three the flags left out.
+            const given = { name: args.name, email: args.email, password: args.password };
+            const missing = Object.entries(given).filter(([, value]) => !value);
+            const answers = await ask(missing.map(([key]) => `${capitalise(key)}: `));
+            const { name, email, password } = {
+                ...given,
+                ...Object.fromEntries(missing.map(([key], i) => [key, answers[i]])),
+            };
 
             // `users.create` checks the role against the config and writes the
             // user, its content row and its credential account in one transaction.
             const user = await callCoreMethod<User>('users.create', {
                 data: { name, email, password, role: args.role ?? 'admin' },
             });
-            console.log(`User created: ${user.email} (${user.id})`);
-        } catch (e) {
-            printError(describeCallError(e), { json: args.json });
-        }
-    },
+            printResult(user, {
+                json: args.json,
+                text: () => console.log(`User created: ${user.email} (${user.id})`),
+            });
+        }),
 });
+
+/** `name` → `Name`, for a prompt. */
+function capitalise(word: string): string {
+    return word.charAt(0).toUpperCase() + word.slice(1);
+}

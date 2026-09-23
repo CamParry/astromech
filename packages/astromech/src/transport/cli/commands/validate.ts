@@ -5,8 +5,8 @@ import type {
 import { defineCommand } from 'citty';
 import { systemAppContext } from '@/app-context/app-context';
 import { validateStoredContent } from '@/transport/cli/validate-stored-content';
-import { bootApplication } from '../config';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
+import { configArgs } from '../common-args';
+import { withApplication } from '../config';
 
 export default defineCommand({
     meta: {
@@ -14,23 +14,21 @@ export default defineCommand({
         description: 'Report stored rows that fail the current field validation',
     },
     args: {
-        config: { type: 'string', description: 'Path to astromech.config.ts' },
-        ...allowRemoteArgs,
+        ...configArgs,
         type: { type: 'string', description: 'Limit to one entry type' },
     },
-    async run({ args }) {
-        // Booted, so the plugin runtime is registered: without it a custom-table
-        // plugin entry type resolves to the entries-table repository and its rows
-        // go unread.
-        await bootApplication(args.config, toAllowRemoteOption(args));
-
-        reportFindings(
-            await validateStoredContent(
-                systemAppContext(),
-                args.type !== undefined ? { type: args.type } : {}
-            )
-        );
-    },
+    run: ({ args }) =>
+        withApplication(args, async () => {
+            // Booted, so the plugin runtime is registered: without it a custom-table
+            // plugin entry type resolves to the entries-table repository and its rows
+            // go unread.
+            reportFindings(
+                await validateStoredContent(
+                    systemAppContext(),
+                    args.type !== undefined ? { type: args.type } : {}
+                )
+            );
+        }),
 });
 
 /** Print the findings, and fail the process only when there are some. */

@@ -1,9 +1,9 @@
 import type { ConfirmOptions } from '@/policies/confirmation';
 import type { MethodFilter } from '@/policies/method-filter';
 import { defineCommand } from 'citty';
+import { configArgs, toAllowRemoteOption } from '../common-args';
 import { confirmArgs, toConfirmOptions } from '../confirm-args';
 import { filterArgs, toMethodFilter } from '../filter-args';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 type RunMcpServer = (
     configPath?: string,
@@ -15,13 +15,9 @@ type RunMcpServer = (
 export default defineCommand({
     meta: { name: 'mcp', description: 'Start the MCP server over stdio' },
     args: {
-        config: {
-            type: 'string',
-            description: 'Path to astromech.config.ts',
-        },
+        ...configArgs,
         ...filterArgs,
         ...confirmArgs,
-        ...allowRemoteArgs,
     },
     async run({ args }) {
         let mod: { runMcpServer: RunMcpServer };

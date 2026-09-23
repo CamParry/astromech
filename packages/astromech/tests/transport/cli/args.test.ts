@@ -4,9 +4,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { toAllowRemoteOption } from '@/transport/cli/common-args';
 import { toConfirmOptions } from '@/transport/cli/confirm-args';
 import { toMethodFilter } from '@/transport/cli/filter-args';
-import { toAllowRemoteOption } from '@/transport/cli/remote-args';
 
 describe('toConfirmOptions', () => {
     it('is off when the flag is absent', () => {

@@ -7,10 +7,10 @@
 import type { ManifestMethod, ToolDefinition } from '@/types/index';
 import { defineCommand } from 'citty';
 import { buildDispatch } from '@/transport/tools/dispatch';
-import { bootApplication } from '../config';
+import { configArgs, jsonArgs } from '../common-args';
+import { withApplication } from '../config';
 import { bootedManifest } from '../methods';
-import { describeCallError, parseJsonArg, printError } from '../output';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
+import { parseJsonArg } from '../output';
 
 export default defineCommand({
     meta: { name: 'call', description: 'Call a method-manifest entry by id' },
@@ -21,22 +21,17 @@ export default defineCommand({
             description: 'Method id, as `astromech methods` prints it',
         },
         args: { type: 'string', description: 'Arguments as inline JSON or @file' },
-        json: { type: 'boolean', default: false, description: 'Report errors as JSON' },
-        config: { type: 'string', description: 'Path to astromech.config.ts' },
-        ...allowRemoteArgs,
+        ...jsonArgs,
+        ...configArgs,
     },
-    async run({ args }) {
-        try {
-            await bootApplication(args.config, toAllowRemoteOption(args));
+    run: ({ args }) =>
+        withApplication(args, async () => {
             const { tool } = resolveCallable(bootedManifest().methods, args.id);
             const result = await tool.invoke(await callArguments(args.args));
             // Always JSON: an arbitrary method's result has no human shape to
             // render it in.
             console.log(JSON.stringify(result ?? null, null, 2));
-        } catch (e) {
-            printError(describeCallError(e), { json: args.json });
-        }
-    },
+        }),
 });
 
 /**

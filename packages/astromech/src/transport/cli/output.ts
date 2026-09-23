@@ -1,5 +1,6 @@
-/** Shared CLI output helpers: uniform JSON mode + error reporting + JSON arg parsing. */
-import { readFile } from 'node:fs/promises';
+/** Shared CLI output helpers: uniform JSON mode, error reporting, JSON arg parsing and generated files. */
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 import { z } from 'zod';
 import { ValidationError } from '@/errors/validation';
 
@@ -60,4 +61,11 @@ export function describeCallError(error: unknown): unknown {
         ),
     ];
     return new Error(`Validation failed:\n${lines.map((l) => `  ${l}`).join('\n')}`);
+}
+
+/** Write a generated file at `out`, relative to the working directory, creating its folder. */
+export async function writeGenerated(out: string, content: string): Promise<void> {
+    const path = resolve(process.cwd(), out);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, content, 'utf-8');
 }

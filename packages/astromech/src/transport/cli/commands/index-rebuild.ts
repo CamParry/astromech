@@ -4,8 +4,8 @@ import {
     checkRelationshipIndex,
     rebuildRelationshipIndex,
 } from '@/transport/cli/relationship-index';
-import { bootApplication } from '../config';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
+import { configArgs } from '../common-args';
+import { withApplication } from '../config';
 
 export default defineCommand({
     meta: {
@@ -13,8 +13,7 @@ export default defineCommand({
         description: 'Rebuild the relationships index from field data',
     },
     args: {
-        config: { type: 'string', description: 'Path to astromech.config.ts' },
-        ...allowRemoteArgs,
+        ...configArgs,
         type: { type: 'string', description: 'Limit to one entry type' },
         check: {
             type: 'boolean',
@@ -22,27 +21,26 @@ export default defineCommand({
             description: 'Report drift without writing; exits 1 when any is found',
         },
     },
-    async run({ args }) {
-        // Booted, so the plugin runtime is registered: without it a custom-table
-        // plugin entry type resolves to the entries-table repository, its rows go
-        // unread, and a rebuild deletes every reference it has.
-        await bootApplication(args.config, toAllowRemoteOption(args));
+    run: ({ args }) =>
+        withApplication(args, async () => {
+            // Booted, so the plugin runtime is registered: without it a custom-table
+            // plugin entry type resolves to the entries-table repository, its rows go
+            // unread, and a rebuild deletes every reference it has.
+            const scope = args.type ? { type: args.type } : {};
 
-        const scope = args.type ? { type: args.type } : {};
+            if (args.check) {
+                const report = await checkRelationshipIndex(scope);
+                reportDrift(report);
+                return;
+            }
 
-        if (args.check) {
-            const report = await checkRelationshipIndex(scope);
-            reportDrift(report);
-            return;
-        }
-
-        const report = await rebuildRelationshipIndex(scope);
-        console.log(
-            `Rebuilt the relationships index: ${report.sourcesScanned} sources scanned, ` +
-                `${report.rowsWritten} rows written, ` +
-                `${report.orphanRowsRemoved} orphan rows removed.`
-        );
-    },
+            const report = await rebuildRelationshipIndex(scope);
+            console.log(
+                `Rebuilt the relationships index: ${report.sourcesScanned} sources scanned, ` +
+                    `${report.rowsWritten} rows written, ` +
+                    `${report.orphanRowsRemoved} orphan rows removed.`
+            );
+        }),
 });
 
 /** Print the diff, and fail the process only when there is one. */

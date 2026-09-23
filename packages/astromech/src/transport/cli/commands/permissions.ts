@@ -1,8 +1,8 @@
 import { defineCommand } from 'citty';
 import { buildPermissionCatalogue } from '@/permissions/catalogue';
+import { configArgs, jsonArgs, toAllowRemoteOption } from '../common-args';
 import { loadConfig } from '../config';
 import { printError } from '../output';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
     meta: { name: 'permissions', description: 'List grantable permissions' },
@@ -15,9 +15,8 @@ export default defineCommand({
             type: 'string',
             description: 'Filter by source: core | entry | global | plugin',
         },
-        json: { type: 'boolean', default: false, description: 'Output as JSON' },
-        config: { type: 'string', description: 'Path to astromech.config.ts' },
-        ...allowRemoteArgs,
+        ...jsonArgs,
+        ...configArgs,
     },
     async run({ args }) {
         try {

@@ -5,11 +5,10 @@ import { defineCommand } from 'citty';
 import { resolveRole } from '@/permissions/roles';
 import { annotateManifest } from '@/policies/annotate-manifest';
 import { filterMethods } from '@/policies/method-filter';
-import { bootApplication } from '../config';
+import { configArgs, jsonArgs } from '../common-args';
+import { withApplication } from '../config';
 import { filterArgs, toMethodFilter } from '../filter-args';
 import { bootedManifest } from '../methods';
-import { printError } from '../output';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 /**
  * Resolve a role slug, rejecting one that is not configured. `requireRole`
@@ -68,14 +67,12 @@ export default defineCommand({
             type: 'string',
             description: 'Annotate each method with whether this role may call it',
         },
-        json: { type: 'boolean', default: false, description: 'Output as JSON' },
-        config: { type: 'string', description: 'Path to astromech.config.ts' },
-        ...allowRemoteArgs,
+        ...jsonArgs,
+        ...configArgs,
         ...filterArgs,
     },
-    async run({ args }) {
-        try {
-            const app = await bootApplication(args.config, toAllowRemoteOption(args));
+    run: ({ args }) =>
+        withApplication(args, async (app) => {
             const resolved = app.config;
             const manifest = bootedManifest();
 
@@ -147,8 +144,5 @@ export default defineCommand({
             }
 
             printExclusionSummary(filtered.excluded);
-        } catch (e) {
-            printError(e, { json: args.json });
-        }
-    },
+        }),
 });

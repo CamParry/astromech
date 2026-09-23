@@ -1,8 +1,13 @@
-import { unlink, writeFile } from 'node:fs/promises';
+import { readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { parseJsonArg, printError, printResult } from '@/transport/cli/output';
+import {
+    parseJsonArg,
+    printError,
+    printResult,
+    writeGenerated,
+} from '@/transport/cli/output';
 
 afterEach(() => {
     process.exitCode = 0;
@@ -107,5 +112,18 @@ describe('printError', () => {
         printError('plain string error', { json: false });
         const rawArg = spy.mock.calls[0]?.[0];
         expect(rawArg).toBe('Error: plain string error');
+    });
+});
+
+describe('writeGenerated', () => {
+    it('writes the file, creating the folders it sits in', async () => {
+        const folder = join(tmpdir(), `astromech-generated-${Date.now()}`);
+        const out = join(folder, 'nested', 'types.d.ts');
+        try {
+            await writeGenerated(out, 'export {};');
+            expect(await readFile(out, 'utf-8')).toBe('export {};');
+        } finally {
+            await rm(folder, { recursive: true, force: true });
+        }
     });
 });

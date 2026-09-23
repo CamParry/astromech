@@ -12,8 +12,8 @@ import { defineCommand } from 'citty';
 import { sql } from 'kysely';
 import { getDb } from '@/database/registry';
 import { pluginNamespace } from '@/plugins/runtime/plugin-identity';
+import { configArgs, toAllowRemoteOption } from '../common-args';
 import { loadConfig } from '../config';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export type PurgeResult = {
     /** Dropped table names, in `sqlite_master` order. */
@@ -93,8 +93,7 @@ export default defineCommand({
             required: true,
             description: 'Plugin package name, e.g. @astromech/redirects',
         },
-        config: { type: 'string', description: 'Path to astromech.config.ts' },
-        ...allowRemoteArgs,
+        ...configArgs,
     },
     async run({ args }) {
         const pkg = args.package;

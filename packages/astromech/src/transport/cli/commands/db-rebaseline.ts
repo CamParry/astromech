@@ -10,8 +10,8 @@ import { defineCommand } from 'citty';
 import { resolveMigrationsDir } from '@/database/app-migrations';
 import { rebaselineMigrations } from '@/database/generate';
 import { CORE_TABLES } from '@/database/tables';
+import { configArgs, toAllowRemoteOption } from '../common-args';
 import { loadConfig } from '../config';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
     meta: {
@@ -19,12 +19,11 @@ export default defineCommand({
         description: "Regenerate this app's baseline migration and snapshot",
     },
     args: {
-        config: { type: 'string', description: 'Path to astromech.config.ts' },
         collapse: {
             type: 'boolean',
             description: 'Fold every migration past the baseline into it',
         },
-        ...allowRemoteArgs,
+        ...configArgs,
     },
     async run({ args }) {
         const { resolved: config } = await loadConfig(

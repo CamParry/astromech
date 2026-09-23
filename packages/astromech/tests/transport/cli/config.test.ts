@@ -8,7 +8,7 @@
 
 import type { AstromechConfig, DatabaseDriver } from '@/types/index';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { assertLocalDatabase } from '@/transport/cli/config';
+import { assertLocalDatabase, withApplication } from '@/transport/cli/config';
 
 /** A config carrying nothing but the driver — the guard reads only `db`. */
 function configWith(db: Partial<DatabaseDriver>): AstromechConfig {
@@ -79,5 +79,22 @@ describe('assertLocalDatabase', () => {
 
         expect(() => assertLocalDatabase(configWith({}), false)).not.toThrow();
         expect(exit).not.toHaveBeenCalled();
+    });
+});
+
+describe('withApplication', () => {
+    it('reports a failure to boot as the command’s error, with exit code 1', async () => {
+        const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        const body = vi.fn();
+
+        await withApplication(
+            { config: '/nowhere/astromech.config.ts', json: true },
+            body
+        );
+
+        expect(body).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+        expect(JSON.parse(String(error.mock.calls[0]?.[0]))).toHaveProperty('error');
+        process.exitCode = 0;
     });
 });

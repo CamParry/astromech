@@ -1,9 +1,9 @@
 import type { Entry, EntryCreateData, EntryStatus, JsonObject } from '@/types/index';
 import { defineCommand } from 'citty';
-import { bootApplication } from '../config';
+import { configArgs, jsonArgs } from '../common-args';
+import { withApplication } from '../config';
 import { callEntryMethod } from '../methods';
-import { describeCallError, parseJsonArg, printError, printResult } from '../output';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
+import { parseJsonArg, printResult } from '../output';
 
 export default defineCommand({
     meta: { name: 'entries:create', description: 'Create a new entry' },
@@ -18,14 +18,11 @@ export default defineCommand({
         },
         publishedAt: { type: 'string', description: 'Published-at ISO datetime' },
         fields: { type: 'string', description: 'Fields as inline JSON or @file' },
-        json: { type: 'boolean', default: false, description: 'Output as JSON' },
-        config: { type: 'string', description: 'Path to astromech.config.ts' },
-        ...allowRemoteArgs,
+        ...jsonArgs,
+        ...configArgs,
     },
-    async run({ args }) {
-        try {
-            await bootApplication(args.config, toAllowRemoteOption(args));
-
+    run: ({ args }) =>
+        withApplication(args, async () => {
             const data: EntryCreateData = {};
 
             if (args.title !== undefined) data.title = args.title;
@@ -45,8 +42,5 @@ export default defineCommand({
                 text: () =>
                     console.log(`Created ${entry.type} ${entry.id} (${entry.status})`),
             });
-        } catch (e) {
-            printError(describeCallError(e), { json: args.json });
-        }
-    },
+        }),
 });

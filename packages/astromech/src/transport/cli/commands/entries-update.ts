@@ -1,9 +1,9 @@
 import type { Entry, EntryStatus, EntryUpdateData, JsonObject } from '@/types/index';
 import { defineCommand } from 'citty';
-import { bootApplication } from '../config';
+import { configArgs, jsonArgs } from '../common-args';
+import { withApplication } from '../config';
 import { callEntryMethod } from '../methods';
-import { describeCallError, parseJsonArg, printError, printResult } from '../output';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
+import { parseJsonArg, printResult } from '../output';
 
 export default defineCommand({
     meta: { name: 'entries:update', description: 'Update an existing entry' },
@@ -23,14 +23,11 @@ export default defineCommand({
             type: 'string',
             description: 'Full EntryUpdateData as inline JSON or @file',
         },
-        json: { type: 'boolean', default: false, description: 'Output as JSON' },
-        config: { type: 'string', description: 'Path to astromech.config.ts' },
-        ...allowRemoteArgs,
+        ...jsonArgs,
+        ...configArgs,
     },
-    async run({ args }) {
-        try {
-            await bootApplication(args.config, toAllowRemoteOption(args));
-
+    run: ({ args }) =>
+        withApplication(args, async () => {
             const base: EntryUpdateData = args.data
                 ? ((await parseJsonArg(args.data)) as EntryUpdateData)
                 : {};
@@ -56,8 +53,5 @@ export default defineCommand({
                 json: args.json,
                 text: () => console.log(`Updated ${args.type} ${args.id}`),
             });
-        } catch (e) {
-            printError(describeCallError(e), { json: args.json });
-        }
-    },
+        }),
 });

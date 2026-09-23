@@ -1,32 +1,31 @@
 import { defineCommand } from 'citty';
-import { bootApplication } from '../config';
+import { configArgs, jsonArgs } from '../common-args';
+import { withApplication } from '../config';
 import { callCoreMethod } from '../methods';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
+import { printResult } from '../output';
+import { confirm } from '../prompt';
 
 export default defineCommand({
     meta: { name: 'users:delete', description: 'Delete a user' },
     args: {
         id: { type: 'positional', required: true, description: 'User ID' },
         force: { type: 'boolean', description: 'Skip confirmation', default: false },
-        ...allowRemoteArgs,
-        config: { type: 'string', description: 'Path to astromech.config.ts' },
+        ...jsonArgs,
+        ...configArgs,
     },
-    async run({ args }) {
-        await bootApplication(args.config, toAllowRemoteOption(args));
-        if (!args.force) {
-            const readline = await import('node:readline/promises');
-            const rl = readline.createInterface({
-                input: process.stdin,
-                output: process.stdout,
-            });
-            const answer = await rl.question(`Delete user ${args.id}? (y/N) `);
-            rl.close();
-            if (answer.toLowerCase() !== 'y') {
+    run: ({ args }) =>
+        withApplication(args, async () => {
+            if (!args.force && !(await confirm(`Delete user ${args.id}?`))) {
                 console.log('Cancelled.');
                 return;
             }
-        }
-        await callCoreMethod('users.delete', { id: args.id });
-        console.log(`User ${args.id} deleted`);
-    },
+            await callCoreMethod('users.delete', { id: args.id });
+            printResult(
+                { id: args.id },
+                {
+                    json: args.json,
+                    text: () => console.log(`User ${args.id} deleted`),
+                }
+            );
+        }),
 });

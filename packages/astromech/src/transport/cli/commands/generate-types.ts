@@ -1,9 +1,8 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
 import { defineCommand } from 'citty';
 import { generateClientTypes } from '@/codegen/type-generator';
+import { configArgs, toAllowRemoteOption } from '../common-args';
 import { loadConfig } from '../config';
-import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
+import { writeGenerated } from '../output';
 
 export default defineCommand({
     meta: {
@@ -16,8 +15,7 @@ export default defineCommand({
             description: 'Output path',
             default: '.astro/astromech.d.ts',
         },
-        config: { type: 'string', description: 'Path to astromech.config.ts' },
-        ...allowRemoteArgs,
+        ...configArgs,
     },
     async run({ args }) {
         const { config: rawConfig, resolved } = await loadConfig(
@@ -26,9 +24,7 @@ export default defineCommand({
         );
         const plugins = rawConfig.plugins ?? [];
         const types = generateClientTypes(resolved, plugins);
-        const outPath = resolve(process.cwd(), args.out);
-        await mkdir(dirname(outPath), { recursive: true });
-        await writeFile(outPath, types, 'utf-8');
+        await writeGenerated(args.out, types);
         console.log(`Types written to ${args.out}`);
     },
 });
