@@ -39,8 +39,8 @@ read at review, and studying where a pattern repeats before changing it.
       exports, typed lint, retired words, lookup verbs, names, stale comments:
       `planned/conventions-and-drift.md`.
 - [ ] The unused `settings` module: `planned/remove-settings-module.md`.
-- [ ] Plugin raw routes kept as closures, and the stale `virtual:` reasoning:
-      `planned/plugin-route-entrypoints.md`.
+- [x] Plugin raw routes kept as closures, and the stale `virtual:` reasoning
+      rewritten; `check:install` installs a packed plugin: `DECISIONS.md`.
 - [x] The one-at-a-time lookups in `media/methods/used-by.ts`, now batched.
       The `col.reference` resolver stays deferred until something consumes it:
       `planned/col-reference-resolution.md`.

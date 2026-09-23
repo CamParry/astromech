@@ -908,14 +908,17 @@ invent its own. `@astromech/assistant` builds its approve/reject panel from it.
 Plugin-declared methods are in the list too, each checked against its declared
 `access` for that role.
 
-> **A plugin imports `astromech`, `astromech/ui` and `astromech/ui/app`, and
-> nothing else from core.** Everything else arrives on `ctx`. Your config is loaded twice: in the
-> running server's module graph, and in plain Node at config time, where the
-> `virtual:astromech/config` that every domain service reaches cannot resolve.
-> Your plugin is loaded with it both times and has to survive the plain-Node one,
-> so importing a subpath like `astromech/methods` throws
-> `ERR_UNSUPPORTED_ESM_URL_SCHEME` at import time. Type-only imports from any
-> subpath are fine, because they erase.
+> **Reach core's services through `ctx`, not an import.** A method runs as the
+> context it is given, and `ctx` is that context for your plugin: the caller,
+> your identity and your storage. Your config is also loaded twice: in the
+> running server's module graph, and in plain Node at config time, where
+> `virtual:` modules do not exist. Your plugin's entry is loaded both times, so
+> it imports only subpaths that load in plain Node, such as `astromech`,
+> `astromech/fields`, `astromech/columns`, `astromech/email` and `astromech/ui`.
+> `astromech/ui/app` reaches `virtual:` modules and throws
+> `ERR_UNSUPPORTED_ESM_URL_SCHEME` there, so only your source-shipped
+> `./admin/*` components import it. Type-only imports from any subpath are
+> fine, because they erase.
 
 ### Reaching a model
 
@@ -976,6 +979,10 @@ export const exportRoutes: PluginRawRoute[] = [
 
 Raw routes mount under the **service key**, alongside RPC, and their `access`
 resolves the same way, so a bare permission key is namespaced identically.
+
+A handler is a closure, like a hook or a cron handler, so a factory-form plugin
+builds its routes from its resolved options: `@astromech/backups` passes its
+`keep` option to `buildBackupRoutes(keep)`.
 
 Two things to hold onto:
 

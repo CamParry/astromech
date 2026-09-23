@@ -16,6 +16,11 @@
 // astromech` commands are read out of the page, so the check runs the page as
 // written, and an edit that breaks the check fails naming the page.
 //
+// A site adds plugins the same way, so the check installs `@astromech/backups`
+// from its tarball on top of the guide and registers it in the config. Its
+// admin page and one of its raw routes are called in the admin flow, which
+// covers a plugin installed from npm rather than linked.
+//
 // After `db:generate` and `db:init`, `astro dev` serves the site and the admin
 // flow in `scripts/admin-browser-check.mjs` runs against it in headless
 // chromium. Then `astro build` runs against a fresh database, and the same flow
@@ -24,7 +29,7 @@
 // `astro build`, and a console warning in the browser each fail the check,
 // apart from the allowlists below.
 //
-// The install resolves everything except the three tarballs from the npm
+// The install resolves everything except the four tarballs from the npm
 // registry, unpinned, as the guide's command does, so a new upstream release
 // can break the guide with nothing changed here. That needs the network, which
 // is why this is a CI job of its own, run weekly as well as on a push, and not
@@ -46,11 +51,16 @@ import { requireFreshDist } from './require-fresh-dist.mjs';
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const GUIDE = 'apps/docs/installation.md';
 
-/** The packages the check packs, by name: core and the two it depends on. */
+// The plugin the site adds after the guide: it has a table with its own
+// migrations, an admin page and raw routes, so each is installed from npm.
+const PLUGIN = '@astromech/backups';
+
+/** The packages the check packs, by name: core, the two it depends on, and a plugin. */
 const PACKED_PACKAGES = {
     astromech: join(repoRoot, 'packages', 'astromech'),
     '@astromech/admin': join(repoRoot, 'packages', 'admin'),
     '@astromech/schema-engine': join(repoRoot, 'packages', 'schema-engine'),
+    [PLUGIN]: join(repoRoot, 'packages', 'plugins', 'backups'),
 };
 
 /** The files the guide must give a code block for, named in its first line. */
@@ -158,6 +168,13 @@ async function main() {
     await stage('install', `installing with ${formatCommand(add)}`, async () => {
         const output = await runCaptured('install', add, inSite);
         expectNoDeprecations(output);
+    });
+
+    const addPlugin = commands.add([tarballs[PLUGIN]]);
+    await stage('plugin', `adding ${PLUGIN} to the site`, async () => {
+        const output = await runCaptured(`install ${PLUGIN}`, addPlugin, inSite);
+        expectNoDeprecations(output);
+        await addPluginToConfig(siteDir);
     });
 
     await stage('cli', "running the guide's astromech commands", async () => {
@@ -388,7 +405,7 @@ async function checkDevServer(commands, inSite, port) {
         }
     );
     await waitForServer(base, server);
-    await expectAdminWorks(`${base}/cms`, { failOnWarnings: true });
+    await expectAdminWorks(`${base}/cms`, { pluginPage: true, failOnWarnings: true });
     await closeAdminBrowser();
     expectNoWarnings('astro dev', server.output, ALLOWED_DEV_WARNINGS);
     await stopServer();
@@ -418,9 +435,26 @@ async function checkBuiltServer(inSite, port) {
         'the API rejects an anonymous read'
     );
 
-    await expectAdminWorks(`${base}/cms`, { failOnWarnings: true });
+    await expectAdminWorks(`${base}/cms`, { pluginPage: true, failOnWarnings: true });
     await closeAdminBrowser();
     await stopServer();
+}
+
+/**
+ * Register the plugin in the guide's `astromech.config.ts`, as the plugin's
+ * README tells a site to: import its factory and call it in `plugins`.
+ */
+async function addPluginToConfig(siteDir) {
+    const file = join(siteDir, 'astromech.config.ts');
+    const config = await readFile(file, 'utf8');
+    const opening = 'export default defineConfig({\n';
+    if (!config.includes(opening)) {
+        throw guideError(
+            `an \`astromech.config.ts\` block containing \`${opening.trim()}\``
+        );
+    }
+    const withPlugin = config.replace(opening, `${opening}    plugins: [backups()],\n`);
+    await writeFile(file, `import { backups } from '${PLUGIN}';\n${withPlugin}`);
 }
 
 /** Remove the SQLite file the guide's config names, and any journal beside it. */

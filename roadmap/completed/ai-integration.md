@@ -488,12 +488,12 @@ f(x)`), so re-coercion is only observable when the STORED value is not
           `[200]`, and the transcript shows the API's own
           `401 authentication_error`. The dispatch table is built and the
           round-trip reaches Anthropic; only the key is fake.
-        - Deferred with its own file: `PluginRawRoute.handler` is a closure
+        - Considered: `PluginRawRoute.handler` is a closure
           where Astro's `injectRoute` takes an `entrypoint`, which is the reason
           plugin route code is outside Vite's graph at all. Changing the
           contract would remove the need for a port on routes, but cannot help
-          hooks, service methods or cron. See
-          `roadmap/planned/plugin-route-entrypoints.md`.
+          hooks, service methods or cron. Settled: closures stay, and
+          `DECISIONS.md` records why.
         - Behaviour change worth knowing: the dispatches are built in the route
           rather than inside the loop's `try`, so a missing manifest is a 500
           rather than an error event in the transcript. Both are boot wiring
