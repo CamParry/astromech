@@ -1,10 +1,9 @@
 /**
- * Shared entry edit page body, parameterized by an `EntriesBinding`; serves
- * root and plugin-namespaced entry types. Two-column layout: sticky action
+ * Entry edit page for one entry type id, the site's or a plugin's. Two-column layout: sticky action
  * bar, main content fields left, metadata sidebar right.
  */
 
-import type { EntriesBinding } from './binding';
+import type { UseAdminEntryTypeResult } from '../../hooks/use-admin-entry-type';
 import type { Entry } from 'astromech';
 import { Menu } from '@base-ui/react/menu';
 import { useStore } from '@tanstack/react-form';
@@ -33,22 +32,27 @@ import {
     useEntryVersions,
     useGetStaged,
 } from '../../hooks/entries';
+import { useAdminEntryType } from '../../hooks/use-admin-entry-type';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useEntryForm } from '../../hooks/use-entry-form';
-import { usePermissions } from '../../hooks/use-permissions';
 import { queryKeys } from '../../hooks/use-query-keys';
-import { EntryNamespaceProvider, namespaceForScope } from '../../i18n/entry-namespace';
+import { EntryNamespaceProvider } from '../../i18n/entry-namespace';
 import { Link } from '../../rendering/cells/link';
-import { resolveAdminEntryType, resolveForm } from '../../rendering/resolve';
+import { resolveForm } from '../../rendering/resolve';
 import { defaultContentLocale } from '../../utilities/content-locale';
 import { formatDatetime } from '../../utilities/dates';
-import { entryEditPath, entryVersionsPath } from '../../utilities/entry-admin-path';
+import {
+    entryEditPath,
+    entryTypeBasePath,
+    entryVersionsPath,
+} from '../../utilities/entry-admin-path';
 import { formatDatetimeForInput } from '../../utilities/formatters';
 import {
     FieldErrorsProvider,
     FieldWarningsProvider,
 } from '../fields/field-errors-context';
 import { FieldValidationProvider } from '../fields/field-validation-context';
+import { NotFoundPage } from '../layout/not-found-page';
 import { LocaleSwitcher } from '../translations/locale-switcher';
 import { Breadcrumb } from '../ui/breadcrumb';
 import { Button } from '../ui/button';
@@ -82,16 +86,18 @@ import { PublishPanel } from './publish-panel';
  * (repeater, blocks, tree) would keep the last row's state.
  */
 export function EntryEditPage({
-    binding,
+    type,
     id,
     locale,
     staged = false,
 }: EntryEditPageProps): React.ReactElement {
+    const entryType = useAdminEntryType(type);
     const resolvedLocale = locale ?? defaultContentLocale();
+    if (entryType === null) return <NotFoundPage path={entryTypeBasePath(type)} />;
     return (
         <EntryEditPageBody
             key={`${id}:${resolvedLocale}:${String(staged)}`}
-            binding={binding}
+            entryType={entryType}
             id={id}
             locale={resolvedLocale}
             staged={staged}
@@ -100,7 +106,8 @@ export function EntryEditPage({
 }
 
 type EntryEditPageProps = {
-    binding: EntriesBinding;
+    /** Entry type id: `post`, or `forms/form` for a plugin's. */
+    type: string;
     id: string;
     /** Locale from the route search params; defaults to the default content locale. */
     locale: string | undefined;
@@ -109,35 +116,34 @@ type EntryEditPageProps = {
 };
 
 function EntryEditPageBody({
-    binding,
+    entryType,
     id,
     locale,
     staged: isStaged,
 }: {
-    binding: EntriesBinding;
+    entryType: UseAdminEntryTypeResult;
     id: string;
     locale: string;
     staged: boolean;
 }): React.ReactElement {
-    const { type, cacheScope, config: entryType, basePath } = binding;
+    const { type, config, basePath, namespace, can } = entryType;
     const { toast } = useToast();
     const { t } = useTranslation();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const [deleteOpen, setDeleteOpen] = React.useState(false);
 
-    const { hasPermission } = usePermissions();
-    const single = entryType?.single ?? type;
-    const plural = entryType?.plural ?? type;
-    const capabilities = entryType?.capabilities;
-    const resolvedForm = resolveForm(resolveAdminEntryType(entryType, type));
+    const single = config.single;
+    const plural = config.plural;
+    const capabilities = config.capabilities;
+    const resolvedForm = resolveForm(config);
     const { hasTitle, hasSlug, hasStatuses, main, sidebar } = resolvedForm;
     // The two columns together ARE the full field tree the client validates.
     const fieldDefinitions = React.useMemo(() => [...main, ...sidebar], [main, sidebar]);
 
-    const isReadOnly = !hasPermission(binding.permissionFor('update'));
+    const isReadOnly = !can('update');
 
-    const hasStaging = entryType?.capabilities?.staging === true;
+    const hasStaging = config.capabilities.staging === true;
     const { data: canonicalEntry, isLoading: canonicalLoading } = useEntry(
         type,
         id,
@@ -159,7 +165,7 @@ function EntryEditPageBody({
     // is ever published. Serves the root and plugin routes alike.
     useAiContext(
         entry != null
-            ? { kind: 'entries', type, id, label: entryLabel(entry, entryType) }
+            ? { kind: 'entries', type, id, label: entryLabel(entry, config) }
             : null,
         { depth: 1 }
     );
@@ -199,7 +205,7 @@ function EntryEditPageBody({
     } = useEntryForm({
         fieldDefinitions,
         operation: 'update',
-        namespace: namespaceForScope(cacheScope),
+        namespace: namespace,
         defaultValues: {
             title: entry?.title ?? '',
             slug: entry?.slug ?? '',
@@ -251,7 +257,7 @@ function EntryEditPageBody({
     // so every staging call is `{ id, locale }` and only the search param says
     // which row is on screen.
     const confirm = useConfirm();
-    const canPublish = hasPermission(binding.permissionFor('publish'));
+    const canPublish = can('publish');
     const canonicalPath = entryEditPath(basePath, id, { locale });
     const stagedPath = entryEditPath(basePath, id, { locale, staged: true });
 
@@ -268,7 +274,7 @@ function EntryEditPageBody({
     const revokeToken = useAdminMutation(mutations.revokePreviewToken);
 
     const previewUrl =
-        entryType?.url && entry != null ? resolveEntryUrl(entryType.url, entry) : null;
+        config.url && entry != null ? resolveEntryUrl(config.url, entry) : null;
 
     // One surface control, not two. A published entry links straight to its live
     // page; anything else opens a tokenised preview of the last saved state.
@@ -321,7 +327,7 @@ function EntryEditPageBody({
     }
 
     return (
-        <EntryNamespaceProvider namespace={namespaceForScope(cacheScope)}>
+        <EntryNamespaceProvider namespace={namespace}>
             <Page>
                 <DeleteEntryModal
                     open={deleteOpen}

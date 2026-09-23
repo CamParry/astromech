@@ -1,14 +1,10 @@
 /**
- * Entry version history route — root entry types. Wraps the shared
- * `EntryVersionsPage`; the loader prefetches the entry and its versions,
- * and a qualified type redirects to the plugin route.
+ * Entry version history route for the site's types; the loader prefetches the
+ * entry and its versions, and a plugin's type id redirects to the plugin route.
  */
 
-import type { EntriesBinding } from '../../../../../components/entries/binding';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { entryPermission } from 'astromech/shared';
 import React from 'react';
-import adminConfig from 'virtual:astromech/admin-config';
 import { EntryVersionsPage } from '../../../../../components/entries/entry-versions-page';
 import {
     entryQueryOptions,
@@ -23,14 +19,7 @@ import {
 function EntryVersionsRoutePage(): React.ReactElement {
     const { type, id } = Route.useParams();
     const { locale } = Route.useSearch();
-    const binding: EntriesBinding = {
-        type,
-        cacheScope: '',
-        config: adminConfig.entryTypes[type],
-        basePath: `/entries/${type}`,
-        permissionFor: (action) => entryPermission(type, action),
-    };
-    return <EntryVersionsPage binding={binding} id={id} locale={locale} />;
+    return <EntryVersionsPage type={type} id={id} locale={locale} />;
 }
 
 export const Route = createFileRoute('/_protected/entries/$type/$id/versions')({

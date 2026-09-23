@@ -21,7 +21,7 @@ import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useEntryForm } from '../../hooks/use-entry-form';
 import { usePermissions } from '../../hooks/use-permissions';
 import { userMutations, useUser } from '../../hooks/users';
-import { EntryNamespaceProvider, namespaceForScope } from '../../i18n/entry-namespace';
+import { EntryNamespaceProvider, labelNamespace } from '../../i18n/entry-namespace';
 import { defaultContentLocale, localeOptions } from '../../utilities/content-locale';
 import { formatDatetime } from '../../utilities/dates';
 import { EntryFieldColumn } from '../entries/entry-fields-renderer';
@@ -111,7 +111,7 @@ function UserEditBody({
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { canUpdateUsers, canDeleteUsers } = usePermissions();
-    const namespace = namespaceForScope('');
+    const namespace = labelNamespace(undefined);
 
     const isTranslatable =
         adminConfig.users.translatable && adminConfig.locales.length > 1;

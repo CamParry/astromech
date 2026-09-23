@@ -1,12 +1,12 @@
 /**
- * Shared entry-type list page body, parameterized by an `EntriesBinding` so it
- * serves both root and plugin-namespaced entry types. Searchable, filterable,
- * paginated table/grid of entries with bulk actions and per-type view state.
+ * Entry list page for one entry type id, the site's or a plugin's. Searchable,
+ * filterable, paginated table or grid with bulk actions and per-type view state.
  */
 
+import type { UseAdminEntryTypeResult } from '../../hooks/use-admin-entry-type';
+import type { EntriesListSearch } from '../../utilities/entry-admin-path';
 import type { DropdownItem } from '../ui/dropdown';
 import type { SortDirection } from '../ui/table';
-import type { EntriesBinding, EntriesListSearch } from './binding';
 import type { CellRenderContext, Entry, TableColumn } from 'astromech';
 import { Menu } from '@base-ui/react/menu';
 import { useNavigate, useSearch } from '@tanstack/react-router';
@@ -25,26 +25,23 @@ import {
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
+import { useAiContext } from '../../context/ai-context';
 import { useAuthorNames } from '../../hooks/author-names';
 import { entryMutations, useEntriesQuery } from '../../hooks/entries';
+import { useAdminEntryType } from '../../hooks/use-admin-entry-type';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useIsMobile } from '../../hooks/use-is-mobile';
-import { usePermissions } from '../../hooks/use-permissions';
 import { useSelection } from '../../hooks/use-selection';
 import { useViewMode } from '../../hooks/use-view-mode';
-import { namespaceForScope } from '../../i18n/entry-namespace';
 import { resolveLabel } from '../../i18n/labels';
 import { defaultCellKind } from '../../rendering/cell-kind-map';
 import { getCellRenderer } from '../../rendering/cell-registry';
 import { Link } from '../../rendering/cells/link';
 import { statusVariant } from '../../rendering/cells/status-variant';
-import {
-    fieldTypeOf,
-    resolveAdminEntryType,
-    resolveTable,
-} from '../../rendering/resolve';
+import { fieldTypeOf, resolveTable } from '../../rendering/resolve';
 import { defaultContentLocale } from '../../utilities/content-locale';
-import { entryEditPath } from '../../utilities/entry-admin-path';
+import { entryEditPath, entryTypeBasePath } from '../../utilities/entry-admin-path';
+import { NotFoundPage } from '../layout/not-found-page';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
@@ -421,53 +418,47 @@ function parseSortParam(
     return { key, direction };
 }
 
-export function EntriesListPage({
-    binding,
+export function EntriesListPage({ type }: { type: string }): React.ReactElement {
+    const entryType = useAdminEntryType(type);
+    if (entryType === null) return <NotFoundPage path={entryTypeBasePath(type)} />;
+    return <EntriesListBody key={type} entryType={entryType} />;
+}
+
+function EntriesListBody({
+    entryType,
 }: {
-    binding: EntriesBinding;
+    entryType: UseAdminEntryTypeResult;
 }): React.ReactElement {
-    const { type, cacheScope, config: entryType, basePath } = binding;
+    const { type, config, basePath, namespace, can } = entryType;
+    useAiContext({ kind: 'entries', type, label: config.plural }, { depth: 0 });
     const navigate = useNavigate();
     const { t } = useTranslation();
-    const ns = namespaceForScope(cacheScope);
     // System columns label via i18n key; admin/grid columns via the Label seam.
     const columnLabel = useCallback(
         (col: TableColumn): string =>
             col.system
                 ? t(typeof col.label === 'string' ? col.label : col.label.$t)
-                : resolveLabel(col.label, col.key, t, ns),
-        [t, ns]
+                : resolveLabel(col.label, col.key, t, namespace),
+        [t, namespace]
     );
-    const { hasPermission } = usePermissions();
-    const canCreate = hasPermission(binding.permissionFor('create'));
-    const canDelete = hasPermission(binding.permissionFor('delete'));
+    const canCreate = can('create');
+    const canDelete = can('delete');
 
-    const single = entryType?.single ?? type;
-    const plural = entryType?.plural ?? type;
-    const adminColumns = entryType?.adminColumns ?? [];
-    const gridFields = entryType?.gridFields ?? [];
-    const capabilities = entryType?.capabilities;
+    const single = config.single;
+    const plural = config.plural;
+    const adminColumns = config.adminColumns ?? [];
+    const gridFields = config.gridFields ?? [];
+    const capabilities = config.capabilities;
     const hasStatuses = capabilities?.statuses !== false;
     const hasTrash = capabilities?.trash !== false;
     const hasSlugCap = capabilities?.slug !== false;
-    const hasTitle = entryType?.titleField !== false;
-    const showSearch =
-        entryType?.titleField !== false || (entryType?.search?.length ?? 0) > 0;
+    const hasTitle = config.titleField !== false;
+    const showSearch = config.titleField !== false || (config.search?.length ?? 0) > 0;
 
-    // `resolveTable` needs a full AdminEntryType. When the binding config is
-    // undefined (unknown root type), resolveAdminEntryType synthesizes a default
-    // reproducing the historical undefined-config behaviour.
-    const resolvedConfig = React.useMemo(
-        () => resolveAdminEntryType(entryType, type),
-        [entryType, type]
-    );
-    const resolvedTable = React.useMemo(
-        () => resolveTable(resolvedConfig),
-        [resolvedConfig]
-    );
+    const resolvedTable = React.useMemo(() => resolveTable(config), [config]);
 
-    const availableViews = entryType?.views ?? ['list'];
-    const defaultView: ViewMode = entryType?.defaultView ?? 'list';
+    const availableViews = config.views ?? ['list'];
+    const defaultView: ViewMode = config.defaultView ?? 'list';
     const showViewToggle =
         availableViews.includes('list') && availableViews.includes('grid');
 
@@ -600,7 +591,7 @@ export function EntriesListPage({
     const gridColumnDefs: TableColumn[] = gridFields.map((gf) => ({
         key: gf.field,
         label: gf.label ?? gf.field,
-        kind: defaultCellKind(fieldTypeOf(resolvedConfig, gf.field)),
+        kind: defaultCellKind(fieldTypeOf(config, gf.field)),
         source: 'field' as const,
         sortable: false,
         system: false,

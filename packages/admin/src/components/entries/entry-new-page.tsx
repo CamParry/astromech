@@ -1,10 +1,9 @@
 /**
- * Shared entry create page body, parameterized by an `EntriesBinding`; serves
- * root and plugin-namespaced entry types. Two-column layout with title,
+ * Entry create page for one entry type id, the site's or a plugin's. Two-column layout with title,
  * optional slug, and a status panel; non-default-locale creates prompt a modal.
  */
 
-import type { EntriesBinding } from './binding';
+import type { UseAdminEntryTypeResult } from '../../hooks/use-admin-entry-type';
 import type { Entry, EntryUpdateData } from 'astromech';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
@@ -13,19 +12,20 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { entryMutations, useEntriesQuery } from '../../hooks/entries';
+import { useAdminEntryType } from '../../hooks/use-admin-entry-type';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useEntryForm } from '../../hooks/use-entry-form';
-import { usePermissions } from '../../hooks/use-permissions';
 import { queryKeys } from '../../hooks/use-query-keys';
-import { EntryNamespaceProvider, namespaceForScope } from '../../i18n/entry-namespace';
-import { resolveAdminEntryType, resolveForm } from '../../rendering/resolve';
+import { EntryNamespaceProvider } from '../../i18n/entry-namespace';
+import { resolveForm } from '../../rendering/resolve';
 import { defaultContentLocale } from '../../utilities/content-locale';
-import { entryEditPath } from '../../utilities/entry-admin-path';
+import { entryEditPath, entryTypeBasePath } from '../../utilities/entry-admin-path';
 import {
     FieldErrorsProvider,
     FieldWarningsProvider,
 } from '../fields/field-errors-context';
 import { FieldValidationProvider } from '../fields/field-validation-context';
+import { NotFoundPage } from '../layout/not-found-page';
 import { Breadcrumb } from '../ui/breadcrumb';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -51,7 +51,7 @@ type CreateMode = 'translate' | 'blank-in-entry' | 'standalone';
 
 type CreateLocaleModalProps = {
     open: boolean;
-    binding: EntriesBinding;
+    type: string;
     locale: string;
     defaultLocale: string;
     onCancel: () => void;
@@ -62,7 +62,7 @@ type CreateLocaleModalProps = {
 
 function CreateLocaleModal({
     open,
-    binding,
+    type,
     locale,
     defaultLocale,
     onCancel,
@@ -76,7 +76,7 @@ function CreateLocaleModal({
 
     // Source entries are existing rows in the default locale (the dominant case).
     const { data: sourceList } = useEntriesQuery({
-        type: binding.type,
+        type,
         locale: defaultLocale,
         limit: 'all',
     });
@@ -196,21 +196,33 @@ function RadioOption({
 }
 
 export function EntryNewPage({
-    binding,
-    requestedLocale: requestedLocaleProp,
+    type,
+    requestedLocale,
 }: {
-    binding: EntriesBinding;
+    /** Entry type id: `post`, or `forms/form` for a plugin's. */
+    type: string;
     /** Requested locale from the route search params; defaults to default locale. */
     requestedLocale: string | undefined;
 }): React.ReactElement {
-    const { type, cacheScope, config: entryType, basePath } = binding;
+    const entryType = useAdminEntryType(type);
+    if (entryType === null) return <NotFoundPage path={entryTypeBasePath(type)} />;
+    return <EntryNewBody entryType={entryType} requestedLocale={requestedLocale} />;
+}
+
+function EntryNewBody({
+    entryType,
+    requestedLocale: requestedLocaleProp,
+}: {
+    entryType: UseAdminEntryTypeResult;
+    requestedLocale: string | undefined;
+}): React.ReactElement {
+    const { type, config, basePath, namespace, can } = entryType;
     const navigate = useNavigate();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const { hasPermission } = usePermissions();
-    const canCreate = hasPermission(binding.permissionFor('create'));
+    const canCreate = can('create');
 
-    const capabilities = entryType?.capabilities;
+    const capabilities = config.capabilities;
     const hasI18n = capabilities?.translatable === true;
     const requestedLocale = requestedLocaleProp ?? defaultContentLocale();
     const isNonDefaultLocale = hasI18n && requestedLocale !== defaultContentLocale();
@@ -220,13 +232,13 @@ export function EntryNewPage({
     const [chosenEntryId, setChosenEntryId] = useState<string | null>(null);
     const [modalOpen, setModalOpen] = useState<boolean>(isNonDefaultLocale);
 
-    const resolvedForm = resolveForm(resolveAdminEntryType(entryType, type));
+    const resolvedForm = resolveForm(config);
     const { hasTitle, hasSlug, hasStatuses, main, sidebar } = resolvedForm;
     // The two columns together ARE the full field tree the client validates.
     // Derived above the permission bail-out so the memo keeps its hook slot.
     const fieldDefinitions = React.useMemo(() => [...main, ...sidebar], [main, sidebar]);
     const queryClient = useQueryClient();
-    const single = entryType?.single ?? type;
+    const single = config.single;
     const createTranslation = useAdminMutation(entryMutations(type).createTranslation, {
         onSuccess: (entry) => handleCreated(entry),
     });
@@ -239,7 +251,7 @@ export function EntryNewPage({
         void navigate({ to: basePath });
         return <></>;
     }
-    const plural = entryType?.plural ?? type;
+    const plural = config.plural;
 
     const {
         form,
@@ -253,7 +265,7 @@ export function EntryNewPage({
     } = useEntryForm({
         fieldDefinitions,
         operation: 'create',
-        namespace: namespaceForScope(cacheScope),
+        namespace: namespace,
         hasSlug,
         hasStatuses,
         // Adding a locale to an existing entry is an `update` on that locale,
@@ -309,12 +321,12 @@ export function EntryNewPage({
     }
 
     return (
-        <EntryNamespaceProvider namespace={namespaceForScope(cacheScope)}>
+        <EntryNamespaceProvider namespace={namespace}>
             <Page>
                 {isNonDefaultLocale && (
                     <CreateLocaleModal
                         open={modalOpen}
-                        binding={binding}
+                        type={type}
                         locale={requestedLocale}
                         defaultLocale={adminConfig.defaultLocale}
                         onCancel={handleModalCancel}

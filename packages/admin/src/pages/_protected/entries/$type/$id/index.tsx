@@ -1,14 +1,10 @@
 /**
- * Entry edit route — root entry types. Wraps the shared `EntryEditPage`; the
- * loader prefetches the entry, and a qualified type redirects to the plugin
- * route.
+ * Entry edit route for the site's types; the loader prefetches the entry, and a
+ * plugin's type id redirects to the plugin route.
  */
 
-import type { EntriesBinding } from '../../../../../components/entries/binding';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { entryPermission } from 'astromech/shared';
 import React from 'react';
-import adminConfig from 'virtual:astromech/admin-config';
 import { EntryEditPage } from '../../../../../components/entries/entry-edit-page';
 import { entryQueryOptions } from '../../../../../hooks/entries';
 import { defaultContentLocale } from '../../../../../utilities/content-locale';
@@ -20,14 +16,7 @@ import {
 function EntryEditRoutePage(): React.ReactElement {
     const { type, id } = Route.useParams();
     const { locale, staged } = Route.useSearch();
-    const binding: EntriesBinding = {
-        type,
-        cacheScope: '',
-        config: adminConfig.entryTypes[type],
-        basePath: `/entries/${type}`,
-        permissionFor: (action) => entryPermission(type, action),
-    };
-    return <EntryEditPage binding={binding} id={id} locale={locale} staged={staged} />;
+    return <EntryEditPage type={type} id={id} locale={locale} staged={staged} />;
 }
 
 export const Route = createFileRoute('/_protected/entries/$type/$id/')({

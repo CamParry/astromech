@@ -113,35 +113,3 @@ export function resolveForm(config: AdminEntryType): ResolvedForm {
         sidebar: config.fields.sidebar,
     };
 }
-
-/**
- * Resolve a full AdminEntryType for an entry type, defaulting an absent
- * config to the current built-in behaviour (title on, statuses on, slug off
- * since slug config is null, no i18n, no admin columns).
- */
-export function resolveAdminEntryType(
-    config: AdminEntryType | undefined,
-    type: string
-): AdminEntryType {
-    return (
-        config ?? {
-            single: type,
-            plural: type,
-            versioning: false,
-            translatable: false,
-            slug: null,
-            adminColumns: [],
-            fields: { main: [], sidebar: [] },
-            url: null,
-            capabilities: {
-                statuses: true,
-                slug: true,
-                translatable: false,
-                versioning: false,
-                staging: false,
-                trash: true,
-            },
-            titleField: 'title',
-        }
-    );
-}

@@ -7,7 +7,6 @@
  * panel asks for, and a locale with no row is opened, not written.
  */
 
-import type { GlobalsBinding } from '@/admin/components/globals/binding';
 import type { AuthUser } from '@/admin/context/auth';
 import type { AdminGlobal, Global, GlobalsService } from '@/types/index';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -49,9 +48,15 @@ vi.mock('astromech/fetch', async (importOriginal) => {
 });
 
 // The shim declares one locale; the switcher needs two to have anywhere to go.
-vi.mock('virtual:astromech/admin-config', () => ({
-    default: { defaultLocale: 'en', locales: ['en', 'fr'] },
+const { adminConfig } = vi.hoisted(() => ({
+    adminConfig: {
+        defaultLocale: 'en',
+        locales: ['en', 'fr'],
+        globals: {} as Record<string, unknown>,
+    },
 }));
+
+vi.mock('virtual:astromech/admin-config', () => ({ default: adminConfig }));
 
 const KEY = 'site';
 const BASE_PATH = `/globals/${KEY}`;
@@ -176,13 +181,7 @@ function mountPage(options: {
     initialUrl?: string;
 }) {
     client.globals = options.api;
-    const binding: GlobalsBinding = {
-        key: KEY,
-        cacheScope: '',
-        config: options.config,
-        basePath: BASE_PATH,
-        permissionFor: (action) => `global:${KEY}:${action}`,
-    };
+    adminConfig.globals[KEY] = options.config;
 
     const rootRoute = createRootRoute({ component: () => <Outlet /> });
     const editRoute = createRoute({
@@ -199,7 +198,7 @@ function mountPage(options: {
             };
             return (
                 <GlobalEditPage
-                    binding={binding}
+                    globalKey={KEY}
                     locale={search.locale}
                     staged={search.staged ?? false}
                 />

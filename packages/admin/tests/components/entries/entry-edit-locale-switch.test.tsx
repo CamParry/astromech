@@ -38,7 +38,6 @@ import { AiContextProvider } from '@/admin/context/ai-context';
 import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
 import { queryKeys } from '@/admin/hooks/use-query-keys';
 import '@/admin/rendering/register-fields';
-import type { EntriesBinding } from '@/admin/components/entries/binding';
 import type * as UseEntryForm from '@/admin/hooks/use-entry-form';
 import type {
     AdminEntryType,
@@ -66,9 +65,15 @@ vi.mock('astromech/fetch', async (importOriginal) => {
 });
 
 // The shim declares one locale; the switcher needs two to have anywhere to go.
-vi.mock('virtual:astromech/admin-config', () => ({
-    default: { defaultLocale: 'en', locales: ['en', 'fr'] },
+const { adminConfig } = vi.hoisted(() => ({
+    adminConfig: {
+        defaultLocale: 'en',
+        locales: ['en', 'fr'],
+        entryTypes: {} as Record<string, unknown>,
+    },
 }));
+
+vi.mock('virtual:astromech/admin-config', () => ({ default: adminConfig }));
 
 /** Every distinct `values.fields` the page's form passed through. */
 const transitions: unknown[] = [];
@@ -203,13 +208,7 @@ function makeApi() {
 
 function mountApp(queryClient: QueryClient, api: EntriesService) {
     client.entries = api;
-    const binding: EntriesBinding = {
-        type: TYPE,
-        cacheScope: '',
-        config: ENTRY_TYPE_CONFIG,
-        basePath: `/entries/${TYPE}`,
-        permissionFor: (action) => `entry:${TYPE}:${action}`,
-    };
+    adminConfig.entryTypes[TYPE] = ENTRY_TYPE_CONFIG;
 
     const rootRoute = createRootRoute({ component: () => <Outlet /> });
     const editRoute = createRoute({
@@ -221,9 +220,7 @@ function mountApp(queryClient: QueryClient, api: EntriesService) {
         component: function EditRoute() {
             const params = useParams({ strict: false }) as { id: string };
             const search = useSearch({ strict: false }) as { locale?: string };
-            return (
-                <EntryEditPage binding={binding} id={params.id} locale={search.locale} />
-            );
+            return <EntryEditPage type={TYPE} id={params.id} locale={search.locale} />;
         },
     });
     const router = createRouter({

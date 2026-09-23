@@ -68,15 +68,16 @@ callbacks)` runs any of them: it invalidates `meta.invalidates` and toasts.
 
 - [x] Add the `globals` case to `utilities/ai-context.ts` with no `default`.
       Already true; lint covers exhaustiveness.
-- [ ] One key factory keyed by the entry type id; delete `scopedEntryKeys`,
+- [x] One key factory keyed by the entry type id; delete `scopedEntryKeys`,
       `scopedGlobalKeys` and `cacheScope`; move the inline keys in, with the
       dashboard's counts under `entries.all(type)` so mutations invalidate
-      them.
-- [ ] Per-resource `mutationOptions` naming the keys each one invalidates;
+      them. The two plugin page keys stay, under `['plugin', name]`.
+- [x] Per-resource `mutationOptions` naming the keys each one invalidates;
       `hooks/entries.ts`'s bodies become one table; bulk restore sends one
       request.
-- [ ] `useAdminEntryType(typeId)` replaces `EntriesBinding` and
-      `GlobalsBinding`; the core and plugin route files only map params.
+- [x] `useAdminEntryType(typeId)` replaces `EntriesBinding` and
+      `GlobalsBinding` (with `useAdminGlobal(id)`); the core and plugin route
+      files only map params, and an unknown id renders `NotFoundPage`.
 - [ ] `useEditController(resource, target)`: loading canonical or staged, one
       form codec, one `update` carrying status, staging create, merge and
       discard. Shared `StagingControls` and `PublishPanel`.

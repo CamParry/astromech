@@ -5,7 +5,6 @@
  * made the entry, and drops the author when the id resolves to no known user.
  */
 
-import type { EntriesBinding } from '@/admin/components/entries/binding';
 import type { AuthUser } from '@/admin/context/auth';
 import type { AdminEntryType, EntriesService, Entry, EntryStatus } from '@/types/index';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -30,9 +29,15 @@ import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
 import en from '@/admin/locales/en.json';
 import '@/admin/rendering/register-fields';
 
-vi.mock('virtual:astromech/admin-config', () => ({
-    default: { defaultLocale: 'en', locales: ['en'] },
+const { adminConfig } = vi.hoisted(() => ({
+    adminConfig: {
+        defaultLocale: 'en',
+        locales: ['en'],
+        entryTypes: {} as Record<string, unknown>,
+    },
 }));
+
+vi.mock('virtual:astromech/admin-config', () => ({ default: adminConfig }));
 
 // The page calls entries and users through the client; each test sets the
 // entries stub.
@@ -109,13 +114,7 @@ function mountPage(entry: Entry): void {
         update: vi.fn(),
     } as unknown as EntriesService;
     client.entries = api;
-    const binding: EntriesBinding = {
-        type: TYPE,
-        cacheScope: '',
-        config: ENTRY_TYPE_CONFIG,
-        basePath: `/entries/${TYPE}`,
-        permissionFor: (action) => `entry:${TYPE}:${action}`,
-    };
+    adminConfig.entryTypes[TYPE] = ENTRY_TYPE_CONFIG;
 
     const rootRoute = createRootRoute({ component: () => <Outlet /> });
     const editRoute = createRoute({
@@ -123,7 +122,7 @@ function mountPage(entry: Entry): void {
         path: '/entries/$type/$id',
         component: function EditRoute() {
             const params = useParams({ strict: false }) as { id: string };
-            return <EntryEditPage binding={binding} id={params.id} locale="en" />;
+            return <EntryEditPage type={TYPE} id={params.id} locale="en" />;
         },
     });
     const router = createRouter({

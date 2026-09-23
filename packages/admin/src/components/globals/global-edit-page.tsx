@@ -1,14 +1,13 @@
 /**
- * Global edit page, parameterized by a `GlobalsBinding`; serves host and
- * plugin-namespaced globals. Composed from the entry edit page's own building
+ * Global edit page for one global id, the site's or a plugin's. Composed from the entry edit page's own building
  * blocks (`useEntryForm`, `EntryFieldColumn`, `PublishPanel`, `LocaleSwitcher`,
  * `EntryFormErrors`) rather than a copy of it. A global has no list to return
  * to, nothing to duplicate and nothing to delete, so the header carries the
  * status, the locale, the staging controls and Update, and nothing else.
  */
 
+import type { UseAdminGlobalResult } from '../../hooks/use-admin-global';
 import type { EntryPayload } from '../../hooks/use-entry-form';
-import type { GlobalsBinding } from './binding';
 import type { Global } from 'astromech';
 import { useStore } from '@tanstack/react-form';
 import { useQueryClient } from '@tanstack/react-query';
@@ -25,16 +24,20 @@ import {
     useGlobal,
     useGlobalVersions,
 } from '../../hooks/globals';
+import { useAdminGlobal } from '../../hooks/use-admin-global';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useEntryForm } from '../../hooks/use-entry-form';
-import { usePermissions } from '../../hooks/use-permissions';
 import { queryKeys } from '../../hooks/use-query-keys';
-import { EntryNamespaceProvider, namespaceForScope } from '../../i18n/entry-namespace';
+import { EntryNamespaceProvider } from '../../i18n/entry-namespace';
 import { resolveLabel } from '../../i18n/labels';
 import { Link } from '../../rendering/cells/link';
 import { defaultContentLocale } from '../../utilities/content-locale';
 import { formatDatetimeForInput } from '../../utilities/formatters';
-import { globalEditPath, globalVersionsPath } from '../../utilities/global-admin-path';
+import {
+    globalBasePath,
+    globalEditPath,
+    globalVersionsPath,
+} from '../../utilities/global-admin-path';
 import { EntryFieldColumn } from '../entries/entry-fields-renderer';
 import { EntryFormErrors } from '../entries/entry-form-errors';
 import { PublishPanel } from '../entries/publish-panel';
@@ -43,6 +46,7 @@ import {
     FieldWarningsProvider,
 } from '../fields/field-errors-context';
 import { FieldValidationProvider } from '../fields/field-validation-context';
+import { NotFoundPage } from '../layout/not-found-page';
 import { LocaleSwitcher } from '../translations/locale-switcher';
 import { Breadcrumb } from '../ui/breadcrumb';
 import { Button } from '../ui/button';
@@ -63,7 +67,8 @@ import { StatusBadge } from '../ui/status-badge';
 import { useToast } from '../ui/toast';
 
 type GlobalEditPageProps = {
-    binding: GlobalsBinding;
+    /** Global id: `site`, or `seo/settings` for a plugin's. */
+    globalKey: string;
     /** Locale from the route search params; defaults to the default content locale. */
     locale: string | undefined;
     /** Show the staged change for that locale rather than the canonical row. */
@@ -76,15 +81,17 @@ type GlobalEditPageProps = {
  * stateful field containers would keep the last row's state.
  */
 export function GlobalEditPage({
-    binding,
+    globalKey,
     locale,
     staged = false,
 }: GlobalEditPageProps): React.ReactElement {
+    const global = useAdminGlobal(globalKey);
     const resolvedLocale = locale ?? defaultContentLocale();
+    if (global === null) return <NotFoundPage path={globalBasePath(globalKey)} />;
     return (
         <GlobalEditPageBody
-            key={`${binding.key}:${resolvedLocale}:${String(staged)}`}
-            binding={binding}
+            key={`${globalKey}:${resolvedLocale}:${String(staged)}`}
+            global={global}
             locale={resolvedLocale}
             staged={staged}
         />
@@ -92,37 +99,35 @@ export function GlobalEditPage({
 }
 
 function GlobalEditPageBody({
-    binding,
+    global: resource,
     locale,
     staged: isStaged,
 }: {
-    binding: GlobalsBinding;
+    global: UseAdminGlobalResult;
     locale: string;
     staged: boolean;
 }): React.ReactElement {
-    const { key, cacheScope, config, basePath } = binding;
-    const namespace = namespaceForScope(cacheScope);
+    const { key, config, basePath, namespace, can } = resource;
     const { toast } = useToast();
     const { t } = useTranslation();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const confirm = useConfirm();
-    const { hasPermission } = usePermissions();
 
-    const label = resolveLabel(config?.label, key, t, namespace);
-    const capabilities = config?.capabilities;
+    const label = resolveLabel(config.label, key, t, namespace);
+    const capabilities = config.capabilities;
     const hasStatuses = capabilities?.statuses === true;
     const hasVersioning = capabilities?.versioning === true;
     const hasStaging = capabilities?.staging === true;
     const isTranslatable = capabilities?.translatable === true;
 
-    const main = config?.fields.main ?? [];
-    const sidebar = config?.fields.sidebar ?? [];
+    const main = config.fields.main ?? [];
+    const sidebar = config.fields.sidebar ?? [];
     // The two columns together ARE the full field tree the client validates.
     const fieldDefinitions = React.useMemo(() => [...main, ...sidebar], [main, sidebar]);
 
-    const isReadOnly = !hasPermission(binding.permissionFor('update'));
-    const canPublish = hasPermission(binding.permissionFor('publish'));
+    const isReadOnly = !can('update');
+    const canPublish = can('publish');
 
     // `null` is a declared global nobody has saved yet: an empty form, whose
     // first save is the `update` that creates the row.

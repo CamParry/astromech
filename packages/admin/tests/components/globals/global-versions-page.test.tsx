@@ -6,7 +6,6 @@
  * the global by key and locale — never by a row id.
  */
 
-import type { GlobalsBinding } from '@/admin/components/globals/binding';
 import type { AuthUser } from '@/admin/context/auth';
 import type {
     AdminGlobal,
@@ -37,6 +36,16 @@ import { queryKeys } from '@/admin/hooks/use-query-keys';
 
 // The page calls globals through the client; each test sets the stub.
 const client = vi.hoisted(() => ({ globals: undefined as unknown }));
+
+const { adminConfig } = vi.hoisted(() => ({
+    adminConfig: {
+        defaultLocale: 'en',
+        locales: ['en'],
+        globals: {} as Record<string, unknown>,
+    },
+}));
+
+vi.mock('virtual:astromech/admin-config', () => ({ default: adminConfig }));
 
 vi.mock('astromech/fetch', async (importOriginal) => {
     const real = await importOriginal<{ astromechUntypedClient: object }>();
@@ -96,13 +105,7 @@ function mountPage() {
     } as unknown as GlobalsService;
 
     client.globals = api;
-    const binding: GlobalsBinding = {
-        key: KEY,
-        cacheScope: '',
-        config: CONFIG,
-        basePath: BASE_PATH,
-        permissionFor: (action) => `global:${KEY}:${action}`,
-    };
+    adminConfig.globals[KEY] = CONFIG;
 
     const queryClient = new QueryClient({
         defaultOptions: { queries: { staleTime: 30_000, retry: false } },
@@ -125,7 +128,7 @@ function mountPage() {
     const versionsRoute = createRoute({
         getParentRoute: () => rootRoute,
         path: `${BASE_PATH}/versions`,
-        component: () => <GlobalVersionsPage binding={binding} locale="en" />,
+        component: () => <GlobalVersionsPage globalKey={KEY} locale="en" />,
     });
     const router = createRouter({
         routeTree: rootRoute.addChildren([versionsRoute]),

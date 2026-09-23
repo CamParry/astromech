@@ -9,6 +9,14 @@ import type { EntryEditSearch } from './entry-admin-path';
 import adminConfig from 'virtual:astromech/admin-config';
 import { editSearchString } from './entry-admin-path';
 
+/** A global's edit path, which its other paths extend: `/globals/site`. */
+export function globalBasePath(globalId: string): string {
+    const plugin = pluginGlobalRouteParams(globalId);
+    return plugin === null
+        ? `/globals/${globalId}`
+        : `/plugin/${plugin.name}/globals/${plugin.key}`;
+}
+
 /** Edit path under a mount's own base path (`/globals/site`). */
 export function globalEditPath(basePath: string, search?: EntryEditSearch): string {
     return `${basePath}${editSearchString(search)}`;

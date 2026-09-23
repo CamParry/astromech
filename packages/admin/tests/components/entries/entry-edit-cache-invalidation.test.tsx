@@ -17,7 +17,7 @@
  * `Link` resolve, plus the plain-React-context providers the page's hooks
  * need (`ToastProvider`, `AuthProvider`, `ConfirmProvider`, `AiContextProvider`).
  * It deliberately skips the app's `_protected` layout/`AppShell` — that's nav
- * chrome unrelated to this bug — and builds an `EntriesBinding` by hand rather
+ * chrome unrelated to this bug — and declares its entry type in a mocked config rather
  * than going through a route loader, exactly as `entry-edit-cache-invalidation`
  * needs: a save must survive whatever the real page's `onSuccess` does, not
  * whatever this test's own copy of it does.
@@ -45,7 +45,6 @@ import { AiContextProvider } from '@/admin/context/ai-context';
 import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
 import { queryKeys } from '@/admin/hooks/use-query-keys';
 import '@/admin/rendering/register-fields';
-import type { EntriesBinding } from '@/admin/components/entries/binding';
 import type {
     AdminEntryType,
     EntriesService,
@@ -54,6 +53,17 @@ import type {
     QueryResult,
     User,
 } from '@/types/index';
+
+// The page reads its entry type from the config; each mount declares it.
+const { adminConfig } = vi.hoisted(() => ({
+    adminConfig: {
+        defaultLocale: 'en',
+        locales: ['en'],
+        entryTypes: {} as Record<string, unknown>,
+    },
+}));
+
+vi.mock('virtual:astromech/admin-config', () => ({ default: adminConfig }));
 
 // The page calls entries through the client; each test sets the stub.
 const client = vi.hoisted(() => ({ entries: undefined as unknown }));
@@ -83,7 +93,6 @@ beforeAll(async () => {
 const TYPE = 'caseStudy';
 const ID = 'cs1';
 const LOCALE = 'en';
-const CACHE_SCOPE = '';
 
 function makeEntry(customer: string): Entry {
     return {
@@ -137,19 +146,13 @@ function mountEditPage(queryClient: QueryClient) {
     } as unknown as EntriesService;
 
     client.entries = api;
-    const binding: EntriesBinding = {
-        type: TYPE,
-        cacheScope: CACHE_SCOPE,
-        config: ENTRY_TYPE_CONFIG,
-        basePath: `/entries/${TYPE}`,
-        permissionFor: (action) => `entry:${TYPE}:${action}`,
-    };
+    adminConfig.entryTypes[TYPE] = ENTRY_TYPE_CONFIG;
 
     const rootRoute = createRootRoute({ component: () => <Outlet /> });
     const editRoute = createRoute({
         getParentRoute: () => rootRoute,
         path: '/',
-        component: () => <EntryEditPage binding={binding} id={ID} locale={LOCALE} />,
+        component: () => <EntryEditPage type={TYPE} id={ID} locale={LOCALE} />,
     });
     const router = createRouter({
         routeTree: rootRoute.addChildren([editRoute]),

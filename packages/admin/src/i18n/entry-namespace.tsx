@@ -1,7 +1,7 @@
 /**
- * Entry i18n namespace seam. Label keys resolve against a namespace derived
- * from the route: plugin entry types use the plugin name, root types use
- * `translation`. Entry pages wrap their body in `EntryNamespaceProvider`.
+ * Entry i18n namespace seam. Label keys resolve against a namespace: a plugin's
+ * entry types and globals use the plugin name, the site's use `translation`.
+ * Entry pages wrap their body in `EntryNamespaceProvider`.
  */
 
 import type { Label } from 'astromech';
@@ -33,9 +33,9 @@ function useEntryNamespace(): string {
     return React.useContext(EntryNamespaceContext);
 }
 
-/** Map an entry surface's cache scope (`''` root, else plugin name) to a namespace. */
-export function namespaceForScope(cacheScope: string): string {
-    return cacheScope === '' ? CORE_NS : cacheScope;
+/** The namespace a resource's labels resolve against: its plugin's, or the core one. */
+export function labelNamespace(plugin: string | undefined): string {
+    return plugin ?? CORE_NS;
 }
 
 /** Hook returning a `(label, name) => string` resolver bound to the active namespace. */

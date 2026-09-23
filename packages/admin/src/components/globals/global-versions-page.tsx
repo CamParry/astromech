@@ -1,37 +1,51 @@
 /**
- * Global version history page, parameterized by a `GlobalsBinding`. A version
+ * Global version history page for one global id. A version
  * snapshots one locale's content row, so the list is the versions of the
  * locale in view; the list, diff and restore UI is the shared
  * `VersionHistory`.
  */
 
-import type { GlobalsBinding } from './binding';
+import type { UseAdminGlobalResult } from '../../hooks/use-admin-global';
 import { useNavigate } from '@tanstack/react-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { globalMutations, useGlobalVersions } from '../../hooks/globals';
+import { useAdminGlobal } from '../../hooks/use-admin-global';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
-import { namespaceForScope } from '../../i18n/entry-namespace';
 import { resolveLabel } from '../../i18n/labels';
 import { defaultContentLocale } from '../../utilities/content-locale';
-import { globalEditPath } from '../../utilities/global-admin-path';
+import { globalBasePath, globalEditPath } from '../../utilities/global-admin-path';
+import { NotFoundPage } from '../layout/not-found-page';
 import { VersionHistory } from '../versions/version-history';
 
 export function GlobalVersionsPage({
-    binding,
+    globalKey,
+    locale,
+}: {
+    /** Global id: `site`, or `seo/settings` for a plugin's. */
+    globalKey: string;
+    locale: string | undefined;
+}): React.ReactElement {
+    const global = useAdminGlobal(globalKey);
+    if (global === null) return <NotFoundPage path={globalBasePath(globalKey)} />;
+    return <GlobalVersionsBody global={global} locale={locale} />;
+}
+
+function GlobalVersionsBody({
+    global,
     locale: localeProp,
 }: {
-    binding: GlobalsBinding;
+    global: UseAdminGlobalResult;
     /** Locale from the route search params; defaults to the default content locale. */
     locale: string | undefined;
 }): React.ReactElement {
-    const { key, cacheScope, config, basePath } = binding;
+    const { key, config, basePath, namespace } = global;
     const locale = localeProp ?? defaultContentLocale();
     const editPath = globalEditPath(basePath, { locale });
     const { t } = useTranslation();
     const navigate = useNavigate();
 
-    const label = resolveLabel(config?.label, key, t, namespaceForScope(cacheScope));
+    const label = resolveLabel(config.label, key, t, namespace);
 
     const { data: versions, isLoading } = useGlobalVersions(key, locale, true);
 

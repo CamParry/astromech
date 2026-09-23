@@ -8,23 +8,13 @@ import { useAuth } from '../context/auth';
 
 export { hasPermission };
 
-/** Permission checks for the signed-in user, scoped by collection where relevant. */
+/** Permission checks for the signed-in user. Entry types and globals use `useAdminEntryType` and `useAdminGlobal`. */
 export function usePermissions() {
     const { user } = useAuth();
     const permissions = user?.permissions ?? [];
 
     return {
         hasPermission: (p: string) => hasPermission(permissions, p),
-        canRead: (collection: string) =>
-            hasPermission(permissions, `entry:${collection}:read`),
-        canCreate: (collection: string) =>
-            hasPermission(permissions, `entry:${collection}:create`),
-        canUpdate: (collection: string) =>
-            hasPermission(permissions, `entry:${collection}:update`),
-        canDelete: (collection: string) =>
-            hasPermission(permissions, `entry:${collection}:delete`),
-        canPublish: (collection: string) =>
-            hasPermission(permissions, `entry:${collection}:publish`),
         canReadMedia: () => hasPermission(permissions, 'media:read'),
         canUploadMedia: () => hasPermission(permissions, 'media:upload'),
         canUpdateMedia: () => hasPermission(permissions, 'media:update'),

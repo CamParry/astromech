@@ -1,37 +1,17 @@
-/**
- * Plugin entry-type version history route. Builds a plugin `EntriesBinding`
- * and renders the shared `EntryVersionsPage`; types with versioning off
- * never link here.
- */
+/** Entry version history route for a plugin's types, addressed by the qualified type id. */
 
 import { createFileRoute } from '@tanstack/react-router';
+import { qualifyEntryType } from 'astromech/shared';
 import React from 'react';
-import { useTranslation } from 'react-i18next';
-import adminConfig from 'virtual:astromech/admin-config';
-import { buildPluginEntriesBinding } from '../../../../../../../components/entries/binding';
 import { EntryVersionsPage } from '../../../../../../../components/entries/entry-versions-page';
-import { EmptyState } from '../../../../../../../components/ui/empty-state';
-import { Page, PageContent } from '../../../../../../../components/ui/page';
 import { validateEntryEditSearch } from '../../../../../../../utilities/entry-admin-path';
 
 function PluginEntryVersionsPage(): React.ReactElement {
     const { name, type, id } = Route.useParams();
     const { locale } = Route.useSearch();
-    const { t } = useTranslation();
-    const binding = buildPluginEntriesBinding(adminConfig, name, type);
-    if (!binding) {
-        return (
-            <Page>
-                <PageContent>
-                    <EmptyState
-                        title={t('plugins.pageNotFound')}
-                        description={`/plugin/${name}/entries/${type}`}
-                    />
-                </PageContent>
-            </Page>
-        );
-    }
-    return <EntryVersionsPage binding={binding} id={id} locale={locale} />;
+    return (
+        <EntryVersionsPage type={qualifyEntryType(name, type)} id={id} locale={locale} />
+    );
 }
 
 export const Route = createFileRoute(

@@ -1,14 +1,10 @@
 /**
- * Entry create route — root entry types. Wraps the shared `EntryNewPage`,
- * carrying the `locale` search param through; a qualified type redirects
- * to the plugin route.
+ * Entry create route for the site's types, carrying the `locale` search param
+ * through; a plugin's type id redirects to the plugin route.
  */
 
-import type { EntriesBinding } from '../../../../components/entries/binding';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { entryPermission } from 'astromech/shared';
 import React from 'react';
-import adminConfig from 'virtual:astromech/admin-config';
 import { EntryNewPage } from '../../../../components/entries/entry-new-page';
 import { pluginEntryRouteParams } from '../../../../utilities/entry-admin-path';
 
@@ -19,14 +15,7 @@ type SearchParams = {
 function EntryCreatePage(): React.ReactElement {
     const { type } = Route.useParams();
     const search = Route.useSearch();
-    const binding: EntriesBinding = {
-        type,
-        cacheScope: '',
-        config: adminConfig.entryTypes[type],
-        basePath: `/entries/${type}`,
-        permissionFor: (action) => entryPermission(type, action),
-    };
-    return <EntryNewPage binding={binding} requestedLocale={search.locale} />;
+    return <EntryNewPage type={type} requestedLocale={search.locale} />;
 }
 
 export const Route = createFileRoute('/_protected/entries/$type/new')({

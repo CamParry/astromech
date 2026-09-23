@@ -31,12 +31,15 @@ export function entryAdminPath(
     id: string,
     search?: EntryEditSearch
 ): string {
+    return entryEditPath(entryTypeBasePath(typeId), id, search);
+}
+
+/** An entry type's list path, which its other paths extend: `/entries/post`. */
+export function entryTypeBasePath(typeId: string): string {
     const plugin = pluginEntryRouteParams(typeId);
-    const path =
-        plugin === null
-            ? `/entries/${typeId}/${id}`
-            : `/plugin/${plugin.name}/entries/${plugin.type}/${id}`;
-    return `${path}${editSearchString(search)}`;
+    return plugin === null
+        ? `/entries/${typeId}`
+        : `/plugin/${plugin.name}/entries/${plugin.type}`;
 }
 
 /**
@@ -80,5 +83,48 @@ export function validateEntryEditSearch(
         out.locale = search['locale'];
     }
     if (search['staged'] === true || search['staged'] === 'true') out.staged = true;
+    return out;
+}
+
+/**
+ * URL search-param shape for the entries list, shared by the site and plugin
+ * list routes so both keep the same filter, sort and page state.
+ */
+export type EntriesListSearch = {
+    q?: string;
+    status?: string;
+    locale?: string;
+    /** `${columnKey}:${'asc' | 'desc'}` */
+    sort?: string;
+    page?: number;
+};
+
+/** Parse/validate raw URL search into the typed list-search shape. */
+export function validateEntriesListSearch(
+    search: Record<string, unknown>
+): EntriesListSearch {
+    const out: EntriesListSearch = {};
+    if (typeof search['q'] === 'string' && search['q']) out.q = search['q'];
+    if (
+        typeof search['status'] === 'string' &&
+        search['status'] &&
+        search['status'] !== 'all'
+    ) {
+        out.status = search['status'];
+    }
+    if (typeof search['locale'] === 'string' && search['locale']) {
+        out.locale = search['locale'];
+    }
+    if (typeof search['sort'] === 'string' && /^.+:(asc|desc)$/.test(search['sort'])) {
+        out.sort = search['sort'];
+    }
+    const pageRaw = search['page'];
+    const pageNum =
+        typeof pageRaw === 'number'
+            ? pageRaw
+            : typeof pageRaw === 'string'
+              ? Number(pageRaw)
+              : NaN;
+    if (Number.isFinite(pageNum) && pageNum > 1) out.page = pageNum;
     return out;
 }
