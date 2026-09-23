@@ -7,7 +7,7 @@
 import type { ApiErrorCode } from '@/errors/api-error';
 import type { Context, ErrorHandler, NotFoundHandler } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
-import type { ZodError, ZodIssue } from 'zod';
+import type { ZodIssue } from 'zod';
 import { HTTPException } from 'hono/http-exception';
 import { BulkOperationError } from '@/entries/errors';
 import { resolveNodeEnv } from '@/env';
@@ -93,15 +93,6 @@ function validationFailed(
         fields,
         ...(form && form.length > 0 ? { form } : {}),
     });
-}
-
-/**
- * OpenAPIHono's own request-validation envelope, for a request that fails the
- * schema its documented operation declares. Distinct from the canonical error
- * body on purpose: it is what a client generated from the document expects.
- */
-export function requestSchemaError(c: Context, err: ZodError): Response {
-    return c.json({ success: false, error: err }, 400);
 }
 
 /**
