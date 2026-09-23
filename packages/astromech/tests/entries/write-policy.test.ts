@@ -8,7 +8,7 @@ import { roleWith } from '@tests/fixtures';
 import { contextAs, createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService } from '@/app-context/services';
-import { CapabilityError } from '@/entries/errors';
+import { CapabilityError } from '@/errors/capability';
 import { PermissionDeniedError } from '@/errors/permission';
 import { scopedServices } from '@/policies/scoped-services';
 

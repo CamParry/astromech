@@ -8,7 +8,7 @@ import { createTestDb, createTestUser, runAsUser, setupTestConfig } from '@tests
 import { beforeEach, describe, expect, it } from 'vitest';
 import { globalsService as api } from '@/app-context/services';
 import { getDb } from '@/database/registry';
-import { GlobalNotFoundError } from '@/globals/errors';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { makeGlobalsConfig } from './globals-config';
 
 beforeEach(async () => {
@@ -19,14 +19,14 @@ beforeEach(async () => {
 describe('an undeclared key', () => {
     it('throws from get rather than answering null', async () => {
         await expect(api.get({ key: 'nope', full: true })).rejects.toThrow(
-            GlobalNotFoundError
+            ResourceNotFoundError
         );
     });
 
     it('throws from update', async () => {
         await expect(
             api.update({ key: 'nope', data: { fields: { title: 'x' } } })
-        ).rejects.toThrow(/Global 'nope' is not declared/);
+        ).rejects.toThrow(/Global 'nope' not found/);
     });
 });
 

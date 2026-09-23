@@ -8,7 +8,7 @@ import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mediaService as api } from '@/app-context/services';
-import { MediaValidationError } from '@/media/errors';
+import { ResourceValidationError } from '@/errors/resource';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { makeTranslatableMediaConfig } from './media-config';
@@ -119,14 +119,14 @@ describe('non-translatable media', () => {
         setupTestConfig(makeTestConfig());
 
         await expect(api.update({ id, locale: 'de', data: {} })).rejects.toThrow(
-            MediaValidationError
+            ResourceValidationError
         );
 
         try {
             await api.get({ id, locale: 'de' });
             expect.unreachable('non-translatable media must refuse another locale');
         } catch (error) {
-            expect((error as MediaValidationError).form).toEqual([
+            expect((error as ResourceValidationError).form).toEqual([
                 "Media is not translatable, so only the 'en' locale can be written.",
             ]);
         }

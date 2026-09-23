@@ -10,7 +10,7 @@ import type { AstromechConfig } from '@/types/index';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { entriesService } from '@/app-context/services';
-import { CapabilityError } from '@/entries/errors';
+import { CapabilityError } from '@/errors/capability';
 
 function makeCapabilityTestConfig(): AstromechConfig {
     return {
@@ -118,7 +118,7 @@ describe('statuses capability', () => {
             .catch((e: unknown) => e);
         expect(err).toBeInstanceOf(CapabilityError);
         const capErr = err as CapabilityError;
-        expect(capErr.entryType).toBe('nostatuses');
+        expect(capErr.id).toBe('nostatuses');
         expect(capErr.capability).toBe('statuses');
     });
 

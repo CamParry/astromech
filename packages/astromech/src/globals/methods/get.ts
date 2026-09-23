@@ -2,9 +2,9 @@ import type { VisibilityShape } from '@/content/visibility';
 import type { Global } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { applyVisibility } from '@/content/visibility';
+import { ResourceValidationError } from '@/errors/resource';
 import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { GlobalValidationError } from '../errors';
 import { readGate } from '../internal/access';
 import {
     asGlobal,
@@ -37,7 +37,7 @@ export const getGlobal = defineServiceMethod({
         // answer null for every global; asking for it in the public shape is a
         // mistake worth naming rather than an empty result.
         if (params.staged === true && params.full !== true) {
-            throw new GlobalValidationError([
+            throw new ResourceValidationError([
                 `${ctx.method.name}: \`staged\` requires \`full\`; a staged change is ` +
                     'never part of the public read.',
             ]);

@@ -2,8 +2,8 @@ import type { Entry } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types';
+import { CapabilityError } from '@/errors/capability';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { CapabilityError } from '../../errors';
 import { entryGate } from '../../internal/access';
 import { isVersioningEnabled } from '../../internal/entry-type';
 import { asEntry, asRecord, getEntryOfType } from '../../internal/records';
@@ -33,7 +33,7 @@ export const mergeStagedEntry = defineServiceMethod({
 
         const repository = getEntryRepository(type);
         const { staging } = repository;
-        if (!staging) throw new CapabilityError(type, 'staging');
+        if (!staging) throw new CapabilityError('entry', type, 'staging');
 
         const canonical = await getEntryOfType(
             ctx.config,

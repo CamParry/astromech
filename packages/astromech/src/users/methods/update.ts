@@ -5,12 +5,12 @@ import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { transaction } from '@/database/transaction';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { requireRole } from '@/permissions/roles';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { UserNotFoundError } from '../errors';
 import { assertKeepsAnAdmin } from '../internal/last-admin';
 import { resolveUserLocale } from '../internal/locale';
 import { readUser } from '../internal/read-user';
@@ -47,7 +47,7 @@ export const updateUser = defineServiceMethod({
         // default-locale row the new one is copied from.
         const current = await repository.get(id, locale);
         const base = current ?? (await readUser(repository, id));
-        if (!base) throw new UserNotFoundError({ id });
+        if (!base) throw new ResourceNotFoundError('user', { id });
 
         const config = ctx.config;
         if (data.role !== undefined) {
@@ -136,7 +136,7 @@ export const updateUser = defineServiceMethod({
         });
 
         const updated = await readUser(repository, id, locale);
-        if (!updated) throw new UserNotFoundError({ id });
+        if (!updated) throw new ResourceNotFoundError('user', { id });
         return toUser(updated);
     },
 });

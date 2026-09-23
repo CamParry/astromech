@@ -7,7 +7,7 @@
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { usersService as api } from '@/app-context/services';
-import { UserValidationError } from '@/users/errors';
+import { ResourceValidationError } from '@/errors/resource';
 import { makeTranslatableUsersConfig } from './users-config';
 
 let id: string;
@@ -103,14 +103,14 @@ describe('non-translatable users', () => {
         setupTestConfig(makeTestConfig());
 
         await expect(api.update({ id, locale: 'de', data: {} })).rejects.toThrow(
-            UserValidationError
+            ResourceValidationError
         );
 
         try {
             await api.get({ id, locale: 'de' });
             expect.unreachable('non-translatable users must refuse another locale');
         } catch (error) {
-            expect((error as UserValidationError).form).toEqual([
+            expect((error as ResourceValidationError).form).toEqual([
                 "Users are not translatable, so only the 'en' locale can be written.",
             ]);
         }

@@ -166,7 +166,7 @@ describe('a status change never writes a translation', () => {
 
             await expect(
                 api[method]({ type: 'post', id: en.id, locale: 'de' })
-            ).rejects.toMatchObject({ name: 'EntryNotFoundError' });
+            ).rejects.toMatchObject({ name: 'ResourceNotFoundError' });
 
             expect(await api.get({ type: 'post', id: en.id, locale: 'de' })).toBeNull();
         }
@@ -182,7 +182,7 @@ describe('a status change never writes a translation', () => {
                 locale: 'de',
                 publishedAt: new Date(Date.now() + 60_000),
             })
-        ).rejects.toMatchObject({ name: 'EntryNotFoundError' });
+        ).rejects.toMatchObject({ name: 'ResourceNotFoundError' });
 
         expect(await api.get({ type: 'post', id: en.id, locale: 'de' })).toBeNull();
     });

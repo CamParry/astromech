@@ -12,7 +12,7 @@ import type { GlobalsService, ResolvedGlobal } from '@/types/index';
 import type { Context } from 'hono';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { getConfig } from '@/config/registry';
-import { CapabilityError } from '@/entries/errors';
+import { CapabilityError } from '@/errors/capability';
 import { findGlobal } from '@/globals/internal/global';
 import { globalsDefinition } from '@/globals/service';
 import { resolveAccess } from '@/permissions/access';
@@ -161,7 +161,7 @@ function globalAccess(): (c: Context<Env>, route: RestRoute) => Response | null 
  */
 function stagedFlagDenied(c: Context<Env>, global: ResolvedGlobal): Response | null {
     if (!flag(c, 'staged') || global.capabilities.staging) return null;
-    return errorResponse(c, new CapabilityError(global.id, 'staging', 'Global'));
+    return errorResponse(c, new CapabilityError('global', global.id, 'staging'));
 }
 
 /** The handler the table cannot express, with the reason. */

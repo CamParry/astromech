@@ -1,9 +1,9 @@
 import type { Media } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { deletePrefix } from '@/storage/prefix';
 import { getStorageDriver } from '@/storage/registry';
-import { MediaNotFoundError } from '../errors';
 import { originalKey } from '../internal/keys';
 import { storeFile } from '../internal/store-file';
 import { toMedia } from '../internal/to-media';
@@ -24,7 +24,7 @@ export const replaceMedia = defineServiceMethod({
         const driver = getStorageDriver();
 
         const row = await repository.get(id);
-        if (!row) throw new MediaNotFoundError({ id });
+        if (!row) throw new ResourceNotFoundError('media', { id });
 
         const newKey = originalKey(id, file.name);
         const oldKey = originalKey(id, row.filename);
@@ -51,7 +51,7 @@ export const replaceMedia = defineServiceMethod({
         });
 
         const updated = await repository.get(id);
-        if (!updated) throw new MediaNotFoundError({ id });
+        if (!updated) throw new ResourceNotFoundError('media', { id });
         return toMedia(ctx.config, updated);
     },
 });

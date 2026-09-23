@@ -38,7 +38,8 @@ import { createRepository } from '@/database/repository/create-repository';
 import { existingResourceIds } from '@/database/repository/resource-existence';
 import { entriesTable, entryContentTable, entryVersionsTable } from '@/database/tables';
 import { ALL_CAPABILITIES } from '@/entries/capabilities';
-import { EntryNotFoundError, UnknownSortKeyError, UnknownWhereKeyError } from '../errors';
+import { ResourceNotFoundError } from '@/errors/resource';
+import { UnknownSortKeyError, UnknownWhereKeyError } from '../errors';
 import { isReferencesFilter } from './references-filter';
 
 const SORTABLE_FIELDS: readonly string[] = [
@@ -417,7 +418,7 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
                 .executeTakeFirstOrThrow();
 
             const restored = await content.anyLocale(id);
-            if (!restored) throw new EntryNotFoundError({ entryId: id });
+            if (!restored) throw new ResourceNotFoundError('entry', { id: id });
             return restored;
         },
 

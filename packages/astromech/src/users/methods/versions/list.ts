@@ -1,7 +1,7 @@
 import type { JsonObject, UserVersion } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { UserNotFoundError } from '../../errors';
 import { resolveUserLocale } from '../../internal/locale';
 import { createUserRepository } from '../../repository';
 
@@ -19,7 +19,7 @@ export const listUserVersions = defineServiceMethod({
         const locale = resolveUserLocale(ctx.config, params.locale);
         const repository = createUserRepository(ctx.config);
         const current = await repository.get(params.id, locale);
-        if (!current) throw new UserNotFoundError({ id: params.id, locale });
+        if (!current) throw new ResourceNotFoundError('user', { id: params.id, locale });
 
         const rows = await repository.versions.list(current.contentId);
         return rows.map((row) => ({

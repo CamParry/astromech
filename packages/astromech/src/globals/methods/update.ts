@@ -5,10 +5,10 @@ import { defaultContentLocale } from '@/config/content-locale';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { parseInput } from '@/errors/validation';
 import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { GlobalNotFoundError } from '../errors';
 import { gate } from '../internal/access';
 import {
     asGlobal,
@@ -62,7 +62,7 @@ export const updateGlobal = defineServiceMethod({
         // A staged write addresses a row `createStaged` made; there is nothing
         // here to create one from.
         if (staged && (id === null || !current)) {
-            throw new GlobalNotFoundError({ key: params.key, locale });
+            throw new ResourceNotFoundError('global', { id: params.key, locale });
         }
         /** The staged row this write targets, absent on a canonical write. */
         const stagedRef = staged && id !== null ? { id, locale } : null;

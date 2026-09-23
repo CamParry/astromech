@@ -6,7 +6,7 @@
 
 import type { ResolvedConfig } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
-import { UserValidationError } from '../errors';
+import { ResourceValidationError } from '@/errors/resource';
 
 /**
  * The locale a call addresses. Non-translatable users live in the default
@@ -17,7 +17,7 @@ export function resolveUserLocale(config: ResolvedConfig, locale?: string): stri
     const defaultLocale = defaultContentLocale(config);
     const resolved = locale ?? defaultLocale;
     if (resolved !== defaultLocale && !config.users.translatable) {
-        throw new UserValidationError([
+        throw new ResourceValidationError([
             `Users are not translatable, so only the '${defaultLocale}' locale ` +
                 `can be written.`,
         ]);

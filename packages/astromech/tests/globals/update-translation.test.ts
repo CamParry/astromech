@@ -7,7 +7,7 @@
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { globalsService as api } from '@/app-context/services';
-import { GlobalValidationError } from '@/globals/errors';
+import { ResourceValidationError } from '@/errors/resource';
 import { makeGlobalsConfig } from './globals-config';
 
 beforeEach(async () => {
@@ -76,14 +76,14 @@ describe('a non-translatable global', () => {
     it('rejects a locale other than the default', async () => {
         await expect(
             api.update({ key: 'contact', locale: 'de', data: { fields: {} } })
-        ).rejects.toThrow(GlobalValidationError);
+        ).rejects.toThrow(ResourceValidationError);
 
         // The reason is a form-level message, which is what a 422 renders.
         try {
             await api.update({ key: 'contact', locale: 'de', data: { fields: {} } });
             expect.unreachable('a non-translatable global must refuse another locale');
         } catch (e) {
-            expect((e as GlobalValidationError).form).toEqual([
+            expect((e as ResourceValidationError).form).toEqual([
                 "Global 'contact' is not translatable, so only the 'en' locale can be written.",
             ]);
         }

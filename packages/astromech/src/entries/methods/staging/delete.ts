@@ -1,6 +1,6 @@
 import { z } from '@hono/zod-openapi';
+import { CapabilityError } from '@/errors/capability';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { CapabilityError } from '../../errors';
 import { entryGate } from '../../internal/access';
 import { getEntryOfType } from '../../internal/records';
 import { syncEntryRelationships } from '../../internal/relationships';
@@ -24,7 +24,7 @@ export const deleteStagedEntry = defineServiceMethod({
         const { type, id } = params;
         const repository = getEntryRepository(type);
         const { staging } = repository;
-        if (!staging) throw new CapabilityError(type, 'staging');
+        if (!staging) throw new CapabilityError('entry', type, 'staging');
         const canonical = await getEntryOfType(
             ctx.config,
             repository,

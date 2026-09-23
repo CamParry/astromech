@@ -2,8 +2,8 @@ import type { JsonObject, User } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { UserNotFoundError } from '../../errors';
 import { resolveUserLocale } from '../../internal/locale';
 import { syncUserRelationships } from '../../internal/relationships';
 import { toUser } from '../../internal/to-user';
@@ -29,11 +29,11 @@ export const restoreUserVersion = defineServiceMethod({
         const locale = resolveUserLocale(ctx.config, params.locale);
         const repository = createUserRepository(ctx.config);
         const current = await repository.get(id, locale);
-        if (!current) throw new UserNotFoundError({ id, locale });
+        if (!current) throw new ResourceNotFoundError('user', { id, locale });
 
         const version = await repository.versions.get(params.versionId);
         if (!version || version.contentId !== current.contentId) {
-            throw new UserNotFoundError({ id, locale });
+            throw new ResourceNotFoundError('user', { id, locale });
         }
         const fields = ((version.fields as JsonObject | null) ??
             current.fields) as JsonObject;

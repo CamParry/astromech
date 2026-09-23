@@ -7,7 +7,7 @@
 import type { ContentRowId, EntryRepository, EntryRow } from '../repository/types';
 import type { Entry, ResolvedConfig } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
-import { EntryNotFoundError } from '../errors';
+import { ResourceNotFoundError } from '@/errors/resource';
 
 /**
  * One locale of one entry as the operations read it: the public shape plus the
@@ -59,8 +59,8 @@ export async function getEntryOfType(
 ): Promise<EntryRecord> {
     const record = await findEntryOfType(config, repository, type, id, locale);
     if (!record) {
-        throw new EntryNotFoundError({
-            entryId: id,
+        throw new ResourceNotFoundError('entry', {
+            id: id,
             locale: locale ?? defaultContentLocale(config),
         });
     }
@@ -82,7 +82,7 @@ export async function getEntryResource(
     if (record) return record;
 
     const row = await repository.anyLocale?.({ type, id }, { includeTrashed: true });
-    if (!row) throw new EntryNotFoundError({ entryId: id });
+    if (!row) throw new ResourceNotFoundError('entry', { id: id });
     return asRecord(row);
 }
 

@@ -17,12 +17,12 @@ import { entriesService } from '@/app-context/services';
 import { decodeWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { entriesTable } from '@/database/tables';
-import { EntryNotFoundError } from '@/entries/errors';
 import {
     getEntryRepository,
     resetEntryRepositoryOverrides,
     setEntryRepository,
 } from '@/entries/repository/registry';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { ValidationError } from '@/errors/validation';
 import { defineHook } from '@/plugins/define-hook';
 
@@ -461,7 +461,7 @@ describe('versioning (on)', () => {
                 versionId: version.id,
                 locale: 'de',
             })
-        ).rejects.toBeInstanceOf(EntryNotFoundError);
+        ).rejects.toBeInstanceOf(ResourceNotFoundError);
     });
 
     it('creates no version when nothing changes', async () => {
@@ -809,10 +809,10 @@ describe('an entry addressed as another type', () => {
         ['issuePreviewToken', (id) => api.issuePreviewToken({ type: 'post', id })],
         ['revokePreviewToken', (id) => api.revokePreviewToken({ type: 'post', id })],
         ['usedBy', (id) => api.usedBy({ type: 'post', id })],
-    ])('%s rejects with EntryNotFoundError', async (_name, call) => {
+    ])('%s rejects with ResourceNotFoundError', async (_name, call) => {
         const before = await api.get({ type: 'note', id: noteId, full: true });
 
-        await expect(call(noteId)).rejects.toBeInstanceOf(EntryNotFoundError);
+        await expect(call(noteId)).rejects.toBeInstanceOf(ResourceNotFoundError);
 
         expect(await api.get({ type: 'note', id: noteId, full: true })).toEqual(before);
     });

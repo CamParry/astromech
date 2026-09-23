@@ -11,10 +11,10 @@
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService as api } from '@/app-context/services';
-import { CapabilityError } from '@/entries/errors';
 import { hashPreviewToken } from '@/entries/internal/preview';
 import { DEFAULT_PREVIEW_TOKEN_TTL_MS } from '@/entries/methods/preview/token';
 import { createEntriesTableRepository } from '@/entries/repository/entries-table';
+import { CapabilityError } from '@/errors/capability';
 
 beforeEach(async () => {
     await createTestDb();

@@ -7,13 +7,10 @@
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { globalsService as api } from '@/app-context/services';
-import { CapabilityError } from '@/entries/errors';
+import { CapabilityError } from '@/errors/capability';
+import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resource';
 import { ValidationError } from '@/errors/validation';
-import {
-    GlobalNotFoundError,
-    GlobalValidationError,
-    StagedGlobalExistsError,
-} from '@/globals/errors';
+import { StagedGlobalExistsError } from '@/globals/errors';
 import { makeGlobalsConfig } from './globals-config';
 
 beforeEach(async () => {
@@ -61,7 +58,7 @@ describe('createStaged', () => {
 
     it('refuses a global that has never been saved', async () => {
         await expect(api.createStaged({ key: 'site' })).rejects.toThrow(
-            GlobalNotFoundError
+            ResourceNotFoundError
         );
     });
 
@@ -98,14 +95,14 @@ describe('getStaged', () => {
     it('refuses a staged read in the public shape', async () => {
         await saveSite();
         await expect(api.get({ key: 'site', staged: true })).rejects.toThrow(
-            GlobalValidationError
+            ResourceValidationError
         );
 
         try {
             await api.get({ key: 'site', staged: true });
             expect.unreachable('a public staged read must be refused');
         } catch (e) {
-            expect((e as GlobalValidationError).form?.[0]).toContain(
+            expect((e as ResourceValidationError).form?.[0]).toContain(
                 '`staged` requires `full`'
             );
         }
@@ -180,7 +177,7 @@ describe('update with staged', () => {
         await saveSite();
         await expect(
             api.update({ key: 'site', staged: true, data: { fields: { title: 'X' } } })
-        ).rejects.toThrow(GlobalNotFoundError);
+        ).rejects.toThrow(ResourceNotFoundError);
     });
 
     it('refuses a global without the staging capability', async () => {

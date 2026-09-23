@@ -8,8 +8,8 @@ import type { GlobalRow, GlobalsRepository } from '../repository/globals-table';
 import type { Global, ResolvedConfig, ResolvedGlobal } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
 import { QUALIFIED_SEPARATOR } from '@/entries/entry-types';
-import { CapabilityError } from '@/entries/errors';
-import { GlobalNotFoundError, GlobalValidationError } from '../errors';
+import { CapabilityError } from '@/errors/capability';
+import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resource';
 import { createGlobalsRepository } from '../repository/globals-table';
 
 /** Every capability a global may declare, for narrowing a bare string to one. */
@@ -46,7 +46,7 @@ export function findGlobal(
 /** {@link findGlobal}, throwing for a key nothing declares. */
 export function resolveGlobal(config: ResolvedConfig, key: string): ResolvedGlobal {
     const global = findGlobal(config, key);
-    if (!global) throw new GlobalNotFoundError({ key });
+    if (!global) throw new ResourceNotFoundError('global', { id: key });
     return global;
 }
 
@@ -56,7 +56,7 @@ export function assertCapability(
     capability: GlobalCapability
 ): void {
     if (!global.capabilities[capability]) {
-        throw new CapabilityError(global.id, capability, 'Global');
+        throw new CapabilityError('global', global.id, capability);
     }
 }
 
@@ -94,7 +94,7 @@ export function resolveLocale(
     const defaultLocale = defaultContentLocale(config);
     const resolved = locale ?? defaultLocale;
     if (resolved !== defaultLocale && !global.capabilities.translatable) {
-        throw new GlobalValidationError([
+        throw new ResourceValidationError([
             `Global '${global.id}' is not translatable, so only the ` +
                 `'${defaultLocale}' locale can be written.`,
         ]);
@@ -133,7 +133,7 @@ export async function requireCanonical(
     const id = await repository.idByKey(params.key);
     const current = id === null ? null : await repository.get({ id, locale });
     if (id === null || !current) {
-        throw new GlobalNotFoundError({ key: params.key, locale });
+        throw new ResourceNotFoundError('global', { id: params.key, locale });
     }
     return { global, locale, repository, id, current };
 }

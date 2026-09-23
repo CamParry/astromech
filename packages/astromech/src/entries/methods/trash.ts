@@ -1,8 +1,8 @@
 import { z } from '@hono/zod-openapi';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { transaction } from '@/database/transaction';
+import { CapabilityError } from '@/errors/capability';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { CapabilityError } from '../errors';
 import { entryGate } from '../internal/access';
 import { fromBatch } from '../internal/from-batch';
 import { trashEntryBatch } from '../internal/trash-batch';
@@ -50,7 +50,7 @@ export const emptyTrash = defineServiceMethod({
         const { type } = params;
         const repository = getEntryRepository(type);
         const { trash } = repository;
-        if (!trash) throw new CapabilityError(type, 'trash');
+        if (!trash) throw new CapabilityError('entry', type, 'trash');
 
         const { data: trashed } = await repository.list({
             type,

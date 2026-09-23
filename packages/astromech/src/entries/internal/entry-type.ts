@@ -7,7 +7,7 @@
 import type { Capability } from '@/entries/capabilities';
 import type { ResolvedConfig, ResolvedEntryType } from '@/types/index';
 import { resolveEntryType } from '@/entries/entry-types';
-import { CapabilityError } from '../errors';
+import { CapabilityError } from '@/errors/capability';
 import { getEntryRepository } from '../repository/registry';
 
 /** Whether the type keeps versions and its repository can store them. */
@@ -33,7 +33,7 @@ export function assertCapability(
 ): void {
     const capabilities = resolveEntryType(config, type)?.capabilities;
     if (capabilities && !capabilities[capability]) {
-        throw new CapabilityError(type, capability);
+        throw new CapabilityError('entry', type, capability);
     }
 }
 
@@ -50,9 +50,9 @@ export function assertWritableFields(
         !capabilities.statuses &&
         (data.status !== undefined || data.publishedAt !== undefined)
     ) {
-        throw new CapabilityError(entryType.id, 'statuses');
+        throw new CapabilityError('entry', entryType.id, 'statuses');
     }
     if (!capabilities.slug && data.slug !== undefined) {
-        throw new CapabilityError(entryType.id, 'slug');
+        throw new CapabilityError('entry', entryType.id, 'slug');
     }
 }

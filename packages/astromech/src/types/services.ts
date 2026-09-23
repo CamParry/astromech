@@ -226,7 +226,7 @@ export type GlobalUpdateData = z.input<typeof updateGlobalSchema>;
  * The globals domain's service contract. Every method takes one options object
  * with `key` first and an optional `locale`; a missing locale is the default
  * content locale. There is no `query`, `create` or `delete`: a global exists
- * because the config declares it. An undeclared key is `GlobalNotFoundError`
+ * because the config declares it. An undeclared key is `ResourceNotFoundError`
  * from every method, `get` included.
  */
 export type GlobalsService = {
@@ -249,7 +249,7 @@ export type GlobalsService = {
      * Write one locale, creating the global's row and that locale's content row
      * on demand. Fields merge: an omitted field keeps its stored value, and an
      * array or container value replaces wholesale. A locale other than the
-     * default on a non-translatable global is a `GlobalValidationError`; on a
+     * default on a non-translatable global is a `ResourceValidationError`; on a
      * translatable one the new locale inherits the shared (`translatable:
      * false`) fields from the default-locale row.
      */
@@ -329,7 +329,7 @@ export type MediaUpdateData = z.input<typeof updateMediaSchema>;
  * The media domain's service contract. A missing `locale` is the default content
  * locale; `query` and `get` fall back to it when the one asked for has no
  * content row, while `versions` and `restoreVersion` address a content row and
- * throw `MediaNotFoundError` when there is none.
+ * throw `ResourceNotFoundError` when there is none.
  */
 export type MediaService = {
     query(params?: MediaQueryParams): Promise<QueryResult<Media>>;
@@ -378,7 +378,7 @@ export type UserUpdateData = z.input<typeof updateUserSchema>;
  * The users domain's service contract. A missing `locale` is the default content
  * locale; `query` and `get` fall back to it when the one asked for has no
  * content row, while `versions` and `restoreVersion` address a content row and
- * throw `UserNotFoundError` when there is none.
+ * throw `ResourceNotFoundError` when there is none.
  */
 export type UsersService = {
     query(params?: UserQueryParams): Promise<QueryResult<User>>;

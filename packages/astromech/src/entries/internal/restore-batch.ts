@@ -1,6 +1,7 @@
 import type { AppContext, Entry } from '@/types/index';
 import { transaction } from '@/database/transaction';
-import { BulkOperationError, CapabilityError } from '../errors';
+import { CapabilityError } from '@/errors/capability';
+import { BulkOperationError } from '../errors';
 import { getEntryRepository } from '../repository/registry';
 import { asEntry, getEntryResources } from './records';
 
@@ -19,7 +20,7 @@ export async function restoreEntryBatch(
     const { type, ids } = params;
     const repository = getEntryRepository(type);
     const { trash } = repository;
-    if (!trash) throw new CapabilityError(type, 'trash');
+    if (!trash) throw new CapabilityError('entry', type, 'trash');
     const entries = await getEntryResources(ctx.config, repository, type, ids);
     const user = ctx.user;
 

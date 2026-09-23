@@ -12,13 +12,10 @@ import type {
 import { defaultContentLocale } from '@/config/content-locale';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types';
+import { CapabilityError } from '@/errors/capability';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { parseInput, ValidationError } from '@/errors/validation';
-import {
-    BulkOperationError,
-    CapabilityError,
-    EntryNotFoundError,
-    UnknownEntryTypeError,
-} from '../errors';
+import { BulkOperationError, UnknownEntryTypeError } from '../errors';
 import { getEntryRepository } from '../repository/registry';
 import { createEntrySchema, updateEntrySchema } from '../schema';
 import { assertWritableFields } from './entry-type';
@@ -88,7 +85,7 @@ export async function updateEntryBatch(
     // locale becomes a translation, planned here for the same reason.
     const staging = params.staged === true ? repository.staging : undefined;
     if (params.staged === true && !staging) {
-        throw new CapabilityError(entryType.id, 'staging');
+        throw new CapabilityError('entry', entryType.id, 'staging');
     }
 
     const plans: UpdatePlan[] = [];
@@ -97,7 +94,7 @@ export async function updateEntryBatch(
             ? await getStagedRecord(staging, id, locale)
             : await findEntryOfType(ctx.config, repository, entryType.id, id, locale);
         if (!record && params.createMissingLocale === false) {
-            throw new EntryNotFoundError({ entryId: id, locale });
+            throw new ResourceNotFoundError('entry', { id, locale });
         }
         plans.push(
             record

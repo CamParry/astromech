@@ -6,8 +6,8 @@
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { globalsService as api } from '@/app-context/services';
-import { CapabilityError } from '@/entries/errors';
-import { GlobalNotFoundError } from '@/globals/errors';
+import { CapabilityError } from '@/errors/capability';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { makeGlobalsConfig } from './globals-config';
 
 beforeEach(async () => {
@@ -74,7 +74,7 @@ describe('the capability and the row', () => {
 
     it('refuses a locale that has never been saved', async () => {
         await expect(api.publish({ key: 'contact' })).rejects.toThrow(
-            GlobalNotFoundError
+            ResourceNotFoundError
         );
 
         await api.update({ key: 'site', data: { fields: { title: 'EN' } } });

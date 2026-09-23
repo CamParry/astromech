@@ -8,7 +8,7 @@ import { noopStorage } from '@tests/fixtures';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mediaService as api } from '@/app-context/services';
-import { MediaNotFoundError } from '@/media/errors';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { makeTranslatableMediaConfig } from './media-config';
@@ -70,7 +70,7 @@ describe('versions', () => {
 
     it('throws for a locale with no content row', async () => {
         await expect(api.versions({ id, locale: 'fr' })).rejects.toThrow(
-            MediaNotFoundError
+            ResourceNotFoundError
         );
     });
 });
@@ -99,12 +99,12 @@ describe('restoreVersion', () => {
 
         await expect(
             api.restoreVersion({ id, locale: 'fr', versionId: version.id })
-        ).rejects.toThrow(MediaNotFoundError);
+        ).rejects.toThrow(ResourceNotFoundError);
     });
 
     it('refuses an unknown version id', async () => {
         await expect(api.restoreVersion({ id, versionId: 'nope' })).rejects.toThrow(
-            MediaNotFoundError
+            ResourceNotFoundError
         );
     });
 });

@@ -6,7 +6,7 @@
 
 import type { ResolvedConfig } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
-import { MediaValidationError } from '../errors';
+import { ResourceValidationError } from '@/errors/resource';
 
 /**
  * The locale a call addresses. Non-translatable media lives in the default
@@ -17,7 +17,7 @@ export function resolveMediaLocale(config: ResolvedConfig, locale?: string): str
     const defaultLocale = defaultContentLocale(config);
     const resolved = locale ?? defaultLocale;
     if (resolved !== defaultLocale && !config.media.translatable) {
-        throw new MediaValidationError([
+        throw new ResourceValidationError([
             `Media is not translatable, so only the '${defaultLocale}' locale ` +
                 `can be written.`,
         ]);

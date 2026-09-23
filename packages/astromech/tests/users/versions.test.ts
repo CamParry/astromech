@@ -7,7 +7,7 @@
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { usersService as api } from '@/app-context/services';
-import { UserNotFoundError } from '@/users/errors';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { makeTranslatableUsersConfig } from './users-config';
 
 let id: string;
@@ -65,7 +65,7 @@ describe('versions', () => {
 
     it('throws for a locale with no content row', async () => {
         await expect(api.versions({ id, locale: 'fr' })).rejects.toThrow(
-            UserNotFoundError
+            ResourceNotFoundError
         );
     });
 });
@@ -92,12 +92,12 @@ describe('restoreVersion', () => {
 
         await expect(
             api.restoreVersion({ id, locale: 'fr', versionId: version.id })
-        ).rejects.toThrow(UserNotFoundError);
+        ).rejects.toThrow(ResourceNotFoundError);
     });
 
     it('refuses an unknown version id', async () => {
         await expect(api.restoreVersion({ id, versionId: 'nope' })).rejects.toThrow(
-            UserNotFoundError
+            ResourceNotFoundError
         );
     });
 });

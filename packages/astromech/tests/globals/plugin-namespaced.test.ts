@@ -8,7 +8,7 @@ import type { AstromechConfig, PluginDefinition } from '@/types/index';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { globalsService as api } from '@/app-context/services';
-import { GlobalNotFoundError } from '@/globals/errors';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { makeGlobalsConfig } from './globals-config';
 
 const seoPlugin: PluginDefinition = {
@@ -73,7 +73,7 @@ describe('a plugin global', () => {
 
     it('refuses a qualified key no plugin declares', async () => {
         await expect(api.get({ key: 'nope/settings', full: true })).rejects.toThrow(
-            GlobalNotFoundError
+            ResourceNotFoundError
         );
     });
 });

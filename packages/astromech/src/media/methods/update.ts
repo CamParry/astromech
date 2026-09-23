@@ -6,11 +6,11 @@ import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { transaction } from '@/database/transaction';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { MediaNotFoundError } from '../errors';
 import { resolveMediaLocale } from '../internal/locale';
 import { readMedia } from '../internal/read-media';
 import { syncMediaRelationships } from '../internal/relationships';
@@ -48,7 +48,7 @@ export const updateMedia = defineServiceMethod({
         // default-locale row the new one is copied from.
         const current = await repository.get(id, locale);
         const base = current ?? (await readMedia(repository, id));
-        if (!base) throw new MediaNotFoundError({ id });
+        if (!base) throw new ResourceNotFoundError('media', { id });
 
         const config = ctx.config;
         const definitions = flattenFieldNodes(config.media.fields ?? []);

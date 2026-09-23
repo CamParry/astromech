@@ -1,4 +1,3 @@
-import type { Capability } from '@/entries/capabilities';
 import { ApiError } from '@/errors/api-error';
 
 /**
@@ -46,27 +45,6 @@ export class BulkOperationError extends Error {
         this.reason = args.reason;
         this.succeededBefore = args.succeededBefore;
         if (args.cause !== undefined) this.cause = args.cause;
-    }
-}
-
-/**
- * Thrown by an operation addressing an entry, or one locale of it, that has no
- * row. The HTTP layer maps it to a 404; `get` answers null rather than throwing.
- */
-export class EntryNotFoundError extends ApiError {
-    public readonly entryId: string;
-    public readonly locale: string | undefined;
-
-    constructor(args: { entryId: string; locale?: string | undefined }) {
-        super(
-            args.locale === undefined
-                ? `Entry '${args.entryId}' not found`
-                : `Entry '${args.entryId}' not found in locale '${args.locale}'`,
-            { status: 404, code: 'NOT_FOUND' }
-        );
-        this.name = 'EntryNotFoundError';
-        this.entryId = args.entryId;
-        this.locale = args.locale;
     }
 }
 
@@ -192,26 +170,5 @@ export class UnknownSortKeyError extends ApiError {
         this.name = 'UnknownSortKeyError';
         this.key = key;
         this.sortableFields = sortableFields;
-    }
-}
-
-/**
- * Thrown when an operation is attempted on a resource that does not declare the
- * required capability. Shared with globals, which pass `kind: 'Global'` so the
- * message names what was addressed; `entryType` keeps its name and holds the
- * resource's id either way.
- */
-export class CapabilityError extends ApiError {
-    public readonly capability: Capability;
-    public readonly entryType: string;
-
-    constructor(entryType: string, capability: Capability, kind = 'Entry type') {
-        super(`${kind} "${entryType}" does not support capability: ${capability}`, {
-            status: 409,
-            code: 'capability_not_supported',
-        });
-        this.name = 'CapabilityError';
-        this.capability = capability;
-        this.entryType = entryType;
     }
 }

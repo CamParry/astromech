@@ -1,8 +1,8 @@
 import type { Usage } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { listUsage } from '@/content/usage';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { MediaNotFoundError } from '../errors';
 import { createMediaRepository } from '../repository';
 
 /**
@@ -18,7 +18,7 @@ export const listMediaUsage = defineServiceMethod({
     async handler(params, ctx): Promise<Usage[]> {
         const { id } = params;
         const row = await createMediaRepository(ctx.config).files.findOne({ id });
-        if (!row) throw new MediaNotFoundError({ id });
+        if (!row) throw new ResourceNotFoundError('media', { id });
         return listUsage(ctx.config, { id, kind: 'media' });
     },
 });

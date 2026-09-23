@@ -156,8 +156,8 @@ function fieldErrorsFrom(err: ValidationError): Record<string, string[]> {
  * `ApiError` under the status and code it carries, ValidationError (bare, or
  * wrapped by a batch write's BulkOperationError) and unknown errors alike.
  *
- * `GlobalValidationError` and `MediaValidationError` need no case of their own:
- * both extend `ValidationError`, so they map to the same 422.
+ * `ResourceValidationError` needs no case of its own: it extends
+ * `ValidationError`, so it maps to the same 422.
  */
 export const onError: ErrorHandler = (err, c) => {
     if (err instanceof HTTPException) {
