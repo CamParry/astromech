@@ -22,7 +22,8 @@ async function enabledRules(
     type: string,
     where: { from?: string; to?: string }
 ): Promise<Entry[]> {
-    const { data } = await ctx.entries.query({ type, where, limit: 'all' });
+    // The plugin's own rules, whatever their visibility.
+    const { data } = await ctx.entries.query({ type, where, limit: 'all', full: true });
     return (data as Entry[]).filter(
         (rule) => (rule.fields as RedirectFields).enabled !== false
     );

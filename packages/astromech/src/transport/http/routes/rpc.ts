@@ -3,22 +3,35 @@
  *
  * `POST /rpc/{method id}` calls any service method the manifest declares: the
  * id addresses the method, the JSON body is its argument object, and
- * `buildScopedDispatch` supplies the call already scoped to the caller's role.
+ * `buildScopedDispatch` supplies the call already scoped to the caller. A
+ * plugin method answers as `POST /plugins/:name/:method` does.
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { badRequest, notFound } from '@/transport/http/middleware/errors';
+import { optionalAuth } from '@/transport/http/middleware/auth';
+import { badRequest, notFound, unauthorized } from '@/transport/http/middleware/errors';
+import { answerPluginMethod } from '@/transport/http/routes/plugins';
 import { resolveScopedMethod } from '@/transport/tools/scoped-tools';
 
 type Env = { Variables: AuthVariables };
 
 const router = new OpenAPIHono<Env>();
 
+// Mounted before `requireAuth`, as the plugin routes are: a public plugin
+// method needs no session, and a core method still refuses a request with none.
+router.use('*', optionalAuth);
+
 router.post('/:id', async (c) => {
     const id = c.req.param('id');
     const resolved = resolveScopedMethod(id, c.var.ctx);
     if (resolved === undefined) return notFound(c, `Method '${id}' not found`);
+
+    const { method } = resolved;
+    if (method.source === 'plugin') {
+        return answerPluginMethod(c, method.serviceKey, method.method);
+    }
+    if (c.var.ctx.user === null || c.var.ctx.role === null) return unauthorized(c);
 
     const { dispatch } = resolved;
     if (!dispatch.ok)

@@ -718,7 +718,10 @@ from there instead of importing an identity module:
 ```ts
 // backup.ts
 export async function resolveKeep(ctx: PluginContext, fallback: number): Promise<number> {
-    const global = await ctx.globals.get({ key: `${ctx.plugin.namespace}/settings` });
+    const global = await ctx.globals.get({
+        key: `${ctx.plugin.namespace}/settings`,
+        full: true,
+    });
     const value = global?.fields['retention'];
     // ...
 }
@@ -726,7 +729,10 @@ export async function resolveKeep(ctx: PluginContext, fallback: number): Promise
 
 ```ts
 // menus/service/menus.ts
-const global = await ctx.globals.get({ key: `${ctx.plugin.namespace}/menu-${key}` });
+const global = await ctx.globals.get({
+    key: `${ctx.plugin.namespace}/menu-${key}`,
+    full: true,
+});
 ```
 
 `ctx.config` sits alongside it, and is a projection of the site's resolved
@@ -780,9 +786,11 @@ try {
 
 The content services sit directly on the context — `ctx.entries`, `ctx.media`,
 `ctx.settings`, `ctx.users`, `ctx.notifications`, `ctx.plugins` — and each is
-the **global** service, not a per-plugin view. Reads default to the `full`
-shape, because plugin altitude is trusted server code; pass an explicit
-`full: false` if you want the public shape.
+the **global** service, not a per-plugin view. Reads answer the public shape,
+as they do for a site's own code: an unpublished, scheduled or trashed entry is
+not returned, and private fields are stripped. Pass `full: true` where the
+plugin reads its own data (its settings global, its own entry types) and needs
+all of it.
 
 `ctx.notifications` is the exception: it acts on the signed-in user's own rows,
 so it throws when the context has no user (a cron tick, a boot-time `setup()`).
@@ -876,8 +884,9 @@ config for any of this to resolve.
 `defineServiceMethod` is JSON-in / JSON-out over `POST`, which covers almost
 everything. When a payload can't survive that — binary bodies, `multipart`
 uploads, streamed responses — declare a `rawRoutes` array instead. Each route
-gets a Web-standard `Request` and returns a `Response`; the plugin never
-touches Hono.
+gets a Web-standard `Request`, the plugin context acting as the caller, and the
+values of the path's `:name` segments, and returns a `Response`; the plugin
+never touches Hono.
 
 ```ts
 // routes/exports.ts
@@ -888,8 +897,8 @@ export const exportRoutes: PluginRawRoute[] = [
         method: 'GET',
         path: '/exports/:id/download', // relative to ${basePath}/api/plugins/<serviceKey>
         access: { permission: 'download' },
-        handler: async (request, ctx) => {
-            const obj = await ctx.storage.get(keyFrom(request));
+        handler: async (_request, ctx, params) => {
+            const obj = await ctx.storage.get(`exports/${params['id']}.gz`);
             return new Response(obj.body, {
                 headers: { 'Content-Type': 'application/gzip' },
             });

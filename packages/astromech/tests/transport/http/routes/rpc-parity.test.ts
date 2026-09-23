@@ -42,6 +42,13 @@ const testPlugin: PluginDefinition = {
         },
     ],
     service: {
+        ping: {
+            access: 'public',
+            summary: 'Answer pong.',
+            input: z.object({}),
+            mutates: false,
+            handler: async () => 'pong',
+        },
         doSomething: {
             access: { permission: 'plugins:x:do' },
             summary: 'Do something.',
@@ -342,6 +349,37 @@ describe('POST /rpc/:id', () => {
 
         const res = await call(app, 'plugins.testMyPlugin.doSomething', { thing: 'x' });
         expect(res.status).toBe(200);
-        expect(await res.json()).toEqual({ data: null });
+        // A plugin method answers its raw result, as `/plugins/:name/:method` does.
+        expect(await res.json()).toBeNull();
+    });
+
+    it('answers a plugin method exactly as the plugin route does', async () => {
+        const app = await freshApp(roleWith([]));
+        const viaRpc = await call(app, 'plugins.testMyPlugin.doSomething', {
+            thing: 'x',
+        });
+        const viaPlugins = await app.request(`${api}/plugins/testMyPlugin/doSomething`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ thing: 'x' }),
+        });
+
+        expect([viaRpc.status, viaPlugins.status]).toEqual([403, 403]);
+        const [rpcBody, pluginBody] = (await Promise.all([
+            viaRpc.json(),
+            viaPlugins.json(),
+        ])) as ErrorBody[];
+        expect(rpcBody?.error.message).toBe(pluginBody?.error.message);
+    });
+
+    it('reaches a public plugin method with no session, and 401s a core one', async () => {
+        const app = await freshApp();
+        signIn(null, adminRole);
+
+        const plugin = await call(app, 'plugins.testMyPlugin.ping');
+        expect(plugin.status).toBe(200);
+        expect(await plugin.json()).toBe('pong');
+
+        expect((await call(app, 'users.query')).status).toBe(401);
     });
 });

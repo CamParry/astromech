@@ -5,6 +5,7 @@
  * - menus.get skips disabled nodes
  * - menus.get preserves nesting
  * - menus.get falls back url → label-only
+ * - menus.get resolves no URL for an entry a visitor cannot see
  * - a global and a nav item appear for each configured menu; none for unconfigured keys
  */
 
@@ -288,5 +289,25 @@ describe('menus.get — entry ref resolution', () => {
         const result = await get('main', 'en');
         // entry takes precedence over url field
         expect(result?.[0]?.url).toBe('/blog/override-test');
+    });
+
+    it('resolves no URL for an entry a visitor cannot see', async () => {
+        const draft = await entriesService.create({
+            type: 'post',
+            data: { title: 'Draft', locale: 'en' },
+        });
+        const trashed = await entriesService.create({
+            type: 'post',
+            data: { title: 'Trashed', locale: 'en', status: 'published' },
+        });
+        await entriesService.trash({ type: 'post', id: trashed.id });
+
+        await writeMenu('main', [
+            { _id: 'd1', label: 'Draft', entry: draft.id },
+            { _id: 't1', label: 'Trashed', entry: trashed.id },
+        ]);
+
+        const result = await get('main', 'en');
+        expect(result).toEqual([{ label: 'Draft' }, { label: 'Trashed' }]);
     });
 });

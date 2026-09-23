@@ -30,6 +30,7 @@ import type {
     SortOption,
 } from '@/types/index';
 import type { Expression, SqlBool, Updateable } from 'kysely';
+import { getDefaultContentLocale } from '@/config/content-locale';
 import { createContentRepository } from '@/content/repository/content-table';
 import { encodePatchWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
@@ -254,7 +255,9 @@ function toEntryRow(
  */
 export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: string }) {
     const dbOverride = opts?.db;
-    const defaultLocale = opts?.defaultLocale ?? 'en';
+    // Read per call: the shared repository is built once and outlives a config
+    // change, so it takes the configured default when it answers.
+    const defaultLocale = (): string => opts?.defaultLocale ?? getDefaultContentLocale();
 
     const handle = (): Db => dbOverride ?? getDb();
 
@@ -346,7 +349,7 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
         const orderPairs = buildOrderBy(params.sort);
         // Raw: search is `title LIKE ? OR slug LIKE ?` and the flat `where` DSL has
         // no `or`. Rows and count share this predicate so the two cannot drift.
-        const whereFn = buildListWhere(params, defaultLocale, types);
+        const whereFn = buildListWhere(params, defaultLocale(), types);
 
         if (limit === 'all') {
             let q = content.query.joined().where(whereFn);

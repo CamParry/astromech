@@ -22,12 +22,13 @@ import {
 import { parseSeoMetaValue } from '../utilities/meta-value';
 
 async function footprintEntries(
-    ctx: PluginContext
+    ctx: PluginContext,
+    shape: { full: boolean }
 ): Promise<{ type: string; entry: Entry }[]> {
     const types = ctx.config.entryTypesWithField(SEO_FIELD_NAME);
     const collected: { type: string; entry: Entry }[] = [];
     for (const type of types) {
-        const { data } = await ctx.entries.query({ type, limit: 'all' });
+        const { data } = await ctx.entries.query({ type, limit: 'all', ...shape });
         for (const entry of data as Entry[]) {
             collected.push({ type, entry });
         }
@@ -42,6 +43,7 @@ async function footprintEntries(
 async function resolveDefaultOgImage(ctx: PluginContext): Promise<string | null> {
     const global = await ctx.globals.get({
         key: `${ctx.plugin.namespace}/settings`,
+        full: true,
     });
     const mediaId = global?.fields['defaultOgImage'];
     if (typeof mediaId !== 'string' || mediaId === '') return null;
@@ -67,7 +69,7 @@ export const seoService = {
         mutates: false,
         handler: async (_input, ctx): Promise<SeoSitemap> => {
             const urls: SeoSitemapUrl[] = [];
-            for (const { type, entry } of await footprintEntries(ctx)) {
+            for (const { type, entry } of await footprintEntries(ctx, { full: false })) {
                 if (entry.status !== 'published') continue;
                 const loc = entryPath(ctx, type, entry);
                 if (!loc) continue;
@@ -121,7 +123,7 @@ export const seoService = {
         mutates: false,
         handler: async (_input, ctx): Promise<SeoOverview> => {
             const items: SeoOverviewItem[] = [];
-            for (const { type, entry } of await footprintEntries(ctx)) {
+            for (const { type, entry } of await footprintEntries(ctx, { full: true })) {
                 const meta = parseSeoMetaValue(entry.fields[SEO_FIELD_NAME]);
                 const titleLength = (meta.title ?? '').length;
                 const descriptionLength = (meta.description ?? '').length;

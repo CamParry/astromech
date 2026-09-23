@@ -20,6 +20,7 @@ import type { Table } from '@/database/define-table';
 import type { GenericDb } from '@/database/repository/create-repository';
 import type { JsonObject } from '@/types/index';
 import type { Expression, SqlBool } from 'kysely';
+import { getDefaultContentLocale } from '@/config/content-locale';
 import { decodeWith, kyselyTableKey } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
@@ -51,7 +52,12 @@ export function createContentRepository<
     opts: ContentRepositoryOptions<R, O, C>
 ): ContentRepository<R, V> {
     const dbOverride = opts.db;
-    const defaultLocale = opts.defaultLocale ?? 'en';
+    // Read per call rather than once, so a repository built before the config
+    // resolves still answers with the configured default.
+    const defaultLocale = (): string =>
+        typeof opts.defaultLocale === 'function'
+            ? opts.defaultLocale()
+            : (opts.defaultLocale ?? getDefaultContentLocale());
     const { ownerColumn } = shape;
     const inheritedColumns = shape.inheritedColumns ?? [];
     const ownerKey = kyselyTableKey(shape.table.name);
@@ -237,7 +243,7 @@ export function createContentRepository<
         return one(
             await findCanonical(
                 ref.id,
-                ref.locale ?? defaultLocale,
+                ref.locale ?? defaultLocale(),
                 options?.includeTrashed === true
             )
         );
@@ -248,7 +254,7 @@ export function createContentRepository<
         options?: { includeTrashed?: boolean }
     ): Promise<R | null> {
         const includeTrashed = options?.includeTrashed === true;
-        const preferred = await findCanonical(id, defaultLocale, includeTrashed);
+        const preferred = await findCanonical(id, defaultLocale(), includeTrashed);
         if (preferred) return one(preferred);
 
         return one(
@@ -275,7 +281,7 @@ export function createContentRepository<
             await contents.create(
                 insertValues({
                     id,
-                    locale: content.locale ?? defaultLocale,
+                    locale: content.locale ?? defaultLocale(),
                     stagedFor: null,
                     own: ownRow,
                     data: content,
@@ -283,7 +289,7 @@ export function createContentRepository<
             );
             return required(
                 await get(
-                    { id, locale: content.locale ?? defaultLocale },
+                    { id, locale: content.locale ?? defaultLocale() },
                     {
                         includeTrashed: true,
                     }
@@ -299,7 +305,7 @@ export function createContentRepository<
      * carries no per-locale content.
      */
     async function update(ref: ContentRef, data: ContentWrite): Promise<R> {
-        const locale = ref.locale ?? defaultLocale;
+        const locale = ref.locale ?? defaultLocale();
         const existing = await findCanonical(ref.id, locale, true);
 
         if (!existing) {
@@ -356,11 +362,11 @@ export function createContentRepository<
 
     const staging = {
         getByCanonical: async (id: string, locale?: string): Promise<R | null> => {
-            return one(await findStaged(id, locale ?? defaultLocale));
+            return one(await findStaged(id, locale ?? defaultLocale()));
         },
 
         create: async (ref: ContentRef, data: ContentWrite): Promise<R> => {
-            const locale = ref.locale ?? defaultLocale;
+            const locale = ref.locale ?? defaultLocale();
             const canonical = await findCanonical(ref.id, locale, false);
             if (!canonical) throw missing(ref.id);
             const { own, content } = split(canonical);
@@ -378,7 +384,7 @@ export function createContentRepository<
         },
 
         update: async (ref: ContentRef, data: ContentWrite): Promise<R> => {
-            const locale = ref.locale ?? defaultLocale;
+            const locale = ref.locale ?? defaultLocale();
             const existing = await findStaged(ref.id, locale);
             if (!existing) throw noStaged(ref.id);
 
@@ -392,7 +398,7 @@ export function createContentRepository<
         delete: async (ref: ContentRef): Promise<void> => {
             await contents.deleteMany({
                 [ownerColumn]: ref.id,
-                locale: ref.locale ?? defaultLocale,
+                locale: ref.locale ?? defaultLocale(),
                 stagedFor: { ne: null },
             } as never);
         },

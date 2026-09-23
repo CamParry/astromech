@@ -129,18 +129,17 @@ export type PluginContext = Omit<AppContext, 'config' | 'entries' | 'globals'> &
      * The GLOBAL entries service — not scoped, not qualified. A plugin addresses
      * its own types explicitly, built from context rather than an import:
      * `` ctx.entries.query({ type: `${ctx.plugin.namespace}/redirect` }) ``.
-     * Reads default to the `full` shape (plugin altitude is trusted server code);
-     * an explicit per-call `full` still wins. No permission checks — HTTP is the
-     * enforcement boundary.
+     * Reads answer the public shape unless the call passes `full: true`, as they
+     * do for every caller. No permission checks — HTTP is the enforcement
+     * boundary.
      */
     entries: TypedEntriesService;
     /**
      * The GLOBAL globals service — not scoped, not qualified, the way
      * `entries` is. A plugin addresses its own globals by the qualified key it
      * builds from context: ``ctx.globals.get({ key: `${ctx.plugin.namespace}/settings` })``.
-     * Reads default to the `full` shape (plugin altitude is trusted server
-     * code); an explicit per-call `full` still wins. No permission checks —
-     * HTTP is the enforcement boundary.
+     * Reads answer the public shape unless the call passes `full: true`. No
+     * permission checks — HTTP is the enforcement boundary.
      */
     globals: TypedGlobalsService;
     /** Storage scoped to this plugin — keys are namespaced under `plugin/<alias>/` transparently. */
@@ -214,7 +213,12 @@ export type PluginRawRoute = {
     /** Path relative to `${basePath}/api/plugins/{name}`, e.g. `/upload`. */
     path: string;
     access: PluginAccess;
-    handler: (request: Request, ctx: PluginContext) => Promise<Response> | Response;
+    /** `params` holds the values of the path's `:name` segments, decoded. */
+    handler: (
+        request: Request,
+        ctx: PluginContext,
+        params: Record<string, string>
+    ) => Promise<Response> | Response;
 };
 
 export type PluginCronJob = {

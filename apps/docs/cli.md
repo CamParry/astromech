@@ -97,7 +97,9 @@ entries method takes its type from the id, so `--args` does not repeat it.
 A method the CLI cannot call says why: `media.upload` carries binary input that
 JSON cannot express, and a session-scoped method (the notifications ones) has no
 signed-in user on a trusted transport. Both are reachable over HTTP instead, at
-`POST {basePath}/api/rpc/{method id}`.
+`POST {basePath}/api/rpc/{method id}`. A plugin method answers there exactly as at
+`POST {basePath}/api/plugins/{serviceKey}/{method}`: its raw result, not wrapped
+in `{ data }`.
 
 The per-domain commands above stay: they hold flag parsing `call` has no way to
 offer — `--fields @file`, an ISO date coerced to a `Date`, and `users:create`'s

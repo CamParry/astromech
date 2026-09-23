@@ -165,8 +165,11 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
     app.on(['GET', 'POST'], `${api}/auth/*`, (c) => getAuth().handler(c.req.raw));
 
     // Plugin RPC + raw routes enforce access per-method (incl. public), so
-    // they mount before the API-wide requireAuth.
+    // they mount before the API-wide requireAuth. So does the one route over
+    // the whole method manifest, which answers a plugin method as they do and
+    // requires a session for everything else itself.
     app.route(`${api}/plugins`, createPluginsRouter());
+    app.route(`${api}/rpc`, rpcRouter);
 
     // CRON poke — enforces its own auth (admin session OR bearer secret), so it
     // mounts before the API-wide requireAuth to allow sessionless external pokes.
@@ -190,9 +193,6 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
     app.route(`${api}/settings`, settingsRouter);
     app.route(`${api}/entry-types`, entryTypesRouter);
     app.route(`${api}/notifications`, notificationsRouter);
-
-    // One route over the whole method manifest, beside the REST surface.
-    app.route(`${api}/rpc`, rpcRouter);
 
     app.doc(`${api}/openapi.json`, {
         openapi: '3.0.0',

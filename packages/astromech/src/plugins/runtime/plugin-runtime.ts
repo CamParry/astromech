@@ -17,7 +17,6 @@ import type {
     PluginServiceNamespace,
     ResolvedConfig,
     ResolvedPluginIdentity,
-    SettingsService,
     TypedEntriesService,
     TypedGlobalsService,
 } from '@/types/index';
@@ -45,11 +44,6 @@ import { createRegistry } from '@/registry';
 import { listAll } from '@/storage/prefix';
 import { getStorageDriver } from '@/storage/registry';
 import { log } from '@/utilities/log';
-import {
-    withDefaultGlobalsShape,
-    withDefaultSettingsShape,
-    withDefaultShape,
-} from '@/utilities/with-default-shape';
 
 // Registry lives on globalThis, shared across the package's entry chunks.
 type RegisteredRawRoute = { identity: ResolvedPluginIdentity; route: PluginRawRoute };
@@ -310,22 +304,13 @@ export function createPluginContext(
     const layer = {
         plugin: identity,
         config: configView,
-        // The domains a plugin sees differently from the app: those with a shape
-        // axis default to 'full', since plugin altitude is trusted server code.
+        // The app's own services under their typed facades. Reads answer the
+        // public shape unless the call passes `full: true`, as everywhere else.
         get entries(): TypedEntriesService {
-            return withDefaultShape(
-                app.entries,
-                'full'
-            ) as unknown as TypedEntriesService;
+            return app.entries as unknown as TypedEntriesService;
         },
         get globals(): TypedGlobalsService {
-            return withDefaultGlobalsShape(
-                app.globals as unknown as TypedGlobalsService,
-                'full'
-            ) as unknown as TypedGlobalsService;
-        },
-        get settings(): SettingsService {
-            return withDefaultSettingsShape(app.settings, 'full');
+            return app.globals as unknown as TypedGlobalsService;
         },
         get plugins(): PluginServiceNamespace | undefined {
             return pluginServicesFor(app);

@@ -19,32 +19,33 @@ type RawNode = {
     _children?: RawNode[];
 };
 
-/** Resolve an entry's front-end URL from its type's `url` template, or null. */
+/**
+ * Resolve an entry's front-end URL from its type's `url` template, or null.
+ * Public reads, so an entry a visitor cannot see (unpublished, scheduled or
+ * trashed) resolves to no URL.
+ */
 async function resolveEntryRef(
     ctx: PluginContext,
     entryId: string,
     locale: string | undefined
 ): Promise<string | null> {
-    // Try every entry type, since the relationship field stores only the id.
+    // Try each type with a URL template, since the relationship field stores
+    // only the id; a type that does not hold it answers null.
     for (const [type, config] of Object.entries(ctx.config.entries)) {
         if (!config.url) continue;
-        try {
-            // The reader's locale first; an entry with no row for it falls back
-            // to the default locale, so a menu never loses an item to a missing
-            // translation.
-            const entry =
-                ((await ctx.entries.get({
-                    type,
-                    id: entryId,
-                    ...(locale ? { locale } : {}),
-                })) as Entry | null) ??
-                (locale
-                    ? ((await ctx.entries.get({ type, id: entryId })) as Entry | null)
-                    : null);
-            if (entry) return resolveEntryUrl(config.url, entry);
-        } catch {
-            // Not this type, or the type rejects this locale — try the next.
-        }
+        // The reader's locale first; an entry with no row for it falls back to
+        // the default locale, so a menu never loses an item to a missing
+        // translation.
+        const entry =
+            ((await ctx.entries.get({
+                type,
+                id: entryId,
+                ...(locale ? { locale } : {}),
+            })) as Entry | null) ??
+            (locale
+                ? ((await ctx.entries.get({ type, id: entryId })) as Entry | null)
+                : null);
+        if (entry) return resolveEntryUrl(config.url, entry);
     }
     return null;
 }
@@ -109,14 +110,13 @@ export function buildMenusService(
 
                 const locale =
                     typeof input?.locale === 'string' ? input.locale : undefined;
-                // Trusted internal read of the plugin's own menu global, at the
-                // qualified key core resolves it under. Reads through
-                // `ctx.globals` are full-shaped by default (plugin altitude is
-                // trusted server code) — the handler returns a sanitised menu
-                // tree, never the raw fields, so this never leaks.
+                // The plugin's own menu global, at the qualified key core
+                // resolves it under, in the full shape: the handler returns a
+                // sanitised menu tree, never the raw fields.
                 const global = await ctx.globals.get({
                     key: `${ctx.plugin.namespace}/menu-${key}`,
                     ...(locale ? { locale } : {}),
+                    full: true,
                 });
                 const stored = global?.fields['items'];
                 const items = Array.isArray(stored) ? (stored as RawNode[]) : [];

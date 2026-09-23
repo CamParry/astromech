@@ -28,18 +28,7 @@ function isArtifactAvailable(row: BackupRunRow): boolean {
     );
 }
 
-/** Parse the last path segment from a URL pathname, e.g. `/backups/runs/abc-123/download` → `abc-123`. */
-function parseSegment(pathname: string, offset: number): string {
-    // segments = ['', 'backups', 'runs', ':id', 'download'] — offset is from the end
-    const parts = pathname.split('/').filter(Boolean);
-    return parts[parts.length - 1 - offset] ?? '';
-}
-
-async function downloadArtifact(request: Request, ctx: PluginContext): Promise<Response> {
-    const url = new URL(request.url);
-    // pathname: /api/plugins/backups/runs/:id/download → id is second from end
-    const id = parseSegment(url.pathname, 1);
-
+async function downloadArtifact(ctx: PluginContext, id: string): Promise<Response> {
     const row = await createBackupRunsRepository(ctx.db).get(id);
     if (row === null) {
         return Response.json({ error: 'Backup run not found' }, { status: 404 });
@@ -62,8 +51,8 @@ async function downloadArtifact(request: Request, ctx: PluginContext): Promise<R
 }
 
 async function restoreFromBackup(
-    request: Request,
     ctx: PluginContext,
+    id: string,
     keep: number
 ): Promise<Response> {
     if (!ctx.database.restore) {
@@ -72,10 +61,6 @@ async function restoreFromBackup(
             { status: 400 }
         );
     }
-
-    const url = new URL(request.url);
-    // pathname: /api/plugins/backups/runs/:id/restore → id is second from end
-    const id = parseSegment(url.pathname, 1);
 
     const row = await createBackupRunsRepository(ctx.db).get(id);
     if (row === null) {
@@ -130,13 +115,14 @@ export function buildBackupRoutes(defaultKeep: number): PluginRawRoute[] {
             // NOT `read` — the artifact is a full database dump, so this is a
             // strictly higher grant than listing run metadata.
             access: { permission: 'download' },
-            handler: (req, ctx) => downloadArtifact(req, ctx),
+            handler: (_req, ctx, params) => downloadArtifact(ctx, params['id'] ?? ''),
         },
         {
             method: 'POST',
             path: '/runs/:id/restore',
             access: { permission: 'restore' },
-            handler: (req, ctx) => restoreFromBackup(req, ctx, defaultKeep),
+            handler: (_req, ctx, params) =>
+                restoreFromBackup(ctx, params['id'] ?? '', defaultKeep),
         },
     ];
 }

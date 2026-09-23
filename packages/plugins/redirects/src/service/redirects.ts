@@ -28,6 +28,7 @@ export const redirectsService = {
                 type: `${ctx.plugin.namespace}/${REDIRECT_TYPE}`,
                 where: { from },
                 limit: 'all',
+                full: true,
             });
 
             // An enabled rule wins over a disabled one for the same path; a rule

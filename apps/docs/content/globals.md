@@ -104,6 +104,7 @@ hard-coding.
 ```ts
 const settings = await ctx.globals.get({
     key: `${ctx.plugin.namespace}/settings`,
+    full: true,
 });
 const mediaId = settings?.fields['defaultOgImage'];
 ```

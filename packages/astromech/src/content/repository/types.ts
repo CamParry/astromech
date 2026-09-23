@@ -223,7 +223,7 @@ export type ContentRepositoryOptions<
     C extends Table,
 > = {
     db?: Db | undefined;
-    defaultLocale?: string | undefined;
+    defaultLocale?: string | (() => string) | undefined;
     decode: (own: TableSelect<O>, content: TableSelect<C>, locales: string[]) => R;
     ownerFilter?: OwnerFilter | undefined;
 };

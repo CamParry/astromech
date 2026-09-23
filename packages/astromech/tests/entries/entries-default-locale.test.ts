@@ -1,10 +1,7 @@
 /**
- * Regression: `defaultLocale` may be a DISPLAY tag (e.g. `en-GB`) that is not a
- * content locale entries are tagged with. Queries that omit an explicit locale
- * rely on the entries service's default; it must bridge the display tag to an
- * available content locale (RFC 4647 lookup), otherwise the locale filter
- * matches nothing and reads come back empty (broke the admin command-palette
- * search, which never passes a locale).
+ * Reads that name no locale take the configured default content locale. It may
+ * be a display tag (`en-GB`) the service bridges to a content locale, and it
+ * need not be `en`: the entries repository reads it from the config too.
  */
 
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
@@ -38,5 +35,27 @@ describe('default locale resolution for locale-less reads', () => {
             limit: 10,
         });
         expect(search.data.map((e) => e.title)).toContain('Home');
+    });
+});
+
+describe('a default content locale other than en', () => {
+    it('answers a resource-level read with the default locale’s row', async () => {
+        const cfg = makeTestConfig();
+        cfg.defaultLocale = 'de';
+        cfg.locales = ['de', 'en'];
+        setupTestConfig(cfg);
+
+        const entry = await api.create({ type: 'post', data: { title: 'Hallo' } });
+        await api.update({
+            type: 'post',
+            id: entry.id,
+            locale: 'en',
+            data: { title: 'Hello' },
+        });
+        await api.trash({ type: 'post', id: entry.id });
+
+        const restored = await api.restore({ type: 'post', id: entry.id });
+        expect(restored.locale).toBe('de');
+        expect(restored.title).toBe('Hallo');
     });
 });

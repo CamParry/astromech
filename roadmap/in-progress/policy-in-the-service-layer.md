@@ -46,13 +46,15 @@ workstream.
       writes the user and its credential account without a transaction. It is
       the third copy of "user plus credential account", beside `auth/setup.ts`
       and `users/methods/create.ts`.
-- [ ] **Plugin reads default to the full shape**, via
+- [x] **Plugin reads default to the full shape**, via
       `utilities/with-default-shape.ts` and `plugin-runtime.ts`, so the menus
       plugin's public method resolves URLs for unpublished, scheduled and
       trashed entries (`plugins/menus/src/service/menus.ts`). Plugin reads
       default to public; a trusted caller opts in with `full: true`. Menus also
-      tries every entry type per node and swallows every error.
-- [ ] **The entries repository hardcodes `'en'`** as its default locale
+      tries every entry type per node and swallows every error. The catch-all
+      is gone; the loop over types stays, since a relationship value carries
+      no type and no plugin-facing call looks one up by id.
+- [x] **The entries repository hardcodes `'en'`** as its default locale
       (`entries/repository/entries-table.ts`, `registry.ts`,
       `entries/internal/preview.ts`); users, media and globals read the
       configured default.
@@ -87,13 +89,18 @@ workstream.
       `permissions` also only load the config: they need no running
       application, and booting would demand a migrated database and every
       plugin's `requiredEnv`.
-- [ ] Merge the two plugin-method HTTP routes (`/plugins/:name/:method` and
+- [x] Merge the two plugin-method HTTP routes (`/plugins/:name/:method` and
       `/rpc/plugins.*`) onto one envelope and one set of 401/403 rules; the admin
-      uses the first.
-- [ ] Pass Hono's path params to plugin raw routes, and delete backups'
+      uses the first. Both answer a plugin method's raw result through one
+      handler; `/rpc` mounts before `requireAuth` so a public plugin method
+      needs no session there either, and requires one for every other method
+      itself.
+- [x] Pass Hono's path params to plugin raw routes, and delete backups'
       hand-rolled URL parsing (`routes/backups.ts`).
-- [ ] Smaller: replace `accessDenied` in `routes/entries.ts` and
+- [x] Smaller: replace `accessDenied` in `routes/entries.ts` and
       `routes/globals.ts` with `permissionsFor(role).allowsAccess`; hoist
       `flattenEntryFields` out of the per-row loop in `entries/methods/query.ts`;
-      drop the unused `audience.role`; replace `with-default-shape.ts`'s 30
-      forwarders with a spread.
+      replace `with-default-shape.ts`'s 30 forwarders with a spread (deleted
+      instead: with plugin reads public, nothing needs it).
+- [ ] Drop the unused `audience.role`. Left for the `field-tree-traversal`
+      branch, which is reworking `content/visibility.ts`, where the type lives.

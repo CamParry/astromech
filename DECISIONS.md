@@ -90,7 +90,7 @@ Live choices and what each one beat. An entry is here because the losing option 
 
 **The media route answers like a file server, not like the API.** Its callers are `<img>` tags and CDNs: a missing file is a plain-text 404, a failed transform serves the original (as Next.js does), anything else is a `no-store` 500. `Cross-Origin-Resource-Policy` is `cross-origin` for public media and `same-site` for private. Rejected: scoping `onError` away from the media prefix, and `same-origin` for private media, which is not access control and breaks a CMS on a sibling subdomain.
 
-**A route declares itself.** One table of `(verb, path, method id)` feeds the Hono handler, the OpenAPI document and the fetch client, and `POST /rpc/:id` reaches any manifest method. Rejected: build-time client codegen, retiring REST for RPC, and retiring the hand-written CLI commands.
+**A route declares itself.** One table of `(verb, path, method id)` feeds the Hono handler, the OpenAPI document and the fetch client, and `POST /rpc/:id` reaches any manifest method. A plugin method answers its raw result under the same access rules on `/rpc/plugins.*` and on `/plugins/:name/:method`, the route the fetch client uses, so a public one needs no session on either. Rejected: build-time client codegen, retiring REST for RPC, retiring the hand-written CLI commands, and the `{ data }` envelope for a plugin method on RPC alone.
 
 **Multi-id writes over REST are `POST` action routes**, `POST /entries/:type/bulk-<action>` with `ids` in the body, as in Strapi's admin API. Most actions have no HTTP method, and a `DELETE` body has no defined meaning. Rejected: `PATCH`/`DELETE` on the collection (Directus), `where` in the query string (Payload), and one batch endpoint, which moves permission checks out of the route table.
 
@@ -109,6 +109,8 @@ Live choices and what each one beat. An entry is here because the losing option 
 **A method whose subject is the caller declares `sessionScoped`.** The handler reads `ctx.user`, and the scoped handle refuses the call when nobody is signed in; no permission is needed to act on your own rows. Rejected: a `sessionArgument: 'userId'` field, and injecting `userId` into the input, which the method's parse strips.
 
 **An untrusted call reaches a service only through the scoped handle, plugin methods included.** `scopedServices(ctx)` checks each method's `access` against `ctx.role`, and `callMethod` maps a manifest method onto it for RPC, the AI tool loop, MCP and the CLI. Rejected: plugin RPC checking `access` itself, which leaves the tool loop no way to scope plugin methods.
+
+**A plugin's reads answer the public shape unless the call asks for `full`.** `ctx.entries`, `ctx.globals` and `ctx.settings` read as a site's own code does, and a plugin reading its own settings or rules passes `full: true`. Rejected: defaulting plugin reads to the full shape as trusted server code, which let the menus plugin's public method resolve URLs for unpublished, scheduled and trashed entries.
 
 **The admin is its own package, `@astromech/admin`, and core depends on it.** `astromech/astro` injects the admin into every site, so a site installs core alone, as with Strapi and Directus. It ships as source because a site's admin components join its build. Rejected: installing the admin beside core (Payload's model), and an `@admin/*` alias the site's Vite would also have to register.
 

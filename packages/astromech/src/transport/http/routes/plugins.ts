@@ -12,9 +12,7 @@ import { resolveAccess } from '@/permissions/access';
 import { permissionsFor } from '@/permissions/permissions-for';
 import {
     createPluginContext,
-    getPluginIdentity,
     getPluginRawRoutes,
-    getPluginServiceMethods,
 } from '@/plugins/runtime/plugin-runtime';
 import { scopedServices } from '@/policies/scoped-services';
 import { optionalAuth } from '@/transport/http/middleware/auth';
@@ -60,37 +58,46 @@ export function createPluginsRouter(): Hono<PluginEnv> {
         router.on(method, path, (c) => {
             const denied = enforceAccess(c, route.access, identity);
             if (denied) return denied;
-            return route.handler(c.req.raw, createPluginContext(identity, c.var.ctx));
+            return route.handler(
+                c.req.raw,
+                createPluginContext(identity, c.var.ctx),
+                c.req.param()
+            );
         });
     }
 
     // RPC: POST /plugins/{serviceKey}/{method}
     // Not in a route table: the method id is two path params resolved at request
-    // time against the plugin service registry, and the handler's result is
-    // returned unenveloped. Access is checked by the scoped handle.
-    router.post('/:name/:method', async (c) => {
-        const name = c.req.param('name');
-        const method = c.req.param('method');
-
-        // Resolve the identity first, then reach the registry through it — the
-        // service registry keys on the namespace, and the segment is the service key.
-        const identity = getPluginIdentity(name);
-        if (!identity) return notFound(c, `Plugin "${name}" not found`);
-
-        const serviceMethod = getPluginServiceMethods().get(identity.namespace)?.[method];
-        if (!serviceMethod) {
-            return notFound(c, `Plugin method "${name}.${method}" not found`);
-        }
-
-        const body = await c.req.json().catch(() => undefined);
-        // A refusal reaches `onError`: 401 without a session, 403 with one.
-        const result = await scopedServices(c.var.ctx).plugins[name]?.[method]?.(body);
-        // Build the JSON Response directly: c.json's generic chokes on the
-        // recursive JsonValue type. RPC returns the raw handler result.
-        return new Response(JSON.stringify(result ?? null), {
-            headers: { 'Content-Type': 'application/json' },
-        });
-    });
+    // time against the plugin service registry.
+    router.post('/:name/:method', (c) =>
+        answerPluginMethod(c, c.req.param('name'), c.req.param('method'))
+    );
 
     return router;
+}
+
+/**
+ * Call one plugin method as `c.var.ctx` and answer its raw result, the one
+ * answer both `POST /plugins/:name/:method` and `POST /rpc/plugins.*` give.
+ * Access is the scoped handle's: a refusal reaches `onError`, 401 without a
+ * session and 403 with one. An unparseable body is no argument.
+ */
+export async function answerPluginMethod(
+    c: Context<PluginEnv>,
+    name: string,
+    method: string
+): Promise<Response> {
+    const plugin = scopedServices(c.var.ctx).plugins[name];
+    if (plugin === undefined) return notFound(c, `Plugin "${name}" not found`);
+    const call = plugin[method];
+    if (call === undefined) {
+        return notFound(c, `Plugin method "${name}.${method}" not found`);
+    }
+
+    const body: unknown = await c.req.json().catch(() => undefined);
+    const result = await call(body);
+    // Built directly: c.json's generic chokes on the recursive JsonValue type.
+    return new Response(JSON.stringify(result ?? null), {
+        headers: { 'Content-Type': 'application/json' },
+    });
 }

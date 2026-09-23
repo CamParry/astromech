@@ -9,9 +9,9 @@ export function entryFields(entry: Entry): Record<string, unknown> {
 }
 
 /**
- * Load a live, submittable form by slug, or `null`. `ctx.entries` reads are
- * `full`-shaped and so bypass the publish gate, making the published and
- * enabled checks this function's own job.
+ * Load a live, submittable form by slug, or `null`. The read asks for the full
+ * shape, since the form's own settings may be private, which bypasses the
+ * publish gate and makes the published and enabled checks this function's job.
  */
 export async function loadForm(ctx: PluginContext, slug: unknown): Promise<Entry | null> {
     if (typeof slug !== 'string' || slug === '') return null;
@@ -20,6 +20,7 @@ export async function loadForm(ctx: PluginContext, slug: unknown): Promise<Entry
         type: `${ctx.plugin.namespace}/${FORM_TYPE}`,
         where: { slug },
         limit: 1,
+        full: true,
     });
 
     const form = (data as Entry[])[0];

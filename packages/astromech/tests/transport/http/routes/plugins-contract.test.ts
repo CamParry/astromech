@@ -67,6 +67,12 @@ const probePlugin: PluginDefinition = {
             handler: () => new Response('raw ok', { status: 200 }),
         },
         {
+            method: 'GET',
+            path: '/raw-items/:id/:part',
+            access: 'public',
+            handler: (_request, _ctx, params) => Response.json(params),
+        },
+        {
             method: 'POST',
             path: '/raw-guarded',
             access: { permission: 'read' },
@@ -244,6 +250,12 @@ describe('raw routes', () => {
         ).request('/plugins/probe/raw-guarded', { method: 'POST', body: 'payload' });
         expect(allowed.status).toBe(201);
         expect(await allowed.text()).toBe('payload');
+    });
+
+    it('hands the handler the path’s params, decoded', async () => {
+        const app = await freshApp();
+        const res = await app.request('/plugins/probe/raw-items/a%20b/notes');
+        expect(await res.json()).toEqual({ id: 'a b', part: 'notes' });
     });
 
     it('does not answer a raw route on the wrong verb', async () => {

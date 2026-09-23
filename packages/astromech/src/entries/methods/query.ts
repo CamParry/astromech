@@ -1,5 +1,11 @@
 import type { VisibilityShape } from '@/content/visibility';
-import type { Entry, QueryResult, ReferencesFilter, ResolvedConfig } from '@/types/index';
+import type {
+    Entry,
+    Field,
+    QueryResult,
+    ReferencesFilter,
+    ResolvedConfig,
+} from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
 import { applyVisibility } from '@/content/visibility';
@@ -115,16 +121,27 @@ export const queryEntries = defineServiceMethod({
 
         const audience = { role: ctx.user?.role ?? null, now };
 
+        // Field definitions per type, flattened once: a cross-type page mixes
+        // types, and a single-type page would otherwise flatten per row.
+        const fieldsByType = new Map<string, Field[]>();
+        const fieldsOf = (type: string): Field[] => {
+            let fields = fieldsByType.get(type);
+            if (fields === undefined) {
+                const entryType = resolveEntryType(config, type);
+                fields = entryType ? flattenEntryFields(entryType.fields) : [];
+                fieldsByType.set(type, fields);
+            }
+            return fields;
+        };
+
         const visibleData: Entry[] = [];
         for (const entry of data) {
-            // Resolve field definitions per row (supports cross-type queries).
             const rowType = entry.type ?? singleType ?? firstType;
             // tableRepository-backed rows have no `type` column, so they come back
             // without a type. Stamp it from the query so every returned entry is
             // complete (consumers build links / resolve icons from `entry.type`).
             if (entry.type === undefined) entry.type = rowType;
-            const rowEntryType = resolveEntryType(config, rowType);
-            const rowFields = rowEntryType ? flattenEntryFields(rowEntryType.fields) : [];
+            const rowFields = fieldsOf(rowType);
 
             const filtered = applyVisibility(entry, {
                 shape,
