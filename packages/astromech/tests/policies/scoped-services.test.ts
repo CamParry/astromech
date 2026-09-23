@@ -49,8 +49,8 @@ function makeService() {
 }
 
 const contracts = {
-    read: { access: 'settings:read', input: z.unknown(), mutates: false },
-    write: { access: 'settings:update', input: z.unknown(), mutates: true },
+    read: { access: 'users:read', input: z.unknown(), mutates: false },
+    write: { access: 'users:update', input: z.unknown(), mutates: true },
 } satisfies Record<string, ServiceMethodContract>;
 
 describe('scopeMethods', () => {
@@ -59,8 +59,8 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             service,
             contracts,
-            { permissions: permissionsFor(role('settings:read')), user: null },
-            'settings'
+            { permissions: permissionsFor(role('users:read')), user: null },
+            'users'
         );
 
         expect(() => scoped.write()).toThrow(PermissionDeniedError);
@@ -71,8 +71,8 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             makeService(),
             contracts,
-            { permissions: permissionsFor(role('settings:read')), user: null },
-            'settings'
+            { permissions: permissionsFor(role('users:read')), user: null },
+            'users'
         );
 
         try {
@@ -81,8 +81,8 @@ describe('scopeMethods', () => {
         } catch (e) {
             expect(e).toBeInstanceOf(PermissionDeniedError);
             const denied = e as PermissionDeniedError;
-            expect(denied.method).toBe('settings.write');
-            expect(denied.permission).toBe('settings:update');
+            expect(denied.method).toBe('users.write');
+            expect(denied.permission).toBe('users:update');
         }
     });
 
@@ -92,10 +92,10 @@ describe('scopeMethods', () => {
             service,
             contracts,
             {
-                permissions: permissionsFor(role('settings:read', 'settings:update')),
+                permissions: permissionsFor(role('users:read', 'users:update')),
                 user: null,
             },
-            'settings'
+            'users'
         );
 
         await expect(scoped.write()).resolves.toBe('write-result');
@@ -107,8 +107,8 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             service,
             contracts,
-            { permissions: permissionsFor(role('settings:read')), user: null },
-            'settings'
+            { permissions: permissionsFor(role('users:read')), user: null },
+            'users'
         );
 
         await scoped.read({ key: 'site.title' });
@@ -121,7 +121,7 @@ describe('scopeMethods', () => {
             service,
             contracts,
             { permissions: permissionsFor(role('*')), user: null },
-            'settings'
+            'users'
         );
 
         try {
@@ -139,7 +139,7 @@ describe('scopeMethods', () => {
             makeService(),
             contracts,
             { permissions: permissionsFor(undefined), user: null },
-            'settings'
+            'users'
         );
 
         expect(() => scoped.read()).toThrow(PermissionDeniedError);
@@ -147,14 +147,14 @@ describe('scopeMethods', () => {
 
     it('treats a null role the same as an absent one', () => {
         const permissions = permissionsFor(null);
-        expect(permissions.allows('settings:read')).toBe(false);
+        expect(permissions.allows('users:read')).toBe(false);
         expect(permissions.allowsMethod(contracts.read)).toBe(false);
 
         const scoped = scopeMethods(
             makeService(),
             contracts,
             { permissions: permissions, user: null },
-            'settings'
+            'users'
         );
         expect(() => scoped.read()).toThrow(PermissionDeniedError);
     });
@@ -164,7 +164,7 @@ describe('scopeMethods', () => {
             makeService(),
             contracts,
             { permissions: permissionsFor(role('*')), user: null },
-            'settings'
+            'users'
         );
 
         expect(scoped.label).toBe('not-a-function');
@@ -211,8 +211,8 @@ describe('scopeMethods — session-scoped', () => {
         const scoped = scopeMethods(
             service,
             contracts,
-            { permissions: permissionsFor(role('settings:read')), user: null },
-            'settings'
+            { permissions: permissionsFor(role('users:read')), user: null },
+            'users'
         );
 
         await scoped.read({ key: 'site.title' });

@@ -76,7 +76,6 @@ const contentModules = [
     'globals',
     'media',
     'users',
-    'settings',
     'notifications',
     'content',
 ];

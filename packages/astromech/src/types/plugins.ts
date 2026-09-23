@@ -101,7 +101,6 @@ export type PluginConfigView = Pick<
     | 'basePath'
     | 'mediaRoute'
     | 'trash'
-    | 'publicSettingKeys'
     | 'timezone'
     | 'roles'
 > & {
@@ -117,7 +116,7 @@ export type PluginConfigView = Pick<
 export type PluginContext = Omit<AppContext, 'config' | 'entries' | 'globals'> & {
     /**
      * This plugin's own resolved identity. Runtime code that needs a namespaced
-     * string — a settings key, a permission, an i18n bundle name — reads it
+     * string — a global key, a permission, an i18n bundle name — reads it
      * from here rather than importing an identity module, which is what keeps a
      * plugin's sub-modules free of any dependency on its identity.
      */

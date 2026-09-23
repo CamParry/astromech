@@ -183,12 +183,6 @@ export default defineConfig({
                     branches: 99,
                     statements: 99,
                 },
-                'src/settings/**': {
-                    lines: 99,
-                    functions: 99,
-                    branches: 94,
-                    statements: 99,
-                },
                 'src/storage/**': {
                     lines: 96,
                     functions: 92,

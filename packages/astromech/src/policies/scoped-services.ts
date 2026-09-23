@@ -12,7 +12,6 @@ import type {
     NotificationsService,
     PluginServiceNamespace,
     ServiceMethodContract,
-    SettingsService,
     User,
     UsersService,
 } from '@/types/index';
@@ -28,7 +27,6 @@ import {
     getPluginServiceMethods,
 } from '@/plugins/runtime/plugin-runtime';
 import { pluginServicesFor } from '@/plugins/runtime/plugin-services';
-import { settingsDefinition } from '@/settings/service';
 import { usersDefinition } from '@/users/service';
 
 /**
@@ -148,7 +146,6 @@ function scopePlugins(ctx: AppContext, permissions: Permissions): PluginServiceN
 export type ScopedServices = {
     users: UsersService;
     media: MediaService;
-    settings: SettingsService;
     entries: EntriesService;
     globals: GlobalsService;
     notifications: NotificationsService;
@@ -172,12 +169,6 @@ export function scopedServices(ctx: AppContext): ScopedServices {
     const handle: ScopedServices = {
         users: scopeMethods(ctx.users, usersDefinition.catalogue, caller, 'users'),
         media: scopeMethods(ctx.media, mediaDefinition.catalogue, caller, 'media'),
-        settings: scopeMethods(
-            ctx.settings,
-            settingsDefinition.catalogue,
-            caller,
-            'settings'
-        ),
         // An entry's and a global's permissions depend on the call's `type` or
         // `key`, and each contract states that in the function form, the
         // `full` and publish gates included.

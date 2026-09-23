@@ -1,5 +1,5 @@
 /**
- * Core domain types — entries, globals, users, media, settings, roles,
+ * Core domain types — entries, globals, users, media, roles,
  * relationships
  */
 
@@ -211,8 +211,6 @@ export type Permission =
     | 'media:upload'
     | 'media:update'
     | 'media:delete'
-    | 'settings:read'
-    | 'settings:update'
     | 'users:read'
     | 'users:create'
     | 'users:update'
@@ -267,11 +265,4 @@ export type NotifyInput = {
     message: string;
     /** Admin-relative click-through path (e.g. `/entries/123`), without the admin base prefix. */
     href?: string;
-};
-
-export type Setting = {
-    key: string;
-    value: JsonValue;
-    updatedAt: Date;
-    updatedBy: string | null;
 };

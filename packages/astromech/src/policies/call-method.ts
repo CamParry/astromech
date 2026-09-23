@@ -10,7 +10,6 @@ import {
     globalsService,
     mediaService,
     notificationsService,
-    settingsService,
     usersService,
 } from '@/app-context/services';
 import { PermissionDeniedError } from '@/errors/permission';
@@ -69,7 +68,6 @@ function trustedServices(): ScopedServices {
     return {
         users: usersService,
         media: mediaService,
-        settings: settingsService,
         entries: entriesService,
         globals: globalsService,
         notifications: notificationsService,

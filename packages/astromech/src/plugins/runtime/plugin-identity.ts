@@ -63,7 +63,7 @@ export function resolvePluginIdentity(def: PluginDefinition): ResolvedPluginIden
 /**
  * Resolve a plugin-declared permission string: bare keys are plugin-scoped
  * (`'read'` → `plugin:<namespace>:read`); strings containing `:` pass through
- * unchanged so core permissions (`settings:read`) remain expressible.
+ * unchanged so core permissions (`users:read`) remain expressible.
  */
 export function resolvePluginPermission(namespace: string, permission: string): string {
     return permission.includes(':') ? permission : `plugin:${namespace}:${permission}`;

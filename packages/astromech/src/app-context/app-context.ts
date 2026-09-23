@@ -14,7 +14,6 @@ import type {
     PluginMethods,
     ResolvedConfig,
     Role,
-    SettingsService,
     User,
     UsersService,
 } from '@/types/index';
@@ -38,7 +37,6 @@ import {
     getCurrentUser,
     getRequestScope,
 } from '@/request-scope/request-scope';
-import { settingsDefinition } from '@/settings/service';
 import { buildScopedTools } from '@/transport/tools/scoped-tools';
 import { usersDefinition } from '@/users/service';
 import { log } from '@/utilities/log';
@@ -61,7 +59,6 @@ export function createAppContext(input: AppContextInput): AppContext {
     let globals: GlobalsService | undefined;
     let media: MediaService | undefined;
     let notifications: NotificationsService | undefined;
-    let settings: SettingsService | undefined;
     let users: UsersService | undefined;
 
     const context: AppContext = {
@@ -87,10 +84,6 @@ export function createAppContext(input: AppContextInput): AppContext {
         get media(): MediaService {
             media ??= mediaDefinition.bind(context);
             return media;
-        },
-        get settings(): SettingsService {
-            settings ??= settingsDefinition.bind(context);
-            return settings;
         },
         get users(): UsersService {
             users ??= usersDefinition.bind(context);

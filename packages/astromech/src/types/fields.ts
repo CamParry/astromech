@@ -126,8 +126,8 @@ export type FieldErrors = Record<string, string[]>;
 export type ValidationMode = 'partial' | 'complete';
 
 /**
- * Context passed to a `FieldValidator`. Resource-generic — works for entries, media,
- * users, and settings, not just entries. Cross-field rules read siblings off
+ * Context passed to a `FieldValidator`. Resource-generic — works for entries, media
+ * and users, not just entries. Cross-field rules read siblings off
  * `values`; the current record is available raw on `resource.record`.
  */
 export type FieldValidationContext = {

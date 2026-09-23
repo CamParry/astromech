@@ -49,11 +49,11 @@ const METHODS: ManifestMethod[] = [
         binaryInput: true,
     }),
     coreMethod({
-        id: 'settings.all',
-        name: 'settings.all',
-        module: 'settings',
-        method: 'all',
-        permission: 'settings:read',
+        id: 'media.query',
+        name: 'media.query',
+        module: 'media',
+        method: 'query',
+        permission: 'media:read',
         input: null,
     }),
 ];
@@ -85,8 +85,8 @@ describe('resolveCallable', () => {
     });
 
     it('refuses a method that declares no input schema', () => {
-        expect(() => resolveCallable(METHODS, 'settings.all')).toThrow(
-            'Method "settings.all" is not callable: no input schema declared on the descriptor'
+        expect(() => resolveCallable(METHODS, 'media.query')).toThrow(
+            'Method "media.query" is not callable: no input schema declared on the descriptor'
         );
     });
 });

@@ -8,7 +8,6 @@ import { resolveAdminPage } from '@/config/admin-pages';
 import { resolveEntryTypes } from '@/config/entry-types';
 import { resolveGlobals } from '@/config/globals';
 import { assertPluginsValid } from '@/config/plugins';
-import { resolvePublicSettingKeys } from '@/config/public-settings';
 import { assertMediaAccessCompatible } from '@/config/validate/media-access';
 import { assertRelationshipTargets } from '@/config/validate/relationships';
 import { assertUniqueDataNames, validateFieldTree } from '@/fields/field-tree';
@@ -31,8 +30,6 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     const adminPages: ResolvedAdminPage[] = (config.admin?.pages ?? []).map(
         resolveAdminPage
     );
-
-    const publicSettingKeys = resolvePublicSettingKeys(config.publicSettings);
 
     for (const [owner, fields] of [
         ['media', config.media?.fields ?? []],
@@ -86,7 +83,6 @@ export function resolveConfig(config: AstromechConfig): ResolvedConfig {
             enabled: config.trash?.enabled ?? true,
             retentionDays: config.trash?.retentionDays ?? 30,
         },
-        publicSettingKeys,
         resolvedRoles: resolveRoles(config),
         timezone: config.timezone ?? 'UTC',
     };

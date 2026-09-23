@@ -79,7 +79,6 @@ const config: ResolvedConfig = {
     globals: {},
     adminPages: [],
     trash: { enabled: true, retentionDays: 30 },
-    publicSettingKeys: [],
     timezone: 'UTC',
     mediaRoute: '/_media',
     migrationsDir: './migrations',

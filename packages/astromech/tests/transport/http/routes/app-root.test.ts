@@ -191,7 +191,6 @@ describe('requireAuth covers every mounted domain router', () => {
         ['/entries/post'],
         ['/users'],
         ['/media'],
-        ['/settings'],
         ['/entry-types'],
         ['/notifications'],
     ])('401s %s without a session', async (path) => {

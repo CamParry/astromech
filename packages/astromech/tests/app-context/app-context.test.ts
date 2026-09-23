@@ -45,7 +45,6 @@ const APP_CONTEXT_KEYS = [
     'notify',
     'role',
     'runHook',
-    'settings',
     'user',
     'users',
 ];
@@ -154,8 +153,6 @@ describe('createAppContext', () => {
         expect(app.entries).not.toBe(other.entries);
         expect(app.globals).toBe(app.globals);
         expect(app.globals).not.toBe(other.globals);
-        expect(app.settings).toBe(app.settings);
-        expect(app.settings).not.toBe(other.settings);
         expect(app.notifications).toBe(app.notifications);
         expect(app.notifications).not.toBe(other.notifications);
         expect(app.users).toBe(app.users);

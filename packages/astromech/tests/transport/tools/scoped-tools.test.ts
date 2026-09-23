@@ -141,13 +141,13 @@ describe('buildScopedTools', () => {
             methods: [
                 coreMethod('users.query'),
                 coreMethod('media.query'),
-                coreMethod('settings.get'),
+                coreMethod('users.get'),
             ],
         });
         const allowedById: Record<string, boolean | null> = {
             'users.query': false,
             'media.query': null,
-            'settings.get': true,
+            'users.get': true,
         };
         vi.mocked(annotateManifest).mockImplementation((methods) =>
             methods.map((method) => ({
@@ -161,7 +161,7 @@ describe('buildScopedTools', () => {
         const dispatched = vi
             .mocked(buildScopedDispatch)
             .mock.calls.map((call) => call[0].id);
-        expect(dispatched).toEqual(['media.query', 'settings.get']);
+        expect(dispatched).toEqual(['media.query', 'users.get']);
         expect(tools).toHaveLength(2);
     });
 

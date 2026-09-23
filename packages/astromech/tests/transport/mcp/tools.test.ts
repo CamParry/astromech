@@ -114,9 +114,8 @@ const sampleManifest: MethodManifest = {
             mutates: false,
             input: idSchema(),
         }),
-        // core — settings
-        core('settings', 'set', {
-            summary: 'Write a setting.',
+        core('users', 'update', {
+            summary: 'Update a CMS user.',
             mutates: true,
             idempotent: true,
             input: objectSchema,
@@ -220,9 +219,9 @@ describe('buildTools', () => {
         expect(tool?.annotations.destructiveHint).toBe(true);
     });
 
-    it('annotations: settings_set → idempotentHint:true', () => {
+    it('annotations: users_update → idempotentHint:true', () => {
         const { tools } = buildTools(sampleManifest);
-        const tool = tools.find((t) => t.name === 'settings_set');
+        const tool = tools.find((t) => t.name === 'users_update');
         expect(tool).toBeDefined();
         expect(tool?.annotations.idempotentHint).toBe(true);
     });

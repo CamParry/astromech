@@ -124,10 +124,6 @@ describe('can — built-in roles', () => {
             expect(can(editorRole, 'users:read')).toBe(false);
         });
 
-        it('cannot update settings', () => {
-            expect(can(editorRole, 'settings:update')).toBe(false);
-        });
-
         it('cannot access plugin permissions', () => {
             expect(can(editorRole, 'plugin:seo:view' as Permission)).toBe(false);
         });
@@ -137,14 +133,13 @@ describe('can — built-in roles', () => {
         it('grants everything via * wildcard', () => {
             expect(can(adminRole, 'entry:posts:publish')).toBe(true);
             expect(can(adminRole, 'users:delete')).toBe(true);
-            expect(can(adminRole, 'settings:update')).toBe(true);
             expect(can(adminRole, 'plugin:seo:view' as Permission)).toBe(true);
         });
     });
 });
 
 describe('BUILT_IN_ROLES', () => {
-    it('editor has entry:* and media permissions but not users/settings', () => {
+    it('editor has entry:* and media permissions but not users', () => {
         const editorBuiltIn = BUILT_IN_ROLES['editor'];
         if (!editorBuiltIn) throw new Error('editor built-in role missing');
         const { permissions } = editorBuiltIn;
@@ -154,7 +149,6 @@ describe('BUILT_IN_ROLES', () => {
         expect(permissions).toContain('media:update');
         expect(permissions).toContain('media:delete');
         expect(permissions).not.toContain('users:read');
-        expect(permissions).not.toContain('settings:read');
     });
 
     it('admin has * wildcard only', () => {

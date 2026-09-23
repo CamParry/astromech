@@ -76,12 +76,6 @@ export const queryKeys = {
             ['users', 'detail', id, 'versions', locale] as const,
     },
 
-    // Settings
-    settings: {
-        all: () => ['settings'] as const,
-        detail: (key: string) => ['settings', 'detail', key] as const,
-    },
-
     // Entry type metadata (schema/config)
     entryTypes: {
         all: () => ['entry-types-meta'] as const,

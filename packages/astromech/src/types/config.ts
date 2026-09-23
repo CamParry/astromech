@@ -464,16 +464,6 @@ export type AstromechConfig = {
     admin?: {
         pages?: AdminPage[];
     };
-    /**
-     * Setting keys readable without authentication. Keys not listed here are
-     * private by default.
-     *
-     * A bare key exposes the key itself and every `<key>:<locale>` variant. An
-     * entry already ending with `:` is a prefix and is taken as written.
-     *
-     * Example: `['site-meta']` allows `'site-meta'` and `'site-meta:en'`.
-     */
-    publicSettings?: string[];
     media?: MediaConfig;
     users?: UsersConfig;
     roles?: Record<string, RoleConfig>;
@@ -548,14 +538,6 @@ export type ResolvedConfig = Omit<
     adminPages: ResolvedAdminPage[];
     trash: Required<TrashConfig>;
     /**
-     * Derived set of setting keys (exact) and prefixes (ending with `:`) that
-     * are publicly readable. Computed once at config resolution from
-     * `AstromechConfig.publicSettings`: a bare entry contributes the key and
-     * the `<key>:` prefix, an entry already ending with `:` is kept as written.
-     * Always present (empty array when nothing is public).
-     */
-    publicSettingKeys: string[];
-    /**
      * Built-in roles merged with `roles`, keyed by slug. Computed once at config
      * resolution so a lookup does not rebuild the map.
      */
@@ -610,7 +592,7 @@ export type AdminConfig = {
         serviceKey: string;
         /** Display name — sidebar group and page-title prefix. */
         label: string;
-        /** Anchors permission strings and settings keys. */
+        /** Anchors permission strings and global keys. */
         permissionNamespace: string;
         /** Sidebar tree derived from nav-visible pages. */
         nav: PluginNavItem[];

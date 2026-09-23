@@ -206,7 +206,7 @@ describe('stage', () => {
         });
     });
 
-    // Media, users and settings never pass a stage; they must keep behaving
+    // Media and users never pass a stage; they must keep behaving
     // exactly as they did before the split existed.
     describe('an omitted stage behaves as publish', () => {
         it('required + empty → error', async () => {

@@ -421,7 +421,7 @@ export async function safeParseFields(
         declared.length === 0 ? { ...fields } : projectToSchema(fields, declared);
     const errors: FieldErrors = {};
     const warnings: FieldErrors = {};
-    // Default to `'complete'`, i.e. today's behaviour: media, users and settings
+    // Default to `'complete'`, i.e. today's behaviour: media and users
     // have no draft concept, so completeness must keep applying to them.
     const validation: ValidationMode = ctx.validation ?? 'complete';
     const collectWarnings = ctx.collectWarnings ?? false;

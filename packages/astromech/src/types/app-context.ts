@@ -13,7 +13,6 @@ import type {
     GlobalsService,
     MediaService,
     NotificationsService,
-    SettingsService,
     UsersService,
 } from './services';
 import type { DB } from '@/database/types';
@@ -45,7 +44,6 @@ export type AppContext = {
     entries: EntriesService;
     globals: GlobalsService;
     media: MediaService;
-    settings: SettingsService;
     users: UsersService;
     /** Session-scoped: acts for `user`. */
     notifications: NotificationsService;

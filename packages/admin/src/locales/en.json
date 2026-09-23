@@ -471,8 +471,7 @@
     },
     "plugins": {
         "pageNotFound": "Plugin page not found",
-        "accessDenied": "You don't have permission to view this page.",
-        "settingsSaved": "Settings saved."
+        "accessDenied": "You don't have permission to view this page."
     },
     "globals": {
         "saved": "{{label}} saved.",

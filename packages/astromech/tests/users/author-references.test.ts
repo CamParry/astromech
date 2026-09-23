@@ -23,7 +23,6 @@ import {
     mediaContentTable,
     mediaTable,
     mediaVersionsTable,
-    settingsTable,
     userContentTable,
     userVersionsTable,
 } from '@/database/tables';
@@ -102,7 +101,7 @@ describe('deleteUser author-reference clearing', () => {
             updatedBy: other.id,
         });
     });
-    it('nulls them on globals, media, settings and another user’s rows too', async () => {
+    it('nulls them on globals, media and another user’s rows too', async () => {
         const author = await createTestUser(db, { name: 'Author', email: 'a@test.dev' });
         const other = await createTestUser(db, { name: 'Other', email: 'o@test.dev' });
 
@@ -112,7 +111,6 @@ describe('deleteUser author-reference clearing', () => {
         const media = createRepository(mediaTable, db);
         const mediaContents = createRepository(mediaContentTable, db);
         const mediaVersions = createRepository(mediaVersionsTable, db);
-        const settings = createRepository(settingsTable, db);
         const userContents = createRepository(userContentTable, db);
         const userVersions = createRepository(userVersionsTable, db);
 
@@ -152,7 +150,6 @@ describe('deleteUser author-reference clearing', () => {
             fields: {},
             createdBy: author.id,
         });
-        await settings.create({ key: 'site:title', value: 'Test', updatedBy: author.id });
 
         // The other user's profile, authored by the user being deleted.
         const otherContent = await userContents.findOne({ userId: other.id });
@@ -191,9 +188,6 @@ describe('deleteUser author-reference clearing', () => {
         });
         expect(await mediaVersions.findOne({ id: mediaVersion.id })).toMatchObject({
             createdBy: null,
-        });
-        expect(await settings.findOne({ key: 'site:title' })).toMatchObject({
-            updatedBy: null,
         });
         expect(await userContents.findOne({ id: otherContent.id })).toMatchObject({
             userId: other.id,

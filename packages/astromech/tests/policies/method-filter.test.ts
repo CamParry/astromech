@@ -50,8 +50,8 @@ function entryMethod(
 const methods: ManifestMethod[] = [
     coreMethod('users', 'query', false),
     coreMethod('users', 'create', true),
-    coreMethod('settings', 'get', false),
-    coreMethod('settings', 'set', true),
+    coreMethod('media', 'get', false),
+    coreMethod('media', 'update', true),
     entryMethod('posts', 'get', false),
     entryMethod('posts', 'publish', true),
     entryMethod('pages', 'get', false),
@@ -84,7 +84,7 @@ describe('readOnly', () => {
 
         expect(ids(result)).toEqual([
             'users.query',
-            'settings.get',
+            'media.get',
             'entries.posts.get',
             'entries.pages.get',
         ]);
@@ -94,11 +94,11 @@ describe('readOnly', () => {
 
 describe('exclude', () => {
     it('drops the named method, with a reason', () => {
-        const result = filterMethods(methods, { exclude: ['settings.set'] });
+        const result = filterMethods(methods, { exclude: ['media.update'] });
 
-        expect(ids(result)).not.toContain('settings.set');
+        expect(ids(result)).not.toContain('media.update');
         expect(result.excluded).toEqual([
-            { id: 'settings.set', reason: 'excluded by surface policy' },
+            { id: 'media.update', reason: 'excluded by surface policy' },
         ]);
     });
 });
@@ -106,10 +106,10 @@ describe('exclude', () => {
 describe('include', () => {
     it('keeps only matches when non-empty', () => {
         const result = filterMethods(methods, {
-            include: ['users.query', 'settings.set'],
+            include: ['users.query', 'media.update'],
         });
 
-        expect(ids(result)).toEqual(['users.query', 'settings.set']);
+        expect(ids(result)).toEqual(['users.query', 'media.update']);
         expect(
             result.excluded.every((e) => e.reason === 'not in the included surface')
         ).toBe(true);
@@ -154,8 +154,8 @@ describe('accounting', () => {
     it('accounts for every dropped method exactly once', () => {
         const result = filterMethods(methods, {
             readOnly: true,
-            exclude: ['settings.get'],
-            include: ['users.*', 'settings.*'],
+            exclude: ['media.get'],
+            include: ['users.*', 'media.*'],
         });
 
         expect(result.methods.length + result.excluded.length).toBe(methods.length);

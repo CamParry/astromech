@@ -41,12 +41,12 @@ describe('toMethodFilter', () => {
             toMethodFilter({
                 'read-only': true,
                 include: 'entries.*, users.query,,',
-                exclude: ' settings.set ',
+                exclude: ' media.update ',
             })
         ).toEqual({
             readOnly: true,
             include: ['entries.*', 'users.query'],
-            exclude: ['settings.set'],
+            exclude: ['media.update'],
         });
     });
 });

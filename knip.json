@@ -9,7 +9,6 @@
         "packages/astromech/src/entries/repository/maintenance.ts": ["types"],
         "packages/astromech/src/notifications/repository.ts": ["types"],
         "packages/astromech/src/plugins/runtime/plugin-tracking-repository.ts": ["types"],
-        "packages/astromech/src/settings/repository.ts": ["types"],
         "packages/plugins/backups/src/repository.ts": ["types"]
     },
     "workspaces": {

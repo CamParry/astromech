@@ -24,7 +24,6 @@ import {
     NOTIFICATIONS_ROUTES,
     notificationsRouter,
 } from '@/transport/http/routes/notifications';
-import { SETTINGS_ROUTES, settingsRouter } from '@/transport/http/routes/settings';
 import { USERS_ROUTES, usersRouter } from '@/transport/http/routes/users';
 
 type Schema = { properties?: Record<string, unknown>; $ref?: string };
@@ -49,7 +48,6 @@ function tables(): [string, RestRoute[]][] {
         ['/globals', GLOBALS_ROUTES],
         ['/users', USERS_ROUTES],
         ['/media', MEDIA_ROUTES],
-        ['/settings', SETTINGS_ROUTES],
         ['/notifications', NOTIFICATIONS_ROUTES],
     ];
 }
@@ -79,14 +77,13 @@ function queryParameters(operation: Operation | undefined): string[] {
         .map((parameter) => parameter.name);
 }
 
-/** The document the six domain routers compose to. */
+/** The document the five domain routers compose to. */
 function document(): Document {
     const app = new OpenAPIHono<{ Variables: AuthVariables }>();
     app.route('/entries', createEntriesRouter());
     app.route('/globals', createGlobalsRouter());
     app.route('/users', usersRouter);
     app.route('/media', mediaRouter);
-    app.route('/settings', settingsRouter);
     app.route('/notifications', notificationsRouter);
     return app.getOpenAPIDocument({
         openapi: '3.0.0',
@@ -124,7 +121,7 @@ describe('the emitted document', () => {
 
     it('covers more than the five paths the hand-written routes described', () => {
         const total = tables().reduce((sum, [, routes]) => sum + routes.length, 0);
-        expect(total).toBe(55);
+        expect(total).toBe(53);
         expect(Object.keys(document().paths).length).toBeGreaterThan(5);
     });
 

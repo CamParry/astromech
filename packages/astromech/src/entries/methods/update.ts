@@ -31,7 +31,7 @@ export const updateEntries = defineServiceMethod({
     access: entryGate('update'),
     mutates: true,
     // Re-applying the same update lands the same end-state — matches the core
-    // `users.update`/`settings.set` idempotent hint.
+    // `users.update` idempotent hint.
     idempotent: true,
     handler(params, ctx): Promise<Entry | Entry[]> {
         return updateOne(params, ctx);

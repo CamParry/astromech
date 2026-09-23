@@ -336,12 +336,12 @@ export function isMethodInputError(error: unknown): error is ValidationError {
     return error instanceof ValidationError && error.fields === undefined;
 }
 
-/** The domain half of a method id — `settings.set` → `settings`. */
+/** The domain half of a method id — `users.update` → `users`. */
 function domainName(id: string): string {
     return id.slice(0, id.indexOf('.'));
 }
 
-/** The method half of a method id — `settings.set` → `set`. */
+/** The method half of a method id — `users.update` → `update`. */
 function methodName(id: string): string {
     return id.slice(id.indexOf('.') + 1);
 }

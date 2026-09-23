@@ -1,6 +1,6 @@
 /**
  * Service contract types — the operations each domain offers (entries, globals,
- * media, settings, users, content, notifications).
+ * media, users, content, notifications).
  *
  * Entry surface design:
  *  - Every entry method takes a single options object.
@@ -14,12 +14,10 @@ import type {
     EntryVersion,
     Global,
     GlobalVersion,
-    JsonValue,
     Media,
     MediaVersion,
     Notification,
     ResourceType,
-    Setting,
     User,
     UserVersion,
 } from './domain';
@@ -356,22 +354,6 @@ export type MediaService = {
         locale?: string;
         versionId: string;
     }): Promise<Media>;
-};
-
-/** The settings domain's service contract. */
-export type SettingsService = {
-    /**
-     * Return all settings. Without `full: true` only public-marked keys are
-     * returned (private keys are omitted). Pass `{ full: true }` from a trusted
-     * (server-side / authenticated) context to receive all keys.
-     */
-    all(params?: { full?: boolean }): Promise<Setting[]>;
-    /**
-     * Return a single setting value. Without `full: true` only public-marked
-     * keys resolve; a non-public key returns `null` on a public read.
-     */
-    get(params: { key: string; full?: boolean }): Promise<JsonValue | null>;
-    set(params: { key: string; value: JsonValue }): Promise<Setting>;
 };
 
 /** The row `users.create` writes. `role` defaults to the least-privileged built-in. */

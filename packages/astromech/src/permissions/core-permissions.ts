@@ -26,8 +26,6 @@ export const CORE_PERMISSIONS = defineAbsolutePermissions({
         description: "Edit an existing item's alt text, title and caption.",
     },
     'media:delete': { label: 'Delete media' },
-    'settings:read': { label: 'View settings' },
-    'settings:update': { label: 'Update settings' },
     'users:read': { label: 'View users' },
     'users:create': { label: 'Create users' },
     'users:update': {

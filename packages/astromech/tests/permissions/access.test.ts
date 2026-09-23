@@ -19,18 +19,18 @@ describe('resolveAccess', () => {
     });
 
     it('answers the permission for a bare core permission', () => {
-        expect(resolveAccess('settings:read', undefined)).toEqual({
+        expect(resolveAccess('users:read', undefined)).toEqual({
             kind: 'permission',
-            permissions: ['settings:read'],
+            permissions: ['users:read'],
         });
     });
 
     it('answers the permission the function form derives from the input', () => {
         const access = (input: { key: string }): Permission => `${input.key}:read`;
 
-        expect(resolveAccess(access, { key: 'settings' })).toEqual({
+        expect(resolveAccess(access, { key: 'users' })).toEqual({
             kind: 'permission',
-            permissions: ['settings:read'],
+            permissions: ['users:read'],
         });
     });
 
@@ -46,9 +46,9 @@ describe('resolveAccess', () => {
     });
 
     it('passes a namespaced key in the object form through unchanged', () => {
-        expect(resolveAccess({ permission: 'settings:read' }, undefined, 'seo')).toEqual({
+        expect(resolveAccess({ permission: 'users:read' }, undefined, 'seo')).toEqual({
             kind: 'permission',
-            permissions: ['settings:read'],
+            permissions: ['users:read'],
         });
     });
 

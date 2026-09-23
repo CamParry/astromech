@@ -384,12 +384,6 @@ export const MEDIA_ROUTE_SPECS = [
     },
 ] as const satisfies readonly HttpRouteSpec[];
 
-export const SETTINGS_ROUTE_SPECS = [
-    { verb: 'get', path: '/', id: 'settings.all' },
-    { verb: 'put', path: '/:key', id: 'settings.set' },
-    { verb: 'get', path: '/:key', id: 'settings.get', handler: 'bespoke' },
-] as const satisfies readonly HttpRouteSpec[];
-
 export const NOTIFICATIONS_ROUTE_SPECS = [
     { verb: 'get', path: '/', id: 'notifications.list' },
     { verb: 'delete', path: '/', id: 'notifications.dismissAll', envelope: 'empty' },
@@ -402,12 +396,11 @@ function mountedAt(base: string, specs: readonly HttpRouteSpec[]): MountedRoute[
     return specs.map((spec) => ({ ...spec, base }));
 }
 
-/** Every REST route the fetch client can reach, across all six domains. */
+/** Every REST route the fetch client can reach, across all five domains. */
 export const HTTP_ROUTES: readonly MountedRoute[] = [
     ...mountedAt('/entries', ENTRIES_ROUTE_SPECS),
     ...mountedAt('/globals', GLOBALS_ROUTE_SPECS),
     ...mountedAt('/users', USERS_ROUTE_SPECS),
     ...mountedAt('/media', MEDIA_ROUTE_SPECS),
-    ...mountedAt('/settings', SETTINGS_ROUTE_SPECS),
     ...mountedAt('/notifications', NOTIFICATIONS_ROUTE_SPECS),
 ];

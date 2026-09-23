@@ -28,7 +28,6 @@ import { mediaRouter } from './routes/media';
 import { notificationsRouter } from './routes/notifications';
 import { createPluginsRouter } from './routes/plugins';
 import { rpcRouter } from './routes/rpc';
-import { settingsRouter } from './routes/settings';
 import { usersRouter } from './routes/users';
 
 type AppEnv = { Variables: AuthVariables };
@@ -190,7 +189,6 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
     app.route(`${api}/globals`, globalsRouter);
     app.route(`${api}/users`, usersRouter);
     app.route(`${api}/media`, mediaRouter);
-    app.route(`${api}/settings`, settingsRouter);
     app.route(`${api}/entry-types`, entryTypesRouter);
     app.route(`${api}/notifications`, notificationsRouter);
 

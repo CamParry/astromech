@@ -107,7 +107,6 @@ function makeCtx(
         entries: null as unknown as PluginContext['entries'],
         globals: null as unknown as PluginContext['globals'],
         media: null as unknown as PluginContext['media'],
-        settings: null as unknown as PluginContext['settings'],
         users: null as unknown as PluginContext['users'],
         notifications: null as unknown as PluginContext['notifications'],
         email: { send: async () => undefined },

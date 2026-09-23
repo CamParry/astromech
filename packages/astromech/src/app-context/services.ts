@@ -9,7 +9,6 @@ import type {
     GlobalsService,
     MediaService,
     NotificationsService,
-    SettingsService,
     TypedEntriesService,
     TypedGlobalsService,
     UsersService,
@@ -19,24 +18,16 @@ import { entriesDefinition } from '@/entries/service';
 import { globalsDefinition } from '@/globals/service';
 import { mediaDefinition } from '@/media/service';
 import { notificationsDefinition } from '@/notifications/service';
-import { settingsDefinition } from '@/settings/service';
 import { usersDefinition } from '@/users/service';
 
 /** The `AppContext` members that hold a bound core service. */
-type ServiceKey =
-    | 'entries'
-    | 'globals'
-    | 'media'
-    | 'settings'
-    | 'users'
-    | 'notifications';
+type ServiceKey = 'entries' | 'globals' | 'media' | 'users' | 'notifications';
 
 /** Each core service's definition, under the `AppContext` member that binds it. */
 const DEFINITIONS = {
     entries: entriesDefinition,
     globals: globalsDefinition,
     media: mediaDefinition,
-    settings: settingsDefinition,
     users: usersDefinition,
     notifications: notificationsDefinition,
 } satisfies Record<ServiceKey, { catalogue: object }>;
@@ -70,9 +61,6 @@ export const globalsService: GlobalsService = bindCurrent('globals');
 
 /** `globalsService` under its typed facade; the one acknowledged place the cast happens. */
 export const typedGlobalsService = globalsService as unknown as TypedGlobalsService;
-
-/** The settings service, acting as whoever the current request is. */
-export const settingsService: SettingsService = bindCurrent('settings');
 
 /** The notifications service, acting for whoever the current request is. */
 export const notificationsService: NotificationsService = bindCurrent('notifications');

@@ -49,5 +49,5 @@ Your tools are not loaded up front. Search for them with tool_search_tool_regex
 before concluding that something cannot be done — an empty result means the tool
 does not exist, not that you lack permission. Names are underscore-separated and
 grouped by what they act on: entries_<type>_<method> for one entry type's
-content (entries_page_query, entries_post_get), and users_, media_ and settings_
-for the rest. A type's name, or a pattern like entries_.*_get, finds a group.`;
+content (entries_page_query, entries_post_get), and users_, media_, globals_ and
+notifications_ for the rest. A type's name, or a pattern like entries_.*_get, finds a group.`;

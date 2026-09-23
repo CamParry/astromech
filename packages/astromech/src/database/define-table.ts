@@ -188,8 +188,8 @@ type RefConfig<O extends RefOpts> = {
 
 // Codec primitives — the encoded format flip lives here
 const passthrough = (v: unknown): unknown => v;
-// Always stringify: a JSON column whose value *is* a string (`settings.set(k,
-// 'a-string')`) must still round-trip, and `jsonParse` unconditionally parses.
+// Always stringify: a JSON column whose value *is* a string must still
+// round-trip, and `jsonParse` unconditionally parses.
 // Passing strings through unchanged made that case throw on read.
 const jsonSerialize = (v: unknown): unknown => JSON.stringify(v);
 const jsonParse = (v: unknown): unknown => (typeof v === 'string' ? JSON.parse(v) : v);

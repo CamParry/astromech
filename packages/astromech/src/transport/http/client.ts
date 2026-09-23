@@ -13,8 +13,6 @@ import type {
     MediaService,
     NotificationsService,
     PluginServiceNamespace,
-    Setting,
-    SettingsService,
     SortOption,
     TypedEntriesService,
     TypedGlobalsService,
@@ -164,9 +162,9 @@ function routeFor(id: string, args: Args): MountedRoute {
  *
  * A path param is percent-encoded: a plugin entry type is addressed by its
  * QUALIFIED id (`redirects/redirect`), whose separator would otherwise grow a
- * segment and miss the route, and a setting key embeds both a path and a
- * `:locale` suffix. Hono decodes it back on the server, and a bare id encodes to
- * itself.
+ * segment and miss the route, and a plugin global's key (`seo/settings`) has
+ * the same separator. Hono decodes it back on the server, and a bare id encodes
+ * to itself.
  */
 function fillPath(
     route: MountedRoute,
@@ -354,35 +352,10 @@ const mediaService = restService<MediaService>('media', callRoute, {
     },
 });
 
-/** `settings.get`, with a missing setting read back as `null` rather than a 404. */
-async function settingValue(key: string): Promise<Setting['value'] | null> {
-    // A missing setting is a normal state, not an error: swallow the 404 so
-    // react-query doesn't treat it as a failure (and retry with backoff —
-    // the cause of the slow settings-page spinner).
-    try {
-        const setting = (await callRoute('settings.get', { key })) as Setting | null;
-        return setting?.value ?? null;
-    } catch (err) {
-        if (err instanceof AstromechApiError && err.status === 404) return null;
-        throw err;
-    }
-}
-
-const settingsService = restService<SettingsService>('settings', callRoute, {
-    // `full` is accepted for type compatibility; the Client is only used by
-    // the authenticated admin SPA, so the HTTP endpoint always returns the full
-    // set (guarded by `requireAuth` + `settings:read`). The flag is ignored on
-    // the wire — the HTTP route does not yet expose a public endpoint.
-    all: () => callRoute('settings.all', {}),
-
-    get: (params) => settingValue((params as { key: string }).key),
-});
-
 /**
  * Globals over the table. `get` is the one override: a global that has never
  * been saved is a normal state, and the route answers 404 for it, so the client
- * reads it back as `null` rather than raising — the same swallow
- * {@link settingValue} makes.
+ * reads it back as `null` rather than raising.
  */
 const globalsService = restService<GlobalsService>('globals', callRoute, {
     get: async (params) => {
@@ -452,7 +425,6 @@ export const astromechClient = {
     entries: entriesService as unknown as TypedEntriesService,
     globals: globalsService as unknown as TypedGlobalsService,
     media: mediaService,
-    settings: settingsService,
     users: usersService,
     notifications: notificationsService,
     plugins: pluginsApi,

@@ -53,7 +53,7 @@ function entryMethod(
 }
 
 const usersQuery = coreMethod('users', 'query', { mutates: false });
-const settingsSet = coreMethod('settings', 'set', { mutates: true });
+const mediaUpdate = coreMethod('media', 'update', { mutates: true });
 const postsUpdate = entryMethod('posts', 'update', { mutates: true });
 const postsDelete = entryMethod('posts', 'delete', {
     mutates: true,
@@ -101,14 +101,14 @@ describe('triggering', () => {
         expect(
             refusal(evaluateConfirmation(postsUpdate, { id: 'abc' }, { trigger })).status
         ).toBe('input_required');
-        expect(evaluateConfirmation(settingsSet, { key: 'a' }, { trigger }).proceed).toBe(
+        expect(evaluateConfirmation(mediaUpdate, { key: 'a' }, { trigger }).proceed).toBe(
             true
         );
-        expect(seen).toEqual(['entries.posts.update', 'settings.set']);
+        expect(seen).toEqual(['entries.posts.update', 'media.update']);
     });
 
     it('defaults to mutating when no trigger is named', () => {
-        expect(refusal(evaluateConfirmation(settingsSet, {}, {})).status).toBe(
+        expect(refusal(evaluateConfirmation(mediaUpdate, {}, {})).status).toBe(
             'input_required'
         );
         expect(evaluateConfirmation(usersQuery, {}, {}).proceed).toBe(true);

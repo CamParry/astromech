@@ -25,7 +25,7 @@ const get = defineServiceMethod({
 });
 
 const list = defineServiceMethod({
-    access: 'settings:read',
+    access: 'users:read',
     input: z.object({ limit: z.number() }),
     mutates: false,
     handler: async (input): Promise<string[]> =>

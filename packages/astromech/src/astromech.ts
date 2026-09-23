@@ -11,7 +11,6 @@ import type {
     PluginServiceNamespace,
     ResolvedConfig,
     Role,
-    SettingsService,
     TypedEntriesService,
     TypedGlobalsService,
     User,
@@ -23,7 +22,6 @@ import { systemAppContext } from '@/app-context/app-context';
 import {
     mediaService,
     notificationsService,
-    settingsService,
     typedEntriesService,
     typedGlobalsService,
     usersService,
@@ -66,8 +64,6 @@ export type Astromech = {
     media: MediaService;
     /** Users, roles, and authentication. */
     users: UsersService;
-    /** Settings resources. */
-    settings: SettingsService;
     /** Notifications for the acting user. */
     notifications: NotificationsService;
     /** The services each installed plugin exposes, namespaced by plugin. */
@@ -188,7 +184,6 @@ async function build(config: AstromechConfig): Promise<Astromech> {
         globals: typedGlobalsService,
         media: mediaService,
         users: usersService,
-        settings: settingsService,
         notifications: notificationsService,
         plugins: pluginServices,
         getCurrentUser,

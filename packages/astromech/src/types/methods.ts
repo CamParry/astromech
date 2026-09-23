@@ -85,7 +85,7 @@ export type ServiceMethod<
     summary?: string;
     /**
      * Zod schema for the call input — the METHOD schema, not the HTTP body: a
-     * transport putting part of it in the path (`settings.set({ key, value })`)
+     * transport putting part of it in the path (`users.update({ id, data })`)
      * still declares the whole argument object. Parsed before the handler runs,
      * so it is the source of both input types: `Input` is what a caller passes
      * (`z.input`), `Parsed` what the handler receives (`z.output`).
@@ -252,7 +252,7 @@ type ManifestMethodBase = {
     sessionScoped?: true;
 };
 
-/** A core domain method (`users`, `media`, `settings`). */
+/** A core domain method (`users`, `media`, `globals`). */
 export type CoreManifestMethod = ManifestMethodBase & {
     source: 'core';
     /** Module the catalogue belongs to — `id` is `<module>.<method>`. */

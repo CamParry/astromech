@@ -10,7 +10,7 @@
  * unwrapped value returned.
  */
 
-import type { Entry, Media, Notification, Setting, User } from '@/types/index';
+import type { Entry, Media, Notification, User } from '@/types/index';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { astromechClient as client } from '@/transport/http/client';
 
@@ -62,7 +62,6 @@ const entry = { id: 'e1', type: 'post', title: 'One' } as unknown as Entry;
 const entries = [entry];
 const media = { id: 'm1', filename: 'a.png' } as unknown as Media;
 const user = { id: 'u1', email: 'a@b.c' } as unknown as User;
-const setting = { key: 'site', value: { title: 'A' } } as unknown as Setting;
 const notification = { id: 'n1' } as unknown as Notification;
 const page = { data: entries, total: 1, page: 1, limit: 20, pages: 1 };
 
@@ -470,41 +469,6 @@ const CASES: Case[] = [
         result: [{ type: 'post', id: 'e1' }],
     },
 
-    // settings
-    {
-        name: 'settings.all',
-        payload: { data: [setting] },
-        call: () => client.settings.all(),
-        url: '/cms/api/settings',
-        method: 'GET',
-        result: [setting],
-    },
-    {
-        name: 'settings.get — one key',
-        payload: { data: setting },
-        call: () => client.settings.get({ key: 'site' }),
-        url: '/cms/api/settings/site',
-        method: 'GET',
-        result: setting.value,
-    },
-    {
-        name: 'settings.get — a key carrying a path and a locale suffix',
-        payload: { data: setting },
-        call: () => client.settings.get({ key: 'plugin:menus:/menus/main' }),
-        url: '/cms/api/settings/plugin%3Amenus%3A%2Fmenus%2Fmain',
-        method: 'GET',
-        result: setting.value,
-    },
-    {
-        name: 'settings.set',
-        payload: { data: setting },
-        call: () => client.settings.set({ key: 'site', value: { title: 'A' } }),
-        url: '/cms/api/settings/site',
-        method: 'PUT',
-        body: { value: { title: 'A' } },
-        result: setting,
-    },
-
     // users
     {
         name: 'users.query — no params',
@@ -632,24 +596,6 @@ describe('the multipart media routes', () => {
         expect(request.method).toBe('POST');
         expect(request.body).toBeInstanceOf(FormData);
         expect(result).toEqual(media);
-    });
-});
-
-describe('settings.get', () => {
-    it('reads a missing setting back as null rather than raising the 404', async () => {
-        stub({ error: { id: 'e', code: 'NOT_FOUND', message: 'no', status: 404 } }, 404);
-        await expect(client.settings.get({ key: 'absent' })).resolves.toBeNull();
-    });
-
-    it('fetches the one key and returns its value', async () => {
-        stub({ data: { key: 'site', value: { title: 'A', x: 1 } } });
-
-        const value = await client.settings.get({ key: 'site' });
-
-        expect(requests.map((request) => request.url)).toEqual([
-            '/cms/api/settings/site',
-        ]);
-        expect(value).toEqual({ title: 'A', x: 1 });
     });
 });
 

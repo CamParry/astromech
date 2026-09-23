@@ -190,14 +190,6 @@ describe('generateMethodManifest — core methods', () => {
         );
     });
 
-    it('should include the path param in settings.set (key + value)', () => {
-        const { methods } = parseManifest([]);
-        const input = findMethod(methods, 'settings.set')?.['input'] as {
-            properties?: Record<string, unknown>;
-        };
-        expect(Object.keys(input?.properties ?? {}).sort()).toEqual(['key', 'value']);
-    });
-
     it('should give every core method an input schema', () => {
         const { methods } = parseManifest([]);
         const core = methods.filter((m) => m['source'] === 'core');
@@ -213,10 +205,12 @@ describe('generateMethodManifest — core methods', () => {
         expect(findMethod(methods, 'media.upload')).toBeDefined();
     });
 
-    it('should include media and settings core methods', () => {
+    it('should include media and notifications core methods', () => {
         const { methods } = parseManifest([]);
         expect(methods.some((m) => String(m['name']).startsWith('media.'))).toBe(true);
-        expect(methods.some((m) => String(m['name']).startsWith('settings.'))).toBe(true);
+        expect(methods.some((m) => String(m['name']).startsWith('notifications.'))).toBe(
+            true
+        );
     });
 });
 
