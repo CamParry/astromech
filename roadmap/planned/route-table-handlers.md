@@ -6,14 +6,49 @@ the route table, and a test holds every transport to the same answer.
 ## Why
 
 - Each router hand-writes argument extraction (`param`, `flag`,
-  `contentArgs`, `keyArgs`, `listArgs`, `getArgs`) in `routes/entries.ts`,
-  `routes/globals.ts`, `routes/users.ts` and `routes/media.ts`, and `full` is
-  parsed two ways.
-- `routes/entries.ts` is about 600 lines of query-string parsing, access
-  ordering, a contract cache and bespoke routes.
+  `contentArgs`, `keyArgs`, `listArgs`, `getArgs`, `queryArgs`) in
+  `routes/entries.ts`, `routes/globals.ts`, `routes/users.ts` and
+  `routes/media.ts`, and `full` is parsed two ways.
+- `routes/entries.ts` holds query-string parsing, access ordering and bespoke
+  routes; `routes/globals.ts` holds a second copy of the access ordering.
 - `rpc-parity.test.ts` and `mcp/parity.test.ts` check that a method is
   reachable, not that it answers the same; neither would have caught the
   publish bypass.
+
+Checked against the code on 2026-09-23: `routes/entries.ts` is 397 lines, not
+600, and the contract cache is already `entryCatalogue` in
+`entries/catalogue.ts`; the drift report finds nothing on an empty branch, so
+the CLI pairs below come from reading the commands.
+
+## The plan
+
+- `mountRestRoutes` builds each table route's argument object: path params,
+  then the query string (every param on a `GET` or `DELETE`, the row's
+  `queryArgs` on a `POST` or `PUT`), then the JSON body (under `bodyKey` when
+  the row names one). A query-string value is converted to the boolean or
+  number the method's input field declares; the method's own parse, in
+  `bind()`, validates the result. The three list routes keep a `query`
+  schema, which turns `sort` and `dir` into the method's `sort` object (and
+  media's `mimeType` into `where`). `attachHandlers`, `RestHandlers.args`,
+  `body` and `precondition` go; `notFound` moves onto the row.
+- Access ordering (permission, then the target's existence) is one function
+  in `route-access.ts`, read by the table mount and the bespoke entries and
+  users routes. It resolves the method's `access` against the path and query
+  arguments, so `GET /globals/:key` (a public global's plain read) becomes a
+  table row. The entries and globals mounts pass the lookup whose miss
+  answers 404.
+- Bulk entry methods take `id` (one) or `ids` (a list), as Payload's Local API
+  takes `id` or `where` on one method. `fromBatch` reads `ids`; the table's
+  `wireNames` and `fromZodError`'s rename go.
+- `DELETE /entries/:type/:id` calls `entries.delete`, and
+  `POST /entries/:type/:id/trash` calls `entries.trash`, beside
+  `/:id/restore`. The bespoke trash-or-delete handler and `/:id/force` go.
+  `POST /media/upload` becomes `POST /media`.
+- CLI: one set of shared flags (`--config`, `--json`, `--allow-remote`), one
+  confirmation prompt for the two deletes, and one wrapper that boots, runs
+  and reports errors, used by every command that calls a method.
+- `tests/transport/policy-parity.test.ts`: each case lists the transports it
+  applies to and the one error code (or result) they must all give.
 
 ## The work
 
