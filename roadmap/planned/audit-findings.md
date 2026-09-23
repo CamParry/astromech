@@ -23,9 +23,9 @@ read at review, and studying where a pattern repeats before changing it.
       resolved twice: `completed/explicit-app-context.md`.
 - [ ] **The service handle is built in seven places**, each with its own cast
       and default shape: `planned/one-service-handle.md`.
-- [ ] **Field behaviour is split between `FieldType` and walkers** that branch
+- [x] **Field behaviour is split between `FieldType` and walkers** that branch
       on type names; plugin field types never reach the server:
-      `planned/field-tree-traversal.md`.
+      `completed/field-tree-traversal.md`.
 - [ ] **The resource module shape stops at the repository.** Copied versions,
       staging, locale, uniqueness and error code; globals missing from the
       relationships index; sort allow-lists; globals' status run in the

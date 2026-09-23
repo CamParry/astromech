@@ -14,9 +14,9 @@ import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// The core container and layout field types (`fields/flatten.ts`,
-// `config/validate/field-tree.ts`). Code outside the fields directories that
-// branches on one of them usually wants a helper like `isLayoutField`.
+// The core container and layout field types (`fields/core-field-types.ts`).
+// Code outside the fields directories that branches on one of them usually
+// wants the field type's own members, or `isLayoutField`/`fieldAffectsData`.
 const STRUCTURAL_TYPES = 'group|accordion|tabs|tab|repeater|blocks|tree';
 
 /**

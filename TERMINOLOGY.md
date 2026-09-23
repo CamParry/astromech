@@ -70,8 +70,9 @@ options.
 addresses a field definition, with item selectors empty; an instance path
 addresses one value, selecting repeated items by id.
 
-**Field type.** The behaviour behind a field's type name: how it builds, coerces,
-validates and types its value.
+**Field type.** The behaviour behind a field's type name, core or from a plugin:
+how it coerces, validates, types and publishes its value, which fields it nests,
+and whether it stores anything at all.
 
 **Global.** One editor-owned item with no list, existing because the site config
 or a plugin declares it by `key`. It carries fields, locales, statuses, versions

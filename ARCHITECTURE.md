@@ -103,7 +103,7 @@ Media and users opt into translation with `media: { translatable: true }` and `u
 
 ### Fields
 
-Fields are shared by entry types, globals, media, users and plugin tables. `fields/builder.ts` is the authoring API (`fields.text(...)`), and `fields/field-type-registry.ts` holds one `FieldType` per type name with its `build`, `coerce`, `validate` and `tsType`. `fields/parse-fields.ts` runs `coerce → default → validate`, recursing through nested fields and passing through layout fields, which store nothing. `parseFields` throws a 422; `safeParseFields` returns the report instead. An entry write reaches it through `entries/internal/stored-fields.ts`, which merges or inherits first and prunes dead relation ids after. The Zod parse of the request around the fields is `parseInput`, in `errors/validation.ts`.
+Fields are shared by entry types, globals, media, users and plugin tables. `fields/builder.ts` is the authoring API (`fields.text(...)`), and `fields/field-type-registry.ts` holds one `FieldType` per type name, core or plugin, with its `coerce`, `validate`, `tsType` and `toPublic`, and, for a container, `children` (the scopes in a value) and `subFields` (the scopes in a definition). `fields/traverse.ts` is the one walk over a schema; config validation (`fields/field-tree.ts`), relationship paths and codegen ask each field's type rather than branching on type names. `fields/parse-fields.ts` runs `coerce → default → validate`, recursing through nested fields and passing through layout fields, which store nothing. `parseFields` throws a 422; `safeParseFields` returns the report instead. An entry write reaches it through `entries/internal/stored-fields.ts`, which merges or inherits first and prunes dead relation ids after. The Zod parse of the request around the fields is `parseInput`, in `errors/validation.ts`.
 
 ## Database and migrations
 
@@ -111,7 +111,7 @@ Fields are shared by entry types, globals, media, users and plugin tables. `fiel
 
 ## Plugins
 
-A plugin is a separate npm package that registers tables, routes, service methods, hooks, cron jobs and admin pages through its `PluginContext` (`ctx`). `ctx` is the `AppContext` every method receives (the content services, `ctx.db`, `ctx.email`, `ctx.database`, `ctx.methods`, `ctx.runHook`, `ctx.env`), plus the plugin layer: `ctx.plugin` (its identity), `ctx.storage` (keys prefixed `plugin/<alias>/`), `ctx.plugins` (other plugins' services, when any are registered) and `ctx.config`, an allow-listed view of the resolved config. The types are in `types/app-context.ts` and `types/plugins.ts`.
+A plugin is a separate npm package that registers tables, field types, routes, service methods, hooks, cron jobs and admin pages through its `PluginContext` (`ctx`). `ctx` is the `AppContext` every method receives (the content services, `ctx.db`, `ctx.email`, `ctx.database`, `ctx.methods`, `ctx.runHook`, `ctx.env`), plus the plugin layer: `ctx.plugin` (its identity), `ctx.storage` (keys prefixed `plugin/<alias>/`), `ctx.plugins` (other plugins' services, when any are registered) and `ctx.config`, an allow-listed view of the resolved config. The types are in `types/app-context.ts` and `types/plugins.ts`.
 
 ### Plugin runtime boundary
 
