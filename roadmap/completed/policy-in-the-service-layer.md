@@ -102,5 +102,3 @@ workstream.
       `flattenEntryFields` out of the per-row loop in `entries/methods/query.ts`;
       replace `with-default-shape.ts`'s 30 forwarders with a spread (deleted
       instead: with plugin reads public, nothing needs it).
-- [ ] Drop the unused `audience.role`. Left for the `field-tree-traversal`
-      branch, which is reworking `content/visibility.ts`, where the type lives.

@@ -48,9 +48,10 @@ versions operations for globals; that seam is the one to avoid.
       `assertCapability` (with `CapabilityError` moved to `errors/`), and
       shared `overlayLocale`/`buildOrderBy`, all in `content/`. Delete the
       per-module copies.
-- [ ] `ResourceNotFoundError(kind, …)` and `ResourceValidationError`, extending
-      `AstromechError` with the status and code from
-      `policy-in-the-service-layer.md`. Delete the four module pairs.
+- [ ] `ResourceNotFoundError(kind, …)` and `ResourceValidationError`, the
+      first extending `ApiError` (`errors/api-error.ts`, which carries the
+      status and code) and the second `ValidationError`. Delete the four
+      module pairs.
       **Public API** (exported classes).
 - [ ] `content/write-fields.ts`: merge or inherit, parse through
       `fieldParseContext(spec, …)`, project, prune. Every create and update

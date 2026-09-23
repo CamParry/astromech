@@ -13,14 +13,14 @@ read at review, and studying where a pattern repeats before changing it.
 
 ## By root cause
 
-- [ ] **Policy lives in the transports.** Publish bypass, REST-only field and
+- [x] **Policy lives in the transports.** Publish bypass, REST-only field and
       last-admin checks, domain errors answering 500, CLI commands that never
       boot the app, drafts exposed through plugin reads, the hardcoded `'en'`:
-      `planned/policy-in-the-service-layer.md`. The remaining route and parity
+      `completed/policy-in-the-service-layer.md`. The remaining route and parity
       work: `planned/route-table-handlers.md`.
-- [ ] **Two contexts leak into each other.** Hooks rebuilding context from the
+- [x] **Two contexts leak into each other.** Hooks rebuilding context from the
       store, user and role held three times, `CronContext`, the session
-      resolved twice: `planned/explicit-app-context.md`.
+      resolved twice: `completed/explicit-app-context.md`.
 - [ ] **The service handle is built in seven places**, each with its own cast
       and default shape: `planned/one-service-handle.md`.
 - [ ] **Field behaviour is split between `FieldType` and walkers** that branch

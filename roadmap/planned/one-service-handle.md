@@ -8,20 +8,20 @@ arguments on one object.
 ## Why
 
 The handle is assembled in about seven places: the `AppContext` getters,
-`bindCurrent`, `scopedServices`/`scopeEntries`, `trustedServices`, the plugin
-context with `withDefaultShape`, the HTTP client, and 13 admin route and hook
-files. Each decides binding, scope, shape and typing itself, which produced the
-three permission wrappers, the `scopeEntries` drift and plugin reads defaulting
-to the full shape. Each also casts with `as unknown as`, because
-`EntriesMethods` collapses the `EntriesService` overloads.
-`explicit-app-context.md` settles binding and scope; typing and default shape
-remain.
+`bindCurrent`, `scopedServices`, `trustedServices`, the plugin context, the
+HTTP client, and 13 admin route and hook files. Each decides binding, scope and
+typing itself, which produced the three permission wrappers, the
+`scopeEntries` drift and plugin reads defaulting to the full shape. Each also
+casts with `as unknown as` (`bindCurrent` in `app-context/services.ts` among
+them), because `EntriesMethods` collapses the `EntriesService` overloads.
+`explicit-app-context.md` and `policy-in-the-service-layer.md` settled binding,
+scope and the public default shape; typing remains.
 
 ## The work
 
 - [ ] `createServices(ctx, { shape })` in `app-context/` builds every handle:
       the `AppContext` getters, `scopedServices(ctx)`, trusted calls, plugin
-      `ctx` (plugin reads default to public), `bindCurrent` and
+      `ctx`, `bindCurrent` and
       `rest-route.ts`. The typed facades are applied in that one file.
 - [ ] Try declaring the entries definition against `EntriesService` so `bind`
       needs no cast. If the overloads defeat `MethodsFor`, keep one cast in
