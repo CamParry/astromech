@@ -122,7 +122,7 @@ Live choices and what each one beat. An entry is here because the losing option 
 
 **An untrusted call reaches a service only through the scoped handle, plugin methods included.** `scopedServices(ctx)` checks each method's `access` against `ctx.role`, and `callMethod` maps a manifest method onto it for RPC, the AI tool loop, MCP and the CLI. Rejected: plugin RPC checking `access` itself, which leaves the tool loop no way to scope plugin methods.
 
-**A plugin's reads answer the public shape unless the call asks for `full`.** `ctx.entries`, `ctx.globals` and `ctx.settings` read as a site's own code does, and a plugin reading its own settings or rules passes `full: true`. Rejected: defaulting plugin reads to the full shape as trusted server code, which let the menus plugin's public method resolve URLs for unpublished, scheduled and trashed entries.
+**A plugin's reads answer the public shape unless the call asks for `full`.** `ctx.entries` and `ctx.globals` read as a site's own code does, and a plugin reading its own settings or rules passes `full: true`. Rejected: defaulting plugin reads to the full shape as trusted server code, which let the menus plugin's public method resolve URLs for unpublished, scheduled and trashed entries.
 
 **The admin is its own package, `@astromech/admin`, and core depends on it.** `astromech/astro` injects the admin into every site, so a site installs core alone, as with Strapi and Directus. It ships as source because a site's admin components join its build. Rejected: installing the admin beside core (Payload's model), and an `@admin/*` alias the site's Vite would also have to register.
 
@@ -160,7 +160,7 @@ Live choices and what each one beat. An entry is here because the losing option 
 
 ## Product shape
 
-**Globals are content, config is code, secrets are env-only, and core ships no settings page.** Config and secrets live in `astromech.config.ts` and `.env`; editor-owned site-wide values are globals. Rejected: a WordPress-style General Settings page, and admin-editable secrets.
+**Globals are content, config is code, secrets are env-only, and core ships no settings page or key-value store.** Config and secrets live in `astromech.config.ts` and `.env`; editor-owned site-wide values are globals; plugin state is a global, a plugin table or `ctx.storage`. Rejected: a WordPress-style General Settings page, admin-editable secrets, and a shared key-value table, which cannot stop one plugin overwriting another's keys.
 
 **Form notifications are one `notifications` blocks field, and spam protection is an open `SpamProvider` contract** with `turnstile()` and `recaptcha()` factories. An `{{email}}` merge tag in `to` picks the recipient. Rejected: a repeater, which cannot vary its shape per kind, and an internal-only spam registry.
 

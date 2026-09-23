@@ -95,9 +95,9 @@ then look at how they're put together:
   public service methods an anonymous caller reaches, gating hooks, and two
   provider seams (notification kinds and spam services) a site can extend.
 - `@astromech/seo` — a custom field, a field-section helper you compose
-  into your entry types, admin pages (a dashboard and a settings form),
+  into your entry types, an admin dashboard, a settings global,
   localized strings, and footprint-derived behaviour.
-- `@astromech/menus` — options-driven admin pages generated per configured
+- `@astromech/menus` — options-driven globals generated per configured
   menu, and a public service method that resolves entry refs to URLs.
 - `@astromech/backups` — a database table, a cron job, plugin storage, and raw
   HTTP routes for the streaming endpoints.

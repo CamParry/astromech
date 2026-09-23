@@ -5,8 +5,8 @@ homepage hero, a set of social links. There is exactly one of it, and it exists
 because your config declares it. Everything an entry carries, a global carries
 too: fields, locales, statuses, versions and staged changes.
 
-A global is not settings. `Astromech.settings` is a key-value store for operator
-values a plugin writes; anything an editor fills in through a form is a global.
+Anything an editor fills in through a form is a global. Config and secrets stay
+in `astromech.config.ts` and `.env`.
 
 ## Declaring a global
 

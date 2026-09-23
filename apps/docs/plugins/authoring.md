@@ -851,8 +851,8 @@ try {
 
 ### Reaching the content services
 
-The content services sit directly on the context — `ctx.entries`, `ctx.media`,
-`ctx.settings`, `ctx.users`, `ctx.notifications`, `ctx.plugins` — and each is
+The content services sit directly on the context — `ctx.entries`, `ctx.globals`,
+`ctx.media`, `ctx.users`, `ctx.notifications`, `ctx.plugins` — and each is
 the **global** service, not a per-plugin view. Reads answer the public shape,
 as they do for a site's own code: an unpublished, scheduled or trashed entry is
 not returned, and private fields are stripped. Pass `full: true` where the
@@ -1056,7 +1056,7 @@ plugin's own layer over it:
 - **The app context.** `db` (the query handle), `user` and `role` (who is
   calling, both `null` outside a request), `clientAddress`, `config`
   ([the projection above](#runtime-identity)), the content services `entries`,
-  `globals`, `media`, `users`, `settings` and `notifications`
+  `globals`, `media`, `users` and `notifications`
   ([reaching them](#reaching-the-content-services)), `notify`, `email` and
   `database` ([capability ports](#capability-ports)), `logger`, `env`,
   `runHook`, and `methods`

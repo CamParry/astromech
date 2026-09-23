@@ -78,7 +78,7 @@ and whether it stores anything at all.
 **Global.** One editor-owned item with no list, existing because the site config
 or a plugin declares it by `key`. It carries fields, locales, statuses, versions
 and staged changes as an entry does, and is addressed by its key plus a locale.
-Not "single type" or "settings" (the operator's key-value store).
+Not "single type" or "settings".
 
 **Integration.** The glue that lets one host serve an application, with no
 business logic. A **framework integration** (Astro) decides how a request arrives
@@ -100,8 +100,8 @@ locale. A media item has no status, staged change or trash.
 **Method manifest.** The catalogue of service methods every transport dispatches
 through.
 
-**Module.** A directory owning one thing inside the core package. The six that
-own content verbs (entries, globals, media, users, settings, notifications) are
+**Module.** A directory owning one thing inside the core package. The five that
+own content verbs (entries, globals, media, users, notifications) are
 the content modules; `content` is the shared module four of them build on.
 Modules call each other, so they are not "domains".
 

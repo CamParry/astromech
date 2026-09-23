@@ -1,8 +1,8 @@
 # @astromech/menus
 
 Developer-declared navigation menus: each menu is configured up front (a
-`key` and a `label`), stored as a settings blob, and edited through a
-generated per-menu admin page — a nested tree of items, each pointing at
+`key` and a `label`), stored as a translatable global the plugin generates,
+and edited through that global's admin page — a nested tree of items, each pointing at
 either an internal entry or an external URL. A public service method resolves
 a menu into a clean tree, turning entry refs into front-end URLs along the
 way.
@@ -14,7 +14,7 @@ menus/
   index.ts               definePlugin() — identity + composing the surfaces below
   types.ts                MenuConfig / MenusOptions / MenuItem
   fields/menu-item.ts     menuItemFields — the node schema used at every depth of the tree
-  pages/menus.ts          buildMenuPages() — one defineAdminPage per configured menu
+  globals/menus.ts        buildMenuGlobals() — one defineGlobal per configured menu, keyed `menu-<key>`
   service/menus.ts        createMenusService() — the public `get` service method
 ```
 
@@ -37,8 +37,8 @@ export default defineConfig({
 });
 ```
 
-Each configured menu gets its own admin page and its own settings blob;
-there's no shared "menus" list to sift through.
+Each configured menu gets its own global and its own admin page; there's no
+shared "menus" list to sift through.
 
 ## Identity
 
@@ -49,7 +49,7 @@ identical:
 
 | form        | value   | where it appears                              |
 | ----------- | ------- | --------------------------------------------- |
-| namespace   | `menus` | settings keys, admin URLs                     |
+| namespace   | `menus` | global keys, permissions, admin URLs          |
 | service key | `menus` | `Astromech.plugins.menus`, `/api/plugins/...` |
 
 ## Service method
@@ -68,14 +68,13 @@ literal `url` field. Addressed the same way over HTTP, as
 
 ## Admin surface
 
-One auto-rendered settings page per configured menu, at
-`/admin/plugin/menus/menus/<key>` — a `fields.tree('items', ...)` editor for
-the menu's nested items.
+One global edit page per configured menu, at
+`/cms/plugin/menus/globals/menu-<key>` — a `fields.tree('items', ...)` editor
+for the menu's nested items.
 
 ## Permissions
 
-`menus` declares no permissions. Its service method is `public`, and its
-admin pages are `fields`-only, so they fall under the generic
-`settings:read` grant like any other settings page. Known limitation: there
-is currently no way to grant "edit navigation menus" as its own permission,
-independent of settings access in general.
+`menus` declares no permissions of its own. Its service method is `public`,
+and each menu's global carries the standard global permissions, such as
+`plugin:menus:global:menu-main:read` and `plugin:menus:global:menu-main:update`,
+so editing one menu can be granted without the others.

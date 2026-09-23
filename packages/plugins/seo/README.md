@@ -81,10 +81,10 @@ export default defineConfig({
 - **Edit page** — `seo.section()` adds the `seo` field group: meta title and
   description inputs with live character counters
   (title 30–60, description 70–160 characters), and a search-result preview.
-- **Overview dashboard** — `/admin/plugin/seo/overview` (requires
+- **Overview dashboard** — `/cms/plugin/seo/overview` (requires
   `plugin:seo:read`) shows SEO health totals and a per-entry
   breakdown across the footprint.
-- **Settings** — `/admin/plugin/seo/settings` holds the default Open Graph
+- **Settings** — `/cms/plugin/seo/globals/settings` holds the default Open Graph
   image, returned by `getMeta` when an entry has no image of its own.
 
 ## Sitemap (recipe)

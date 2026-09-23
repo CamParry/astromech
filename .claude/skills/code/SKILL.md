@@ -33,8 +33,7 @@ is guessable from any other.
 - **The record is one nested object; addressing sits at the top level.**
   `createEntry({ type, data })`, `updateEntries({ type, ids, data })`,
   `getUser({ id })`. The key is `data` unless a more specific word says what the
-  object does, which is true of `duplicate`'s `overrides` and `settings.set`'s
-  `value` and nowhere else.
+  object does, which is true of `duplicate`'s `overrides` and nowhere else.
 
 - **A handler never re-parses its own `input`.** `defineService.bind()` has
   already parsed it, on every call path. Parse only a slot the method's schema

@@ -24,8 +24,7 @@ and read query keys and mutations from one factory per resource.
 
 ## The work
 
-- [ ] Add the `globals` case to `utilities/ai-context.ts` with no `default`,
-      and fix `apps/docs/ai-context.md`, which still lists `'settings'`.
+- [ ] Add the `globals` case to `utilities/ai-context.ts` with no `default`.
 - [ ] One key factory keyed by the entry type id; delete `scopedEntryKeys`,
       `scopedGlobalKeys` and `cacheScope`; move the inline keys in, with the
       dashboard's counts under `entries.all(type)` so mutations invalidate

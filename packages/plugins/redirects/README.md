@@ -92,7 +92,7 @@ Recording a redirect keeps the rules loop-free and one hop deep:
 
 This adds a **Redirects** entry type to the admin (managed like any other) with
 `from`, `to`, `status` (301/302), and `enabled` fields. The list lives at
-`/admin/plugin/redirects/entries/redirect`.
+`/cms/plugin/redirects/entries/redirect`.
 
 ## Permissions
 

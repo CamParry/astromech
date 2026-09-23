@@ -16,7 +16,7 @@ A route declares an `AiContextReference` (exported from `astromech`):
 
 ```ts
 type AiContextReference = {
-    kind: 'entries' | 'media' | 'users' | 'settings' | 'pages';
+    kind: 'entries' | 'globals' | 'media' | 'users' | 'pages';
     type?: string;
     id?: string;
     label: string;

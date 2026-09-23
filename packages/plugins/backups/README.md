@@ -26,7 +26,7 @@ backups/
   src/routes/backups.ts         download + restore (raw routes — they stream)
   src/permissions/backups.ts    definePermissions — the grantable permission keys
   src/pages/backups.ts          defineAdminPage — the run history page
-  src/pages/settings.ts         defineAdminPage — the retention settings form
+  src/globals/settings.ts       defineGlobal — the retention setting
   src/admin/pages/backups-page.tsx  the page renderer (browser asset)
   src/locales/en.json           i18n bundle
 ```
@@ -48,12 +48,11 @@ export default defineConfig({
 });
 ```
 
-Both options are optional. `keep` is a _fallback_ — the **Backups → Settings**
-admin page holds a `retention` value, and that wins when set, so an admin can
-change retention without a redeploy. Like every settings page it stores one blob
-under its own key: `plugin:backups:/settings` → `{ "retention": 7 }`.
+Both options are optional. `keep` is a _fallback_ — the plugin's `settings`
+global (**Backups → Settings**) holds a `retention` value, and that wins when
+set, so an admin can change retention without a redeploy.
 
-`schedule` has no settings equivalent — cron jobs are registered at boot, so
+`schedule` has no global equivalent — cron jobs are registered at boot, so
 changing the schedule needs a redeploy.
 
 The plugin owns a table, so run the migration step for it the same way as any
@@ -66,10 +65,10 @@ generated `migrations/` ship with the package).
 `@astromech/` scope is stripped when deriving, and `backups` is a single word,
 so both derived forms come out identical:
 
-| form        | value     | where it appears                                           |
-| ----------- | --------- | ---------------------------------------------------------- |
-| namespace   | `backups` | permissions, settings keys, i18n, admin URLs, table prefix |
-| service key | `backups` | `Astromech.plugins.backups`, `/api/plugins/backups/…`      |
+| form        | value     | where it appears                                         |
+| ----------- | --------- | -------------------------------------------------------- |
+| namespace   | `backups` | permissions, global keys, i18n, admin URLs, table prefix |
+| service key | `backups` | `Astromech.plugins.backups`, `/api/plugins/backups/…`    |
 
 The table is `plugin_backups_runs` — `definePluginTable` owns that prefix, so
 the table declares the bare name `runs`.
@@ -139,11 +138,12 @@ record of itself.
 
 ## Admin surface
 
-- **Backups** — `/admin/plugin/backups` (requires `plugin:backups:read`). Run
+- **Backups** — `/cms/plugin/backups` (requires `plugin:backups:read`). Run
   history with status, trigger, size and per-row download / restore / delete.
   Restore and delete both go through a confirmation dialog.
-- **Settings** — `/admin/plugin/backups/settings` (requires `settings:read`, and
-  `settings:update` to save). The retention count.
+- **Settings** — `/cms/plugin/backups/globals/settings` (requires
+  `plugin:backups:global:settings:read`, and
+  `plugin:backups:global:settings:update` to save). The retention count.
 
 ## Rotation
 

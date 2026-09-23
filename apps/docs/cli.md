@@ -154,7 +154,7 @@ scope a partial one.
 
 Field rules run when a row is written, so tightening one leaves the rows you
 already stored alone. `validate` walks stored content — entries, media, users
-and settings pages — and reports every row the current rules would reject. It
+and globals — and reports every row the current rules would reject. It
 writes nothing.
 
 ```sh
@@ -213,7 +213,7 @@ Or, after a package build, point directly at the built CLI:
 **Requires** `@modelcontextprotocol/sdk` to be installed in the project. If it
 is missing, the command prints an install hint and exits with code 1.
 
-**v1 coverage:** core domain methods (users, settings, media query/get/delete)
+**v1 coverage:** core domain methods (users, globals, media query/get/delete)
 and the standard entry CRUD+publish actions (query, get, create, update,
 publish, unpublish, delete). Not yet projected: plugin service methods, media
 upload/replace (binary data cannot cross JSON-RPC), the notifications methods
