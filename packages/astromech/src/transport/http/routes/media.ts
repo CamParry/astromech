@@ -45,6 +45,7 @@ export const MEDIA_ROUTES: RestRoute[] = attachHandlers(MEDIA_ROUTE_SPECS, {
         }),
     },
     'delete /:id': { args: (c) => ({ id: c.req.param('id') }) },
+    'get /:id/used-by': { args: (c) => ({ id: c.req.param('id') }) },
     'get /:id/versions': { args: contentArgs },
     'post /:id/versions/:versionId/restore': {
         args: (c) => ({ ...contentArgs(c), versionId: c.req.param('versionId') ?? '' }),
@@ -88,21 +89,6 @@ function queryArgs(c: Context<Env>): MediaQueryParams {
     }
     return params;
 }
-
-// GET /media/:id/usage — bespoke
-// Not in the table: it pre-flights `media.get` to turn an unknown id into a
-// 404, so one handler makes two method calls.
-router.get('/:id/usage', async (c) => {
-    const { id } = c.req.param();
-    const permissions = permissionsFor(c.var.ctx.role);
-    if (!permissions.allowsMethod(mediaDefinition.catalogue.usedBy)) return forbidden(c);
-
-    const item = await c.var.ctx.media.get({ id });
-    if (!item) return notFound(c, `Media '${id}' not found`);
-
-    const data = await c.var.ctx.media.usedBy({ id });
-    return c.json({ data });
-});
 
 // POST /media/upload — bespoke
 // Not in the table: `binaryInput`. The body is multipart and a `File` has no

@@ -145,7 +145,7 @@ export const ENTRIES_ROUTES: RestRoute[] = attachHandlers(ENTRIES_ROUTE_SPECS, {
         args: (c) => ({ ...contentArgs(c), versionId: param(c, 'versionId') }),
         precondition: entryAccess(),
     },
-    'get /:type/:id/incoming-relationships': {
+    'get /:type/:id/used-by': {
         args: canonicalArgs,
         precondition: entryAccess(),
     },

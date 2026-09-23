@@ -40,39 +40,25 @@ import type { createUserSchema, updateUserSchema } from '@/users/schema';
 import type { z } from 'zod';
 
 /**
- * Lightweight summary of an inbound relationship row — used by the delete
- * confirmation modal to surface entries that reference the one being deleted.
+ * One reference in the relationships index pointing at a resource: a row of a
+ * `usedBy` answer, which the delete check and the media "used by" panel read.
  */
-export type IncomingRelationship = {
-    /** Source entry id (the entry that contains the relationship). */
-    sourceId: string;
-    /** Title of the source entry. */
-    sourceTitle: string;
-    /** Type of the source entry (only `'entry'`-source rows are returned). */
-    sourceType: string;
-    /** Schema path of the relationship field on the source (`sections[].author`). */
-    schemaPath: string;
-};
-
-/**
- * One reference in the index pointing at a media item — a row of the media
- * "used by" panel. The media mirror of {@link IncomingRelationship}, widened to
- * carry the source kind because a media file can be referenced by an entry, a
- * user or another media record.
- */
-export type MediaUsage = {
+export type Usage = {
     sourceId: string;
     /** Display name of the source; empty when it could not be loaded. */
     sourceTitle: string;
     /** What holds the reference. */
     sourceKind: ResourceType;
-    /** The source's entry type, qualified for a plugin type. Null for user and media sources. */
+    /**
+     * An entry source's type (qualified for a plugin type) or a global source's
+     * key. Null for user and media sources.
+     */
     sourceType: string | null;
     /** Schema path of the field holding the reference (`sections[].gallery`). */
     schemaPath: string;
     /** Instance path — deep-links to the exact item. Never pattern-matched. */
     instancePath: string;
-    /** True when the source is a staged (pending-merge) copy. */
+    /** True when only the source's staged (pending-merge) change holds it. */
     sourceStaged: boolean;
 };
 
@@ -198,10 +184,8 @@ export type EntriesService = {
         locale?: string;
     }): Promise<Entry[]>;
 
-    incomingRelationships(params: {
-        type: string;
-        id: string;
-    }): Promise<IncomingRelationship[]>;
+    /** Every reference to this entry, from any resource. */
+    usedBy(params: { type: string; id: string }): Promise<Usage[]>;
 
     // Forward versioning (staged entries) — all act on one locale of the entry.
     // Require the `staging` capability (entries-table repository) on the type; the
@@ -358,7 +342,8 @@ export type MediaService = {
         data: MediaUpdateData;
     }): Promise<Media>;
     delete(params: { id: string }): Promise<void>;
-    usedBy(params: { id: string }): Promise<MediaUsage[]>;
+    /** Every reference to this media item, from any resource. */
+    usedBy(params: { id: string }): Promise<Usage[]>;
     versions(params: { id: string; locale?: string }): Promise<MediaVersion[]>;
     restoreVersion(params: {
         id: string;

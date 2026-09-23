@@ -1,148 +1,24 @@
-/**
- * Reverse lookup for the delete modal: everything that references a media item.
- * Reads the relationships index, then names each source through its own domain.
- */
-
-import type { RelationshipRow } from '@/database/tables';
-import type { MediaUsage, ResolvedConfig } from '@/types/index';
+import type { Usage } from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { createRelationshipRepository } from '@/database/repository/relationships';
-// Peer domains, read only to name a source row. See the `listMediaUsage` docstring.
-import { getEntryResource } from '@/entries/internal/records';
-import { getEntryRepository } from '@/entries/repository/registry';
+import { listUsage } from '@/content/usage';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { createUserRepository } from '@/users/repository';
 import { MediaNotFoundError } from '../errors';
 import { createMediaRepository } from '../repository';
 
 /**
- * Every reference in the index pointing at this media item — one row per
- * reference, so a source using the same file at two paths yields two rows. Titles
- * resolve here so this returns the same shape as `entries.incomingRelationships`.
+ * Every reference to a media item, from any resource: the "used by" panel. One
+ * row per reference, so a source using the file at two paths is two rows.
  */
 export const listMediaUsage = defineServiceMethod({
-    summary: 'List the entries, users and media items that reference a media item.',
+    summary:
+        'List the entries, globals, users and media items that reference a media item.',
     input: z.object({ id: z.string() }),
     access: 'media:read',
     mutates: false,
-    async handler(params, ctx): Promise<MediaUsage[]> {
+    async handler(params, ctx): Promise<Usage[]> {
         const { id } = params;
-        const row = await createMediaRepository(ctx.config).get(id);
+        const row = await createMediaRepository(ctx.config).files.findOne({ id });
         if (!row) throw new MediaNotFoundError({ id });
-
-        // Staged sources count: a pending merge that uses this file is a reason
-        // not to delete it.
-        const rows = await createRelationshipRepository().findByTarget(id, 'media', {
-            includeStaged: true,
-        });
-
-        const titles = await resolveSourceTitles(ctx.config, rows);
-        return rows
-            .map(
-                (reference): MediaUsage => ({
-                    sourceId: reference.sourceId,
-                    sourceKind: reference.sourceKind,
-                    sourceType: reference.sourceType,
-                    sourceTitle: titles.get(sourceTitleKey(reference)) ?? '',
-                    schemaPath: reference.schemaPath,
-                    instancePath: reference.instancePath,
-                    sourceStaged: reference.sourceStaged,
-                })
-            )
-            .sort(compareUsage);
+        return listUsage(ctx.config, { id, kind: 'media' });
     },
 });
-
-/**
- * Display name per source, keyed by kind+id. Entry sources load through their
- * own type's repository, in the locale they display under — the target's
- * repository would silently miss sources of another type. A source that fails
- * to load keeps an empty title.
- */
-async function resolveSourceTitles(
-    config: ResolvedConfig,
-    rows: readonly RelationshipRow[]
-): Promise<Map<string, string>> {
-    const titles = new Map<string, string>();
-
-    const entryIdsByType = new Map<string, Set<string>>();
-    const userIds = new Set<string>();
-    const mediaIds = new Set<string>();
-    for (const row of rows) {
-        if (row.sourceKind === 'user') userIds.add(row.sourceId);
-        else if (row.sourceKind === 'media') mediaIds.add(row.sourceId);
-        else if (row.sourceType !== null) {
-            const ids = entryIdsByType.get(row.sourceType) ?? new Set<string>();
-            ids.add(row.sourceId);
-            entryIdsByType.set(row.sourceType, ids);
-        }
-    }
-
-    for (const [type, ids] of entryIdsByType) {
-        // A type dropped from config since its rows were written has no repository.
-        let repository;
-        try {
-            repository = getEntryRepository(type);
-        } catch {
-            continue;
-        }
-        const records = await Promise.all(
-            Array.from(ids, async (entryId) => {
-                try {
-                    return await getEntryResource(config, repository, type, entryId);
-                } catch {
-                    return null;
-                }
-            })
-        );
-        for (const record of records) {
-            if (record !== null) titles.set(`entry ${record.id}`, record.title);
-        }
-    }
-
-    // A name or an email is all a title needs, so the account row is enough.
-    const accounts = createUserRepository(config).accounts;
-    for (const ids of chunks(userIds)) {
-        for (const user of await accounts.findMany({ where: { id: { in: ids } } })) {
-            titles.set(`user ${user.id}`, user.name || user.email);
-        }
-    }
-
-    // The filename lives on the file row, so the content join is not needed.
-    const files = createMediaRepository(config).files;
-    for (const ids of chunks(mediaIds)) {
-        for (const item of await files.findMany({ where: { id: { in: ids } } })) {
-            titles.set(`media ${item.id}`, item.filename);
-        }
-    }
-
-    return titles;
-}
-
-/** D1 caps a query at 100 bound parameters, and each id binds one. */
-const ID_CHUNK = 100;
-
-/** The ids in slices small enough for one `IN (…)` each. */
-function chunks(ids: ReadonlySet<string>): string[][] {
-    const all = Array.from(ids);
-    const slices: string[][] = [];
-    for (let i = 0; i < all.length; i += ID_CHUNK)
-        slices.push(all.slice(i, i + ID_CHUNK));
-    return slices;
-}
-
-/** Kind+id, NUL-joined so no id can spell another kind's key. */
-function sourceTitleKey(row: { sourceKind: string; sourceId: string }): string {
-    return `${row.sourceKind} ${row.sourceId}`;
-}
-
-/** Stable panel order: the index itself has none, so reads would reshuffle. */
-function compareUsage(a: MediaUsage, b: MediaUsage): number {
-    return (
-        a.sourceKind.localeCompare(b.sourceKind) ||
-        (a.sourceType ?? '').localeCompare(b.sourceType ?? '') ||
-        a.sourceId.localeCompare(b.sourceId) ||
-        a.schemaPath.localeCompare(b.schemaPath) ||
-        a.instancePath.localeCompare(b.instancePath)
-    );
-}

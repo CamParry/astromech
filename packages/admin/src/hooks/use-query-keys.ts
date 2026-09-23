@@ -22,6 +22,9 @@ export const queryKeys = {
         /** The staged change of one locale of an entry (forward versioning). */
         staged: (collection: string, id: string, locale: string) =>
             ['entries', collection, 'staged', id, locale] as const,
+        /** What references one entry, from any resource. */
+        usedBy: (collection: string, id: string) =>
+            ['entries', collection, 'used-by', id] as const,
     },
 
     // Globals
@@ -54,6 +57,8 @@ export const queryKeys = {
             ['media', 'detail', id, locale ?? null] as const,
         versions: (id: string, locale: string) =>
             ['media', 'detail', id, 'versions', locale] as const,
+        /** What references one media item, from any resource. */
+        usedBy: (id: string) => ['media', 'detail', id, 'used-by'] as const,
     },
 
     // Users

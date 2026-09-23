@@ -808,10 +808,7 @@ describe('an entry addressed as another type', () => {
         ['deleteStaged', (id) => api.deleteStaged({ type: 'post', id })],
         ['issuePreviewToken', (id) => api.issuePreviewToken({ type: 'post', id })],
         ['revokePreviewToken', (id) => api.revokePreviewToken({ type: 'post', id })],
-        [
-            'incomingRelationships',
-            (id) => api.incomingRelationships({ type: 'post', id }),
-        ],
+        ['usedBy', (id) => api.usedBy({ type: 'post', id })],
     ])('%s rejects with EntryNotFoundError', async (_name, call) => {
         const before = await api.get({ type: 'note', id: noteId, full: true });
 
@@ -980,19 +977,22 @@ describe('relationships', () => {
         expect(rels).toHaveLength(0);
     });
 
-    it('incomingRelationships lists the source with its title', async () => {
+    it('usedBy lists the source with its title', async () => {
         const target = await api.create({ type: 'post', data: { title: 'Target' } });
         const src = await api.create({
             type: 'post',
             data: { title: 'Source', fields: { related: [target.id] } },
         });
-        const incoming = await api.incomingRelationships({ type: 'post', id: target.id });
+        const incoming = await api.usedBy({ type: 'post', id: target.id });
         expect(incoming).toEqual([
             {
                 sourceId: src.id,
+                sourceKind: 'entry',
                 sourceTitle: 'Source',
                 sourceType: 'post',
                 schemaPath: 'related',
+                instancePath: 'related',
+                sourceStaged: false,
             },
         ]);
     });

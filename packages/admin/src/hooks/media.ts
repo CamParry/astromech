@@ -85,13 +85,10 @@ export function useRestoreMediaVersion(
     });
 }
 
-/**
- * Read-only: the index references pointing at this media item. Rows are
- * index-shaped, so the caller resolves display titles itself.
- */
+/** Read-only: every reference to this media item, from any resource. */
 export function useMediaUsage(id: string, enabled = true) {
     return useQuery({
-        queryKey: [...queryKeys.media.detailPrefix(id), 'usage'] as const,
+        queryKey: queryKeys.media.usedBy(id),
         queryFn: () => astromechClient.media.usedBy({ id }),
         enabled,
     });

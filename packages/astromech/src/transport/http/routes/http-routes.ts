@@ -209,11 +209,7 @@ export const ENTRIES_ROUTE_SPECS = [
         id: 'entries.restoreVersion',
         queryArgs: ['locale'],
     },
-    {
-        verb: 'get',
-        path: '/:type/:id/incoming-relationships',
-        id: 'entries.incomingRelationships',
-    },
+    { verb: 'get', path: '/:type/:id/used-by', id: 'entries.usedBy' },
     {
         verb: 'post',
         path: '/:type/:id/staged',
@@ -373,7 +369,7 @@ export const MEDIA_ROUTE_SPECS = [
         queryArgs: ['locale'],
     },
     { verb: 'delete', path: '/:id', id: 'media.delete', envelope: 'success' },
-    { verb: 'get', path: '/:id/usage', id: 'media.usedBy', handler: 'bespoke' },
+    { verb: 'get', path: '/:id/used-by', id: 'media.usedBy' },
     {
         verb: 'get',
         path: '/:id/versions',

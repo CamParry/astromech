@@ -14,7 +14,7 @@ import {
 import { AstromechApiError, astromechClient } from 'astromech/fetch';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../components/ui/toast';
-import { scopedEntryKeys } from './use-query-keys';
+import { queryKeys, scopedEntryKeys } from './use-query-keys';
 
 /**
  * Optional mount binding: root callers omit both (root client, unprefixed
@@ -102,13 +102,13 @@ export function useEntryVersions(
 }
 
 /**
- * Read-only: fetch entries that reference `id` via a relationship row.
- * Used by the delete-confirmation modal to warn about dangling references.
+ * Read-only: every reference to `id`, from any resource. Used by the
+ * delete-confirmation modal to warn about dangling references.
  */
-export function useIncomingRelationships(type: string, id: string, enabled = true) {
+export function useEntryUsage(type: string, id: string, enabled = true) {
     return useQuery({
-        queryKey: ['entries', type, 'incoming-relationships', id] as const,
-        queryFn: () => astromechClient.entries.incomingRelationships({ type, id }),
+        queryKey: queryKeys.entries.usedBy(type, id),
+        queryFn: () => astromechClient.entries.usedBy({ type, id }),
         enabled,
     });
 }

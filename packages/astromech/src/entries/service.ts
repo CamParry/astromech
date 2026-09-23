@@ -14,7 +14,6 @@ import { duplicateEntry } from './methods/duplicate';
 import { getEntry } from './methods/get';
 import { issuePreviewToken, revokePreviewToken } from './methods/preview/token';
 import { queryEntries } from './methods/query';
-import { listIncomingRelationships } from './methods/relationships';
 import { restoreEntries } from './methods/restore';
 import { createStagedEntry } from './methods/staging/create';
 import { deleteStagedEntry } from './methods/staging/delete';
@@ -23,6 +22,7 @@ import { mergeStagedEntry } from './methods/staging/merge';
 import { publishEntries, scheduleEntries, unpublishEntries } from './methods/status';
 import { emptyTrash, trashEntries } from './methods/trash';
 import { updateEntries } from './methods/update';
+import { listEntryUsage } from './methods/used-by';
 import { listEntryVersions } from './methods/versions/list';
 import { restoreEntryVersion } from './methods/versions/restore';
 
@@ -78,7 +78,7 @@ export const entriesDefinition = defineService<EntriesMethods>(
         publish: publishEntries,
         unpublish: unpublishEntries,
         schedule: scheduleEntries,
-        incomingRelationships: listIncomingRelationships,
+        usedBy: listEntryUsage,
         createStaged: createStagedEntry,
         getStaged: getStagedEntry,
         mergeStaged: mergeStagedEntry,

@@ -143,7 +143,7 @@ describe('relationships targeting a titleless type', () => {
             data: { title: 'My Bookmark', fields: { snippet: snippet.id } },
         });
 
-        const incoming = await api.incomingRelationships({
+        const incoming = await api.usedBy({
             type: 'snippet',
             id: snippet.id,
         });

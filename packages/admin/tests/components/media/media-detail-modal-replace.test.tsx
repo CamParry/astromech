@@ -6,7 +6,7 @@
  * many that is, and it can only be raised once a file has been chosen.
  */
 
-import type { Media, MediaUsage } from '@/types/index';
+import type { Media, Usage } from '@/types/index';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
@@ -41,7 +41,7 @@ const ITEM: Media = {
  * User sources, so the usage panel needs no entry-type labels from the
  * admin-config shim to render them.
  */
-let usage: MediaUsage[] = [];
+let usage: Usage[] = [];
 
 const USAGE = [
     {
@@ -62,7 +62,7 @@ const USAGE = [
         instancePath: 'avatar',
         sourceStaged: false,
     },
-] as MediaUsage[];
+] as Usage[];
 
 vi.mock('@/admin/hooks/media', () => ({
     useMediaItem: () => ({ data: ITEM, isLoading: false, isError: false }),

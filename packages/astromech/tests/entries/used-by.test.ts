@@ -1,5 +1,5 @@
 /**
- * `entries.incomingRelationships` — reverse lookup for the delete modal.
+ * `entries.usedBy` — reverse lookup for the delete modal.
  *
  * The interesting case is a source whose entry type is NOT the target's: it
  * lives in that type's own repository, so loading it through the target's
@@ -8,12 +8,20 @@
  */
 
 import type { AstromechConfig, PluginDefinition } from '@/types/index';
+import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService as api } from '@/app-context/services';
+import {
+    entriesService as api,
+    globalsService,
+    mediaService,
+    usersService,
+} from '@/app-context/services';
 import { defineTable } from '@/database/define-table';
 import { tableRepository } from '@/entries/repository/table';
+import { createMediaRepository } from '@/media/repository';
+import { setStorageDriver } from '@/storage/registry';
 
 const linksTable = defineTable('test_links', ({ col }) => ({
     id: col.id(),
@@ -80,6 +88,30 @@ function makeRelationsConfig(): AstromechConfig {
                 ],
             },
         },
+        users: {
+            fields: [
+                {
+                    name: 'featured',
+                    type: 'relationship',
+                    label: 'Featured',
+                    target: 'post',
+                },
+            ],
+        },
+        media: {
+            fields: [
+                { name: 'about', type: 'relationship', label: 'About', target: 'post' },
+            ],
+        },
+        globals: [
+            {
+                key: 'site',
+                label: 'Site',
+                fields: [
+                    { name: 'home', type: 'relationship', label: 'Home', target: 'post' },
+                ],
+            },
+        ],
         plugins: [linksPlugin()],
     };
 }
@@ -96,7 +128,7 @@ beforeEach(async () => {
         )`.execute(db);
 });
 
-describe('incomingRelationships', () => {
+describe('usedBy', () => {
     it('returns a source whose entry type is not the target type', async () => {
         const target = await api.create({ type: 'post', data: { title: 'Target' } });
         const source = await api.create({
@@ -104,14 +136,17 @@ describe('incomingRelationships', () => {
             data: { title: 'Article', fields: { author: target.id } },
         });
 
-        const incoming = await api.incomingRelationships({ type: 'post', id: target.id });
+        const incoming = await api.usedBy({ type: 'post', id: target.id });
 
         expect(incoming).toEqual([
             {
                 sourceId: source.id,
+                sourceKind: 'entry',
                 sourceTitle: 'Article',
                 sourceType: 'article',
                 schemaPath: 'author',
+                instancePath: 'author',
+                sourceStaged: false,
             },
         ]);
     });
@@ -124,14 +159,17 @@ describe('incomingRelationships', () => {
             data: { fields: { label: 'A link', post: target.id } },
         });
 
-        const incoming = await api.incomingRelationships({ type: 'post', id: target.id });
+        const incoming = await api.usedBy({ type: 'post', id: target.id });
 
         expect(incoming).toEqual([
             {
                 sourceId: link.id,
+                sourceKind: 'entry',
                 sourceTitle: '',
                 sourceType: 'links/link',
                 schemaPath: 'post',
+                instancePath: 'post',
+                sourceStaged: false,
             },
         ]);
     });
@@ -146,7 +184,7 @@ describe('incomingRelationships', () => {
             },
         });
 
-        const incoming = await api.incomingRelationships({ type: 'post', id: target.id });
+        const incoming = await api.usedBy({ type: 'post', id: target.id });
 
         expect(incoming).toHaveLength(2);
         expect(incoming.every((r) => r.sourceId === source.id)).toBe(true);
@@ -165,7 +203,7 @@ describe('incomingRelationships', () => {
         });
         await api.createStaged({ type: 'article', id: canonical.id });
 
-        const incoming = await api.incomingRelationships({ type: 'post', id: target.id });
+        const incoming = await api.usedBy({ type: 'post', id: target.id });
 
         // The staged row is the same entry, holding the same reference.
         expect(incoming.map((r) => r.sourceId)).toEqual([canonical.id]);
@@ -184,7 +222,7 @@ describe('incomingRelationships', () => {
             data: { title: 'DE', fields: { author: target.id } },
         });
 
-        const incoming = await api.incomingRelationships({ type: 'post', id: target.id });
+        const incoming = await api.usedBy({ type: 'post', id: target.id });
 
         expect(incoming.map((r) => r.sourceId)).toEqual([source.id]);
         // Named in the default locale, whichever locale was written last.
@@ -199,15 +237,47 @@ describe('incomingRelationships', () => {
         });
         await api.trash({ type: 'article', id: source.id });
 
-        const incoming = await api.incomingRelationships({ type: 'post', id: target.id });
+        const incoming = await api.usedBy({ type: 'post', id: target.id });
 
         expect(incoming.map((r) => r.sourceId)).toEqual([source.id]);
     });
 
+    it('reports a global, a user and a media item holding a reference', async () => {
+        setStorageDriver(noopStorage);
+        const target = await api.create({ type: 'post', data: { title: 'Target' } });
+        const global = await globalsService.update({
+            key: 'site',
+            data: { fields: { home: target.id } },
+        });
+        const user = await usersService.create({
+            data: {
+                email: 'a@example.com',
+                name: 'Ada',
+                fields: { featured: target.id },
+            },
+        });
+        const media = await createMediaRepository().create(
+            { filename: 'photo.png', mimeType: 'image/png', size: 1 },
+            {}
+        );
+        await mediaService.update({
+            id: media.id,
+            data: { fields: { about: target.id } },
+        });
+
+        const usage = await api.usedBy({ type: 'post', id: target.id });
+
+        expect(
+            usage.map((row) => [row.sourceKind, row.sourceId, row.sourceTitle])
+        ).toEqual([
+            ['global', global.id, 'Site'],
+            ['media', media.id, 'photo.png'],
+            ['user', user.id, 'Ada'],
+        ]);
+    });
+
     it('returns an empty list when nothing references the target', async () => {
         const target = await api.create({ type: 'post', data: { title: 'Lonely' } });
-        expect(await api.incomingRelationships({ type: 'post', id: target.id })).toEqual(
-            []
-        );
+        expect(await api.usedBy({ type: 'post', id: target.id })).toEqual([]);
     });
 });

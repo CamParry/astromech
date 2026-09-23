@@ -173,7 +173,7 @@
         "pickSourceEntry": "Pick the source entry",
         "pickGroupToJoin": "Pick the entry to add this locale to",
         "deletesAllLocales": "This entry has {{count}} locales. All of them go with it.",
-        "incomingRelationshipsHeader": "{{count}} other entries reference this one and will lose those references:"
+        "usedByHeader": "{{count}} references point at this entry and will be lost:"
     },
     "staging": {
         "stageChange": "Stage a change",
@@ -427,6 +427,7 @@
         "usedByHeader_one": "Used by {{count}} reference",
         "usedByHeader_other": "Used by {{count}} references",
         "usedBySourceEntries": "Entries",
+        "usedBySourceGlobals": "Globals",
         "usedBySourceUsers": "Users",
         "usedBySourceMedia": "Media",
         "usedByStaged": "staged",

@@ -134,9 +134,9 @@ describe('GET /media/:id', () => {
     });
 });
 
-describe('GET /media/:id/usage', () => {
+describe('GET /media/:id/used-by', () => {
     it('returns { data } with a reference list per referencing domain', async () => {
-        const res = await app().request(`/media/${pngId}/usage`);
+        const res = await app().request(`/media/${pngId}/used-by`);
         expect(res.status).toBe(200);
         const body = (await res.json()) as { data: unknown[] };
         expect(Object.keys(body)).toEqual(['data']);
@@ -145,12 +145,12 @@ describe('GET /media/:id/usage', () => {
     });
 
     it('404s an unknown id — the handler pre-flights media.get', async () => {
-        const res = await app().request('/media/nope/usage');
+        const res = await app().request('/media/nope/used-by');
         expect(res.status).toBe(404);
     });
 
     it('403s without media:read', async () => {
-        const res = await app(roleWith([])).request(`/media/${pngId}/usage`);
+        const res = await app(roleWith([])).request(`/media/${pngId}/used-by`);
         expect(res.status).toBe(403);
     });
 });

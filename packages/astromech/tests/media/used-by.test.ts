@@ -219,7 +219,7 @@ describe('mediaService.usedBy', () => {
         expect(await mediaService.usedBy({ id: await createMedia() })).toEqual([]);
     });
 
-    // Matches `entries.incomingRelationships`, which asserts the target exists
+    // Matches `entries.usedBy`, which asserts the target exists
     // rather than reporting "no usage" for an id that is not a media item.
     it('throws for an unknown media id', async () => {
         await expect(mediaService.usedBy({ id: 'nope' })).rejects.toThrow(/not found/);

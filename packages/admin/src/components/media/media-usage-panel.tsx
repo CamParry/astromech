@@ -1,10 +1,10 @@
 /**
- * "Used by" panel — the entries, users and media items that reference one
- * media item, grouped by source kind and entry type. `media.usedBy` resolves
+ * "Used by" panel — the entries, globals, users and media items that reference
+ * one media item, grouped by source kind and entry type. `media.usedBy` resolves
  * display titles server-side, so this component only groups and links.
  */
 
-import type { MediaUsage } from 'astromech';
+import type { Usage } from 'astromech';
 import { parseEntryTypeId } from 'astromech/shared';
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,9 +21,9 @@ export type MediaUsagePanelProps = {
 /** One heading's worth of rows: all the references from one kind (and entry type). */
 type UsageGroup = {
     key: string;
-    sourceKind: MediaUsage['sourceKind'];
+    sourceKind: Usage['sourceKind'];
     sourceType: string | null;
-    rows: MediaUsage[];
+    rows: Usage[];
 };
 
 export function MediaUsagePanel({
@@ -87,7 +87,7 @@ function SourceName({
     row,
 }: {
     group: UsageGroup;
-    row: MediaUsage;
+    row: Usage;
 }): React.ReactElement {
     // A source that would not load has no title, so its id is all there is.
     const label = row.sourceTitle === '' ? row.sourceId : row.sourceTitle;
@@ -103,7 +103,7 @@ function SourceName({
 }
 
 /** Stable groups in the order the sorted rows arrive in. */
-function groupUsage(rows: MediaUsage[]): UsageGroup[] {
+function groupUsage(rows: Usage[]): UsageGroup[] {
     const groups = new Map<string, UsageGroup>();
     for (const row of rows) {
         const key = `${row.sourceKind} ${row.sourceType ?? ''}`;
@@ -121,6 +121,7 @@ function groupUsage(rows: MediaUsage[]): UsageGroup[] {
 
 /** Entry groups use the type's plural label; the other kinds are translated. */
 function groupLabel(group: UsageGroup, translate: (key: string) => string): string {
+    if (group.sourceKind === 'global') return translate('media.usedBySourceGlobals');
     if (group.sourceKind === 'user') return translate('media.usedBySourceUsers');
     if (group.sourceKind === 'media') return translate('media.usedBySourceMedia');
     if (group.sourceType === null) return translate('media.usedBySourceEntries');

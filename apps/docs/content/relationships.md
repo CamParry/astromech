@@ -57,8 +57,8 @@ const author = await Astromech.entries.get({
 and it is yours to decide what to show instead.
 
 `where: { references }` compares entry ids too, so it answers for the entry
-across every locale. `incomingRelationships` returns entry ids in `sourceId`,
-one row per reference, with `sourceTitle` read in the default locale.
+across every locale. `usedBy` returns resource ids in `sourceId`, one row per
+reference, with an entry's `sourceTitle` read in the default locale.
 
 ## Querying the reverse direction
 
@@ -84,12 +84,18 @@ and throws when it names nothing, so a typo fails loudly instead of returning
 an empty page. The filter also works on a type stored in its own table rather
 than in `entries`, as long as the query names that type alone.
 
-For the delete-confirmation case there is a direct call:
+For the delete-confirmation case there is a direct call, on entries and on
+media alike. It lists every reference, whichever resource holds it:
 
 ```ts
-await Astromech.entries.incomingRelationships({ type: 'post', id });
-// → [{ sourceId, sourceTitle, sourceType, schemaPath }]
+await Astromech.entries.usedBy({ type: 'post', id });
+await Astromech.media.usedBy({ id });
+// → [{ sourceId, sourceKind, sourceType, sourceTitle, schemaPath, instancePath, sourceStaged }]
 ```
+
+`sourceKind` is `'entry'`, `'global'`, `'user'` or `'media'`. `sourceType` is an
+entry's type or a global's key, and null for a user or a media item.
+`sourceStaged` is true when only a pending staged change holds the reference.
 
 ## How it is stored, and what you owe it
 
@@ -114,12 +120,12 @@ astromech index:rebuild --check    # report drift, write nothing, exit 1 if any
 
 Because the index is derived, a wrong index is repairable and a rebuild is
 always safe. That is what makes it acceptable for it to be polymorphic across
-entries, users and media.
+entries, globals, users and media.
 
 ## Deleted targets
 
 An id whose target no longer exists is dropped from the field data the next
-time the entry is written, and the index row goes with it. The check is
+time the entry, global, user or media item holding it is written, and the index row goes with it. The check is
 deliberately timid, because a false positive deletes an author's data: an id
 is **kept** when the field names no target, or when the target names no
 configured entry type. A target stored in its own table rather than in

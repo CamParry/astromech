@@ -168,7 +168,7 @@ describe('a plugin container field type', () => {
             },
         });
 
-        const incoming = await api.incomingRelationships({ type: 'post', id: target.id });
+        const incoming = await api.usedBy({ type: 'post', id: target.id });
 
         expect(incoming).toEqual([
             expect.objectContaining({ sourceId: source.id, schemaPath: 'cards[].link' }),

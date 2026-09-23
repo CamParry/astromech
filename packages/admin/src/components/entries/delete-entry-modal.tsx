@@ -1,13 +1,13 @@
 /**
  * Confirmation modal for trashing or permanently deleting an entry. Trash and
  * delete are resource-level, so every locale of the entry goes with it; the
- * modal says so when there is more than one, and lists incoming relationships.
+ * modal says so when there is more than one, and lists what references it.
  */
 
-import type { Entry, IncomingRelationship } from 'astromech';
+import type { Entry, Usage } from 'astromech';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useIncomingRelationships } from '../../hooks/entries';
+import { useEntryUsage } from '../../hooks/entries';
 import { Button } from '../ui/button';
 import { Modal } from '../ui/modal';
 import { Spinner } from '../ui/spinner';
@@ -40,7 +40,7 @@ export function DeleteEntryModal({
 
     const localeCount = entry?.locales.length ?? 0;
 
-    const { data: incoming, isLoading: incomingLoading } = useIncomingRelationships(
+    const { data: incoming, isLoading: incomingLoading } = useEntryUsage(
         entry?.type ?? '',
         entry?.id ?? '',
         open && entry != null
@@ -104,7 +104,7 @@ export function DeleteEntryModal({
                     ) : (
                         <>
                             <p className="am-text-sm">
-                                {t('entries.incomingRelationshipsHeader', {
+                                {t('entries.usedByHeader', {
                                     count: incomingCount,
                                 })}
                             </p>
@@ -112,16 +112,17 @@ export function DeleteEntryModal({
                                 className="am-text-sm am-text-muted"
                                 style={{ paddingLeft: '1.25rem' }}
                             >
-                                {(incoming ?? [])
-                                    .slice(0, 10)
-                                    .map((r: IncomingRelationship) => (
-                                        <li key={`${r.sourceId}-${r.schemaPath}`}>
-                                            {r.sourceTitle || r.sourceId}{' '}
-                                            <span className="am-text-mono">
-                                                ({r.sourceType}.{r.schemaPath})
-                                            </span>
-                                        </li>
-                                    ))}
+                                {(incoming ?? []).slice(0, 10).map((r: Usage) => (
+                                    <li
+                                        key={`${r.sourceKind}-${r.sourceId}-${r.instancePath}`}
+                                    >
+                                        {r.sourceTitle || r.sourceId}{' '}
+                                        <span className="am-text-mono">
+                                            ({r.sourceType ?? r.sourceKind}.{r.schemaPath}
+                                            )
+                                        </span>
+                                    </li>
+                                ))}
                                 {incomingCount > 10 && (
                                     <li>… +{incomingCount - 10} more</li>
                                 )}

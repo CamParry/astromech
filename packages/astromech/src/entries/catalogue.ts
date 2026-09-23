@@ -124,8 +124,8 @@ function entryMethodSummary(method: EntryMethodName, type: string): string {
             return `List the version history of a "${type}" entry.`;
         case 'restoreVersion':
             return `Roll a "${type}" entry back to an earlier version.`;
-        case 'incomingRelationships':
-            return `List the entries that reference a "${type}" entry.`;
+        case 'usedBy':
+            return `List what references a "${type}" entry.`;
         case 'createStaged':
             return `Stage a change to a "${type}" entry.`;
         case 'getStaged':
@@ -204,7 +204,7 @@ function entryInputSchemas(
         publish: z.object({ type, id: ids, locale }),
         unpublish: z.object({ type, id: ids, locale }),
         schedule: z.object({ type, id: ids, locale }).extend(scheduleEntrySchema.shape),
-        incomingRelationships: canonical,
+        usedBy: canonical,
         createStaged: localised,
         getStaged: localised,
         mergeStaged: localised,

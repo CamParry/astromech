@@ -8,7 +8,7 @@
  * on here.
  */
 
-import type { Entry, EntryVersion, IncomingRelationship } from '@/types/index';
+import type { Entry, EntryVersion, Usage } from '@/types/index';
 import { adminRole } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { mountRouter, seedTestUser } from '@tests/mount-router';
@@ -216,28 +216,31 @@ describe('POST /entries/:type/:id/versions/:versionId/restore', () => {
     });
 });
 
-describe('GET /entries/:type/:id/incoming-relationships', () => {
+describe('GET /entries/:type/:id/used-by', () => {
     it('returns { data: relationships } naming the source entry and field path', async () => {
         const source = await api.create({
             type: 'post',
             data: { title: 'Source', slug: 'source', fields: { related: [id] } },
         });
 
-        const res = await app().request(`/entries/post/${id}/incoming-relationships`);
+        const res = await app().request(`/entries/post/${id}/used-by`);
         expect(res.status).toBe(200);
-        const body = (await res.json()) as { data: IncomingRelationship[] };
+        const body = (await res.json()) as { data: Usage[] };
         expect(Object.keys(body)).toEqual(['data']);
         expect(body.data).toHaveLength(1);
         expect(body.data[0]).toEqual({
             sourceId: source.id,
+            sourceKind: 'entry',
             sourceTitle: 'Source',
             sourceType: 'post',
             schemaPath: 'related',
+            instancePath: 'related',
+            sourceStaged: false,
         });
     });
 
     it('returns an empty list when nothing points at the entry', async () => {
-        const res = await app().request(`/entries/post/${id}/incoming-relationships`);
+        const res = await app().request(`/entries/post/${id}/used-by`);
         expect(((await res.json()) as { data: unknown[] }).data).toEqual([]);
     });
 });

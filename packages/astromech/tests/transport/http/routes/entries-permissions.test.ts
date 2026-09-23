@@ -152,12 +152,7 @@ describe('every entries route demands one entry action', () => {
                 `/post/${id}/versions/${versionId}/restore`,
                 json({}),
             ],
-            [
-                'GET /:type/:id/incoming-relationships',
-                'read',
-                `/post/${id}/incoming-relationships`,
-                undefined,
-            ],
+            ['GET /:type/:id/used-by', 'read', `/post/${id}/used-by`, undefined],
         ];
     }
 
