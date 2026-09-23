@@ -11,6 +11,7 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService, globalsService, mediaService } from '@/app-context/services';
 import { createRelationshipRepository } from '@/database/repository/relationships';
+import { assertRequiredCapability } from '@/globals/internal/global';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { rebuildRelationshipIndex } from '@/transport/cli/relationship-index';
@@ -141,5 +142,41 @@ describe('global relationships', () => {
         await rebuildRelationshipIndex();
 
         expect(await storedRows()).toEqual(written);
+    });
+
+    // A global has one row per locale, so a `unique` field has nothing to collide with.
+    it('accepts any value for a unique field', async () => {
+        setupTestConfig({
+            ...makeConfig(),
+            globals: [
+                {
+                    key: 'site',
+                    label: 'Site',
+                    fields: [
+                        {
+                            name: 'code',
+                            type: 'text',
+                            label: 'Code',
+                            validation: [{ unique: true }],
+                        },
+                    ],
+                },
+            ],
+        });
+        const saved = await globalsService.update({
+            key: 'site',
+            data: { fields: { code: 'A' } },
+        });
+        expect(saved.fields).toEqual({ code: 'A' });
+    });
+
+    it('refuses a capability name that is not a global one', () => {
+        expect(() =>
+            assertRequiredCapability(
+                setupTestConfig(makeConfig()),
+                { key: 'site' },
+                'trash'
+            )
+        ).toThrow(/not a global capability/);
     });
 });

@@ -231,6 +231,35 @@ describe('readImageDimensions', () => {
         expect(readImageDimensions(new Uint8Array(0))).toBeNull();
     });
 
+    it('returns null for a JPEG that runs out inside marker padding', () => {
+        const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
+        expect(readImageDimensions(bytes)).toBeNull();
+    });
+
+    it('returns null for a JPEG segment whose length is impossible', () => {
+        const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x01, 0x00, 0x00]);
+        expect(readImageDimensions(bytes)).toBeNull();
+    });
+
+    it('returns null for a JPEG with no frame header', () => {
+        const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x02, 0x00, 0x00]);
+        expect(readImageDimensions(bytes)).toBeNull();
+    });
+
+    it('returns null for a WebP whose first chunk is none it knows', () => {
+        const ascii = (text: string): number[] => [...text].map((c) => c.charCodeAt(0));
+        const bytes = new Uint8Array([
+            ...ascii('RIFF'),
+            0,
+            0,
+            0,
+            0,
+            ...ascii('WEBP'),
+            ...ascii('ABCD'),
+        ]);
+        expect(readImageDimensions(bytes)).toBeNull();
+    });
+
     it('returns null for random/unknown bytes', () => {
         const junk = new Uint8Array([
             0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
