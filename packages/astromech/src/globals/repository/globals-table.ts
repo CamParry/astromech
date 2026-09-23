@@ -5,11 +5,7 @@
  * There is no list, no slug, no trash and no preview token.
  */
 
-import type {
-    ContentRepository,
-    ContentRow,
-    ContentWrite,
-} from '@/content/repository/types';
+import type { ContentRepository, ContentRow } from '@/content/repository/types';
 import type { Db } from '@/database/types';
 import type { GlobalContentRow, GlobalRow as GlobalsTableRow } from '@/globals/tables';
 import type { JsonObject } from '@/types/index';
@@ -20,15 +16,12 @@ import { globalContentTable, globalsTable, globalVersionsTable } from '@/databas
 /** One locale of one global, as the globals service reads it. */
 export type GlobalRow = ContentRow & { key: string };
 
-export type GlobalsRepository = Omit<
-    ContentRepository<GlobalRow, typeof globalVersionsTable>,
-    'create'
+export type GlobalsRepository = ContentRepository<
+    GlobalRow,
+    typeof globalVersionsTable
 > & {
     /** The `globals.id` for a config key, or null when nothing is saved yet. */
     idByKey(key: string): Promise<string | null>;
-    /** Create the global's row and its first content row. A global is
-     *  identified by its config key, so that is the only owner column. */
-    create(own: { key: string }, content: ContentWrite): Promise<GlobalRow>;
 };
 
 /** The two joined rows plus the locale list, in the shape the service reads. */
@@ -84,9 +77,5 @@ export function createGlobalsRepository(opts?: {
         return row?.id ?? null;
     }
 
-    return {
-        ...content,
-        idByKey,
-        create: (own, write) => content.create(own, write),
-    };
+    return { ...content, idByKey };
 }

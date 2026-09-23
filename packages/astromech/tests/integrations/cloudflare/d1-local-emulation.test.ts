@@ -21,7 +21,6 @@ import type { MigrationProvider } from 'kysely/migration';
 import { migrateToLatest } from '@astromech/schema-engine';
 import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { insertFirstUser } from '@/auth/setup';
 import { d1 } from '@/database/drivers/d1';
 import { assertForeignKeysEnforced } from '@/database/migrations';
 import { clearEnvSource } from '@/env';
@@ -30,6 +29,7 @@ import {
     resetBindings,
     resolveBinding,
 } from '@/integrations/cloudflare/bindings';
+import { insertFirstUser } from '@/users/repository';
 
 /** Test-only schema; deliberately unrelated to the app's `DB` type. */
 type TestSchema = {

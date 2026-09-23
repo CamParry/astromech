@@ -6,12 +6,7 @@
 
 import type { MediaContentRow, MediaTableRow, NewMediaTableRow } from './tables';
 import type { ListPage } from '@/content/list';
-import type {
-    ContentRef,
-    ContentRow,
-    ContentWrite,
-    JoinedWhere,
-} from '@/content/repository/types';
+import type { ContentRow, ContentWrite, JoinedWhere } from '@/content/repository/types';
 import type {
     JsonObject,
     MediaMetadata,
@@ -28,7 +23,6 @@ import { RESOURCE_SPECS } from '@/content/resources';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { mediaContentTable, mediaTable, mediaVersionsTable } from '@/database/tables';
-import { transaction } from '@/database/transaction';
 
 /** One locale of one media item, as the media service reads it. */
 export type MediaRow = ContentRow & {
@@ -192,21 +186,14 @@ export function createMediaRepository(config?: ResolvedConfig) {
         return content.create(own, write);
     }
 
-    /** Write one locale's content row, creating it when it does not exist. */
-    async function update(ref: ContentRef, data: ContentWrite): Promise<MediaRow> {
-        return content.update(ref, data);
-    }
-
     /**
-     * Drops the row and every relationship pointing at (or from) it. One
-     * transaction: an index outliving a failed delete would name a row that is
-     * gone.
+     * Drops the row and every relationship pointing at (or from) it. Call it
+     * inside a transaction: an index outliving a failed delete would name a row
+     * that is gone.
      */
     async function del(id: string): Promise<void> {
-        await transaction(async () => {
-            await createRelationshipRepository().deleteByResource(id, 'media');
-            await content.delete(id);
-        });
+        await createRelationshipRepository().deleteByResource(id, 'media');
+        await content.delete(id);
     }
 
     return {
@@ -220,7 +207,7 @@ export function createMediaRepository(config?: ResolvedConfig) {
         count,
         get,
         create,
-        update,
+        update: content.update,
         delete: del,
         versions: content.versions,
         translatable: content.translatable,

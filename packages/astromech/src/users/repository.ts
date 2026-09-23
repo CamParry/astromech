@@ -6,18 +6,16 @@
 
 import type { NewUserTableRow, UserContentRow, UserTableRow } from './tables';
 import type { ListPage } from '@/content/list';
-import type {
-    ContentRef,
-    ContentRow,
-    ContentWrite,
-    JoinedWhere,
-} from '@/content/repository/types';
+import type { ContentRow, ContentWrite, JoinedWhere } from '@/content/repository/types';
+import type { Db } from '@/database/types';
 import type { JsonObject, ResolvedConfig, SortOption } from '@/types/index';
 import type { Expression, SqlBool } from 'kysely';
+import { sql } from 'kysely';
 import { defaultContentLocale, getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
 import { RESOURCE_SPECS } from '@/content/resources';
+import { encodeWith } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { userContentTable, usersTable, userVersionsTable } from '@/database/tables';
@@ -179,11 +177,11 @@ export function createUserRepository(config?: ResolvedConfig) {
         return content.create(own, write);
     }
 
-    /** Write one locale's content row, creating it when it does not exist. */
-    async function update(ref: ContentRef, data: ContentWrite): Promise<UserRow> {
-        return content.update(ref, data);
-    }
-
+    /**
+     * Drops the row and every relationship pointing at (or from) it. Call it
+     * inside a transaction: an index outliving a failed delete would name a row
+     * that is gone.
+     */
     async function del(id: string): Promise<void> {
         // Relationship rows first: deleting the user row is what orphans them.
         await createRelationshipRepository().deleteByResource(id, 'user');
@@ -202,11 +200,36 @@ export function createUserRepository(config?: ResolvedConfig) {
         get,
         accountRow,
         create,
-        update,
+        update: content.update,
         delete: del,
         versions: content.versions,
         translatable: content.translatable,
         locales: content.locales,
         anyLocale: content.anyLocale,
     };
+}
+
+/**
+ * Insert the `users` row only while the table is empty, in one statement.
+ * `true` when this call inserted it. Defaults to the registered db. First-run
+ * setup's gate: the losing racer inserts nothing.
+ */
+export async function insertFirstUser(row: NewUserTableRow, db?: Db): Promise<boolean> {
+    const { db: kysely, table } = createRepository(usersTable, db).kysely();
+    // `encodeWith` mints the id and the timestamps the columns default, and
+    // serializes every value; the Kysely handle spells the column names the way
+    // `CamelCasePlugin` does.
+    const cells = Object.entries(encodeWith(usersTable, row));
+    const result = await kysely
+        .insertInto(table)
+        .columns(cells.map(([column]) => column))
+        .expression(
+            kysely
+                .selectNoFrom(cells.map(([column, value]) => sql.val(value).as(column)))
+                .where(({ not, exists, selectFrom }) =>
+                    not(exists(selectFrom(table).select(sql.lit(1).as('one'))))
+                )
+        )
+        .executeTakeFirst();
+    return Number(result.numInsertedOrUpdatedRows ?? 0) === 1;
 }

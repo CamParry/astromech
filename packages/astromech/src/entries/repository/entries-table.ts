@@ -13,16 +13,11 @@ import type {
     EntryRow,
     EntryWrite,
     ListParams,
-    NewEntryVersionSnapshot,
     PreviewTokenRecord,
 } from './types';
 import type { JoinedWhere } from '@/content/repository/types';
 import type { DB, Db } from '@/database/types';
-import type {
-    EntryRow as EntriesTableRow,
-    EntryContentRow,
-    EntryVersionRow,
-} from '@/entries/tables';
+import type { EntryRow as EntriesTableRow, EntryContentRow } from '@/entries/tables';
 import type {
     EntryStatus,
     JsonObject,
@@ -374,7 +369,7 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
     const trash = {
         trash: async (id: string, actor?: string | null): Promise<void> => {
             const row = await entries.findOne({ id });
-            if (!row) throw new Error(`Entry '${id}' not found`);
+            if (!row) throw new ResourceNotFoundError('entry', { id });
 
             // Idempotent: re-trashing an already-trashed entry is a no-op.
             if (row.deletedAt === null) {
@@ -410,17 +405,6 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
         emptyTrash: async (type: string): Promise<void> => {
             await entries.deleteMany({ type, deletedAt: { ne: null } });
         },
-    };
-
-    const versions = {
-        list: async (contentId: ContentRowId): Promise<EntryVersionRow[]> =>
-            content.versions.list(contentId),
-        get: async (versionId: string): Promise<EntryVersionRow | null> =>
-            content.versions.get(versionId),
-        create: async (snapshot: NewEntryVersionSnapshot): Promise<void> =>
-            content.versions.create(snapshot),
-        latestNumber: async (contentId: ContentRowId): Promise<number> =>
-            content.versions.latestNumber(contentId),
     };
 
     const previewToken = {
@@ -462,7 +446,7 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
         update: content.update,
         delete: content.delete,
         trash,
-        versions,
+        versions: content.versions,
         staging: content.staging,
         translatable: content.translatable,
         previewToken,

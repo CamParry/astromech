@@ -1,4 +1,5 @@
 import { z } from '@hono/zod-openapi';
+import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { deletePrefix } from '@/storage/prefix';
 import { getStorageDriver } from '@/storage/registry';
@@ -24,6 +25,9 @@ export const deleteMedia = defineServiceMethod({
             await deletePrefix(driver, variantPrefix(id));
         }
 
-        await repository.delete(id);
+        // The row and its index rows go together, as a user's do.
+        await transaction(async () => {
+            await repository.delete(id);
+        });
     },
 });

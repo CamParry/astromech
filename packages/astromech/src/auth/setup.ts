@@ -4,20 +4,15 @@
  * install create exactly one user without a lock or a transaction.
  */
 
-import type { Db } from '@/database/types';
 import type { BuiltInRoleSlug } from '@/permissions/roles';
-import type { NewUserTableRow } from '@/users/tables';
 import { z } from '@hono/zod-openapi';
-import { sql } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
-import { encodeWith } from '@/database/codec';
-import { createRepository } from '@/database/repository/create-repository';
-import { userContentTable, usersTable } from '@/database/tables';
 import { transaction } from '@/database/transaction';
 import {
     createCredentialAccount,
     hashCredential,
 } from '@/users/internal/credential-account';
+import { createUserRepository, insertFirstUser } from '@/users/repository';
 
 /** The refusal every closed sign-up path answers with. */
 export const SIGN_UP_CLOSED = {
@@ -59,35 +54,11 @@ export async function createFirstAdmin(
         if (!inserted) return 'closed';
 
         await createCredentialAccount(id, passwordHash);
-        await createRepository(userContentTable).create({
-            userId: id,
-            locale: getDefaultContentLocale(),
-            fields: {},
-        });
+        // A write to a locale with no content row creates it.
+        await createUserRepository().update(
+            { id, locale: getDefaultContentLocale() },
+            { fields: {} }
+        );
         return 'created';
     });
-}
-
-/**
- * Insert the `users` row only while the table is empty, in one statement.
- * `true` when this call inserted it. Defaults to the registered db.
- */
-export async function insertFirstUser(row: NewUserTableRow, db?: Db): Promise<boolean> {
-    const { db: kysely, table } = createRepository(usersTable, db).kysely();
-    // `encodeWith` mints the id and the timestamps the columns default, and
-    // serializes every value; the Kysely handle spells the column names the way
-    // `CamelCasePlugin` does.
-    const cells = Object.entries(encodeWith(usersTable, row));
-    const result = await kysely
-        .insertInto(table)
-        .columns(cells.map(([column]) => column))
-        .expression(
-            kysely
-                .selectNoFrom(cells.map(([column, value]) => sql.val(value).as(column)))
-                .where(({ not, exists, selectFrom }) =>
-                    not(exists(selectFrom(table).select(sql.lit(1).as('one'))))
-                )
-        )
-        .executeTakeFirst();
-    return Number(result.numInsertedOrUpdatedRows ?? 0) === 1;
 }
