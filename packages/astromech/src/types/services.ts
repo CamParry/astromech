@@ -192,7 +192,7 @@ export type EntriesService = {
     // service throws otherwise.
 
     /** Stage a change: copy this locale's content into a second, linked row.
-     * Throws `StagedEntryExistsError` if one already exists. */
+     * Throws `StagedChangeExistsError` if one already exists. */
     createStaged(params: { type: string; id: string; locale?: string }): Promise<Entry>;
     /** This locale's staged change, or null. */
     getStaged(params: {
@@ -302,7 +302,7 @@ export type GlobalsService = {
     /**
      * Stage a change: copy this locale's content into a second, linked row,
      * with `data.fields` patched over the copy. Needs the `staging` capability
-     * and an already-saved locale; throws `StagedGlobalExistsError` when one
+     * and an already-saved locale; throws `StagedChangeExistsError` when one
      * already exists.
      */
     createStaged(params: {

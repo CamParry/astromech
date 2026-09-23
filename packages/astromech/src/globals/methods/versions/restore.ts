@@ -1,8 +1,7 @@
-import type { Global, JsonObject } from '@/types/index';
+import type { Global } from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { snapshotVersion } from '@/content/versions';
-import { transaction } from '@/database/transaction';
-import { ResourceNotFoundError } from '@/errors/resource';
+import { RESOURCE_SPECS } from '@/content/resources';
+import { restoreVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
 import { asGlobal, requireCanonical } from '../../internal/global';
@@ -26,24 +25,18 @@ export const restoreGlobalVersion = defineServiceMethod({
             key: params.key,
             locale: params.locale,
         });
-
-        const version = await repository.versions.get(params.versionId);
-        if (!version || version.contentId !== current.contentId) {
-            throw new ResourceNotFoundError('global', { id: params.key, locale });
-        }
-        const restoredFields = ((version.fields as JsonObject | null) ??
-            current.fields) as JsonObject;
-
-        const updated = await transaction(async () => {
-            await snapshotVersion(repository.versions, current, ctx.user);
-            const row = await repository.update(
-                { id, locale },
-                { fields: restoredFields }
-            );
-            await syncGlobalRelationships(ctx.config, id);
-            return row;
+        return restoreVersion({
+            spec: RESOURCE_SPECS.global,
+            versions: repository.versions,
+            current,
+            versionId: params.versionId,
+            address: { id: params.key, locale },
+            user: ctx.user,
+            write: async ({ fields }) => {
+                const row = await repository.update({ id, locale }, { fields });
+                await syncGlobalRelationships(ctx.config, id);
+                return asGlobal(row);
+            },
         });
-
-        return asGlobal(updated);
     },
 });

@@ -60,7 +60,7 @@ describe('POST /globals/:key/staged', () => {
         const body = (await res.json()) as {
             error: { code: string; details: { locale: string } };
         };
-        expect(body.error.code).toBe('staged_global_exists');
+        expect(body.error.code).toBe('staged_change_exists');
         expect(body.error.details.locale).toBe('en');
     });
 });

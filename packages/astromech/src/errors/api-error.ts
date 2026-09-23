@@ -16,8 +16,7 @@ export type ApiErrorCode =
     | 'METHOD_NOT_ALLOWED'
     | 'SIGN_UP_CLOSED'
     | 'capability_not_supported'
-    | 'staged_entry_exists'
-    | 'staged_global_exists';
+    | 'staged_change_exists';
 
 /** An error with the status and code the HTTP layer answers it with. */
 export class ApiError extends Error {

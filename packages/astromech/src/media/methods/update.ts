@@ -20,9 +20,6 @@ import { toMedia } from '../internal/to-media';
 import { createMediaRepository } from '../repository';
 import { updateMediaSchema } from '../schema';
 
-/** The content columns a version snapshots, so a change to one is versioned. */
-const VERSIONED_COLUMNS = ['title', 'alt', 'caption'] as const;
-
 /**
  * Update one locale of a media item's authored content. A locale with no row yet
  * gets one seeded from the default-locale row with the patch applied over it, so
@@ -106,12 +103,13 @@ export const updateMedia = defineServiceMethod({
         // index that outlived a failed write would name relations the stored
         // fields do not.
         const updated = await transaction(async () => {
-            if (current && changesVersionedContent(current, next, VERSIONED_COLUMNS)) {
-                await snapshotVersion(repository.versions, current, ctx.user, {
-                    title: current.title,
-                    alt: current.alt,
-                    caption: current.caption,
-                });
+            if (current && changesVersionedContent(RESOURCE_SPECS.media, current, next)) {
+                await snapshotVersion(
+                    RESOURCE_SPECS.media,
+                    repository.versions,
+                    current,
+                    ctx.user
+                );
             }
             // `updatedAt` is stamped by the repository (the column declares
             // `onUpdate`); an explicitly-`undefined` key means "leave this

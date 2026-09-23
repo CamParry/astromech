@@ -112,8 +112,13 @@ export const updateGlobal = defineServiceMethod({
                 return asGlobal(row);
             }
             if (current && global.capabilities.versioning) {
-                if (changesVersionedContent(current, { fields })) {
-                    await snapshotVersion(repository.versions, current, user);
+                if (changesVersionedContent(RESOURCE_SPECS.global, current, { fields })) {
+                    await snapshotVersion(
+                        RESOURCE_SPECS.global,
+                        repository.versions,
+                        current,
+                        user
+                    );
                 }
             }
             const written = await writeRow({

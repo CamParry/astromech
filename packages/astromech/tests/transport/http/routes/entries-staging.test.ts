@@ -139,7 +139,7 @@ describe('staged-entry routes — round-trip', () => {
         expect(((await after.json()) as { data: unknown }).data).toBeNull();
     });
 
-    it('409 staged_entry_exists (carrying the locale) on a duplicate stage', async () => {
+    it('409 staged_change_exists (carrying the locale) on a duplicate stage', async () => {
         const app = mountedApp(roleWith(['*']));
         const canonical = await api.create({
             type: 'post',
@@ -158,7 +158,7 @@ describe('staged-entry routes — round-trip', () => {
         const dupBody = (await dup.json()) as {
             error: { code: string; details: { locale: string } };
         };
-        expect(dupBody.error.code).toBe('staged_entry_exists');
+        expect(dupBody.error.code).toBe('staged_change_exists');
         expect(dupBody.error.details).toEqual({ locale: 'en' });
     });
 

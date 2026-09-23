@@ -1,15 +1,17 @@
 import type { Entry } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { RESOURCE_SPECS } from '@/content/resources';
+import { snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types';
 import { CapabilityError } from '@/errors/capability';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
 import { isVersioningEnabled } from '../../internal/entry-type';
 import { asEntry, asRecord, getEntryOfType } from '../../internal/records';
 import { syncEntryRelationships } from '../../internal/relationships';
 import { toStoredFields } from '../../internal/stored-fields';
-import { snapshotVersion } from '../../internal/versions';
 import { getEntryRepository } from '../../repository/registry';
 
 /**
@@ -43,7 +45,13 @@ export const mergeStagedEntry = defineServiceMethod({
             params.locale
         );
         const stagedRow = await staging.getByCanonical(id, canonical.locale);
-        if (!stagedRow) throw new Error(`No staged change for entry '${id}'`);
+        if (!stagedRow) {
+            throw new ResourceNotFoundError('entry', {
+                id,
+                locale: canonical.locale,
+                staged: true,
+            });
+        }
         const staged = asRecord(stagedRow);
 
         // The canonical's type governs: the staged row is a copy of it.
@@ -73,7 +81,12 @@ export const mergeStagedEntry = defineServiceMethod({
             // 1. Backup (conditional on versioning): snapshot the canonical first so
             //    a partial failure leaves a recoverable version.
             if (versioningOn && repository.versions) {
-                await snapshotVersion(repository.versions, canonical, ctx.user);
+                await snapshotVersion(
+                    RESOURCE_SPECS.entry,
+                    repository.versions,
+                    canonical,
+                    ctx.user
+                );
             }
 
             // 2. Update the canonical row in place (id + slug preserved → external

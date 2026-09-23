@@ -1,9 +1,8 @@
-import type { JsonObject, User } from '@/types/index';
+import type { User } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
-import { snapshotVersion } from '@/content/versions';
-import { transaction } from '@/database/transaction';
+import { restoreVersion } from '@/content/versions';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { syncUserRelationships } from '../../internal/relationships';
@@ -37,20 +36,18 @@ export const restoreUserVersion = defineServiceMethod({
         const current = await repository.get(id, locale);
         if (!current) throw new ResourceNotFoundError('user', { id, locale });
 
-        const version = await repository.versions.get(params.versionId);
-        if (!version || version.contentId !== current.contentId) {
-            throw new ResourceNotFoundError('user', { id, locale });
-        }
-        const fields = ((version.fields as JsonObject | null) ??
-            current.fields) as JsonObject;
-
-        const updated = await transaction(async () => {
-            await snapshotVersion(repository.versions, current, ctx.user);
-            const row = await repository.update({ id, locale }, { fields });
-            await syncUserRelationships(ctx.config, id);
-            return row;
+        return restoreVersion({
+            spec: RESOURCE_SPECS.user,
+            versions: repository.versions,
+            current,
+            versionId: params.versionId,
+            address: { id, locale },
+            user: ctx.user,
+            write: async ({ fields }) => {
+                const row = await repository.update({ id, locale }, { fields });
+                await syncUserRelationships(ctx.config, id);
+                return toUser(row);
+            },
         });
-
-        return toUser(updated);
     },
 });

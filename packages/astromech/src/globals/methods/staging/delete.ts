@@ -1,4 +1,5 @@
 import { transaction } from '@/database/transaction';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
 import { requireCanonical } from '../../internal/global';
@@ -19,7 +20,13 @@ export const deleteStagedGlobal = defineServiceMethod({
     async handler(params, ctx): Promise<void> {
         const { repository, id, locale } = await requireCanonical(ctx.config, params);
         const staged = await repository.staging.getByCanonical(id, locale);
-        if (!staged) throw new Error(`No staged change for global '${params.key}'`);
+        if (!staged) {
+            throw new ResourceNotFoundError('global', {
+                id: params.key,
+                locale,
+                staged: true,
+            });
+        }
         // The global keeps its other content, so this re-derives rather than deletes.
         await transaction(async () => {
             await repository.staging.delete({ id, locale });

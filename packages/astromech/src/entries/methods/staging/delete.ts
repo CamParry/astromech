@@ -1,5 +1,6 @@
 import { z } from '@hono/zod-openapi';
 import { CapabilityError } from '@/errors/capability';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
 import { getEntryOfType } from '../../internal/records';
@@ -33,7 +34,13 @@ export const deleteStagedEntry = defineServiceMethod({
             params.locale
         );
         const staged = await staging.getByCanonical(id, canonical.locale);
-        if (!staged) throw new Error(`No staged change for entry '${id}'`);
+        if (!staged) {
+            throw new ResourceNotFoundError('entry', {
+                id,
+                locale: canonical.locale,
+                staged: true,
+            });
+        }
         await staging.delete({ id, locale: canonical.locale });
         // The entry keeps its other content, so this re-derives rather than deletes.
         await syncEntryRelationships(ctx.config, canonical, canonical.fields, type);

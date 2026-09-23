@@ -108,8 +108,16 @@ export const updateUser = defineServiceMethod({
         // are one transaction: an index that outlived a failed write would name
         // relations the stored fields do not.
         await transaction(async () => {
-            if (current && changesVersionedContent(current, { fields }, [])) {
-                await snapshotVersion(repository.versions, current, ctx.user);
+            if (
+                current &&
+                changesVersionedContent(RESOURCE_SPECS.user, current, { fields })
+            ) {
+                await snapshotVersion(
+                    RESOURCE_SPECS.user,
+                    repository.versions,
+                    current,
+                    ctx.user
+                );
             }
             if (name !== undefined || email !== undefined || role !== undefined) {
                 await repository.accounts.update(id, { name, email, role });

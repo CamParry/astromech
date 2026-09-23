@@ -479,7 +479,7 @@ export function useCreateStaged(
             options?.onSuccess?.(entry);
         },
         onError: (err) => {
-            if (err instanceof AstromechApiError && err.code === 'staged_entry_exists') {
+            if (err instanceof AstromechApiError && err.code === 'staged_change_exists') {
                 options?.onConflict?.();
                 return;
             }

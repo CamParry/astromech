@@ -1,7 +1,9 @@
 import type { Global } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
+import { RESOURCE_SPECS } from '@/content/resources';
 import { snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
 import { asGlobal, requireCanonical } from '../../internal/global';
@@ -29,7 +31,13 @@ export const mergeStagedGlobal = defineServiceMethod({
         );
 
         const staged = await repository.staging.getByCanonical(id, locale);
-        if (!staged) throw new Error(`No staged change for global '${params.key}'`);
+        if (!staged) {
+            throw new ResourceNotFoundError('global', {
+                id: params.key,
+                locale,
+                staged: true,
+            });
+        }
 
         // Merging is the promotion moment: editing the staged row validates at
         // the draft stage (it is unpublished), so this is the first write where
@@ -52,7 +60,12 @@ export const mergeStagedGlobal = defineServiceMethod({
             // Snapshot the canonical first, so a partial failure leaves a
             // recoverable version.
             if (global.capabilities.versioning) {
-                await snapshotVersion(repository.versions, current, ctx.user);
+                await snapshotVersion(
+                    RESOURCE_SPECS.global,
+                    repository.versions,
+                    current,
+                    ctx.user
+                );
             }
             const row = await repository.update({ id, locale }, { fields });
             // Discard the staged row before re-indexing, so the references it

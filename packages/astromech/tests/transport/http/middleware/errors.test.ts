@@ -8,8 +8,8 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { HTTPException } from 'hono/http-exception';
 import { describe, expect, it } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
-import { StagedEntryExistsError } from '@/entries/errors';
 import { PermissionDeniedError } from '@/errors/permission';
+import { StagedChangeExistsError } from '@/errors/resource';
 import { onError } from '@/transport/http/middleware/errors';
 
 /** An app whose one route throws `error`, behind the real error handler. */
@@ -52,11 +52,11 @@ describe('onError', () => {
 
     it('answers an ApiError with its own status, code and details', async () => {
         const res = await throwing(
-            new StagedEntryExistsError({ canonicalId: 'e1', locale: 'de' })
+            new StagedChangeExistsError('entry', { id: 'e1', locale: 'de' })
         ).request('/');
         expect(res.status).toBe(409);
         expect((await body(res)).error).toMatchObject({
-            code: 'staged_entry_exists',
+            code: 'staged_change_exists',
             status: 409,
             details: { locale: 'de' },
         });

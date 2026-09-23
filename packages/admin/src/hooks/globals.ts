@@ -150,7 +150,7 @@ export function useCreateStagedGlobal(
             options?.onSuccess?.(global);
         },
         onError: (err) => {
-            if (err instanceof AstromechApiError && err.code === 'staged_global_exists') {
+            if (err instanceof AstromechApiError && err.code === 'staged_change_exists') {
                 options?.onConflict?.();
                 return;
             }

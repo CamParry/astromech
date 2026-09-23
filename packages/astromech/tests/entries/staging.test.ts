@@ -7,7 +7,7 @@
  *
  * Repository-level concerns (partial slug index, list exclusion) are pinned in
  * tests/entries/repository/entries-table.test.ts. These tests own the service policy:
- * content/relation copy, the StagedEntryExistsError gate, merge ordering, and
+ * content/relation copy, the StagedChangeExistsError gate, merge ordering, and
  * the capability assertions. The staging methods live on the concrete service
  * object (EntriesService & EntriesStagingApi), so we import it directly rather than
  * through the EntriesService-typed local transport.
@@ -22,9 +22,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { entriesService as api } from '@/app-context/services';
 import { getDb } from '@/database/registry';
 import { createRelationshipRepository } from '@/database/repository/relationships';
-import { StagedEntryExistsError } from '@/entries/errors';
 import { getEntryRepository } from '@/entries/repository/registry';
 import { CapabilityError } from '@/errors/capability';
+import { StagedChangeExistsError } from '@/errors/resource';
 
 let dbCounter = 0;
 let dbPath = '';
@@ -98,7 +98,7 @@ describe('createStaged', () => {
         expect(await relationStagedFlags(canonical.id)).toEqual([false]);
     });
 
-    it('throws StagedEntryExistsError (carrying the locale) when one exists', async () => {
+    it('throws StagedChangeExistsError (carrying the locale) when one exists', async () => {
         const canonical = await api.create({
             type: 'post',
             data: { title: 'X', slug: 'x' },
@@ -108,14 +108,14 @@ describe('createStaged', () => {
 
         await expect(
             api.createStaged({ type: 'post', id: canonical.id })
-        ).rejects.toBeInstanceOf(StagedEntryExistsError);
+        ).rejects.toBeInstanceOf(StagedChangeExistsError);
 
         try {
             await api.createStaged({ type: 'post', id: canonical.id });
             throw new Error('expected throw');
         } catch (err) {
-            expect(err).toBeInstanceOf(StagedEntryExistsError);
-            expect((err as StagedEntryExistsError).locale).toBe('en');
+            expect(err).toBeInstanceOf(StagedChangeExistsError);
+            expect((err as StagedChangeExistsError).locale).toBe('en');
             expect(err).not.toHaveProperty('stagedId');
         }
     });
@@ -253,9 +253,12 @@ describe('mergeStaged', () => {
             type: 'post',
             data: { title: 'X', slug: 'x' },
         });
-        await expect(api.mergeStaged({ type: 'post', id: canonical.id })).rejects.toThrow(
-            /No staged change/
-        );
+        await expect(
+            api.mergeStaged({ type: 'post', id: canonical.id })
+        ).rejects.toMatchObject({ name: 'ResourceNotFoundError', status: 404 });
+        await expect(
+            api.deleteStaged({ type: 'post', id: canonical.id })
+        ).rejects.toMatchObject({ status: 404 });
     });
 });
 
@@ -616,6 +619,6 @@ describe('deleteStaged', () => {
         });
         await expect(
             api.deleteStaged({ type: 'post', id: canonical.id })
-        ).rejects.toThrow(/No staged change/);
+        ).rejects.toThrow(/no staged change/);
     });
 });

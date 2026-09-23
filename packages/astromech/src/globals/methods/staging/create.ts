@@ -1,8 +1,8 @@
 import type { Global, JsonObject } from '@/types/index';
 import { transaction } from '@/database/transaction';
+import { StagedChangeExistsError } from '@/errors/resource';
 import { mergePatch } from '@/fields/values';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { StagedGlobalExistsError } from '../../errors';
 import { gate } from '../../internal/access';
 import { asGlobal, requireCanonical } from '../../internal/global';
 import { syncGlobalRelationships } from '../../internal/relationships';
@@ -27,7 +27,8 @@ export const createStagedGlobal = defineServiceMethod({
         });
 
         const existing = await repository.staging.getByCanonical(id, locale);
-        if (existing) throw new StagedGlobalExistsError({ key: params.key, locale });
+        if (existing)
+            throw new StagedChangeExistsError('global', { id: params.key, locale });
 
         const user = ctx.user;
         // The staged row copies the canonical's content and is always

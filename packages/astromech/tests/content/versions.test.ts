@@ -1,6 +1,7 @@
 /**
- * `snapshotVersion` credits the user it is handed, and nothing else. The author
- * is a parameter, so these run with no request, no database and no config.
+ * `snapshotVersion` credits the user it is handed and keeps the spec's versioned
+ * columns. The author is a parameter, so these run with no request, no database
+ * and no config.
  */
 
 import type {
@@ -10,7 +11,8 @@ import type {
 } from '@/content/repository/types';
 import type { User } from '@/types/index';
 import { describe, expect, it } from 'vitest';
-import { snapshotVersion } from '@/content/versions';
+import { RESOURCE_SPECS } from '@/content/resources';
+import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 
 const contentId = 'content-1' as ContentRowId;
 
@@ -52,7 +54,12 @@ describe('snapshotVersion', () => {
     it('credits the user it is given', async () => {
         const { versions, written } = recordingVersions(2);
 
-        await snapshotVersion(versions, { contentId, fields: { title: 'Hi' } }, editor);
+        await snapshotVersion(
+            RESOURCE_SPECS.global,
+            versions,
+            { contentId, fields: { title: 'Hi' } },
+            editor
+        );
 
         expect(written).toHaveLength(1);
         expect(written[0]).toMatchObject({
@@ -66,20 +73,46 @@ describe('snapshotVersion', () => {
     it('credits nobody when given null', async () => {
         const { versions, written } = recordingVersions();
 
-        await snapshotVersion(versions, { contentId, fields: {} }, null);
+        await snapshotVersion(
+            RESOURCE_SPECS.global,
+            versions,
+            { contentId, fields: {} },
+            null
+        );
 
         expect(written[0]?.createdBy).toBeNull();
         expect(written[0]?.version).toBe(1);
     });
 
-    it('writes the resource’s own snapshot columns from `extra`', async () => {
+    it('writes the spec’s versioned columns and no others', async () => {
         const { versions, written } = recordingVersions();
 
-        await snapshotVersion(versions, { contentId, fields: {} }, editor, {
-            title: 'Post',
-            slug: 'post',
-        });
+        await snapshotVersion(
+            RESOURCE_SPECS.entry,
+            versions,
+            { contentId, fields: {}, title: 'Post', slug: 'post', status: 'published' },
+            editor
+        );
 
         expect(written[0]).toMatchObject({ title: 'Post', slug: 'post' });
+        expect(written[0]).not.toHaveProperty('status');
+    });
+});
+
+describe('changesVersionedContent', () => {
+    it('sees a change to a versioned column', () => {
+        const current = { fields: {}, title: 'A', alt: null };
+        expect(changesVersionedContent(RESOURCE_SPECS.media, current, { alt: 'B' })).toBe(
+            true
+        );
+    });
+
+    it('ignores a column the spec does not version', () => {
+        const current = { fields: {}, status: 'unpublished' };
+        expect(
+            changesVersionedContent(RESOURCE_SPECS.entry, current, {
+                status: 'published',
+            })
+        ).toBe(false);
     });
 });

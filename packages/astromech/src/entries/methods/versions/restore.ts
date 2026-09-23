@@ -1,20 +1,19 @@
-import type { Entry, JsonObject } from '@/types/index';
+import type { Entry } from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { transaction } from '@/database/transaction';
+import { RESOURCE_SPECS } from '@/content/resources';
+import { restoreVersion } from '@/content/versions';
 import { CapabilityError } from '@/errors/capability';
-import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
 import { asEntry, getEntryOfType } from '../../internal/records';
 import { syncEntryRelationships } from '../../internal/relationships';
 import { uniqueSlugIfChanged } from '../../internal/slug';
-import { snapshotVersion } from '../../internal/versions';
 import { getEntryRepository } from '../../repository/registry';
 
 /**
  * Restores one locale of an entry to one of its saved versions: overwrites the
- * content row with the version's title, slug, and fields. Throws if the version
- * does not exist or belongs to another locale.
+ * content row with the version's title, slug and fields, and re-indexes it.
+ * Throws if the version does not exist or belongs to another locale.
  */
 export const restoreEntryVersion = defineServiceMethod({
     summary: 'Roll an entry back to an earlier version.',
@@ -29,12 +28,10 @@ export const restoreEntryVersion = defineServiceMethod({
     mutates: true,
     idempotent: true,
     async handler(params, ctx): Promise<Entry> {
-        const { type, id, versionId } = params;
+        const { type, id } = params;
 
         const repository = getEntryRepository(type);
         if (!repository.versions) throw new CapabilityError('entry', type, 'versioning');
-        // The guard's narrowing does not survive into the transaction closure below.
-        const versions = repository.versions;
 
         const currentEntry = await getEntryOfType(
             ctx.config,
@@ -44,39 +41,31 @@ export const restoreEntryVersion = defineServiceMethod({
             params.locale
         );
 
-        const version = await versions.get(versionId);
-        if (!version || version.contentId !== currentEntry.contentId) {
-            throw new ResourceNotFoundError('entry', {
-                id: id,
-                locale: currentEntry.locale,
-            });
-        }
-
-        const slug = await uniqueSlugIfChanged({
-            repository,
-            type,
-            entry: currentEntry,
-            slug: version.slug,
+        return restoreVersion({
+            spec: RESOURCE_SPECS.entry,
+            versions: repository.versions,
+            current: currentEntry,
+            versionId: params.versionId,
+            address: { id, locale: currentEntry.locale },
+            user: ctx.user,
+            write: async ({ fields, columns }) => {
+                const slug = await uniqueSlugIfChanged({
+                    repository,
+                    type,
+                    entry: currentEntry,
+                    slug: columns['slug'] as string | null,
+                });
+                const row = await repository.update(
+                    { id, locale: currentEntry.locale },
+                    {
+                        title: columns['title'] as string,
+                        slug: slug ?? currentEntry.slug,
+                        fields,
+                    }
+                );
+                await syncEntryRelationships(ctx.config, row, fields, type);
+                return asEntry(row);
+            },
         });
-        const restoredFields = (version.fields as JsonObject) ?? currentEntry.fields;
-
-        // Snapshot the state being overwritten, update the row, and reindex it
-        // atomically, so a restore is itself reversible and never leaves the row
-        // and its relationship index out of step.
-        const updated = await transaction(async () => {
-            await snapshotVersion(versions, currentEntry, ctx.user);
-            const row = await repository.update(
-                { id, locale: currentEntry.locale },
-                {
-                    title: version.title,
-                    slug: slug ?? currentEntry.slug,
-                    fields: restoredFields,
-                }
-            );
-            await syncEntryRelationships(ctx.config, row, restoredFields, type);
-            return row;
-        });
-
-        return asEntry(updated);
     },
 });

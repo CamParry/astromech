@@ -2,8 +2,8 @@ import type { Entry } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { transaction } from '@/database/transaction';
 import { CapabilityError } from '@/errors/capability';
+import { StagedChangeExistsError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { StagedEntryExistsError } from '../../errors';
 import { entryGate } from '../../internal/access';
 import { asEntry, getEntryOfType } from '../../internal/records';
 import { syncEntryRelationships } from '../../internal/relationships';
@@ -41,10 +41,7 @@ export const createStagedEntry = defineServiceMethod({
 
         const existing = await staging.getByCanonical(id, canonical.locale);
         if (existing) {
-            throw new StagedEntryExistsError({
-                canonicalId: id,
-                locale: canonical.locale,
-            });
+            throw new StagedChangeExistsError('entry', { id, locale: canonical.locale });
         }
 
         // The staged row copies the canonical's content — slug included, which the

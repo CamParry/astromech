@@ -23,6 +23,8 @@ export type ResourceSpec = {
     translatable(config: ResolvedConfig, target?: string): boolean;
     /** The columns a list may order by; empty for a resource with no list. */
     sortable: readonly string[];
+    /** The content columns a version snapshots beside `fields`. */
+    versionedColumns: readonly string[];
 };
 
 /** Every resource's spec, keyed by kind, so a missing resource is a type error. */
@@ -41,6 +43,7 @@ export const RESOURCE_SPECS: {
         translatable: (config, type) =>
             resolveEntryType(config, type ?? '')?.translatable === true,
         sortable: ['title', 'status', 'createdAt', 'updatedAt', 'publishedAt', 'slug'],
+        versionedColumns: ['title', 'slug'],
     },
     global: {
         kind: 'global',
@@ -52,6 +55,7 @@ export const RESOURCE_SPECS: {
         translatable: (config, key) =>
             findGlobal(config, key ?? '')?.capabilities.translatable === true,
         sortable: [],
+        versionedColumns: [],
     },
     user: {
         kind: 'user',
@@ -59,6 +63,7 @@ export const RESOURCE_SPECS: {
         fields: (config) => config.users.fields,
         translatable: (config) => config.users.translatable,
         sortable: ['name', 'email', 'createdAt', 'updatedAt', 'role'],
+        versionedColumns: [],
     },
     media: {
         kind: 'media',
@@ -66,5 +71,6 @@ export const RESOURCE_SPECS: {
         fields: (config) => config.media.fields ?? [],
         translatable: (config) => config.media.translatable,
         sortable: MEDIA_SORT_FIELDS,
+        versionedColumns: ['title', 'alt', 'caption'],
     },
 };

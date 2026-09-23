@@ -11,6 +11,7 @@ import type {
 } from '@/types/index';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
+import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types';
 import { CapabilityError } from '@/errors/capability';
@@ -25,7 +26,6 @@ import { syncEntryRelationships } from './relationships';
 import { deriveSlug, uniqueSlugIfChanged } from './slug';
 import { toStoredFields } from './stored-fields';
 import { propagateSharedFields } from './translatable';
-import { changesVersionedContent, snapshotVersion } from './versions';
 
 /**
  * Updates one locale of a batch of entries, atomically, firing the entry write
@@ -241,13 +241,18 @@ async function updateOne(params: {
     if (
         entryType.capabilities.versioning &&
         repository.versions &&
-        changesVersionedContent(currentEntry, {
+        changesVersionedContent(RESOURCE_SPECS.entry, currentEntry, {
             title: validated.title,
             slug: validated.slug,
             fields,
         })
     ) {
-        await snapshotVersion(repository.versions, currentEntry, user);
+        await snapshotVersion(
+            RESOURCE_SPECS.entry,
+            repository.versions,
+            currentEntry,
+            user
+        );
     }
 
     const publishedAt =
@@ -377,7 +382,7 @@ async function getStagedRecord(
     locale: string
 ): Promise<EntryRecord> {
     const row = await staging.getByCanonical(id, locale);
-    if (!row) throw new Error(`No staged change for entry '${id}'`);
+    if (!row) throw new ResourceNotFoundError('entry', { id, locale, staged: true });
     return asRecord(row);
 }
 

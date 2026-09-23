@@ -18,9 +18,9 @@ const LABELS: Record<ResourceType, string> = {
 };
 
 /**
- * Thrown for an id (a global's key) no row or declaration holds, and for a
- * locale of one with no content row where an operation requires one. A `get`
- * answers null rather than throwing.
+ * Thrown for an id (a global's key) no row or declaration holds, for a locale of
+ * one with no content row where an operation requires one, and, with `staged`,
+ * for a locale with no staged change. A `get` answers null rather than throwing.
  */
 export class ResourceNotFoundError extends ApiError {
     public readonly kind: ResourceType;
@@ -28,13 +28,14 @@ export class ResourceNotFoundError extends ApiError {
     public readonly id: string;
     public readonly locale: string | undefined;
 
-    constructor(kind: ResourceType, args: { id: string; locale?: string | undefined }) {
-        super(
-            args.locale === undefined
-                ? `${LABELS[kind]} '${args.id}' not found`
-                : `${LABELS[kind]} '${args.id}' not found in locale '${args.locale}'`,
-            { status: 404, code: 'NOT_FOUND' }
-        );
+    constructor(
+        kind: ResourceType,
+        args: { id: string; locale?: string | undefined; staged?: boolean }
+    ) {
+        super(notFoundMessage(`${LABELS[kind]} '${args.id}'`, args), {
+            status: 404,
+            code: 'NOT_FOUND',
+        });
         this.name = 'ResourceNotFoundError';
         this.kind = kind;
         this.id = args.id;
@@ -53,4 +54,44 @@ export class ResourceValidationError extends ValidationError {
         super(issues, fields, messages);
         this.name = 'ResourceValidationError';
     }
+}
+
+/**
+ * Thrown by `createStaged` when that locale already has a staged change. The id
+ * and locale are the whole address of the existing staged row, so the admin
+ * needs no second id to open it.
+ */
+export class StagedChangeExistsError extends ApiError {
+    public readonly kind: ResourceType;
+    /** The resource id, or a global's key. */
+    public readonly id: string;
+    public readonly locale: string;
+
+    constructor(kind: ResourceType, args: { id: string; locale: string }) {
+        super(
+            `${LABELS[kind]} '${args.id}' already has a staged change for locale ` +
+                `'${args.locale}'`,
+            {
+                status: 409,
+                code: 'staged_change_exists',
+                details: { locale: args.locale },
+            }
+        );
+        this.name = 'StagedChangeExistsError';
+        this.kind = kind;
+        this.id = args.id;
+        this.locale = args.locale;
+    }
+}
+
+function notFoundMessage(
+    subject: string,
+    args: { locale?: string | undefined; staged?: boolean }
+): string {
+    if (args.staged === true) {
+        return `${subject} has no staged change in locale '${args.locale ?? ''}'`;
+    }
+    return args.locale === undefined
+        ? `${subject} not found`
+        : `${subject} not found in locale '${args.locale}'`;
 }

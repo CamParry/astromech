@@ -49,27 +49,6 @@ export class BulkOperationError extends Error {
 }
 
 /**
- * Thrown by `createStaged` when that locale of the entry already has a staged
- * change. Carries the locale, which with the entry id is the whole address of
- * the existing staged row — the admin needs no second id to redirect to it.
- */
-export class StagedEntryExistsError extends ApiError {
-    public readonly canonicalId: string;
-    public readonly locale: string;
-
-    constructor(args: { canonicalId: string; locale: string }) {
-        super(
-            `Entry '${args.canonicalId}' already has a staged change for locale ` +
-                `'${args.locale}'`,
-            { status: 409, code: 'staged_entry_exists', details: { locale: args.locale } }
-        );
-        this.name = 'StagedEntryExistsError';
-        this.canonicalId = args.canonicalId;
-        this.locale = args.locale;
-    }
-}
-
-/**
  * Thrown when a read asks for trashed entries in the public shape. The two are
  * mutually exclusive: public visibility drops every trashed row after the
  * repository call, so the combination answers an empty list either way.

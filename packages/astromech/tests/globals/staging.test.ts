@@ -8,9 +8,12 @@ import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { globalsService as api } from '@/app-context/services';
 import { CapabilityError } from '@/errors/capability';
-import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resource';
+import {
+    ResourceNotFoundError,
+    ResourceValidationError,
+    StagedChangeExistsError,
+} from '@/errors/resource';
 import { ValidationError } from '@/errors/validation';
-import { StagedGlobalExistsError } from '@/globals/errors';
 import { makeGlobalsConfig } from './globals-config';
 
 beforeEach(async () => {
@@ -52,7 +55,7 @@ describe('createStaged', () => {
         await api.createStaged({ key: 'site' });
 
         await expect(api.createStaged({ key: 'site' })).rejects.toThrow(
-            StagedGlobalExistsError
+            StagedChangeExistsError
         );
     });
 
@@ -209,11 +212,16 @@ describe('mergeStaged', () => {
         expect(versions[0]?.fields).toEqual({ title: 'Live', brand: 'Acme' });
     });
 
-    it('refuses when there is no staged change', async () => {
+    it('refuses when there is no staged change, with a 404', async () => {
         await saveSite();
-        await expect(api.mergeStaged({ key: 'site' })).rejects.toThrow(
-            /No staged change/
-        );
+        await expect(api.mergeStaged({ key: 'site' })).rejects.toMatchObject({
+            name: 'ResourceNotFoundError',
+            status: 404,
+            message: "Global 'site' has no staged change in locale 'en'",
+        });
+        await expect(api.deleteStaged({ key: 'site' })).rejects.toMatchObject({
+            status: 404,
+        });
     });
 
     it('validates the staged content against the canonical status before writing', async () => {
@@ -255,7 +263,7 @@ describe('deleteStaged', () => {
     it('refuses when there is no staged change', async () => {
         await saveSite();
         await expect(api.deleteStaged({ key: 'site' })).rejects.toThrow(
-            /No staged change/
+            /no staged change/
         );
     });
 });
