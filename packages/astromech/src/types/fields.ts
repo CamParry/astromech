@@ -243,6 +243,20 @@ export type SubFields = {
 };
 
 /**
+ * What codegen hands a field type's `tsType`, so a container can type its
+ * nested scopes without knowing where it sits in the generated file.
+ */
+export type TsTypeEmit = {
+    /** The `name?: type;` property lines of a nested scope, in the current shape. */
+    properties: (fields: Field[]) => string[];
+    /**
+     * Declare a named type beside the entry type's own and return its name, which
+     * codegen prefixes with the entry type's. `body` receives that name, for recursion.
+     */
+    alias: (name: string, body: (name: string) => string) => string;
+};
+
+/**
  * The behaviour behind one field type name, core or plugin. The pipeline,
  * codegen, visibility, references and config validation all dispatch to it
  * rather than branching on type names.
@@ -253,8 +267,15 @@ export type FieldType = {
     // `any` — heterogeneous factory option types; a registry can't hold a single precise signature.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     build?: (name: string, options?: any) => Field;
-    /** TS type emitted by codegen for this field, or `null` to omit. */
-    tsType: (field: DataField, shape: 'full' | 'public') => string | null;
+    /**
+     * TS type emitted by codegen, or `null` to omit the field. Absent means
+     * `JsonValue`. A container types its nested scopes through `emit`.
+     */
+    tsType?: (
+        field: DataField,
+        shape: 'full' | 'public',
+        emit: TsTypeEmit
+    ) => string | null;
     defaultValue?: unknown;
     /** Normalisation applied before validation. */
     coerce?: (value: unknown) => unknown;
@@ -282,8 +303,6 @@ export type FieldType = {
     affectsData?: boolean;
     /** Whether the type may be declared without a name, as a layout field. */
     layout?: boolean;
-    /** Reserved instance keys this type owns, e.g. `['_id', '_disabled', '_title']`. */
-    reservedKeys?: string[];
     isRelation?: boolean;
 };
 

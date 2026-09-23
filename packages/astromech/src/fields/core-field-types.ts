@@ -13,6 +13,7 @@ import type {
     FieldType,
     FieldValidator,
     SubFields,
+    TsTypeEmit,
 } from '@/types/fields';
 import type { JSONContent } from '@tiptap/core';
 import {
@@ -65,7 +66,7 @@ import {
     validateText,
     validateUrl,
 } from './built-in-rules';
-import { RESERVED_KEY } from './reserved-keys';
+import { RESERVED_KEY, RESERVED_KEY_META } from './reserved-keys';
 import { renderRichText } from './rich-text/render';
 import { coerceRichText, validateRichText } from './rich-text/validate';
 
@@ -195,7 +196,57 @@ const validateBlockTypes: FieldValidator = async (ctx) => {
 };
 
 /** A core type that stores data: each has a builder, a TS type and its own check. */
-type CoreDataFieldType = FieldType & Required<Pick<FieldType, 'build' | 'validate'>>;
+type CoreDataFieldType = FieldType &
+    Required<Pick<FieldType, 'build' | 'tsType' | 'validate'>>;
+
+const REPEATER_KEYS = [RESERVED_KEY.id, RESERVED_KEY.disabled, RESERVED_KEY.title];
+const BLOCKS_KEYS = [
+    RESERVED_KEY.id,
+    RESERVED_KEY.type,
+    RESERVED_KEY.disabled,
+    RESERVED_KEY.title,
+];
+const TREE_KEYS = [RESERVED_KEY.id, RESERVED_KEY.disabled];
+
+/** The TS lines for a container's reserved item keys, in the given shape. */
+function reservedKeyLines(keys: readonly string[], shape: 'full' | 'public'): string[] {
+    return keys.flatMap((key) => {
+        const meta = RESERVED_KEY_META[key];
+        if (meta === undefined || (shape === 'public' && !meta.inPublic)) return [];
+        return [meta.tsLine];
+    });
+}
+
+/** An object type literal from property lines. */
+function objectType(lines: string[]): string {
+    return lines.length === 0 ? '{}' : `{\n${lines.map((l) => `  ${l}`).join('\n')}\n}`;
+}
+
+/** The item type of a `repeater`: its reserved keys, then its fields. */
+function repeaterType(
+    field: DataField,
+    shape: 'full' | 'public',
+    emit: TsTypeEmit
+): string {
+    const lines = [
+        ...reservedKeyLines(REPEATER_KEYS, shape),
+        ...emit.properties(field.fields ?? []),
+    ];
+    return `Array<${objectType(lines)}>`;
+}
+
+/** A `tree` node refers to itself, so it is a named type. */
+function treeType(field: DataField, shape: 'full' | 'public', emit: TsTypeEmit): string {
+    const suffix = shape === 'public' ? 'PublicTreeNode' : 'TreeNode';
+    const name = emit.alias(`${field.name}${suffix}`, (self) =>
+        objectType([
+            ...reservedKeyLines(TREE_KEYS, shape),
+            ...emit.properties(field.fields ?? []),
+            `${RESERVED_KEY.children}?: ${self}[];`,
+        ])
+    );
+    return `${name}[]`;
+}
 
 /** The one scope a `group`, `repeater` or `tree` declares. */
 function ownFields(repeats: boolean): (field: DataField) => SubFields[] {
@@ -290,7 +341,7 @@ const dataFieldTypes: CoreDataFieldType[] = [
         type: 'group',
         build: (name, options) => group(name, options as GroupOptions),
         validate: validateGroup,
-        tsType: () => null,
+        tsType: (field, _shape, emit) => objectType(emit.properties(field.fields ?? [])),
         layout: true,
         subFields: ownFields(false),
         children: (field, value) => {
@@ -312,23 +363,19 @@ const dataFieldTypes: CoreDataFieldType[] = [
         build: (name, options) =>
             repeater(name, options as Parameters<typeof repeater>[1]),
         validate: validateItemList,
-        tsType: () => null,
+        tsType: repeaterType,
         defaultValue: [],
-        reservedKeys: [RESERVED_KEY.id, RESERVED_KEY.disabled, RESERVED_KEY.title],
         children: (field, value) => arrayChildren(field, value, () => field.fields ?? []),
         subFields: ownFields(true),
     },
     {
         type: 'blocks',
         build: (name, options) => blocks(name, options as Parameters<typeof blocks>[1]),
-        tsType: () => null,
+        // `JsonObject` is intersected rather than given an index signature, which
+        // would admit `undefined` and stop the item being a `JsonObject`.
+        tsType: (_field, shape) =>
+            `Array<import('astromech').JsonObject & { ${reservedKeyLines(BLOCKS_KEYS, shape).join(' ')} }>`,
         defaultValue: [],
-        reservedKeys: [
-            RESERVED_KEY.id,
-            RESERVED_KEY.type,
-            RESERVED_KEY.disabled,
-            RESERVED_KEY.title,
-        ],
         validate: validateBlockTypes,
         children: (field, value) =>
             arrayChildren(field, value, (item) => {
@@ -347,9 +394,8 @@ const dataFieldTypes: CoreDataFieldType[] = [
         type: 'tree',
         build: (name, options) => tree(name, options as Parameters<typeof tree>[1]),
         validate: validateItemList,
-        tsType: () => null,
+        tsType: treeType,
         defaultValue: [],
-        reservedKeys: [RESERVED_KEY.id, RESERVED_KEY.disabled],
         children: treeChildren,
         subFields: ownFields(true),
     },
@@ -417,7 +463,6 @@ const dataFieldTypes: CoreDataFieldType[] = [
 /** Layout-only types: they draw a surface, store nothing, and never take a name. */
 const layoutFieldTypes: FieldType[] = ['tabs', 'tab', 'accordion'].map((type) => ({
     type,
-    tsType: () => null,
     layout: true,
     affectsData: false,
 }));

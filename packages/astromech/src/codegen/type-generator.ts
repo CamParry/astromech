@@ -7,15 +7,14 @@
 import type {
     DataField,
     Field,
-    FieldType,
     PluginDefinition,
     PluginFieldTypeRegistration,
     ResolvedConfig,
     ResolvedEntryFields,
+    TsTypeEmit,
 } from '@/types/index';
 import { getFieldType } from '@/fields/field-type-registry';
 import { flattenFieldNodes } from '@/fields/flatten';
-import { RESERVED_KEY_META } from '@/fields/reserved-keys';
 
 /**
  * Convert a collection slug (snake_case, kebab-case, camelCase) to PascalCase.
@@ -32,24 +31,6 @@ function toPascalCase(name: string): string {
  */
 const RELATION_TYPES = new Set(['relationship', 'media']);
 
-/**
- * TS emission + public visibility for reserved instance keys lives in
- * `RESERVED_KEY_META` — the single source shared with the runtime
- * public-read strip. Which keys a container owns comes from `reservedKeys`.
- */
-
-/** Reserved-key type lines a container emits for the given shape, in declared order. */
-function reservedKeyLines(fieldType: FieldType, shape: 'full' | 'public'): string[] {
-    const lines: string[] = [];
-    for (const key of fieldType.reservedKeys ?? []) {
-        const emit = RESERVED_KEY_META[key];
-        if (emit === undefined) continue;
-        if (shape === 'public' && !emit.inPublic) continue;
-        lines.push(emit.tsLine);
-    }
-    return lines;
-}
-
 /** Quote property names that aren't valid TS identifiers (e.g. `seo-meta`). */
 function propertyKey(name: string): string {
     return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name) ? name : JSON.stringify(name);
@@ -60,10 +41,7 @@ function propertyKey(name: string): string {
  * `shape === 'public'`, private fields (including those under a private layout
  * field) are excluded.
  */
-function collectDataFields(
-    fields: Field[],
-    shape: 'full' | 'public' = 'full'
-): DataField[] {
+function collectDataFields(fields: Field[], shape: 'full' | 'public'): DataField[] {
     const dataFields = flattenFieldNodes(fields);
     return shape === 'public'
         ? dataFields.filter((field) => field.private !== true)
@@ -71,38 +49,52 @@ function collectDataFields(
 }
 
 /**
- * Build the body lines of an object type from a Field[], indented by
- * `indent` spaces. Used for top-level collections and recursively for
- * group/repeater children; `hoisted` collects self-referential tree aliases.
+ * The property-line renderer for one entry type in one shape. Named types a
+ * field type declares through `emit.alias` are prefixed with the entry type's
+ * name, collected into `hoisted`, and kept unique through `taken`.
  */
-function buildObjectLines(
-    fields: Field[],
-    pluginFieldTypes: Map<string, PluginFieldTypeRegistration>,
-    indent: string,
-    hoisted?: string[],
-    shape: 'full' | 'public' = 'full'
-): string[] {
-    const dataFields = collectDataFields(fields, shape);
-    const lines: string[] = [];
-    for (const field of dataFields) {
-        const tsType = fieldToTsType(field, pluginFieldTypes, hoisted, shape);
-        if (tsType === null) continue;
-        const optional = field.required === true ? '' : '?';
-        lines.push(`${indent}${propertyKey(field.name)}${optional}: ${tsType};`);
+function scopeRenderer(
+    prefix: string,
+    shape: 'full' | 'public',
+    hoisted: string[],
+    taken: Set<string>,
+    pluginFieldTypes: Map<string, PluginFieldTypeRegistration>
+): (fields: Field[]) => string[] {
+    const emit: TsTypeEmit = {
+        properties: (fields) => propertyLines(fields),
+        alias: (name, body) => {
+            const base = `${prefix}${toPascalCase(name)}`;
+            let ref = base;
+            for (let n = 2; taken.has(ref); n += 1) ref = `${base}${n}`;
+            taken.add(ref);
+            hoisted.push(`export type ${ref} = ${body(ref)};`);
+            return ref;
+        },
+    };
+
+    function propertyLines(fields: Field[]): string[] {
+        const lines: string[] = [];
+        for (const field of collectDataFields(fields, shape)) {
+            const tsType = fieldToTsType(field, shape, emit, pluginFieldTypes);
+            if (tsType === null) continue;
+            const optional = field.required === true ? '' : '?';
+            lines.push(`${propertyKey(field.name)}${optional}: ${tsType};`);
+        }
+        return lines;
     }
-    return lines;
+
+    return propertyLines;
 }
 
 /**
- * Map a data field to its TypeScript type string for the Fields type. Returns
- * null for unrecognised types. `hoisted` collects named aliases for
- * self-referential (tree) types.
+ * Map a data field to its TypeScript type string, or null to omit it: an
+ * unregistered type is omitted, and a type with no `tsType` is `JsonValue`.
  */
 function fieldToTsType(
     field: DataField,
-    pluginFieldTypes: Map<string, PluginFieldTypeRegistration>,
-    hoisted?: string[],
-    shape: 'full' | 'public' = 'full'
+    shape: 'full' | 'public',
+    emit: TsTypeEmit,
+    pluginFieldTypes: Map<string, PluginFieldTypeRegistration>
 ): string | null {
     const pluginType = pluginFieldTypes.get(field.type);
     if (pluginType) {
@@ -114,78 +106,8 @@ function fieldToTsType(
 
     const fieldType = getFieldType(field.type);
     if (fieldType === undefined) return null;
-
-    // A `children` slot marks a nested field, needing recursion + hoisting the
-    // field type's pure `tsType(field, shape)` can't carry, so it's emitted
-    // here; reserved instance keys still come from `fieldType.reservedKeys`.
-    if (fieldType.children !== undefined) {
-        switch (field.type) {
-            case 'group': {
-                // Nested object: children are recursively typed.
-                // Layout fields within the children are flattened.
-                const childLines = buildObjectLines(
-                    field.fields ?? [],
-                    pluginFieldTypes,
-                    '  ',
-                    hoisted,
-                    shape
-                );
-                if (childLines.length === 0) return '{}';
-                return `{\n${childLines.join('\n')}\n}`;
-            }
-
-            case 'repeater': {
-                // Typed array of the child object shape, prefixed by the reserved
-                // instance keys (`_id` is a persisted UUID for stable item identity).
-                const childLines = buildObjectLines(
-                    field.fields ?? [],
-                    pluginFieldTypes,
-                    '  ',
-                    hoisted,
-                    shape
-                );
-                const reserved = reservedKeyLines(fieldType, shape).map((l) => `  ${l}`);
-                const lines = [...reserved, ...childLines];
-                return `Array<{\n${lines.join('\n')}\n}>`;
-            }
-
-            case 'tree': {
-                // Self-referential node type — must be a named declaration so the
-                // recursion terminates. Push the alias to the hoisted accumulator
-                // and return a reference to it as an array.
-                const suffix = shape === 'public' ? 'PublicTreeNode' : 'TreeNode';
-                const nodeName = `${toPascalCase(field.name)}${suffix}`;
-                const childLines = buildObjectLines(
-                    field.fields ?? [],
-                    pluginFieldTypes,
-                    '  ',
-                    hoisted,
-                    shape
-                );
-                const reserved = reservedKeyLines(fieldType, shape).map((l) => `  ${l}`);
-                const lines = [
-                    ...reserved,
-                    ...childLines,
-                    `  _children?: ${nodeName}[];`,
-                ];
-                const alias = `export type ${nodeName} = {\n${lines.join('\n')}\n};`;
-                if (hoisted !== undefined) {
-                    hoisted.push(alias);
-                }
-                return `${nodeName}[]`;
-            }
-
-            case 'blocks': {
-                // Heterogeneous array; `_type` discriminates the block variant. The
-                // intersected `JsonObject` (not an inline index signature) keeps the
-                // element a `JsonObject`, since an index signature would admit `undefined`.
-                const reserved = reservedKeyLines(fieldType, shape);
-                return `Array<import('astromech').JsonObject & { ${reserved.join(' ')} }>`;
-            }
-        }
-    }
-
-    return fieldType.tsType(field, shape);
+    if (fieldType.tsType === undefined) return "import('astromech').JsonValue";
+    return fieldType.tsType(field, shape, emit);
 }
 
 /**
@@ -251,26 +173,28 @@ function generateCollectionTypes(
     const fieldsPublicName = `${pascal}FieldsPublic`;
     const relationsName = `${pascal}Relations`;
 
-    // Collect all data-bearing fields from both columns, layout fields flattened.
-    const allFields = collectDataFields([...fields.main, ...fields.sidebar]);
-    const allFieldsPublic = collectDataFields(
-        [...fields.main, ...fields.sidebar],
-        'public'
-    );
+    const columns = [...fields.main, ...fields.sidebar];
+    const allFields = collectDataFields(columns, 'full');
 
-    // Accumulator for top-level declarations hoisted by nested field types (e.g. tree
-    // node types that must be named to allow self-reference).
+    // Declarations hoisted by nested field types (e.g. tree node types that
+    // must be named to allow self-reference), placed before the Fields type.
+    const taken = new Set<string>();
     const hoisted: string[] = [];
     const hoistedPublic: string[] = [];
-
-    // Build full Fields lines
-    const fieldLines: string[] = [];
-    for (const field of allFields) {
-        const tsType = fieldToTsType(field, pluginFieldTypes, hoisted, 'full');
-        if (tsType === null) continue;
-        const optional = field.required === true ? '' : '?';
-        fieldLines.push(`  ${propertyKey(field.name)}${optional}: ${tsType};`);
-    }
+    const fieldLines = scopeRenderer(
+        pascal,
+        'full',
+        hoisted,
+        taken,
+        pluginFieldTypes
+    )(columns).map((line) => `  ${line}`);
+    const fieldPublicLines = scopeRenderer(
+        pascal,
+        'public',
+        hoistedPublic,
+        taken,
+        pluginFieldTypes
+    )(columns).map((line) => `  ${line}`);
 
     // A type alias, not an interface: only an alias of an object type gets the
     // implicit index signature that makes it assignable to `Entry['fields']`
@@ -279,19 +203,8 @@ function generateCollectionTypes(
         fieldLines.length > 0
             ? `export type ${fieldsName} = {\n${fieldLines.join('\n')}\n};`
             : `export type ${fieldsName} = {};`;
-
-    // Hoist any extra declarations (tree node types) before the Fields type.
     const fieldsType =
         hoisted.length > 0 ? `${hoisted.join('\n\n')}\n\n${mainType}` : mainType;
-
-    // Build public FieldsPublic lines
-    const fieldPublicLines: string[] = [];
-    for (const field of allFieldsPublic) {
-        const tsType = fieldToTsType(field, pluginFieldTypes, hoistedPublic, 'public');
-        if (tsType === null) continue;
-        const optional = field.required === true ? '' : '?';
-        fieldPublicLines.push(`  ${propertyKey(field.name)}${optional}: ${tsType};`);
-    }
 
     // Always add the __shape brand marker for public types.
     const publicBodyLines = ["  readonly __shape?: 'public';", ...fieldPublicLines];
@@ -506,7 +419,7 @@ export function generateClientTypes(
     const augmentationLines = blocks
         .map(({ collectionKey }) => {
             const pascal = toPascalCase(collectionKey);
-            return `    ${collectionKey}: { fields: ${pascal}Fields; fieldsPublic: ${pascal}FieldsPublic; relations: ${pascal}Relations };`;
+            return `    ${propertyKey(collectionKey)}: { fields: ${pascal}Fields; fieldsPublic: ${pascal}FieldsPublic; relations: ${pascal}Relations };`;
         })
         .join('\n');
 

@@ -73,7 +73,7 @@ describe('type-generator — globals', () => {
             })
         );
 
-        expect(output).toContain('export type NavTreeNode = {');
-        expect(output).toContain('nav?: NavTreeNode[];');
+        expect(output).toContain('export type SiteGlobalNavTreeNode = {');
+        expect(output).toContain('nav?: SiteGlobalNavTreeNode[];');
     });
 });

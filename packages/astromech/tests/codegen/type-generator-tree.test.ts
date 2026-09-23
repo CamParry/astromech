@@ -33,11 +33,11 @@ describe('type-generator — tree field', () => {
         const output = generateClientTypes(config);
 
         // Named node type must appear.
-        expect(output).toContain('export type NavItemsTreeNode');
+        expect(output).toContain('export type PagesNavItemsTreeNode');
         // Self-referential _children property.
-        expect(output).toContain('_children?: NavItemsTreeNode[]');
+        expect(output).toContain('_children?: PagesNavItemsTreeNode[]');
         // Field typed as array of the named node.
-        expect(output).toContain('navItems?: NavItemsTreeNode[]');
+        expect(output).toContain('navItems?: PagesNavItemsTreeNode[]');
     });
 
     it('includes reserved _id and _disabled in the node type', () => {
@@ -84,7 +84,7 @@ describe('type-generator — tree field', () => {
 
         const output = generateClientTypes(config);
 
-        const nodePos = output.indexOf('export type MenuItemsTreeNode');
+        const nodePos = output.indexOf('export type PagesMenuItemsTreeNode');
         const fieldsPos = output.indexOf('export type PagesFields');
         expect(nodePos).toBeGreaterThan(-1);
         expect(fieldsPos).toBeGreaterThan(-1);
@@ -104,7 +104,54 @@ describe('type-generator — tree field', () => {
         const output = generateClientTypes(config);
 
         // Required field — no optional marker.
-        expect(output).toContain('items: ItemsTreeNode[]');
-        expect(output).not.toContain('items?: ItemsTreeNode[]');
+        expect(output).toContain('items: PagesItemsTreeNode[]');
+        expect(output).not.toContain('items?: PagesItemsTreeNode[]');
+    });
+});
+
+describe('type-generator — hoisted names', () => {
+    const menu = {
+        name: 'menu',
+        type: 'tree',
+        fields: [{ name: 'label', type: 'text' }],
+    };
+
+    it('gives two entry types with the same tree field distinct node types', () => {
+        const config = {
+            ...makeConfig([menu]),
+            entries: {
+                header: { fields: { main: [menu], sidebar: [] } },
+                footer: { fields: { main: [menu], sidebar: [] } },
+            },
+        } as unknown as ResolvedConfig;
+
+        const output = generateClientTypes(config);
+
+        expect(output).toContain('export type HeaderMenuTreeNode = {');
+        expect(output).toContain('export type FooterMenuTreeNode = {');
+        expect(output.match(/export type \w*MenuTreeNode = /g)).toHaveLength(2);
+    });
+
+    it('numbers a second tree of the same name inside one entry type', () => {
+        const config = makeConfig([
+            { name: 'top', type: 'group', fields: [menu] },
+            { name: 'bottom', type: 'group', fields: [menu] },
+        ]);
+
+        const output = generateClientTypes(config);
+
+        expect(output).toContain('menu?: PagesMenuTreeNode[];');
+        expect(output).toContain('menu?: PagesMenuTreeNode2[];');
+    });
+
+    it('quotes an entry-type key that is not an identifier', () => {
+        const config = {
+            ...makeConfig([]),
+            entries: { 'case-study': { fields: { main: [], sidebar: [] } } },
+        } as unknown as ResolvedConfig;
+
+        expect(generateClientTypes(config)).toContain(
+            '"case-study": { fields: CaseStudyFields;'
+        );
     });
 });

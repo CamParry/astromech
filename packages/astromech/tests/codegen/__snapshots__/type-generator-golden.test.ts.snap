@@ -15,11 +15,11 @@ declare module 'astromech' {
 
 // --- Collection: posts (Posts) ---
 
-export type FTreeTreeNode = {
+export type PostsFTreeTreeNode = {
   _id: string;
   _disabled?: boolean;
   tLabel?: string;
-  _children?: FTreeTreeNode[];
+  _children?: PostsFTreeTreeNode[];
 };
 
 export type PostsFields = {
@@ -58,7 +58,7 @@ export type PostsFields = {
   rLabel?: string;
   rCount?: number;
 }>;
-  fTree?: FTreeTreeNode[];
+  fTree?: PostsFTreeTreeNode[];
   fBlocks?: Array<import('astromech').JsonObject & { _id: string; _type: string; _disabled?: boolean; _title?: string; }>;
   sInside?: string;
   pInside?: string;
@@ -67,10 +67,10 @@ export type PostsFields = {
 };
 };
 
-export type FTreePublicTreeNode = {
+export type PostsFTreePublicTreeNode = {
   _id: string;
   tLabel?: string;
-  _children?: FTreePublicTreeNode[];
+  _children?: PostsFTreePublicTreeNode[];
 };
 
 export type PostsFieldsPublic = {
@@ -106,7 +106,7 @@ export type PostsFieldsPublic = {
   rLabel?: string;
   rCount?: number;
 }>;
-  fTree?: FTreePublicTreeNode[];
+  fTree?: PostsFTreePublicTreeNode[];
   fBlocks?: Array<import('astromech').JsonObject & { _id: string; _type: string; }>;
   sInside?: string;
   fTab?: {

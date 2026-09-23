@@ -122,20 +122,20 @@ describe('type-generator — FieldsPublic variant', () => {
         const output = generateClientTypes(config);
 
         // Public tree node type is emitted with a distinct name.
-        expect(output).toContain('export type NavItemsPublicTreeNode = {');
-        const nodeIdx = output.indexOf('export type NavItemsPublicTreeNode = {');
+        expect(output).toContain('export type PostsNavItemsPublicTreeNode = {');
+        const nodeIdx = output.indexOf('export type PostsNavItemsPublicTreeNode = {');
         const nodeEnd = output.indexOf('\n}', nodeIdx);
         const nodeSlice = output.slice(nodeIdx, nodeEnd);
         expect(nodeSlice).toContain('_id: string;');
         expect(nodeSlice).not.toContain('_disabled');
-        expect(nodeSlice).toContain('_children?: NavItemsPublicTreeNode[];');
+        expect(nodeSlice).toContain('_children?: PostsNavItemsPublicTreeNode[];');
         expect(nodeSlice).toContain('label');
 
         // Public field references the public node type.
         const pubIdx = output.indexOf('export type PostsFieldsPublic = {');
         const pubEnd = output.indexOf('\nexport type PostsRelations', pubIdx);
         const pubSlice = output.slice(pubIdx, pubEnd);
-        expect(pubSlice).toContain('navItems?: NavItemsPublicTreeNode[]');
+        expect(pubSlice).toContain('navItems?: PostsNavItemsPublicTreeNode[]');
     });
 
     it('FieldsPublic omits _disabled and _title from blocks field', () => {

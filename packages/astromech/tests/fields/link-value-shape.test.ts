@@ -4,7 +4,7 @@
  * rendering; packages/admin/tests/components/fields/link-field-value.test.tsx pins the editor.
  */
 
-import type { FieldValidationContext } from '@/types/fields';
+import type { FieldValidationContext, TsTypeEmit } from '@/types/fields';
 import { describe, expect, it } from 'vitest';
 import { validateLink } from '@/fields/built-in-rules';
 import { getFieldType } from '@/fields/field-type-registry';
@@ -23,13 +23,16 @@ function ctx(value: unknown): FieldValidationContext {
     };
 }
 
+/** No nested scopes are typed in these checks. */
+const noEmit: TsTypeEmit = { properties: () => [], alias: (name) => name };
+
 describe('link value shape', () => {
     const field = { name: 'cta', type: 'link' } as const;
 
     it('the generated type names `url` and never `href`', () => {
         const d = getFieldType('link');
         for (const shape of ['full', 'public'] as const) {
-            const tsType = d?.tsType(field, shape);
+            const tsType = d?.tsType?.(field, shape, noEmit);
             expect(tsType).toContain('url:');
             expect(tsType).not.toContain('href');
         }

@@ -1,4 +1,4 @@
-import type { Field } from '@/types/fields';
+import type { Field, TsTypeEmit } from '@/types/fields';
 import { describe, expect, it } from 'vitest';
 import { getFieldType } from '@/fields/field-type-registry';
 import { CORE_FIELD_TYPES } from '@/types/fields';
@@ -7,6 +7,9 @@ import { CORE_FIELD_TYPES } from '@/types/fields';
 const LAYOUT_ONLY_TYPES = new Set(['tabs', 'tab', 'accordion']);
 
 const DATA_TYPES = CORE_FIELD_TYPES.filter((t) => !LAYOUT_ONLY_TYPES.has(t));
+
+/** No nested scopes are typed in these checks. */
+const noEmit: TsTypeEmit = { properties: () => [], alias: (name) => name };
 
 describe('core field types', () => {
     it('registers every core type', () => {
@@ -45,34 +48,42 @@ describe('core field types', () => {
         it('text → "string" for both shapes', () => {
             const d = getFieldType('text');
             const field = { name: 'x', type: 'text' } as const;
-            expect(d?.tsType(field, 'full')).toBe('string');
-            expect(d?.tsType(field, 'public')).toBe('string');
+            expect(d?.tsType?.(field, 'full', noEmit)).toBe('string');
+            expect(d?.tsType?.(field, 'public', noEmit)).toBe('string');
         });
 
         it('richtext → JsonValue import for full, "string" for public', () => {
             const d = getFieldType('richtext');
             const field = { name: 'body', type: 'richtext' } as const;
-            expect(d?.tsType(field, 'full')).toBe("import('astromech').JsonValue");
-            expect(d?.tsType(field, 'public')).toBe('string');
+            expect(d?.tsType?.(field, 'full', noEmit)).toBe(
+                "import('astromech').JsonValue"
+            );
+            expect(d?.tsType?.(field, 'public', noEmit)).toBe('string');
         });
 
         it('media with multiple:true → "string[]"', () => {
             const d = getFieldType('media');
             expect(
-                d?.tsType({ name: 'imgs', type: 'media', multiple: true }, 'full')
+                d?.tsType?.(
+                    { name: 'imgs', type: 'media', multiple: true },
+                    'full',
+                    noEmit
+                )
             ).toBe('string[]');
         });
 
         it('media without multiple → "string"', () => {
             const d = getFieldType('media');
-            expect(d?.tsType({ name: 'img', type: 'media' }, 'full')).toBe('string');
+            expect(d?.tsType?.({ name: 'img', type: 'media' }, 'full', noEmit)).toBe(
+                'string'
+            );
         });
 
         it('multiselect → "string[]"', () => {
             const d = getFieldType('multiselect');
-            expect(d?.tsType({ name: 'tags', type: 'multiselect' }, 'full')).toBe(
-                'string[]'
-            );
+            expect(
+                d?.tsType?.({ name: 'tags', type: 'multiselect' }, 'full', noEmit)
+            ).toBe('string[]');
         });
     });
 
@@ -113,25 +124,46 @@ describe('core field types', () => {
         });
     });
 
-    describe('reservedKeys', () => {
-        it('repeater reservedKeys deep-equals ["_id","_disabled","_title"]', () => {
+    describe('container tsType', () => {
+        const emit: TsTypeEmit = {
+            properties: (fields) => fields.map((f) => `${f.name ?? ''}?: string;`),
+            alias: (name, body) => `${name}=${body(name)}`,
+        };
+
+        it('types a group as an object of its fields', () => {
+            const group = {
+                name: 'meta',
+                type: 'group',
+                fields: [{ name: 'a', type: 'text' }],
+            };
+            expect(getFieldType('group')?.tsType?.(group, 'full', emit)).toBe(
+                '{\n  a?: string;\n}'
+            );
+        });
+
+        it('leads repeater items with their reserved keys, editorial ones full-shape only', () => {
+            const repeater = { name: 'items', type: 'repeater', fields: [] };
             const d = getFieldType('repeater');
-            expect(d?.reservedKeys).toEqual(['_id', '_disabled', '_title']);
+            expect(d?.tsType?.(repeater, 'full', emit)).toBe(
+                'Array<{\n  _id: string;\n  _disabled?: boolean;\n  _title?: string;\n}>'
+            );
+            expect(d?.tsType?.(repeater, 'public', emit)).toBe(
+                'Array<{\n  _id: string;\n}>'
+            );
         });
 
-        it('tree reservedKeys deep-equals ["_id","_disabled"]', () => {
-            const d = getFieldType('tree');
-            expect(d?.reservedKeys).toEqual(['_id', '_disabled']);
+        it('names a tree node through emit.alias so it can refer to itself', () => {
+            const tree = { name: 'menu', type: 'tree', fields: [] };
+            expect(getFieldType('tree')?.tsType?.(tree, 'full', emit)).toBe(
+                'menuTreeNode={\n  _id: string;\n  _disabled?: boolean;\n  _children?: menuTreeNode[];\n}[]'
+            );
         });
 
-        it('blocks reservedKeys deep-equals ["_id","_type","_disabled","_title"]', () => {
-            const d = getFieldType('blocks');
-            expect(d?.reservedKeys).toEqual(['_id', '_type', '_disabled', '_title']);
-        });
-
-        it('text has no reservedKeys', () => {
-            const d = getFieldType('text');
-            expect(d?.reservedKeys).toBeUndefined();
+        it('discriminates blocks items by `_type`', () => {
+            const blocks = { name: 'body', type: 'blocks', blocks: [] };
+            expect(getFieldType('blocks')?.tsType?.(blocks, 'public', emit)).toBe(
+                "Array<import('astromech').JsonObject & { _id: string; _type: string; }>"
+            );
         });
     });
 
