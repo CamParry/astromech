@@ -1,8 +1,8 @@
 import type { ResourceType } from '@/types/domain';
 import type { Field, FieldValidationContext, ValidationMode } from '@/types/fields';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { group, tab, tabs } from '@/fields/builder';
-import { registerFieldType } from '@/fields/field-type-registry';
+import { setPluginFieldTypes } from '@/fields/field-type-registry';
 import { safeParseFields } from '@/fields/parse-fields';
 
 type CtxOverrides = Partial<{
@@ -302,12 +302,15 @@ describe('default', () => {
 
 describe('coerce', () => {
     // Register a throwaway field type with a trim coerce fn.
-    registerFieldType({
-        type: 't-coerce',
-        build: (() => ({})) as never,
-        tsType: () => 'string',
-        coerce: (x) => String(x).trim(),
-        validate: async () => true,
+    beforeEach(() => {
+        setPluginFieldTypes([
+            {
+                type: 't-coerce',
+                tsType: () => 'string',
+                coerce: (x) => String(x).trim(),
+                validate: async () => true,
+            },
+        ]);
     });
 
     it('trims value via the field type coerce', async () => {

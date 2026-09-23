@@ -19,6 +19,7 @@ const allowlist = [
     /^src\/fields\//,
     /^src\/utilities\//,
     /^src\/errors\//,
+    /^src\/registry\.ts$/,
     /^src\/types\//,
     /^src\/entries\/entry-types\.ts$/,
     /^src\/entries\/entry-url\.ts$/,

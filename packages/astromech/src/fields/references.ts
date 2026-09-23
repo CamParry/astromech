@@ -1,14 +1,14 @@
 /**
- * Reference extraction — derives the relationships index from field
- * data via `fieldType.children()`. Only ever run this on data that has been
- * through `parseFields`; `children()` mints ids and is non-deterministic on raw input.
+ * Reference extraction — derives the relationships index from field data via
+ * `fieldType.children()`, and the declared relation paths via `traverseFields`.
+ * Run it only on parsed data: `children()` mints ids on raw input.
  */
 
 import type { DataField, Field, FieldPathSegment } from '@/types/fields';
 import { formatInstancePath, formatSchemaPath } from '@/fields/field-path';
 import { getFieldType } from '@/fields/field-type-registry';
-import { flattenFieldNodes } from '@/fields/flatten';
-import { RESERVED_KEY } from '@/fields/reserved-keys';
+import { fieldAffectsData, flattenFieldNodes } from '@/fields/flatten';
+import { traverseFields } from '@/fields/traverse';
 
 /**
  * What a relation points at — the relation-eligible subset of `ResourceType`
@@ -136,59 +136,15 @@ export function collectRelationshipDeclarations(
     definitions: Field[]
 ): RelationshipDeclaration[] {
     const collected: RelationshipDeclaration[] = [];
-    walkSchema(definitions, [], collected);
+    traverseFields(definitions, ({ field, schemaPath }) => {
+        if (!fieldAffectsData(field)) return;
+        if (getFieldType(field.type)?.isRelation !== true) return;
+        collected.push({
+            schemaPath,
+            targetKind: targetKindOf(field),
+            target: field.target,
+        });
+        return false;
+    });
     return collected;
-}
-
-/**
- * Definitions-only twin of `walk`. Container shape comes from the field type
- * rather than a list of container type names, so a plugin container recurses for
- * free. Terminates because definitions are finite and statically declared — a
- * `tree`'s recursion lives in its data, not in its schema.
- */
-function walkSchema(
-    definitions: Field[],
-    parentSegments: readonly FieldPathSegment[],
-    out: RelationshipDeclaration[]
-): void {
-    for (const field of flattenFieldNodes(definitions)) {
-        const fieldType = getFieldType(field.type);
-        const segments: FieldPathSegment[] = [
-            ...parentSegments,
-            { kind: 'field', name: field.name },
-        ];
-
-        if (fieldType?.isRelation === true) {
-            out.push({
-                schemaPath: formatSchemaPath(segments),
-                targetKind: targetKindOf(field),
-                target: field.target,
-            });
-            continue;
-        }
-
-        if (fieldType?.children !== undefined) {
-            const { scopes } = fieldType.children(field, probeValue(field));
-            for (const scope of scopes) {
-                walkSchema(
-                    scope.definitions,
-                    [...parentSegments, ...scope.segments],
-                    out
-                );
-            }
-        }
-    }
-}
-
-/**
- * The synthetic value that makes a container hand back its scopes: `group`
- * ignores a non-object and yields its one scope, `repeater`/`tree` yield one per
- * item, and `blocks` needs an item per declared block type or it yields none.
- * The ids `children()` mints are discarded — `formatSchemaPath` collapses an
- * item segment to `[]`.
- */
-function probeValue(field: DataField): unknown {
-    return field.blocks !== undefined
-        ? field.blocks.map((block) => ({ [RESERVED_KEY.type]: block.type }))
-        : [{}];
 }

@@ -3,24 +3,41 @@ import { describe, expect, it } from 'vitest';
 import { getFieldType } from '@/fields/field-type-registry';
 import { CORE_FIELD_TYPES } from '@/types/fields';
 
-/** Structural types that only ever appear unnamed, so no field type backs them. */
+/** Structural types that only ever appear unnamed and store nothing. */
 const LAYOUT_ONLY_TYPES = new Set(['tabs', 'tab', 'accordion']);
 
 const DATA_TYPES = CORE_FIELD_TYPES.filter((t) => !LAYOUT_ONLY_TYPES.has(t));
 
 describe('core field types', () => {
-    it('every data type is registered', () => {
-        for (const type of DATA_TYPES) {
+    it('registers every core type', () => {
+        for (const type of CORE_FIELD_TYPES) {
             expect(getFieldType(type), `missing field type for "${type}"`).toBeDefined();
         }
     });
 
-    it('layout-only types are not registered', () => {
+    it('gives every data type its own check', () => {
+        for (const type of DATA_TYPES) {
+            expect(getFieldType(type)?.validate, type).toBeTypeOf('function');
+            expect(getFieldType(type)?.affectsData, type).not.toBe(false);
+        }
+    });
+
+    it('marks the layout-only types as layout that stores nothing', () => {
         for (const type of LAYOUT_ONLY_TYPES) {
-            expect(
-                getFieldType(type),
-                `unexpected field type for layout "${type}"`
-            ).toBeUndefined();
+            expect(getFieldType(type)).toMatchObject({
+                layout: true,
+                affectsData: false,
+            });
+        }
+        expect(getFieldType('group')?.layout).toBe(true);
+    });
+
+    it('declares sub-fields on exactly the types with value children', () => {
+        for (const type of CORE_FIELD_TYPES) {
+            const fieldType = getFieldType(type);
+            expect(fieldType?.subFields === undefined, type).toBe(
+                fieldType?.children === undefined
+            );
         }
     });
 

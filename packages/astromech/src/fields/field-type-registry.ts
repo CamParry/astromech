@@ -1,24 +1,25 @@
 /**
- * Field-type registry — the single source of truth per field type.
- *
- * Core field types are authored in `./core-field-types` and registered at module
- * load below; the `coerce → default → validate` pipeline dispatches to them.
+ * Field-type registry — one `FieldType` per type name. Core types are fixed at
+ * module load; plugin types are set when the config resolves and live on the
+ * shared namespace, so every loaded copy of core sees them.
  */
 
 import type { FieldType } from '@/types/fields';
+import { createKeyedRegistry } from '@/registry';
 import { coreFieldTypes } from './core-field-types';
 
-/** Registered field types keyed by field `type`. Populated at module load. */
-const fieldTypes = new Map<string, FieldType>();
+/** Core field types keyed by `type`. Identical in every loaded copy of core. */
+const coreTypes = new Map<string, FieldType>(coreFieldTypes.map((f) => [f.type, f]));
 
-/** Register (or replace) a field type. */
-export function registerFieldType(fieldType: FieldType): void {
-    fieldTypes.set(fieldType.type, fieldType);
+const pluginTypes = createKeyedRegistry<FieldType>('pluginFieldTypes');
+
+/** Replace the plugin field types with this set. Collisions are checked before. */
+export function setPluginFieldTypes(fieldTypes: readonly FieldType[]): void {
+    pluginTypes.clear();
+    for (const fieldType of fieldTypes) pluginTypes.set(fieldType.type, fieldType);
 }
 
-/** Look up the field type for a field `type`, if registered. */
+/** The field type for a field `type`, core or plugin, if registered. */
 export function getFieldType(type: string): FieldType | undefined {
-    return fieldTypes.get(type);
+    return coreTypes.get(type) ?? pluginTypes.get(type) ?? undefined;
 }
-
-for (const f of coreFieldTypes) registerFieldType(f);

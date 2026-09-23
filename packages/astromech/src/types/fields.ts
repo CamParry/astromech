@@ -235,39 +235,53 @@ export type ContainerScope = {
     values: Record<string, unknown>;
 };
 
+/** One nested scope a container field declares: its fields, and whether it repeats per item. */
+export type SubFields = {
+    fields: Field[];
+    /** True when the scope is one item of an array value (`repeater`, `blocks`, `tree`). */
+    repeats: boolean;
+};
+
 /**
- * The single source of truth for a core field type; the pipeline dispatches to
- * it. One record per type replaces the drifting surfaces (union, builder,
- * type-gen switch, defaults, coercion). A plugin field type registers a
- * `PluginFieldTypeRegistration` instead, which also names its admin component.
+ * The behaviour behind one field type name, core or plugin. The pipeline,
+ * codegen, visibility, references and config validation all dispatch to it
+ * rather than branching on type names.
  */
 export type FieldType = {
     type: string;
-    /** The builder factory — `type(name, options?)` returning a `Field`. */
+    /** The builder factory — `type(name, options?)` returning a `Field`. Core types only. */
     // `any` — heterogeneous factory option types; a registry can't hold a single precise signature.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    build: (name: string, options?: any) => Field;
+    build?: (name: string, options?: any) => Field;
     /** TS type emitted by codegen for this field, or `null` to omit. */
     tsType: (field: DataField, shape: 'full' | 'public') => string | null;
     defaultValue?: unknown;
     /** Normalisation applied before validation. */
     coerce?: (value: unknown) => unknown;
     /**
-     * Type-intrinsic validation, run before any author rule. Required: the
-     * declarative rules all report a mismatch rather than judging a value of
-     * the wrong type, so a type without this has nothing checking its shape.
+     * Type-intrinsic validation, run before any author rule. Every core data
+     * type declares one: the declarative rules report a mismatch rather than
+     * judging a value of the wrong type.
      */
-    validate: FieldValidator;
+    validate?: FieldValidator;
     /**
      * Container types only: expose the nested scopes inside this field's value
-     * so the pipeline can recurse generically instead of switching on type.
-     * Returns the normalized container value (`next` — cloned, with item `_id`s
-     * minted) plus a flat list of scopes holding live references into it.
+     * so a walk over values recurses without switching on type. Returns the
+     * normalized container value (`next` — cloned, with item `_id`s minted)
+     * plus a flat list of scopes holding live references into it.
      */
     children?: (
         field: DataField,
         value: unknown
     ) => { next: unknown; scopes: ContainerScope[] };
+    /** Container types only: the nested scopes the field declares, for a walk over the schema. */
+    subFields?: (field: DataField) => SubFields[];
+    /** The value a `public`-shape read returns, e.g. rich text rendered to HTML. */
+    toPublic?: (field: DataField, value: unknown) => unknown;
+    /** `false` for a type that stores nothing, such as a preview. Default `true`. */
+    affectsData?: boolean;
+    /** Whether the type may be declared without a name, as a layout field. */
+    layout?: boolean;
     /** Reserved instance keys this type owns, e.g. `['_id', '_disabled', '_title']`. */
     reservedKeys?: string[];
     isRelation?: boolean;

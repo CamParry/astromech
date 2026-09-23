@@ -6,8 +6,8 @@
  */
 
 import type { Field, ValidationMode } from '@/types/fields';
-import { describe, expect, it } from 'vitest';
-import { registerFieldType } from '@/fields/field-type-registry';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { setPluginFieldTypes } from '@/fields/field-type-registry';
 import { safeParseFields } from '@/fields/parse-fields';
 
 type CtxOverrides = Partial<{
@@ -31,12 +31,15 @@ function field(def: Partial<Field> & { name: string; type: string }): Field {
 }
 
 // Appends a marker on every pass, so `f(f(x)) !== f(x)`.
-registerFieldType({
-    type: 'stamped',
-    build: (() => ({})) as never,
-    tsType: () => 'string',
-    coerce: (v) => (typeof v === 'string' ? `${v}!` : v),
-    validate: async () => true,
+beforeEach(() => {
+    setPluginFieldTypes([
+        {
+            type: 'stamped',
+            tsType: () => 'string',
+            coerce: (v) => (typeof v === 'string' ? `${v}!` : v),
+            validate: async () => true,
+        },
+    ]);
 });
 
 describe('coerceOnly — root fields', () => {

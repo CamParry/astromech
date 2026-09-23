@@ -590,6 +590,38 @@ describe('resolveConfig qualified relationship targets', () => {
             )
         ).toThrow(/store\/missing/);
     });
+
+    it('crashes when an unknown qualified target sits inside a block', () => {
+        const inBlock: EntryType = {
+            single: 'Linker',
+            plural: 'Linkers',
+            fields: [
+                blocks('body', {
+                    blocks: [
+                        block('card', {
+                            fields: [
+                                {
+                                    name: 'ref',
+                                    type: 'relationship',
+                                    target: 'store/gone',
+                                },
+                            ],
+                        }),
+                    ],
+                }),
+            ],
+        };
+        expect(() =>
+            resolveConfig(
+                baseConfig([
+                    {
+                        package: '@astromech/store',
+                        entries: [{ ...inBlock, type: 'linker' }],
+                    },
+                ])
+            )
+        ).toThrow(/store\/gone/);
+    });
 });
 
 describe('resolveConfig globals', () => {

@@ -5,7 +5,9 @@
 import type { Field, ResolvedEntryFields } from '@/types/fields';
 import type { ResolvedConfig } from '@/types/index';
 import { parseEntryTypeId, resolveEntryType } from '@/entries/entry-types';
-import { isLayoutField } from '@/fields/flatten';
+import { getFieldType } from '@/fields/field-type-registry';
+import { fieldAffectsData } from '@/fields/flatten';
+import { traverseFields } from '@/fields/traverse';
 
 /**
  * Any relationship field whose `target` is qualified (`{plugin}/{type}`) must
@@ -16,20 +18,20 @@ export function assertQualifiedRelationshipTargets(
     config: Pick<ResolvedConfig, 'entries' | 'pluginEntries'>
 ): void {
     const checkNodes = (ownerKey: string, nodes: Field[]): void => {
-        for (const field of nodes) {
-            if (!isLayoutField(field) && field.type === 'relationship') {
-                const target = field.target;
-                if (target && parseEntryTypeId(target)) {
-                    if (resolveEntryType(config, target) === undefined) {
-                        throw new Error(
-                            `Astromech entry type "${ownerKey}": relationship field ` +
-                                `"${field.name}" targets unknown entry type "${target}".`
-                        );
-                    }
-                }
+        traverseFields(nodes, ({ field }) => {
+            if (!fieldAffectsData(field) || field.target === undefined) return;
+            if (getFieldType(field.type)?.isRelation !== true) return;
+            const target = field.target;
+            if (
+                parseEntryTypeId(target) &&
+                resolveEntryType(config, target) === undefined
+            ) {
+                throw new Error(
+                    `Astromech entry type "${ownerKey}": relationship field ` +
+                        `"${field.name}" targets unknown entry type "${target}".`
+                );
             }
-            if (field.fields) checkNodes(ownerKey, field.fields);
-        }
+        });
     };
     const check = (ownerKey: string, fields: ResolvedEntryFields): void => {
         checkNodes(ownerKey, fields.main);

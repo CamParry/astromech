@@ -1,7 +1,7 @@
 /**
- * Core field types — one entry per data-bearing field type. Layout fields are
- * excluded: they emit no data. Nested types fill `children`, normalizing the
- * stored value and reporting nested scopes for the pipeline to recurse into.
+ * Core field types. Nested types fill `children` (the scopes inside a value) and
+ * `subFields` (the scopes a definition declares); `tabs`, `tab` and `accordion`
+ * are layout-only and store nothing.
  */
 
 import type { GroupOptions } from '@/fields/builder';
@@ -12,6 +12,7 @@ import type {
     FieldPathSegment,
     FieldType,
     FieldValidator,
+    SubFields,
 } from '@/types/fields';
 import {
     blocks,
@@ -191,7 +192,15 @@ const validateBlockTypes: FieldValidator = async (ctx) => {
         : `Unknown block type: ${unknownTypes.join(', ')}`;
 };
 
-export const coreFieldTypes: FieldType[] = [
+/** A core type that stores data: each has a builder, a TS type and its own check. */
+type CoreDataFieldType = FieldType & Required<Pick<FieldType, 'build' | 'validate'>>;
+
+/** The one scope a `group`, `repeater` or `tree` declares. */
+function ownFields(repeats: boolean): (field: DataField) => SubFields[] {
+    return (field) => [{ fields: field.fields ?? [], repeats }];
+}
+
+const dataFieldTypes: CoreDataFieldType[] = [
     {
         type: 'text',
         build: text,
@@ -278,6 +287,8 @@ export const coreFieldTypes: FieldType[] = [
         build: (name, options) => group(name, options as GroupOptions),
         validate: validateGroup,
         tsType: () => null,
+        layout: true,
+        subFields: ownFields(false),
         children: (field, value) => {
             const next = { ...(isPlainObject(value) ? value : {}) };
             return {
@@ -301,6 +312,7 @@ export const coreFieldTypes: FieldType[] = [
         defaultValue: [],
         reservedKeys: [RESERVED_KEY.id, RESERVED_KEY.disabled, RESERVED_KEY.title],
         children: (field, value) => arrayChildren(field, value, () => field.fields ?? []),
+        subFields: ownFields(true),
     },
     {
         type: 'blocks',
@@ -321,6 +333,11 @@ export const coreFieldTypes: FieldType[] = [
                 );
                 return block === undefined ? null : (block.fields ?? []);
             }),
+        subFields: (field) =>
+            (field.blocks ?? []).map((block) => ({
+                fields: block.fields ?? [],
+                repeats: true,
+            })),
     },
     {
         type: 'tree',
@@ -330,6 +347,7 @@ export const coreFieldTypes: FieldType[] = [
         defaultValue: [],
         reservedKeys: [RESERVED_KEY.id, RESERVED_KEY.disabled],
         children: treeChildren,
+        subFields: ownFields(true),
     },
     {
         type: 'email',
@@ -391,3 +409,13 @@ export const coreFieldTypes: FieldType[] = [
         validate: validateKeyValue,
     },
 ];
+
+/** Layout-only types: they draw a surface, store nothing, and never take a name. */
+const layoutFieldTypes: FieldType[] = ['tabs', 'tab', 'accordion'].map((type) => ({
+    type,
+    tsType: () => null,
+    layout: true,
+    affectsData: false,
+}));
+
+export const coreFieldTypes: FieldType[] = [...dataFieldTypes, ...layoutFieldTypes];
