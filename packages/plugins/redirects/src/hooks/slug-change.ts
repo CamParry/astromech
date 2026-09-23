@@ -48,7 +48,7 @@ export const slugChangeHook: Hook = defineHook(
         if (rulesFromNewPath.length > 0) {
             await ctx.entries.delete({
                 type,
-                id: rulesFromNewPath.map((rule) => rule.id),
+                ids: rulesFromNewPath.map((rule) => rule.id),
             });
         }
 
@@ -59,7 +59,7 @@ export const slugChangeHook: Hook = defineHook(
         if (rulesToOldPath.length > 0) {
             await ctx.entries.update({
                 type,
-                id: rulesToOldPath.map((rule) => rule.id),
+                ids: rulesToOldPath.map((rule) => rule.id),
                 data: { fields: { to } },
             });
         }
