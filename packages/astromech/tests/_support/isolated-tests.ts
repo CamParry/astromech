@@ -38,6 +38,7 @@ export const isolatedTests = [
     'tests/auth/secret.test.ts',
     'tests/auth/session.test.ts',
     'tests/storage/drivers/s3.test.ts',
+    'tests/transport/cli/commands.test.ts',
     'tests/transport/http/client-address.test.ts',
     'tests/transport/http/client/entries-service.test.ts',
     'tests/transport/http/client/globals-service.test.ts',

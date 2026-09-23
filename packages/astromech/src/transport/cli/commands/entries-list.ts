@@ -22,6 +22,8 @@ export default defineCommand({
                 args.type,
                 'query',
                 {
+                    // The full shape, so drafts are listed with their status.
+                    full: true,
                     limit: limitNum,
                     ...(args.locale ? { locale: args.locale } : {}),
                     ...(args.status ? { where: { status: args.status } } : {}),

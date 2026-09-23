@@ -13,8 +13,10 @@ export default defineCommand({
     },
     run: ({ args }) =>
         withApplication(args, async () => {
+            // The full shape: the CLI is an admin tool, and a draft is an entry.
             const entry = await callEntryMethod<Entry | null>(args.type, 'get', {
                 id: args.id,
+                full: true,
                 ...(args.locale ? { locale: args.locale } : {}),
             });
             if (!entry) throw new Error('Entry not found');
