@@ -19,9 +19,10 @@ export function assertQualifiedRelationshipTargets(
 ): void {
     const checkNodes = (ownerKey: string, nodes: Field[]): void => {
         traverseFields(nodes, ({ field }) => {
-            if (!fieldAffectsData(field) || field.target === undefined) return;
-            if (getFieldType(field.type)?.isRelation !== true) return;
-            const target = field.target;
+            const target = fieldAffectsData(field) ? field.target : undefined;
+            if (target === undefined || getFieldType(field.type)?.isRelation !== true) {
+                return;
+            }
             if (
                 parseEntryTypeId(target) &&
                 resolveEntryType(config, target) === undefined

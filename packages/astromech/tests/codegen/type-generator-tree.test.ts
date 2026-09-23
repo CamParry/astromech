@@ -155,3 +155,24 @@ describe('type-generator — hoisted names', () => {
         );
     });
 });
+
+describe('type-generator — relation targets', () => {
+    it('types users, media and unknown targets on the Relations type', () => {
+        const output = generateClientTypes(
+            makeConfig([
+                { name: 'author', type: 'relationship', target: 'users' },
+                { name: 'cover', type: 'relationship', target: 'media' },
+                {
+                    name: 'other',
+                    type: 'relationship',
+                    target: 'nowhere',
+                    multiple: true,
+                },
+            ])
+        );
+
+        expect(output).toContain("author: import('astromech').User;");
+        expect(output).toContain("cover: import('astromech').Media;");
+        expect(output).toContain("other: import('astromech').Entry[];");
+    });
+});

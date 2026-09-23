@@ -141,6 +141,36 @@ describe('toAdminEntryType', () => {
     });
 });
 
+describe('toAdminEntryType — optional members', () => {
+    it('carries the optional view settings when the entry type declares them', () => {
+        const resolved = resolveConfig({
+            ...baseConfig(),
+            entries: {
+                post: {
+                    single: 'Post',
+                    plural: 'Posts',
+                    icon: 'FileText',
+                    views: ['list', 'grid'],
+                    defaultView: 'grid',
+                    gridFields: [{ field: 'body' }],
+                    search: ['body'],
+                    fields: [{ name: 'body', type: 'text' }],
+                },
+            },
+        });
+        const postEntry = resolved.entries['post'];
+        if (!postEntry) throw new Error('post entry not resolved');
+
+        expect(toAdminEntryType(postEntry)).toMatchObject({
+            icon: 'FileText',
+            views: ['list', 'grid'],
+            defaultView: 'grid',
+            gridFields: [{ field: 'body' }],
+            search: ['body'],
+        });
+    });
+});
+
 describe('buildAdminConfig', () => {
     it('produces correct basePath, locales, defaultLocale', () => {
         const config = baseConfig([], {

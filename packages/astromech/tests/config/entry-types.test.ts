@@ -184,6 +184,18 @@ describe('assertEntryTypeValid — capability mismatch', () => {
         );
     });
 
+    it('names statuses and slug when the repository supports neither', () => {
+        const cfg: EntryType = {
+            single: 'Item',
+            plural: 'Items',
+            statuses: true,
+            slug: { source: 'title' },
+        };
+        expect(() => assertEntryTypeValid('widget', cfg, [])).toThrow(
+            'does not support: statuses, slug.'
+        );
+    });
+
     it('includes the repository support list in the message when non-empty', () => {
         const cfg: EntryType = {
             single: 'Item',
