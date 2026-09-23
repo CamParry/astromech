@@ -118,13 +118,8 @@ async function entryTitles(
     ids: ReadonlySet<string>
 ): Promise<Map<string, string>> {
     const titles = new Map<string, string>();
-    // A type dropped from config since its rows were written has no repository.
-    let repository;
-    try {
-        repository = getEntryRepository(type);
-    } catch {
-        return titles;
-    }
+    // A type dropped from config reads through the entries-table repository.
+    const repository = getEntryRepository(type);
     const records = await Promise.all(
         Array.from(ids, async (id) => {
             try {
