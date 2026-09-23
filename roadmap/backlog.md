@@ -88,6 +88,7 @@ not be re-derived.
 - [ ] Postgres dump/restore — `pg_dump`/`pg_restore` (gated on Postgres driver, Phase 23)
 - [ ] Admin-editable backup **schedule** (retention is editable via the plugin's `/settings` page): the cron schedule is consumed once at boot when the job is registered, so a settings override needs runtime cron re-registration — a feature, not a wiring fix
 - [ ] Encryption at rest for backup artifacts
+- [ ] The backups admin page runs three plain `useMutation` calls with its own keys, because a plugin cannot import the admin's `useAdminMutation`. Export a plugin-facing mutation helper, or leave them.
 - [ ] Multi-instance run-now lock — reuse the `_astromech_cron` lock so a concurrent scheduled + manual run across processes is guarded (v1 uses an in-process flag only)
 
 ### AI context follow-ups (P6, 2026-08-03)

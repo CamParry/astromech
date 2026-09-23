@@ -32,9 +32,9 @@ read at review, and studying where a pattern repeats before changing it.
       browser: `completed/resource-module-shape.md`.
 - [x] **Plugin contributions take a parallel path** through config, codegen,
       permissions and the admin: `completed/plugin-types-in-core-registries.md`.
-- [ ] **Admin pages share no composition.** Copied staging controls, 16
+- [x] **Admin pages share no composition.** Copied staging controls, 16
       mutation bodies, a duplicate key factory, a stale dashboard, the missing
-      AI-context globals case: `planned/admin-resource-views.md`.
+      AI-context globals case: `completed/admin-resource-views.md`.
 - [ ] **Drift goes unnoticed until a sweep.** The drift report, test-only
       exports, typed lint, retired words, lookup verbs, names, stale comments:
       `planned/conventions-and-drift.md`.
