@@ -307,3 +307,12 @@ export function useEntryForm<TSaved = Entry>({
         fieldValidation,
     };
 }
+
+/** The TanStack form `useEntryForm` builds, for the field components that bind to it. */
+export type EntryForm = ReturnType<typeof useEntryForm>['form'];
+
+/** The validation state `useEntryForm` returns, which the edit layout provides to its fields. */
+export type EntryFormState = Pick<
+    ReturnType<typeof useEntryForm>,
+    'formErrors' | 'fieldErrors' | 'fieldWarnings' | 'fieldValidation'
+>;

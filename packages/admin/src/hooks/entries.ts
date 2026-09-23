@@ -22,17 +22,15 @@ export function useEntriesQuery(params: EntryQueryParams & { type: string }) {
 }
 
 export function entryQueryOptions(type: string, id: string, locale: string) {
-    const keys = queryKeys.entries;
     return queryOptions({
-        queryKey: keys.get(type, id, locale),
+        queryKey: queryKeys.entries.get(type, id, locale),
         queryFn: () => astromechUntypedClient.entries.get({ type, id, locale }),
     });
 }
 
 export function entryVersionsQueryOptions(type: string, id: string, locale: string) {
-    const keys = queryKeys.entries;
     return queryOptions({
-        queryKey: keys.versions(type, id, locale),
+        queryKey: queryKeys.entries.versions(type, id, locale),
         queryFn: () => astromechUntypedClient.entries.versions({ type, id, locale }),
     });
 }
@@ -58,16 +56,6 @@ export function useEntryUsage(type: string, id: string, enabled = true) {
     return useQuery({
         queryKey: queryKeys.entries.usedBy(type, id),
         queryFn: () => astromechUntypedClient.entries.usedBy({ type, id }),
-        enabled,
-    });
-}
-
-/** This locale's staged change, or null. */
-export function useGetStaged(type: string, id: string, locale: string, enabled = true) {
-    const keys = queryKeys.entries;
-    return useQuery({
-        queryKey: keys.staged(type, id, locale),
-        queryFn: () => astromechUntypedClient.entries.getStaged({ type, id, locale }),
         enabled,
     });
 }

@@ -31,6 +31,7 @@
 @import './partials/components/spinner.css';
 @import './partials/components/skeleton.css';
 @import './partials/components/empty-state.css';
+@import './partials/components/banner.css';
 @import './partials/components/avatar.css';
 @import './partials/components/tooltip.css';
 @import './partials/components/collection-grid.css';

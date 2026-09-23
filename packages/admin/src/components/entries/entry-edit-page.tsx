@@ -1,83 +1,62 @@
 /**
- * Entry edit page for one entry type id, the site's or a plugin's. Two-column layout: sticky action
- * bar, main content fields left, metadata sidebar right.
+ * Entry edit page for one entry type id, the site's or a plugin's: the header
+ * actions, the staging banners and the two-column form over `useEditController`.
  */
 
 import type { UseAdminEntryTypeResult } from '../../hooks/use-admin-entry-type';
 import type { Entry } from 'astromech';
 import { Menu } from '@base-ui/react/menu';
-import { useStore } from '@tanstack/react-form';
-import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { astromechUntypedClient } from 'astromech/fetch';
 import { resolveEntryUrl } from 'astromech/shared';
-import {
-    ArrowLeft,
-    Copy,
-    ExternalLink,
-    Eye,
-    GitMerge,
-    Layers,
-    MoreHorizontal,
-    Trash2,
-} from 'lucide-react';
+import { Copy, ExternalLink, Eye, MoreHorizontal, Trash2 } from 'lucide-react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { useAiContext } from '../../context/ai-context';
 import { authorName, useAuthorNames } from '../../hooks/author-names';
-import {
-    entryMutations,
-    useEntry,
-    useEntryVersions,
-    useGetStaged,
-} from '../../hooks/entries';
+import { entryMutations } from '../../hooks/entries';
 import { useAdminEntryType } from '../../hooks/use-admin-entry-type';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
-import { useEntryForm } from '../../hooks/use-entry-form';
-import { queryKeys } from '../../hooks/use-query-keys';
+import { entryEditResource, useEditController } from '../../hooks/use-edit-controller';
 import { EntryNamespaceProvider } from '../../i18n/entry-namespace';
-import { Link } from '../../rendering/cells/link';
 import { resolveForm } from '../../rendering/resolve';
 import { defaultContentLocale } from '../../utilities/content-locale';
 import { formatDatetime } from '../../utilities/dates';
-import {
-    entryEditPath,
-    entryTypeBasePath,
-    entryVersionsPath,
-} from '../../utilities/entry-admin-path';
-import { formatDatetimeForInput } from '../../utilities/formatters';
-import {
-    FieldErrorsProvider,
-    FieldWarningsProvider,
-} from '../fields/field-errors-context';
-import { FieldValidationProvider } from '../fields/field-validation-context';
+import { entryEditPath, entryTypeBasePath } from '../../utilities/entry-admin-path';
 import { NotFoundPage } from '../layout/not-found-page';
 import { LocaleSwitcher } from '../translations/locale-switcher';
 import { Breadcrumb } from '../ui/breadcrumb';
 import { Button } from '../ui/button';
-import { useConfirm } from '../ui/confirm';
-import { Input } from '../ui/input';
 import {
-    FormLayout,
-    FormLayoutContent,
     Page,
     PageContent,
     PageHeader,
     PageHeaderActions,
     PageLoading,
     PageTitle,
-    Stack,
 } from '../ui/page';
-import { Panel } from '../ui/panel';
 import { StatusBadge } from '../ui/status-badge';
-import { useToast } from '../ui/toast';
 import { Tooltip } from '../ui/tooltip';
 import { DeleteEntryModal } from './delete-entry-modal';
-import { EntryFieldColumn } from './entry-fields-renderer';
-import { EntryFormErrors } from './entry-form-errors';
+import {
+    EntryFormLayout,
+    FieldColumn,
+    SlugField,
+    StatusField,
+    TitleField,
+} from './entry-form-fields';
 import { entryLabel } from './entry-label';
-import { PublishPanel } from './publish-panel';
+import { EditBanners, StagingControls, VersionsLink } from './staging-controls';
+
+type EntryEditPageProps = {
+    /** Entry type id: `post`, or `forms/form` for a plugin's. */
+    type: string;
+    id: string;
+    /** Locale from the route search params; defaults to the default content locale. */
+    locale: string | undefined;
+    /** Edit the staged change for that locale rather than the canonical row. */
+    staged?: boolean | undefined;
+};
 
 /**
  * Keyed by the row in view: duplicate navigates to a different id, and the
@@ -95,7 +74,7 @@ export function EntryEditPage({
     const resolvedLocale = locale ?? defaultContentLocale();
     if (entryType === null) return <NotFoundPage path={entryTypeBasePath(type)} />;
     return (
-        <EntryEditPageBody
+        <EntryEditBody
             key={`${id}:${resolvedLocale}:${String(staged)}`}
             entryType={entryType}
             id={id}
@@ -105,234 +84,81 @@ export function EntryEditPage({
     );
 }
 
-type EntryEditPageProps = {
-    /** Entry type id: `post`, or `forms/form` for a plugin's. */
-    type: string;
-    id: string;
-    /** Locale from the route search params; defaults to the default content locale. */
-    locale: string | undefined;
-    /** Edit the staged change for that locale rather than the canonical row. */
-    staged?: boolean | undefined;
-};
-
-function EntryEditPageBody({
+function EntryEditBody({
     entryType,
     id,
     locale,
-    staged: isStaged,
+    staged,
 }: {
     entryType: UseAdminEntryTypeResult;
     id: string;
     locale: string;
     staged: boolean;
 }): React.ReactElement {
-    const { type, config, basePath, namespace, can } = entryType;
-    const { toast } = useToast();
+    const { type, config, basePath, namespace } = entryType;
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const queryClient = useQueryClient();
+    const authorNames = useAuthorNames();
     const [deleteOpen, setDeleteOpen] = React.useState(false);
 
-    const single = config.single;
-    const plural = config.plural;
-    const capabilities = config.capabilities;
-    const resolvedForm = resolveForm(config);
-    const { hasTitle, hasSlug, hasStatuses, main, sidebar } = resolvedForm;
-    // The two columns together ARE the full field tree the client validates.
-    const fieldDefinitions = React.useMemo(() => [...main, ...sidebar], [main, sidebar]);
+    const controller = useEditController(entryEditResource(entryType, id, locale), {
+        staged,
+    });
+    const { record: entry, form, isStaged, isReadOnly } = controller;
+    const { hasTitle, hasSlug, hasStatuses, main, sidebar } = resolveForm(config);
+    const { capabilities } = config;
 
-    const isReadOnly = !can('update');
-
-    const hasStaging = config.capabilities.staging === true;
-    const { data: canonicalEntry, isLoading: canonicalLoading } = useEntry(
-        type,
-        id,
-        locale
-    );
-    // The staged change for this locale: what the staged editor shows, and what
-    // tells the canonical view whether to offer "Stage" or "View staged".
-    const { data: stagedChange, isLoading: stagedLoading } = useGetStaged(
-        type,
-        id,
-        locale,
-        hasStaging
-    );
-    const entry = isStaged ? (stagedChange ?? undefined) : canonicalEntry;
-    const authorNames = useAuthorNames();
-    const isLoading = isStaged ? canonicalLoading || stagedLoading : canonicalLoading;
-
-    // Declare the entry in view; `null` until it loads, so no placeholder label
-    // is ever published. Serves the root and plugin routes alike.
+    // `null` until the row loads, so no placeholder label is ever declared.
     useAiContext(
-        entry != null
+        entry !== null
             ? { kind: 'entries', type, id, label: entryLabel(entry, config) }
             : null,
         { depth: 1 }
     );
 
-    // Versioning. Staged rows don't surface version history (their action set is
-    // Save/Merge/Discard/Preview) — skip the fetch so a post-merge stale refetch
-    // can't hit the just-deleted staged row.
-    const hasVersioning = capabilities?.versioning === true;
-    const { data: versions } = useEntryVersions(
-        type,
-        id,
-        locale,
-        hasVersioning && !isStaged
-    );
-    const versionCount = versions?.length ?? 0;
-
-    const mutations = entryMutations(type, single);
+    const mutations = entryMutations(type, config.single);
     const trashEntry = useAdminMutation(mutations.trash, {
         onSuccess: () => void navigate({ to: basePath }),
     });
-
     const duplicateEntry = useAdminMutation(mutations.duplicate, {
-        onSuccess: (newEntry) =>
+        onSuccess: (copy) =>
             void navigate({
-                to: entryEditPath(basePath, newEntry.id, { locale: newEntry.locale }),
+                to: entryEditPath(basePath, copy.id, { locale: copy.locale }),
             }),
-    });
-
-    const {
-        form,
-        saveMutation,
-        handleSave,
-        fieldErrors,
-        fieldWarnings,
-        formErrors,
-        fieldValidation,
-    } = useEntryForm({
-        fieldDefinitions,
-        operation: 'update',
-        namespace: namespace,
-        defaultValues: {
-            title: entry?.title ?? '',
-            slug: entry?.slug ?? '',
-            status: entry?.status ?? 'unpublished',
-            publishedAt: formatDatetimeForInput(entry?.publishedAt),
-            fields: (entry?.fields as Record<string, unknown>) ?? {},
-        },
-        hasSlug,
-        hasStatuses,
-        readOnly: isReadOnly,
-        saveFn: (data) =>
-            astromechUntypedClient.entries.update({
-                type,
-                id,
-                locale,
-                staged: isStaged,
-                data,
-            }),
-        publishFn: (data) =>
-            astromechUntypedClient.entries.update({
-                type,
-                id,
-                locale,
-                staged: isStaged,
-                data,
-            }),
-        onSuccess: (updated) => {
-            const keys = queryKeys.entries;
-            // Seed the cache with the saved entry before invalidating, so the
-            // re-render `form.reset` triggers already sees fresh defaultValues
-            // instead of the stale one the invalidated query hasn't refetched yet.
-            queryClient.setQueryData(
-                isStaged ? keys.staged(type, id, locale) : keys.get(type, id, locale),
-                updated
-            );
-            void queryClient.invalidateQueries({ queryKey: keys.all(type) });
-            toast({
-                message: t('entries.updated', { name: single }),
-                variant: 'success',
-            });
-        },
-    });
-
-    // `form.state` is a plain getter — reading it in render never re-renders on
-    // change, so the unsaved-changes indicator would miss most edits.
-    const isDirty = useStore(form.store, (state) => state.isDirty);
-
-    // Forward versioning: staged entries. A staged row shares its entry's id,
-    // so every staging call is `{ id, locale }` and only the search param says
-    // which row is on screen.
-    const confirm = useConfirm();
-    const canPublish = can('publish');
-    const canonicalPath = entryEditPath(basePath, id, { locale });
-    const stagedPath = entryEditPath(basePath, id, { locale, staged: true });
-
-    const createStaged = useAdminMutation(mutations.createStaged, {
-        onSuccess: () => void navigate({ to: stagedPath }),
-    });
-    const mergeStaged = useAdminMutation(mutations.mergeStaged, {
-        onSuccess: () => void navigate({ to: canonicalPath }),
-    });
-    const deleteStaged = useAdminMutation(mutations.deleteStaged, {
-        onSuccess: () => void navigate({ to: canonicalPath }),
     });
     const issueToken = useAdminMutation(mutations.issuePreviewToken);
     const revokeToken = useAdminMutation(mutations.revokePreviewToken);
 
     const previewUrl =
-        config.url && entry != null ? resolveEntryUrl(config.url, entry) : null;
-
-    // One surface control, not two. A published entry links straight to its live
-    // page; anything else opens a tokenised preview of the last saved state.
-    const showViewLive = !isStaged && previewUrl != null && entry?.status === 'published';
-    const showPreview = hasStaging && previewUrl != null && !showViewLive;
+        config.url !== null && entry !== null ? resolveEntryUrl(config.url, entry) : null;
+    // One surface control: a published entry links to its live page; anything
+    // else opens a tokenised preview of the last saved state.
+    const showViewLive =
+        !isStaged && previewUrl !== null && entry?.status === 'published';
+    const showPreview = capabilities.staging && previewUrl !== null && !showViewLive;
     const previewLabel = isStaged ? t('staging.previewStaged') : t('staging.preview');
 
-    function handlePreview(staged: boolean): void {
-        if (!previewUrl) return;
+    function handlePreview(): void {
+        if (previewUrl === null) return;
         issueToken.mutate(id, {
             onSuccess: ({ token }) => {
                 const url = `${previewUrl}?preview=${encodeURIComponent(token)}${
-                    staged ? '&staged=1' : ''
+                    isStaged ? '&staged=1' : ''
                 }`;
                 window.open(url, '_blank', 'noopener');
             },
         });
     }
 
-    function handleMerge(): void {
-        // Clobber warning: the canonical was edited after this staged change began.
-        const diverged =
-            canonicalEntry != null &&
-            entry != null &&
-            new Date(canonicalEntry.updatedAt).getTime() >
-                new Date(entry.createdAt).getTime();
-        confirm({
-            title: t('staging.confirmMergeTitle'),
-            description: diverged
-                ? t('staging.confirmMergeDivergedMessage')
-                : t('staging.confirmMergeMessage'),
-            variant: 'primary',
-            confirmLabel: t('staging.merge'),
-            onConfirm: () => mergeStaged.mutate({ id, locale }),
-        });
-    }
-
-    function handleDiscard(): void {
-        confirm({
-            title: t('staging.confirmDiscardTitle'),
-            description: t('staging.confirmDiscardMessage'),
-            variant: 'danger',
-            confirmLabel: t('staging.discard'),
-            onConfirm: () => deleteStaged.mutate({ id, locale }),
-        });
-    }
-
-    if (isLoading) {
-        return <PageLoading />;
-    }
+    if (controller.isLoading) return <PageLoading />;
 
     return (
         <EntryNamespaceProvider namespace={namespace}>
             <Page>
                 <DeleteEntryModal
                     open={deleteOpen}
-                    entry={entry ?? null}
-                    typeLabel={single}
+                    entry={entry}
+                    typeLabel={config.single}
                     force={false}
                     onCancel={() => setDeleteOpen(false)}
                     onConfirm={() => trashEntry.mutate(id)}
@@ -342,27 +168,27 @@ function EntryEditPageBody({
                     <PageTitle>
                         <Breadcrumb
                             items={[
-                                { label: plural, to: basePath },
+                                { label: config.plural, to: basePath },
                                 {
                                     label: t('entries.editTitle', {
                                         title: hasTitle
-                                            ? (entry?.title ?? single)
-                                            : single,
+                                            ? (entry?.title ?? config.single)
+                                            : config.single,
                                     }),
                                 },
                             ]}
                         />
                     </PageTitle>
                     <PageHeaderActions>
-                        {!isReadOnly && isDirty && (
+                        {!isReadOnly && controller.isDirty && (
                             <span className="am-form-layout-dirty-indicator">
                                 {t('common.unsavedChanges')}
                             </span>
                         )}
-                        {hasStatuses && !isStaged && entry != null && (
+                        {hasStatuses && !isStaged && entry !== null && (
                             <StatusBadge status={entry.status} />
                         )}
-                        {!isStaged && capabilities?.translatable && entry != null && (
+                        {!isStaged && capabilities.translatable && entry !== null && (
                             <LocaleSwitcher
                                 id={id}
                                 currentLocale={entry.locale}
@@ -377,7 +203,7 @@ function EntryEditPageBody({
                         {showViewLive && (
                             <Tooltip content={t('entries.viewLive')}>
                                 <a
-                                    href={previewUrl ?? undefined}
+                                    href={previewUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="am-btn am-btn-secondary am-btn-md am-btn-icon"
@@ -387,61 +213,29 @@ function EntryEditPageBody({
                                 </a>
                             </Tooltip>
                         )}
-                        {/* Preview (forward versioning): issue a token, open the front-end URL. */}
                         {showPreview && (
                             <Tooltip content={previewLabel}>
                                 <Button
                                     variant="secondary"
                                     aria-label={previewLabel}
-                                    onClick={() => handlePreview(isStaged)}
+                                    onClick={handlePreview}
                                     loading={issueToken.isPending}
                                     icon={<Eye size={16} />}
                                 />
                             </Tooltip>
                         )}
-                        {/* Canonical: stage a change, or jump to the existing one. */}
-                        {hasStaging &&
-                            !isStaged &&
-                            !isReadOnly &&
-                            (stagedChange != null ? (
-                                <Link
-                                    to={stagedPath}
-                                    className="am-btn am-btn-secondary am-btn-md"
-                                >
-                                    <Layers size={16} />
-                                    {t('staging.viewStaged')}
-                                </Link>
-                            ) : (
-                                <Button
-                                    variant="secondary"
-                                    icon={<Layers size={16} />}
-                                    onClick={() => createStaged.mutate({ id, locale })}
-                                    loading={createStaged.isPending}
-                                >
-                                    {t('staging.stageChange')}
-                                </Button>
-                            ))}
+                        {!isStaged && <StagingControls controller={controller} />}
                         {!isReadOnly && (
                             <Button
                                 variant={isStaged ? 'secondary' : 'primary'}
-                                onClick={handleSave}
-                                loading={saveMutation.isPending}
+                                onClick={controller.handleSave}
+                                loading={controller.saveMutation.isPending}
                             >
                                 {t('common.update')}
                             </Button>
                         )}
-                        {/* Staged: merge is the primary commit action (needs publish). */}
-                        {isStaged && canPublish && (
-                            <Button
-                                variant="primary"
-                                icon={<GitMerge size={16} />}
-                                onClick={handleMerge}
-                                loading={mergeStaged.isPending}
-                            >
-                                {t('staging.merge')}
-                            </Button>
-                        )}
-                        {!isReadOnly && (
+                        {isStaged && <StagingControls controller={controller} />}
+                        {!isReadOnly && !isStaged && (
                             <Menu.Root>
                                 <Menu.Trigger
                                     className="am-btn am-btn-secondary am-btn-md am-btn-icon"
@@ -456,63 +250,38 @@ function EntryEditPageBody({
                                         align="end"
                                     >
                                         <Menu.Popup className="am-topbar-menu-popup">
-                                            {isStaged ? (
+                                            <Menu.Item
+                                                className="am-topbar-menu-item"
+                                                onClick={() => duplicateEntry.mutate(id)}
+                                                disabled={duplicateEntry.isPending}
+                                            >
+                                                <span className="am-topbar-menu-item-icon">
+                                                    <Copy size={14} />
+                                                </span>
+                                                {t('common.duplicate')}
+                                            </Menu.Item>
+                                            {capabilities.staging && (
                                                 <Menu.Item
-                                                    className="am-topbar-menu-item am-topbar-menu-item-danger"
-                                                    onClick={handleDiscard}
-                                                    disabled={deleteStaged.isPending}
+                                                    className="am-topbar-menu-item"
+                                                    onClick={() => revokeToken.mutate(id)}
+                                                    disabled={revokeToken.isPending}
                                                 >
                                                     <span className="am-topbar-menu-item-icon">
-                                                        <Trash2 size={14} />
+                                                        <Eye size={14} />
                                                     </span>
-                                                    {t('staging.discard')}
+                                                    {t('staging.revokePreview')}
                                                 </Menu.Item>
-                                            ) : (
-                                                <>
-                                                    <Menu.Item
-                                                        className="am-topbar-menu-item"
-                                                        onClick={() =>
-                                                            duplicateEntry.mutate(id)
-                                                        }
-                                                        disabled={
-                                                            duplicateEntry.isPending
-                                                        }
-                                                    >
-                                                        <span className="am-topbar-menu-item-icon">
-                                                            <Copy size={14} />
-                                                        </span>
-                                                        {t('common.duplicate')}
-                                                    </Menu.Item>
-                                                    {hasStaging && (
-                                                        <Menu.Item
-                                                            className="am-topbar-menu-item"
-                                                            onClick={() =>
-                                                                revokeToken.mutate(id)
-                                                            }
-                                                            disabled={
-                                                                revokeToken.isPending
-                                                            }
-                                                        >
-                                                            <span className="am-topbar-menu-item-icon">
-                                                                <Eye size={14} />
-                                                            </span>
-                                                            {t('staging.revokePreview')}
-                                                        </Menu.Item>
-                                                    )}
-                                                    <Menu.Separator className="am-topbar-menu-separator" />
-                                                    <Menu.Item
-                                                        className="am-topbar-menu-item am-topbar-menu-item-danger"
-                                                        onClick={() =>
-                                                            setDeleteOpen(true)
-                                                        }
-                                                    >
-                                                        <span className="am-topbar-menu-item-icon">
-                                                            <Trash2 size={14} />
-                                                        </span>
-                                                        {t('common.delete')}
-                                                    </Menu.Item>
-                                                </>
                                             )}
+                                            <Menu.Separator className="am-topbar-menu-separator" />
+                                            <Menu.Item
+                                                className="am-topbar-menu-item am-topbar-menu-item-danger"
+                                                onClick={() => setDeleteOpen(true)}
+                                            >
+                                                <span className="am-topbar-menu-item-icon">
+                                                    <Trash2 size={14} />
+                                                </span>
+                                                {t('common.delete')}
+                                            </Menu.Item>
                                         </Menu.Popup>
                                     </Menu.Positioner>
                                 </Menu.Portal>
@@ -521,234 +290,54 @@ function EntryEditPageBody({
                     </PageHeaderActions>
                 </PageHeader>
 
-                {entry != null && (
+                {entry !== null && (
                     <p className="am-entry-meta">
                         {entryMetaLine(entry, authorNames, t)}
                     </p>
                 )}
 
                 <PageContent>
-                    {isStaged && (
-                        <div
-                            className="am-banner am-banner-info"
-                            style={{
-                                marginBottom: '1rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.75rem',
-                            }}
-                        >
-                            <span>
-                                {t('staging.banner', {
-                                    title: canonicalEntry?.title ?? single,
-                                })}
-                            </span>
-                            <Link to={canonicalPath} className="am-link am-text-sm">
-                                <ArrowLeft size={14} style={{ marginRight: '0.25rem' }} />
-                                {t('staging.backToCurrent')}
-                            </Link>
-                        </div>
-                    )}
-                    {isReadOnly && (
-                        <div
-                            className="am-banner am-banner-info"
-                            style={{ marginBottom: '1rem' }}
-                        >
-                            {t('permissions.readOnly')}
-                        </div>
-                    )}
-                    <EntryFormErrors messages={formErrors} />
-                    <FieldValidationProvider value={fieldValidation}>
-                        <FieldErrorsProvider value={fieldErrors}>
-                            <FieldWarningsProvider value={fieldWarnings}>
-                                <FormLayout>
-                                    <FormLayoutContent>
-                                        <Stack gap={8}>
-                                            {hasTitle && (
-                                                <Panel>
-                                                    <form.Field
-                                                        name="title"
-                                                        validators={{
-                                                            onChange: ({ value }) =>
-                                                                value.trim() === ''
-                                                                    ? t(
-                                                                          'entries.titleRequired'
-                                                                      )
-                                                                    : undefined,
-                                                        }}
-                                                    >
-                                                        {(field) => (
-                                                            <div className="am-field">
-                                                                <label
-                                                                    className="am-field-label"
-                                                                    htmlFor="entry-title"
-                                                                >
-                                                                    {t(
-                                                                        'entries.titleField'
-                                                                    )}{' '}
-                                                                    <span className="am-field-required">
-                                                                        *
-                                                                    </span>
-                                                                </label>
-                                                                <Input
-                                                                    id="entry-title"
-                                                                    type="text"
-                                                                    value={
-                                                                        field.state.value
-                                                                    }
-                                                                    onChange={(e) =>
-                                                                        field.handleChange(
-                                                                            e.target.value
-                                                                        )
-                                                                    }
-                                                                    onBlur={
-                                                                        field.handleBlur
-                                                                    }
-                                                                    required
-                                                                />
-                                                                {field.state.meta.errors
-                                                                    .length > 0 && (
-                                                                    <p className="am-field-error">
-                                                                        {
-                                                                            field.state
-                                                                                .meta
-                                                                                .errors[0]
-                                                                        }
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </form.Field>
-                                                </Panel>
-                                            )}
-
-                                            <form.Field name="fields">
-                                                {(f) => (
-                                                    <EntryFieldColumn
-                                                        nodes={main}
-                                                        values={f.state.value}
-                                                        onChange={(name, value) =>
-                                                            f.handleChange({
-                                                                ...f.state.value,
-                                                                [name]: value,
-                                                            })
-                                                        }
-                                                        disabled={isReadOnly}
-                                                    />
-                                                )}
-                                            </form.Field>
-                                        </Stack>
-
-                                        <Stack gap={8}>
-                                            {hasStatuses && !isStaged && (
-                                                <form.Field name="status">
-                                                    {(statusField) => (
-                                                        <form.Field name="publishedAt">
-                                                            {(publishedAtField) => (
-                                                                <PublishPanel
-                                                                    status={
-                                                                        statusField.state
-                                                                            .value
-                                                                    }
-                                                                    publishedAt={
-                                                                        publishedAtField
-                                                                            .state.value
-                                                                    }
-                                                                    entryPublishedAt={
-                                                                        entry?.publishedAt
-                                                                    }
-                                                                    onStatusChange={(s) =>
-                                                                        statusField.handleChange(
-                                                                            s
-                                                                        )
-                                                                    }
-                                                                    onPublishedAtChange={(
-                                                                        v
-                                                                    ) =>
-                                                                        publishedAtField.handleChange(
-                                                                            v
-                                                                        )
-                                                                    }
-                                                                    readOnly={isReadOnly}
-                                                                />
-                                                            )}
-                                                        </form.Field>
-                                                    )}
-                                                </form.Field>
-                                            )}
-
-                                            {hasSlug && (
-                                                <form.Field name="slug">
-                                                    {(field) => (
-                                                        <Panel
-                                                            title={t('entries.slugPanel')}
-                                                        >
-                                                            <div className="am-field">
-                                                                <Input
-                                                                    id="entry-slug"
-                                                                    type="text"
-                                                                    value={
-                                                                        field.state.value
-                                                                    }
-                                                                    onChange={(e) =>
-                                                                        field.handleChange(
-                                                                            e.target.value
-                                                                        )
-                                                                    }
-                                                                    onBlur={
-                                                                        field.handleBlur
-                                                                    }
-                                                                    pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
-                                                                />
-                                                            </div>
-                                                        </Panel>
-                                                    )}
-                                                </form.Field>
-                                            )}
-
-                                            <form.Field name="fields">
-                                                {(f) => (
-                                                    <EntryFieldColumn
-                                                        nodes={sidebar}
-                                                        values={f.state.value}
-                                                        onChange={(name, value) =>
-                                                            f.handleChange({
-                                                                ...f.state.value,
-                                                                [name]: value,
-                                                            })
-                                                        }
-                                                        disabled={isReadOnly}
-                                                    />
-                                                )}
-                                            </form.Field>
-                                            {hasVersioning && !isStaged && (
-                                                <Panel>
-                                                    {versionCount > 0 ? (
-                                                        <Link
-                                                            to={entryVersionsPath(
-                                                                basePath,
-                                                                id,
-                                                                locale
-                                                            )}
-                                                            className="am-link am-text-sm"
-                                                        >
-                                                            {t('versions.revisionsLink', {
-                                                                count: versionCount,
-                                                            })}
-                                                        </Link>
-                                                    ) : (
-                                                        <span className="am-text-sm am-text-muted">
-                                                            {t('versions.noRevisionsYet')}
-                                                        </span>
-                                                    )}
-                                                </Panel>
-                                            )}
-                                        </Stack>
-                                    </FormLayoutContent>
-                                </FormLayout>
-                            </FieldWarningsProvider>
-                        </FieldErrorsProvider>
-                    </FieldValidationProvider>
+                    <EditBanners
+                        controller={controller}
+                        title={controller.canonical?.title ?? config.single}
+                    />
+                    <EntryFormLayout
+                        state={controller}
+                        main={
+                            <>
+                                {hasTitle && (
+                                    <TitleField form={form} disabled={isReadOnly} />
+                                )}
+                                <FieldColumn
+                                    form={form}
+                                    nodes={main}
+                                    disabled={isReadOnly}
+                                />
+                            </>
+                        }
+                        sidebar={
+                            <>
+                                {hasStatuses && !isStaged && (
+                                    <StatusField
+                                        form={form}
+                                        savedPublishedAt={entry?.publishedAt}
+                                        disabled={isReadOnly}
+                                    />
+                                )}
+                                {hasSlug && (
+                                    <SlugField form={form} disabled={isReadOnly} />
+                                )}
+                                <FieldColumn
+                                    form={form}
+                                    nodes={sidebar}
+                                    disabled={isReadOnly}
+                                />
+                                {capabilities.versioning && !isStaged && (
+                                    <VersionsLink controller={controller} />
+                                )}
+                            </>
+                        }
+                    />
                 </PageContent>
             </Page>
         </EntryNamespaceProvider>

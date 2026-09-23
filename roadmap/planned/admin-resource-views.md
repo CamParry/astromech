@@ -42,16 +42,16 @@ seed the input through `formatDatetimeForInput`.
 - **Mutations.** Each resource module (`hooks/entries.ts`, `globals.ts`,
   `media.ts`, `users.ts`, `notifications.ts`) exports one
   `xMutations(address)` factory of TanStack `mutationOptions`, whose `meta`
-  names the keys it invalidates and its toasts. `useAdminMutation(options,
-callbacks)` runs any of them: it invalidates `meta.invalidates` and toasts.
+  names the keys it invalidates and its toasts. `useAdminMutation` runs any
+  of them: it invalidates `meta.invalidates` and toasts.
   Bulk restore sends one `restore` with every id. A staged change that already
   exists resolves the create as `null`, so both callers open it without an
   `onConflict` branch.
 - **`useAdminEntryType(type)` and `useAdminGlobal(id)`** (`hooks/`) read
   `AdminConfig.entryTypes`/`globals`, the i18n namespace, the base path and
   `can(action)` from `entryPermission`/`globalPermission`. The pages take a
-  type or global id; the route files pass their params (the plugin routes
-  qualify theirs) and prefetch the same query options.
+  type or global id; the route files pass their params, and the plugin
+  routes qualify theirs.
 - **`useEditController({ resource, id, locale, staged })`** loads the
   canonical row or its staged change, builds the form values and the one
   `update` payload (status only on a canonical write), and exposes staging
@@ -78,9 +78,11 @@ callbacks)` runs any of them: it invalidates `meta.invalidates` and toasts.
 - [x] `useAdminEntryType(typeId)` replaces `EntriesBinding` and
       `GlobalsBinding` (with `useAdminGlobal(id)`); the core and plugin route
       files only map params, and an unknown id renders `NotFoundPage`.
-- [ ] `useEditController(resource, target)`: loading canonical or staged, one
+- [x] `useEditController(resource, target)`: loading canonical or staged, one
       form codec, one `update` carrying status, staging create, merge and
-      discard. Shared `StagingControls` and `PublishPanel`.
+      discard. Shared `StagingControls` and `PublishPanel`. The resource is
+      `entryEditResource` or `globalEditResource`; the staged entry view shows
+      Discard as a button, as the global one did, instead of a menu item.
 - [ ] `useListController` for the entries list; users and media adopt it where
       the shape matches.
 - [ ] The five large pages become compositions of the above.

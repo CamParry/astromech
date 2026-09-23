@@ -1,0 +1,29 @@
+.am-banner {
+    display: flex;
+    gap: calc(var(--am-space) * 3);
+    align-items: center;
+    padding: calc(var(--am-space) * 3) calc(var(--am-space) * 4);
+    margin-bottom: calc(var(--am-space) * 4);
+    font-size: 0.875rem;
+    border: 1px solid var(--am-color-border);
+    border-radius: var(--am-radius-md);
+}
+
+.am-banner-info {
+    color: var(--am-color-text-default);
+    background-color: var(--am-color-bg-muted);
+}
+
+.am-banner-error {
+    flex-direction: column;
+    align-items: flex-start;
+    color: var(--am-color-danger-emphasis);
+    background-color: var(--am-color-danger-bg);
+    border-color: var(--am-color-danger-border);
+}
+
+.am-banner .am-link {
+    display: inline-flex;
+    gap: var(--am-space);
+    align-items: center;
+}

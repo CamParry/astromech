@@ -27,27 +27,8 @@ export function globalVersionsQueryOptions(key: string, locale: string) {
     });
 }
 
-/**
- * One locale of one global. `null` is loaded-and-empty — a declared global
- * nobody has saved yet — not an error, so the edit page renders a blank form
- * whose first save creates the row.
- */
-export function useGlobal(key: string, locale: string) {
-    return useQuery(globalQueryOptions(key, locale));
-}
-
 export function useGlobalVersions(key: string, locale: string, enabled = true) {
     return useQuery({ ...globalVersionsQueryOptions(key, locale), enabled });
-}
-
-/** This locale's staged change, or null. */
-export function useGetStagedGlobal(key: string, locale: string, enabled = true) {
-    const keys = queryKeys.globals;
-    return useQuery({
-        queryKey: keys.staged(key, locale),
-        queryFn: () => astromechUntypedClient.globals.getStaged({ key, locale }),
-        enabled,
-    });
 }
 
 /** Every write the admin makes to one global, each invalidating the global's keys. */

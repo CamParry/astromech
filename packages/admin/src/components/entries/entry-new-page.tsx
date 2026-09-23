@@ -8,7 +8,7 @@ import type { Entry, EntryUpdateData } from 'astromech';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { astromechUntypedClient } from 'astromech/fetch';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { entryMutations, useEntriesQuery } from '../../hooks/entries';
@@ -20,32 +20,20 @@ import { EntryNamespaceProvider } from '../../i18n/entry-namespace';
 import { resolveForm } from '../../rendering/resolve';
 import { defaultContentLocale } from '../../utilities/content-locale';
 import { entryEditPath, entryTypeBasePath } from '../../utilities/entry-admin-path';
-import {
-    FieldErrorsProvider,
-    FieldWarningsProvider,
-} from '../fields/field-errors-context';
-import { FieldValidationProvider } from '../fields/field-validation-context';
 import { NotFoundPage } from '../layout/not-found-page';
 import { Breadcrumb } from '../ui/breadcrumb';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
 import { Modal } from '../ui/modal';
-import {
-    ButtonGroup,
-    FormLayout,
-    FormLayoutContent,
-    Page,
-    PageContent,
-    PageHeader,
-    PageTitle,
-    Stack,
-} from '../ui/page';
-import { Panel } from '../ui/panel';
+import { ButtonGroup, Page, PageContent, PageHeader, PageTitle, Stack } from '../ui/page';
 import { Select } from '../ui/select';
 import { useToast } from '../ui/toast';
-import { EntryFieldColumn } from './entry-fields-renderer';
-import { EntryFormErrors } from './entry-form-errors';
-import { PublishPanel } from './publish-panel';
+import {
+    EntryFormLayout,
+    FieldColumn,
+    SlugField,
+    StatusField,
+    TitleField,
+} from './entry-form-fields';
 
 type CreateMode = 'translate' | 'blank-in-entry' | 'standalone';
 
@@ -203,28 +191,44 @@ export function EntryNewPage({
     type: string;
     /** Requested locale from the route search params; defaults to default locale. */
     requestedLocale: string | undefined;
-}): React.ReactElement {
+}): React.ReactElement | null {
     const entryType = useAdminEntryType(type);
     if (entryType === null) return <NotFoundPage path={entryTypeBasePath(type)} />;
-    return <EntryNewBody entryType={entryType} requestedLocale={requestedLocale} />;
+    if (!entryType.can('create')) return <CreateForbidden to={entryType.basePath} />;
+    return (
+        <EntryNewBody
+            entryType={entryType}
+            requestedLocale={requestedLocale ?? defaultContentLocale()}
+        />
+    );
+}
+
+/** Send a user who may not create back to the list, saying why. */
+function CreateForbidden({ to }: { to: string }): null {
+    const navigate = useNavigate();
+    const { toast } = useToast();
+    const { t } = useTranslation();
+    useEffect(() => {
+        toast({ message: t('permissions.forbidden'), variant: 'error' });
+        void navigate({ to });
+    }, []);
+    return null;
 }
 
 function EntryNewBody({
     entryType,
-    requestedLocale: requestedLocaleProp,
+    requestedLocale,
 }: {
     entryType: UseAdminEntryTypeResult;
-    requestedLocale: string | undefined;
+    requestedLocale: string;
 }): React.ReactElement {
-    const { type, config, basePath, namespace, can } = entryType;
+    const { type, config, basePath, namespace } = entryType;
     const navigate = useNavigate();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const canCreate = can('create');
+    const queryClient = useQueryClient();
 
-    const capabilities = config.capabilities;
-    const hasI18n = capabilities?.translatable === true;
-    const requestedLocale = requestedLocaleProp ?? defaultContentLocale();
+    const hasI18n = config.capabilities.translatable;
     const isNonDefaultLocale = hasI18n && requestedLocale !== defaultContentLocale();
 
     // For non-default-locale creates, hold the entry this locale is being added
@@ -232,44 +236,20 @@ function EntryNewBody({
     const [chosenEntryId, setChosenEntryId] = useState<string | null>(null);
     const [modalOpen, setModalOpen] = useState<boolean>(isNonDefaultLocale);
 
-    const resolvedForm = resolveForm(config);
-    const { hasTitle, hasSlug, hasStatuses, main, sidebar } = resolvedForm;
-    // The two columns together ARE the full field tree the client validates.
-    // Derived above the permission bail-out so the memo keeps its hook slot.
+    const { hasTitle, hasSlug, hasStatuses, main, sidebar } = resolveForm(config);
+    // The two columns together are the full field tree the client validates.
     const fieldDefinitions = React.useMemo(() => [...main, ...sidebar], [main, sidebar]);
-    const queryClient = useQueryClient();
-    const single = config.single;
+
     const createTranslation = useAdminMutation(entryMutations(type).createTranslation, {
         onSuccess: (entry) => handleCreated(entry),
     });
 
-    if (!canCreate) {
-        toast({
-            message: t('permissions.forbidden'),
-            variant: 'error',
-        });
-        void navigate({ to: basePath });
-        return <></>;
-    }
-    const plural = config.plural;
-
-    const {
-        form,
-        saveMutation,
-        handleSave,
-        handlePublish,
-        fieldErrors,
-        fieldWarnings,
-        formErrors,
-        fieldValidation,
-    } = useEntryForm({
+    const entryForm = useEntryForm({
         fieldDefinitions,
         operation: 'create',
-        namespace: namespace,
+        namespace,
         hasSlug,
         hasStatuses,
-        // Adding a locale to an existing entry is an `update` on that locale,
-        // which creates the content row; a new entry is a `create`.
         saveFn: (payload) => writeEntry(payload),
         publishFn: (payload) => writeEntry(payload),
         onSuccess: (entry) => {
@@ -277,14 +257,22 @@ function EntryNewBody({
             handleCreated(entry);
         },
     });
+    const { form, saveMutation, handleSave, handlePublish } = entryForm;
 
     function handleCreated(entry: Entry): void {
-        toast({ message: t('entries.created', { name: single }), variant: 'success' });
+        toast({
+            message: t('entries.created', { name: config.single }),
+            variant: 'success',
+        });
         void navigate({
             to: entryEditPath(basePath, entry.id, { locale: entry.locale }),
         });
     }
 
+    /**
+     * Adding a locale to an existing entry is an `update` on that locale, which
+     * creates the content row; a new entry is a `create`.
+     */
     function writeEntry(payload: EntryUpdateData): Promise<Entry> {
         if (chosenEntryId !== null) {
             return astromechUntypedClient.entries.update({
@@ -300,26 +288,6 @@ function EntryNewBody({
         });
     }
 
-    function handleModalCancel(): void {
-        void navigate({ to: basePath });
-    }
-
-    function handleChooseStandalone(): void {
-        setChosenEntryId(null);
-        setModalOpen(false);
-    }
-
-    function handleChooseBlankInEntry(sourceId: string): void {
-        setChosenEntryId(sourceId);
-        setModalOpen(false);
-    }
-
-    function handleChooseTranslate(source: Entry): void {
-        // Add the requested locale to the source entry; the missing row
-        // inherits the source's own columns.
-        createTranslation.mutate({ id: source.id, locale: requestedLocale });
-    }
-
     return (
         <EntryNamespaceProvider namespace={namespace}>
             <Page>
@@ -329,17 +297,29 @@ function EntryNewBody({
                         type={type}
                         locale={requestedLocale}
                         defaultLocale={adminConfig.defaultLocale}
-                        onCancel={handleModalCancel}
-                        onChooseStandalone={handleChooseStandalone}
-                        onChooseBlankInEntry={handleChooseBlankInEntry}
-                        onChooseTranslate={handleChooseTranslate}
+                        onCancel={() => void navigate({ to: basePath })}
+                        onChooseStandalone={() => {
+                            setChosenEntryId(null);
+                            setModalOpen(false);
+                        }}
+                        onChooseBlankInEntry={(sourceId) => {
+                            setChosenEntryId(sourceId);
+                            setModalOpen(false);
+                        }}
+                        // The missing row inherits the source's own columns.
+                        onChooseTranslate={(source) =>
+                            createTranslation.mutate({
+                                id: source.id,
+                                locale: requestedLocale,
+                            })
+                        }
                     />
                 )}
                 <PageHeader>
                     <PageTitle>
                         <Breadcrumb
                             items={[
-                                { label: plural, to: basePath },
+                                { label: config.plural, to: basePath },
                                 { label: t('entries.create') },
                             ]}
                         />
@@ -378,192 +358,27 @@ function EntryNewBody({
                 </PageHeader>
 
                 <PageContent>
-                    <EntryFormErrors messages={formErrors} />
-                    <FieldValidationProvider value={fieldValidation}>
-                        <FieldErrorsProvider value={fieldErrors}>
-                            <FieldWarningsProvider value={fieldWarnings}>
-                                <FormLayout>
-                                    <FormLayoutContent>
-                                        {/* Main column */}
-                                        <Stack gap={8}>
-                                            {/* Title + optional slug */}
-                                            {(hasTitle || hasSlug) && (
-                                                <Panel>
-                                                    {hasTitle && (
-                                                        <form.Field
-                                                            name="title"
-                                                            validators={{
-                                                                onChange: ({ value }) =>
-                                                                    value.trim() === ''
-                                                                        ? t(
-                                                                              'entries.titleRequired'
-                                                                          )
-                                                                        : undefined,
-                                                            }}
-                                                        >
-                                                            {(field) => (
-                                                                <div className="am-field">
-                                                                    <label
-                                                                        className="am-field-label"
-                                                                        htmlFor="entry-title"
-                                                                    >
-                                                                        {t(
-                                                                            'entries.titleField'
-                                                                        )}{' '}
-                                                                        <span className="am-field-required">
-                                                                            *
-                                                                        </span>
-                                                                    </label>
-                                                                    <Input
-                                                                        id="entry-title"
-                                                                        type="text"
-                                                                        value={
-                                                                            field.state
-                                                                                .value
-                                                                        }
-                                                                        onChange={(e) =>
-                                                                            field.handleChange(
-                                                                                e.target
-                                                                                    .value
-                                                                            )
-                                                                        }
-                                                                        onBlur={
-                                                                            field.handleBlur
-                                                                        }
-                                                                        placeholder={`${single} title`}
-                                                                        required
-                                                                    />
-                                                                    {field.state.meta
-                                                                        .errors.length >
-                                                                        0 && (
-                                                                        <p className="am-field-error">
-                                                                            {
-                                                                                field
-                                                                                    .state
-                                                                                    .meta
-                                                                                    .errors[0]
-                                                                            }
-                                                                        </p>
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                        </form.Field>
-                                                    )}
-
-                                                    {hasSlug && (
-                                                        <form.Field name="slug">
-                                                            {(field) => (
-                                                                <div
-                                                                    className="am-field"
-                                                                    style={{
-                                                                        marginTop: '1rem',
-                                                                    }}
-                                                                >
-                                                                    <label
-                                                                        className="am-field-label"
-                                                                        htmlFor="entry-slug"
-                                                                    >
-                                                                        {t(
-                                                                            'entries.slugField'
-                                                                        )}
-                                                                    </label>
-                                                                    <Input
-                                                                        id="entry-slug"
-                                                                        type="text"
-                                                                        value={
-                                                                            field.state
-                                                                                .value
-                                                                        }
-                                                                        onChange={(e) =>
-                                                                            field.handleChange(
-                                                                                e.target
-                                                                                    .value
-                                                                            )
-                                                                        }
-                                                                        onBlur={
-                                                                            field.handleBlur
-                                                                        }
-                                                                        placeholder="auto-generated-from-title"
-                                                                        pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
-                                                                    />
-                                                                </div>
-                                                            )}
-                                                        </form.Field>
-                                                    )}
-                                                </Panel>
-                                            )}
-
-                                            <form.Field name="fields">
-                                                {(f) => (
-                                                    <EntryFieldColumn
-                                                        nodes={main}
-                                                        values={f.state.value}
-                                                        onChange={(name, value) =>
-                                                            f.handleChange({
-                                                                ...f.state.value,
-                                                                [name]: value,
-                                                            })
-                                                        }
-                                                    />
-                                                )}
-                                            </form.Field>
-                                        </Stack>
-
-                                        {/* Sidebar column */}
-                                        <Stack gap={8}>
-                                            {hasStatuses && (
-                                                <form.Field name="status">
-                                                    {(statusField) => (
-                                                        <form.Field name="publishedAt">
-                                                            {(publishedAtField) => (
-                                                                <PublishPanel
-                                                                    status={
-                                                                        statusField.state
-                                                                            .value
-                                                                    }
-                                                                    publishedAt={
-                                                                        publishedAtField
-                                                                            .state.value
-                                                                    }
-                                                                    onStatusChange={(s) =>
-                                                                        statusField.handleChange(
-                                                                            s
-                                                                        )
-                                                                    }
-                                                                    onPublishedAtChange={(
-                                                                        v
-                                                                    ) =>
-                                                                        publishedAtField.handleChange(
-                                                                            v
-                                                                        )
-                                                                    }
-                                                                />
-                                                            )}
-                                                        </form.Field>
-                                                    )}
-                                                </form.Field>
-                                            )}
-
-                                            <form.Field name="fields">
-                                                {(f) => (
-                                                    <EntryFieldColumn
-                                                        nodes={sidebar}
-                                                        values={f.state.value}
-                                                        onChange={(name, value) =>
-                                                            f.handleChange({
-                                                                ...f.state.value,
-                                                                [name]: value,
-                                                            })
-                                                        }
-                                                    />
-                                                )}
-                                            </form.Field>
-                                        </Stack>
-                                    </FormLayoutContent>
-                                </FormLayout>
-                            </FieldWarningsProvider>
-                        </FieldErrorsProvider>
-                    </FieldValidationProvider>
+                    <EntryFormLayout
+                        state={entryForm}
+                        main={
+                            <>
+                                {hasTitle && (
+                                    <TitleField
+                                        form={form}
+                                        placeholder={`${config.single} title`}
+                                    />
+                                )}
+                                <FieldColumn form={form} nodes={main} />
+                            </>
+                        }
+                        sidebar={
+                            <>
+                                {hasStatuses && <StatusField form={form} />}
+                                {hasSlug && <SlugField form={form} />}
+                                <FieldColumn form={form} nodes={sidebar} />
+                            </>
+                        }
+                    />
                 </PageContent>
             </Page>
         </EntryNamespaceProvider>

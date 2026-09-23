@@ -24,27 +24,13 @@ import { userMutations, useUser } from '../../hooks/users';
 import { EntryNamespaceProvider, labelNamespace } from '../../i18n/entry-namespace';
 import { defaultContentLocale, localeOptions } from '../../utilities/content-locale';
 import { formatDatetime } from '../../utilities/dates';
-import { EntryFieldColumn } from '../entries/entry-fields-renderer';
-import { EntryFormErrors } from '../entries/entry-form-errors';
-import {
-    FieldErrorsProvider,
-    FieldWarningsProvider,
-} from '../fields/field-errors-context';
-import { FieldValidationProvider } from '../fields/field-validation-context';
+import { EntryFormLayout, FieldColumn } from '../entries/entry-form-fields';
 import { Avatar } from '../ui/avatar';
 import { Breadcrumb } from '../ui/breadcrumb';
 import { Button } from '../ui/button';
 import { useConfirm } from '../ui/confirm';
 import { Input } from '../ui/input';
-import {
-    FormLayout,
-    Page,
-    PageContent,
-    PageHeader,
-    PageLoading,
-    PageTitle,
-    Stack,
-} from '../ui/page';
+import { Page, PageContent, PageHeader, PageLoading, PageTitle } from '../ui/page';
 import { Panel } from '../ui/panel';
 import { Select } from '../ui/select';
 import { UserVersionsPanel } from './user-versions-panel';
@@ -153,15 +139,7 @@ function UserEditBody({
         });
     }
 
-    const {
-        form,
-        saveMutation,
-        handleSave,
-        fieldErrors,
-        fieldWarnings,
-        formErrors,
-        fieldValidation,
-    } = useEntryForm<User>({
+    const entryForm = useEntryForm<User>({
         fieldDefinitions,
         operation: 'update',
         namespace,
@@ -175,6 +153,7 @@ function UserEditBody({
         saveFn: writeUser,
         publishFn: writeUser,
     });
+    const { form, saveMutation, handleSave } = entryForm;
 
     // `form.state` is a plain getter — reading it in render never re-renders on
     // change, which left Save permanently disabled. Subscribe to the store.
@@ -196,288 +175,253 @@ function UserEditBody({
                 </PageHeader>
 
                 <PageContent>
-                    <EntryFormErrors messages={formErrors} />
-                    <FieldValidationProvider value={fieldValidation}>
-                        <FieldErrorsProvider value={fieldErrors}>
-                            <FieldWarningsProvider value={fieldWarnings}>
-                                <FormLayout>
-                                    {/* Main column */}
-                                    <Stack gap={8}>
-                                        <Panel title={t('users.profilePanel')}>
-                                            <div
-                                                style={{
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    gap: '1.25rem',
-                                                }}
-                                            >
-                                                <form.Field
-                                                    name="title"
-                                                    validators={{
-                                                        onChange: ({ value }) =>
-                                                            value.trim() === ''
-                                                                ? t('users.nameRequired')
-                                                                : undefined,
-                                                    }}
-                                                >
-                                                    {(field) => (
-                                                        <div className="am-field">
-                                                            <label
-                                                                className="am-field-label"
-                                                                htmlFor="user-name"
-                                                            >
-                                                                {t('users.nameField')}
-                                                            </label>
-                                                            <Input
-                                                                id="user-name"
-                                                                type="text"
-                                                                value={field.state.value}
-                                                                onChange={(e) =>
-                                                                    field.handleChange(
-                                                                        e.target.value
-                                                                    )
-                                                                }
-                                                                onBlur={field.handleBlur}
-                                                                required
-                                                            />
-                                                            {field.state.meta.errors
-                                                                .length > 0 && (
-                                                                <p className="am-field-error">
-                                                                    {
-                                                                        field.state.meta
-                                                                            .errors[0]
-                                                                    }
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </form.Field>
-
+                    <EntryFormLayout
+                        state={entryForm}
+                        main={
+                            <>
+                                <Panel title={t('users.profilePanel')}>
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '1.25rem',
+                                        }}
+                                    >
+                                        <form.Field
+                                            name="title"
+                                            validators={{
+                                                onChange: ({ value }) =>
+                                                    value.trim() === ''
+                                                        ? t('users.nameRequired')
+                                                        : undefined,
+                                            }}
+                                        >
+                                            {(field) => (
                                                 <div className="am-field">
                                                     <label
                                                         className="am-field-label"
-                                                        htmlFor="user-email"
+                                                        htmlFor="user-name"
                                                     >
-                                                        {t('users.emailField')}
+                                                        {t('users.nameField')}
                                                     </label>
                                                     <Input
-                                                        id="user-email"
-                                                        type="email"
-                                                        value={user.email}
-                                                        readOnly
-                                                        disabled
-                                                        hint={t('users.emailReadonly')}
+                                                        id="user-name"
+                                                        type="text"
+                                                        value={field.state.value}
+                                                        onChange={(e) =>
+                                                            field.handleChange(
+                                                                e.target.value
+                                                            )
+                                                        }
+                                                        onBlur={field.handleBlur}
+                                                        required
                                                     />
-                                                </div>
-
-                                                {canEditRole && (
-                                                    <div className="am-field">
-                                                        <label
-                                                            className="am-field-label"
-                                                            htmlFor="user-role"
-                                                        >
-                                                            {t('users.roleField')}
-                                                        </label>
-                                                        <Select
-                                                            id="user-role"
-                                                            value={role}
-                                                            onValueChange={(v) =>
-                                                                setRole(v ?? '')
-                                                            }
-                                                            options={adminConfig.roles.map(
-                                                                (r) => ({
-                                                                    value: r.slug,
-                                                                    label: r.name,
-                                                                })
-                                                            )}
-                                                        />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </Panel>
-
-                                        {(isTranslatable ||
-                                            fieldDefinitions.length > 0) && (
-                                            <Panel
-                                                {...(fieldDefinitions.length > 0
-                                                    ? { title: t('users.fieldsPanel') }
-                                                    : {})}
-                                            >
-                                                <div
-                                                    style={{
-                                                        display: 'flex',
-                                                        flexDirection: 'column',
-                                                        gap: '1.25rem',
-                                                    }}
-                                                >
-                                                    {isTranslatable && (
-                                                        <div className="am-content-locale">
-                                                            <Select
-                                                                value={locale}
-                                                                onValueChange={(
-                                                                    value
-                                                                ) => {
-                                                                    if (value !== null)
-                                                                        onLocaleChange(
-                                                                            value
-                                                                        );
-                                                                }}
-                                                                options={localeOptions(
-                                                                    user.locales
-                                                                )}
-                                                            />
-                                                            {locale !== user.locale && (
-                                                                <p className="am-text-muted am-text-sm">
-                                                                    {t(
-                                                                        'users.translationFallbackHint',
-                                                                        {
-                                                                            locale: user.locale.toUpperCase(),
-                                                                        }
-                                                                    )}
-                                                                </p>
-                                                            )}
-                                                        </div>
+                                                    {field.state.meta.errors.length >
+                                                        0 && (
+                                                        <p className="am-field-error">
+                                                            {field.state.meta.errors[0]}
+                                                        </p>
                                                     )}
-
-                                                    <form.Field name="fields">
-                                                        {(field) => (
-                                                            <EntryFieldColumn
-                                                                nodes={fieldDefinitions}
-                                                                values={field.state.value}
-                                                                onChange={(name, value) =>
-                                                                    field.handleChange({
-                                                                        ...field.state
-                                                                            .value,
-                                                                        [name]: value,
-                                                                    })
-                                                                }
-                                                                disabled={!canSave}
-                                                            />
-                                                        )}
-                                                    </form.Field>
                                                 </div>
-                                            </Panel>
-                                        )}
+                                            )}
+                                        </form.Field>
 
-                                        {/* `user.locale` is the row that was read:
+                                        <div className="am-field">
+                                            <label
+                                                className="am-field-label"
+                                                htmlFor="user-email"
+                                            >
+                                                {t('users.emailField')}
+                                            </label>
+                                            <Input
+                                                id="user-email"
+                                                type="email"
+                                                value={user.email}
+                                                readOnly
+                                                disabled
+                                                hint={t('users.emailReadonly')}
+                                            />
+                                        </div>
+
+                                        {canEditRole && (
+                                            <div className="am-field">
+                                                <label
+                                                    className="am-field-label"
+                                                    htmlFor="user-role"
+                                                >
+                                                    {t('users.roleField')}
+                                                </label>
+                                                <Select
+                                                    id="user-role"
+                                                    value={role}
+                                                    onValueChange={(v) =>
+                                                        setRole(v ?? '')
+                                                    }
+                                                    options={adminConfig.roles.map(
+                                                        (r) => ({
+                                                            value: r.slug,
+                                                            label: r.name,
+                                                        })
+                                                    )}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                </Panel>
+
+                                {(isTranslatable || fieldDefinitions.length > 0) && (
+                                    <Panel
+                                        {...(fieldDefinitions.length > 0
+                                            ? { title: t('users.fieldsPanel') }
+                                            : {})}
+                                    >
+                                        <div
+                                            style={{
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '1.25rem',
+                                            }}
+                                        >
+                                            {isTranslatable && (
+                                                <div className="am-content-locale">
+                                                    <Select
+                                                        value={locale}
+                                                        onValueChange={(value) => {
+                                                            if (value !== null)
+                                                                onLocaleChange(value);
+                                                        }}
+                                                        options={localeOptions(
+                                                            user.locales
+                                                        )}
+                                                    />
+                                                    {locale !== user.locale && (
+                                                        <p className="am-text-muted am-text-sm">
+                                                            {t(
+                                                                'users.translationFallbackHint',
+                                                                {
+                                                                    locale: user.locale.toUpperCase(),
+                                                                }
+                                                            )}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            <FieldColumn
+                                                form={form}
+                                                nodes={fieldDefinitions}
+                                                disabled={!canSave}
+                                            />
+                                        </div>
+                                    </Panel>
+                                )}
+
+                                {/* `user.locale` is the row that was read:
                                             a locale with no row has no versions to
                                             list. */}
-                                        <UserVersionsPanel
-                                            userId={id}
-                                            locale={user.locale}
-                                            canUpdate={canUpdateUsers()}
-                                        />
-                                    </Stack>
+                                <UserVersionsPanel
+                                    userId={id}
+                                    locale={user.locale}
+                                    canUpdate={canUpdateUsers()}
+                                />
+                            </>
+                        }
+                        sidebar={
+                            <>
+                                <Panel title={t('users.actionsPanel')}>
+                                    {canSave && (
+                                        <Button
+                                            onClick={handleSave}
+                                            loading={saveMutation.isPending}
+                                            disabled={!isDirty || saveMutation.isPending}
+                                        >
+                                            {t('common.save')}
+                                        </Button>
+                                    )}
+                                    {canDeleteUsers() && (
+                                        <Button
+                                            variant="danger"
+                                            onClick={() =>
+                                                confirm({
+                                                    title: t('users.confirmDeleteTitle'),
+                                                    description: t(
+                                                        'users.confirmDeleteMessage',
+                                                        { name: user.name }
+                                                    ),
+                                                    confirmLabel: t('common.delete'),
+                                                    onConfirm: () =>
+                                                        deleteMutation.mutate(id),
+                                                })
+                                            }
+                                            loading={deleteMutation.isPending}
+                                            style={{
+                                                marginTop: canSave ? '0.5rem' : undefined,
+                                            }}
+                                        >
+                                            {t('common.delete')}
+                                        </Button>
+                                    )}
+                                </Panel>
 
-                                    {/* Sidebar column */}
-                                    <Stack gap={8}>
-                                        <Panel title={t('users.actionsPanel')}>
-                                            {canSave && (
-                                                <Button
-                                                    onClick={handleSave}
-                                                    loading={saveMutation.isPending}
-                                                    disabled={
-                                                        !isDirty || saveMutation.isPending
-                                                    }
-                                                >
-                                                    {t('common.save')}
-                                                </Button>
-                                            )}
-                                            {canDeleteUsers() && (
-                                                <Button
-                                                    variant="danger"
-                                                    onClick={() =>
-                                                        confirm({
-                                                            title: t(
-                                                                'users.confirmDeleteTitle'
-                                                            ),
-                                                            description: t(
-                                                                'users.confirmDeleteMessage',
-                                                                { name: user.name }
-                                                            ),
-                                                            confirmLabel:
-                                                                t('common.delete'),
-                                                            onConfirm: () =>
-                                                                deleteMutation.mutate(id),
-                                                        })
-                                                    }
-                                                    loading={deleteMutation.isPending}
-                                                    style={{
-                                                        marginTop: canSave
-                                                            ? '0.5rem'
-                                                            : undefined,
-                                                    }}
-                                                >
-                                                    {t('common.delete')}
-                                                </Button>
-                                            )}
-                                        </Panel>
-
-                                        <Panel title={t('users.metadataPanel')}>
-                                            <div
-                                                style={{
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    gap: '0.75rem',
-                                                }}
-                                            >
+                                <Panel title={t('users.metadataPanel')}>
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '0.75rem',
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.75rem',
+                                                marginBottom: '0.5rem',
+                                            }}
+                                        >
+                                            <Avatar
+                                                name={user.name}
+                                                src={user.image}
+                                                size="md"
+                                            />
+                                            <div>
+                                                <div style={{ fontWeight: 500 }}>
+                                                    {user.name}
+                                                </div>
                                                 <div
                                                     style={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '0.75rem',
-                                                        marginBottom: '0.5rem',
+                                                        fontSize: '0.8125rem',
+                                                        color: 'var(--am-color-text-muted)',
                                                     }}
                                                 >
-                                                    <Avatar
-                                                        name={user.name}
-                                                        src={user.image}
-                                                        size="md"
-                                                    />
-                                                    <div>
-                                                        <div style={{ fontWeight: 500 }}>
-                                                            {user.name}
-                                                        </div>
-                                                        <div
-                                                            style={{
-                                                                fontSize: '0.8125rem',
-                                                                color: 'var(--am-color-text-muted)',
-                                                            }}
-                                                        >
-                                                            {user.email}
-                                                        </div>
-                                                    </div>
+                                                    {user.email}
                                                 </div>
-
-                                                <dl className="am-meta">
-                                                    <div>
-                                                        <dt className="am-meta-label">
-                                                            {t('users.joinedLabel')}
-                                                        </dt>
-                                                        <dd className="am-meta-value">
-                                                            {formatDatetime(
-                                                                user.createdAt
-                                                            )}
-                                                        </dd>
-                                                    </div>
-                                                    <div>
-                                                        <dt className="am-meta-label">
-                                                            {t('users.lastUpdatedLabel')}
-                                                        </dt>
-                                                        <dd className="am-meta-value">
-                                                            {formatDatetime(
-                                                                user.updatedAt
-                                                            )}
-                                                        </dd>
-                                                    </div>
-                                                </dl>
                                             </div>
-                                        </Panel>
-                                    </Stack>
-                                </FormLayout>
-                            </FieldWarningsProvider>
-                        </FieldErrorsProvider>
-                    </FieldValidationProvider>
+                                        </div>
+
+                                        <dl className="am-meta">
+                                            <div>
+                                                <dt className="am-meta-label">
+                                                    {t('users.joinedLabel')}
+                                                </dt>
+                                                <dd className="am-meta-value">
+                                                    {formatDatetime(user.createdAt)}
+                                                </dd>
+                                            </div>
+                                            <div>
+                                                <dt className="am-meta-label">
+                                                    {t('users.lastUpdatedLabel')}
+                                                </dt>
+                                                <dd className="am-meta-value">
+                                                    {formatDatetime(user.updatedAt)}
+                                                </dd>
+                                            </div>
+                                        </dl>
+                                    </div>
+                                </Panel>
+                            </>
+                        }
+                    />
                 </PageContent>
             </Page>
         </EntryNamespaceProvider>
