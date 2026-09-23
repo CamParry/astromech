@@ -157,11 +157,11 @@ describe('GET /media/:id/used-by', () => {
     });
 });
 
-describe('POST /media/upload', () => {
+describe('POST /media', () => {
     async function upload(role: Role = adminRole, file?: File): Promise<Response> {
         const formData = new FormData();
         if (file !== undefined) formData.append('file', file);
-        return app(role).request('/media/upload', { method: 'POST', body: formData });
+        return app(role).request('/media', { method: 'POST', body: formData });
     }
 
     it('stores the file and returns { data: media } with 201', async () => {

@@ -41,7 +41,6 @@ export const isolatedTests = [
     'tests/transport/http/client-address.test.ts',
     'tests/transport/http/client/entries-service.test.ts',
     'tests/transport/http/client/globals-service.test.ts',
-    'tests/transport/http/client/media-upload-path.test.ts',
     'tests/transport/http/client/methods.test.ts',
     'tests/transport/http/routes/app-root.test.ts',
     'tests/transport/http/routes/cron.test.ts',

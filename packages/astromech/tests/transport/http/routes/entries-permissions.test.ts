@@ -132,12 +132,7 @@ describe('every entries route demands one entry action', () => {
                 },
             ],
             ['DELETE /:type/trash', 'delete', '/post/trash', { method: 'DELETE' }],
-            [
-                'DELETE /:type/:id/force',
-                'delete',
-                `/post/${id}/force`,
-                { method: 'DELETE' },
-            ],
+            ['POST /:type/:id/trash', 'delete', `/post/${id}/trash`, json({})],
             ['DELETE /:type/:id', 'delete', `/post/${id}`, { method: 'DELETE' }],
             ['POST /:type/:id/publish', 'publish', `/post/${id}/publish`, json({})],
             ['POST /:type/:id/unpublish', 'publish', `/post/${id}/unpublish`, json({})],

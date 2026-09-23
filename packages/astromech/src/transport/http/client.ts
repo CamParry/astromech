@@ -305,7 +305,7 @@ async function uploadFile(path: string, file: File): Promise<Media> {
 }
 
 const mediaService = restService<MediaService>('media', callRoute, {
-    upload: (params) => uploadFile('/media/upload', (params as { file: File }).file),
+    upload: (params) => uploadFile('/media', (params as { file: File }).file),
     replace: (params) => {
         const { id, file } = params as { id: string; file: File };
         return uploadFile(`/media/${id}/replace`, file);

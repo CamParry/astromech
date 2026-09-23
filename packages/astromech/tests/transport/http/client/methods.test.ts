@@ -195,8 +195,8 @@ const CASES: Case[] = [
         name: 'entries.trash — one id',
         payload: { success: true },
         call: () => client.entries.trash({ type: 'post', id: 'e1' }),
-        url: '/cms/api/entries/post/e1',
-        method: 'DELETE',
+        url: '/cms/api/entries/post/e1/trash',
+        method: 'POST',
         result: undefined,
     },
     {
@@ -212,7 +212,7 @@ const CASES: Case[] = [
         name: 'entries.delete — one id',
         payload: { success: true },
         call: () => client.entries.delete({ type: 'post', id: 'e1' }),
-        url: '/cms/api/entries/post/e1/force',
+        url: '/cms/api/entries/post/e1',
         method: 'DELETE',
         result: undefined,
     },
@@ -585,12 +585,12 @@ describe('every client method builds its request from the route table', () => {
 describe('the multipart media routes', () => {
     const file = (): File => new File(['x'], 'a.png', { type: 'image/png' });
 
-    it('posts an upload as FormData to /media/upload', async () => {
+    it('posts an upload as FormData to /media', async () => {
         stub({ data: media }, 201);
         const result = await client.media.upload({ file: file() });
 
         const request = only();
-        expect(request.url).toBe('/cms/api/media/upload');
+        expect(request.url).toBe('/cms/api/media');
         expect(request.method).toBe('POST');
         expect(request.body).toBeInstanceOf(FormData);
         expect((request.body as FormData).get('file')).toBeInstanceOf(File);

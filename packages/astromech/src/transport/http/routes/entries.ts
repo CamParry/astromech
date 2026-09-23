@@ -3,15 +3,13 @@
  *
  * Every entry type is served here, addressed by the type id the entries
  * service itself uses — bare for a root type, qualified for a plugin type.
- * The routes are rows in `http-routes.ts`; two get a bespoke handler.
+ * The routes are rows in `http-routes.ts`; one gets a bespoke handler.
  */
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { EntryQueryParams, ResolvedEntryType } from '@/types/index';
+import type { EntryQueryParams } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createServices } from '@/app-context/services';
-import { getConfig } from '@/config/registry';
 import { entryCatalogue } from '@/entries/catalogue';
-import { resolveEntryType } from '@/entries/entry-types';
 import { entriesDefinition } from '@/entries/service';
 import { badRequest } from '@/transport/http/middleware/errors';
 import { ENTRIES_ROUTE_SPECS } from './http-routes';
@@ -25,8 +23,7 @@ type Env = { Variables: AuthVariables };
  * factory so tests can mount an isolated instance.
  *
  * Hono matches in registration order, so the cross-type `POST /query` mounts
- * before the table's `POST /:type` would take it, and the table before the
- * bespoke `DELETE /:type/:id` would swallow `DELETE /:type/trash`.
+ * before the table's `POST /:type` would take it.
  */
 export function createEntriesRouter(): OpenAPIHono<Env> {
     const router = new OpenAPIHono<Env>();
@@ -39,7 +36,6 @@ export function createEntriesRouter(): OpenAPIHono<Env> {
         specs: ENTRIES_ROUTE_SPECS,
         missingTarget: missingEntryType,
     });
-    mountTrashOrDelete(router);
     return router;
 }
 
@@ -102,31 +98,6 @@ function mountCrossTypeQuery(router: OpenAPIHono<Env>): void {
                 full,
             })
         );
-    });
-}
-
-/** The soft delete, which the table cannot express. */
-function mountTrashOrDelete(router: OpenAPIHono<Env>): void {
-    // DELETE /entries/:type/:id (soft delete)
-    // Not in the table: the method id is chosen at request time from the type's
-    // `trash` capability — trash it if the type keeps a bin, delete it if not.
-    router.delete('/:type/:id', async (c) => {
-        const { type, id } = c.req.param();
-        const denied = routeAccess(
-            c,
-            entriesDefinition.catalogue.delete.access,
-            { type },
-            missingEntryType
-        );
-        if (denied) return denied;
-
-        const resolved = resolveEntryType(getConfig(), type) as ResolvedEntryType;
-        const { entries } = c.var.ctx;
-        await (resolved.capabilities.trash ? entries.trash : entries.delete)({
-            type,
-            id,
-        });
-        return c.json({ success: true });
     });
 }
 

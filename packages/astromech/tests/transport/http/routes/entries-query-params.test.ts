@@ -219,9 +219,9 @@ describe('the delete routes are resource-level', () => {
             data: { title: 'Beide', slug: 'beide' },
         });
 
-        // A `locale` on the URL is not part of the route's arguments, so it
-        // changes nothing: the whole entry goes.
-        const res = await app().request(`/entries/post/${created.id}/force?locale=de`, {
+        // `entries.delete` takes no `locale`, so one on the URL is dropped by
+        // the method's parse and the whole entry goes.
+        const res = await app().request(`/entries/post/${created.id}?locale=de`, {
             method: 'DELETE',
         });
         expect(res.status).toBe(200);

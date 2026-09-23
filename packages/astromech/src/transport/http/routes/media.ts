@@ -20,10 +20,10 @@ mountRestRoutes(router, {
     specs: MEDIA_ROUTE_SPECS,
 });
 
-// POST /media/upload — bespoke
+// POST /media — bespoke
 // Not in the table: `binaryInput`. The body is multipart and a `File` has no
 // JSON representation, so no contract schema can validate the call.
-router.post('/upload', async (c) => {
+router.post('/', async (c) => {
     const permissions = permissionsFor(c.var.ctx.role);
     if (!permissions.allowsMethod(mediaDefinition.catalogue.upload)) return forbidden(c);
 

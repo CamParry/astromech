@@ -317,15 +317,15 @@ describe('POST /entries/:type/:id/duplicate', () => {
     });
 });
 
-describe('DELETE /entries/:type/:id', () => {
-    it('trashes when the type has the trash capability, returning { success: true }', async () => {
+describe('POST /entries/:type/:id/trash', () => {
+    it('trashes the entry, returning { success: true }', async () => {
         const created = await api.create({
             type: 'post',
             data: { title: 'Bin me', slug: 'bin' },
         });
 
-        const res = await app().request(`/entries/post/${created.id}`, {
-            method: 'DELETE',
+        const res = await app().request(`/entries/post/${created.id}/trash`, {
+            method: 'POST',
         });
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({ success: true });
@@ -334,34 +334,35 @@ describe('DELETE /entries/:type/:id', () => {
         expect(trashed.data.map((e) => e.id)).toEqual([created.id]);
     });
 
-    it('hard-deletes when the type has no trash capability', async () => {
+    it('409s when the type has no trash capability', async () => {
         setupTestConfig(configWithoutTrash());
         const created = await api.create({
             type: 'note',
-            data: { title: 'Gone', slug: 'gone' },
+            data: { title: 'Kept', slug: 'kept' },
         });
 
-        const res = await app().request(`/entries/note/${created.id}`, {
-            method: 'DELETE',
+        const res = await app().request(`/entries/note/${created.id}/trash`, {
+            method: 'POST',
         });
-        expect(res.status).toBe(200);
-        expect(await api.get({ type: 'note', id: created.id, full: true })).toBeNull();
+        expect(res.status).toBe(409);
     });
 });
 
-describe('DELETE /entries/:type/:id/force', () => {
-    it('hard-deletes regardless of the trash capability', async () => {
+describe('DELETE /entries/:type/:id', () => {
+    it('deletes permanently, whether or not the type keeps a trash', async () => {
         const created = await api.create({
             type: 'post',
-            data: { title: 'Force', slug: 'force' },
+            data: { title: 'Gone', slug: 'gone' },
         });
 
-        const res = await app().request(`/entries/post/${created.id}/force`, {
+        const res = await app().request(`/entries/post/${created.id}`, {
             method: 'DELETE',
         });
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({ success: true });
         expect(await api.get({ type: 'post', id: created.id, full: true })).toBeNull();
+        const trashed = await api.query({ type: 'post', trashed: true, full: true });
+        expect(trashed.data).toEqual([]);
     });
 });
 

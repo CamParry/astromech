@@ -64,8 +64,8 @@ export type MountedRoute = HttpRouteSpec & { base: string };
  * Every entry type is served here, addressed by the type id the entries service
  * uses, URL-encoded into the `:type` segment.
  *
- * Two rows are bespoke; `transport/http/routes/entries.ts`
- * records the reason against each handler.
+ * One row is bespoke; `transport/http/routes/entries.ts` records the reason
+ * against its handler.
  */
 export const ENTRIES_ROUTE_SPECS = [
     { verb: 'get', path: '/:type', id: 'entries.query', envelope: 'raw', client: 'none' },
@@ -142,6 +142,12 @@ export const ENTRIES_ROUTE_SPECS = [
         queryArgs: ['locale'],
         client: 'list',
     },
+    {
+        verb: 'post',
+        path: '/:type/:id/trash',
+        id: 'entries.trash',
+        envelope: 'success',
+    },
     { verb: 'post', path: '/:type/:id/restore', id: 'entries.restore' },
     {
         verb: 'post',
@@ -156,19 +162,8 @@ export const ENTRIES_ROUTE_SPECS = [
         id: 'entries.emptyTrash',
         envelope: 'success',
     },
-    {
-        verb: 'delete',
-        path: '/:type/:id',
-        id: 'entries.trash',
-        envelope: 'success',
-        handler: 'bespoke',
-    },
-    {
-        verb: 'delete',
-        path: '/:type/:id/force',
-        id: 'entries.delete',
-        envelope: 'success',
-    },
+    // After `/:type/trash`, which Hono would otherwise match as an id.
+    { verb: 'delete', path: '/:type/:id', id: 'entries.delete', envelope: 'success' },
     {
         verb: 'post',
         path: '/:type/:id/publish',
@@ -333,7 +328,7 @@ export const USERS_ROUTE_SPECS = [
 ] as const satisfies readonly HttpRouteSpec[];
 
 /**
- * `POST /media/upload` and `POST /media/:id/replace` are absent by design: their
+ * `POST /media` and `POST /media/:id/replace` are absent by design: their
  * body is multipart and a `File` has no JSON representation, so there is no
  * schema to document and no body the generic client could build.
  */
