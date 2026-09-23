@@ -116,7 +116,7 @@ export function entryMutations(type: string, name: string = type) {
         }),
         bulkTrash: mutationOptions({
             mutationKey: [...all, 'bulkTrash'],
-            mutationFn: (ids: string[]) => entries.trash({ type, id: ids }),
+            mutationFn: (ids: string[]) => entries.trash({ type, ids }),
             meta: {
                 invalidates,
                 successMessage: 'entries.bulkTrashed',
@@ -125,7 +125,7 @@ export function entryMutations(type: string, name: string = type) {
         }),
         bulkDelete: mutationOptions({
             mutationKey: [...all, 'bulkDelete'],
-            mutationFn: (ids: string[]) => entries.delete({ type, id: ids }),
+            mutationFn: (ids: string[]) => entries.delete({ type, ids }),
             meta: {
                 invalidates,
                 successMessage: 'entries.bulkDeleted',
@@ -134,7 +134,7 @@ export function entryMutations(type: string, name: string = type) {
         }),
         bulkRestore: mutationOptions({
             mutationKey: [...all, 'bulkRestore'],
-            mutationFn: (ids: string[]) => entries.restore({ type, id: ids }),
+            mutationFn: (ids: string[]) => entries.restore({ type, ids }),
             meta: {
                 invalidates,
                 successMessage: 'entries.bulkRestored',
@@ -143,7 +143,7 @@ export function entryMutations(type: string, name: string = type) {
         }),
         bulkPublish: mutationOptions({
             mutationKey: [...all, 'bulkPublish'],
-            mutationFn: (ids: string[]) => entries.publish({ type, id: ids }),
+            mutationFn: (ids: string[]) => entries.publish({ type, ids }),
             meta: {
                 invalidates,
                 successMessage: 'entries.bulkPublished',
@@ -152,7 +152,7 @@ export function entryMutations(type: string, name: string = type) {
         }),
         bulkUnpublish: mutationOptions({
             mutationKey: [...all, 'bulkUnpublish'],
-            mutationFn: (ids: string[]) => entries.unpublish({ type, id: ids }),
+            mutationFn: (ids: string[]) => entries.unpublish({ type, ids }),
             meta: {
                 invalidates,
                 successMessage: 'entries.bulkUnpublished',

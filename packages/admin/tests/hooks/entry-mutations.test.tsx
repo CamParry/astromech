@@ -72,7 +72,7 @@ describe('entryMutations', () => {
 
         await waitFor(() => expect(onSuccess).toHaveBeenCalled());
         expect(restore).toHaveBeenCalledTimes(1);
-        expect(restore).toHaveBeenCalledWith({ type: 'post', id: ['a', 'b', 'c'] });
+        expect(restore).toHaveBeenCalledWith({ type: 'post', ids: ['a', 'b', 'c'] });
         expect(invalidate).toHaveBeenCalledWith({
             queryKey: queryKeys.entries.all('post'),
         });
