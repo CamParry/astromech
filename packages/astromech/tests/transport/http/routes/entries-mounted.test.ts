@@ -13,10 +13,12 @@
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { AstromechConfig, PluginDefinition, Role, User } from '@/types/index';
+import type { AstromechConfig, PluginDefinition, Role } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { seedTestUser, testUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { createAppContext } from '@/app-context/app-context';
 import { noInput } from '@/services/define-service-method';
 import { onError } from '@/transport/http/middleware/errors';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
@@ -46,7 +48,7 @@ function configWithWidgets(): AstromechConfig {
     return { ...makeTestConfig(), plugins: [widgetsPlugin] };
 }
 
-const fakeUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;
+const fakeUser = testUser;
 
 /** The qualified id, URL-encoded for the `:type` path segment. */
 const WIDGET = encodeURIComponent('widgets/widget');
@@ -65,8 +67,7 @@ function mountedApp(role: Role): OpenAPIHono<{ Variables: AuthVariables }> {
     const app = new OpenAPIHono<{ Variables: AuthVariables }>();
     app.onError(onError);
     app.use('/entries/*', async (c, next) => {
-        c.set('user', fakeUser);
-        c.set('role', role);
+        c.set('ctx', createAppContext({ user: fakeUser, role: role }));
         return next();
     });
     app.route('/entries', createEntriesRouter());
@@ -75,7 +76,7 @@ function mountedApp(role: Role): OpenAPIHono<{ Variables: AuthVariables }> {
 
 describe('plugin entry types on the entries router — permission matrix + CRUD', () => {
     beforeEach(async () => {
-        await createTestDb();
+        await seedTestUser(await createTestDb());
         setupTestConfig(configWithWidgets());
     });
 
@@ -255,7 +256,7 @@ describe('plugin entry types on the entries router — permission matrix + CRUD'
 
 describe('composed plugins router — no entries subtree', () => {
     async function freshPluginsRouter() {
-        await createTestDb();
+        await seedTestUser(await createTestDb());
         setupTestConfig(configWithWidgets());
         return createPluginsRouter();
     }

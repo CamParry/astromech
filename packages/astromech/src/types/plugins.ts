@@ -145,7 +145,10 @@ export type PluginContext = Omit<AppContext, 'config' | 'entries' | 'globals'> &
     globals: TypedGlobalsService;
     /** Storage scoped to this plugin — keys are namespaced under `plugin/<alias>/` transparently. */
     storage: PluginStorage;
-    /** Other plugins' service methods — `ctx.plugins.<serviceKey>.<method>(input)`. */
+    /**
+     * Other plugins' service methods, `ctx.plugins.<serviceKey>.<method>(input)`,
+     * each run as this context's user.
+     */
     plugins?: PluginServiceNamespace | undefined;
 };
 

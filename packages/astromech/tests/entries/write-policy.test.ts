@@ -5,7 +5,7 @@
  */
 
 import { roleWith } from '@tests/fixtures';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { contextAs, createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService } from '@/app-context/services';
 import { CapabilityError } from '@/entries/errors';
@@ -40,7 +40,7 @@ describe('publishing through a write, on the scoped handle', () => {
     it('refuses a create that publishes without the publish grant', async () => {
         await expect(
             attempt(() =>
-                scopedServices(writer).entries.create({
+                scopedServices(contextAs(writer)).entries.create({
                     type: 'post',
                     data: { title: 'Live', status: 'published' },
                 })
@@ -58,7 +58,7 @@ describe('publishing through a write, on the scoped handle', () => {
 
         await expect(
             attempt(() =>
-                scopedServices(writer).entries.update({
+                scopedServices(contextAs(writer)).entries.update({
                     type: 'post',
                     id: entry.id,
                     data: { status: 'published' },
@@ -79,7 +79,7 @@ describe('publishing through a write, on the scoped handle', () => {
 
         await expect(
             attempt(() =>
-                scopedServices(writer).entries.duplicate({
+                scopedServices(contextAs(writer)).entries.duplicate({
                     type: 'post',
                     id: entry.id,
                     overrides: { status: 'published' },
@@ -89,7 +89,7 @@ describe('publishing through a write, on the scoped handle', () => {
     });
 
     it('lets a write that does not publish through on the write grant alone', async () => {
-        const entry = await scopedServices(writer).entries.create({
+        const entry = await scopedServices(contextAs(writer)).entries.create({
             type: 'post',
             data: { title: 'Draft' },
         });
@@ -97,7 +97,7 @@ describe('publishing through a write, on the scoped handle', () => {
     });
 
     it('publishes through a write for a role holding the publish grant', async () => {
-        const entry = await scopedServices(publisher).entries.create({
+        const entry = await scopedServices(contextAs(publisher)).entries.create({
             type: 'post',
             data: { title: 'Live', status: 'published' },
         });

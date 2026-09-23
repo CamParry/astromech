@@ -166,7 +166,7 @@ export default defineConfig({
                     branches: 93,
                     statements: 94,
                 },
-                'src/request-context/**': {
+                'src/request-scope/**': {
                     lines: 99,
                     functions: 99,
                     branches: 99,

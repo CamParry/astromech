@@ -5,18 +5,11 @@
  * one entry chunk is visible to the runner reached through another.
  */
 
-import type { DB } from '@/database/types';
-import type { ResolvedConfig, SchedulerDriver } from '@/types/index';
-import type { Kysely } from 'kysely';
+import type { AppContext, SchedulerDriver } from '@/types/index';
 import { interval } from '@/cron/drivers/interval';
 import { isWorkersRuntime } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
 import { createRegistry } from '@/registry';
-
-export type CronContext = {
-    db: Kysely<DB>;
-    config: ResolvedConfig;
-};
 
 export type CronJob = {
     name: string;
@@ -26,7 +19,8 @@ export type CronJob = {
      * re-read on subsequent starts. Keep the field; do not change its type.
      */
     schedule?: string;
-    handler: (ctx: CronContext) => Promise<void>;
+    /** Runs as the system: `ctx` has no user and no role. */
+    handler: (ctx: AppContext) => Promise<void>;
 };
 
 const jobs = createRegistry<CronJob[]>('cronJobs', { required: false });

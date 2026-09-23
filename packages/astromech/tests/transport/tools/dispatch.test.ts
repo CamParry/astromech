@@ -6,6 +6,7 @@
 import type * as appServices from '@/app-context/services';
 import type { ToolDefinition } from '@/transport/tools/dispatch';
 import type {
+    AppContext,
     CoreManifestMethod,
     JsonSchemaObject,
     ManifestMethod,
@@ -14,7 +15,7 @@ import type {
     PluginManifestMethod,
     Role,
 } from '@/types/index';
-import { makeTestConfig, setupTestConfig } from '@tests/harness';
+import { contextAs, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { usersService } from '@/app-context/services';
@@ -111,7 +112,11 @@ function scopedTool(
     manifest: ManifestMethod,
     actingRole: Role | undefined
 ): ToolDefinition {
-    const result = buildScopedDispatch(manifest, actingRole);
+    // The users service is this file's stub, so a call that gets through is seen.
+    const ctx = Object.create(contextAs(actingRole ?? null), {
+        users: { value: usersService },
+    }) as AppContext;
+    const result = buildScopedDispatch(manifest, ctx);
     if (!result.ok) expect.unreachable(`expected a tool, got: ${result.reason}`);
     return result.tool;
 }
@@ -157,7 +162,7 @@ describe('buildScopedDispatch', () => {
 
     it('skips exactly what buildDispatch skips, with the same reason', () => {
         for (const manifest of [binaryMethod, schemalessMethod]) {
-            const scoped = buildScopedDispatch(manifest, role('*'));
+            const scoped = buildScopedDispatch(manifest, contextAs(role('*')));
 
             expect(scoped.ok).toBe(false);
             expect(scoped).toEqual(buildDispatch(manifest));

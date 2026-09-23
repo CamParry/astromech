@@ -19,6 +19,7 @@ import type {
 } from '@/types/index';
 import { buildAiModels } from '@/ai/models';
 import { setAiModels } from '@/ai/registry';
+import { systemAppContext } from '@/app-context/app-context';
 import {
     mediaService,
     notificationsService,
@@ -50,7 +51,7 @@ import { setImageConfig } from '@/media/serving/image/registry';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { createRegistry } from '@/registry';
-import { getCurrentRole, getCurrentUser } from '@/request-context/request-context';
+import { getCurrentRole, getCurrentUser } from '@/request-scope/request-scope';
 import { setStorageDriver } from '@/storage/registry';
 import { createHttpApp } from '@/transport/http/app';
 
@@ -198,9 +199,10 @@ async function build(config: AstromechConfig): Promise<Astromech> {
         getCurrentUser,
         getCurrentRole,
         fetch: async (request: Request): Promise<Response> => http.fetch(request),
-        scheduled: (at?: Date): Promise<void> => onTick(at ?? new Date()),
+        scheduled: (at?: Date): Promise<void> =>
+            onTick(at ?? new Date(), systemAppContext()),
         startScheduler: async (): Promise<void> => {
-            await getSchedulerDriver()?.start(onTick);
+            await getSchedulerDriver()?.start((now) => onTick(now, systemAppContext()));
         },
     };
 }

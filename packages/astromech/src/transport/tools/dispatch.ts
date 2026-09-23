@@ -7,7 +7,7 @@
  */
 
 import type { MethodCaller } from '@/policies/call-method';
-import type { ManifestMethod, Role, ToolDefinition } from '@/types/index';
+import type { AppContext, ManifestMethod, ToolDefinition } from '@/types/index';
 import { confirmMessage } from '@/policies/confirmation';
 
 // The dispatch shapes live in the pure leaf so `types/plugins.ts` can name them.
@@ -51,15 +51,16 @@ export function buildDispatch(manifest: ManifestMethod): DispatchResult {
 }
 
 /**
- * The same dispatch, with `invoke` calling through `scopedServices(role)` so
- * every call is checked against what the role holds. A missing role is allowed
- * nothing, never treated as trusted; that is what `buildDispatch` is for.
+ * The same dispatch, with `invoke` calling through `scopedServices(ctx)` so
+ * every call runs as `ctx` and is checked against what its role holds. A
+ * missing role is allowed nothing, never treated as trusted; that is what
+ * `buildDispatch` is for.
  */
 export function buildScopedDispatch(
     manifest: ManifestMethod,
-    role: Role | null | undefined
+    ctx: AppContext
 ): DispatchResult {
-    return projectTool(manifest, { role });
+    return projectTool(manifest, { ctx });
 }
 
 /** Project a manifest method into a tool whose `invoke` acts for `caller`. */

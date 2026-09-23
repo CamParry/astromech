@@ -23,7 +23,7 @@ export const isolatedTests = [
     'tests/plugins/runtime/plugin-runtime.test.ts',
     'tests/policies/call-method.test.ts',
     'tests/registry.test.ts',
-    'tests/request-context/request-context.test.ts',
+    'tests/request-scope/request-scope.test.ts',
     'tests/entries/create-atomicity.test.ts',
     'tests/entries/duplicate-atomicity.test.ts',
     'tests/entries/restore-atomicity.test.ts',

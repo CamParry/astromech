@@ -22,7 +22,7 @@ const router = new OpenAPIHono<Env>();
 // No method id, and the response is a bare array rather than an envelope.
 router.get('/', (c) => {
     const { entries } = getConfig();
-    const permissions = permissionsFor(c.var.role);
+    const permissions = permissionsFor(c.var.ctx.role);
 
     const meta = Object.entries(entries)
         .filter(([type]) => permissions.allows(entryPermission(type, 'read')))
@@ -49,7 +49,7 @@ router.get('/:type', (c) => {
 
     // Permission before existence, as on every entries route: a 404 an
     // unpermitted caller can read is a type enumeration.
-    if (!permissionsFor(c.var.role).allows(entryPermission(type, 'read'))) {
+    if (!permissionsFor(c.var.ctx.role).allows(entryPermission(type, 'read'))) {
         return forbidden(c);
     }
 

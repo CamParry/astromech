@@ -21,14 +21,18 @@ import type { Kysely } from 'kysely';
 
 /** Everything a service method's handler runs with. */
 export type AppContext = {
-    /** The query handle; a getter, so it joins an open `transaction(fn)`. */
+    /**
+     * The query handle; a getter, so a read inside `transaction(fn)` joins it.
+     * Read it per query: a repository built from a handle read outside the
+     * transaction keeps that handle, and its writes do not join.
+     */
     readonly db: Kysely<DB>;
     config: ResolvedConfig;
     /** The acting user, or null for unauthenticated / system contexts. */
     user: User | null;
     /**
-     * The acting user's role, or null outside a request context. Fixed when the
-     * context is built, and passed straight to `scopedServices`.
+     * The acting user's role, or null for a system context. Fixed when the
+     * context is built; `scopedServices(ctx)` checks calls against it.
      */
     role: Role | null;
     /**
@@ -52,9 +56,9 @@ export type AppContext = {
     /** Env vars (resolved via import.meta.env in Vite/Astro SSR). Never the browser. */
     env: Record<string, string | undefined>;
     /**
-     * Run `event`'s handlers in registration order, replacing the payload with
-     * any non-`undefined` return; a handler throw propagates to the caller
-     * (`DECISIONS.md`).
+     * Run `event`'s handlers in registration order, each as this context,
+     * replacing the payload with any non-`undefined` return; a handler throw
+     * propagates to the caller (`DECISIONS.md`).
      */
     runHook: <E extends HookEvent>(
         event: E,
@@ -62,6 +66,6 @@ export type AppContext = {
     ) => Promise<HookPayloadFor<E>>;
     /** Database maintenance capabilities (feature-detected per driver). Distinct from `db` (the query instance). */
     database: PluginDatabase;
-    /** The method manifest as a dispatch table, already scoped to `role`. */
+    /** The method manifest as a dispatch table, each call made as this context. */
     methods: PluginMethods;
 };

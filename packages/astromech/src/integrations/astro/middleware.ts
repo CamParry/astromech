@@ -8,7 +8,7 @@ import type { MiddlewareHandler } from 'astro';
 import { rawConfig } from 'virtual:astromech/config';
 import { createAstromech } from '@/astromech';
 import { assertAuthSecret } from '@/auth/better-auth';
-import { runWithRequest } from '@/request-context/request-context';
+import { runInRequestScope } from '@/request-scope/request-scope';
 
 export const onRequest: MiddlewareHandler = async (context, next) => {
     // Before the application is created, so a site missing its secret serves
@@ -20,7 +20,7 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
     // what starts the in-process ticker. A no-op on Workers.
     await app.startScheduler();
 
-    return runWithRequest(context.request, () => next());
+    return runInRequestScope({ request: context.request }, () => next());
 };
 
 export default onRequest;

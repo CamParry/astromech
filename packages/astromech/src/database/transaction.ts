@@ -1,6 +1,6 @@
 /**
  * Transaction scope — an `AsyncLocalStorage` boundary holding the open Kysely
- * transaction handle, the same registry-backed store `request-context` uses.
+ * transaction handle, the same registry-backed store `request-scope` uses.
  * `getDb()` reads it first, so every repository joins without being told.
  */
 

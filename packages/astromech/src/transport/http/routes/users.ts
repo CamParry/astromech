@@ -8,7 +8,6 @@ import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { SortDirection, UserQueryParams, UserUpdateData } from '@/types/index';
 import type { Context } from 'hono';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
-import { usersService } from '@/app-context/services';
 import { permissionsFor } from '@/permissions/permissions-for';
 import {
     badRequest,
@@ -87,16 +86,15 @@ function queryArgs(c: Context<Env>): UserQueryParams {
 // Not in the table: self-access. A caller reading its own row passes without
 // `users:read`, which no method contract can state.
 router.get('/:id', async (c) => {
-    const permissions = permissionsFor(c.var.role);
-    const currentUser = c.var.user;
+    const { ctx } = c.var;
     const args = contentArgs(c);
     if (
-        !permissions.allowsMethod(usersDefinition.catalogue.get) &&
-        currentUser.id !== args.id
+        !permissionsFor(ctx.role).allowsMethod(usersDefinition.catalogue.get) &&
+        ctx.user?.id !== args.id
     )
         return forbidden(c);
 
-    const user = await usersService.get(args);
+    const user = await ctx.users.get(args);
     if (!user) return notFound(c, `User '${args.id}' not found`);
     return c.json({ data: user });
 });
@@ -107,9 +105,9 @@ router.get('/:id', async (c) => {
 // input failure is reported under the wire's names, as the table's routes do.
 router.put('/:id', async (c) => {
     const { id, locale } = contentArgs(c);
-    const permissions = permissionsFor(c.var.role);
+    const permissions = permissionsFor(c.var.ctx.role);
     const canUpdateUsers = permissions.allowsMethod(usersDefinition.catalogue.update);
-    const isSelf = c.var.user.id === id;
+    const isSelf = c.var.ctx.user?.id === id;
 
     if (!canUpdateUsers && !isSelf) return forbidden(c);
 
@@ -122,7 +120,7 @@ router.put('/:id', async (c) => {
     if (changesRole && !canUpdateUsers) return forbidden(c);
 
     try {
-        const user = await usersService.update({
+        const user = await c.var.ctx.users.update({
             id,
             ...(locale ? { locale } : {}),
             data: raw as UserUpdateData,

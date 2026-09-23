@@ -14,18 +14,20 @@
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { Role, User } from '@/types/index';
+import type { Role } from '@/types/index';
 import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createFileTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { seedTestUser, testUser } from '@tests/mount-router';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { createAppContext } from '@/app-context/app-context';
 import { entriesService as api } from '@/app-context/services';
 import { onError } from '@/transport/http/middleware/errors';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
 
-const fakeUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;
+const fakeUser = testUser;
 
 function roleWith(permissions: string[]): Role {
     return {
@@ -42,7 +44,7 @@ let dbPath = '';
 beforeEach(async () => {
     dbCounter += 1;
     dbPath = join(tmpdir(), `astromech-staging-http-${process.pid}-${dbCounter}.db`);
-    await createFileTestDb(`file:${dbPath}`);
+    await seedTestUser(await createFileTestDb(`file:${dbPath}`));
 
     const cfg = makeTestConfig();
     if (cfg.entries.post) cfg.entries.post.staging = true; // versioning on + staging on
@@ -64,8 +66,7 @@ function mountedApp(role: Role): OpenAPIHono<{ Variables: AuthVariables }> {
     const app = new OpenAPIHono<{ Variables: AuthVariables }>();
     app.onError(onError);
     app.use('/entries/*', async (c, next) => {
-        c.set('user', fakeUser);
-        c.set('role', role);
+        c.set('ctx', createAppContext({ user: fakeUser, role: role }));
         return next();
     });
     app.route('/entries', createEntriesRouter());

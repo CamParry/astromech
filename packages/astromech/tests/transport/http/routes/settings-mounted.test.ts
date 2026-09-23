@@ -18,6 +18,7 @@ import type { Role, User } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { createAppContext } from '@/app-context/app-context';
 import { settingsService } from '@/app-context/services';
 import { settingsRouter } from '@/transport/http/routes/settings';
 
@@ -36,8 +37,7 @@ function roleWith(permissions: string[]): Role {
 function mountedApp(role: Role): OpenAPIHono<{ Variables: AuthVariables }> {
     const app = new OpenAPIHono<{ Variables: AuthVariables }>();
     app.use('/settings/*', async (c, next) => {
-        c.set('user', fakeUser);
-        c.set('role', role);
+        c.set('ctx', createAppContext({ user: fakeUser, role: role }));
         return next();
     });
     app.route('/settings', settingsRouter);

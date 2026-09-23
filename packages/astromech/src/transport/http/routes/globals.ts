@@ -11,7 +11,6 @@ import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { GlobalsService, ResolvedGlobal } from '@/types/index';
 import type { Context } from 'hono';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
-import { globalsService } from '@/app-context/services';
 import { getConfig } from '@/config/registry';
 import { CapabilityError } from '@/entries/errors';
 import { findGlobal } from '@/globals/internal/global';
@@ -147,7 +146,7 @@ function globalAccess(): (c: Context<Env>, route: RestRoute) => Response | null 
         const key = param(c, 'key');
         const declared = globalsDefinition.catalogue[method];
         const access = resolveAccess(declared.access, { key });
-        if (!permissionsFor(c.var.role).allowsAccess(access)) return forbidden(c);
+        if (!permissionsFor(c.var.ctx.role).allowsAccess(access)) return forbidden(c);
 
         if (!findGlobal(getConfig(), key))
             return notFound(c, `Global '${key}' not found`);
@@ -186,7 +185,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
             full,
             staged,
         });
-        if (!permissionsFor(c.var.role).allowsAccess(access)) return forbidden(c);
+        if (!permissionsFor(c.var.ctx.role).allowsAccess(access)) return forbidden(c);
         if (!global) return notFound(c, `Global '${key}' not found`);
         const refused = stagedFlagDenied(c, global);
         if (refused) return refused;
@@ -195,7 +194,7 @@ function mountBespokeRoutes(router: OpenAPIHono<Env>): void {
         // Called directly, not through the scoped handle: the permission above
         // is the conditional one this route exists for, and the handle's own
         // gate cannot express it.
-        const result = await globalsService.get({
+        const result = await c.var.ctx.globals.get({
             key,
             ...(locale ? { locale } : {}),
             ...(full ? { full: true } : {}),

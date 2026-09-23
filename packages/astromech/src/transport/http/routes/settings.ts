@@ -6,7 +6,6 @@
 import type { RestRoute } from './rest-route';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { settingsService } from '@/app-context/services';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { settingsDefinition } from '@/settings/service';
 import { forbidden, notFound } from '@/transport/http/middleware/errors';
@@ -39,14 +38,14 @@ documentBespokeRoutes(router, settingsDefinition.catalogue, SETTINGS_ROUTE_SPECS
 // re-attaches the path param as `{ data: { key, value } }`.
 router.get('/:key', async (c) => {
     const { key } = c.req.param();
-    const permissions = permissionsFor(c.var.role);
+    const permissions = permissionsFor(c.var.ctx.role);
     if (!permissions.allowsMethod(settingsDefinition.catalogue.get)) return forbidden(c);
 
     // Authenticated admin endpoint (guarded by settings:read): return the
     // full shape so private settings (e.g. plugin pages) are editable. The
     // the Client requests base + per-locale keys separately, so no locale
     // merge is needed here.
-    const value = await settingsService.get({ key, full: true });
+    const value = await c.var.ctx.settings.get({ key, full: true });
     if (value === null) return notFound(c, `Setting '${key}' not found`);
     return c.json({ data: { key, value } });
 });

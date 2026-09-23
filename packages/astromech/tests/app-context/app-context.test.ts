@@ -4,13 +4,15 @@
  */
 
 import type { AppContext, Role, User } from '@/types/index';
-import { describe, expect, it } from 'vitest';
-import { createAppContext, currentAppContext } from '@/app-context/app-context';
+import { describe, expect, it, vi } from 'vitest';
+import {
+    createAppContext,
+    currentAppContext,
+    systemAppContext,
+} from '@/app-context/app-context';
 import { bindCurrent } from '@/app-context/services';
 import { createPluginContext } from '@/plugins/runtime/plugin-runtime';
-import { runWithContext } from '@/request-context/request-context';
-import { defineService } from '@/services/define-service';
-import { defineServiceMethod, noInput } from '@/services/define-service-method';
+import { runInRequestScope } from '@/request-scope/request-scope';
 
 const editor: Role = {
     slug: 'editor',
@@ -48,22 +50,9 @@ const APP_CONTEXT_KEYS = [
     'users',
 ];
 
-type WhoService = {
-    who(): Promise<string | null>;
-};
-
-const who = defineServiceMethod({
-    access: 'public',
-    input: noInput(),
-    mutates: false,
-    handler: async (_input, ctx): Promise<string | null> => ctx.user?.id ?? null,
-});
-
-const whoService = defineService<WhoService>('who', { who });
-
 /** Run `fn` as `user`, the way a request-scoped transport would. */
 function asUser<T>(id: string, fn: () => Promise<T>): Promise<T> {
-    return runWithContext(
+    return runInRequestScope(
         { request: new Request('http://localhost/'), user: { id } as User, role: editor },
         fn
     );
@@ -95,22 +84,28 @@ describe('currentAppContext', () => {
 });
 
 describe('bindCurrent', () => {
-    it('binds each call to the context of the request it is made in', async () => {
-        const service = bindCurrent(whoService);
+    it('calls the service the current request’s context holds', async () => {
+        const get = vi.fn(() => Promise.resolve(null));
+        const app = { users: { get } } as unknown as AppContext;
 
-        expect(await asUser('user-1', () => service.who())).toBe('user-1');
+        await runInRequestScope({ request: new Request('http://localhost/'), app }, () =>
+            bindCurrent('users').get({ id: 'user-1' })
+        );
+        expect(get).toHaveBeenCalledWith({ id: 'user-1' });
     });
 
-    it('binds to the system context outside a request', async () => {
-        const service = bindCurrent(whoService);
-
-        expect(await service.who()).toBeNull();
+    it('binds to the one system context outside a request', async () => {
+        expect(await currentAppContext()).toBe(await currentAppContext());
+        expect(await currentAppContext()).toBe(systemAppContext());
     });
 });
 
 describe('createPluginContext', () => {
     it('is the app context, plus the plugin layer and nothing else', () => {
-        const ctx = createPluginContext(identity, null, editor);
+        const ctx = createPluginContext(
+            identity,
+            createAppContext({ user: null, role: editor })
+        );
 
         expect(Object.keys(ctx).sort()).toEqual(
             [...APP_CONTEXT_KEYS, 'plugin', 'plugins', 'storage'].sort()
@@ -118,15 +113,23 @@ describe('createPluginContext', () => {
     });
 
     it('carries the plugin’s identity and its own config view', () => {
-        const ctx = createPluginContext(identity, null, editor);
+        const ctx = createPluginContext(
+            identity,
+            createAppContext({ user: null, role: editor })
+        );
 
         expect(ctx.plugin).toBe(identity);
         expect(typeof ctx.config.entryTypesWithField).toBe('function');
     });
 
-    it('acts as the user and role it was built for', () => {
+    it('acts as the context it was built over', () => {
         const user = { id: 'user-1' } as User;
-        const ctx = createPluginContext(identity, user, editor, '203.0.113.1');
+        const app = createAppContext({
+            user,
+            role: editor,
+            clientAddress: '203.0.113.1',
+        });
+        const ctx = createPluginContext(identity, app);
 
         expect(ctx.user).toBe(user);
         expect(ctx.role).toBe(editor);

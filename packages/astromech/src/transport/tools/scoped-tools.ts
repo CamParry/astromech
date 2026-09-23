@@ -1,18 +1,18 @@
 /**
- * The tool surface one role reaches: every manifest method it may call, each
+ * The tool surface one context's role reaches: every manifest method it may call, each
  * dispatched through `buildScopedDispatch`. Lives beside `dispatch.ts` because
  * it composes it, and serves the AI tool-loop as well as MCP.
  */
 import type { DispatchResult } from '@/transport/tools/dispatch';
-import type { ManifestMethod, Role, ToolDefinition } from '@/types/index';
+import type { AppContext, ManifestMethod, ToolDefinition } from '@/types/index';
 import { getMethodManifest } from '@/codegen/manifest-registry';
 import { annotateManifest } from '@/policies/annotate-manifest';
 import { filterMethods } from '@/policies/method-filter';
 import { buildScopedDispatch } from '@/transport/tools/dispatch';
 
-/** Build the tool definitions this role reaches, narrowed by the method filter. */
+/** Build the tool definitions `ctx`'s role reaches, narrowed by the method filter. */
 export function buildScopedTools(
-    role: Role | null | undefined,
+    ctx: AppContext,
     options?: { readOnly?: boolean }
 ): ToolDefinition[] {
     const manifest = getMethodManifest();
@@ -27,13 +27,13 @@ export function buildScopedTools(
     // A size reduction, NOT a security measure: the annotation is advisory and
     // `buildScopedDispatch` is what actually refuses. `allowed === null` is an
     // input-derived permission only the scoped handle can decide, so it stays.
-    const permitted = annotateManifest(filtered.methods, role).filter(
+    const permitted = annotateManifest(filtered.methods, ctx.role).filter(
         (method) => method.allowed !== false
     );
 
     const tools: ToolDefinition[] = [];
     for (const method of permitted) {
-        const dispatch = buildScopedDispatch(method, role);
+        const dispatch = buildScopedDispatch(method, ctx);
         if (!dispatch.ok) continue;
         tools.push(dispatch.tool);
     }
@@ -48,9 +48,9 @@ export function buildScopedTools(
  */
 export function resolveScopedMethod(
     id: string,
-    role: Role | null | undefined
+    ctx: AppContext
 ): { method: ManifestMethod; dispatch: DispatchResult } | undefined {
     const method = getMethodManifest()?.methods.find((entry) => entry.id === id);
     if (method === undefined) return undefined;
-    return { method, dispatch: buildScopedDispatch(method, role) };
+    return { method, dispatch: buildScopedDispatch(method, ctx) };
 }

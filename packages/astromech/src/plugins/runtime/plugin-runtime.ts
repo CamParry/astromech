@@ -6,6 +6,7 @@
 
 import type {
     AnyServiceMethod,
+    AppContext,
     HookHandler,
     NotifyInput,
     PluginConfigView,
@@ -16,13 +17,11 @@ import type {
     PluginServiceNamespace,
     ResolvedConfig,
     ResolvedPluginIdentity,
-    Role,
     SettingsService,
     TypedEntriesService,
     TypedGlobalsService,
-    User,
 } from '@/types/index';
-import { createAppContext } from '@/app-context/app-context';
+import { systemAppContext } from '@/app-context/app-context';
 import { registerCronJob } from '@/cron/registry';
 import { kyselyTableKey, registerTableCodec } from '@/database/codec';
 import { clearEmailOverrides, registerEmailOverride } from '@/email/email-overrides';
@@ -39,11 +38,10 @@ import {
     pluginEntryTypes,
     resolvePluginIdentity,
 } from '@/plugins/runtime/plugin-identity';
-import { pluginServices } from '@/plugins/runtime/plugin-services';
+import { pluginServicesFor } from '@/plugins/runtime/plugin-services';
 import { isTable } from '@/plugins/runtime/plugin-tables';
 import { createPluginTrackingRepository } from '@/plugins/runtime/plugin-tracking-repository';
 import { createRegistry } from '@/registry';
-import { getCurrentRole, getCurrentUser } from '@/request-context/request-context';
 import { listAll } from '@/storage/prefix';
 import { getStorageDriver } from '@/storage/registry';
 import { log } from '@/utilities/log';
@@ -114,16 +112,11 @@ export function registerPlugins(defs: PluginDefinition[], config: ResolvedConfig
 
         for (const { event, handler } of def.hooks ?? []) {
             if (!handler) continue;
-            addHook(event, async (payload: unknown) => {
-                const [user, role] = await Promise.all([
-                    getCurrentUser(),
-                    getCurrentRole(),
-                ]);
-                return (handler as HookHandler)(
-                    payload,
-                    createPluginContext(identity, user, role)
-                );
-            });
+            // The hook runs as the call that fired it: its context, with this
+            // plugin's layer over it.
+            addHook(event, (payload: unknown, ctx) =>
+                (handler as HookHandler)(payload, createPluginContext(identity, ctx))
+            );
         }
 
         for (const override of def.emails ?? []) registerEmailOverride(override);
@@ -171,15 +164,15 @@ export async function bootPlugins(defs: PluginDefinition[]): Promise<void> {
             registerCronJob({
                 name: `plugin:${identity.namespace}:${job.name}`,
                 schedule: job.schedule,
-                handler: async () => {
-                    await job.handler(createPluginContext(identity, null, null));
+                handler: async (ctx) => {
+                    await job.handler(createPluginContext(identity, ctx));
                 },
             });
         }
 
         if (def.setup) {
             try {
-                await def.setup(createPluginContext(identity, null, null));
+                await def.setup(createPluginContext(identity, systemAppContext()));
             } catch (error) {
                 throw new Error(
                     `Astromech plugin "${def.package}" setup() failed during boot: ` +
@@ -303,20 +296,16 @@ function makeConfigView(
 }
 
 /**
- * Build the unified PluginContext for a given plugin, acting user and role: the
- * app context, with this plugin's own layer over it. `clientAddress` is
- * HTTP-transport only.
+ * Build the PluginContext for a plugin: `app`, the context of the call it runs
+ * in, with this plugin's own layer over it. It acts as `app`'s user and role.
  */
 export function createPluginContext(
     identity: ResolvedPluginIdentity,
-    user: User | null,
-    role: Role | null,
-    clientAddress?: string | undefined
+    app: AppContext
 ): PluginContext {
     const config = state().config;
     const configView = config ? makeConfigView(config) : makeConfigView(emptyConfig());
     const PREFIX = `plugin/${identity.namespace}/`;
-    const app = createAppContext({ user, role, clientAddress });
 
     const layer = {
         plugin: identity,
@@ -339,7 +328,7 @@ export function createPluginContext(
             return withDefaultSettingsShape(app.settings, 'full');
         },
         get plugins(): PluginServiceNamespace | undefined {
-            return pluginServices;
+            return pluginServicesFor(app);
         },
         notify: (input: NotifyInput) =>
             notify({

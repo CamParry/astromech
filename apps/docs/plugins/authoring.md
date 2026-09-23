@@ -651,6 +651,11 @@ export function createWidgetsRepository(db: PluginContext['db']) {
 const widgets = await createWidgetsRepository(ctx.db).live(20);
 ```
 
+Read `ctx.db` where you query, not once up front. It is a getter that returns
+the open transaction's handle inside `transaction(fn)`, so a repository built
+before the transaction opened keeps the outer handle and its writes do not
+join.
+
 `where` ANDs its keys together: a bare value means `=`, a bare `null` means
 `IS NULL` (omit the key, or pass `undefined`, for "no filter"), and a per-column
 object takes `eq`/`ne`/`in`/`notIn`/`gt`/`gte`/`lt`/`lte`/`like`/`contains`. An
@@ -703,7 +708,9 @@ from `astromech`.
 ### Runtime identity
 
 Hooks, service methods, cron handlers and `setup()` all receive a
-`PluginContext`, which carries the plugin's own resolved identity at
+`PluginContext`. A hook and a service method act as the caller that reached
+them; a cron handler and `setup()` act as the system, with no user and no role.
+The context carries the plugin's own resolved identity at
 `ctx.plugin` — `package`, `namespace`, `serviceKey`, `permissionNamespace`, and
 `version` if declared. Runtime code that needs a namespaced string reads it
 from there instead of importing an identity module:
@@ -813,9 +820,8 @@ description, inputSchema, annotations, permission, permissionDynamic,
 confirmMessage, invoke }`. `invoke` refuses what the role does not hold, and
 `readOnly` drops every mutating method structurally rather than advising against
 it. Wrap each one in whatever your model SDK's tool shape is and call `invoke`
-from its handler. `ctx.role` is the role all of this is checked against — the
-current request's resolved role, or `null` outside a request context (a cron
-tick, a boot-time `setup()`).
+from its handler. `ctx.role` is the role all of this is checked against: the
+caller's role, or `null` for the system (a cron tick, a boot-time `setup()`).
 
 Two fields are easy to skip past. `id` is the manifest method id (`entries.page.publish`)
 and is the only key you may index a tool on — `name` is not unique, because

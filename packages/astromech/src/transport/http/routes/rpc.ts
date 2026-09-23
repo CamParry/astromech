@@ -17,7 +17,7 @@ const router = new OpenAPIHono<Env>();
 
 router.post('/:id', async (c) => {
     const id = c.req.param('id');
-    const resolved = resolveScopedMethod(id, c.var.role);
+    const resolved = resolveScopedMethod(id, c.var.ctx);
     if (resolved === undefined) return notFound(c, `Method '${id}' not found`);
 
     const { dispatch } = resolved;

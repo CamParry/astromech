@@ -39,18 +39,18 @@ entries · globals · media · users · settings ·       the content modules
 auth                                                 beside them: the better-auth wiring, and it may import users
 content                                              the shared content repository, under entries, globals, media and users
 plugins · config · database · storage · fields ·     the modules those build on
-  permissions · hooks · request-context · email ·
+  permissions · hooks · request-scope · email ·
   ai · cron
 types · services · utilities · errors ·              pure leaves
   env.ts · registry.ts
 ```
 
-- **Composition root.** `createAstromech` in `astromech.ts` resolves the config, wires the drivers and composes the content services onto the application instance. `createPluginContext` in `plugins/runtime/plugin-runtime.ts` builds the plugin `ctx` from the same services. `createAppContext` in `app-context/app-context.ts` builds the `AppContext` a method receives, and `app-context/services.ts` binds each content module's definition to the current request with `bindCurrent`.
+- **Composition root.** `createAstromech` in `astromech.ts` resolves the config, wires the drivers and composes the content services onto the application instance. `createPluginContext` in `plugins/runtime/plugin-runtime.ts` builds the plugin `ctx` from the same services. `createAppContext` in `app-context/app-context.ts` builds the `AppContext` a method receives: one per request, and one cached system context (no user, no role) for the CLI, cron jobs and plugin `setup()`. `app-context/services.ts` exposes each content service acting as the current request's context (`bindCurrent`), for callers that hold none.
 - **`exports/`** holds one barrel per published subpath. Only it and `types/index.ts` are barrels; everywhere else an import names the file that declares the symbol.
 - **`integrations/`**: `astro/` is the framework integration (Vite config, virtual modules, injected routes, boot middleware); `cloudflare/` is the runtime integration (the Worker entry and binding lookup). `TERMINOLOGY.md` defines the two kinds.
 - **`codegen/`** generates the site's entry types, the method manifest and the plugin client manifest.
-- **`transport/`** is every way a call arrives: Hono routes in `http/`, the CLI, the dev-only MCP server, and `tools/`, the tool surface MCP and the AI tool-loop share. `cli/` and `mcp/` boot the application themselves, so they sit above the composition root. Transports hold no business logic.
-- **`policies/`** decides what a role may call. `scopedServices(role)` wraps the core services and every plugin method and refuses a call the role lacks; every untrusted caller (REST, RPC, plugin RPC, the AI tool-loop) goes through it. Trusted paths (SSR, hooks, `ctx.plugins`, the CLI, MCP) use the raw services. A caller that names a method by manifest id goes through `callMethod`; REST and plugin RPC call the scoped handle directly.
+- **`transport/`** is every way a call arrives: Hono routes in `http/` (the auth middleware puts the request's `AppContext` on `c.var.ctx`), the CLI, the dev-only MCP server, and `tools/`, the tool surface MCP and the AI tool-loop share. `cli/` and `mcp/` boot the application themselves, so they sit above the composition root. Transports hold no business logic.
+- **`policies/`** decides what a role may call. `scopedServices(ctx)` wraps the context's services and every plugin method, built once per context, and refuses a call `ctx.role` lacks; every untrusted caller (REST, RPC, plugin RPC, the AI tool-loop) goes through it. Trusted paths (SSR, hooks, `ctx.plugins`, the CLI, MCP) use the raw services. A caller that names a method by manifest id goes through `callMethod`; REST and plugin RPC call the scoped handle directly.
 - **`auth/`** holds the better-auth wiring, session resolution, first-run setup and better-auth's own tables. It imports `users` to read the user a session names; `users` never imports `auth`.
 - **The modules below them** hold no business logic. `plugins/` here means the `define*` authoring API and every `runtime/` file except `plugin-runtime.ts`.
 - **Leaves** import only other leaves and third-party packages. A small pure file (a constant, a type, a function over its arguments) may sit inside any module and still be imported from any layer.
@@ -59,7 +59,7 @@ types · services · utilities · errors ·              pure leaves
 
 `entries`, `globals`, `media`, `users`, `settings` and `notifications` own the business verbs. Each has a `service.ts` that assembles its `methods/` into a `defineService` definition, and a `tables.ts`; most also have a `schema.ts` of shared Zod request schemas. A method file exports one `defineServiceMethod` object: access rule, input and output schemas, effect hints, the capability its target must declare, and the handler. The method manifest, `policies/scoped-services.ts` and the REST mount all read that catalogue; `entries/catalogue.ts` fixes it per entry type, because an entry method's permission and schemas vary with the type.
 
-A handler reaches the user, config, hooks and sibling services through its `AppContext`, never the request store, config registry or hook runner (lint enforces this). `defineService.bind()` has already checked the capability its `requires` names on the call's target, and parsed its input. One content module may call another's service, but reaches tables through `database/tables.ts`. A content module does not import the composition root; `media/serving/handler.ts` is the one exception.
+A handler reaches the user, config, hooks and sibling services through its `AppContext`, never the request scope, config registry, hook runner or the current request's bound services (lint enforces this). `defineService.bind()` has already checked the capability its `requires` names on the call's target, and parsed its input. One content module may call another's service, but reaches tables through `database/tables.ts`. A content module does not import the composition root; `media/serving/handler.ts` is the one exception.
 
 `content/` holds the shared repository over `{ table, contentTable, versionsTable }`, the translatable, versioning and visibility helpers, and the relationship-index policy that users and media share.
 
@@ -117,7 +117,7 @@ A plugin is a separate npm package that registers tables, routes, service method
 
 A plugin imports only published `astromech` subpaths that load in plain Node, such as `astromech`, `astromech/fields`, `astromech/columns`, `astromech/email` and `astromech/ui`, and never `@astromech/admin`. The site's `astromech.config.ts` is evaluated twice: once in plain Node at config time (route registration, codegen, migrations) and once in the Vite SSR graph that serves requests. `virtual:` modules exist only in the second. `astromech/ui/app` reaches them, so only a plugin's source-shipped `./admin/*` components may import it, never its entry. `pnpm run check:node-imports` imports core's plugin-facing subpaths and every published plugin's entry in plain Node.
 
-The plugin runtime registers hooks into `hooks/`, the one hook runner. A hook handler's throw propagates to the caller.
+The plugin runtime registers hooks into `hooks/`, the one hook runner. A hook runs as the context that fired it, with the plugin's layer over it, and `ctx.plugins` calls run as the context they are reached from. A hook handler's throw propagates to the caller.
 
 ## The browser boundary
 
@@ -127,7 +127,7 @@ The admin runs in the browser and reaches core through three entries only: `astr
 
 ## Scheduler
 
-Cadence lives in the `_astromech_cron` table, not in deploy config, so an admin edit takes effect on the next tick. A `SchedulerDriver` only triggers a tick; `cron/runner.ts` decides which jobs are due and runs each in its own try/catch. The table is also the lock against concurrent ticks.
+Cadence lives in the `_astromech_cron` table, not in deploy config, so an admin edit takes effect on the next tick. A `SchedulerDriver` only triggers a tick; `cron/runner.ts` decides which jobs are due and runs each in its own try/catch, with the system `AppContext`. The table is also the lock against concurrent ticks.
 
 ## Public entry points
 

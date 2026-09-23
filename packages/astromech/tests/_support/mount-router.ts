@@ -14,7 +14,8 @@ import type { Context, Hono, Next } from 'hono';
 import type { Kysely } from 'kysely';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestUser } from '@tests/harness';
-import { runWithContext } from '@/request-context/request-context';
+import { currentAppContext } from '@/app-context/app-context';
+import { runInRequestScope } from '@/request-scope/request-scope';
 import { onError } from '@/transport/http/middleware/errors';
 
 export type RouteEnv = { Variables: AuthVariables };
@@ -46,14 +47,14 @@ export function mountRouter(
     user: User = testUser
 ): OpenAPIHono<RouteEnv> {
     const app = new OpenAPIHono<RouteEnv>();
-    // Seeds the request scope as well as the context variables: a session-scoped
-    // method takes its subject from the scope, and a pre-filled user is what
-    // keeps a resolve from being attempted.
-    const stub = (c: Context<RouteEnv>, next: Next): Promise<void> => {
-        c.set('user', user);
-        c.set('role', role);
-        return runWithContext({ request: c.req.raw, user, role }, () => next());
-    };
+    // Seeds the request scope with the identity, and `c.var.ctx` with the
+    // context built from it, as `requireAuth` does. A pre-filled user is what
+    // keeps a session resolve from being attempted.
+    const stub = (c: Context<RouteEnv>, next: Next): Promise<void> =>
+        runInRequestScope({ request: c.req.raw, user, role }, async () => {
+            c.set('ctx', await currentAppContext());
+            await next();
+        });
     // The real app's error handler, so a service throw is mapped here exactly as
     // it is in `transport/http/app.ts`.
     app.onError(onError);

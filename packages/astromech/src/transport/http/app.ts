@@ -16,7 +16,7 @@ import { getAuth } from '@/auth/better-auth';
 import { createFirstAdmin, firstAdminSchema, SIGN_UP_CLOSED } from '@/auth/setup';
 import { resolveNodeEnv } from '@/env';
 import { handleMediaRequest } from '@/media/serving/handler';
-import { runWithContext } from '@/request-context/request-context';
+import { getRequestScope, runInRequestScope } from '@/request-scope/request-scope';
 import { getClientAddress } from '@/transport/http/client-address';
 import { requireAuth } from './middleware/auth';
 import { forbidden, fromZodError, onError, onNotFound } from './middleware/errors';
@@ -45,15 +45,21 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
     app.onError(onError);
     app.notFound(onNotFound);
 
-    // `app.fetch` is a public entry point, so the app establishes its own scope
-    // rather than requiring an ambient one. Nesting inside the Astro
-    // middleware's is free: a request nobody asks about resolves nothing. The
-    // client address goes on the store so every context built below carries it.
-    app.use('*', (c, next) =>
-        runWithContext({ request: c.req.raw, clientAddress: getClientAddress(c) }, () =>
-            next()
-        )
-    );
+    // `app.fetch` is a public entry point, so the app opens a request scope when
+    // none is open for this request, and joins the Astro middleware's when one
+    // is, so the session resolves once. The client address goes on the scope so
+    // every context built below carries it.
+    app.use('*', (c, next) => {
+        const open = getRequestScope();
+        if (open?.request === c.req.raw) {
+            open.clientAddress = getClientAddress(c);
+            return next();
+        }
+        return runInRequestScope(
+            { request: c.req.raw, clientAddress: getClientAddress(c) },
+            () => next()
+        );
+    });
 
     // Security headers, applied to all responses. A media response relaxes
     // `Cross-Origin-Resource-Policy` so another origin can embed a public file,
@@ -172,7 +178,7 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
     // GET /me — current user + role (used by admin SPA). Not in a route table:
     // no service method behind it, only the session `requireAuth` resolved.
     app.get(`${api}/me`, (c) => {
-        return c.json({ data: { user: c.var.user, role: c.var.role } });
+        return c.json({ data: { user: c.var.ctx.user, role: c.var.ctx.role } });
     });
 
     app.route(`${api}/entries`, entriesRouter);

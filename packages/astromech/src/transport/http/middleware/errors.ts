@@ -166,7 +166,7 @@ export const onError: ErrorHandler = (err, c) => {
 
     // A refusal of a caller who never signed in is a missing session, not a
     // missing grant.
-    if (err instanceof PermissionDeniedError && c.get('user') === undefined) {
+    if (err instanceof PermissionDeniedError && c.get('ctx')?.user == null) {
         return unauthorized(c);
     }
 

@@ -17,15 +17,14 @@ import {
     getPluginServiceMethods,
 } from '@/plugins/runtime/plugin-runtime';
 import { scopedServices } from '@/policies/scoped-services';
-import { getClientAddress } from '@/transport/http/client-address';
 import { optionalAuth } from '@/transport/http/middleware/auth';
 import { forbidden, notFound, unauthorized } from '@/transport/http/middleware/errors';
 
-type PluginEnv = { Variables: Partial<AuthVariables> };
+type PluginEnv = { Variables: AuthVariables };
 
 /**
  * Enforce a raw route's declared access. Returns a denial Response, or null to
- * proceed. RPC methods are checked by `scopedServices(role).plugins` instead.
+ * proceed. RPC methods are checked by `scopedServices(ctx).plugins` instead.
  */
 function enforceAccess(
     c: Context<PluginEnv>,
@@ -35,11 +34,10 @@ function enforceAccess(
     const resolved = resolveAccess(access, undefined, identity.permissionNamespace);
     if (resolved.kind === 'public') return null;
 
-    const user = c.var.user;
-    if (!user) return unauthorized(c);
+    if (c.var.ctx.user === null) return unauthorized(c);
     if (resolved.kind === 'authenticated') return null;
 
-    if (!permissionsFor(c.var.role).allowsAccess(resolved)) return forbidden(c);
+    if (!permissionsFor(c.var.ctx.role).allowsAccess(resolved)) return forbidden(c);
     return null;
 }
 
@@ -62,15 +60,7 @@ export function createPluginsRouter(): Hono<PluginEnv> {
         router.on(method, path, (c) => {
             const denied = enforceAccess(c, route.access, identity);
             if (denied) return denied;
-            return route.handler(
-                c.req.raw,
-                createPluginContext(
-                    identity,
-                    c.var.user ?? null,
-                    c.var.role ?? null,
-                    getClientAddress(c)
-                )
-            );
+            return route.handler(c.req.raw, createPluginContext(identity, c.var.ctx));
         });
     }
 
@@ -94,9 +84,7 @@ export function createPluginsRouter(): Hono<PluginEnv> {
 
         const body = await c.req.json().catch(() => undefined);
         // A refusal reaches `onError`: 401 without a session, 403 with one.
-        const result = await scopedServices(c.var.role ?? null).plugins[name]?.[method]?.(
-            body
-        );
+        const result = await scopedServices(c.var.ctx).plugins[name]?.[method]?.(body);
         // Build the JSON Response directly: c.json's generic chokes on the
         // recursive JsonValue type. RPC returns the raw handler result.
         return new Response(JSON.stringify(result ?? null), {

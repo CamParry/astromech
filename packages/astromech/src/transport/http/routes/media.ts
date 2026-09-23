@@ -8,7 +8,6 @@ import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { MediaQueryParams, SortDirection } from '@/types/index';
 import type { Context } from 'hono';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
-import { mediaService } from '@/app-context/services';
 import { mediaDefinition } from '@/media/service';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { badRequest, forbidden, notFound } from '@/transport/http/middleware/errors';
@@ -95,13 +94,13 @@ function queryArgs(c: Context<Env>): MediaQueryParams {
 // 404, so one handler makes two method calls.
 router.get('/:id/usage', async (c) => {
     const { id } = c.req.param();
-    const permissions = permissionsFor(c.var.role);
+    const permissions = permissionsFor(c.var.ctx.role);
     if (!permissions.allowsMethod(mediaDefinition.catalogue.usedBy)) return forbidden(c);
 
-    const item = await mediaService.get({ id });
+    const item = await c.var.ctx.media.get({ id });
     if (!item) return notFound(c, `Media '${id}' not found`);
 
-    const data = await mediaService.usedBy({ id });
+    const data = await c.var.ctx.media.usedBy({ id });
     return c.json({ data });
 });
 
@@ -109,7 +108,7 @@ router.get('/:id/usage', async (c) => {
 // Not in the table: `binaryInput`. The body is multipart and a `File` has no
 // JSON representation, so no contract schema can validate the call.
 router.post('/upload', async (c) => {
-    const permissions = permissionsFor(c.var.role);
+    const permissions = permissionsFor(c.var.ctx.role);
     if (!permissions.allowsMethod(mediaDefinition.catalogue.upload)) return forbidden(c);
 
     const formData = await c.req.formData();
@@ -119,7 +118,7 @@ router.post('/upload', async (c) => {
         return badRequest(c, 'A file field is required');
     }
 
-    const media = await mediaService.upload({ file });
+    const media = await c.var.ctx.media.upload({ file });
     return c.json({ data: media }, 201);
 });
 
@@ -127,7 +126,7 @@ router.post('/upload', async (c) => {
 // Not in the table: `binaryInput`, plus the same `media.get` pre-flight.
 router.post('/:id/replace', async (c) => {
     const { id } = c.req.param();
-    const permissions = permissionsFor(c.var.role);
+    const permissions = permissionsFor(c.var.ctx.role);
     if (!permissions.allowsMethod(mediaDefinition.catalogue.replace)) return forbidden(c);
 
     const formData = await c.req.formData();
@@ -138,10 +137,10 @@ router.post('/:id/replace', async (c) => {
     }
 
     // The service throws for an unknown id, which would surface as a 500.
-    const item = await mediaService.get({ id });
+    const item = await c.var.ctx.media.get({ id });
     if (!item) return notFound(c, `Media '${id}' not found`);
 
-    const media = await mediaService.replace({ id, file });
+    const media = await c.var.ctx.media.replace({ id, file });
     return c.json({ data: media });
 });
 

@@ -9,23 +9,23 @@
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { User } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { adminRole, noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { seedTestUser, testUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { createAppContext } from '@/app-context/app-context';
 import { mediaService } from '@/app-context/services';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
 
-const fakeUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;
+const fakeUser = testUser;
 
 function mountedApp(): OpenAPIHono<{ Variables: AuthVariables }> {
     const app = new OpenAPIHono<{ Variables: AuthVariables }>();
     app.use('/media/*', async (c, next) => {
-        c.set('user', fakeUser);
-        c.set('role', adminRole);
+        c.set('ctx', createAppContext({ user: fakeUser, role: adminRole }));
         return next();
     });
     app.route('/media', mediaRouter);
@@ -35,7 +35,7 @@ function mountedApp(): OpenAPIHono<{ Variables: AuthVariables }> {
 let id: string;
 
 beforeEach(async () => {
-    await createTestDb();
+    await seedTestUser(await createTestDb());
     setupTestConfig(makeTestConfig());
     setStorageDriver(noopStorage);
     const row = await createMediaRepository().create(

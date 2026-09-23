@@ -32,26 +32,26 @@ already holds that nothing below a method reads the store.
 
 ## The work
 
-- [ ] `createPluginContext(identity, ctx: AppContext)`; `AppContext.runHook`
+- [x] `createPluginContext(identity, ctx: AppContext)`; `AppContext.runHook`
       passes its own ctx to the hook, and `ctx.plugins` binds to the ctx.
-- [ ] `scopedServices(ctx)` and `buildScopedTools(ctx)` take the context, bind
+- [x] `scopedServices(ctx)` and `buildScopedTools(ctx)` take the context, bind
       with `definition.bind(ctx)` and read `ctx.role`; build the scoped handle
       once per ctx; delete the store read in `requireSubject`.
-- [ ] Hono's auth middleware sets `c.var.ctx`, replacing `c.var.user` and
+- [x] Hono's auth middleware sets `c.var.ctx`, replacing `c.var.user` and
       `c.var.role`; raw plugin routes receive it.
-- [ ] Retire `CronContext`: jobs get a system `AppContext`, cached once per boot.
-- [ ] `bindCurrent` calls the method on `await currentAppContext()` directly
+- [x] Retire `CronContext`: jobs get a system `AppContext`, cached once per boot.
+- [x] `bindCurrent` calls the method on `await currentAppContext()` directly
       and drops its own WeakMap cache.
-- [ ] `transport/http/app.ts` reuses an open request store instead of nesting a
+- [x] `transport/http/app.ts` reuses an open request store instead of nesting a
       second one.
-- [ ] Rename the store to request scope, matching the existing transaction
+- [x] Rename the store to request scope, matching the existing transaction
       scope: `RequestContext` → `RequestScope`, `runWithContext`/`runWithRequest`
       → `runInRequestScope`, `getRequestContext` → `getRequestScope`,
       `request-context/` → `request-scope/`. Add a `TERMINOLOGY.md` entry.
-- [ ] Add `@/app-context/services` to the lint rule's ambient sources for the
+- [x] Add `@/app-context/services` to the lint rule's ambient sources for the
       content modules.
-- [ ] Document that `ctx.db` is read per query, never kept: a repository built
+- [x] Document that `ctx.db` is read per query, never kept: a repository built
       from it outside `transaction(fn)` does not join the transaction
       (`plugins/assistant/src/service/sessions.ts`, `plugins/backups/src/backup.ts`).
-- [ ] Record in `DECISIONS.md`: a hook fired from cron or plugin `setup()` runs
+- [x] Record in `DECISIONS.md`: a hook fired from cron or plugin `setup()` runs
       as the system, even inside an admin's HTTP request such as `/cron/run`.

@@ -10,8 +10,8 @@ export function subjectId(user: User | null): string {
     if (user === null) {
         throw new AstromechError(
             'notifications are session-scoped: they act on the signed-in ' +
-                "user's own rows, and there is no request context here to name one. " +
-                'Use `ctx.notify` to emit, or call this inside `runWithRequest`.'
+                "user's own rows, and this context has no user to name one. " +
+                'Use `ctx.notify` to emit.'
         );
     }
     return user.id;

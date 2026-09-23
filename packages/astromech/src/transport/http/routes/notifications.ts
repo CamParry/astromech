@@ -8,7 +8,6 @@
 import type { RestRoute } from './rest-route';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { notificationsService } from '@/app-context/services';
 import { notificationsDefinition } from '@/notifications/service';
 import { NOTIFICATIONS_ROUTE_SPECS } from './http-routes';
 import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
@@ -37,7 +36,7 @@ documentBespokeRoutes(
 // Not in the table: the method returns a scalar, and the route wraps it as
 // `{ data: { count } }` rather than the `{ data }` envelope.
 router.get('/count', async (c) => {
-    const count = await notificationsService.count();
+    const count = await c.var.ctx.notifications.count();
     return c.json({ data: { count } });
 });
 

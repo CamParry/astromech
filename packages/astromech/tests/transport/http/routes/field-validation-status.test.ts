@@ -23,7 +23,7 @@
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { AstromechConfig, StorageDriver, User } from '@/types/index';
+import type { AstromechConfig, StorageDriver } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { adminRole } from '@tests/fixtures';
 import {
@@ -32,8 +32,11 @@ import {
     makeTestConfig,
     setupTestConfig,
 } from '@tests/harness';
+import { seedTestUser, testUser } from '@tests/mount-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { entriesService, mediaService } from '@/app-context/services';
+import { createAppContext } from '@/app-context/app-context';
+import { mediaService } from '@/app-context/services';
+import { entriesDefinition } from '@/entries/service';
 import { ValidationError } from '@/errors/validation';
 import { setStorageDriver } from '@/storage/registry';
 import { onError } from '@/transport/http/middleware/errors';
@@ -50,7 +53,7 @@ type ErrorBody = {
     };
 };
 
-const fakeUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;
+const fakeUser = testUser;
 
 /** In-memory storage so `media.upload` can persist a record to update. */
 function memoryStorage(): StorageDriver {
@@ -97,8 +100,7 @@ function mountedApp(): OpenAPIHono<{ Variables: AuthVariables }> {
     const app = new OpenAPIHono<{ Variables: AuthVariables }>();
     app.onError(onError);
     app.use('*', async (c, next) => {
-        c.set('user', fakeUser);
-        c.set('role', adminRole);
+        c.set('ctx', createAppContext({ user: fakeUser, role: adminRole }));
         return next();
     });
     app.route('/entries', createEntriesRouter());
@@ -194,7 +196,7 @@ function makeConfig(): AstromechConfig {
 }
 
 beforeEach(async () => {
-    await createTestDb();
+    await seedTestUser(await createTestDb());
     setupTestConfig(makeConfig());
     setStorageDriver(memoryStorage());
 });
@@ -272,11 +274,10 @@ describe('POST /entries/:type — invalid field value', () => {
 });
 
 describe('POST /entries/:type/:id/staged — a service ValidationError', () => {
-    // The staging route keeps a `try/catch` for its 409 envelope, so the throw
-    // has to get past it to `onError`. `createStaged` copies the canonical's
-    // stored values and runs no field pipeline of its own, so the failure is
-    // injected rather than provoked.
-    it('422s rather than being flattened to a 500 by the route catch', async () => {
+    // `createStaged` copies the canonical's stored values and runs no field
+    // pipeline of its own, so the failure is injected into its handler rather
+    // than provoked.
+    it('422s rather than being flattened to a 500', async () => {
         const app = mountedApp();
         const created = await app.request('/entries/post', {
             method: 'POST',
@@ -285,7 +286,7 @@ describe('POST /entries/:type/:id/staged — a service ValidationError', () => {
         });
         const id = ((await created.json()) as { data: { id: string } }).data.id;
 
-        vi.spyOn(entriesService, 'createStaged').mockRejectedValue(
+        vi.spyOn(entriesDefinition.catalogue.createStaged, 'handler').mockRejectedValue(
             ValidationError.fromFieldErrors({
                 contact: ['Must be a valid email address'],
             })
@@ -374,6 +375,7 @@ describe('users routes — invalid field value', () => {
 
     it('PUT /users/:id 422s with details.fields', async () => {
         const db = await createTestDb();
+        await seedTestUser(db);
         setupTestConfig(makeConfig());
         const existing = await createTestUser(db);
 

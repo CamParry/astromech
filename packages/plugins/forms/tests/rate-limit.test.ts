@@ -11,6 +11,7 @@ import type { Kysely } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createAppContext } from '@/app-context/app-context';
 import { entriesService as localEntries } from '@/app-context/services';
 import { setEmailDriver } from '@/email/registry';
 import {
@@ -37,7 +38,10 @@ function send(clientAddress?: string): Promise<SubmitResult> {
     ) => Promise<SubmitResult>;
     return handler(
         { slug: 'contact', data: { name: 'Ada' } },
-        createPluginContext(identity, null, null, clientAddress)
+        createPluginContext(
+            identity,
+            createAppContext({ user: null, role: null, clientAddress })
+        )
     );
 }
 

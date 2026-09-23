@@ -16,7 +16,7 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { getSession } from '@/auth/session';
-import { runWithRequest } from '@/request-context/request-context';
+import { runInRequestScope } from '@/request-scope/request-scope';
 import { noInput } from '@/services/define-service-method';
 import { onError } from '@/transport/http/middleware/errors';
 import { createPluginsRouter } from '@/transport/http/routes/plugins';
@@ -97,7 +97,7 @@ async function freshApp(): Promise<OpenAPIHono> {
     setupTestConfig(configWithProbe());
     const app = new OpenAPIHono();
     app.onError(onError);
-    app.use('*', (c, next) => runWithRequest(c.req.raw, () => next()));
+    app.use('*', (c, next) => runInRequestScope({ request: c.req.raw }, () => next()));
     app.route('/plugins', createPluginsRouter());
     return app;
 }

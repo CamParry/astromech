@@ -130,6 +130,11 @@ for reverse lookups, filtering and deletion.
 **Repository.** The database-access unit: reads and writes over one table. Not
 "storage", "store" or "persistence".
 
+**Request scope.** The per-request store an HTTP transport opens: the `Request`
+and the identity resolved from it. Transport plumbing only; code below a
+transport takes an app context instead. Named like the transaction scope. Not
+"request context", which reads as the app context.
+
 **Resource.** An entry, a global, a media item or a user: the four things that
 carry fields and run the field pipeline. Not "record" or "document".
 

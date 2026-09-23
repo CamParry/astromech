@@ -11,7 +11,6 @@ import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { EntryQueryParams, ResolvedEntryType, SortDirection } from '@/types/index';
 import type { Context } from 'hono';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
-import { entriesService } from '@/app-context/services';
 import { getConfig } from '@/config/registry';
 import { entryCatalogue } from '@/entries/catalogue';
 import { resolveEntryType } from '@/entries/entry-types';
@@ -313,7 +312,9 @@ function entryPrecondition(c: Context<Env>, method: EntryMethodName): Response |
     const type = param(c, 'type');
     const declared = entriesDefinition.catalogue[method];
     if (
-        !permissionsFor(c.var.role).allowsAccess(resolveAccess(declared.access, { type }))
+        !permissionsFor(c.var.ctx.role).allowsAccess(
+            resolveAccess(declared.access, { type })
+        )
     )
         return forbidden(c);
 
@@ -330,7 +331,7 @@ function mountCrossTypeQuery(router: OpenAPIHono<Env>): void {
     // absent one answers a hand-rolled `invalid_input` 400 outside ApiErrorCode.
     // The rest of the body is the method's to parse, so a bad field is its 422.
     router.post('/query', async (c) => {
-        const permissions = permissionsFor(c.var.role);
+        const permissions = permissionsFor(c.var.ctx.role);
         const body = await c.req.json<unknown>().catch(() => undefined);
         if (body === undefined) return badRequest(c, 'Invalid JSON body');
         const types = bodyTypes(body);
@@ -363,7 +364,7 @@ function mountCrossTypeQuery(router: OpenAPIHono<Env>): void {
         }
 
         return c.json(
-            await entriesService.query({
+            await c.var.ctx.entries.query({
                 ...(body as EntryQueryParams),
                 type: types,
                 full: wantsFull,
@@ -383,10 +384,11 @@ function mountTrashOrDelete(router: OpenAPIHono<Env>): void {
         if (denied) return denied;
 
         const resolved = resolveEntryType(getConfig(), type) as ResolvedEntryType;
-        const call = resolved.capabilities.trash
-            ? entriesService.trash
-            : entriesService.delete;
-        await call({ type, id });
+        const { entries } = c.var.ctx;
+        await (resolved.capabilities.trash ? entries.trash : entries.delete)({
+            type,
+            id,
+        });
         return c.json({ success: true });
     });
 }

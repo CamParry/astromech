@@ -5,7 +5,7 @@
 
 import type { Db } from '@/database/types';
 import { adminRole } from '@tests/fixtures';
-import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
+import { contextAs, createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { usersService } from '@/app-context/services';
 import { scopedServices } from '@/policies/scoped-services';
@@ -23,7 +23,7 @@ describe('the only admin', () => {
         const admin = await createTestUser(db, { role: 'admin' });
 
         await expect(
-            scopedServices(adminRole).users.update({
+            scopedServices(contextAs(adminRole)).users.update({
                 id: admin.id,
                 data: { role: 'editor' },
             })

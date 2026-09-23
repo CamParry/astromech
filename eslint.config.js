@@ -69,8 +69,8 @@ const noModuleScopeConfigRead = {
 };
 
 // The content modules take their dependencies from the method's `ctx`. The
-// three modules a handler must not reach for are the request store, the config
-// registry and the hook bus.
+// modules a handler must not reach for are the request scope, the config
+// registry, the hook bus and the services bound to the current request.
 const contentModules = [
     'entries',
     'globals',
@@ -82,9 +82,10 @@ const contentModules = [
 ];
 
 const ambientSources = [
-    '@/request-context/request-context',
+    '@/request-scope/request-scope',
     '@/config/registry',
     '@/hooks/hooks',
+    '@/app-context/services',
 ];
 
 const noAmbientRead = ['ImportDeclaration', 'ImportExpression'].map((node) => ({
@@ -92,7 +93,7 @@ const noAmbientRead = ['ImportDeclaration', 'ImportExpression'].map((node) => ({
         .map((m) => m.replaceAll('/', '\\/'))
         .join('|')})$/]`,
     message:
-        "Content modules take the user, config and hooks from the method's ctx — pass them in rather than reading the request store or the config registry (see DECISIONS.md).",
+        "Content modules take the user, config, hooks and sibling services from the method's ctx — pass them in rather than reading the request scope, the config registry or the current request's services (see DECISIONS.md).",
 }));
 
 // The two files below a content module that legitimately read ambiently:

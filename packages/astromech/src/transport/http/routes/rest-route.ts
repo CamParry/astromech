@@ -146,7 +146,7 @@ async function handleRestRoute(
     if (route.precondition !== undefined) {
         const denied = route.precondition(c, route);
         if (denied) return denied;
-    } else if (!permissionsFor(c.var.role).allowsMethod(contract)) {
+    } else if (!permissionsFor(c.var.ctx.role).allowsMethod(contract)) {
         return forbidden(c);
     }
 
@@ -185,7 +185,7 @@ async function handleRestRoute(
 
 /** Call `<domain>.<method>` on the handle scoped to the caller's role. */
 function invoke(c: Context<Env>, id: string, args: unknown): Promise<unknown> {
-    const handle = scopedServices(c.var.role) as unknown as Record<string, ServiceRecord>;
+    const handle = scopedServices(c.var.ctx) as unknown as Record<string, ServiceRecord>;
     const fn = handle[domainName(id)]?.[methodName(id)];
     if (typeof fn !== 'function') {
         throw new Error(`Method '${id}' is absent from the scoped services handle.`);

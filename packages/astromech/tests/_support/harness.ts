@@ -29,11 +29,13 @@
 import type { UserTableRow } from '@/database/tables';
 import type { DB } from '@/database/types';
 import type {
+    AppContext,
     AstromechConfig,
     DatabaseDriver,
     JsonObject,
     PluginDefinition,
     ResolvedConfig,
+    Role,
     User,
 } from '@/types/index';
 import type { MigrationProvider } from 'kysely/migration';
@@ -45,6 +47,7 @@ import { createClient } from '@libsql/client';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { noopStorage } from '@tests/fixtures';
 import { CamelCasePlugin, Kysely } from 'kysely';
+import { createAppContext } from '@/app-context/app-context';
 import { setConfig } from '@/config/registry';
 import { resolveConfig } from '@/config/resolve';
 import { decodeWith, encodeWith } from '@/database/codec';
@@ -53,7 +56,7 @@ import { setDb } from '@/database/registry';
 import { userContentTable, usersTable } from '@/database/tables';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { registerPlugins } from '@/plugins/runtime/plugin-runtime';
-import { runWithContext } from '@/request-context/request-context';
+import { runInRequestScope } from '@/request-scope/request-scope';
 
 type Db = Kysely<DB>;
 
@@ -236,10 +239,18 @@ export function setupTestConfig(
  * outside a scope there simply is no user.
  */
 export function runAsUser<T>(user: User | null, fn: () => T): T {
-    return runWithContext(
+    return runInRequestScope(
         { request: new Request('http://localhost/'), user, role: null },
         fn
     );
+}
+
+/**
+ * A context acting as `role` and `user`, the way a transport builds one for a
+ * caller. No user by default, so a write records no author row to reference.
+ */
+export function contextAs(role: Role | null, user: User | null = null): AppContext {
+    return createAppContext({ user, role });
 }
 
 /**

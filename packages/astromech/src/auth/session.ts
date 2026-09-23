@@ -1,7 +1,7 @@
 /**
  * Session resolution: the single place a Better Auth session is turned into an
  * Astromech identity (full user row + resolved role). It reads the users
- * repository; `users` never imports `auth`. `request-context/` is its one caller.
+ * repository; `users` never imports `auth`. `request-scope/` is its one caller.
  */
 
 import type { Role, User } from '@/types/index';

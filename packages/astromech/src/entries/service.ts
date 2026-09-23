@@ -31,8 +31,8 @@ import { restoreEntryVersion } from './methods/versions/restore';
  * the handlers implement. `MethodsFor<S>` reads a method's parameter and result
  * off its LAST overload, so the five that answer an `Entry` for one id and an
  * `Entry[]` for a list have to state both here for the catalogue to be checked
- * against something true. The composition root casts back
- * (`app-context/services.ts`, `app-context/app-context.ts`).
+ * against something true. `createAppContext` (`app-context/app-context.ts`)
+ * casts back.
  */
 export type EntriesMethods = Omit<
     EntriesService,

@@ -17,7 +17,7 @@ import type {
 } from '@/types/index';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { adminRole, roleWith } from '@tests/fixtures';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { contextAs, createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { entriesService, usersService } from '@/app-context/services';
@@ -125,7 +125,7 @@ describe('manifest ↔ RPC route parity', () => {
         const refused: string[] = [];
 
         for (const method of manifest.methods) {
-            const dispatch = buildScopedDispatch(method, adminRole);
+            const dispatch = buildScopedDispatch(method, contextAs(adminRole));
             const res = await call(app, method.id);
 
             if (!dispatch.ok) {

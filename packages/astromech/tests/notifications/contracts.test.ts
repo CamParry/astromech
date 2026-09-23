@@ -9,13 +9,13 @@
  */
 
 import type { DB } from '@/database/types';
-import type { CoreManifestMethod, Role } from '@/types/index';
+import type { CoreManifestMethod, Role, User } from '@/types/index';
 import type { Kysely } from 'kysely';
 import {
+    contextAs,
     createTestDb,
     createTestUser,
     makeTestConfig,
-    runAsUser,
     setupTestConfig,
 } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -112,9 +112,10 @@ describe('the trusted transports', () => {
 });
 
 describe('the scoped handle', () => {
-    /** The tool a role gets for one notifications method. */
-    function tool(name: string) {
-        const result = buildScopedDispatch(methodNamed(name), editor);
+    /** The tool an editor signed in as `userId` gets for one notifications method. */
+    function tool(name: string, userId?: string) {
+        const user = userId === undefined ? null : ({ id: userId } as User);
+        const result = buildScopedDispatch(methodNamed(name), contextAs(editor, user));
         if (!result.ok) throw new Error(`expected a tool: ${result.reason}`);
         return result.tool;
     }
@@ -123,46 +124,30 @@ describe('the scoped handle', () => {
         await notify({ target: { all: true }, type: 'info', title: 'a', message: 'm' });
         await notify({ target: { user: alice }, type: 'info', title: 'b', message: 'm' });
 
-        const rows = await runAsUser({ id: alice } as never, () =>
-            tool('list').invoke({})
-        );
+        const rows = await tool('list', alice).invoke({});
         expect((rows as { title: string }[]).map((r) => r.title)).toEqual(['b', 'a']);
-        expect(
-            await runAsUser({ id: bob } as never, () => tool('count').invoke({}))
-        ).toBe(1);
+        expect(await tool('count', bob).invoke({})).toBe(1);
     });
 
     it('ignores a caller-supplied userId rather than trusting it', async () => {
         await notify({ target: { user: alice }, type: 'info', title: 'a', message: 'm' });
 
-        const rows = await runAsUser({ id: bob } as never, () =>
-            tool('list').invoke({ userId: alice })
-        );
+        const rows = await tool('list', bob).invoke({ userId: alice });
         expect(rows).toEqual([]);
     });
 
     it('dismisses only the caller’s own row', async () => {
         await notify({ target: { all: true }, type: 'info', title: 'a', message: 'm' });
-        const [row] = (await runAsUser({ id: bob } as never, () =>
-            tool('list').invoke({})
-        )) as { id: string }[];
+        const [row] = (await tool('list', bob).invoke({})) as { id: string }[];
 
-        await runAsUser({ id: alice } as never, () =>
-            tool('dismiss').invoke({ id: row?.id ?? '' })
-        );
-        expect(
-            await runAsUser({ id: bob } as never, () => tool('count').invoke({}))
-        ).toBe(1);
+        await tool('dismiss', alice).invoke({ id: row?.id ?? '' });
+        expect(await tool('count', bob).invoke({})).toBe(1);
 
-        await runAsUser({ id: bob } as never, () =>
-            tool('dismiss').invoke({ id: row?.id ?? '' })
-        );
-        expect(
-            await runAsUser({ id: bob } as never, () => tool('count').invoke({}))
-        ).toBe(0);
+        await tool('dismiss', bob).invoke({ id: row?.id ?? '' });
+        expect(await tool('count', bob).invoke({})).toBe(0);
     });
 
-    it('refuses outside a request context, where there is no user to act as', async () => {
+    it('refuses a context with no user to act as', async () => {
         await expect(tool('list').invoke({})).rejects.toThrow('session-scoped');
     });
 });

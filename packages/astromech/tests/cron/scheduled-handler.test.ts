@@ -8,6 +8,7 @@ import type { AstromechConfig } from '@/types/index';
 import type { Kysely, Updateable } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { systemAppContext } from '@/app-context/app-context';
 import { cloudflareCron } from '@/cron/drivers/cloudflare';
 import { interval } from '@/cron/drivers/interval';
 import { webhook } from '@/cron/drivers/webhook';
@@ -41,7 +42,9 @@ beforeEach(async () => {
     // `scheduled-boot.test.ts`.
     globals().astromech = {
         config,
-        app: Promise.resolve({ scheduled: (at?: Date) => onTick(at ?? new Date()) }),
+        app: Promise.resolve({
+            scheduled: (at?: Date) => onTick(at ?? new Date(), systemAppContext()),
+        }),
     };
 });
 
@@ -85,7 +88,7 @@ describe('createWorkerEntry().scheduled', () => {
 
         // First call seeds the table (inserts a row with nextRun in the future).
         // The seed tick does not fire the handler (nextRun is after seedTime).
-        await runDue(seedTime);
+        await runDue(seedTime, systemAppContext());
 
         // Manually set nextRun to a past date so the job is due.
         const db = (await import('@/database/registry')).getDb() as Kysely<DB>;

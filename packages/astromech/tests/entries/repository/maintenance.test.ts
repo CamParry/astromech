@@ -4,9 +4,9 @@
  */
 
 import type { Db } from '@/database/types';
-import type { ResolvedConfig } from '@/types/index';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { systemAppContext } from '@/app-context/app-context';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { entriesTable } from '@/database/tables';
@@ -15,13 +15,12 @@ import { createEntriesTableRepository } from '@/entries/repository/entries-table
 import { createEntryMaintenanceRepository } from '@/entries/repository/maintenance';
 
 let db: Db;
-let config: ResolvedConfig;
 let entryRepository: ReturnType<typeof createEntriesTableRepository>;
 let maintenance: ReturnType<typeof createEntryMaintenanceRepository>;
 
 beforeEach(async () => {
     db = await createTestDb();
-    config = setupTestConfig();
+    setupTestConfig();
     entryRepository = createEntriesTableRepository();
     maintenance = createEntryMaintenanceRepository(db);
 });
@@ -240,7 +239,7 @@ describe('trashPurgeJob', () => {
             ]
         );
 
-        await trashPurgeJob.handler({ db, config });
+        await trashPurgeJob.handler(systemAppContext());
 
         expect(
             await entryRepository.get(

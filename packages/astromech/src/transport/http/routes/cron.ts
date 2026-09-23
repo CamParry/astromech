@@ -7,9 +7,9 @@
  */
 
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { currentAppContext, systemAppContext } from '@/app-context/app-context';
 import { onTick } from '@/cron/runner';
 import { resolveEnv } from '@/env';
-import { getCurrentRole } from '@/request-context/request-context';
 import { unauthorized } from '@/transport/http/middleware/errors';
 
 const router = new OpenAPIHono();
@@ -28,9 +28,12 @@ router.post('/run', async (c) => {
 
     // Short-circuits: a bearer poke carries no session, so asking for a role
     // would resolve one nobody sent.
-    if (!bearerOk && (await getCurrentRole())?.slug !== 'admin') return unauthorized(c);
+    if (!bearerOk && (await currentAppContext()).role?.slug !== 'admin') {
+        return unauthorized(c);
+    }
 
-    await onTick(new Date());
+    // The jobs run as the system, not as the admin who asked for the tick.
+    await onTick(new Date(), systemAppContext());
     return c.json({ success: true });
 });
 

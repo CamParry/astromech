@@ -32,11 +32,12 @@ import { globalsDefinition } from '@/globals/service';
 import { runHook } from '@/hooks/hooks';
 import { mediaDefinition } from '@/media/service';
 import { notificationsDefinition, notify } from '@/notifications/service';
+import { createRegistry } from '@/registry';
 import {
     getCurrentRole,
     getCurrentUser,
-    getRequestContext,
-} from '@/request-context/request-context';
+    getRequestScope,
+} from '@/request-scope/request-scope';
 import { settingsDefinition } from '@/settings/service';
 import { buildScopedTools } from '@/transport/tools/scoped-tools';
 import { usersDefinition } from '@/users/service';
@@ -105,10 +106,10 @@ export function createAppContext(input: AppContextInput): AppContext {
         get env(): Record<string, string | undefined> {
             return getEnvRecord();
         },
-        runHook: (event, payload) => runHook(event, payload),
+        runHook: (event, payload) => runHook(event, payload, context),
         get methods(): PluginMethods {
             return {
-                tools: (options) => buildScopedTools(role, options),
+                tools: (options) => buildScopedTools(context, options),
             };
         },
         get database(): PluginDatabase {
@@ -128,25 +129,35 @@ export function createAppContext(input: AppContextInput): AppContext {
     return context;
 }
 
+const systemContext = createRegistry<AppContext>('systemAppContext', {
+    required: false,
+});
+
 /**
- * The context for the current request, built once from the request store and
- * cached on it; a system context (user and role null) outside one. The only
- * place below a transport that reads the store.
+ * The system context: no user, no role. Built once and reused, which is safe
+ * because every member that reaches a registry reads it at call time.
+ */
+export function systemAppContext(): AppContext {
+    const existing = systemContext.get();
+    if (existing) return existing;
+    const created = createAppContext({ user: null, role: null });
+    systemContext.set(created);
+    return created;
+}
+
+/**
+ * The context for the current request, built once from the request scope and
+ * cached on it; the system context outside one. The only place below a
+ * transport that reads the scope.
  */
 export async function currentAppContext(): Promise<AppContext> {
-    const requestContext = getRequestContext();
-    if (requestContext === undefined) {
-        return createAppContext({ user: null, role: null });
-    }
-    if (requestContext.app !== undefined) return requestContext.app;
+    const scope = getRequestScope();
+    if (scope === undefined) return systemAppContext();
+    if (scope.app !== undefined) return scope.app;
 
     const [user, role] = await Promise.all([getCurrentUser(), getCurrentRole()]);
-    const app = createAppContext({
-        user,
-        role,
-        clientAddress: requestContext.clientAddress,
-    });
-    requestContext.app = app;
+    const app = createAppContext({ user, role, clientAddress: scope.clientAddress });
+    scope.app = app;
     return app;
 }
 

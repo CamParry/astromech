@@ -11,6 +11,7 @@ import { adminRole } from '@tests/fixtures';
 import { createElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
+import { createAppContext, systemAppContext } from '@/app-context/app-context';
 import { getCronJobs } from '@/cron/registry';
 import { setEmailDriver } from '@/email/registry';
 import { runHook } from '@/hooks/hooks';
@@ -25,7 +26,6 @@ import {
     registerPlugins,
 } from '@/plugins/runtime/plugin-runtime';
 import { globals } from '@/registry';
-import { runWithContext } from '@/request-context/request-context';
 import { buildScopedTools } from '@/transport/tools/scoped-tools';
 
 vi.mock('@/transport/tools/scoped-tools', () => ({
@@ -170,8 +170,7 @@ describe('createPluginContext', () => {
         registerPlugins([def({ package: '@astromech/seo' })], config);
         const ctx = createPluginContext(
             resolvePluginIdentity(def({ package: '@astromech/seo' })),
-            user,
-            null
+            createAppContext({ user, role: null })
         );
 
         expect(ctx.user).toBe(user);
@@ -184,8 +183,7 @@ describe('createPluginContext', () => {
         registerPlugins([def({ package: '@astromech/seo' })], config);
         const ctx = createPluginContext(
             resolvePluginIdentity(def({ package: '@astromech/seo' })),
-            user,
-            null
+            createAppContext({ user, role: null })
         );
 
         expect(ctx.role).toBeNull();
@@ -195,8 +193,7 @@ describe('createPluginContext', () => {
         registerPlugins([def({ package: '@astromech/seo' })], config);
         const ctx = createPluginContext(
             resolvePluginIdentity(def({ package: '@astromech/seo' })),
-            user,
-            adminRole
+            createAppContext({ user, role: adminRole })
         );
 
         expect(ctx.role).toBe(adminRole);
@@ -208,12 +205,13 @@ describe('createPluginContext', () => {
         tools.mockReturnValue([]);
         const ctx = createPluginContext(
             resolvePluginIdentity(def({ package: '@astromech/seo' })),
-            user,
-            adminRole
+            createAppContext({ user, role: adminRole })
         );
 
         expect(ctx.methods.tools({ readOnly: true })).toEqual([]);
-        expect(tools).toHaveBeenCalledWith(adminRole, { readOnly: true });
+        expect(tools).toHaveBeenCalledWith(expect.objectContaining({ role: adminRole }), {
+            readOnly: true,
+        });
     });
 
     // The port renders, rather than passing the element through: a driver only
@@ -229,8 +227,7 @@ describe('createPluginContext', () => {
         });
         const ctx = createPluginContext(
             resolvePluginIdentity(def({ package: '@astromech/seo' })),
-            user,
-            null
+            createAppContext({ user, role: null })
         );
 
         await ctx.email.send(
@@ -249,8 +246,7 @@ describe('createPluginContext', () => {
         registerPlugins([def({ package: '@astromech/seo' })], config);
         const ctx = createPluginContext(
             resolvePluginIdentity(def({ package: '@astromech/seo' })),
-            user,
-            null
+            createAppContext({ user, role: null })
         );
 
         await expect(
@@ -260,7 +256,7 @@ describe('createPluginContext', () => {
 });
 
 describe('registerPlugins hooks', () => {
-    it('runs a registered handler with the event context and the current-user plugin context', async () => {
+    it('runs a registered handler with the payload, as the context that fired it', async () => {
         const seen: { event: unknown; user: User | null }[] = [];
         registerPlugins(
             [
@@ -279,9 +275,10 @@ describe('registerPlugins hooks', () => {
             config
         );
 
-        await runWithContext(
-            { request: new Request('http://localhost/'), user, role: null },
-            () => runHook('entry:beforeCreate', { type: 'posts' } as EntryCreateContext)
+        await runHook(
+            'entry:beforeCreate',
+            { type: 'posts' } as EntryCreateContext,
+            createAppContext({ user, role: null })
         );
         expect(seen).toEqual([{ event: { type: 'posts' }, user }]);
     });
@@ -302,7 +299,7 @@ describe('registerPlugins hooks', () => {
         );
 
         await expect(
-            runHook('entry:beforeCreate', {} as EntryCreateContext)
+            runHook('entry:beforeCreate', {} as EntryCreateContext, systemAppContext())
         ).rejects.toThrow('blocked');
     });
 
@@ -332,7 +329,7 @@ describe('registerPlugins hooks', () => {
         );
 
         await expect(
-            runHook('entry:afterUpdate', {} as EntryUpdateContext)
+            runHook('entry:afterUpdate', {} as EntryUpdateContext, systemAppContext())
         ).rejects.toThrow('after-fail');
         expect(secondRan).toBe(false);
     });
@@ -353,7 +350,7 @@ describe('registerPlugins hooks', () => {
             config
         );
 
-        await runHook('forms:afterSubmit', { id: 42 });
+        await runHook('forms:afterSubmit', { id: 42 }, systemAppContext());
         expect(payloads).toEqual([{ id: 42 }]);
     });
 });
@@ -392,7 +389,7 @@ describe('bootPlugins', () => {
         expect(job).toBeDefined();
         expect(job?.schedule).toBe('0 3 * * *');
 
-        await job?.handler({} as never);
+        await job?.handler(systemAppContext());
         expect(seenUser).toBeNull();
     });
 

@@ -18,15 +18,15 @@ import type {
     ServiceMethodContract,
     User,
 } from '@/types/index';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { contextAs, createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
+import { createAppContext } from '@/app-context/app-context';
 import { entriesDefinition } from '@/entries/service';
 import { PermissionDeniedError } from '@/errors/permission';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { annotateManifest } from '@/policies/annotate-manifest';
 import { scopedServices, scopeMethods } from '@/policies/scoped-services';
-import { runWithContext } from '@/request-context/request-context';
 import { noInput } from '@/services/define-service-method';
 
 beforeEach(() => {
@@ -59,7 +59,7 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             service,
             contracts,
-            permissionsFor(role('settings:read')),
+            { permissions: permissionsFor(role('settings:read')), user: null },
             'settings'
         );
 
@@ -71,7 +71,7 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             makeService(),
             contracts,
-            permissionsFor(role('settings:read')),
+            { permissions: permissionsFor(role('settings:read')), user: null },
             'settings'
         );
 
@@ -91,7 +91,10 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             service,
             contracts,
-            permissionsFor(role('settings:read', 'settings:update')),
+            {
+                permissions: permissionsFor(role('settings:read', 'settings:update')),
+                user: null,
+            },
             'settings'
         );
 
@@ -104,7 +107,7 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             service,
             contracts,
-            permissionsFor(role('settings:read')),
+            { permissions: permissionsFor(role('settings:read')), user: null },
             'settings'
         );
 
@@ -117,7 +120,7 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             service,
             contracts,
-            permissionsFor(role('*')),
+            { permissions: permissionsFor(role('*')), user: null },
             'settings'
         );
 
@@ -135,7 +138,7 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             makeService(),
             contracts,
-            permissionsFor(undefined),
+            { permissions: permissionsFor(undefined), user: null },
             'settings'
         );
 
@@ -147,7 +150,12 @@ describe('scopeMethods', () => {
         expect(permissions.allows('settings:read')).toBe(false);
         expect(permissions.allowsMethod(contracts.read)).toBe(false);
 
-        const scoped = scopeMethods(makeService(), contracts, permissions, 'settings');
+        const scoped = scopeMethods(
+            makeService(),
+            contracts,
+            { permissions: permissions, user: null },
+            'settings'
+        );
         expect(() => scoped.read()).toThrow(PermissionDeniedError);
     });
 
@@ -155,7 +163,7 @@ describe('scopeMethods', () => {
         const scoped = scopeMethods(
             makeService(),
             contracts,
-            permissionsFor(role('*')),
+            { permissions: permissionsFor(role('*')), user: null },
             'settings'
         );
 
@@ -167,35 +175,34 @@ const sessionContracts = {
     read: { access: 'public', input: z.unknown(), sessionScoped: true, mutates: false },
 } satisfies Record<string, ServiceMethodContract>;
 
-/** A scoped handle over `makeService()`, with `read` declared session-scoped. */
-function scopeSession(service: ReturnType<typeof makeService>) {
-    return scopeMethods(service, sessionContracts, permissionsFor(role()), 'inbox');
-}
-
-/** Run `fn` as `id`, the way a request-scoped transport would. */
-function asUser<T>(id: string, fn: () => T): T {
-    return runWithContext(
-        { request: new Request('http://localhost/'), user: { id } as User, role: null },
-        fn
+/**
+ * A scoped handle over `makeService()`, with `read` declared session-scoped,
+ * acting for `userId` when given and for nobody otherwise.
+ */
+function scopeSession(service: ReturnType<typeof makeService>, userId?: string) {
+    const user = userId === undefined ? null : ({ id: userId } as User);
+    return scopeMethods(
+        service,
+        sessionContracts,
+        { permissions: permissionsFor(role()), user },
+        'inbox'
     );
 }
 
 describe('scopeMethods — session-scoped', () => {
     it('passes the input through unchanged, with no permission held', async () => {
         const service = makeService();
-        const scoped = scopeSession(service);
+        const scoped = scopeSession(service, 'user-1');
 
-        await asUser('user-1', () => scoped.read({ before: 'yesterday' }));
+        await scoped.read({ before: 'yesterday' });
         expect(service.read).toHaveBeenCalledWith({ before: 'yesterday' });
     });
 
-    // Rejects rather than throws: reading the request context needs an await, so
-    // only this branch of the wrapper is async. The permission check still throws.
-    it('refuses when nobody is signed in, without entering the service', async () => {
+    it('refuses when nobody is signed in, without entering the service', () => {
         const service = makeService();
         const scoped = scopeSession(service);
 
-        await expect(scoped.read({})).rejects.toThrow(PermissionDeniedError);
+        expect(() => scoped.read({})).toThrow(PermissionDeniedError);
         expect(service.read).not.toHaveBeenCalled();
     });
 
@@ -204,11 +211,11 @@ describe('scopeMethods — session-scoped', () => {
         const scoped = scopeMethods(
             service,
             contracts,
-            permissionsFor(role('settings:read')),
+            { permissions: permissionsFor(role('settings:read')), user: null },
             'settings'
         );
 
-        await asUser('user-1', () => scoped.read({ key: 'site.title' }));
+        await scoped.read({ key: 'site.title' });
         expect(service.read).toHaveBeenCalledWith({ key: 'site.title' });
     });
 });
@@ -229,7 +236,7 @@ function scopeStub(stub: object, actingRole: Role | undefined): Record<string, n
     return scopeMethods(
         stub as unknown as EntriesService,
         entriesDefinition.catalogue,
-        permissionsFor(actingRole),
+        { permissions: permissionsFor(actingRole), user: null },
         'entries'
     ) as unknown as Record<string, never>;
 }
@@ -385,7 +392,7 @@ describe('scopedServices — globals', () => {
     });
 
     it('derives the read permission per key', () => {
-        const scoped = scopedServices(role('global:internal:read'));
+        const scoped = scopedServices(contextAs(role('global:internal:read')));
 
         try {
             void scoped.globals.get({ key: 'site', full: true });
@@ -397,7 +404,7 @@ describe('scopedServices — globals', () => {
     });
 
     it('refuses the full shape of a public global without the read permission', () => {
-        const scoped = scopedServices(role());
+        const scoped = scopedServices(contextAs(role()));
 
         expect(() => scoped.globals.get({ key: 'site', full: true })).toThrow(
             PermissionDeniedError
@@ -408,14 +415,14 @@ describe('scopedServices — globals', () => {
     });
 
     it('allows a public global\u2019s plain read with no role at all', async () => {
-        const scoped = scopedServices(null);
+        const scoped = scopedServices(contextAs(null));
 
         // Reaches the service, which answers null: nothing is saved.
         await expect(scoped.globals.get({ key: 'site' })).resolves.toBeNull();
     });
 
     it('refuses a private global\u2019s plain read', () => {
-        const scoped = scopedServices(null);
+        const scoped = scopedServices(contextAs(null));
 
         try {
             void scoped.globals.get({ key: 'internal' });
@@ -426,7 +433,7 @@ describe('scopedServices — globals', () => {
     });
 
     it('gates a plugin global on the plugin permission form', () => {
-        const scoped = scopedServices(role('global:site:update'));
+        const scoped = scopedServices(contextAs(role('global:site:update')));
 
         try {
             void scoped.globals.update({
@@ -442,7 +449,7 @@ describe('scopedServices — globals', () => {
     });
 
     it('derives the permission per action', () => {
-        const scoped = scopedServices(role('global:internal:update'));
+        const scoped = scopedServices(contextAs(role('global:internal:update')));
 
         try {
             void scoped.globals.publish({ key: 'internal' });
@@ -457,7 +464,7 @@ describe('scopedServices — globals', () => {
 
 describe('scopedServices', () => {
     it('refuses a real core method the role lacks', () => {
-        const scoped = scopedServices(role('users:read'));
+        const scoped = scopedServices(contextAs(role('users:read')));
 
         try {
             void scoped.users.create({ data: { email: 'a@b.dev', name: 'A' } });
@@ -470,7 +477,7 @@ describe('scopedServices', () => {
     });
 
     it('refuses media.replace to a role without media:upload', () => {
-        const scoped = scopedServices(role('media:read', 'media:update'));
+        const scoped = scopedServices(contextAs(role('media:read', 'media:update')));
 
         try {
             void scoped.media.replace({
@@ -486,7 +493,7 @@ describe('scopedServices', () => {
     });
 
     it('treats a null role the same as an absent one', () => {
-        const scoped = scopedServices(null);
+        const scoped = scopedServices(contextAs(null));
 
         expect(() => scoped.users.query()).toThrow(PermissionDeniedError);
     });
@@ -527,7 +534,7 @@ function probeMethod(
     actingRole: Role | null,
     key: string
 ): (input?: unknown) => Promise<unknown> {
-    const method = scopedServices(actingRole).plugins.probe?.[key];
+    const method = scopedServices(contextAs(actingRole)).plugins.probe?.[key];
     if (method === undefined) throw new Error(`probe.${key} is missing from the handle`);
     return method;
 }
@@ -562,15 +569,25 @@ describe('scopedServices — plugins', () => {
     });
 
     it('keeps a denied method on the handle', () => {
-        expect(scopedServices(null).plugins.probe?.whoami).toBeTypeOf('function');
+        expect(scopedServices(contextAs(null)).plugins.probe?.whoami).toBeTypeOf(
+            'function'
+        );
     });
 
-    it('hands the plugin context the client address on the request store', async () => {
-        const seen = await runWithContext(
-            { request: new Request('http://localhost/'), clientAddress: '203.0.113.9' },
-            () => probeMethod(null, 'address')()
+    it('hands the plugin method the context the handle was built for', async () => {
+        const ctx = createAppContext({
+            user: null,
+            role: null,
+            clientAddress: '203.0.113.9',
+        });
+        await expect(scopedServices(ctx).plugins.probe?.address?.()).resolves.toBe(
+            '203.0.113.9'
         );
-        expect(seen).toBe('203.0.113.9');
+    });
+
+    it('builds one handle per context', () => {
+        const ctx = contextAs(role());
+        expect(scopedServices(ctx)).toBe(scopedServices(ctx));
     });
 });
 

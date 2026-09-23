@@ -11,6 +11,7 @@ import type { Kysely, Updateable } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { Cron } from 'croner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { systemAppContext } from '@/app-context/app-context';
 import { registerCronJob } from '@/cron/registry';
 import { onTick, runDue } from '@/cron/runner';
 import { decodeWith, encodePatchWith } from '@/database/codec';
@@ -56,7 +57,7 @@ describe('onTick / runDue', () => {
             handler: async () => undefined,
         });
 
-        await onTick(now);
+        await onTick(now, systemAppContext());
 
         const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
         const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
@@ -79,7 +80,7 @@ describe('onTick / runDue', () => {
             .execute();
 
         const now2 = new Date('2024-06-01T00:02:00.000Z');
-        await onTick(now2);
+        await onTick(now2, systemAppContext());
 
         const rawRows2 = await db.selectFrom('_astromech_cron').selectAll().execute();
         const row2 = singleRow(rawRows2.map((r) => decodeWith(cronTable, r)));
@@ -100,7 +101,7 @@ describe('onTick / runDue', () => {
         });
 
         // Seed the row first.
-        await onTick(new Date('2024-06-01T11:00:00.000Z'));
+        await onTick(new Date('2024-06-01T11:00:00.000Z'), systemAppContext());
         callCount = 0; // reset after seed tick (it may have run)
 
         const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
@@ -118,7 +119,7 @@ describe('onTick / runDue', () => {
             .where('name', '=', 'test-job')
             .execute();
 
-        await onTick(now);
+        await onTick(now, systemAppContext());
         expect(callCount).toBe(1);
 
         // Set nextRun in the future → should NOT run.
@@ -135,7 +136,7 @@ describe('onTick / runDue', () => {
             .where('name', '=', 'test-job')
             .execute();
 
-        await onTick(now);
+        await onTick(now, systemAppContext());
         expect(callCount).toBe(0);
     });
 
@@ -152,7 +153,7 @@ describe('onTick / runDue', () => {
         });
 
         // Seed the row.
-        await onTick(new Date('2024-06-01T11:00:00.000Z'));
+        await onTick(new Date('2024-06-01T11:00:00.000Z'), systemAppContext());
 
         const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
 
@@ -171,7 +172,7 @@ describe('onTick / runDue', () => {
             .execute();
 
         callCount = 0;
-        await onTick(now);
+        await onTick(now, systemAppContext());
         expect(callCount).toBe(0);
     });
 
@@ -185,7 +186,7 @@ describe('onTick / runDue', () => {
         });
 
         // First tick: seed + run (nextRun is computed from '* * * * *').
-        await onTick(now);
+        await onTick(now, systemAppContext());
 
         const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
 
@@ -203,7 +204,7 @@ describe('onTick / runDue', () => {
             .where('name', '=', 'test-job')
             .execute();
 
-        await onTick(now);
+        await onTick(now, systemAppContext());
 
         const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
         const row = singleRow(rawRows.map((r) => decodeWith(cronTable, r)));
@@ -227,7 +228,7 @@ describe('onTick / runDue', () => {
         });
 
         // Seed + make it due.
-        await runDue(new Date('2024-06-01T11:00:00.000Z'));
+        await runDue(new Date('2024-06-01T11:00:00.000Z'), systemAppContext());
         callCount = 0;
 
         const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
@@ -244,7 +245,10 @@ describe('onTick / runDue', () => {
             .execute();
 
         // Two concurrent passes — only one should win the CAS claim.
-        await Promise.all([runDue(now), runDue(now)]);
+        await Promise.all([
+            runDue(now, systemAppContext()),
+            runDue(now, systemAppContext()),
+        ]);
 
         expect(callCount).toBe(1);
     });
@@ -265,7 +269,7 @@ describe('onTick / runDue', () => {
         // Simulate a tick already running.
         globals().cronTickRunning = true;
 
-        await onTick(now);
+        await onTick(now, systemAppContext());
         expect(callCount).toBe(0);
 
         // Clean up.
@@ -285,7 +289,7 @@ describe('onTick / runDue', () => {
         });
 
         // Seed.
-        await runDue(new Date('2024-06-01T11:00:00.000Z'));
+        await runDue(new Date('2024-06-01T11:00:00.000Z'), systemAppContext());
         callCount = 0;
 
         const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
@@ -304,7 +308,7 @@ describe('onTick / runDue', () => {
             .where('name', '=', 'test-job')
             .execute();
 
-        await onTick(now);
+        await onTick(now, systemAppContext());
         expect(callCount).toBe(0);
 
         // Set lock to PAST expiry (stale claim) → should reclaim and run.
@@ -320,7 +324,7 @@ describe('onTick / runDue', () => {
             .where('name', '=', 'test-job')
             .execute();
 
-        await onTick(now);
+        await onTick(now, systemAppContext());
         expect(callCount).toBe(1);
     });
 
@@ -340,7 +344,7 @@ describe('onTick / runDue', () => {
         });
 
         // Seed + make due.
-        await runDue(new Date('2024-06-01T11:00:00.000Z'));
+        await runDue(new Date('2024-06-01T11:00:00.000Z'), systemAppContext());
         const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
         const past = new Date(now.getTime() - 60_000);
         await db
@@ -355,7 +359,7 @@ describe('onTick / runDue', () => {
             .execute();
 
         // Must not throw.
-        await expect(onTick(now)).resolves.toBeUndefined();
+        await expect(onTick(now, systemAppContext())).resolves.toBeUndefined();
 
         // console.error was called with the job name.
         expect(consoleError).toHaveBeenCalledWith(
@@ -387,9 +391,9 @@ describe('onTick / runDue', () => {
                 handler: async () => undefined,
             });
 
-            await expect(runDue(new Date('2024-06-01T00:00:00.000Z'))).rejects.toThrow(
-                /'config' is not configured\. Ensure createAstromech/
-            );
+            await expect(
+                runDue(new Date('2024-06-01T00:00:00.000Z'), systemAppContext())
+            ).rejects.toThrow(/'config' is not configured\. Ensure createAstromech/);
         });
 
         it('11. honours the timezone from the runtime config registry', async () => {
@@ -405,7 +409,7 @@ describe('onTick / runDue', () => {
                 handler: async () => undefined,
             });
 
-            await onTick(now);
+            await onTick(now, systemAppContext());
 
             const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
             const rawRows = await db.selectFrom('_astromech_cron').selectAll().execute();
@@ -436,7 +440,7 @@ describe('onTick / runDue', () => {
         });
 
         // Seed + set nextRun far in the past.
-        await runDue(new Date('2024-06-01T11:00:00.000Z'));
+        await runDue(new Date('2024-06-01T11:00:00.000Z'), systemAppContext());
         callCount = 0;
 
         const db = (await import('@/database/registry')).getDb() as Kysely<DB>;
@@ -452,7 +456,7 @@ describe('onTick / runDue', () => {
             .where('name', '=', 'test-job')
             .execute();
 
-        await onTick(now);
+        await onTick(now, systemAppContext());
         expect(callCount).toBe(1);
 
         // nextRun should have advanced to a future time.
@@ -461,7 +465,7 @@ describe('onTick / runDue', () => {
         expect(row.nextRun?.getTime()).toBeGreaterThan(now.getTime());
 
         // Second immediate tick — should NOT run again.
-        await onTick(now);
+        await onTick(now, systemAppContext());
         expect(callCount).toBe(1);
     });
 });

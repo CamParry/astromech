@@ -11,12 +11,13 @@ import type { Kysely, Updateable } from 'kysely';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { systemAppContext } from '@/app-context/app-context';
 import { getSession } from '@/auth/session';
 import { registerCronJob } from '@/cron/registry';
 import { encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/tables';
 import { globals } from '@/registry';
-import { runWithRequest } from '@/request-context/request-context';
+import { runInRequestScope } from '@/request-scope/request-scope';
 import { cronRouter } from '@/transport/http/routes/cron';
 
 // Mock getSession so tests control the session branch without a real
@@ -30,7 +31,7 @@ const mockGetSession = vi.mocked(getSession);
 /** Minimal app: a request scope, then the cron router. */
 function makeApp(): OpenAPIHono {
     const app = new OpenAPIHono();
-    app.use('*', (c, next) => runWithRequest(c.req.raw, () => next()));
+    app.use('*', (c, next) => runInRequestScope({ request: c.req.raw }, () => next()));
     app.route('/cron', cronRouter);
     return app;
 }
@@ -99,7 +100,7 @@ async function seedDueJob(): Promise<{ ran: boolean }> {
     const { onTick } = await import('@/cron/runner');
 
     // Seed the row (initial nextRun will be future).
-    await onTick(new Date('2024-01-01T00:00:00.000Z'));
+    await onTick(new Date('2024-01-01T00:00:00.000Z'), systemAppContext());
 
     // Force nextRun into the past so the poke tick fires the handler.
     const db = getDb() as Kysely<DB>;

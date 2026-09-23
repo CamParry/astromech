@@ -4,7 +4,7 @@
  * four seams are applied. Each seam's own behaviour is tested beside it.
  */
 
-import type { ManifestMethod, Role, ToolDefinition } from '@/types/index';
+import type { AppContext, ManifestMethod, Role, ToolDefinition } from '@/types/index';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getMethodManifest } from '@/codegen/manifest-registry';
 import { annotateManifest } from '@/policies/annotate-manifest';
@@ -18,6 +18,9 @@ vi.mock('@/policies/annotate-manifest', () => ({ annotateManifest: vi.fn() }));
 vi.mock('@/transport/tools/dispatch', () => ({ buildScopedDispatch: vi.fn() }));
 
 const role: Role = { slug: 'editor', name: 'Editor', permissions: [], isBuiltIn: true };
+
+/** The context the tools are built for; only its role is read here. */
+const ctx = { role } as AppContext;
 
 /** A core manifest method — the shape `buildScopedDispatch` accepts. */
 function coreMethod(id: string): ManifestMethod {
@@ -89,7 +92,7 @@ describe('buildScopedTools', () => {
     it('throws when the manifest is missing', () => {
         vi.mocked(getMethodManifest).mockReturnValue(undefined);
 
-        expect(() => buildScopedTools(role)).toThrow(/populated at runtime boot/);
+        expect(() => buildScopedTools(ctx)).toThrow(/populated at runtime boot/);
     });
 
     it('passes plugin methods through to filtering', () => {
@@ -102,7 +105,7 @@ describe('buildScopedTools', () => {
             ],
         });
 
-        const tools = buildScopedTools(role);
+        const tools = buildScopedTools(ctx);
 
         expect(ids(vi.mocked(filterMethods).mock.calls[0]?.[0] ?? [])).toEqual([
             'users.query',
@@ -117,13 +120,13 @@ describe('buildScopedTools', () => {
     });
 
     it('passes readOnly through to the method filter', () => {
-        buildScopedTools(role, { readOnly: true });
+        buildScopedTools(ctx, { readOnly: true });
 
         expect(vi.mocked(filterMethods).mock.calls[0]?.[1]).toEqual({ readOnly: true });
     });
 
     it('leaves readOnly undefined when no options are given', () => {
-        buildScopedTools(role);
+        buildScopedTools(ctx);
 
         expect(vi.mocked(filterMethods).mock.calls[0]?.[1]).toEqual({
             readOnly: undefined,
@@ -153,7 +156,7 @@ describe('buildScopedTools', () => {
             }))
         );
 
-        const tools = buildScopedTools(role);
+        const tools = buildScopedTools(ctx);
 
         const dispatched = vi
             .mocked(buildScopedDispatch)
@@ -162,11 +165,11 @@ describe('buildScopedTools', () => {
         expect(tools).toHaveLength(2);
     });
 
-    it('annotates and dispatches against the role it was given', () => {
-        buildScopedTools(role);
+    it('annotates against the context’s role and dispatches as the context', () => {
+        buildScopedTools(ctx);
 
         expect(vi.mocked(annotateManifest).mock.calls[0]?.[1]).toBe(role);
-        expect(vi.mocked(buildScopedDispatch).mock.calls[0]?.[1]).toBe(role);
+        expect(vi.mocked(buildScopedDispatch).mock.calls[0]?.[1]).toBe(ctx);
     });
 
     it('skips a method dispatch refuses to build', () => {
@@ -176,7 +179,7 @@ describe('buildScopedTools', () => {
                 : { ok: true, tool: dispatchFor(method) }
         );
 
-        const tools = buildScopedTools(role);
+        const tools = buildScopedTools(ctx);
 
         expect(tools.map((tool) => tool.name)).toEqual(['media_query']);
     });

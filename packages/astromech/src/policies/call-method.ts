@@ -4,7 +4,7 @@
  * role or trusted, and call it with the caller's argument object.
  */
 import type { ScopedServices } from '@/policies/scoped-services';
-import type { CoreManifestMethod, ManifestMethod, Role } from '@/types/index';
+import type { AppContext, CoreManifestMethod, ManifestMethod } from '@/types/index';
 import {
     entriesService,
     globalsService,
@@ -17,8 +17,11 @@ import { PermissionDeniedError } from '@/errors/permission';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { scopedServices } from '@/policies/scoped-services';
 
-/** Who a call acts for: a role, checked by the scoped handle, or a trusted local caller. */
-export type MethodCaller = { role: Role | null | undefined } | 'trusted';
+/**
+ * Who a call acts for: a context, whose role the scoped handle checks, or a
+ * trusted local caller, which acts as the current request or the system.
+ */
+export type MethodCaller = { ctx: AppContext } | 'trusted';
 
 /** Anything callable through a string key. */
 type ServiceRecord = Record<string, unknown>;
@@ -44,7 +47,7 @@ export async function callMethod(
         );
     }
 
-    const handle = caller === 'trusted' ? trustedServices() : scopedServices(caller.role);
+    const handle = caller === 'trusted' ? trustedServices() : scopedServices(caller.ctx);
 
     switch (method.source) {
         case 'core':

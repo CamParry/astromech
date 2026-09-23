@@ -9,7 +9,6 @@ import type {
     GlobalsService,
     MediaService,
     NotificationsService,
-    ServiceDefinition,
     SettingsService,
     TypedEntriesService,
     TypedGlobalsService,
@@ -23,62 +22,63 @@ import { notificationsDefinition } from '@/notifications/service';
 import { settingsDefinition } from '@/settings/service';
 import { usersDefinition } from '@/users/service';
 
-/**
- * The interface, each call bound to `currentAppContext()`. One binding per
- * context, so a request's calls share the objects `bind` builds.
- */
-export function bindCurrent<S extends object>(definition: ServiceDefinition<S>): S {
-    const byContext = new WeakMap<AppContext, S>();
-    const forContext = (context: AppContext): S => {
-        const existing = byContext.get(context);
-        if (existing) return existing;
-        const service = definition.bind(context);
-        byContext.set(context, service);
-        return service;
-    };
+/** The `AppContext` members that hold a bound core service. */
+type ServiceKey =
+    | 'entries'
+    | 'globals'
+    | 'media'
+    | 'settings'
+    | 'users'
+    | 'notifications';
 
+/** Each core service's definition, under the `AppContext` member that binds it. */
+const DEFINITIONS = {
+    entries: entriesDefinition,
+    globals: globalsDefinition,
+    media: mediaDefinition,
+    settings: settingsDefinition,
+    users: usersDefinition,
+    notifications: notificationsDefinition,
+} satisfies Record<ServiceKey, { catalogue: object }>;
+
+/**
+ * The service `key` names, each call made on the one `currentAppContext()`
+ * already holds, so a request's calls share its binding.
+ */
+export function bindCurrent<K extends ServiceKey>(key: K): AppContext[K] {
     const bound: Record<string, (input: unknown) => Promise<unknown>> = {};
-    for (const key of Object.keys(definition.catalogue)) {
-        bound[key] = async (input) => {
-            const service = forContext(await currentAppContext()) as Record<
+    for (const method of Object.keys(DEFINITIONS[key].catalogue)) {
+        bound[method] = async (input) => {
+            const service = (await currentAppContext())[key] as unknown as Record<
                 string,
                 (input: unknown) => unknown
             >;
-            return service[key]?.(input);
+            return service[method]?.(input);
         };
     }
-    return bound as S;
+    return bound as unknown as AppContext[K];
 }
 
-/**
- * The entries service, acting as whoever the current request is. `EntriesMethods`
- * collapses the overload pairs `EntriesService` declares, so the catalogue can be
- * checked against a shape the handlers implement; this is one of the two
- * acknowledged places the cast back happens.
- */
-export const entriesService: EntriesService = bindCurrent(
-    entriesDefinition
-) as unknown as EntriesService;
+/** The entries service, acting as whoever the current request is. */
+export const entriesService: EntriesService = bindCurrent('entries');
 
 /** `entriesService` under its typed facade — build consumer handles from it. */
 export const typedEntriesService = entriesService as unknown as TypedEntriesService;
 
 /** The globals service, acting as whoever the current request is. */
-export const globalsService: GlobalsService = bindCurrent(globalsDefinition);
+export const globalsService: GlobalsService = bindCurrent('globals');
 
 /** `globalsService` under its typed facade; the one acknowledged place the cast happens. */
 export const typedGlobalsService = globalsService as unknown as TypedGlobalsService;
 
 /** The settings service, acting as whoever the current request is. */
-export const settingsService: SettingsService = bindCurrent(settingsDefinition);
+export const settingsService: SettingsService = bindCurrent('settings');
 
 /** The notifications service, acting for whoever the current request is. */
-export const notificationsService: NotificationsService = bindCurrent(
-    notificationsDefinition
-);
+export const notificationsService: NotificationsService = bindCurrent('notifications');
 
 /** The users service, acting as whoever the current request is. */
-export const usersService: UsersService = bindCurrent(usersDefinition);
+export const usersService: UsersService = bindCurrent('users');
 
 /** The media service, acting as whoever the current request is. */
-export const mediaService: MediaService = bindCurrent(mediaDefinition);
+export const mediaService: MediaService = bindCurrent('media');

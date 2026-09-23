@@ -1,10 +1,9 @@
 /**
- * Request-scoped context.
+ * The request scope.
  *
  * Two things are pinned here: identity is scoped to the request, not to the
- * module (the concurrency case, which the module-level `currentUser` this
- * replaced failed only under interleaving), and a request that never asks who
- * the caller is resolves no session at all.
+ * module (the concurrency case, which only shows under interleaving), and a
+ * request that never asks who the caller is resolves no session at all.
  */
 
 import type { User } from '@/types/index';
@@ -14,10 +13,9 @@ import { getSession } from '@/auth/session';
 import {
     getCurrentRole,
     getCurrentUser,
-    getRequestContext,
-    runWithContext,
-    runWithRequest,
-} from '@/request-context/request-context';
+    getRequestScope,
+    runInRequestScope,
+} from '@/request-scope/request-scope';
 
 vi.mock('@/auth/session', () => ({ getSession: vi.fn() }));
 
@@ -68,12 +66,15 @@ describe('request context', () => {
     it('has no user outside a context, and resolves no session to say so', async () => {
         expect(await getCurrentUser()).toBeNull();
         expect(await getCurrentRole()).toBeNull();
-        expect(getRequestContext()).toBeUndefined();
+        expect(getRequestScope()).toBeUndefined();
         expect(mockGetSession).not.toHaveBeenCalled();
     });
 
     it('resolves nothing for a request that never asks who the caller is', async () => {
-        const seen = await runWithRequest(request(), async () => 'served');
+        const seen = await runInRequestScope(
+            { request: request() },
+            async () => 'served'
+        );
 
         expect(seen).toBe('served');
         expect(mockGetSession).not.toHaveBeenCalled();
@@ -83,7 +84,7 @@ describe('request context', () => {
         const user = makeUser('a');
         signIn(user);
 
-        await runWithRequest(request(), async () => {
+        await runInRequestScope({ request: request() }, async () => {
             expect(await getCurrentUser()).toBe(user);
             expect(await getCurrentRole()).toBe(adminRole);
             expect(await getCurrentUser()).toBe(user);
@@ -91,11 +92,11 @@ describe('request context', () => {
 
         expect(mockGetSession).toHaveBeenCalledTimes(1);
         expect(await getCurrentUser()).toBeNull();
-        expect(getRequestContext()).toBeUndefined();
+        expect(getRequestScope()).toBeUndefined();
     });
 
     it('caches a missing session too, rather than retrying it', async () => {
-        await runWithRequest(request(), async () => {
+        await runInRequestScope({ request: request() }, async () => {
             expect(await getCurrentUser()).toBeNull();
             expect(await getCurrentRole()).toBeNull();
         });
@@ -106,7 +107,7 @@ describe('request context', () => {
     it('takes a seeded user without resolving one', async () => {
         const user = makeUser('a');
 
-        const seen = await runWithContext(
+        const seen = await runInRequestScope(
             { request: request(), user, role: adminRole },
             async () => {
                 expect(await getCurrentRole()).toBe(adminRole);
@@ -129,7 +130,7 @@ describe('request context', () => {
         const bEntered = deferred();
         const aResumed = deferred();
 
-        const requestA = runWithContext(
+        const requestA = runInRequestScope(
             { request: request(), user: userA, role: null },
             async () => {
                 expect(await getCurrentUser()).toBe(userA);
@@ -140,7 +141,7 @@ describe('request context', () => {
             }
         );
 
-        const requestB = runWithContext(
+        const requestB = runInRequestScope(
             { request: request(), user: userB, role: null },
             async () => {
                 expect(await getCurrentUser()).toBe(userB);
@@ -161,12 +162,12 @@ describe('request context', () => {
         const outer = makeUser('outer');
         const inner = makeUser('inner');
 
-        await runWithContext(
+        await runInRequestScope(
             { request: request(), user: outer, role: null },
             async () => {
                 expect(await getCurrentUser()).toBe(outer);
 
-                await runWithContext(
+                await runInRequestScope(
                     { request: request(), user: inner, role: adminRole },
                     async () => {
                         expect(await getCurrentUser()).toBe(inner);

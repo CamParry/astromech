@@ -5,25 +5,17 @@
  */
 import type { Permissions } from '@/permissions/permissions-for';
 import type {
+    AppContext,
     EntriesService,
     GlobalsService,
     MediaService,
     NotificationsService,
     PluginServiceNamespace,
-    Role,
     ServiceMethodContract,
     SettingsService,
+    User,
     UsersService,
 } from '@/types/index';
-import { currentAppContext } from '@/app-context/app-context';
-import {
-    entriesService,
-    globalsService,
-    mediaService,
-    notificationsService,
-    settingsService,
-    usersService,
-} from '@/app-context/services';
 import { entriesDefinition } from '@/entries/service';
 import { PermissionDeniedError } from '@/errors/permission';
 import { globalsDefinition } from '@/globals/service';
@@ -35,7 +27,7 @@ import {
     getPluginIdentities,
     getPluginServiceMethods,
 } from '@/plugins/runtime/plugin-runtime';
-import { pluginServices } from '@/plugins/runtime/plugin-services';
+import { pluginServicesFor } from '@/plugins/runtime/plugin-services';
 import { settingsDefinition } from '@/settings/service';
 import { usersDefinition } from '@/users/service';
 
@@ -52,33 +44,22 @@ type ServiceRecord = Record<string, unknown>;
 /** A method as this wrapper calls it: one parameter object, any return. */
 type ServiceFn = (...args: unknown[]) => unknown;
 
-/**
- * Refuse a session-scoped call when nobody is signed in, since there is no
- * subject to act as. The handler reads the subject from `ctx.user` itself, so
- * the caller's input needs nothing added to it.
- */
-async function requireSubject(id: string): Promise<void> {
-    const { user } = await currentAppContext();
-    if (user === null) {
-        throw new PermissionDeniedError(
-            id,
-            null,
-            'is session-scoped, and this caller has no signed-in user to act as.'
-        );
-    }
-}
+/** Who a scoped handle acts for: the role's guard, and the signed-in user if any. */
+export type ScopedCaller = { permissions: Permissions; user: User | null };
 
 /**
  * Wrap every method of `service` in its declared permission check. A denied
  * method still EXISTS on the returned object and throws, rather than
- * disappearing as if it were never there — even for a synchronous method.
+ * disappearing as if it were never there. A session-scoped method is refused
+ * when `caller` has no signed-in user, since there is no subject to act as.
  */
 export function scopeMethods<S extends object>(
     service: S,
     contracts: ContractCatalogue,
-    permissions: Permissions,
+    caller: ScopedCaller,
     module: string
 ): S {
+    const { permissions } = caller;
     const scoped: ServiceRecord = {};
 
     for (const [key, value] of Object.entries(service as ServiceRecord)) {
@@ -101,15 +82,15 @@ export function scopeMethods<S extends object>(
                     deniedPermission(resolved, permissions.allows)
                 );
             }
-            // Called on the service so a method reaching for a sibling through
-            // `this` keeps working. Only the session-scoped branch is async,
-            // since reading the request context needs an await.
-            if (contract.sessionScoped === true) {
-                return (async (): Promise<unknown> => {
-                    await requireSubject(id);
-                    return fn.apply(service, args);
-                })();
+            if (contract.sessionScoped === true && caller.user === null) {
+                throw new PermissionDeniedError(
+                    id,
+                    null,
+                    'is session-scoped, and this caller has no signed-in user to act as.'
+                );
             }
+            // Called on the service so a method reaching for a sibling through
+            // `this` keeps working.
             return fn.apply(service, args);
         };
     }
@@ -122,10 +103,11 @@ type PluginMethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
 
 /**
  * Wrap every registered plugin's service methods in their declared `access`,
- * resolved under the plugin's permission namespace. A denied method still
- * exists on the returned object and rejects, as `scopeMethods` does.
+ * resolved under the plugin's permission namespace, each running as `ctx`. A
+ * denied method still exists on the returned object and rejects.
  */
-function scopePlugins(permissions: Permissions): PluginServiceNamespace {
+function scopePlugins(ctx: AppContext, permissions: Permissions): PluginServiceNamespace {
+    const services = pluginServicesFor(ctx);
     const scoped: Record<string, PluginMethodMap> = {};
 
     for (const identity of getPluginIdentities()) {
@@ -149,7 +131,7 @@ function scopePlugins(permissions: Permissions): PluginServiceNamespace {
                         deniedPermission(resolved, permissions.allows)
                     );
                 }
-                const invoke = pluginServices[identity.serviceKey]?.[key];
+                const invoke = services[identity.serviceKey]?.[key];
                 if (invoke === undefined) throw new PermissionDeniedError(id, null);
                 return invoke(input);
             };
@@ -172,54 +154,52 @@ export type ScopedServices = {
     plugins: PluginServiceNamespace;
 };
 
+const HANDLES = new WeakMap<AppContext, ScopedServices>();
+
 /**
- * Compose one role into a handle over every domain.
- *
- * One `permissionsFor` guard backs them all, so the role is resolved once per
- * handle rather than once per call.
+ * The handle over every domain for `ctx`: its services, each method refused
+ * unless `ctx.role` may call it. Built once per context and reused.
  */
-export function scopedServices(role: Role | null | undefined): ScopedServices {
-    const permissions = permissionsFor(role);
-    return {
-        users: scopeMethods(
-            usersService,
-            usersDefinition.catalogue,
-            permissions,
-            'users'
-        ),
-        media: scopeMethods(
-            mediaService,
-            mediaDefinition.catalogue,
-            permissions,
-            'media'
-        ),
+export function scopedServices(ctx: AppContext): ScopedServices {
+    const existing = HANDLES.get(ctx);
+    if (existing) return existing;
+
+    const caller: ScopedCaller = {
+        permissions: permissionsFor(ctx.role),
+        user: ctx.user,
+    };
+    const handle: ScopedServices = {
+        users: scopeMethods(ctx.users, usersDefinition.catalogue, caller, 'users'),
+        media: scopeMethods(ctx.media, mediaDefinition.catalogue, caller, 'media'),
         settings: scopeMethods(
-            settingsService,
+            ctx.settings,
             settingsDefinition.catalogue,
-            permissions,
+            caller,
             'settings'
         ),
         // An entry's and a global's permissions depend on the call's `type` or
         // `key`, and each contract states that in the function form, the
         // `full` and publish gates included.
         entries: scopeMethods(
-            entriesService,
+            ctx.entries,
             entriesDefinition.catalogue,
-            permissions,
+            caller,
             'entries'
         ),
         globals: scopeMethods(
-            globalsService,
+            ctx.globals,
             globalsDefinition.catalogue,
-            permissions,
+            caller,
             'globals'
         ),
         notifications: scopeMethods(
-            notificationsService,
+            ctx.notifications,
             notificationsDefinition.catalogue,
-            permissions,
+            caller,
             'notifications'
         ),
-        plugins: scopePlugins(permissions),
+        plugins: scopePlugins(ctx, caller.permissions),
     };
+    HANDLES.set(ctx, handle);
+    return handle;
 }

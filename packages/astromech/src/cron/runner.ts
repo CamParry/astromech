@@ -4,11 +4,10 @@
  * handler, then records the run and releases the claim.
  */
 import type { CronRepository } from '@/cron/repository';
+import type { AppContext } from '@/types/index';
 import { Cron } from 'croner';
-import { getConfig } from '@/config/registry';
 import { getCronJobs } from '@/cron/registry';
 import { createCronRepository } from '@/cron/repository';
-import { getDb } from '@/database/registry';
 import { globals } from '@/registry';
 
 /** Claim lease: generous so a normal job never self-expires mid-run. A crashed
@@ -53,13 +52,10 @@ async function seed(
 /**
  * One due-evaluation pass (NO overlap guard — exported so tests can exercise the
  * DB lock by running passes concurrently). Production code calls onTick().
+ * Every job runs with `ctx`, the system context, whoever triggered the tick.
  */
-export async function runDue(now: Date): Promise<void> {
-    // Cron handlers are handed the raw Kysely handle — that is their public
-    // contract, so the runner still resolves one even though its own queries go
-    // through the repository.
-    const db = getDb();
-    const config = getConfig();
+export async function runDue(now: Date, ctx: AppContext): Promise<void> {
+    const config = ctx.config;
     const timezone = config.timezone ?? 'UTC';
     const repository = createCronRepository();
 
@@ -76,7 +72,7 @@ export async function runDue(now: Date): Promise<void> {
         if (!(await repository.claim(row.name, now, expiry))) continue; // another tick owns it
 
         try {
-            await job.handler({ db, config });
+            await job.handler(ctx);
         } catch (err) {
             console.error(`[astromech/cron] Job "${row.name}" failed:`, err);
         }
@@ -95,11 +91,11 @@ export async function runDue(now: Date): Promise<void> {
  * Core scheduler tick. Belt-and-suspenders overlap guard (skips if a prior tick
  * in THIS process is still running) layered over the cross-instance DB lock.
  */
-export async function onTick(now: Date = new Date()): Promise<void> {
+export async function onTick(now: Date, ctx: AppContext): Promise<void> {
     if (globals().cronTickRunning === true) return;
     globals().cronTickRunning = true;
     try {
-        await runDue(now);
+        await runDue(now, ctx);
     } finally {
         globals().cronTickRunning = false;
     }

@@ -5,18 +5,20 @@
  */
 import type * as appServices from '@/app-context/services';
 import type {
+    AppContext,
     CoreManifestMethod,
     EntriesManifestMethod,
     Permission,
     PluginDefinition,
     PluginManifestMethod,
     Role,
+    User,
 } from '@/types/index';
 import {
+    contextAs,
     createTestDb,
     createTestUser,
     makeTestConfig,
-    runAsUser,
     setupTestConfig,
 } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -108,6 +110,18 @@ function role(...permissions: Permission[]): Role {
     return { slug: 'test', name: 'Test', permissions, isBuiltIn: false };
 }
 
+/**
+ * A caller acting as `actingRole` (and `user`, when given), whose users and
+ * entries services are this file's stubs.
+ */
+function as(actingRole: Role, user: User | null = null): { ctx: AppContext } {
+    const ctx = Object.create(contextAs(actingRole, user), {
+        users: { value: usersService },
+        entries: { value: entriesService },
+    }) as AppContext;
+    return { ctx };
+}
+
 beforeEach(() => {
     setupTestConfig();
     vi.clearAllMocks();
@@ -116,7 +130,7 @@ beforeEach(() => {
 describe('callMethod', () => {
     it('refuses a role without the permission before the service runs', async () => {
         await expect(
-            callMethod(usersQuery, {}, { role: role('users:create') })
+            callMethod(usersQuery, {}, as(role('users:create')))
         ).rejects.toThrow(PermissionDeniedError);
         expect(usersService.query).not.toHaveBeenCalled();
     });
@@ -125,7 +139,7 @@ describe('callMethod', () => {
         const result = await callMethod(
             postsQuery,
             { type: 'note', limit: 5 },
-            { role: role('entry:post:read') }
+            as(role('entry:post:read'))
         );
 
         expect(result).toEqual({ type: 'post', limit: 5 });
@@ -139,7 +153,7 @@ describe('callMethod', () => {
             module: 'nope',
         };
 
-        for (const caller of ['trusted', { role: role('*') }] as const) {
+        for (const caller of ['trusted', as(role('*'))] as const) {
             await expect(callMethod(unknown, {}, caller)).rejects.toThrow(
                 'no service registered for domain "nope"'
             );
@@ -162,8 +176,10 @@ describe('callMethod: session-scoped', () => {
         setupTestConfig();
         const user = await createTestUser(db, { name: 'Alice', role: 'editor' });
 
-        const rows = await runAsUser({ id: user.id } as never, () =>
-            callMethod(notificationsList, {}, { role: role('admin:access') })
+        const rows = await callMethod(
+            notificationsList,
+            {},
+            as(role('admin:access'), { id: user.id } as User)
         );
         expect(rows).toEqual([]);
     });
@@ -176,7 +192,7 @@ describe('callMethod: plugins', () => {
 
     it('checks a role caller against the method’s access', async () => {
         await expect(
-            callMethod(probeEcho, { hello: 'world' }, { role: role() })
+            callMethod(probeEcho, { hello: 'world' }, as(role()))
         ).rejects.toMatchObject({
             name: 'PermissionDeniedError',
             permission: 'plugin:probe:read',
@@ -184,7 +200,7 @@ describe('callMethod: plugins', () => {
         expect(echoHandler).not.toHaveBeenCalled();
 
         await expect(
-            callMethod(probeEcho, { hello: 'world' }, { role: role('plugin:probe:read') })
+            callMethod(probeEcho, { hello: 'world' }, as(role('plugin:probe:read')))
         ).resolves.toEqual({ hello: 'world' });
     });
 

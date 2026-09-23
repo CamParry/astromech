@@ -1,6 +1,6 @@
 /**
  * Fixtures shared across the suite: a storage driver that stores nothing, and
- * the roles that route and request-context tests act under.
+ * the roles that route and request-scope tests act under.
  */
 
 import type { Role, StorageDriver, StorageList } from '@/types/index';
