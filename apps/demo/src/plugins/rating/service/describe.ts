@@ -5,7 +5,7 @@
  */
 
 import { defineServiceMethod, noInput } from 'astromech';
-import { RATING_FIELD_TYPE } from '../fields/rating';
+import { MAX_RATING, RATING_FIELD_TYPE } from '../fields/rating';
 
 export type RatingDescription = {
     fieldType: string;
@@ -23,7 +23,7 @@ export const ratingService = {
         handler: (_input, ctx): RatingDescription => ({
             fieldType: RATING_FIELD_TYPE,
             usedBy: ctx.config.entryTypesWithField(RATING_FIELD_TYPE),
-            max: 5,
+            max: MAX_RATING,
         }),
     }),
 };

@@ -1,10 +1,11 @@
 import type { PluginDefinition, ResolvedConfig } from '@/types/index';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { generateClientTypes } from '@/codegen/type-generator';
+import { setPluginFieldTypes } from '@/fields/field-type-registry';
 import {
     assertNoFieldTypeCollisions,
-    collectPluginFieldTypes,
+    pluginFieldTypes,
 } from '@/plugins/runtime/plugin-fields';
 
 const def = (
@@ -56,9 +57,9 @@ describe('assertNoFieldTypeCollisions', () => {
     });
 });
 
-describe('collectPluginFieldTypes', () => {
-    it('maps registrations by field type', () => {
-        const map = collectPluginFieldTypes([
+describe('pluginFieldTypes', () => {
+    it('lists each plugin field type without its admin component', () => {
+        const types = pluginFieldTypes([
             def({
                 package: '@a/seo',
                 fields: [
@@ -66,7 +67,7 @@ describe('collectPluginFieldTypes', () => {
                 ],
             }),
         ]);
-        expect(map.get('seo-meta')?.component).toBe('@a/seo/field');
+        expect(types).toEqual([{ type: 'seo-meta', defaultValue: {} }]);
     });
 });
 
@@ -86,36 +87,27 @@ describe('generateClientTypes with plugin field types', () => {
         trash: { enabled: true, retentionDays: 30 },
     } as unknown as ResolvedConfig;
 
-    it('uses the registration typeGen when provided', () => {
-        const output = generateClientTypes(
-            config,
-            collectPluginFieldTypes([
-                def({
-                    package: '@a/seo',
-                    fields: [
-                        {
-                            type: 'seo-meta',
-                            component: '@a/seo/field',
-                            typeGen: () => '{ title: string; description: string }',
-                        },
-                    ],
-                }),
-            ])
-        );
+    beforeEach(() => {
+        setPluginFieldTypes([]);
+    });
+
+    it('uses the plugin type’s tsType when provided', () => {
+        setPluginFieldTypes([
+            { type: 'seo-meta', tsType: () => '{ title: string; description: string }' },
+        ]);
+        const output = generateClientTypes(config);
         expect(output).toContain('seo?: { title: string; description: string };');
     });
 
-    it('falls back to JsonValue without typeGen', () => {
-        const output = generateClientTypes(
-            config,
-            collectPluginFieldTypes([
-                def({
-                    package: '@a/seo',
-                    fields: [{ type: 'seo-meta', component: '@a/seo/field' }],
-                }),
-            ])
-        );
+    it('falls back to JsonValue without a tsType', () => {
+        setPluginFieldTypes([{ type: 'seo-meta' }]);
+        const output = generateClientTypes(config);
         expect(output).toContain("seo?: import('astromech').JsonValue;");
+    });
+
+    it('omits a plugin field that affects no data', () => {
+        setPluginFieldTypes([{ type: 'seo-meta', affectsData: false }]);
+        expect(generateClientTypes(config)).not.toContain('seo?:');
     });
 
     it('skips unknown field types entirely without a registration', () => {
@@ -124,7 +116,7 @@ describe('generateClientTypes with plugin field types', () => {
     });
 
     it('emits hook-event augmentations (service lines no longer generated)', () => {
-        const output = generateClientTypes(config, new Map(), [
+        const output = generateClientTypes(config, [
             def({
                 package: '@astromech/redirects',
                 service: {
@@ -143,7 +135,7 @@ describe('generateClientTypes with plugin field types', () => {
     });
 
     it('omits the plugin augmentation block when no plugin contributes', () => {
-        const output = generateClientTypes(config, new Map(), [def({ package: '@a/b' })]);
+        const output = generateClientTypes(config, [def({ package: '@a/b' })]);
         expect(output).not.toContain('AstromechPluginServices');
     });
 });

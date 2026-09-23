@@ -1,5 +1,6 @@
-import type { BaseFieldProps, Field } from 'astromech';
+import type { BaseFieldProps } from 'astromech';
 import React from 'react';
+import { MAX_RATING, ratingError } from '../../fields/rating';
 
 export default function RatingField({
     name,
@@ -10,12 +11,12 @@ export default function RatingField({
     const current = typeof value === 'number' ? value : 0;
     return (
         <div data-rating-field style={{ display: 'flex', gap: '0.25rem' }}>
-            {[1, 2, 3, 4, 5].map((star) => (
+            {Array.from({ length: MAX_RATING }, (_, i) => i + 1).map((star) => (
                 <button
                     key={star}
                     type="button"
                     disabled={disabled}
-                    aria-label={`${star} of 5`}
+                    aria-label={`${star} of ${MAX_RATING}`}
                     onClick={() => onChange(name, star === current ? 0 : star)}
                     style={{
                         background: 'none',
@@ -33,9 +34,7 @@ export default function RatingField({
     );
 }
 
-export function validate(value: unknown, _field: Field): string | undefined {
-    if (typeof value === 'number' && (value < 0 || value > 5)) {
-        return 'Rating must be between 0 and 5';
-    }
-    return undefined;
+/** The inline check the admin runs as the value changes; the server runs the same one. */
+export function validate(value: unknown): string | undefined {
+    return ratingError(value);
 }

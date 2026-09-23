@@ -1,26 +1,21 @@
 /**
- * Plugin custom field types: collects `fields: [...]` registrations across
- * the plugin set and guards against collisions, with core types and between
- * plugins. The collected map feeds the type generator and client code-gen.
+ * Plugin field types: guards against collisions, with core types and between
+ * plugins, and hands the set to the field-type registry when the config
+ * resolves.
  */
 
-import type { PluginDefinition, PluginFieldTypeRegistration } from '@/types/index';
+import type { FieldType, PluginDefinition } from '@/types/index';
 import { CORE_FIELD_TYPES } from '@/types/index';
 
 /**
- * Collect all plugin field-type registrations, keyed by field type.
- * Assumes `assertNoFieldTypeCollisions` has already passed.
+ * Every plugin's field types as `FieldType`s, without the admin component,
+ * which only the admin's component map reads. Assumes
+ * `assertNoFieldTypeCollisions` has already passed.
  */
-export function collectPluginFieldTypes(
-    defs: PluginDefinition[]
-): Map<string, PluginFieldTypeRegistration> {
-    const registrations = new Map<string, PluginFieldTypeRegistration>();
-    for (const def of defs) {
-        for (const registration of def.fields ?? []) {
-            registrations.set(registration.type, registration);
-        }
-    }
-    return registrations;
+export function pluginFieldTypes(defs: PluginDefinition[]): FieldType[] {
+    return defs.flatMap((def) =>
+        (def.fields ?? []).map(({ component: _component, ...fieldType }) => fieldType)
+    );
 }
 
 /**

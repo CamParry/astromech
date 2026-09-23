@@ -8,7 +8,6 @@ import type {
     DataField,
     Field,
     PluginDefinition,
-    PluginFieldTypeRegistration,
     ResolvedConfig,
     ResolvedEntryFields,
     TsTypeEmit,
@@ -57,8 +56,7 @@ function scopeRenderer(
     prefix: string,
     shape: 'full' | 'public',
     hoisted: string[],
-    taken: Set<string>,
-    pluginFieldTypes: Map<string, PluginFieldTypeRegistration>
+    taken: Set<string>
 ): (fields: Field[]) => string[] {
     const emit: TsTypeEmit = {
         properties: (fields) => propertyLines(fields),
@@ -75,7 +73,7 @@ function scopeRenderer(
     function propertyLines(fields: Field[]): string[] {
         const lines: string[] = [];
         for (const field of collectDataFields(fields, shape)) {
-            const tsType = fieldToTsType(field, shape, emit, pluginFieldTypes);
+            const tsType = fieldToTsType(field, shape, emit);
             if (tsType === null) continue;
             const optional = field.required === true ? '' : '?';
             lines.push(`${propertyKey(field.name)}${optional}: ${tsType};`);
@@ -93,17 +91,8 @@ function scopeRenderer(
 function fieldToTsType(
     field: DataField,
     shape: 'full' | 'public',
-    emit: TsTypeEmit,
-    pluginFieldTypes: Map<string, PluginFieldTypeRegistration>
+    emit: TsTypeEmit
 ): string | null {
-    const pluginType = pluginFieldTypes.get(field.type);
-    if (pluginType) {
-        // No typeGen → JsonValue. A typeGen returning null opts out entirely
-        // (presentational field, no stored data) and is skipped by the caller.
-        if (pluginType.typeGen === undefined) return "import('astromech').JsonValue";
-        return pluginType.typeGen(field);
-    }
-
     const fieldType = getFieldType(field.type);
     if (fieldType === undefined) return null;
     if (fieldType.tsType === undefined) return "import('astromech').JsonValue";
@@ -165,7 +154,6 @@ function generateCollectionTypes(
     collectionKey: string,
     fields: ResolvedEntryFields,
     knownCollections: Set<string>,
-    pluginFieldTypes: Map<string, PluginFieldTypeRegistration>,
     qualifiedTargetMap: Map<string, string> = new Map<string, string>()
 ): CollectionTypeBlock {
     const pascal = toPascalCase(collectionKey);
@@ -185,15 +173,13 @@ function generateCollectionTypes(
         pascal,
         'full',
         hoisted,
-        taken,
-        pluginFieldTypes
+        taken
     )(columns).map((line) => `  ${line}`);
     const fieldPublicLines = scopeRenderer(
         pascal,
         'public',
         hoistedPublic,
-        taken,
-        pluginFieldTypes
+        taken
     )(columns).map((line) => `  ${line}`);
 
     // A type alias, not an interface: only an alias of an object type gets the
@@ -265,8 +251,7 @@ type GlobalBlock = {
 function generateGlobalBlocks(
     config: ResolvedConfig,
     knownCollections: Set<string>,
-    qualifiedTargetMap: Map<string, string>,
-    pluginFieldTypes: Map<string, PluginFieldTypeRegistration>
+    qualifiedTargetMap: Map<string, string>
 ): GlobalBlock[] {
     const blocks: GlobalBlock[] = [];
 
@@ -275,7 +260,6 @@ function generateGlobalBlocks(
             prefix,
             fields,
             knownCollections,
-            pluginFieldTypes,
             qualifiedTargetMap
         );
         blocks.push({ globalId, prefix, fieldsType: block.fieldsType });
@@ -319,8 +303,7 @@ type PluginEntryBlock = {
 function generatePluginEntryBlocks(
     pluginEntries: Record<string, Record<string, { fields: ResolvedEntryFields }>>,
     knownCollections: Set<string>,
-    qualifiedTargetMap: Map<string, string>,
-    pluginFieldTypes: Map<string, PluginFieldTypeRegistration>
+    qualifiedTargetMap: Map<string, string>
 ): PluginEntryBlock[] {
     const blocks: PluginEntryBlock[] = [];
 
@@ -335,7 +318,6 @@ function generatePluginEntryBlocks(
                 prefix,
                 entryType.fields,
                 knownCollections,
-                pluginFieldTypes,
                 qualifiedTargetMap
             );
 
@@ -386,7 +368,6 @@ function generatePluginAugmentations(plugins: PluginDefinition[]): string[] {
 /** Generate the full content of the `.astro/astromech.d.ts` type declaration file. */
 export function generateClientTypes(
     config: ResolvedConfig,
-    pluginFieldTypes = new Map<string, PluginFieldTypeRegistration>(),
     plugins: PluginDefinition[] = []
 ): string {
     const collectionKeys = Object.keys(config.entries);
@@ -411,7 +392,6 @@ export function generateClientTypes(
             key,
             entryType.fields,
             knownCollections,
-            pluginFieldTypes,
             qualifiedTargetMap
         )
     );
@@ -442,8 +422,7 @@ export function generateClientTypes(
     const pluginEntryBlocks = generatePluginEntryBlocks(
         pluginEntriesInput,
         knownCollections,
-        qualifiedTargetMap,
-        pluginFieldTypes
+        qualifiedTargetMap
     );
 
     const pluginEntryTypeBlocks = pluginEntryBlocks
@@ -464,8 +443,7 @@ export function generateClientTypes(
     const globalBlocks = generateGlobalBlocks(
         config,
         knownCollections,
-        qualifiedTargetMap,
-        pluginFieldTypes
+        qualifiedTargetMap
     );
 
     const globalAugmentationLines = globalBlocks

@@ -148,13 +148,13 @@ lazily, and resolves each one against the definition's `root`:
 
 ```ts
 // fields/rating.ts
-import type { PluginFieldTypeRegistration } from 'astromech';
+import type { PluginFieldType } from 'astromech';
 
-export const ratingField: PluginFieldTypeRegistration = {
+export const ratingField: PluginFieldType = {
     type: 'rating',
     component: './admin/fields/rating-field.tsx',
     defaultValue: 0,
-    typeGen: () => 'number',
+    tsType: () => 'number',
 };
 ```
 
@@ -204,41 +204,63 @@ don't follow that layout.
 
 ### Custom field types
 
-Register the type as data; the renderer is a separate component file.
+A plugin field type is a `FieldType`, the same record behind every core type,
+plus the `component` that renders it in the admin. Core registers it when the
+config resolves, so the server coerces, defaults and validates its values on
+every write, and codegen, public reads and the relationships index handle it
+like a core type.
 
 ```ts
 // fields/rating.ts
-import type { PluginFieldTypeRegistration } from 'astromech';
-import { RATING_FIELD_TYPE } from '../types.js';
+import type { PluginFieldType } from 'astromech';
 
-export const ratingField: PluginFieldTypeRegistration = {
-    type: RATING_FIELD_TYPE, // build error if it collides
+export const ratingField: PluginFieldType = {
+    type: 'rating', // build error if it collides
     component: './admin/fields/rating-field.tsx',
-    defaultValue: 0,
-    typeGen: () => 'number', // TS type in generated Fields interfaces
+    defaultValue: 0, // a missing value on create
+    tsType: () => 'number', // generated Fields types; JsonValue when omitted
+    coerce: (value) => (typeof value === 'string' ? Number(value) : value),
+    validate: async ({ value }) =>
+        typeof value === 'number' && value >= 0 && value <= 5
+            ? true
+            : 'Rating must be between 0 and 5',
 };
 ```
 
+The other members, all optional:
+
+| Member        | Does                                                                                                        |
+| ------------- | ----------------------------------------------------------------------------------------------------------- |
+| `affectsData` | `false` for a field that stores nothing, such as a preview. Data paths skip it; the admin still renders it. |
+| `isRelation`  | The value is an id or a list of ids the relationships index records.                                        |
+| `toPublic`    | The value a public read returns, as rich text returns HTML.                                                 |
+| `children`    | A container's nested value scopes, so parsing and public reads recurse into it.                             |
+| `subFields`   | A container's declared field lists, so config validation and relationship paths reach them.                 |
+
+A container's `tsType` receives a third argument, `emit`: `emit.properties(fields)`
+types a nested scope, and `emit.alias(name, body)` declares a named type for a
+value that refers to itself.
+
 The renderer **default-exports** a component taking `BaseFieldProps`, and may
-also export `validate(value, field)`:
+also export `validate(value, field)`, which the admin runs as the value changes.
+Share the check with the field type's `validate` so the two agree:
 
 ```tsx
 // admin/fields/rating-field.tsx
-import type { BaseFieldProps, Field } from 'astromech';
+import type { BaseFieldProps } from 'astromech';
 
 export default function RatingField({ name, value, onChange, disabled }: BaseFieldProps) {
     /* ... */
 }
 
-export function validate(value: unknown, field: Field): string | undefined {
+export function validate(value: unknown): string | undefined {
     /* ... */
 }
 ```
 
-A presentational field that persists no data (a preview, say) returns `null`
-from `typeGen` so it's omitted from generated entry `Fields` types entirely.
-
 Then reference it anywhere a field is declared: `{ name: 'quality', type: 'rating' }`.
+A field whose type has `affectsData: false` still takes a name, which the admin
+uses as its key; nothing is stored under it.
 
 ### Running the field pipeline yourself
 

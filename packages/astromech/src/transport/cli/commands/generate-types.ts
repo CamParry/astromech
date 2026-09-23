@@ -2,7 +2,6 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { defineCommand } from 'citty';
 import { generateClientTypes } from '@/codegen/type-generator';
-import { collectPluginFieldTypes } from '@/plugins/runtime/plugin-fields';
 import { loadConfig } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
@@ -26,11 +25,7 @@ export default defineCommand({
             toAllowRemoteOption(args)
         );
         const plugins = rawConfig.plugins ?? [];
-        const types = generateClientTypes(
-            resolved,
-            collectPluginFieldTypes(plugins),
-            plugins
-        );
+        const types = generateClientTypes(resolved, plugins);
         const outPath = resolve(process.cwd(), args.out);
         await mkdir(dirname(outPath), { recursive: true });
         await writeFile(outPath, types, 'utf-8');

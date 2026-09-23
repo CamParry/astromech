@@ -19,12 +19,17 @@ import { assertMediaAccessCompatible } from '@/config/validate/media-access';
 import { assertQualifiedRelationshipTargets } from '@/config/validate/relationships';
 import { ALL_CAPABILITIES } from '@/entries/capabilities';
 import { assertUniqueDataNames, validateFieldTree } from '@/fields/field-tree';
+import { setPluginFieldTypes } from '@/fields/field-type-registry';
 import { resolveRoles } from '@/permissions/roles';
+import { pluginFieldTypes } from '@/plugins/runtime/plugin-fields';
 
 /** Resolve the config with defaults and plugin merging. */
 export function resolveConfig(config: AstromechConfig): ResolvedConfig {
     const plugins = config.plugins ?? [];
     assertPluginsValid(plugins);
+    // Before any field tree is read: parse, codegen and validation look plugin
+    // types up in the same registry as core's.
+    setPluginFieldTypes(pluginFieldTypes(plugins));
 
     const entries: Record<string, ResolvedEntryType> = {};
     for (const [typeKey, entryType] of Object.entries(config.entries)) {

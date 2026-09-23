@@ -17,7 +17,7 @@ import type {
     StorageObject,
 } from './config';
 import type { Permission } from './domain';
-import type { DataField, FieldValidator } from './fields';
+import type { FieldType } from './fields';
 import type { PluginHooks } from './hooks';
 import type { ServiceMethod, ToolDefinition } from './methods';
 import type { TypedEntriesService } from './typed-entries';
@@ -259,33 +259,14 @@ export type PluginAdmin = {
 };
 
 /**
- * Custom field type registration. The renderer module (resolved from the
- * `component` import specifier by the code-gen virtual module) must default-
- * export a component taking the standard field props (`BaseFieldProps`), and
- * may export `validate(value, field)` returning an error message or
- * `undefined`. That `validate` runs only in the browser; for server-side
- * enforcement supply `serverValidate` below.
+ * A field type a plugin contributes: a `FieldType`, registered beside the core
+ * types when the config resolves, plus the admin component that renders it.
+ * The component module default-exports a component taking `BaseFieldProps`,
+ * and may export `validate(value, field)` for inline errors in the browser.
  */
-export type PluginFieldTypeRegistration = {
-    /** Field type key, e.g. `seo-preview`. Colliding with a core type or another plugin is a build error. */
-    type: string;
+export type PluginFieldType = Omit<FieldType, 'build' | 'layout'> & {
     /** Import specifier (STRING) for the renderer module. */
     component: string;
-    /** Serializable value shown when the field has no stored value yet. */
-    defaultValue?: unknown;
-    /**
-     * TS type for generated entry `Fields` interfaces. Defaults to `JsonValue`.
-     * Return `null` for a presentational field that persists no data (e.g. a
-     * preview) so it is omitted from the generated type entirely.
-     */
-    typeGen?: (field: DataField) => string | null;
-    /**
-     * Server-side validator — the type-intrinsic rule for this custom field,
-     * enforced by the field pipeline on every mutation (not just the browser).
-     * Async; returns `true` when valid or an error message string. Wired into
-     * the pipeline in P2/P3.
-     */
-    serverValidate?: FieldValidator;
 };
 
 /**
@@ -369,7 +350,8 @@ export type PluginDefinition = PluginIdentity & {
      * `<namespace>/<key>` on the one globals service.
      */
     globals?: GlobalConfig[];
-    fields?: PluginFieldTypeRegistration[];
+    /** Field types, each keyed by its `type`. Colliding with a core or another plugin's type is a build error. */
+    fields?: PluginFieldType[];
     /**
      * Tables shipped by the plugin (create via
      * `definePluginTable`; names are `plugin_<namespace>_` prefixed).

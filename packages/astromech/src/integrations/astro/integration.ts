@@ -15,7 +15,6 @@ import { runMigrations } from '@/database/migrations';
 import { AstromechError } from '@/errors/astromech-error';
 import { registerRoutes } from '@/integrations/astro/routes';
 import { collectIconNames, createViteConfig } from '@/integrations/astro/vite';
-import { collectPluginFieldTypes } from '@/plugins/runtime/plugin-fields';
 
 export type AstromechIntegrationOptions = {
     /** Path to the site's astromech.config.ts, resolved against the Astro project root. */
@@ -95,11 +94,7 @@ export function astromech(options: AstromechIntegrationOptions = {}): AstroInteg
                 const { generateClientTypes } = await import('@/codegen/type-generator');
                 injectTypes({
                     filename: 'astromech.d.ts',
-                    content: generateClientTypes(
-                        resolvedConfig,
-                        collectPluginFieldTypes(plugins),
-                        plugins
-                    ),
+                    content: generateClientTypes(resolvedConfig, plugins),
                 });
 
                 const {

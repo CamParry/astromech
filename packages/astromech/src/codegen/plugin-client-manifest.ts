@@ -5,7 +5,7 @@
  */
 
 import type { AdminPage, AdminSlotContribution, AdminSlotName } from '@/types/config';
-import type { PluginDefinition, PluginFieldTypeRegistration } from '@/types/plugins';
+import type { PluginDefinition, PluginFieldType } from '@/types/plugins';
 import { fileURLToPath } from 'node:url';
 import { AstromechError } from '@/errors/astromech-error';
 import {
@@ -62,7 +62,7 @@ export function generatePluginClientManifest(
     const fieldTypeLines = plugins.flatMap((def) => {
         const identity = resolvePluginIdentity(def);
         return (def.fields ?? []).map(
-            (reg: PluginFieldTypeRegistration) =>
+            (reg: PluginFieldType) =>
                 `\t${JSON.stringify(reg.type)}: { load: () => import(${JSON.stringify(resolveAssetSpecifier(def, reg.component))}), defaultValue: ${JSON.stringify(reg.defaultValue ?? null)}, plugin: ${JSON.stringify(identity.namespace)}, serviceKey: ${JSON.stringify(identity.serviceKey)}, namespace: ${JSON.stringify(identity.permissionNamespace)} },`
         );
     });

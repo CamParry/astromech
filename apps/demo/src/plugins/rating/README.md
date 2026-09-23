@@ -17,7 +17,7 @@ asset specifiers resolve against this directory instead of a package specifier.
 rating/
   index.ts                    definePlugin() — identity + composing the surfaces below
   permissions/rating.ts       definePermissions() — the grantable permission keys
-  fields/rating.ts            the `rating` field-type registration + RATING_FIELD_TYPE
+  fields/rating.ts            the `rating` field type (server checks) + RATING_FIELD_TYPE
   admin/fields/rating-field.tsx  the field renderer (browser asset) + validate()
   pages/overview.ts           defineAdminPage — component view
   admin/pages/overview-page.tsx  the overview renderer (browser asset)
