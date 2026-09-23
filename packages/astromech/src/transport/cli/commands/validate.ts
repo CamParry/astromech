@@ -3,6 +3,7 @@ import type {
     ValidationReport,
 } from '@/transport/cli/validate-stored-content';
 import { defineCommand } from 'citty';
+import { systemAppContext } from '@/app-context/app-context';
 import { validateStoredContent } from '@/transport/cli/validate-stored-content';
 import { bootApplication } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
@@ -25,6 +26,7 @@ export default defineCommand({
 
         reportFindings(
             await validateStoredContent(
+                systemAppContext(),
                 args.type !== undefined ? { type: args.type } : {}
             )
         );

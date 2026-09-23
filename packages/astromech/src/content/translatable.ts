@@ -1,14 +1,15 @@
 /**
  * Non-translatable fields belong to the item, not to one of its locales: they
  * are inherited from the default-locale row when a translation is written, and
- * propagated to the other locales when the default one is updated. Shared by
- * every resource with per-locale content; the resource supplies its field
- * definitions and its repository's `translatable` group.
+ * propagated to the other locales when the default one is updated.
  */
 
 import type { ContentRef, ContentRow } from './repository/types';
+import type { ResourceSpec } from './resources';
 import type { DataField } from '@/types/fields';
-import type { JsonObject } from '@/types/index';
+import type { JsonObject, ResolvedConfig } from '@/types/index';
+import { defaultContentLocale } from '@/config/content-locale';
+import { flattenFieldNodes } from '@/fields/flatten';
 
 /** The read `inheritSharedFields` needs: one locale of one item. */
 type ContentReader = {
@@ -24,43 +25,28 @@ type FieldPropagator = {
 };
 
 /**
- * The subset of `names` whose definitions are marked `translatable: false`.
- * Empty when the resource itself is not translatable.
- */
-function sharedFieldNames(
-    definitions: readonly DataField[],
-    names: readonly string[],
-    translatable: boolean
-): string[] {
-    if (!translatable) return [];
-    return definitions
-        .filter((field) => field.translatable === false && names.includes(field.name))
-        .map((field) => field.name);
-}
-
-/**
  * Merges the item's shared fields in from its default-locale row. A field
  * marked `translatable: false` belongs to the item, so a new translation takes
  * the stored value over whatever the caller sent.
  */
-export async function inheritSharedFields(params: {
-    repository: ContentReader;
-    values: Record<string, unknown>;
-    definitions: readonly DataField[];
-    translatable: boolean;
-    /** The item being translated; absent when it is being created. */
-    id: string | undefined;
-    locale: string;
-    defaultLocale: string;
-}): Promise<Record<string, unknown>> {
-    const { repository, values, definitions, id, locale, defaultLocale } = params;
+export async function inheritSharedFields(
+    spec: ResourceSpec,
+    config: ResolvedConfig,
+    params: {
+        /** The entry type or global key; users and media have none. */
+        target?: string | undefined;
+        repository: ContentReader;
+        values: Record<string, unknown>;
+        /** The item being translated; absent when it is being created. */
+        id: string | undefined;
+        locale: string;
+    }
+): Promise<Record<string, unknown>> {
+    const { repository, values, id, locale } = params;
+    const defaultLocale = defaultContentLocale(config);
     if (id === undefined || locale === defaultLocale) return values;
 
-    const shared = sharedFieldNames(
-        definitions,
-        definitions.map((field) => field.name),
-        params.translatable
-    );
+    const shared = sharedFieldNames(spec, config, params.target, undefined);
     if (shared.length === 0) return values;
 
     const source = await repository.get(
@@ -81,21 +67,25 @@ export async function inheritSharedFields(params: {
  * Only the names the caller actually patched are sent: the merged document
  * holds every field, and propagating an untouched one would overwrite them.
  */
-export async function propagateSharedFields(params: {
-    translatable: FieldPropagator | undefined;
-    definitions: readonly DataField[];
-    isTranslatable: boolean;
-    record: { id: string; locale: string };
-    fields: JsonObject;
-    patchedFieldNames: string[];
-}): Promise<void> {
-    const { translatable, definitions, record, fields, patchedFieldNames } = params;
+export async function propagateSharedFields(
+    spec: ResourceSpec,
+    config: ResolvedConfig,
+    params: {
+        target?: string | undefined;
+        translatable: FieldPropagator | undefined;
+        record: { id: string; locale: string };
+        fields: JsonObject;
+        patchedFieldNames: string[];
+    }
+): Promise<void> {
+    const { translatable, record, fields } = params;
     if (!translatable) return;
 
     const shared = sharedFieldNames(
-        definitions,
-        patchedFieldNames,
-        params.isTranslatable
+        spec,
+        config,
+        params.target,
+        params.patchedFieldNames
     );
     if (shared.length === 0) return;
 
@@ -105,4 +95,25 @@ export async function propagateSharedFields(params: {
         if (value !== undefined) values[name] = value;
     }
     await translatable.propagateFields(record.id, record.locale, values);
+}
+
+/**
+ * The target's fields marked `translatable: false`, narrowed to `names` when
+ * given. Empty when the target itself is not translatable.
+ */
+function sharedFieldNames(
+    spec: ResourceSpec,
+    config: ResolvedConfig,
+    target: string | undefined,
+    names: readonly string[] | undefined
+): string[] {
+    if (!spec.translatable(config, target)) return [];
+    const definitions: DataField[] = flattenFieldNodes(spec.fields(config, target));
+    return definitions
+        .filter(
+            (field) =>
+                field.translatable === false &&
+                (names === undefined || names.includes(field.name))
+        )
+        .map((field) => field.name);
 }

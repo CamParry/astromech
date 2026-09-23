@@ -4,7 +4,12 @@
  * stays in each module; `DECISIONS.md` says why the spec holds no repository.
  */
 
-import type { Field, ResolvedConfig, ResourceType } from '@/types/index';
+import type {
+    Field,
+    ResolvedConfig,
+    ResourceType,
+    ResourceValidator,
+} from '@/types/index';
 import { resolveEntryType } from '@/entries/entry-types';
 import { findGlobal } from '@/globals/find-global';
 import { MEDIA_SORT_FIELDS } from '@/types/query';
@@ -21,6 +26,10 @@ export type ResourceSpec = {
     fields(config: ResolvedConfig, target?: string): Field[];
     /** Whether the target keeps a content row per locale. */
     translatable(config: ResolvedConfig, target?: string): boolean;
+    /** Whether the target carries a publication status, so a draft may be partial. */
+    hasStatuses(config: ResolvedConfig, target?: string): boolean;
+    /** The author's whole-resource validator for the target, when it declares one. */
+    validate(config: ResolvedConfig, target?: string): ResourceValidator | undefined;
     /** The columns a list may order by; empty for a resource with no list. */
     sortable: readonly string[];
     /** The content columns a version snapshots beside `fields`. */
@@ -42,6 +51,11 @@ export const RESOURCE_SPECS: {
         },
         translatable: (config, type) =>
             resolveEntryType(config, type ?? '')?.translatable === true,
+        // A type no longer configured keeps its rows; they validate as drafts
+        // of a type with statuses, which is the default.
+        hasStatuses: (config, type) =>
+            resolveEntryType(config, type ?? '')?.capabilities.statuses !== false,
+        validate: (config, type) => resolveEntryType(config, type ?? '')?.validate,
         sortable: ['title', 'status', 'createdAt', 'updatedAt', 'publishedAt', 'slug'],
         versionedColumns: ['title', 'slug'],
     },
@@ -54,6 +68,9 @@ export const RESOURCE_SPECS: {
         },
         translatable: (config, key) =>
             findGlobal(config, key ?? '')?.capabilities.translatable === true,
+        hasStatuses: (config, key) =>
+            findGlobal(config, key ?? '')?.capabilities.statuses === true,
+        validate: (config, key) => findGlobal(config, key ?? '')?.validate,
         sortable: [],
         versionedColumns: [],
     },
@@ -62,6 +79,8 @@ export const RESOURCE_SPECS: {
         name: () => 'User content',
         fields: (config) => config.users.fields,
         translatable: (config) => config.users.translatable,
+        hasStatuses: () => false,
+        validate: (config) => config.users.validate,
         sortable: ['name', 'email', 'createdAt', 'updatedAt', 'role'],
         versionedColumns: [],
     },
@@ -70,6 +89,8 @@ export const RESOURCE_SPECS: {
         name: () => 'Media',
         fields: (config) => config.media.fields ?? [],
         translatable: (config) => config.media.translatable,
+        hasStatuses: () => false,
+        validate: (config) => config.media.validate,
         sortable: MEDIA_SORT_FIELDS,
         versionedColumns: ['title', 'alt', 'caption'],
     },

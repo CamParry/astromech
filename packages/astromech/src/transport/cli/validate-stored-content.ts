@@ -1,24 +1,22 @@
 /**
- * Stored-content validation report.
- *
- * Validation is write-time only, so tightening a rule never flags rows already
- * stored. `validateStoredContent` walks stored content and reports every row
- * whose field data the CURRENT rules would reject. It writes nothing.
+ * Stored-content validation report. Validation is write-time only, so tightening
+ * a rule never flags rows already stored; this walks stored content and reports
+ * every row the CURRENT rules would reject, with each write path's parse context.
  */
 
+import type { ScannedRow } from '@/content/unique';
 import type { FieldErrors } from '@/types/fields';
 import type {
+    AppContext,
     EntryStatus,
     JsonObject,
     ResolvedGlobal,
     ResourceType,
 } from '@/types/index';
-import { globalsService } from '@/app-context/services';
-import { getDefaultContentLocale } from '@/config/content-locale';
-import { getConfig } from '@/config/registry';
-import { isUniqueAmong } from '@/content/unique';
+import { defaultContentLocale } from '@/config/content-locale';
+import { RESOURCE_SPECS } from '@/content/resources';
+import { definitionsOf, fieldParseContext } from '@/content/write-fields';
 import { createRepository } from '@/database/repository/create-repository';
-import { existingEntryTypes } from '@/database/repository/resource-existence';
 import {
     QUALIFIED_SEPARATOR,
     qualifyEntryType,
@@ -27,8 +25,6 @@ import {
 import { listEntryRows } from '@/entries/internal/records';
 import { getEntryRepository, hasCustomTable } from '@/entries/repository/registry';
 import { entriesTable, entryContentTable } from '@/entries/tables';
-import { entryValidationMode } from '@/entries/validation-mode';
-import { flattenEntryFields, flattenFieldNodes } from '@/fields/flatten';
 import { safeParseFields } from '@/fields/parse-fields';
 import { createMediaRepository } from '@/media/repository';
 import { createUserRepository } from '@/users/repository';
@@ -52,18 +48,38 @@ export type ValidationReport = {
     findings: ValidationFinding[];
 };
 
-/** Report every stored row the current field rules would reject. Writes nothing. */
+/** What a media or user content row carries that the check reads. */
+type ContentFieldsRow = { id: string; fields: JsonObject };
+
+/** One stored row to check, with what its write path's parse context needs. */
+type StoredRow = {
+    kind: ResourceType;
+    /** The entry type or global key; users and media have none. */
+    target: string | undefined;
+    id: string;
+    locale: string;
+    fields: JsonObject;
+    status: EntryStatus | undefined;
+    record: unknown;
+    scan: () => Promise<readonly ScannedRow[]>;
+};
+
+/**
+ * Report every stored row the current field rules would reject. Writes nothing.
+ * `ctx` is the caller's app context; the CLI hands it the system context.
+ */
 export async function validateStoredContent(
+    ctx: AppContext,
     opts?: ValidationScope
 ): Promise<ValidationReport> {
     const report: ValidationReport = { rowsChecked: 0, findings: [] };
 
-    await checkEntries(report, opts?.type);
+    await checkEntries(ctx, report, opts?.type);
     // `type` names an entry type, so a scoped run covers entries only.
     if (opts?.type === undefined) {
-        await checkMedia(report);
-        await checkUsers(report);
-        await checkGlobals(report);
+        await checkContentRows(ctx, report, 'media');
+        await checkContentRows(ctx, report, 'user');
+        await checkGlobals(ctx, report);
     }
 
     return report;
@@ -79,6 +95,7 @@ export async function validateStoredContent(
  * surface addresses it by; `locale` is what tells two findings apart.
  */
 async function checkEntries(
+    ctx: AppContext,
     report: ValidationReport,
     type: string | undefined
 ): Promise<void> {
@@ -94,92 +111,50 @@ async function checkEntries(
     for (const row of contents) {
         const entry = live.get(row.entryId);
         if (entry === undefined) continue;
-        await checkEntryRow(report, {
+        await checkRow(ctx, report, {
+            kind: 'entry',
+            target: entry.type,
             id: entry.id,
-            type: entry.type,
             locale: row.locale,
             status: row.status,
             fields: (row.fields ?? {}) as JsonObject,
             record: row,
+            scan: () =>
+                listEntryRows(getEntryRepository(entry.type), entry.type, row.locale),
         });
     }
 
-    for (const typeName of customTableEntryTypes(type)) {
-        const { data } = await getEntryRepository(typeName).list({
+    for (const typeName of customTableEntryTypes(ctx, type)) {
+        const repository = getEntryRepository(typeName);
+        const { data } = await repository.list({
             type: typeName,
             limit: 'all',
             locale: 'all',
         });
         for (const record of data) {
             if (record.deletedAt != null) continue;
-            await checkEntryRow(report, {
+            // A custom-table repository need not be locale-aware; the fallback
+            // matches the entries-table repository's own.
+            const locale = record.locale ?? defaultContentLocale(ctx.config);
+            await checkRow(ctx, report, {
+                kind: 'entry',
+                target: typeName,
                 id: record.id,
-                type: typeName,
-                // A custom-table repository need not be locale-aware; the fallback
-                // matches the entries-table repository's own.
-                locale: record.locale ?? getConfig().defaultLocale ?? 'en',
+                locale,
                 status: record.status,
                 fields: record.fields,
                 record,
+                scan: () => listEntryRows(repository, typeName, locale),
             });
         }
     }
 }
 
-/** One entry row through the pipeline, with `entries/internal/update-batch.ts`'s context. */
-async function checkEntryRow(
-    report: ValidationReport,
-    row: {
-        id: string;
-        type: string;
-        locale: string;
-        status: EntryStatus | undefined;
-        fields: JsonObject;
-        record: unknown;
-    }
-): Promise<void> {
-    const entryType = resolveEntryType(getConfig(), row.type);
-    // A row whose type the config no longer declares has no rules to fail.
-    if (!entryType) return;
-
-    report.rowsChecked += 1;
-    const definitions = flattenEntryFields(entryType.fields);
-    const validate = entryType.validate;
-    const processed = await safeParseFields(
-        row.fields as Record<string, unknown>,
-        definitions,
-        {
-            operation: 'update',
-            validation: entryValidationMode({
-                status: row.status,
-                hasStatuses: entryType.capabilities.statuses !== false,
-            }),
-            resource: { kind: 'entry', record: row.record },
-            user: null,
-            isUnique: isUniqueAmong(
-                () => listEntryRows(getEntryRepository(row.type), row.type, row.locale),
-                row.id
-            ),
-            entryTypes: (ids) => existingEntryTypes(ids),
-            coerceOnly: new Set(),
-            collectWarnings: false,
-            ...(validate ? { validate } : {}),
-        }
-    );
-
-    collect(
-        report,
-        { kind: 'entry', type: row.type, id: row.id, locale: row.locale },
-        processed
-    );
-}
-
 /** Entry types whose rows live outside the `entries` table, plugin types qualified. */
-function customTableEntryTypes(type: string | undefined): string[] {
-    const config = getConfig();
+function customTableEntryTypes(ctx: AppContext, type: string | undefined): string[] {
     const configured = [
-        ...Object.keys(config.entries),
-        ...Object.entries(config.pluginEntries).flatMap(([plugin, types]) =>
+        ...Object.keys(ctx.config.entries),
+        ...Object.entries(ctx.config.pluginEntries).flatMap(([plugin, types]) =>
             Object.keys(types).map((name) => qualifyEntryType(plugin, name))
         ),
     ];
@@ -189,97 +164,47 @@ function customTableEntryTypes(type: string | undefined): string[] {
 }
 
 /**
- * Every content row of every media item, with `media/methods/update.ts`'s
- * context. Rows come straight from the repository rather than through `query`,
- * which resolves a delivery URL and so needs a storage driver the report has no
- * use for; `isUnique` reads only `fields`, which both carry identically. A
- * `unique` rule on media compares within one locale, so each locale is a pass of
- * its own.
+ * Every content row of every media item or user. Rows come straight from the
+ * repository rather than through `query`, which for media resolves a delivery
+ * URL the report has no use for. A `unique` rule compares within one locale, so
+ * each locale is a pass of its own, with one load shared by its rows.
  */
-async function checkMedia(report: ValidationReport): Promise<void> {
-    const config = getConfig();
-    const definitions = flattenFieldNodes(config.media?.fields ?? []);
-    const validate = config.media?.validate;
-    const repository = createMediaRepository();
-
-    // Non-translatable media lives in the default content locale alone.
-    const defaultLocale = getDefaultContentLocale();
-    const locales = config.media?.translatable
-        ? (config.locales ?? [defaultLocale])
-        : [defaultLocale];
-
-    for (const locale of locales) {
-        // One load per locale: a `unique` rule reads it per row, and the run
-        // writes nothing, so the snapshot cannot go stale under it.
-        const load = memoize(() => repository.listContent(locale));
-        for (const row of await load()) {
-            report.rowsChecked += 1;
-            const processed = await safeParseFields(row.fields, definitions, {
-                operation: 'update',
-                resource: { kind: 'media', record: row },
-                user: null,
-                // Built per row: `excludeId` is what keeps a row from colliding
-                // with itself, and only the load behind it is shared.
-                isUnique: isUniqueAmong(load, row.id),
-                entryTypes: (ids) => existingEntryTypes(ids),
-                coerceOnly: new Set(),
-                collectWarnings: false,
-                ...(validate ? { validate } : {}),
+async function checkContentRows(
+    ctx: AppContext,
+    report: ValidationReport,
+    kind: 'media' | 'user'
+): Promise<void> {
+    const listContent = (locale: string): Promise<readonly ContentFieldsRow[]> =>
+        kind === 'media'
+            ? createMediaRepository(ctx.config).listContent(locale)
+            : createUserRepository(ctx.config).listContent(locale);
+    for (const locale of locales(ctx, RESOURCE_SPECS[kind].translatable(ctx.config))) {
+        // One load per locale: the run writes nothing, so it cannot go stale.
+        const scan = memoize(() => listContent(locale));
+        for (const row of await scan()) {
+            await checkRow(ctx, report, {
+                kind,
+                target: undefined,
+                id: row.id,
+                locale,
+                status: undefined,
+                fields: row.fields,
+                record: row,
+                scan,
             });
-            collect(report, { kind: 'media', type: null, id: row.id, locale }, processed);
         }
     }
 }
 
 /**
- * Every content row of every user, with `users/methods/update.ts`'s
- * context. A `unique` rule on users compares within one locale, so each
- * locale is a pass of its own — the same shape as `checkMedia`.
+ * Every saved locale of every declared global, host and plugin alike. A locale
+ * that has never been saved reads back null and is skipped: there is no stored
+ * row to report on.
  */
-async function checkUsers(report: ValidationReport): Promise<void> {
-    const config = getConfig();
-    const definitions = flattenFieldNodes(config.users.fields);
-    const validate = config.users.validate;
-    const repository = createUserRepository();
-
-    const defaultLocale = getDefaultContentLocale();
-    const locales = config.users.translatable
-        ? (config.locales ?? [defaultLocale])
-        : [defaultLocale];
-
-    for (const locale of locales) {
-        const load = memoize(() => repository.listContent(locale));
-        for (const row of await load()) {
-            report.rowsChecked += 1;
-            const processed = await safeParseFields(
-                row.fields as Record<string, unknown>,
-                definitions,
-                {
-                    operation: 'update',
-                    resource: { kind: 'user', record: row },
-                    user: null,
-                    isUnique: isUniqueAmong(load, row.id),
-                    entryTypes: (ids) => existingEntryTypes(ids),
-                    coerceOnly: new Set(),
-                    collectWarnings: false,
-                    ...(validate ? { validate } : {}),
-                }
-            );
-            collect(report, { kind: 'user', type: null, id: row.id, locale }, processed);
-        }
-    }
-}
-
-/**
- * Every saved locale of every declared global, host and plugin alike, with
- * `globals/methods/update.ts`'s context. A locale that has never been saved
- * reads back null and is skipped: there is no stored row to report on.
- */
-async function checkGlobals(report: ValidationReport): Promise<void> {
-    const config = getConfig();
+async function checkGlobals(ctx: AppContext, report: ValidationReport): Promise<void> {
     const declared: [string, ResolvedGlobal][] = [
-        ...Object.entries(config.globals),
-        ...Object.entries(config.pluginGlobals).flatMap(([plugin, globals]) =>
+        ...Object.entries(ctx.config.globals),
+        ...Object.entries(ctx.config.pluginGlobals).flatMap(([plugin, globals]) =>
             Object.entries(globals).map(([key, global]): [string, ResolvedGlobal] => [
                 `${plugin}${QUALIFIED_SEPARATOR}${key}`,
                 global,
@@ -287,36 +212,69 @@ async function checkGlobals(report: ValidationReport): Promise<void> {
         ),
     ];
 
-    // A non-translatable global lives in the default content locale alone, and
-    // asking it for another is a caller error, not an empty result.
-    const defaultLocale = getDefaultContentLocale();
     for (const [key, global] of declared) {
-        const locales = global.capabilities.translatable
-            ? (config.locales ?? [defaultLocale])
-            : [defaultLocale];
-        for (const locale of locales) {
-            const row = await globalsService.get({ key, locale, full: true });
+        for (const locale of locales(ctx, global.capabilities.translatable)) {
+            const row = await ctx.globals.get({ key, locale, full: true });
             if (row === null) continue;
-
-            report.rowsChecked += 1;
-            const validate = global.validate;
-            const processed = await safeParseFields(
-                row.fields as Record<string, unknown>,
-                flattenEntryFields(global.fields),
-                {
-                    operation: 'update',
-                    resource: { kind: 'global', record: row },
-                    user: null,
-                    isUnique: isUniqueAmong(async () => []),
-                    entryTypes: (ids) => existingEntryTypes(ids),
-                    coerceOnly: new Set(),
-                    collectWarnings: false,
-                    ...(validate ? { validate } : {}),
-                }
-            );
-            collect(report, { kind: 'global', type: null, id: key, locale }, processed);
+            await checkRow(ctx, report, {
+                kind: 'global',
+                target: key,
+                id: key,
+                locale,
+                status: row.status,
+                fields: row.fields,
+                record: row,
+                scan: async () => [],
+            });
         }
     }
+}
+
+/** A row through its write path's parse, its findings appended to the report. */
+async function checkRow(
+    ctx: AppContext,
+    report: ValidationReport,
+    row: StoredRow
+): Promise<void> {
+    const spec = RESOURCE_SPECS[row.kind];
+    // A row whose entry type the config no longer declares has no rules to fail.
+    if (row.kind === 'entry' && !resolveEntryType(ctx.config, row.target ?? '')) return;
+
+    report.rowsChecked += 1;
+    const processed = await safeParseFields(
+        row.fields,
+        definitionsOf(spec, ctx.config, row.target),
+        {
+            ...fieldParseContext(spec, ctx.config, {
+                target: row.target,
+                operation: 'update',
+                record: row.record,
+                user: null,
+                status: row.status,
+                scan: row.scan,
+                excludeId: row.id,
+                coerceOnly: new Set(),
+            }),
+            collectWarnings: false,
+        }
+    );
+
+    const subject = {
+        kind: row.kind,
+        type: row.kind === 'entry' ? (row.target ?? null) : null,
+        id: row.id,
+        locale: row.locale,
+    };
+    collect(report, subject, processed);
+}
+
+/**
+ * The locales a resource keeps rows in: every configured one when it is
+ * translatable, else the default content locale alone.
+ */
+function locales(ctx: AppContext, translatable: boolean): string[] {
+    const defaultLocale = defaultContentLocale(ctx.config);
+    return translatable ? (ctx.config.locales ?? [defaultLocale]) : [defaultLocale];
 }
 
 /** Append one pipeline result's errors, then its form-level messages. */
@@ -336,7 +294,7 @@ function collect(
 }
 
 /** Run `load` once and hand every later caller the same promise. */
-function memoize<T>(load: () => Promise<T[]>): () => Promise<T[]> {
-    let pending: Promise<T[]> | undefined;
+function memoize<T>(load: () => Promise<readonly T[]>): () => Promise<readonly T[]> {
+    let pending: Promise<readonly T[]> | undefined;
     return () => (pending ??= load());
 }

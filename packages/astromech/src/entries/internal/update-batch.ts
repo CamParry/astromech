@@ -11,7 +11,9 @@ import type {
 } from '@/types/index';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
+import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
+import { patchedFieldNames } from '@/content/write-fields';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types';
 import { CapabilityError } from '@/errors/capability';
@@ -25,7 +27,6 @@ import { asEntry, asRecord, findEntryOfType, getEntryOfType } from './records';
 import { syncEntryRelationships } from './relationships';
 import { deriveSlug, uniqueSlugIfChanged } from './slug';
 import { toStoredFields } from './stored-fields';
-import { propagateSharedFields } from './translatable';
 
 /**
  * Updates one locale of a batch of entries, atomically, firing the entry write
@@ -222,7 +223,7 @@ async function updateOne(params: {
     const validated = parseInput(updateEntrySchema({ titled }), data);
 
     const patch = validated.fields;
-    const patchedFieldNames = patch ? getPatchedFieldNames(patch) : [];
+    const patched = patch ? patchedFieldNames(patch) : [];
     const fields = patch
         ? await toStoredFields({
               kind: 'update',
@@ -231,7 +232,6 @@ async function updateOne(params: {
               entryType,
               currentEntry,
               patch,
-              patchedFieldNames,
               status: validated.status,
               user,
           })
@@ -287,12 +287,12 @@ async function updateOne(params: {
         // A staged row is not one of the entry's locales, so its shared fields
         // stay with it until the merge.
         if (!staging) {
-            await propagateSharedFields({
-                repository,
-                entryType,
-                entry: currentEntry,
+            await propagateSharedFields(RESOURCE_SPECS.entry, config, {
+                target: entryType.id,
+                translatable: repository.translatable,
+                record: currentEntry,
                 fields,
-                patchedFieldNames,
+                patchedFieldNames: patched,
             });
         }
     }
@@ -384,9 +384,4 @@ async function getStagedRecord(
     const row = await staging.getByCanonical(id, locale);
     if (!row) throw new ResourceNotFoundError('entry', { id, locale, staged: true });
     return asRecord(row);
-}
-
-/** Root field names the caller actually sent; an `undefined` value is absent. */
-function getPatchedFieldNames(patch: Record<string, unknown>): string[] {
-    return Object.keys(patch).filter((name) => patch[name] !== undefined);
 }

@@ -9,6 +9,7 @@
 import type { AstromechConfig, JsonObject } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { systemAppContext } from '@/app-context/app-context';
 import {
     entriesService as api,
     globalsService,
@@ -146,7 +147,7 @@ describe('validateStoredContent', () => {
             },
         });
 
-        const report = await validateStoredContent();
+        const report = await validateStoredContent(systemAppContext());
 
         expect(report.findings).toEqual([]);
         expect(report.rowsChecked).toBeGreaterThan(0);
@@ -178,7 +179,7 @@ describe('validateStoredContent', () => {
         });
         const before = await snapshot();
 
-        await validateStoredContent();
+        await validateStoredContent(systemAppContext());
 
         expect(await snapshot()).toEqual(before);
     });
@@ -190,7 +191,7 @@ describe('validateStoredContent', () => {
         });
         await storeFields(article.id, { rating: 9 });
 
-        const report = await validateStoredContent();
+        const report = await validateStoredContent(systemAppContext());
 
         expect(report.findings).toEqual([
             {
@@ -211,7 +212,7 @@ describe('validateStoredContent', () => {
         });
         await storeFields(article.id, { rating: 'three' });
 
-        const report = await validateStoredContent();
+        const report = await validateStoredContent(systemAppContext());
 
         expect(report.findings).toHaveLength(1);
         expect(report.findings[0]?.fieldPath).toBe('rating');
@@ -222,14 +223,14 @@ describe('validateStoredContent', () => {
     it('validates each row at the stage its own status implies', async () => {
         const article = await api.create({ type: 'article', data: { title: 'Draft' } });
 
-        expect((await validateStoredContent()).findings).toEqual([]);
+        expect((await validateStoredContent(systemAppContext())).findings).toEqual([]);
 
         await createRepository(entryContentTable).updateMany(
             { entryId: article.id },
             { status: 'published' }
         );
 
-        expect((await validateStoredContent()).findings).toEqual([
+        expect((await validateStoredContent(systemAppContext())).findings).toEqual([
             {
                 kind: 'entry',
                 type: 'article',
@@ -248,7 +249,7 @@ describe('validateStoredContent', () => {
             data: { title: 'One', fields: { rating: 1, code: 'only' } },
         });
 
-        expect((await validateStoredContent()).findings).toEqual([]);
+        expect((await validateStoredContent(systemAppContext())).findings).toEqual([]);
     });
 
     it('reports two rows that share a unique value', async () => {
@@ -259,7 +260,7 @@ describe('validateStoredContent', () => {
         const second = await api.create({ type: 'article', data: { title: 'Two' } });
         await storeFields(second.id, { code: 'dup' });
 
-        const report = await validateStoredContent();
+        const report = await validateStoredContent(systemAppContext());
 
         expect(report.findings.map((finding) => finding.id).sort()).toEqual(
             [first.id, second.id].sort()
@@ -272,7 +273,7 @@ describe('validateStoredContent', () => {
         await storeFields(article.id, { rating: 9 });
         await api.trash({ type: 'article', id: article.id });
 
-        expect((await validateStoredContent()).findings).toEqual([]);
+        expect((await validateStoredContent(systemAppContext())).findings).toEqual([]);
     });
 
     it('reports a user row against the current rules', async () => {
@@ -288,7 +289,7 @@ describe('validateStoredContent', () => {
             { fields: { nickname: 'far too long' } }
         );
 
-        const report = await validateStoredContent();
+        const report = await validateStoredContent(systemAppContext());
 
         expect(report.findings).toEqual([
             {
@@ -308,14 +309,14 @@ describe('validateStoredContent', () => {
             data: { fields: { company: 'Acme' } },
         });
 
-        const report = await validateStoredContent();
+        const report = await validateStoredContent(systemAppContext());
 
         expect(report.findings).toEqual([]);
         expect(report.rowsChecked).toBe(1);
     });
 
     it('skips a declared global no locale has saved', async () => {
-        expect((await validateStoredContent()).rowsChecked).toBe(0);
+        expect((await validateStoredContent(systemAppContext())).rowsChecked).toBe(0);
     });
 
     it('reports a stored global that fails a current rule', async () => {
@@ -325,7 +326,7 @@ describe('validateStoredContent', () => {
         });
         await storeGlobalFields({ company: 'Far too long' });
 
-        const report = await validateStoredContent();
+        const report = await validateStoredContent(systemAppContext());
 
         expect(report.findings).toEqual([
             {
@@ -342,15 +343,24 @@ describe('validateStoredContent', () => {
     // A draft is written with `required` relaxed; the report applies the
     // complete rules, so the missing field surfaces under the locale it is
     // missing from.
+    // A published row validates as complete and a draft as partial, the rule
+    // `globals.update` applies, so only the published `en` row is reported.
     it('reports each saved locale of a translatable global separately', async () => {
-        await globalsService.update({ key: 'site', data: { fields: {} } });
+        await globalsService.update({
+            key: 'site',
+            data: { fields: { tagline: 'Hi' }, status: 'published' },
+        });
         await globalsService.update({
             key: 'site',
             locale: 'de',
             data: { fields: { tagline: 'Hallo' } },
         });
+        await createRepository(globalContentTable).updateMany(
+            { locale: 'en' },
+            { fields: {} }
+        );
 
-        const report = await validateStoredContent();
+        const report = await validateStoredContent(systemAppContext());
 
         expect(report.findings).toEqual([
             {
@@ -366,16 +376,27 @@ describe('validateStoredContent', () => {
     });
 });
 
-describe('validateStoredContent({ type })', () => {
+describe('validateStoredContent(systemAppContext(), { type })', () => {
     it('checks only the named entry type', async () => {
         const article = await api.create({ type: 'article', data: { title: 'Bad' } });
         const other = await api.create({ type: 'report', data: { title: 'Also bad' } });
         await storeFields(article.id, { rating: 9 });
         await storeFields(other.id, { rating: 9 });
 
-        const report = await validateStoredContent({ type: 'article' });
+        const report = await validateStoredContent(systemAppContext(), {
+            type: 'article',
+        });
 
         expect(report.findings.map((finding) => finding.id)).toEqual([article.id]);
         expect(report.rowsChecked).toBe(1);
+    });
+});
+
+describe('validateStoredContent and the write path', () => {
+    it('reads a draft global as partial, as its update does', async () => {
+        await globalsService.update({ key: 'site', data: { fields: { tagline: 'Hi' } } });
+        await createRepository(globalContentTable).updateMany({}, { fields: {} });
+
+        expect((await validateStoredContent(systemAppContext())).findings).toEqual([]);
     });
 });

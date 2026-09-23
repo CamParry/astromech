@@ -1,5 +1,4 @@
 import type { Global } from '@/types/index';
-import { defaultContentLocale } from '@/config/content-locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
@@ -53,7 +52,6 @@ export const mergeStagedGlobal = defineServiceMethod({
             current,
             status: current.status,
             user: ctx.user,
-            defaultLocale: defaultContentLocale(ctx.config),
             config: ctx.config,
         });
 

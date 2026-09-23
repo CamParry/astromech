@@ -1,18 +1,13 @@
 import type { MediaRow } from '../repository';
 import type { JsonObject, Media } from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { pruneDanglingRelations } from '@/content/dangling-relations';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { propagateSharedFields } from '@/content/translatable';
-import { isUniqueAmong } from '@/content/unique';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
-import { existingEntryTypes } from '@/database/repository/resource-existence';
+import { patchedFieldNames, writeFields } from '@/content/write-fields';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
-import { flattenFieldNodes } from '@/fields/flatten';
-import { parseFields } from '@/fields/parse-fields';
-import { mergePatch, projectToSchema } from '@/fields/values';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { readMedia } from '../internal/read-media';
 import { syncMediaRelationships } from '../internal/relationships';
@@ -54,37 +49,25 @@ export const updateMedia = defineServiceMethod({
         if (!base) throw new ResourceNotFoundError('media', { id });
 
         const config = ctx.config;
-        const definitions = flattenFieldNodes(config.media.fields ?? []);
-
         const patch = data.fields;
-        const patchedNames =
-            patch === undefined
-                ? []
-                : Object.keys(patch).filter((name) => patch[name] !== undefined);
+        const patchedNames = patch === undefined ? [] : patchedFieldNames(patch);
 
         let fields: JsonObject | undefined;
         if (patch !== undefined) {
-            // `fields` is a patch: an omitted field keeps its stored value, an
-            // explicit `null` stores null, and a container replaces wholesale.
-            const merged = mergePatch(base.fields, patch);
-            const parsed = await parseFields(merged, definitions, {
-                operation: 'update',
-                resource: { kind: 'media', record: toMedia(config, base) },
-                user: ctx.user,
-                isUnique: isUniqueAmong(() => repository.listContent(locale), id),
-                entryTypes: (ids) => existingEntryTypes(ids),
-                coerceOnly: new Set(patchedNames),
-                ...(config.media.validate ? { validate: config.media.validate } : {}),
-            });
-            // After `parseFields` (its minted item ids are what the traversal
-            // needs) and before the write, so the index derives from the pruned
-            // values.
-            const pruned = await pruneDanglingRelations(
+            // Merged over `base`, so a locale being written for the first time
+            // starts as a copy of the default-locale row.
+            fields = await writeFields(
+                RESOURCE_SPECS.media,
                 config,
-                definitions,
-                projectToSchema(parsed, definitions) as JsonObject
+                { base: base.fields, patch },
+                {
+                    operation: 'update',
+                    record: toMedia(config, base),
+                    user: ctx.user,
+                    scan: () => repository.listContent(locale),
+                    excludeId: id,
+                }
             );
-            fields = pruned.values;
         } else if (!current) {
             // The copy carries the source row's fields unchanged.
             fields = base.fields;
@@ -127,10 +110,8 @@ export const updateMedia = defineServiceMethod({
             // An update that never touched `fields` must leave the index and the
             // item's other locales alone.
             if (fields !== undefined && patch !== undefined) {
-                await propagateSharedFields({
+                await propagateSharedFields(RESOURCE_SPECS.media, config, {
                     translatable: repository.translatable,
-                    definitions,
-                    isTranslatable: config.media.translatable,
                     record: { id, locale },
                     fields,
                     patchedFieldNames: patchedNames,

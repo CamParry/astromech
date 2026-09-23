@@ -1,12 +1,9 @@
-import type { JsonObject, User } from '@/types/index';
+import type { User } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
-import { pruneDanglingRelations } from '@/content/dangling-relations';
-import { isUniqueAmong } from '@/content/unique';
-import { existingEntryTypes } from '@/database/repository/resource-existence';
+import { RESOURCE_SPECS } from '@/content/resources';
+import { writeFields } from '@/content/write-fields';
 import { transaction } from '@/database/transaction';
-import { flattenFieldNodes } from '@/fields/flatten';
-import { parseFields } from '@/fields/parse-fields';
 import { requireRole } from '@/permissions/roles';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { createCredentialAccount, hashCredential } from '../internal/credential-account';
@@ -30,24 +27,17 @@ export const createUser = defineServiceMethod({
         const config = ctx.config;
         requireRole(config, data.role);
 
-        const fieldDefs = flattenFieldNodes(config.users.fields);
-        const validate = config.users.validate;
-        const parsedFields = await parseFields(data.fields ?? {}, fieldDefs, {
-            operation: 'create',
-            resource: { kind: 'user', record: null },
-            user: ctx.user,
-            isUnique: isUniqueAmong(() =>
-                createUserRepository(config).listContent(defaultContentLocale(config))
-            ),
-            entryTypes: (relIds) => existingEntryTypes(relIds),
-            ...(validate ? { validate } : {}),
-        });
-        // After `parseFields` (its minted item ids are what the traversal
-        // needs) and before the write, so the index derives from pruned values.
-        const { values: fields } = await pruneDanglingRelations(
-            ctx.config,
-            fieldDefs,
-            parsedFields as JsonObject
+        const repository = createUserRepository(config);
+        const fields = await writeFields(
+            RESOURCE_SPECS.user,
+            config,
+            { values: data.fields ?? {} },
+            {
+                operation: 'create',
+                record: null,
+                user: ctx.user,
+                scan: () => repository.listContent(defaultContentLocale(config)),
+            }
         );
 
         // Hashed before the transaction opens, so no lock is held while it runs.
@@ -59,7 +49,7 @@ export const createUser = defineServiceMethod({
         // a user that is not there.
         const userId = ctx.user?.id ?? null;
         const created = await transaction(async () => {
-            const row = await createUserRepository(ctx.config).create(
+            const row = await repository.create(
                 {
                     email: data.email,
                     name: data.name,

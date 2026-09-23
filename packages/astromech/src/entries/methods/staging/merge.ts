@@ -3,7 +3,6 @@ import { z } from '@hono/zod-openapi';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
-import { resolveEntryType } from '@/entries/entry-types';
 import { CapabilityError } from '@/errors/capability';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
@@ -54,9 +53,6 @@ export const mergeStagedEntry = defineServiceMethod({
         }
         const staged = asRecord(stagedRow);
 
-        // The canonical's type governs: the staged row is a copy of it.
-        const entryType = resolveEntryType(ctx.config, type);
-
         // Merging is the promotion moment: editing the staged row validates at the
         // draft stage (it is unpublished), so this is the first write where the
         // canonical's own status decides whether completeness is enforced. Run it
@@ -65,7 +61,6 @@ export const mergeStagedEntry = defineServiceMethod({
             kind: 'merge',
             config: ctx.config,
             repository,
-            entryType,
             type,
             canonical,
             staged,

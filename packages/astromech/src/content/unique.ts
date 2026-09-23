@@ -7,8 +7,8 @@
 import type { DataField } from '@/types/fields';
 import { valuesEqual } from '@/utilities/values-equal';
 
-/** What the scan reads from one row. */
-type ScannedRow = { id: string; fields?: unknown };
+/** What the uniqueness scan reads from one row. */
+export type ScannedRow = { id: string; fields?: unknown };
 
 /**
  * Build an `isUnique` check from a lazy loader of the rows in scope (one entry

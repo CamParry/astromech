@@ -1,17 +1,12 @@
-import type { JsonObject, User } from '@/types/index';
+import type { User } from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { pruneDanglingRelations } from '@/content/dangling-relations';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { propagateSharedFields } from '@/content/translatable';
-import { isUniqueAmong } from '@/content/unique';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
-import { existingEntryTypes } from '@/database/repository/resource-existence';
+import { patchedFieldNames, writeFields } from '@/content/write-fields';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
-import { flattenFieldNodes } from '@/fields/flatten';
-import { parseFields } from '@/fields/parse-fields';
-import { mergePatch, projectToSchema } from '@/fields/values';
 import { requireRole } from '@/permissions/roles';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { assertKeepsAnAdmin } from '../internal/last-admin';
@@ -66,40 +61,27 @@ export const updateUser = defineServiceMethod({
             );
         }
 
-        const definitions = flattenFieldNodes(config.users.fields);
         const patch = data.fields;
-        const patchedNames =
-            patch === undefined
-                ? []
-                : Object.keys(patch).filter((name) => patch[name] !== undefined);
+        const patchedNames = patch === undefined ? [] : patchedFieldNames(patch);
 
         // A patch is merged over `base`, so a locale being written for the first
         // time is seeded from the default-locale row. A write naming no `fields`
         // at all touches the account row alone and creates no content row.
-        let fields: JsonObject | undefined;
-        if (patch !== undefined) {
-            // `fields` is a patch: an omitted field keeps its stored value, an
-            // explicit `null` stores null, and a container replaces wholesale.
-            const merged = mergePatch(base.fields, patch);
-            const parsed = await parseFields(merged, definitions, {
-                operation: 'update',
-                resource: { kind: 'user', record: toUser(base) },
-                user: ctx.user,
-                isUnique: isUniqueAmong(() => repository.listContent(locale), id),
-                entryTypes: (ids) => existingEntryTypes(ids),
-                coerceOnly: new Set(patchedNames),
-                ...(config.users.validate ? { validate: config.users.validate } : {}),
-            });
-            // After `parseFields` (its minted item ids are what the traversal
-            // needs) and before the write, so the index derives from the pruned
-            // values.
-            const pruned = await pruneDanglingRelations(
-                ctx.config,
-                definitions,
-                projectToSchema(parsed, definitions) as JsonObject
-            );
-            fields = pruned.values;
-        }
+        const fields =
+            patch === undefined
+                ? undefined
+                : await writeFields(
+                      RESOURCE_SPECS.user,
+                      config,
+                      { base: base.fields, patch },
+                      {
+                          operation: 'update',
+                          record: toUser(base),
+                          user: ctx.user,
+                          scan: () => repository.listContent(locale),
+                          excludeId: id,
+                      }
+                  );
 
         const { name, email, role } = data;
         const userId = ctx.user?.id ?? null;
@@ -137,10 +119,8 @@ export const updateUser = defineServiceMethod({
             // An update that never touched `fields` must leave the index and the
             // user's other locales alone.
             if (fields !== undefined && patch !== undefined) {
-                await propagateSharedFields({
+                await propagateSharedFields(RESOURCE_SPECS.user, config, {
                     translatable: repository.translatable,
-                    definitions,
-                    isTranslatable: config.users.translatable,
                     record: { id, locale },
                     fields,
                     patchedFieldNames: patchedNames,

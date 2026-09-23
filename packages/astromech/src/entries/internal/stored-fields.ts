@@ -1,30 +1,23 @@
 /**
- * The values an entry write stores: a pre-step (inherit the entry's shared
- * fields, or merge the patch over the current row), then the field parse, then
- * a prune of dead relation ids.
+ * The values an entry write stores, through the shared `writeFields` path: a
+ * create inherits the entry's shared fields, an update merges its patch over the
+ * current row, and a merge takes the staged change's fields as they are.
  */
 
 import type { EntryRepository } from '../repository/types';
 import type { EntryRecord } from './records';
-import type { DataField } from '@/types/fields';
+import type { FieldSource } from '@/content/write-fields';
 import type {
-    Entry,
     EntryStatus,
     JsonObject,
     ResolvedConfig,
     ResolvedEntryType,
     User,
 } from '@/types/index';
-import { defaultContentLocale } from '@/config/content-locale';
-import { pruneDanglingRelations } from '@/content/dangling-relations';
-import { isUniqueAmong } from '@/content/unique';
-import { existingEntryTypes } from '@/database/repository/resource-existence';
-import { flattenEntryFields } from '@/fields/flatten';
-import { parseFields } from '@/fields/parse-fields';
-import { mergePatch, projectToSchema } from '@/fields/values';
-import { entryValidationMode } from '../validation-mode';
+import { RESOURCE_SPECS } from '@/content/resources';
+import { inheritSharedFields } from '@/content/translatable';
+import { writeFields } from '@/content/write-fields';
 import { listEntryRows } from './records';
-import { inheritSharedFields } from './translatable';
 
 /**
  * The three write paths that store field values, each with what its own
@@ -34,12 +27,11 @@ import { inheritSharedFields } from './translatable';
 export type StoredFieldsInput = {
     /** Who the write is attributed to; the field validators read it. */
     user: User | null;
-    /** The config the prune and the shared-field inheritance read. */
     config: ResolvedConfig;
+    repository: EntryRepository;
 } & (
     | {
           kind: 'create';
-          repository: EntryRepository;
           entryType: ResolvedEntryType;
           values: Record<string, unknown>;
           locale: string;
@@ -49,18 +41,13 @@ export type StoredFieldsInput = {
       }
     | {
           kind: 'update';
-          repository: EntryRepository;
           entryType: ResolvedEntryType;
           currentEntry: EntryRecord;
           patch: Record<string, unknown>;
-          patchedFieldNames: string[];
           status: EntryStatus | undefined;
       }
     | {
           kind: 'merge';
-          repository: EntryRepository;
-          /** Absent when the canonical's type is no longer configured. */
-          entryType: ResolvedEntryType | undefined;
           type: string;
           canonical: EntryRecord;
           staged: EntryRecord;
@@ -72,102 +59,65 @@ export type StoredFieldsInput = {
  * when a field or the type's own validator reports.
  */
 export async function toStoredFields(input: StoredFieldsInput): Promise<JsonObject> {
-    const { repository, entryType } = input;
-    const definitions = entryType ? flattenEntryFields(entryType.fields) : [];
-    const write = await prepareWrite(input, definitions);
+    const { config, repository, user } = input;
+    const spec = RESOURCE_SPECS.entry;
 
-    const validate = entryType?.validate;
-    const values = await parseFields(write.values, definitions, {
-        operation: input.kind === 'create' ? 'create' : 'update',
-        validation: entryValidationMode({
-            status: write.status,
-            hasStatuses: entryType ? entryType.capabilities.statuses !== false : true,
-        }),
-        resource: { kind: 'entry', record: write.record },
-        user: input.user,
-        isUnique: isUniqueAmong(
-            () => listEntryRows(repository, write.type, write.locale),
-            write.excludeId
-        ),
-        entryTypes: (ids) => existingEntryTypes(ids),
-        ...(write.coerceOnly ? { coerceOnly: write.coerceOnly } : {}),
-        ...(validate ? { validate } : {}),
-    });
-
-    // After `parseFields` (its minted item ids are what the traversal needs)
-    // and before the write, so the index derives from pruned values.
-    const pruned = await pruneDanglingRelations(
-        input.config,
-        definitions,
-        (input.kind === 'update'
-            ? projectToSchema(values, definitions)
-            : values) as JsonObject
-    );
-    return pruned.values;
-}
-
-/** What the parse needs from the write path, resolved to concrete values. */
-type PreparedWrite = {
-    values: Record<string, unknown>;
-    type: string;
-    locale: string;
-    status: EntryStatus | undefined;
-    record: Entry | null;
-    excludeId?: readonly string[];
-    coerceOnly?: ReadonlySet<string>;
-};
-
-async function prepareWrite(
-    input: StoredFieldsInput,
-    definitions: DataField[]
-): Promise<PreparedWrite> {
     if (input.kind === 'create') {
-        const { repository, entryType } = input;
-        return {
-            values: await inheritSharedFields({
-                repository,
-                entryType,
+        const type = input.entryType.id;
+        return writeFields(
+            spec,
+            config,
+            {
                 values: input.values,
-                definitions,
-                entryId: input.entryId,
-                locale: input.locale,
-                defaultLocale: defaultContentLocale(input.config),
-            }),
-            type: entryType.id,
-            locale: input.locale,
-            status: input.status,
-            record: null,
-        };
+                inherit: (values) =>
+                    inheritSharedFields(spec, config, {
+                        target: type,
+                        // The shared read is by id and locale; an entry read names its type.
+                        repository: {
+                            get: (ref, opts) => repository.get({ ...ref, type }, opts),
+                        },
+                        values,
+                        id: input.entryId,
+                        locale: input.locale,
+                    }),
+            },
+            {
+                target: type,
+                operation: 'create',
+                record: null,
+                user,
+                status: input.status,
+                scan: () => listEntryRows(repository, type, input.locale),
+            }
+        );
     }
 
-    if (input.kind === 'update') {
-        const { entryType, currentEntry } = input;
-        return {
-            // A patch, not a replacement: an omitted field keeps its stored value, an
-            // explicit `null` stores null, and an array or container value replaces
-            // wholesale. Only patched fields are coerced; validation sees the merge.
-            values: mergePatch(currentEntry.fields, input.patch),
-            type: entryType.id,
-            locale: currentEntry.locale,
-            // An update that omits `status` keeps the row's current one, so
-            // editing an already-published entry still enforces completeness.
-            status: input.status ?? currentEntry.status,
-            record: currentEntry,
-            // The entry's own row is the only one the uniqueness scan must
-            // ignore: its staged copy shares its id and `list` excludes staged
-            // rows anyway.
-            excludeId: [currentEntry.id],
-            coerceOnly: new Set(input.patchedFieldNames),
-        };
-    }
+    const { type, current, source, status } =
+        input.kind === 'update'
+            ? {
+                  type: input.entryType.id,
+                  current: input.currentEntry,
+                  source: { base: input.currentEntry.fields, patch: input.patch },
+                  // An update that omits `status` keeps the row's current one, so
+                  // editing an already-published entry still enforces completeness.
+                  status: input.status ?? input.currentEntry.status,
+              }
+            : {
+                  type: input.type,
+                  current: input.canonical,
+                  source: { values: input.staged.fields as Record<string, unknown> },
+                  status: input.canonical.status,
+              };
 
-    const { canonical, staged } = input;
-    return {
-        values: (staged.fields ?? {}) as Record<string, unknown>,
-        type: input.type,
-        locale: canonical.locale,
-        status: canonical.status,
-        record: canonical,
-        excludeId: [canonical.id],
-    };
+    return writeFields(spec, config, source satisfies FieldSource, {
+        target: type,
+        operation: 'update',
+        record: current,
+        user,
+        status,
+        scan: () => listEntryRows(repository, type, current.locale),
+        // The entry's own row is the only one the scan must ignore: its staged
+        // copy shares its id and `list` excludes staged rows anyway.
+        excludeId: current.id,
+    });
 }

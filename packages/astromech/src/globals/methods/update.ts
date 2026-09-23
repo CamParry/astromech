@@ -1,21 +1,26 @@
 import type { GlobalRow, GlobalsRepository } from '../repository/globals-table';
-import type { EntryStatus, Global, JsonObject, ResolvedGlobal } from '@/types/index';
+import type {
+    EntryStatus,
+    Global,
+    JsonObject,
+    ResolvedConfig,
+    ResolvedGlobal,
+} from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { defaultContentLocale } from '@/config/content-locale';
 import { assertCapability } from '@/content/capabilities';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
+import { patchedFieldNames } from '@/content/write-fields';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resource';
 import { parseInput } from '@/errors/validation';
-import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../internal/access';
 import { asGlobal, globalRepository, resolveGlobal } from '../internal/global';
 import { syncGlobalRelationships } from '../internal/relationships';
-import { patchedFieldNames, toStoredFields } from '../internal/stored-fields';
+import { toStoredFields } from '../internal/stored-fields';
 import { localised, updateGlobalSchema } from '../schema';
 
 /**
@@ -97,7 +102,6 @@ export const updateGlobal = defineServiceMethod({
             // published global still enforces completeness.
             status: data.status ?? current?.status,
             user,
-            defaultLocale: defaultContentLocale(ctx.config),
             config: ctx.config,
         });
 
@@ -127,6 +131,7 @@ export const updateGlobal = defineServiceMethod({
                 }
             }
             const written = await writeRow({
+                config: ctx.config,
                 repository,
                 global,
                 key: params.key,
@@ -161,6 +166,7 @@ export const updateGlobal = defineServiceMethod({
  * touched out to the global's other locales.
  */
 async function writeRow(params: {
+    config: ResolvedConfig;
     repository: GlobalsRepository;
     global: ResolvedGlobal;
     key: string;
@@ -173,7 +179,8 @@ async function writeRow(params: {
     userId: string | null;
     patchedNames: string[];
 }): Promise<Global> {
-    const { repository, global, id, locale, current, fields, userId, status } = params;
+    const { config, repository, global, id, locale, current, fields, userId, status } =
+        params;
     // Publishing stamps the gate when the row has none yet, as `publish` does.
     const publishedAt =
         status === 'published' && !current?.publishedAt
@@ -207,10 +214,9 @@ async function writeRow(params: {
                   }
               );
 
-    await propagateSharedFields({
+    await propagateSharedFields(RESOURCE_SPECS.global, config, {
+        target: global.id,
         translatable: repository.translatable,
-        definitions: flattenEntryFields(global.fields),
-        isTranslatable: global.capabilities.translatable,
         record: { id: row.id, locale: row.locale },
         fields,
         patchedFieldNames: params.patchedNames,
