@@ -1,9 +1,10 @@
 import type { Entry } from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { defaultContentLocale } from '@/config/content-locale';
+import { resolveResourceLocale } from '@/content/locale';
+import { RESOURCE_SPECS } from '@/content/resources';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types';
-import { parseInput, ValidationError } from '@/errors/validation';
+import { parseInput } from '@/errors/validation';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { UnknownEntryTypeError } from '../errors';
 import { entryGate } from '../internal/access';
@@ -49,14 +50,12 @@ export const createEntry = defineServiceMethod({
 
         const title = validated.title ?? '';
         const status = validated.status ?? 'unpublished';
-        const defaultLocale = defaultContentLocale(ctx.config);
-        const locale = data.locale ?? defaultLocale;
-        if (locale !== defaultLocale && !entryType.translatable) {
-            throw ValidationError.fromFieldErrors({}, [
-                `Entry type '${entryType.id}' is not translatable, so only the ` +
-                    `'${defaultLocale}' locale can be written.`,
-            ]);
-        }
+        const locale = resolveResourceLocale(
+            RESOURCE_SPECS.entry,
+            ctx.config,
+            entryType.id,
+            data.locale
+        );
         const publishedAt =
             status === 'published' ? new Date() : (validated.publishedAt ?? null);
 

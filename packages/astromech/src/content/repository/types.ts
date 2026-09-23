@@ -180,6 +180,8 @@ export type ContentRepository<R extends ContentRow, V extends Table = Table> = {
         /** `COUNT(*)` over the same join under the same predicate. */
         count(where: JoinedWhere): Promise<number>;
         rows(raw: Record<string, unknown>[]): Promise<R[]>;
+        /** Each row replaced by its `locale` row where it has one. */
+        overlayLocale(rows: R[], locale: string): Promise<R[]>;
     };
 };
 

@@ -6,7 +6,6 @@
 
 import type { GlobalRow, GlobalsRepository } from '../repository/globals-table';
 import type {
-    DataField,
     Global,
     JsonObject,
     ResolvedConfig,
@@ -15,24 +14,12 @@ import type {
 } from '@/types/index';
 import { pruneDanglingRelations } from '@/content/dangling-relations';
 import { inheritSharedFields } from '@/content/translatable';
+import { isUniqueAmong } from '@/content/unique';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { entryValidationMode } from '@/entries/validation-mode';
 import { flattenEntryFields } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
-import { uniqueAmongRecords } from '@/fields/unique-among';
 import { mergePatch, projectToSchema } from '@/fields/values';
-
-/**
- * The uniqueness check for a global. A global has exactly one row per locale, so
- * there is nothing to scan against and it always answers true.
- */
-export function globalIsUnique(): (field: DataField, value: unknown) => Promise<boolean> {
-    return uniqueAmongRecords<never>({
-        load: async () => [],
-        getId: () => undefined,
-        getFields: () => ({}),
-    });
-}
 
 /**
  * Turns what a caller sent into the values that go in the row. Throws a 422 when
@@ -87,7 +74,8 @@ export async function toStoredFields(input: {
         }),
         resource: { kind: 'global', record },
         user: input.user,
-        isUnique: globalIsUnique(),
+        // One row per locale, so there is nothing else to be unique among.
+        isUnique: isUniqueAmong(async () => []),
         entryTypes: (ids) => existingEntryTypes(ids),
         ...(current ? { coerceOnly: new Set(patchedFieldNames(patch)) } : {}),
         ...(global.validate ? { validate: global.validate } : {}),

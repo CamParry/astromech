@@ -1,10 +1,11 @@
 /**
  * The media repository — the shared content repository over
  * `media`/`media_content`/`media_versions`, plus the file-row repository and the
- * library list query with its filename search, mime bucket and sort allow-list.
+ * library list query with its filename search and mime bucket.
  */
 
 import type { MediaContentRow, MediaTableRow, NewMediaTableRow } from './tables';
+import type { ListPage } from '@/content/list';
 import type {
     ContentRef,
     ContentRow,
@@ -17,12 +18,13 @@ import type {
     MediaMimeTypeFilter,
     MediaQueryParams,
     ResolvedConfig,
-    SortOption,
 } from '@/types/index';
 import type { Expression, SqlBool } from 'kysely';
 import { sql } from 'kysely';
 import { defaultContentLocale, getDefaultContentLocale } from '@/config/content-locale';
+import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
+import { RESOURCE_SPECS } from '@/content/resources';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { mediaContentTable, mediaTable, mediaVersionsTable } from '@/database/tables';
@@ -43,13 +45,6 @@ export type MediaRow = ContentRow & {
     fileUpdatedAt: Date;
     fileUpdatedBy: string | null;
 };
-
-/** Page slice for `list`; omit it for an unpaginated read. */
-export type MediaPage = { limit: number; offset: number };
-
-/** Columns a caller may order by. Anything else is ignored, not an error. */
-const SORTABLE_COLS = ['filename', 'mimeType', 'size', 'createdAt'] as const;
-type SortableCol = (typeof SORTABLE_COLS)[number];
 
 /** The expression builder the joined list query is compiled against. */
 type JoinedEb = Parameters<JoinedWhere>[0];
@@ -111,25 +106,6 @@ function mimeBucket(
     return null;
 }
 
-/** Order-by clauses for a sort option, falling back to newest-first. */
-function buildOrderBy(
-    sort?: SortOption | SortOption[]
-): { col: SortableCol; dir: 'asc' | 'desc' }[] {
-    const fallback: { col: SortableCol; dir: 'asc' | 'desc' }[] = [
-        { col: 'createdAt', dir: 'desc' },
-    ];
-    if (!sort) return fallback;
-    const sorts = Array.isArray(sort) ? sort : [sort];
-    const clauses = sorts.flatMap((s) =>
-        Object.entries(s).flatMap(([field, dir]) => {
-            if (!(SORTABLE_COLS as readonly string[]).includes(field)) return [];
-            if (dir !== 'asc' && dir !== 'desc') return [];
-            return [{ col: field as SortableCol, dir }];
-        })
-    );
-    return clauses.length > 0 ? clauses : fallback;
-}
-
 /**
  * Build the media repository. It resolves its db handle per call, so a write
  * inside `transaction()` joins that transaction without being handed one.
@@ -139,7 +115,6 @@ export function createMediaRepository(config?: ResolvedConfig) {
         ? defaultContentLocale(config)
         : getDefaultContentLocale();
     const files = createRepository(mediaTable);
-    const contents = createRepository(mediaContentTable);
 
     const content = createContentRepository(
         {
@@ -174,49 +149,25 @@ export function createMediaRepository(config?: ResolvedConfig) {
     }
 
     /**
-     * Replace each row's content with the requested locale's, where that locale
-     * has a row. One query for the whole page; a row with no match keeps the
-     * default locale's content, which is the fallback a media read promises.
+     * Newest first unless `params.sort` says otherwise; an unknown sort throws.
+     * Omit `page` for every match. Each row is read in `locale` where it has one.
      */
-    async function overlayLocale(rows: MediaRow[], locale: string): Promise<MediaRow[]> {
-        if (rows.length === 0) return rows;
-        const translations = await contents.findMany({
-            where: { mediaId: { in: rows.map((row) => row.id) }, locale },
-        });
-        const byMediaId = new Map(translations.map((row) => [row.mediaId, row]));
-
-        return rows.map((row) => {
-            const translation = byMediaId.get(row.id);
-            if (!translation) return row;
-            return {
-                ...row,
-                contentId: translation.id as MediaRow['contentId'],
-                locale: translation.locale,
-                title: translation.title,
-                alt: translation.alt,
-                caption: translation.caption,
-                fields: (translation.fields ?? {}) as JsonObject,
-                updatedAt: translation.updatedAt,
-                updatedBy: translation.updatedBy,
-                createdBy: translation.createdBy,
-            };
-        });
-    }
-
-    /** Newest first unless `params.sort` says otherwise. Omit `page` for every match. */
     async function list(
         params?: MediaQueryParams,
-        page?: MediaPage,
+        page?: ListPage,
         locale?: string
     ): Promise<MediaRow[]> {
         let q = content.query.joined().where(filter(params));
-        for (const { col, dir } of buildOrderBy(params?.sort)) {
-            q = q.orderBy(`${ownerKey}.${col}`, dir);
+        const order = buildOrderBy(RESOURCE_SPECS.media.sortable, params?.sort, [
+            { field: 'createdAt', direction: 'desc' },
+        ]);
+        for (const { field, direction } of order) {
+            q = q.orderBy(`${ownerKey}.${field}`, direction);
         }
         if (page) q = q.limit(page.limit).offset(page.offset);
         const rows = await content.query.rows(await q.execute());
         if (locale === undefined || locale === defaultLocale) return rows;
-        return overlayLocale(rows, locale);
+        return content.query.overlayLocale(rows, locale);
     }
 
     async function count(params?: MediaQueryParams): Promise<number> {

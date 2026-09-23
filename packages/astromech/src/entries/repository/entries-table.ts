@@ -31,7 +31,9 @@ import type {
 } from '@/types/index';
 import type { Expression, SqlBool, Updateable } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
+import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
+import { RESOURCE_SPECS } from '@/content/resources';
 import { encodePatchWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
@@ -39,17 +41,8 @@ import { existingResourceIds } from '@/database/repository/resource-existence';
 import { entriesTable, entryContentTable, entryVersionsTable } from '@/database/tables';
 import { ALL_CAPABILITIES } from '@/entries/capabilities';
 import { ResourceNotFoundError } from '@/errors/resource';
-import { UnknownSortKeyError, UnknownWhereKeyError } from '../errors';
+import { UnknownWhereKeyError } from '../errors';
 import { isReferencesFilter } from './references-filter';
-
-const SORTABLE_FIELDS: readonly string[] = [
-    'title',
-    'status',
-    'createdAt',
-    'updatedAt',
-    'publishedAt',
-    'slug',
-];
 
 /** The expression builder the joined list query is compiled against. */
 type JoinedEb = Parameters<JoinedWhere>[0];
@@ -60,23 +53,15 @@ type OrderPair = [column: string, direction: 'asc' | 'desc'];
  * `createdAt` is the entry's, every other sortable column the content row's —
  * the same split the returned shape makes.
  */
-function buildOrderBy(sort?: SortOption | SortOption[]): OrderPair[] {
-    const fallback: OrderPair[] = [['entries.createdAt', 'desc']];
-    if (!sort) return fallback;
-
-    const sorts = Array.isArray(sort) ? sort : [sort];
-    const clauses: OrderPair[] = sorts.flatMap((s) =>
-        Object.entries(s).flatMap(([field, dir]) => {
-            if (!SORTABLE_FIELDS.includes(field)) {
-                throw new UnknownSortKeyError(field, SORTABLE_FIELDS);
-            }
-            const column =
-                field === 'createdAt' ? 'entries.createdAt' : `entryContent.${field}`;
-            return [[column, dir === 'asc' ? 'asc' : 'desc']] as OrderPair[];
-        })
+function orderPairs(sort?: SortOption | SortOption[]): OrderPair[] {
+    return buildOrderBy(RESOURCE_SPECS.entry.sortable, sort, [
+        { field: 'createdAt', direction: 'desc' },
+    ]).map(
+        ({ field, direction }): OrderPair => [
+            field === 'createdAt' ? 'entries.createdAt' : `entryContent.${field}`,
+            direction,
+        ]
     );
-
-    return clauses.length > 0 ? clauses : fallback;
 }
 
 function buildListWhere(
@@ -347,14 +332,14 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
         const limit = params.limit;
         const page = params.page ?? 1;
 
-        const orderPairs = buildOrderBy(params.sort);
+        const order = orderPairs(params.sort);
         // Raw: search is `title LIKE ? OR slug LIKE ?` and the flat `where` DSL has
         // no `or`. Rows and count share this predicate so the two cannot drift.
         const whereFn = buildListWhere(params, defaultLocale(), types);
 
         if (limit === 'all') {
             let q = content.query.joined().where(whereFn);
-            for (const [column, direction] of orderPairs) {
+            for (const [column, direction] of order) {
                 q = q.orderBy(column, direction);
             }
             const data = await content.query.rows(await q.execute());
@@ -367,7 +352,7 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
         const total = await content.query.count(whereFn);
 
         let rowsQ = content.query.joined().where(whereFn).limit(perPage).offset(offset);
-        for (const [column, direction] of orderPairs) {
+        for (const [column, direction] of order) {
             rowsQ = rowsQ.orderBy(column, direction);
         }
         const data = await content.query.rows(await rowsQ.execute());

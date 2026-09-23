@@ -1,7 +1,8 @@
 import type { User } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { resolveResourceLocale } from '@/content/locale';
+import { RESOURCE_SPECS } from '@/content/resources';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { resolveUserLocale } from '../internal/locale';
 import { readUser } from '../internal/read-user';
 import { toUser } from '../internal/to-user';
 import { createUserRepository } from '../repository';
@@ -17,7 +18,12 @@ export const getUser = defineServiceMethod({
     access: 'users:read',
     mutates: false,
     async handler(params, ctx): Promise<User | null> {
-        const locale = resolveUserLocale(ctx.config, params.locale);
+        const locale = resolveResourceLocale(
+            RESOURCE_SPECS.user,
+            ctx.config,
+            undefined,
+            params.locale
+        );
         const row = await readUser(createUserRepository(ctx.config), params.id, locale);
         return row ? toUser(row) : null;
     },

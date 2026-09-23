@@ -83,7 +83,19 @@ export type UserQueryParams = {
     sort?: SortOption | SortOption[] | undefined;
 };
 
-export type MediaMimeTypeFilter = 'images' | 'videos' | 'documents' | 'other';
+/** The classes of file a media list can be filtered to, by MIME type. */
+export const MEDIA_MIME_TYPE_FILTERS = [
+    'images',
+    'videos',
+    'documents',
+    'other',
+] as const;
+
+/** One of {@link MEDIA_MIME_TYPE_FILTERS}. */
+export type MediaMimeTypeFilter = (typeof MEDIA_MIME_TYPE_FILTERS)[number];
+
+/** The columns a media list can be ordered by. */
+export const MEDIA_SORT_FIELDS = ['filename', 'mimeType', 'size', 'createdAt'] as const;
 
 export type MediaQueryParams = {
     /** The locale each item's content is read in. Default: the default locale. */

@@ -85,7 +85,7 @@ describe('GET /users', () => {
         expect(((await res.json()) as { pagination: unknown }).pagination).toBeNull();
     });
 
-    it('sorts on an allowed field and ignores an unlisted one', async () => {
+    it('sorts on an allowed field and refuses an unlisted one', async () => {
         await makeUser('b@test.dev', 'Bob');
         await makeUser('a@test.dev', 'Ann');
 
@@ -94,10 +94,9 @@ describe('GET /users', () => {
             ((await sorted.json()) as { data: User[] }).data.map((u) => u.name)
         ).toEqual(['Ann', 'Bob']);
 
-        // `id` is not in the route's SORTABLE_FIELDS, so the sort is dropped
-        // rather than rejected — the service's default order stands.
+        // `id` is not a sortable column, so the method refuses it.
         const unlisted = await app().request('/users?sort=id&dir=asc');
-        expect(unlisted.status).toBe(200);
+        expect(unlisted.status).toBe(400);
     });
 
     it('400s an unrecognised dir — the route schema rejects it before the handler', async () => {

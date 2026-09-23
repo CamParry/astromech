@@ -1,5 +1,7 @@
 import { z } from '@hono/zod-openapi';
+import { sortSchema } from '@/content/list';
 import { jsonObject } from '@/services/json';
+import { MEDIA_MIME_TYPE_FILTERS } from '@/types/query';
 
 export const updateMediaSchema = z
     .object({
@@ -10,15 +12,13 @@ export const updateMediaSchema = z
     })
     .openapi('UpdateMedia');
 
-const sortDirection = z.enum(['asc', 'desc']);
-
 /** The `where` filter a media query accepts: one mime-type class. */
 const where = z.object({
-    mimeType: z.enum(['images', 'videos', 'documents', 'other']).optional(),
+    mimeType: z.enum(MEDIA_MIME_TYPE_FILTERS).optional(),
 });
 
 /**
- * Call schema for `media.query` — mirrors `MediaQueryParams`. Not a request body:
+ * Call schema for `media.query`, the shape of `MediaQueryParams`. Not a request body:
  * the HTTP route reads these off the query string, so this exists purely so the
  * method manifest can describe how the method is called.
  */
@@ -28,13 +28,5 @@ export const mediaQuerySchema = z.object({
     where: where.optional(),
     page: z.number().optional(),
     limit: z.union([z.number(), z.literal('all')]).optional(),
-    // A sort that does not parse is DROPPED rather than rejected, answering the
-    // default order — the rule `entrySortSchema` already states.
-    sort: z
-        .union([
-            z.record(z.string(), sortDirection),
-            z.array(z.record(z.string(), sortDirection)),
-        ])
-        .optional()
-        .catch(undefined),
+    sort: sortSchema,
 });

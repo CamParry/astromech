@@ -5,8 +5,8 @@
  */
 
 import { createContentRelationships } from '@/content/relationships';
+import { RESOURCE_SPECS } from '@/content/resources';
 import { globalContentTable, globalsTable } from '@/database/tables';
-import { findGlobal } from './global';
 
 const relationships = createContentRelationships({
     table: globalsTable,
@@ -14,10 +14,7 @@ const relationships = createContentRelationships({
     ownerColumn: 'globalId',
     kind: 'global',
     // A global no longer declared has no fields, so it holds no references.
-    fields: (config, owner) => {
-        const global = findGlobal(config, String(owner['key']));
-        return global ? [...global.fields.main, ...global.fields.sidebar] : [];
-    },
+    fields: (config, owner) => RESOURCE_SPECS.global.fields(config, String(owner['key'])),
     sourceType: (owner) => String(owner['key']),
 });
 

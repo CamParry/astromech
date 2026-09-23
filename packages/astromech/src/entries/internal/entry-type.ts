@@ -6,6 +6,7 @@
 
 import type { Capability } from '@/entries/capabilities';
 import type { ResolvedConfig, ResolvedEntryType } from '@/types/index';
+import { assertCapability } from '@/content/capabilities';
 import { resolveEntryType } from '@/entries/entry-types';
 import { CapabilityError } from '@/errors/capability';
 import { getEntryRepository } from '../repository/registry';
@@ -26,15 +27,13 @@ export function typeOf(input: unknown): string {
 }
 
 /** Enforce a type's configured capability set. An unknown type is left to the caller. */
-export function assertCapability(
+export function assertTypeCapability(
     config: ResolvedConfig,
     type: string,
     capability: Capability
 ): void {
-    const capabilities = resolveEntryType(config, type)?.capabilities;
-    if (capabilities && !capabilities[capability]) {
-        throw new CapabilityError('entry', type, capability);
-    }
+    const entryType = resolveEntryType(config, type);
+    if (entryType) assertCapability('entry', entryType, capability);
 }
 
 /**

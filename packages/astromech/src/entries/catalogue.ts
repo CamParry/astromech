@@ -7,13 +7,13 @@ import type { EntriesMethods } from './service';
 import type { Capability } from '@/entries/capabilities';
 import type { ServiceMethodContract } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { sortSchema } from '@/content/list';
 import { isCapability } from '@/entries/capabilities';
 import { parseEntryTypeId } from '@/entries/entry-types';
 import { resolveAccess } from '@/permissions/access';
 import {
     createEntrySchema,
     duplicateOverridesSchema,
-    entrySortSchema,
     previewTokenSchema,
     scheduleEntrySchema,
     updateEntrySchema,
@@ -168,7 +168,7 @@ function entryInputSchemas(
             trashed: z.boolean().optional(),
             page: z.number().optional(),
             limit: limitParam.optional(),
-            sort: entrySortSchema,
+            sort: sortSchema,
             locale: z.string().optional(),
             full: z.boolean().optional(),
             previewToken: z.string().optional(),

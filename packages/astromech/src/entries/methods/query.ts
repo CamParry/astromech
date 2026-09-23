@@ -8,6 +8,7 @@ import type {
 } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
+import { sortSchema } from '@/content/list';
 import { applyVisibility } from '@/content/visibility';
 import { resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
@@ -22,7 +23,6 @@ import { entryGate } from '../internal/access';
 import { queryPreviewEntries } from '../internal/preview-read';
 import { asEntry } from '../internal/records';
 import { getEntryRepository, hasCustomTable } from '../repository/registry';
-import { entrySortSchema } from '../schema';
 
 /**
  * Lists entries of one or more types, paginated and filtered to the caller's
@@ -40,7 +40,7 @@ export const queryEntries = defineServiceMethod({
         trashed: z.boolean().optional(),
         page: z.number().optional(),
         limit: z.union([z.number(), z.literal('all')]).optional(),
-        sort: entrySortSchema,
+        sort: sortSchema,
         locale: z.string().optional(),
         full: z.boolean().optional(),
         previewToken: z.string().optional(),

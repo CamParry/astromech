@@ -2,6 +2,7 @@ import type { JsonObject, User } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
 import { pruneDanglingRelations } from '@/content/dangling-relations';
+import { isUniqueAmong } from '@/content/unique';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { transaction } from '@/database/transaction';
 import { flattenFieldNodes } from '@/fields/flatten';
@@ -11,7 +12,6 @@ import { defineServiceMethod } from '@/services/define-service-method';
 import { createCredentialAccount, hashCredential } from '../internal/credential-account';
 import { syncUserRelationships } from '../internal/relationships';
 import { toUser } from '../internal/to-user';
-import { userIsUnique } from '../internal/unique';
 import { createUserRepository } from '../repository';
 import { createUserSchema } from '../schema';
 
@@ -36,9 +36,9 @@ export const createUser = defineServiceMethod({
             operation: 'create',
             resource: { kind: 'user', record: null },
             user: ctx.user,
-            isUnique: userIsUnique(createUserRepository(config), {
-                locale: defaultContentLocale(config),
-            }),
+            isUnique: isUniqueAmong(() =>
+                createUserRepository(config).listContent(defaultContentLocale(config))
+            ),
             entryTypes: (relIds) => existingEntryTypes(relIds),
             ...(validate ? { validate } : {}),
         });

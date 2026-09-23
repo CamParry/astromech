@@ -2,6 +2,9 @@ import type { GlobalRow, GlobalsRepository } from '../repository/globals-table';
 import type { Global, JsonObject, ResolvedGlobal } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
+import { assertCapability } from '@/content/capabilities';
+import { resolveResourceLocale } from '@/content/locale';
+import { RESOURCE_SPECS } from '@/content/resources';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
@@ -10,13 +13,7 @@ import { parseInput } from '@/errors/validation';
 import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../internal/access';
-import {
-    asGlobal,
-    assertCapability,
-    globalRepository,
-    resolveGlobal,
-    resolveLocale,
-} from '../internal/global';
+import { asGlobal, globalRepository, resolveGlobal } from '../internal/global';
 import { syncGlobalRelationships } from '../internal/relationships';
 import { patchedFieldNames, toStoredFields } from '../internal/stored-fields';
 import { localised, updateGlobalSchema } from '../schema';
@@ -47,8 +44,13 @@ export const updateGlobal = defineServiceMethod({
     async handler(params, ctx): Promise<Global> {
         const global = resolveGlobal(ctx.config, params.key);
         const staged = params.staged === true;
-        if (staged) assertCapability(global, 'staging');
-        const locale = resolveLocale(ctx.config, global, params.locale);
+        if (staged) assertCapability('global', global, 'staging');
+        const locale = resolveResourceLocale(
+            RESOURCE_SPECS.global,
+            ctx.config,
+            global.id,
+            params.locale
+        );
         const repository = globalRepository(ctx.config);
         const user = ctx.user;
 

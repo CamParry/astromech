@@ -68,8 +68,11 @@ describe('mediaService.query — sort', () => {
         ]);
     });
 
-    it('ignores a column outside the allowlist and falls back to newest-first', async () => {
-        expect(await names({ id: 'asc' } as SortOption)).toEqual(await names());
+    it('refuses a column outside the allowlist', async () => {
+        await expect(names({ id: 'asc' } as SortOption)).rejects.toMatchObject({
+            name: 'UnknownSortKeyError',
+            status: 400,
+        });
     });
 
     it('ignores a direction that is not asc or desc', async () => {

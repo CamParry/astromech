@@ -11,15 +11,13 @@ import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { mediaDefinition } from '@/media/service';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { badRequest, forbidden, notFound } from '@/transport/http/middleware/errors';
+import { MEDIA_MIME_TYPE_FILTERS } from '@/types/query';
 import { MEDIA_ROUTE_SPECS } from './http-routes';
 import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
 
 type Env = { Variables: AuthVariables };
 
 const router = new OpenAPIHono<Env>();
-
-/** Sort fields accepted off the wire. Mirrors the repository allowlist. */
-const SORTABLE_FIELDS = new Set(['filename', 'mimeType', 'size', 'createdAt']);
 
 /** The query string the list route accepts. `dir` is the only one that can fail. */
 const listQuery = z.object({
@@ -73,18 +71,14 @@ function queryArgs(c: Context<Env>): MediaQueryParams {
     if (q['page']) params.page = Number(q['page']);
     if (q['limit'] === 'all') params.limit = 'all';
     else if (q['limit']) params.limit = Number(q['limit']);
-    const mimeType = q['mimeType'];
-    if (
-        mimeType === 'images' ||
-        mimeType === 'videos' ||
-        mimeType === 'documents' ||
-        mimeType === 'other'
-    ) {
+    const mimeType = MEDIA_MIME_TYPE_FILTERS.find((filter) => filter === q['mimeType']);
+    if (mimeType !== undefined) {
         params.where = { mimeType };
     }
     const sortField = q['sort'];
-    // `dir` is already 'asc' or 'desc' — the route schema 400s anything else.
-    if (sortField && SORTABLE_FIELDS.has(sortField)) {
+    // `dir` is already 'asc' or 'desc' — the route schema 400s anything else. A
+    // field the list cannot order by is the method's 400.
+    if (sortField) {
         params.sort = { [sortField]: (q['dir'] as SortDirection | undefined) ?? 'desc' };
     }
     return params;

@@ -151,24 +151,3 @@ export class UnknownWhereKeyError extends ApiError {
         this.key = key;
     }
 }
-
-/**
- * Thrown when `entries.query`'s `sort` names a field the entries-table repository
- * cannot order by. Discarding one instead would silently answer in the default
- * `createdAt desc` order.
- */
-export class UnknownSortKeyError extends ApiError {
-    public readonly key: string;
-    public readonly sortableFields: readonly string[];
-
-    constructor(key: string, sortableFields: readonly string[]) {
-        super(
-            `entries.query: unrecognized sort key '${key}'. Sortable ` +
-                `fields are ${sortableFields.map((f) => `'${f}'`).join(', ')}.`,
-            { status: 400, code: 'BAD_REQUEST' }
-        );
-        this.name = 'UnknownSortKeyError';
-        this.key = key;
-        this.sortableFields = sortableFields;
-    }
-}

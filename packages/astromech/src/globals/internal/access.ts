@@ -8,7 +8,7 @@ import type { GlobalAction } from '@/permissions/global-permission';
 import type { PermissionRule } from '@/types/index';
 import { getConfig } from '@/config/registry';
 import { globalPermission } from '@/permissions/global-permission';
-import { findGlobal } from './global';
+import { findGlobal } from '../find-global';
 
 /**
  * The key one call names. A call with no key is not refused here: it resolves to

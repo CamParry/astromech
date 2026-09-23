@@ -4,6 +4,7 @@
  */
 
 import { createContentRelationships } from '@/content/relationships';
+import { RESOURCE_SPECS } from '@/content/resources';
 import { mediaContentTable, mediaTable } from '@/database/tables';
 
 const relationships = createContentRelationships({
@@ -11,7 +12,7 @@ const relationships = createContentRelationships({
     contentTable: mediaContentTable,
     ownerColumn: 'mediaId',
     kind: 'media',
-    fields: (config) => config.media?.fields ?? [],
+    fields: (config) => RESOURCE_SPECS.media.fields(config),
 });
 
 /**

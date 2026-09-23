@@ -13,7 +13,7 @@ import type { Context } from 'hono';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { getConfig } from '@/config/registry';
 import { CapabilityError } from '@/errors/capability';
-import { findGlobal } from '@/globals/internal/global';
+import { findGlobal } from '@/globals/find-global';
 import { globalsDefinition } from '@/globals/service';
 import { resolveAccess } from '@/permissions/access';
 import { permissionsFor } from '@/permissions/permissions-for';

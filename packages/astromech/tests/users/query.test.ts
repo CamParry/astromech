@@ -32,9 +32,10 @@ describe('usersService.query', () => {
         expect(result.data.map((u) => u.name)).toEqual(['Zoe', 'Adam']);
     });
 
-    it('falls back to the default sort for an unsortable column', async () => {
-        const result = await usersService.query({ sort: { fields: 'desc' }, limit: 10 });
-        expect(result.data.map((u) => u.name)).toEqual(['Adam', 'Zoe']);
+    it('refuses an unsortable column', async () => {
+        await expect(
+            usersService.query({ sort: { fields: 'desc' }, limit: 10 })
+        ).rejects.toMatchObject({ name: 'UnknownSortKeyError', status: 400 });
     });
 
     it('searches name OR email, and counts only matches', async () => {

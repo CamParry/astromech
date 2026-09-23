@@ -7,7 +7,7 @@
 import type { Capability } from './capabilities';
 import type { EntriesService, Entry, EntryUpdateParams } from '@/types/index';
 import { defineService } from '@/services/define-service';
-import { assertCapability, typeOf } from './internal/entry-type';
+import { assertTypeCapability, typeOf } from './internal/entry-type';
 import { createEntry } from './methods/create';
 import { deleteEntries } from './methods/delete';
 import { duplicateEntry } from './methods/duplicate';
@@ -88,6 +88,6 @@ export const entriesDefinition = defineService<EntriesMethods>(
     },
     {
         assertRequires: (capability, input, ctx) =>
-            assertCapability(ctx.config, typeOf(input), capability as Capability),
+            assertTypeCapability(ctx.config, typeOf(input), capability as Capability),
     }
 );

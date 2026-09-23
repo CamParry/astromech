@@ -19,10 +19,10 @@ import { defineTable } from '@/database/define-table';
 import {
     CustomTableCrossTypeQueryError,
     InvalidReferencesFilterError,
-    UnknownSortKeyError,
     UnknownWhereKeyError,
 } from '@/entries/errors';
 import { tableRepository } from '@/entries/repository/table';
+import { UnknownSortKeyError } from '@/errors/query';
 import { createMediaRepository } from '@/media/repository';
 
 const linksTable = defineTable('test_links', ({ col }) => ({

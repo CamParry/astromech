@@ -1,10 +1,11 @@
 /**
  * The user repository — the shared content repository over
  * `users`/`user_content`/`user_versions`, plus the account-row repository and
- * the list query with its name/email search and sort allow-list.
+ * the list query with its name/email search.
  */
 
 import type { NewUserTableRow, UserContentRow, UserTableRow } from './tables';
+import type { ListPage } from '@/content/list';
 import type {
     ContentRef,
     ContentRow,
@@ -14,7 +15,9 @@ import type {
 import type { JsonObject, ResolvedConfig, SortOption } from '@/types/index';
 import type { Expression, SqlBool } from 'kysely';
 import { defaultContentLocale, getDefaultContentLocale } from '@/config/content-locale';
+import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
+import { RESOURCE_SPECS } from '@/content/resources';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { userContentTable, usersTable, userVersionsTable } from '@/database/tables';
@@ -30,38 +33,11 @@ export type UserRow = ContentRow & {
     accountUpdatedAt: Date;
 };
 
+/** What the users list filters and orders by. */
 export type UserListParams = {
     search?: string | undefined;
     sort?: SortOption | SortOption[] | undefined;
-    limit?: number | undefined;
-    offset?: number | undefined;
 };
-
-const SORTABLE_COLS = ['name', 'email', 'createdAt', 'updatedAt', 'role'] as const;
-type SortableCol = (typeof SORTABLE_COLS)[number];
-
-function isSortableCol(s: string): s is SortableCol {
-    return (SORTABLE_COLS as readonly string[]).includes(s);
-}
-
-/** Order-by clauses for a sort option, falling back to name-ascending. */
-function buildOrderBy(
-    sort?: SortOption | SortOption[]
-): { col: SortableCol; dir: 'asc' | 'desc' }[] {
-    const fallback: { col: SortableCol; dir: 'asc' | 'desc' }[] = [
-        { col: 'name', dir: 'asc' },
-    ];
-    if (!sort) return fallback;
-    const sorts = Array.isArray(sort) ? sort : [sort];
-    const clauses = sorts.flatMap((s) =>
-        Object.entries(s).flatMap(([field, dir]) => {
-            if (!isSortableCol(field)) return [];
-            if (dir !== 'asc' && dir !== 'desc') return [];
-            return [{ col: field, dir }];
-        })
-    );
-    return clauses.length > 0 ? clauses : fallback;
-}
 
 export type UserRepository = ReturnType<typeof createUserRepository>;
 
@@ -74,7 +50,6 @@ export function createUserRepository(config?: ResolvedConfig) {
         ? defaultContentLocale(config)
         : getDefaultContentLocale();
     const accounts = createRepository(usersTable);
-    const contents = createRepository(userContentTable);
 
     /** The two joined rows plus the locale list, in the shape the service reads. */
     function decode(
@@ -137,45 +112,28 @@ export function createUserRepository(config?: ResolvedConfig) {
     }
 
     /**
-     * Replace each row's content with the requested locale's, where that locale
-     * has a row. One query for the whole page; a row with no match keeps the
-     * default locale's content, which is the fallback a user read promises.
+     * Name order unless `params.sort` says otherwise; an unknown sort throws.
+     * Omit `page` for every match. Each row is read in `locale` where it has one.
      */
-    async function overlayLocale(rows: UserRow[], locale: string): Promise<UserRow[]> {
-        if (rows.length === 0) return rows;
-        const translations = await contents.findMany({
-            where: { userId: { in: rows.map((row) => row.id) }, locale },
-        });
-        const byUserId = new Map(translations.map((row) => [row.userId, row]));
-
-        return rows.map((row) => {
-            const translation = byUserId.get(row.id);
-            if (!translation) return row;
-            return {
-                ...row,
-                contentId: translation.id as UserRow['contentId'],
-                locale: translation.locale,
-                fields: (translation.fields ?? {}) as JsonObject,
-                updatedAt: translation.updatedAt,
-                updatedBy: translation.updatedBy,
-                createdBy: translation.createdBy,
-            };
-        });
-    }
-
-    async function list(params?: UserListParams, locale?: string): Promise<UserRow[]> {
+    async function list(
+        params?: UserListParams,
+        page?: ListPage,
+        locale?: string
+    ): Promise<UserRow[]> {
         let q = content.query.joined().where(filter(params));
-        for (const { col, dir } of buildOrderBy(params?.sort)) {
-            q = q.orderBy(`${ownerKey}.${col}`, dir);
+        const order = buildOrderBy(RESOURCE_SPECS.user.sortable, params?.sort, [
+            { field: 'name', direction: 'asc' },
+        ]);
+        for (const { field, direction } of order) {
+            q = q.orderBy(`${ownerKey}.${field}`, direction);
         }
-        if (params?.limit !== undefined) q = q.limit(params.limit);
-        if (params?.offset !== undefined) q = q.offset(params.offset);
+        if (page) q = q.limit(page.limit).offset(page.offset);
         const rows = await content.query.rows(await q.execute());
         if (locale === undefined || locale === defaultLocale) return rows;
-        return overlayLocale(rows, locale);
+        return content.query.overlayLocale(rows, locale);
     }
 
-    async function count(params?: { search?: string | undefined }): Promise<number> {
+    async function count(params?: UserListParams): Promise<number> {
         return content.query.count(filter(params));
     }
 

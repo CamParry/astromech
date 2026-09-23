@@ -1,15 +1,16 @@
+import type { MediaMimeTypeFilter } from 'astromech';
+import { MEDIA_MIME_TYPE_FILTERS, MEDIA_SORT_FIELDS } from 'astromech/shared';
+
 export const MEDIA_ACCEPT = 'image/*,video/*,application/pdf';
 
 export type ViewMode = 'grid' | 'list';
 
-export type TypeFilter = 'all' | 'images' | 'videos' | 'documents' | 'other';
+/** A media list's type filter: one MIME class, or every file. */
+export type TypeFilter = 'all' | MediaMimeTypeFilter;
 
 export const TYPE_FILTER_VALUES = [
     'all',
-    'images',
-    'videos',
-    'documents',
-    'other',
+    ...MEDIA_MIME_TYPE_FILTERS,
 ] as const satisfies readonly TypeFilter[];
 
 /**
@@ -24,15 +25,8 @@ export const TYPE_FILTER_KEYS: Record<TypeFilter, string> = {
     other: 'media.filterOther',
 };
 
-/** Columns the media list can be ordered by; must match the repository allowlist. */
-export type MediaSortKey = 'filename' | 'mimeType' | 'size' | 'createdAt';
-
-const MEDIA_SORT_KEYS = [
-    'filename',
-    'mimeType',
-    'size',
-    'createdAt',
-] as const satisfies readonly MediaSortKey[];
+/** A column the media list can be ordered by. */
+export type MediaSortKey = (typeof MEDIA_SORT_FIELDS)[number];
 
 /** The browsing state a media surface reads from: search, filter, sort, page. */
 export type MediaBrowserQuery = {
@@ -46,5 +40,5 @@ export type MediaBrowserQuery = {
 
 /** Narrow an arbitrary sort key to one the media API accepts. */
 export function isSortKey(key: string): key is MediaSortKey {
-    return (MEDIA_SORT_KEYS as readonly string[]).includes(key);
+    return (MEDIA_SORT_FIELDS as readonly string[]).includes(key);
 }

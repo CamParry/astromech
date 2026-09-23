@@ -4,6 +4,7 @@
  */
 
 import { createContentRelationships } from '@/content/relationships';
+import { RESOURCE_SPECS } from '@/content/resources';
 import { userContentTable, usersTable } from '@/database/tables';
 
 const relationships = createContentRelationships({
@@ -11,7 +12,7 @@ const relationships = createContentRelationships({
     contentTable: userContentTable,
     ownerColumn: 'userId',
     kind: 'user',
-    fields: (config) => config.users.fields,
+    fields: (config) => RESOURCE_SPECS.user.fields(config),
 });
 
 /**

@@ -1,8 +1,9 @@
 import type { JsonObject, UserVersion } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { resolveResourceLocale } from '@/content/locale';
+import { RESOURCE_SPECS } from '@/content/resources';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { resolveUserLocale } from '../../internal/locale';
 import { createUserRepository } from '../../repository';
 
 /**
@@ -16,7 +17,12 @@ export const listUserVersions = defineServiceMethod({
     access: 'users:read',
     mutates: false,
     async handler(params, ctx): Promise<UserVersion[]> {
-        const locale = resolveUserLocale(ctx.config, params.locale);
+        const locale = resolveResourceLocale(
+            RESOURCE_SPECS.user,
+            ctx.config,
+            undefined,
+            params.locale
+        );
         const repository = createUserRepository(ctx.config);
         const current = await repository.get(params.id, locale);
         if (!current) throw new ResourceNotFoundError('user', { id: params.id, locale });

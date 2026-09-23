@@ -1,18 +1,15 @@
 import type { VisibilityShape } from '@/content/visibility';
 import type { Global } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { assertCapability } from '@/content/capabilities';
+import { resolveResourceLocale } from '@/content/locale';
+import { RESOURCE_SPECS } from '@/content/resources';
 import { applyVisibility } from '@/content/visibility';
 import { ResourceValidationError } from '@/errors/resource';
 import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { readGate } from '../internal/access';
-import {
-    asGlobal,
-    assertCapability,
-    globalRepository,
-    resolveGlobal,
-    resolveLocale,
-} from '../internal/global';
+import { asGlobal, globalRepository, resolveGlobal } from '../internal/global';
 import { localised } from '../schema';
 
 /**
@@ -31,7 +28,12 @@ export const getGlobal = defineServiceMethod({
     mutates: false,
     async handler(params, ctx): Promise<Global | null> {
         const global = resolveGlobal(ctx.config, params.key);
-        const locale = resolveLocale(ctx.config, global, params.locale);
+        const locale = resolveResourceLocale(
+            RESOURCE_SPECS.global,
+            ctx.config,
+            global.id,
+            params.locale
+        );
 
         // A staged change is never published, so a public read of one would
         // answer null for every global; asking for it in the public shape is a
@@ -47,7 +49,7 @@ export const getGlobal = defineServiceMethod({
         const id = await repository.idByKey(params.key);
         if (id === null) return null;
 
-        if (params.staged === true) assertCapability(global, 'staging');
+        if (params.staged === true) assertCapability('global', global, 'staging');
         const row =
             params.staged === true
                 ? await repository.staging.getByCanonical(id, locale)

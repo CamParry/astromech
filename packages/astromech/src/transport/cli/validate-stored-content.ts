@@ -16,6 +16,7 @@ import type {
 import { globalsService } from '@/app-context/services';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { getConfig } from '@/config/registry';
+import { isUniqueAmong } from '@/content/unique';
 import { createRepository } from '@/database/repository/create-repository';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
 import {
@@ -23,16 +24,13 @@ import {
     qualifyEntryType,
     resolveEntryType,
 } from '@/entries/entry-types';
+import { listEntryRows } from '@/entries/internal/records';
 import { getEntryRepository, hasCustomTable } from '@/entries/repository/registry';
 import { entriesTable, entryContentTable } from '@/entries/tables';
-import { entryIsUnique } from '@/entries/unique';
 import { entryValidationMode } from '@/entries/validation-mode';
 import { flattenEntryFields, flattenFieldNodes } from '@/fields/flatten';
 import { safeParseFields } from '@/fields/parse-fields';
-import { globalIsUnique } from '@/globals/internal/stored-fields';
-import { mediaIsUnique } from '@/media/internal/unique';
 import { createMediaRepository } from '@/media/repository';
-import { userIsUnique } from '@/users/internal/unique';
 import { createUserRepository } from '@/users/repository';
 
 /** Scope of a report run. `type` is an ENTRY type; it never covers media, users or globals. */
@@ -158,11 +156,10 @@ async function checkEntryRow(
             }),
             resource: { kind: 'entry', record: row.record },
             user: null,
-            isUnique: entryIsUnique(getEntryRepository(row.type), {
-                type: row.type,
-                locale: row.locale,
-                excludeId: row.id,
-            }),
+            isUnique: isUniqueAmong(
+                () => listEntryRows(getEntryRepository(row.type), row.type, row.locale),
+                row.id
+            ),
             entryTypes: (ids) => existingEntryTypes(ids),
             coerceOnly: new Set(),
             collectWarnings: false,
@@ -223,10 +220,7 @@ async function checkMedia(report: ValidationReport): Promise<void> {
                 user: null,
                 // Built per row: `excludeId` is what keeps a row from colliding
                 // with itself, and only the load behind it is shared.
-                isUnique: mediaIsUnique(
-                    { listContent: load },
-                    { locale, excludeId: row.id }
-                ),
+                isUnique: isUniqueAmong(load, row.id),
                 entryTypes: (ids) => existingEntryTypes(ids),
                 coerceOnly: new Set(),
                 collectWarnings: false,
@@ -264,10 +258,7 @@ async function checkUsers(report: ValidationReport): Promise<void> {
                     operation: 'update',
                     resource: { kind: 'user', record: row },
                     user: null,
-                    isUnique: userIsUnique(
-                        { listContent: load },
-                        { locale, excludeId: row.id }
-                    ),
+                    isUnique: isUniqueAmong(load, row.id),
                     entryTypes: (ids) => existingEntryTypes(ids),
                     coerceOnly: new Set(),
                     collectWarnings: false,
@@ -316,7 +307,7 @@ async function checkGlobals(report: ValidationReport): Promise<void> {
                     operation: 'update',
                     resource: { kind: 'global', record: row },
                     user: null,
-                    isUnique: globalIsUnique(),
+                    isUnique: isUniqueAmong(async () => []),
                     entryTypes: (ids) => existingEntryTypes(ids),
                     coerceOnly: new Set(),
                     collectWarnings: false,

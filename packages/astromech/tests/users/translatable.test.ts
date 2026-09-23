@@ -111,7 +111,7 @@ describe('non-translatable users', () => {
             expect.unreachable('non-translatable users must refuse another locale');
         } catch (error) {
             expect((error as ResourceValidationError).form).toEqual([
-                "Users are not translatable, so only the 'en' locale can be written.",
+                "User content is not translatable, so only the 'en' locale can be written.",
             ]);
         }
     });

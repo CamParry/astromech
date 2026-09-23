@@ -17,12 +17,13 @@ import type {
 } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
 import { pruneDanglingRelations } from '@/content/dangling-relations';
+import { isUniqueAmong } from '@/content/unique';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { flattenEntryFields } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
-import { entryIsUnique } from '../unique';
 import { entryValidationMode } from '../validation-mode';
+import { listEntryRows } from './records';
 import { inheritSharedFields } from './translatable';
 
 /**
@@ -84,11 +85,10 @@ export async function toStoredFields(input: StoredFieldsInput): Promise<JsonObje
         }),
         resource: { kind: 'entry', record: write.record },
         user: input.user,
-        isUnique: entryIsUnique(repository, {
-            type: write.type,
-            locale: write.locale,
-            ...(write.excludeId ? { excludeId: write.excludeId } : {}),
-        }),
+        isUnique: isUniqueAmong(
+            () => listEntryRows(repository, write.type, write.locale),
+            write.excludeId
+        ),
         entryTypes: (ids) => existingEntryTypes(ids),
         ...(write.coerceOnly ? { coerceOnly: write.coerceOnly } : {}),
         ...(validate ? { validate } : {}),

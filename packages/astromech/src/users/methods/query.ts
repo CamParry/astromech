@@ -1,6 +1,8 @@
 import type { QueryResult, User } from '@/types/index';
+import { queryPage } from '@/content/list';
+import { resolveResourceLocale } from '@/content/locale';
+import { RESOURCE_SPECS } from '@/content/resources';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { resolveUserLocale } from '../internal/locale';
 import { toUser } from '../internal/to-user';
 import { createUserRepository } from '../repository';
 import { userQuerySchema } from '../schema';
@@ -16,43 +18,17 @@ export const queryUsers = defineServiceMethod({
     access: 'users:read',
     mutates: false,
     async handler(params, ctx): Promise<QueryResult<User>> {
-        const locale = resolveUserLocale(ctx.config, params.locale);
+        const locale = resolveResourceLocale(
+            RESOURCE_SPECS.user,
+            ctx.config,
+            undefined,
+            params.locale
+        );
         const repository = createUserRepository(ctx.config);
-        const page = params.page ?? 1;
-        const limit = params.limit;
-
-        if (limit === 'all') {
-            const rows = await repository.list(
-                { search: params.search, sort: params.sort },
-                locale
-            );
-            return { data: rows.map(toUser), pagination: null };
-        }
-
-        const perPage = typeof limit === 'number' ? limit : 20;
-        const offset = (page - 1) * perPage;
-
-        const [rows, total] = await Promise.all([
-            repository.list(
-                {
-                    search: params.search,
-                    sort: params.sort,
-                    limit: perPage,
-                    offset,
-                },
-                locale
-            ),
-            repository.count({ search: params.search }),
-        ]);
-
-        return {
-            data: rows.map(toUser),
-            pagination: {
-                page,
-                limit: perPage,
-                total,
-                pages: Math.ceil(total / perPage),
-            },
-        };
+        const result = await queryPage(params, {
+            list: (page) => repository.list(params, page, locale),
+            count: () => repository.count(params),
+        });
+        return { ...result, data: result.data.map(toUser) };
     },
 });

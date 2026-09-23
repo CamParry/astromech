@@ -1,6 +1,8 @@
 import type { Media, QueryResult } from '@/types/index';
+import { queryPage } from '@/content/list';
+import { resolveResourceLocale } from '@/content/locale';
+import { RESOURCE_SPECS } from '@/content/resources';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { resolveMediaLocale } from '../internal/locale';
 import { toMedia } from '../internal/to-media';
 import { createMediaRepository } from '../repository';
 import { mediaQuerySchema } from '../schema';
@@ -16,35 +18,17 @@ export const queryMedia = defineServiceMethod({
     access: 'media:read',
     mutates: false,
     async handler(params, ctx): Promise<QueryResult<Media>> {
-        const locale = resolveMediaLocale(ctx.config, params.locale);
+        const locale = resolveResourceLocale(
+            RESOURCE_SPECS.media,
+            ctx.config,
+            undefined,
+            params.locale
+        );
         const repository = createMediaRepository(ctx.config);
-        const page = params.page ?? 1;
-        const limit = params.limit;
-
-        if (limit === 'all') {
-            const rows = await repository.list(params, undefined, locale);
-            return {
-                data: rows.map((row) => toMedia(ctx.config, row)),
-                pagination: null,
-            };
-        }
-
-        const perPage = typeof limit === 'number' ? limit : 20;
-        const offset = (page - 1) * perPage;
-
-        const [rows, total] = await Promise.all([
-            repository.list(params, { limit: perPage, offset }, locale),
-            repository.count(params),
-        ]);
-
-        return {
-            data: rows.map((row) => toMedia(ctx.config, row)),
-            pagination: {
-                page,
-                limit: perPage,
-                total,
-                pages: Math.ceil(total / perPage),
-            },
-        };
+        const result = await queryPage(params, {
+            list: (page) => repository.list(params, page, locale),
+            count: () => repository.count(params),
+        });
+        return { ...result, data: result.data.map((row) => toMedia(ctx.config, row)) };
     },
 });

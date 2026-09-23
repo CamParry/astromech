@@ -1,7 +1,10 @@
 import type { JsonObject, User } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { pruneDanglingRelations } from '@/content/dangling-relations';
+import { resolveResourceLocale } from '@/content/locale';
+import { RESOURCE_SPECS } from '@/content/resources';
 import { propagateSharedFields } from '@/content/translatable';
+import { isUniqueAmong } from '@/content/unique';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { transaction } from '@/database/transaction';
@@ -12,11 +15,9 @@ import { mergePatch, projectToSchema } from '@/fields/values';
 import { requireRole } from '@/permissions/roles';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { assertKeepsAnAdmin } from '../internal/last-admin';
-import { resolveUserLocale } from '../internal/locale';
 import { readUser } from '../internal/read-user';
 import { syncUserRelationships } from '../internal/relationships';
 import { toUser } from '../internal/to-user';
-import { userIsUnique } from '../internal/unique';
 import { createUserRepository } from '../repository';
 import { updateUserSchema } from '../schema';
 
@@ -40,7 +41,12 @@ export const updateUser = defineServiceMethod({
     idempotent: true,
     async handler(params, ctx): Promise<User> {
         const { id, data } = params;
-        const locale = resolveUserLocale(ctx.config, params.locale);
+        const locale = resolveResourceLocale(
+            RESOURCE_SPECS.user,
+            ctx.config,
+            undefined,
+            params.locale
+        );
         const repository = createUserRepository(ctx.config);
 
         // The row this write edits, or — when the locale has none — the
@@ -79,7 +85,7 @@ export const updateUser = defineServiceMethod({
                 operation: 'update',
                 resource: { kind: 'user', record: toUser(base) },
                 user: ctx.user,
-                isUnique: userIsUnique(repository, { locale, excludeId: id }),
+                isUnique: isUniqueAmong(() => repository.listContent(locale), id),
                 entryTypes: (ids) => existingEntryTypes(ids),
                 coerceOnly: new Set(patchedNames),
                 ...(config.users.validate ? { validate: config.users.validate } : {}),

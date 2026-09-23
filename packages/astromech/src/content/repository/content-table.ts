@@ -39,6 +39,9 @@ function ownerAlias(column: string): string {
     return `${OWNER_PREFIX}${column.charAt(0).toUpperCase()}${column.slice(1)}`;
 }
 
+/** D1 caps a query at 100 bound parameters; each id binds one, and the locale one more. */
+const ID_CHUNK = 90;
+
 /** The write keys that are not content columns and never reach a row patch. */
 const NON_COLUMN_KEYS = new Set(['locale']);
 
@@ -206,6 +209,30 @@ export function createContentRepository<
                 byId.get(String(content[ownerColumn])) ?? [String(content['locale'])]
             )
         );
+    }
+
+    /**
+     * Replace each row with its `locale` row where it has one; a row with none
+     * keeps what it was read in. One query per chunk of ids, for a page read in
+     * the default locale.
+     */
+    async function overlayLocale(read: R[], locale: string): Promise<R[]> {
+        const byId = new Map<string, R>();
+        const ids = Array.from(new Set(read.map((row) => row.id)));
+        for (let i = 0; i < ids.length; i += ID_CHUNK) {
+            const chunk = ids.slice(i, i + ID_CHUNK);
+            const raw = await joined()
+                .where((eb) =>
+                    eb.and([
+                        eb(`${contentKey}.${ownerColumn}`, 'in', chunk),
+                        eb(`${contentKey}.locale`, '=', locale),
+                        ...canonicalOnly(eb),
+                    ])
+                )
+                .execute();
+            for (const row of await rows(raw)) byId.set(row.id, row);
+        }
+        return read.map((row) => byId.get(row.id) ?? row);
     }
 
     async function one(raw: Record<string, unknown> | undefined): Promise<R | null> {
@@ -468,6 +495,6 @@ export function createContentRepository<
         translatable,
         staging,
         versions: versionsRepository,
-        query: { db, ownerKey, contentKey, joined, count, rows },
+        query: { db, ownerKey, contentKey, joined, count, rows, overlayLocale },
     };
 }

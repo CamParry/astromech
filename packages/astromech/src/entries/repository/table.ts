@@ -22,9 +22,9 @@ import type { Db } from '@/database/types';
 import type { JsonObject, ReferencesFilter } from '@/types/index';
 import type { Expression, SqlBool } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
+import { buildOrderBy } from '@/content/list';
 import { decodeWith } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
-import { UnknownSortKeyError } from '../errors';
 import { isReferencesFilter } from './references-filter';
 
 type OrderPair = [column: string, direction: 'asc' | 'desc'];
@@ -343,25 +343,13 @@ class TableRepository implements EntryRepository<EntryRow> {
      *  unknown entries-list `where` or sort key throws"). */
     private buildOrderBy(params: ListParams): OrderPair[] {
         const cols = this.getColumns();
-        const pairs: OrderPair[] = [];
-
-        if (params.sort) {
-            const sorts = Array.isArray(params.sort) ? params.sort : [params.sort];
-            for (const s of sorts) {
-                for (const [field, dir] of Object.entries(s)) {
-                    if (!(field in cols)) {
-                        throw new UnknownSortKeyError(field, Object.keys(cols));
-                    }
-                    pairs.push([field, dir === 'asc' ? 'asc' : 'desc']);
-                }
-            }
-        }
-
-        if (pairs.length === 0 && this.createdAtCol !== false) {
-            if (this.createdAtCol in cols) pairs.push([this.createdAtCol, 'desc']);
-        }
-
-        return pairs;
+        const fallback =
+            this.createdAtCol !== false && this.createdAtCol in cols
+                ? [{ field: this.createdAtCol, direction: 'desc' as const }]
+                : [];
+        return buildOrderBy(Object.keys(cols), params.sort, fallback).map(
+            ({ field, direction }): OrderPair => [field, direction]
+        );
     }
 
     /**

@@ -11,7 +11,7 @@ import { createRelationshipRepository } from '@/database/repository/relationship
 import { mediaTable, usersTable } from '@/database/tables';
 import { getEntryResource } from '@/entries/internal/records';
 import { getEntryRepository } from '@/entries/repository/registry';
-import { findGlobal } from '@/globals/internal/global';
+import { findGlobal } from '@/globals/find-global';
 
 /**
  * Every reference pointing at one target, one row per reference: a source using

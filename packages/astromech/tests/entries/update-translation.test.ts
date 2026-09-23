@@ -129,7 +129,7 @@ describe('update into a locale with no row', () => {
                 locale: 'de',
                 data: { fields: {} },
             })
-        ).rejects.toMatchObject({ name: 'ValidationError' });
+        ).rejects.toMatchObject({ name: 'ResourceValidationError' });
 
         expect(await api.get({ type: 'note', id: note.id, locale: 'de' })).toBeNull();
     });
@@ -140,7 +140,7 @@ describe('update into a locale with no row', () => {
                 type: 'note',
                 data: { title: 'First', locale: 'de', fields: { body: 'x' } },
             })
-        ).rejects.toMatchObject({ name: 'ValidationError' });
+        ).rejects.toMatchObject({ name: 'ResourceValidationError' });
 
         const { data } = await api.query({ type: 'note', locale: 'all', full: true });
         expect(data).toEqual([]);

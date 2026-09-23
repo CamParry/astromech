@@ -2,7 +2,10 @@ import type { MediaRow } from '../repository';
 import type { JsonObject, Media } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { pruneDanglingRelations } from '@/content/dangling-relations';
+import { resolveResourceLocale } from '@/content/locale';
+import { RESOURCE_SPECS } from '@/content/resources';
 import { propagateSharedFields } from '@/content/translatable';
+import { isUniqueAmong } from '@/content/unique';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { transaction } from '@/database/transaction';
@@ -11,11 +14,9 @@ import { flattenFieldNodes } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { resolveMediaLocale } from '../internal/locale';
 import { readMedia } from '../internal/read-media';
 import { syncMediaRelationships } from '../internal/relationships';
 import { toMedia } from '../internal/to-media';
-import { mediaIsUnique } from '../internal/unique';
 import { createMediaRepository } from '../repository';
 import { updateMediaSchema } from '../schema';
 
@@ -41,7 +42,12 @@ export const updateMedia = defineServiceMethod({
     idempotent: true,
     async handler(params, ctx): Promise<Media> {
         const { id, data } = params;
-        const locale = resolveMediaLocale(ctx.config, params.locale);
+        const locale = resolveResourceLocale(
+            RESOURCE_SPECS.media,
+            ctx.config,
+            undefined,
+            params.locale
+        );
         const repository = createMediaRepository(ctx.config);
 
         // The row this write edits, or — when the locale has none — the
@@ -68,7 +74,7 @@ export const updateMedia = defineServiceMethod({
                 operation: 'update',
                 resource: { kind: 'media', record: toMedia(config, base) },
                 user: ctx.user,
-                isUnique: mediaIsUnique(repository, { locale, excludeId: id }),
+                isUnique: isUniqueAmong(() => repository.listContent(locale), id),
                 entryTypes: (ids) => existingEntryTypes(ids),
                 coerceOnly: new Set(patchedNames),
                 ...(config.media.validate ? { validate: config.media.validate } : {}),

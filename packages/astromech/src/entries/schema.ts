@@ -78,28 +78,6 @@ export function updateEntrySchema({ titled }: { titled: boolean }) {
     return schema.openapi('UpdateEntry');
 }
 
-const sortDirection = z.enum(['asc', 'desc']);
-
-const sortObject = z.record(z.string(), sortDirection);
-
-/**
- * A query's `sort` — one field→direction map, or a list of them. A value that
- * does not parse as this shape is DROPPED rather than rejected, answering the
- * default order; a well-shaped sort naming an unorderable field throws.
- */
-export const entrySortSchema = z
-    .union([sortObject, z.array(sortObject)])
-    .optional()
-    .catch(undefined)
-    // `catch` is the one wrapper `@asteasolutions/zod-to-openapi` cannot render,
-    // so the OpenAPI shape is stated here. The method manifest still reads the
-    // union off the schema itself.
-    .openapi({
-        type: 'object',
-        additionalProperties: { type: 'string', enum: ['asc', 'desc'] },
-        description: 'Field → direction, or a list of such objects.',
-    });
-
 export const scheduleEntrySchema = z.object({
     publishedAt: z.union([
         z.date(),

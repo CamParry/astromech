@@ -128,6 +128,8 @@ Live choices and what each one beat. An entry is here because the losing option 
 
 **Only entry types take storage of their own.** Entry types come in open-ended numbers and a plugin's records belong in its own table. Users are the tables Better Auth signs in against, and media has its seam at the bytes (`StorageDriver`), as with Payload's storage adapters. Rejected: a repository seam on every content module.
 
+**The four resources share helpers over one `ResourceSpec`, not a generic service.** `content/resources.ts` gives each resource its kind, field tree, translatable test and sortable columns, and `content/` builds the shared locale, capability, uniqueness, sort, relationship and `usedBy` code on it, after Strapi's core service factories. The spec holds no repository: entries' is pluggable per type and the other three add their own columns, so each module builds its own. Rejected: a repository factory in the spec, which needs one repository interface that custom tables do not meet; a base class per resource; and Payload's split, which shares collection operations but copies the versions operations for globals.
+
 **Every id in the relationships index is unique across resources, custom tables included**, because `findByTarget` matches on `targetId` alone. Entries, media and custom rows take ULIDs, users UUIDs, and `tableRepository` refuses an `idColumn` not declared with `col.id()`. Rejected: `sourceType` in the key, which fixes sources but not targets.
 
 **An entry's type is part of its address.** The repository takes the type with the id, and a row of another type reads as not found (404), as in Payload and Strapi. Rejected: a post-read type check, which answers 500 and reveals the id's real type.

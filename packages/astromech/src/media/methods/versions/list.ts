@@ -1,8 +1,9 @@
 import type { JsonObject, MediaVersion } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { resolveResourceLocale } from '@/content/locale';
+import { RESOURCE_SPECS } from '@/content/resources';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { resolveMediaLocale } from '../../internal/locale';
 import { createMediaRepository } from '../../repository';
 
 /**
@@ -16,7 +17,12 @@ export const listMediaVersions = defineServiceMethod({
     access: 'media:read',
     mutates: false,
     async handler(params, ctx): Promise<MediaVersion[]> {
-        const locale = resolveMediaLocale(ctx.config, params.locale);
+        const locale = resolveResourceLocale(
+            RESOURCE_SPECS.media,
+            ctx.config,
+            undefined,
+            params.locale
+        );
         const repository = createMediaRepository(ctx.config);
         const current = await repository.get(params.id, locale);
         if (!current) throw new ResourceNotFoundError('media', { id: params.id, locale });

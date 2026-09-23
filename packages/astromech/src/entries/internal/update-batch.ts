@@ -9,12 +9,13 @@ import type {
     ResolvedEntryType,
     User,
 } from '@/types/index';
-import { defaultContentLocale } from '@/config/content-locale';
+import { resolveResourceLocale } from '@/content/locale';
+import { RESOURCE_SPECS } from '@/content/resources';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types';
 import { CapabilityError } from '@/errors/capability';
 import { ResourceNotFoundError } from '@/errors/resource';
-import { parseInput, ValidationError } from '@/errors/validation';
+import { parseInput } from '@/errors/validation';
 import { BulkOperationError, UnknownEntryTypeError } from '../errors';
 import { getEntryRepository } from '../repository/registry';
 import { createEntrySchema, updateEntrySchema } from '../schema';
@@ -68,14 +69,12 @@ export async function updateEntryBatch(
         );
     }
 
-    const defaultLocale = defaultContentLocale(ctx.config);
-    const locale = params.locale ?? defaultLocale;
-    if (locale !== defaultLocale && !entryType.translatable) {
-        throw ValidationError.fromFieldErrors({}, [
-            `Entry type '${entryType.id}' is not translatable, so only the ` +
-                `'${defaultLocale}' locale can be written.`,
-        ]);
-    }
+    const locale = resolveResourceLocale(
+        RESOURCE_SPECS.entry,
+        ctx.config,
+        entryType.id,
+        params.locale
+    );
 
     const repository = getEntryRepository(entryType.id);
     const user = ctx.user;

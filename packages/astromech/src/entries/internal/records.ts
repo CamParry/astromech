@@ -87,6 +87,24 @@ export async function getEntryResource(
 }
 
 /**
+ * Every live row of one type in one locale, staged rows excluded: what a
+ * uniqueness check scans.
+ */
+export async function listEntryRows(
+    repository: EntryRepository,
+    type: string,
+    locale: string
+): Promise<EntryRow[]> {
+    const { data } = await repository.list({
+        type,
+        locale,
+        trashed: false,
+        limit: 'all',
+    });
+    return data;
+}
+
+/**
  * Read a batch of entries of the given type at resource level, preserving input
  * order. Shared by the delete, trash and restore operations.
  */

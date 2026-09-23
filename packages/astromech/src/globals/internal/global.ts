@@ -1,15 +1,17 @@
 /**
  * Config-derived helpers shared across the globals operations: resolving a key
- * to its declaration, the locale a call writes, the capability assertions, the
- * repository handle, and the row → `Global` narrowing.
+ * to its declaration, the capability a method requires, the repository handle,
+ * and the row → `Global` narrowing.
  */
 
 import type { GlobalRow, GlobalsRepository } from '../repository/globals-table';
 import type { Global, ResolvedConfig, ResolvedGlobal } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
-import { QUALIFIED_SEPARATOR } from '@/entries/entry-types';
-import { CapabilityError } from '@/errors/capability';
-import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resource';
+import { assertCapability } from '@/content/capabilities';
+import { resolveResourceLocale } from '@/content/locale';
+import { RESOURCE_SPECS } from '@/content/resources';
+import { ResourceNotFoundError } from '@/errors/resource';
+import { findGlobal } from '../find-global';
 import { createGlobalsRepository } from '../repository/globals-table';
 
 /** Every capability a global may declare, for narrowing a bare string to one. */
@@ -28,36 +30,11 @@ export function isGlobalCapability(value: string): value is GlobalCapability {
     return (GLOBAL_CAPABILITIES as readonly string[]).includes(value);
 }
 
-/**
- * The declaration for a key, or undefined when nothing declares it. A bare key
- * is a host global; a key holding the qualified separator is `<namespace>/<key>`
- * and resolves against that plugin's map alone, which is what stops a host
- * `settings` and a plugin's `seo/settings` reaching one another.
- */
-export function findGlobal(
-    config: ResolvedConfig,
-    key: string
-): ResolvedGlobal | undefined {
-    const index = key.indexOf(QUALIFIED_SEPARATOR);
-    if (index === -1) return config.globals[key];
-    return config.pluginGlobals[key.slice(0, index)]?.[key.slice(index + 1)];
-}
-
 /** {@link findGlobal}, throwing for a key nothing declares. */
 export function resolveGlobal(config: ResolvedConfig, key: string): ResolvedGlobal {
     const global = findGlobal(config, key);
     if (!global) throw new ResourceNotFoundError('global', { id: key });
     return global;
-}
-
-/** Enforce a global's configured capability set. */
-export function assertCapability(
-    global: ResolvedGlobal,
-    capability: GlobalCapability
-): void {
-    if (!global.capabilities[capability]) {
-        throw new CapabilityError('global', global.id, capability);
-    }
 }
 
 /**
@@ -78,28 +55,7 @@ export function assertRequiredCapability(
     if (!isGlobalCapability(capability)) {
         throw new Error(`'${capability}' is not a global capability.`);
     }
-    assertCapability(global, capability);
-}
-
-/**
- * The locale a call addresses. A non-translatable global lives in the default
- * content locale alone, so any other locale is a caller error rather than a
- * silent write to the wrong row.
- */
-export function resolveLocale(
-    config: ResolvedConfig,
-    global: ResolvedGlobal,
-    locale?: string
-): string {
-    const defaultLocale = defaultContentLocale(config);
-    const resolved = locale ?? defaultLocale;
-    if (resolved !== defaultLocale && !global.capabilities.translatable) {
-        throw new ResourceValidationError([
-            `Global '${global.id}' is not translatable, so only the ` +
-                `'${defaultLocale}' locale can be written.`,
-        ]);
-    }
-    return resolved;
+    assertCapability('global', global, capability);
 }
 
 /** The globals repository, bound to the configured default content locale. */
@@ -127,7 +83,12 @@ export async function requireCanonical(
     params: { key: string; locale?: string | undefined }
 ): Promise<CanonicalGlobal> {
     const global = resolveGlobal(config, params.key);
-    const locale = resolveLocale(config, global, params.locale);
+    const locale = resolveResourceLocale(
+        RESOURCE_SPECS.global,
+        config,
+        global.id,
+        params.locale
+    );
 
     const repository = globalRepository(config);
     const id = await repository.idByKey(params.key);
