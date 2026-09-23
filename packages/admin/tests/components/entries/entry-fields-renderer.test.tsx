@@ -14,6 +14,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import '@/admin/rendering/register-fields';
 import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer';
 import { useFieldValue } from '@/admin/components/fields/field-context';
+import { FieldErrorsProvider } from '@/admin/components/fields/field-errors-context';
 import { FormField } from '@/admin/components/fields/form-field';
 import { registerField } from '@/admin/rendering/field-registry';
 import { accordion, group, repeater, tab, tabs, text } from '@/fields/builder';
@@ -161,5 +162,21 @@ describe('container items', () => {
         expect(commits.at(-1)?.value).toEqual([
             { _id: 'l1', href: '/b', rel: 'nofollow' },
         ]);
+    });
+});
+
+describe('a named group in a column', () => {
+    it('shows the error filed under the group’s own path', () => {
+        render(
+            <FieldErrorsProvider value={{ meta: ['Must be an object'] }}>
+                <EntryFieldColumn
+                    nodes={[group('meta', { fields: [text('summary')] })]}
+                    values={{ meta: 'not an object' }}
+                    onChange={() => undefined}
+                />
+            </FieldErrorsProvider>
+        );
+
+        expect(screen.getByText('Must be an object')).toBeDefined();
     });
 });

@@ -9,6 +9,7 @@ import { formatInstancePath, isLayoutField } from 'astromech/shared';
 import React from 'react';
 import { useLabel } from '../../i18n/entry-namespace';
 import { FieldValuesProvider } from '../fields/field-context';
+import { useFieldError } from '../fields/field-errors-context';
 import { FormField } from '../fields/form-field';
 import { Collapsible } from '../ui/collapsible';
 import { Stack } from '../ui/page';
@@ -242,13 +243,19 @@ function LayoutNode({
     );
 }
 
-/** A named, boxed group in a column: a titled Panel over the group's own key. */
+/**
+ * A named, boxed group in a column: a titled Panel over the group's own key.
+ * It draws no `FieldWrapper`, so it shows the group's own error itself.
+ */
 function GroupPanel({
     node,
     scope,
     disabled,
 }: { node: DataField } & NodeProps): React.ReactElement {
     const label = useLabel();
+    const error = useFieldError(
+        formatInstancePath([...scope.segments, { kind: 'field', name: node.name }])
+    );
     return (
         <Panel
             title={label(node.label, node.name)}
@@ -257,6 +264,9 @@ function GroupPanel({
             })}
         >
             <Stack gap={5}>
+                {error !== undefined && error.length > 0 && (
+                    <p className="am-field-error">{error[0]}</p>
+                )}
                 <FieldList
                     nodes={node.fields ?? []}
                     scope={childScope(scope, node.name)}

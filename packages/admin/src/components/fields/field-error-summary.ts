@@ -6,7 +6,7 @@
 
 import type { DataField, Field, FieldErrors, Label } from 'astromech';
 import type { TFunction } from 'i18next';
-import { flattenFieldNodes, parseInstancePath } from 'astromech/shared';
+import { flattenFieldNodes, getFieldType, parseInstancePath } from 'astromech/shared';
 import { titleCase } from '../../i18n/labels';
 
 /** How many fields the summary names before it starts counting. */
@@ -29,11 +29,9 @@ function labelOf(field: DataField): Label {
  * so every block definition is a candidate; the step is safe only when they agree.
  */
 function childrenOf(field: DataField): DataField[] | null {
-    if (field.fields !== undefined) return flattenFieldNodes(field.fields);
-    if (field.blocks !== undefined) {
-        return field.blocks.flatMap((block) => flattenFieldNodes(block.fields));
-    }
-    return null;
+    const scopes = getFieldType(field.type)?.subFields?.(field);
+    if (scopes === undefined) return null;
+    return scopes.flatMap((scope) => flattenFieldNodes(scope.fields));
 }
 
 /**
