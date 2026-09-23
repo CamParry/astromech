@@ -307,9 +307,3 @@ export function useEntryForm<TSaved = Entry>({
         fieldValidation,
     };
 }
-
-/**
- * The return type of `useEntryForm`, derived from the hook itself at the entry
- * instantiation — the one the entry pages and their tests hold.
- */
-export type UseEntryFormResult = ReturnType<typeof useEntryForm<Entry>>;

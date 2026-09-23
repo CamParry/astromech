@@ -5,8 +5,13 @@
  * list plus a dispatch map keyed by tool name. No I/O; unit-testable.
  */
 import type { ConfirmOptions } from '@/policies/confirmation';
-import type { DispatchResult, ToolAnnotations } from '@/transport/tools/dispatch';
-import type { JsonSchemaObject, ManifestMethod, MethodManifest } from '@/types/index';
+import type { DispatchResult } from '@/transport/tools/dispatch';
+import type {
+    JsonSchemaObject,
+    ManifestMethod,
+    MethodManifest,
+    ToolAnnotations,
+} from '@/types/index';
 import {
     CONFIRM_KEY,
     evaluateConfirmation,

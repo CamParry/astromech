@@ -16,9 +16,6 @@ import { defineTable } from '@/database/define-table';
 import {
     columnType,
     createSnapshot,
-    emitCreateIndexes,
-    emitCreateTable,
-    emitTableStatements,
     resolveReferenceTarget,
     toSnakeCase,
     toSnapshotTable,
@@ -218,37 +215,6 @@ describe('toSnapshotTable', () => {
             },
             { name: 'child_label_unique', columns: ['label'], unique: true },
         ]);
-    });
-});
-
-describe('emit wrappers', () => {
-    it('emitCreateTable renders columns then table-level FKs', () => {
-        expect(emitCreateTable(parent, 'sqlite')).toBe(
-            [
-                'CREATE TABLE `parent` (',
-                '    `id` text PRIMARY KEY NOT NULL,',
-                '    `name` text NOT NULL',
-                ')',
-            ].join('\n')
-        );
-    });
-
-    it('emitCreateIndexes renders explicit indexes then synthesized column-unique indexes', () => {
-        expect(emitCreateIndexes(child, 'sqlite')).toEqual([
-            'CREATE INDEX `idx_child_parent` ON `child` (`parent_id`)',
-            'CREATE UNIQUE INDEX `child_parent_label_unique` ON `child` (`parent_id`,`label`) WHERE label IS NOT NULL',
-            'CREATE UNIQUE INDEX `child_label_unique` ON `child` (`label`)',
-        ]);
-    });
-
-    it('emitCreateIndexes is empty for a table with no indexes and no column-level uniques', () => {
-        expect(emitCreateIndexes(parent, 'sqlite')).toEqual([]);
-    });
-
-    it('emitTableStatements emits CREATE TABLE first, then the index statements', () => {
-        const statements = emitTableStatements(child, 'sqlite');
-        expect(statements[0]).toBe(emitCreateTable(child, 'sqlite'));
-        expect(statements.slice(1)).toEqual(emitCreateIndexes(child, 'sqlite'));
     });
 });
 

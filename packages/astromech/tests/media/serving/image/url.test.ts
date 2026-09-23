@@ -8,7 +8,6 @@ import {
     parseImageParams,
     variantPrefix,
     variantStorageKey,
-    widthLadder,
 } from '@/media/serving/image/url';
 
 describe('buildMediaUrl', () => {
@@ -177,29 +176,5 @@ describe('normaliseWidths', () => {
 
     it('handles empty input', () => {
         expect(normaliseWidths([])).toEqual([]);
-    });
-});
-
-describe('widthLadder', () => {
-    const allowlist = [320, 640, 1280, 1920];
-
-    it('caps at intrinsic width (never upscales)', () => {
-        expect(widthLadder(allowlist, 800)).toEqual([320, 640]);
-    });
-
-    it('includes exact intrinsic match', () => {
-        expect(widthLadder(allowlist, 1280)).toEqual([320, 640, 1280]);
-    });
-
-    it('returns all widths when intrinsic is larger than all', () => {
-        expect(widthLadder(allowlist, 2560)).toEqual([320, 640, 1280, 1920]);
-    });
-
-    it('returns [intrinsicWidth] when every allowlist width exceeds intrinsic', () => {
-        expect(widthLadder(allowlist, 200)).toEqual([200]);
-    });
-
-    it('dedupes and sorts the allowlist before filtering', () => {
-        expect(widthLadder([1280, 640, 640, 320], 640)).toEqual([320, 640]);
     });
 });

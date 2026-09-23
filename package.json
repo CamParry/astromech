@@ -18,7 +18,7 @@
         "check:node-imports": "pnpm -F astromech check:node-imports",
         "check:exports": "pnpm -F astromech check:exports",
         "check:docs": "node scripts/check-docs-links.mjs",
-        "check:unused": "knip",
+        "check:unused": "knip && knip --production --include files,exports,types,nsExports,nsTypes,enumMembers",
         "check:boot": "node scripts/check-boot.mjs",
         "check:boot:cloudflare": "node scripts/check-boot-cloudflare.mjs",
         "check:install": "node scripts/check-install.mjs",

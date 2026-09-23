@@ -30,7 +30,7 @@ Run `pnpm run verify:fast` while working (typecheck, tests, lint, `check:unused`
 | `pnpm run check:node-imports`    | imports core's plugin-facing subpaths and each plugin in plain Node; needs `build`                         |
 | `pnpm run check:exports`         | `exports` and `publishConfig.exports` agree                                                                |
 | `pnpm run check:docs`            | every repo-relative link and backticked path in markdown resolves                                          |
-| `pnpm run check:unused`          | knip: unused files, exports and dependencies, and undeclared imports                                       |
+| `pnpm run check:unused`          | knip: unused files, exports and dependencies, and undeclared imports; then exports only tests use          |
 | `pnpm run check:boot`            | boots the built demo and drives the admin in chromium; needs `build`                                       |
 | `pnpm run check:boot:cloudflare` | serves `apps/demo-cloudflare` on workerd (see its `AGENTS.md`)                                             |
 | `pnpm run check:install`         | installs packed tarballs into a scratch site per `apps/docs/installation.md`, plus `@astromech/backups`    |

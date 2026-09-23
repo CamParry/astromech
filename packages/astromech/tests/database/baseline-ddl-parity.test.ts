@@ -3,20 +3,20 @@
  *
  * Builds two SQLite databases: one via `apps/demo/migrations`' full
  * `migrationProvider` chain (`migrateToLatest`, run by `createTestDb`), one by
- * executing `emitTableStatements()` for the same `defineTable` tables
+ * executing `renderTableStatements(toSnapshotTable())` for the same `defineTable` tables
  * (`CORE_TABLES`) directly. Compares them through the engine's `dumpSchema`
  * oracle — one normalized `sqlite_master` dump everywhere — so the committed
  * migration chain and the tables it was generated from never silently
  * drift apart.
  */
 import type { SchemaRow } from '@astromech/schema-engine';
-import { dumpSchema } from '@astromech/schema-engine';
+import { dumpSchema, renderTableStatements } from '@astromech/schema-engine';
 import { createClient } from '@libsql/client';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { createTestDb } from '@tests/harness';
 import { Kysely, sql } from 'kysely';
 import { describe, expect, it } from 'vitest';
-import { emitTableStatements } from '@/database/table-snapshot';
+import { toSnapshotTable } from '@/database/table-snapshot';
 import { CORE_TABLES } from '@/database/tables';
 
 const TABLE_NAMES = CORE_TABLES.map((table) => table.name);
@@ -27,7 +27,7 @@ async function buildEmitterDb(): Promise<Kysely<unknown>> {
         dialect: new LibsqlDialect({ client: client as never }),
     });
     for (const table of CORE_TABLES) {
-        for (const statement of emitTableStatements(table, 'sqlite')) {
+        for (const statement of renderTableStatements(toSnapshotTable(table, 'sqlite'))) {
             await sql.raw(statement).execute(db);
         }
     }

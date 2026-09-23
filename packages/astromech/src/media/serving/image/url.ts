@@ -1,5 +1,3 @@
-import { normaliseWidths } from '@/media/image-widths';
-
 export type ImageFormat = 'avif' | 'webp';
 
 export type ParsedImageParams = {
@@ -68,13 +66,4 @@ export function variantStorageKey(
 /** The variants/<id>/ prefix used to purge all variants of a media item. */
 export function variantPrefix(id: string): string {
     return `variants/${id}/`;
-}
-
-/** The srcset width ladder for a given intrinsic width: the allowlist, deduped+sorted,
- *  filtered to <= intrinsicWidth (never upscale). If every allowlist width exceeds the
- *  intrinsic width, return just [intrinsicWidth] (so at least one source is emitted). */
-export function widthLadder(widths: readonly number[], intrinsicWidth: number): number[] {
-    const sorted = normaliseWidths(widths);
-    const filtered = sorted.filter((w) => w <= intrinsicWidth);
-    return filtered.length > 0 ? filtered : [intrinsicWidth];
 }

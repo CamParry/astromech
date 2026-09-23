@@ -16,5 +16,3 @@ export const defineServiceMethod: <S extends z.ZodType, Output>(
     method: ServiceMethodDefinition<S, Output, PluginContext>
 ) => ServiceMethod<z.input<S>, Output, PluginContext, z.output<S>> =
     defineServiceMethodGeneric;
-
-export { noInput } from '@/services/define-service-method';

@@ -9,8 +9,6 @@ import { CamelCasePlugin, Kysely } from 'kysely';
 import { resolveBinding } from '@/integrations/cloudflare/bindings';
 import { D1Dialect } from './d1-dialect';
 
-export type { D1DatabaseLike, D1PreparedStatementLike, D1ResultLike } from './d1-dialect';
-
 export type D1Options =
     | { binding: string; database?: never }
     | { database: D1DatabaseLike; binding?: never };

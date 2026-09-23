@@ -10,9 +10,6 @@ import type { MethodCaller } from '@/policies/call-method';
 import type { AppContext, ManifestMethod, ToolDefinition } from '@/types/index';
 import { confirmMessage } from '@/policies/confirmation';
 
-// The dispatch shapes live in the pure leaf so `types/plugins.ts` can name them.
-export type { ToolAnnotations, ToolDefinition } from '@/types/index';
-
 /**
  * Either a dispatchable tool or the reason there isn't one. A bare `null` told
  * the caller nothing, so every omission looked the same as a bug.

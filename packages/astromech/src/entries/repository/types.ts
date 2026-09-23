@@ -9,11 +9,6 @@ import type { Capability } from '@/entries/capabilities';
 import type { EntryVersionRow } from '@/entries/tables';
 import type { EntryStatus, JsonObject, SortOption, WhereFilters } from '@/types/index';
 
-export type { Capability } from '@/entries/capabilities';
-
-/** The id of a row in `entry_content`. Shared with every other resource. */
-export type { ContentRowId } from '@/content/repository/types';
-
 /**
  * How a caller names one locale of one entry. `id` is the entry id — the only
  * id that appears in a URL, a service call, a relation or a preview. A missing

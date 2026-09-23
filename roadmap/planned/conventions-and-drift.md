@@ -54,7 +54,7 @@ visible where it happens and leaves the judgement to review.
 
 ## Tooling
 
-- [ ] knip: add a `--production` pass to `check:unused` (entries marked `!`,
+- [x] knip: add a `--production` pass to `check:unused` (entries marked `!`,
       tests excluded) so an export only tests use shows up; delete
       `EntryQueryResult`, `QueryOptions` and the re-exports outside `exports/`
       (`entries/repository/types.ts`, `entries/repository/table.ts`,

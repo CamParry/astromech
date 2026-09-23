@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fieldNameToLabel, getFieldLabel } from '@/utilities/labels';
+import { fieldNameToLabel } from '@/utilities/labels';
 
 describe('fieldNameToLabel', () => {
     it('converts snake_case to Title Case', () => {
@@ -32,28 +32,5 @@ describe('fieldNameToLabel', () => {
     it('handles acronyms and consecutive capitals better', () => {
         expect(fieldNameToLabel('SEOTitle')).toBe('SEO Title');
         expect(fieldNameToLabel('APIKey')).toBe('API Key');
-    });
-});
-
-describe('getFieldLabel', () => {
-    it('uses label if provided', () => {
-        expect(getFieldLabel({ name: 'featured_image', label: 'Hero Image' })).toBe(
-            'Hero Image'
-        );
-        expect(getFieldLabel({ name: 'meta_title', label: 'SEO Title' })).toBe(
-            'SEO Title'
-        );
-    });
-
-    it('converts field name to title case if no label', () => {
-        expect(getFieldLabel({ name: 'featured_image' })).toBe('Featured Image');
-        expect(getFieldLabel({ name: 'meta_title' })).toBe('Meta Title');
-        expect(getFieldLabel({ name: 'firstName' })).toBe('First Name');
-    });
-
-    it('handles empty label as falsy', () => {
-        expect(getFieldLabel({ name: 'featured_image', label: '' })).toBe(
-            'Featured Image'
-        );
     });
 });

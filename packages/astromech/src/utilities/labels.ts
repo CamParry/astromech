@@ -19,8 +19,3 @@ export function t(key: string): MessageRef {
 export function fieldNameToLabel(name: string): string {
     return startCase(name);
 }
-
-/** A field's display label — its own `label` if set, else its title-cased name. */
-export function getFieldLabel(field: { name: string; label?: string }): string {
-    return field.label || fieldNameToLabel(field.name);
-}

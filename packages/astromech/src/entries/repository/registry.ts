@@ -1,6 +1,6 @@
 /**
  * Entry repository registry: a type resolves to its own repository when one is
- * mounted via `setEntryRepository`, else the shared entries-table repository. Both
+ * mounted by `registerEntryRepositories`, else the shared entries-table repository. Both
  * registries live on `globalThis` — module-level state duplicates per bundle chunk.
  */
 
@@ -28,6 +28,11 @@ export function getEntryRepository(type: string): EntryRepository {
     return overrides.get(type) ?? getEntriesTable();
 }
 
+/**
+ * Mount one type's repository by hand. Tests use it to swap in a failing one;
+ * a site names its repository on the entry type instead.
+ * @internal
+ */
 export function setEntryRepository(type: string, repository: EntryRepository): void {
     overrides.set(type, repository);
 }

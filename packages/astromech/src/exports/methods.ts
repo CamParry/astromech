@@ -10,7 +10,8 @@ export { formatAiContextMessage } from '@/utilities/ai-context';
 export type { AiContextItem } from '@/types/ai-context';
 
 export { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch';
-export type { DispatchResult, ToolDefinition } from '@/transport/tools/dispatch';
+export type { DispatchResult } from '@/transport/tools/dispatch';
+export type { ToolDefinition } from '@/types/index';
 export { buildScopedTools } from '@/transport/tools/scoped-tools';
 
 export { filterMethods } from '@/policies/method-filter';

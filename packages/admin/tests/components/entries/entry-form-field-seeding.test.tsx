@@ -25,10 +25,11 @@ import { initReactI18next } from 'react-i18next';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/admin/components/ui/toast';
 import '@/admin/rendering/register-fields';
-import type { UseEntryFormResult } from '@/admin/hooks/use-entry-form';
 import type { Entry, Field } from '@/types/index';
 import { EntryFieldColumn } from '@/admin/components/entries/entry-fields-renderer';
 import { useEntryForm } from '@/admin/hooks/use-entry-form';
+
+type UseEntryFormResult = ReturnType<typeof useEntryForm<Entry>>;
 
 beforeAll(async () => {
     // The hook reads labels through `useTranslation`; the SPA's own i18n module

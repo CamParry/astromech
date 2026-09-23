@@ -1,3 +1,8 @@
 /** `astromech/database/d1` — the Cloudflare D1 database driver. */
 
 export * from '@/database/drivers/d1';
+export type {
+    D1DatabaseLike,
+    D1PreparedStatementLike,
+    D1ResultLike,
+} from '@/database/drivers/d1-dialect';

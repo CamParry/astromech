@@ -68,7 +68,10 @@ function evictOldest(windows: Map<string, Window>): void {
     if (oldest.done !== true) windows.delete(oldest.value);
 }
 
-/** Clear every counter. For tests — nothing in the plugin calls it. */
+/**
+ * Clear every counter. For tests: nothing in the plugin calls it.
+ * @internal
+ */
 export function resetRateLimit(): void {
     globalThis.__astromechFormsRateLimit = undefined;
 }

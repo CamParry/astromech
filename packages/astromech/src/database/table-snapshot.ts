@@ -13,12 +13,7 @@ import type {
     SnapshotTable,
     SqlDialect,
 } from '@astromech/schema-engine';
-import {
-    capIdentifier,
-    renderCreateIndex,
-    renderCreateTable,
-    renderTableStatements,
-} from '@astromech/schema-engine';
+import { capIdentifier } from '@astromech/schema-engine';
 import { AstromechError } from '@/errors/astromech-error';
 
 /**
@@ -174,22 +169,4 @@ export function createSnapshot(tables: Table[], opts: { dialect: SqlDialect }): 
         dialect: opts.dialect,
         tables: Object.fromEntries(entries),
     };
-}
-
-/** Render a table's `CREATE TABLE` statement (columns, then table-level FKs,
- *  in column declaration order). */
-export function emitCreateTable(table: Table, dialect: SqlDialect): string {
-    return renderCreateTable(toSnapshotTable(table, dialect));
-}
-
-/** Render a table's index statements — explicit indexes then synthesized
- *  column-unique indexes. */
-export function emitCreateIndexes(table: Table, dialect: SqlDialect): string[] {
-    const snap = toSnapshotTable(table, dialect);
-    return snap.indexes.map((idx) => renderCreateIndex(snap.name, idx));
-}
-
-/** Render a table's full statement set: `CREATE TABLE` first, then indexes. */
-export function emitTableStatements(table: Table, dialect: SqlDialect): string[] {
-    return renderTableStatements(toSnapshotTable(table, dialect));
 }

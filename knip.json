@@ -19,48 +19,57 @@
         },
         "packages/astromech": {
             "entry": [
-                "src/exports/*.ts",
-                "scripts/*.{mjs,ts}",
+                "src/exports/*.ts!",
+                "scripts/*.{mjs,ts}!",
                 "tests/**/*.test.{ts,tsx}",
                 "tests/_support/**/*.{ts,tsx}"
             ],
             "project": [
-                "src/**/*.{ts,tsx,astro}",
+                "src/**/*.{ts,tsx,astro}!",
                 "tests/**/*.{ts,tsx}",
-                "scripts/**/*.{mjs,ts}"
+                "scripts/**/*.{mjs,ts}!"
             ],
             "ignoreDependencies": ["wrangler"]
         },
         "packages/admin": {
             "entry": [
-                "src/exports/*.ts",
-                "src/pages/**/*.tsx",
+                "src/exports/*.ts!",
+                "src/pages/**/*.tsx!",
                 "tests/**/*.test.{ts,tsx}",
                 "tests/_support/**/*.{ts,tsx}"
             ],
-            "project": ["src/**/*.{ts,tsx,astro}", "tests/**/*.{ts,tsx}"],
+            "project": ["src/**/*.{ts,tsx,astro}!", "tests/**/*.{ts,tsx}"],
             "ignoreUnresolved": ["./routeTree.gen"]
         },
         "packages/schema-engine": {
             "entry": ["tests/**/*.test.ts"],
-            "project": ["src/**/*.ts", "tests/**/*.ts"]
+            "project": ["src/**/*.ts!", "tests/**/*.ts"]
         },
         "packages/plugins/*": {
             "entry": [
-                "src/tables/index.ts",
-                "src/admin/**/*.tsx",
-                "migrations/**/*.ts",
+                "src/tables/index.ts!",
+                "src/admin/**/*.tsx!",
+                "migrations/**/*.ts!",
                 "tests/**/*.test.{ts,tsx}"
             ],
-            "project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}", "migrations/**/*.ts"]
+            "project": [
+                "src/**/*.{ts,tsx}!",
+                "tests/**/*.{ts,tsx}",
+                "migrations/**/*.ts!"
+            ]
         },
         "apps/demo": {
             "entry": [
-                "src/admin/**/*.tsx",
-                "src/plugins/*/admin/**/*.tsx",
-                "migrations/**/*.ts"
+                "src/admin/**/*.tsx!",
+                "src/plugins/*/admin/**/*.tsx!",
+                "migrations/**/*.ts!"
             ],
-            "project": ["*.{ts,mjs}", "src/**/*.{ts,tsx,astro}", "migrations/**/*.ts"],
+            "project": [
+                "*.{ts,mjs}!",
+                "!seed.ts!",
+                "src/**/*.{ts,tsx,astro}!",
+                "migrations/**/*.ts!"
+            ],
             "ignoreDependencies": [
                 "tailwindcss",
                 "@tailwindcss/forms",
@@ -70,8 +79,8 @@
             ]
         },
         "apps/demo-cloudflare": {
-            "entry": ["migrations/**/*.ts"],
-            "project": ["*.{ts,mjs}", "src/**/*.{ts,tsx,astro}", "migrations/**/*.ts"]
+            "entry": ["migrations/**/*.ts!"],
+            "project": ["*.{ts,mjs}!", "src/**/*.{ts,tsx,astro}!", "migrations/**/*.ts!"]
         },
         "apps/docs": {}
     }

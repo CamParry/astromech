@@ -6,8 +6,6 @@
  */
 
 import type {
-    Capability,
-    ContentRowId,
     EntryRef,
     EntryRepository,
     EntryRow,
@@ -15,9 +13,10 @@ import type {
     ListParams,
     PreviewTokenRecord,
 } from './types';
-import type { JoinedWhere } from '@/content/repository/types';
+import type { ContentRowId, JoinedWhere } from '@/content/repository/types';
 import type { Where } from '@/database/repository/where';
 import type { DB, Db } from '@/database/types';
+import type { Capability } from '@/entries/capabilities';
 import type { EntryRow as EntriesTableRow, EntryContentRow } from '@/entries/tables';
 import type { JsonObject, ReferencesFilter, SortOption } from '@/types/index';
 import type { Expression, SqlBool, Updateable } from 'kysely';

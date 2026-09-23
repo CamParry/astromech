@@ -4,7 +4,8 @@
  * of the read, so an entry of another type is not found.
  */
 
-import type { ContentRowId, EntryRepository, EntryRow } from '../repository/types';
+import type { EntryRepository, EntryRow } from '../repository/types';
+import type { ContentRowId } from '@/content/repository/types';
 import type { Entry, ResolvedConfig } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
 import { ResourceNotFoundError } from '@/errors/resource';

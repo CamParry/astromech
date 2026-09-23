@@ -4,9 +4,9 @@ import { buildDefaultValues } from '../utilities/defaults';
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- idiomatic non-null assertions in tree-field traversal */
 /**
- * State management for the tree field component. Internally flattens the
- * recursive tree into an ordered list of `FlatNode`s (depth + parentId); all
- * mutations operate on the flat list and rebuild the tree before committing.
+ * State management for the tree field component. Mutations rewrite the nested
+ * tree; `flattenTree` gives the ordered list of `FlatNode`s (depth + parentId)
+ * the component renders and the depth checks read.
  */
 
 export type TreeNode = {
@@ -35,37 +35,6 @@ export function flattenTree(
         }
     }
     return result;
-}
-
-export function buildTree(flat: FlatNode[]): TreeNode[] {
-    // Reconstruct a tree from the flat list. Each node's _children are the
-    // immediately following nodes at depth+1 that trace back to it.
-    // Strategy: walk the flat list and assign children by parent tracking.
-    const nodeMap = new Map<string, TreeNode>();
-
-    // Clone nodes without _children first.
-    for (const { node } of flat) {
-        const { _children: _dropped, ...rest } = node;
-        void _dropped;
-        nodeMap.set(node._id, rest as TreeNode);
-    }
-
-    const roots: TreeNode[] = [];
-
-    for (const { node, parentId } of flat) {
-        const cloned = nodeMap.get(node._id)!;
-        if (parentId === null) {
-            roots.push(cloned);
-        } else {
-            const parent = nodeMap.get(parentId)!;
-            if (!Array.isArray(parent._children)) {
-                parent._children = [];
-            }
-            (parent._children as TreeNode[]).push(cloned);
-        }
-    }
-
-    return roots;
 }
 
 function withId(data: Partial<TreeNode> = {}): TreeNode {

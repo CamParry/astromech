@@ -8,12 +8,13 @@
  * harness), not against generated SQL.
  */
 import type { Where } from '@/database/repository/where';
+import { renderTableStatements } from '@astromech/schema-engine';
 import { createTestDb } from '@tests/harness';
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineTable } from '@/database/define-table';
 import { createRepository } from '@/database/repository/create-repository';
-import { emitTableStatements } from '@/database/table-snapshot';
+import { toSnapshotTable } from '@/database/table-snapshot';
 import { cronTable } from '@/database/tables';
 import { AstromechError } from '@/errors/astromech-error';
 
@@ -49,7 +50,9 @@ function entryRepository() {
 
 beforeEach(async () => {
     const db = await createTestDb();
-    for (const statement of emitTableStatements(entriesProbe, 'sqlite')) {
+    for (const statement of renderTableStatements(
+        toSnapshotTable(entriesProbe, 'sqlite')
+    )) {
         await sql.raw(statement).execute(db);
     }
 });

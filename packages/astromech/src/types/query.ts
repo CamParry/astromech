@@ -33,10 +33,6 @@ export type ReferencesFilter = {
  */
 export type WhereFilters = Record<string, unknown>;
 
-export type QueryOptions = {
-    locale?: string | undefined;
-};
-
 export type EntryQueryParams = {
     /** Single type or array of types. Required at the runtime surface. */
     type?: string | readonly string[] | undefined;
@@ -70,9 +66,6 @@ export type QueryResult<T = Entry> = {
         pages: number;
     } | null; // null when limit is 'all'
 };
-
-/** @deprecated Use QueryResult instead */
-export type EntryQueryResult<T = Entry> = QueryResult<T>;
 
 export type UserQueryParams = {
     /** The locale each user's content is read in. Default: the default locale. */

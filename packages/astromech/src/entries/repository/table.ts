@@ -5,13 +5,13 @@
  */
 
 import type {
-    ContentRowId,
     EntryRef,
     EntryRepository,
     EntryRow,
     EntryWrite,
     ListParams,
 } from './types';
+import type { ContentRowId } from '@/content/repository/types';
 import type { Column, Table } from '@/database/define-table';
 import type { KyselyHandle, Repository } from '@/database/repository/create-repository';
 import type { Where } from '@/database/repository/where';
@@ -434,4 +434,5 @@ export function tableRepository(
     return new TableRepository(table, options);
 }
 
-export type { TableRepository as CustomTableRepository };
+/** The type `EntryType['repository']` takes: a repository `tableRepository()` built. */
+export type CustomTableRepository = TableRepository;

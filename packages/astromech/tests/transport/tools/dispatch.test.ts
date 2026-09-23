@@ -4,7 +4,6 @@
  * `invoke` goes through `scopedServices`, so a refusal comes from the handle.
  */
 import type * as appServices from '@/app-context/services';
-import type { ToolDefinition } from '@/transport/tools/dispatch';
 import type {
     AppContext,
     CoreManifestMethod,
@@ -14,6 +13,7 @@ import type {
     PluginDefinition,
     PluginManifestMethod,
     Role,
+    ToolDefinition,
 } from '@/types/index';
 import { contextAs, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

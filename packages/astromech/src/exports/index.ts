@@ -122,7 +122,8 @@ export { defineAdminPage } from '@/config/define-admin-page';
 export { defineEntryType } from '@/entries/define-entry-type';
 export { defineGlobal } from '@/config/define-global';
 export { definePlugin } from '@/plugins/define-plugin';
-export { defineServiceMethod, noInput } from '@/plugins/define-service-method';
+export { defineServiceMethod } from '@/plugins/define-service-method';
+export { noInput } from '@/services/define-service-method';
 export { defineHook } from '@/plugins/define-hook';
 
 /**

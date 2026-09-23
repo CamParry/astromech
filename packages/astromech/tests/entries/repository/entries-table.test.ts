@@ -7,7 +7,7 @@
  * capability groups plus the preview token.
  */
 
-import type { ContentRowId } from '@/entries/repository/types';
+import type { ContentRowId } from '@/content/repository/types';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { transaction } from '@/database/transaction';
