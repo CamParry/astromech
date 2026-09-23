@@ -1027,7 +1027,7 @@ describe('bulk', () => {
         const b = await api.create({ type: 'post', data: { title: 'B' } });
         const res = await api.update({
             type: 'post',
-            id: [a.id, b.id],
+            ids: [a.id, b.id],
             data: { status: 'published' },
         });
         expect(res).toHaveLength(2);
@@ -1044,7 +1044,7 @@ describe('bulk', () => {
         await expect(
             api.update({
                 type: 'post',
-                id: [a.id, 'missing-id', b.id],
+                ids: [a.id, 'missing-id', b.id],
                 data: { title: 'X' },
             })
         ).rejects.toThrow(/missing-id/);
@@ -1057,7 +1057,17 @@ describe('bulk', () => {
 
     it('refuses an empty id list, which the method’s schema declares non-empty', async () => {
         await expect(
-            api.update({ type: 'post', id: [], data: { title: 'X' } })
+            api.update({ type: 'post', ids: [], data: { title: 'X' } })
+        ).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it('refuses a call naming both `id` and `ids`, or neither', async () => {
+        const a = await api.create({ type: 'post', data: { title: 'A' } });
+        await expect(
+            api.update({ type: 'post', id: a.id, ids: [a.id], data: { title: 'X' } })
+        ).rejects.toBeInstanceOf(ValidationError);
+        await expect(
+            api.update({ type: 'post', data: { title: 'X' } })
         ).rejects.toBeInstanceOf(ValidationError);
     });
 });

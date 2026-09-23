@@ -244,7 +244,7 @@ export function useBulkTrashEntries(
 
     return useMutation({
         mutationFn: (ids: string[]) =>
-            astromechUntypedClient.entries.trash({ type, id: ids }),
+            astromechUntypedClient.entries.trash({ type, ids }),
         onSuccess: () => {
             void queryClient.invalidateQueries({
                 queryKey: keys.all(type),
@@ -272,7 +272,7 @@ export function useBulkDeleteEntries(
 
     return useMutation({
         mutationFn: (ids: string[]) =>
-            astromechUntypedClient.entries.delete({ type, id: ids }),
+            astromechUntypedClient.entries.delete({ type, ids }),
         onSuccess: () => {
             void queryClient.invalidateQueries({
                 queryKey: keys.all(type),
@@ -300,7 +300,7 @@ export function useBulkPublishEntries(
 
     return useMutation({
         mutationFn: (ids: string[]) =>
-            astromechUntypedClient.entries.publish({ type, id: ids }),
+            astromechUntypedClient.entries.publish({ type, ids }),
         onSuccess: () => {
             void queryClient.invalidateQueries({
                 queryKey: keys.all(type),
@@ -328,7 +328,7 @@ export function useBulkUnpublishEntries(
 
     return useMutation({
         mutationFn: (ids: string[]) =>
-            astromechUntypedClient.entries.unpublish({ type, id: ids }),
+            astromechUntypedClient.entries.unpublish({ type, ids }),
         onSuccess: () => {
             void queryClient.invalidateQueries({
                 queryKey: keys.all(type),

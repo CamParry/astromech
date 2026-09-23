@@ -175,7 +175,7 @@ async function handleRestRoute(
         // from an edge parse — rendered under the names the caller sent. Every
         // other error, the scoped handle's refusal included, is onError's.
         if (isMethodInputError(error)) {
-            return fromZodError(c, error, route.bodyKey, route.wireNames);
+            return fromZodError(c, error, route.bodyKey);
         }
         throw error;
     }
@@ -285,7 +285,7 @@ function pathParams(path: string): z.ZodObject | undefined {
 /**
  * The request body this route documents: the key it declares as `bodyKey`, or
  * the method's argument object minus whatever the URL already carries (path
- * params and `queryArgs`), under the names the wire gives them. A route left
+ * params and `queryArgs`). A route left
  * with no fields sends no body.
  */
 function requestBody(
@@ -298,33 +298,16 @@ function requestBody(
 
     if (route.bodyKey !== undefined) return input.shape[route.bodyKey];
 
-    const onUrl = [...paramNames(route.path), ...(route.queryArgs ?? [])].filter(
-        (name) => name in input.shape
-    );
-    const rest = onUrl.length > 0 ? input.omit(maskFor(onUrl)) : input;
-    if (Object.keys(rest.shape).length === 0) return undefined;
-    return renameShape(rest, route.wireNames);
-}
-
-/** `['type', 'id']` → `{ type: true, id: true }`, the mask `omit` reads. */
-function maskFor(names: string[]): Record<string, true> {
-    return Object.fromEntries(names.map((name) => [name, true]));
-}
-
-/** `object` with each key the route renames on the wire — `id` → `ids`. */
-function renameShape(
-    object: z.ZodObject,
-    wireNames: Record<string, string> | undefined
-): z.ZodObject {
-    if (wireNames === undefined) return object;
-    return z.object(
-        Object.fromEntries(
-            Object.entries(object.shape).map(([key, schema]) => [
-                wireNames[key] ?? key,
-                schema,
-            ])
-        )
-    );
+    // Rebuilt from the shape: a schema with a refinement (`oneOrMany`) cannot
+    // be narrowed with `omit`.
+    const onUrl = new Set([...paramNames(route.path), ...(route.queryArgs ?? [])]);
+    // A method taking `id` or `ids` is addressed one way per route: by the
+    // path's `:id`, or by the body's `ids` on a bulk row.
+    if (onUrl.has('id')) onUrl.add('ids');
+    if (route.client === 'list') onUrl.add('id');
+    const rest = Object.entries(input.shape).filter(([name]) => !onUrl.has(name));
+    if (rest.length === 0) return undefined;
+    return z.object(Object.fromEntries(rest));
 }
 
 /**

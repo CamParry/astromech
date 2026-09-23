@@ -150,7 +150,7 @@ type Call = (id: string, params?: Args) => Promise<unknown>;
 function routeFor(id: string, args: Args): MountedRoute {
     const rows = HTTP_ROUTES.filter((row) => row.id === id && row.client !== 'none');
     const list = rows.find((row) => row.client === 'list');
-    if (list !== undefined && Array.isArray(args[list.listArg ?? 'id'])) return list;
+    if (list !== undefined && Array.isArray(args[list.listArg ?? 'ids'])) return list;
     const single = rows.find((row) => row.client !== 'list');
     if (single === undefined) throw new Error(`No REST route for method '${id}'.`);
     return single;
@@ -179,7 +179,7 @@ function fillPath(
     const rest: Args = {};
     for (const [key, value] of Object.entries(args)) {
         if (taken.has(key) || value === undefined) continue;
-        rest[route.wireNames?.[key] ?? key] = value;
+        rest[key] = value;
     }
 
     return { path: filled === '/' ? base : `${base}${filled}`, rest };

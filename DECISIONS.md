@@ -50,7 +50,7 @@ Live choices and what each one beat. An entry is here because the losing option 
 
 **The `where` DSL is the repository's stable contract; `kysely()` is not.** Core stays inside `createRepository`'s typed methods, so the DSL grows to meet it: `or` takes `Where` clauses, `and` waits for a caller, and `contains` escapes `%`, `_` and `\` where `like` is verbatim. `kysely()` covers the rest (aggregates, expression filters) with no compatibility promise, named for the engine so the coupling is greppable, like `payload.db.drizzle`. Rejected: `query()`, which hides the coupling; a `findMany(qb => …)` builder callback; and escaping at call sites, which needs an `ESCAPE` clause the caller cannot emit.
 
-**Every mutating entry operation is a batch, and one id is a batch of one.** So single writes are atomic, and an explicit-id batch is atomic and travels in the request body. `fromBatch` adapts each method to `id: string | readonly string[]` and unwraps `BulkOperationError` for one id. Best-effort `{ docs, errors }` is for filter-addressed operations only. Rejected: a Prisma-style `update`/`updateMany` split.
+**Every mutating entry operation is a batch, and one id is a batch of one.** So single writes are atomic, and an explicit-id batch is atomic and travels in the request body. Each method takes `id` for one entry or `ids` for a list, as Payload's Local API takes `id` or `where` on one method; `fromBatch` adapts it and unwraps `BulkOperationError` for one id. Best-effort `{ docs, errors }` is for filter-addressed operations only. Rejected: a Prisma-style `update`/`updateMany` split, and `id: string | string[]`, which the REST body had to rename to `ids`.
 
 ## Config, boot and packaging
 

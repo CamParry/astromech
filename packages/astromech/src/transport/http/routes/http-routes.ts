@@ -34,13 +34,6 @@ export type HttpRouteSpec = {
      */
     bodyKey?: string;
     /**
-     * Argument key → the name the wire gives it, where the two differ. The bulk
-     * routes are the case: the method takes `id` (one id or a list), the wire
-     * has always called it `ids`. Read by the document, by the validation-error
-     * field paths, and by the client when it builds the body.
-     */
-    wireNames?: Record<string, string>;
-    /**
      * Argument names this route carries on the query string. `locale` is the
      * case: a content-level route addresses one locale of an entry, and that
      * addressing belongs in the URL beside `:id`. Read by the document, and by
@@ -51,11 +44,11 @@ export type HttpRouteSpec = {
     handler?: 'bespoke';
     /**
      * How the fetch client reaches this route, when a method id has more than
-     * one: `list` when the addressed argument is an array, `none` when the
+     * one: `list` when the call passes the list argument, `none` when the
      * client never uses this route at all. The unmarked row is the default.
      */
     client?: 'list' | 'none';
-    /** The argument a `client: 'list'` row addresses as an array. `id` unless given. */
+    /** The argument a `client: 'list'` row addresses as an array. `ids` unless given. */
     listArg?: string;
 };
 
@@ -66,8 +59,7 @@ export type MountedRoute = HttpRouteSpec & { base: string };
  * Every entry type is served here, addressed by the type id the entries service
  * uses, URL-encoded into the `:type` segment.
  *
- * The bulk routes take the wire's `ids` where the method takes `id`, so each
- * carries `wireNames`. Two rows are bespoke; `transport/http/routes/entries.ts`
+ * Two rows are bespoke; `transport/http/routes/entries.ts`
  * records the reason against each handler.
  */
 export const ENTRIES_ROUTE_SPECS = [
@@ -94,7 +86,6 @@ export const ENTRIES_ROUTE_SPECS = [
         verb: 'post',
         path: '/:type/bulk-update',
         id: 'entries.update',
-        wireNames: { id: 'ids' },
         queryArgs: ['locale', 'staged'],
         client: 'list',
     },
@@ -110,7 +101,6 @@ export const ENTRIES_ROUTE_SPECS = [
         path: '/:type/bulk-trash',
         id: 'entries.trash',
         envelope: 'success',
-        wireNames: { id: 'ids' },
         client: 'list',
     },
     {
@@ -118,21 +108,18 @@ export const ENTRIES_ROUTE_SPECS = [
         path: '/:type/bulk-delete',
         id: 'entries.delete',
         envelope: 'success',
-        wireNames: { id: 'ids' },
         client: 'list',
     },
     {
         verb: 'post',
         path: '/:type/bulk-restore',
         id: 'entries.restore',
-        wireNames: { id: 'ids' },
         client: 'list',
     },
     {
         verb: 'post',
         path: '/:type/bulk-publish',
         id: 'entries.publish',
-        wireNames: { id: 'ids' },
         queryArgs: ['locale'],
         client: 'list',
     },
@@ -140,7 +127,6 @@ export const ENTRIES_ROUTE_SPECS = [
         verb: 'post',
         path: '/:type/bulk-unpublish',
         id: 'entries.unpublish',
-        wireNames: { id: 'ids' },
         queryArgs: ['locale'],
         client: 'list',
     },
@@ -148,7 +134,6 @@ export const ENTRIES_ROUTE_SPECS = [
         verb: 'post',
         path: '/:type/bulk-schedule',
         id: 'entries.schedule',
-        wireNames: { id: 'ids' },
         queryArgs: ['locale'],
         client: 'list',
     },

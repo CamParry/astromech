@@ -53,7 +53,7 @@ describe('createEntriesService — type path segment', () => {
     });
 
     it('encodes on the bulk sub-routes', async () => {
-        await api().trash({ type: 'redirects/redirect', id: ['a', 'b'] });
+        await api().trash({ type: 'redirects/redirect', ids: ['a', 'b'] });
         expect(calls[0]).toBe('/cms/api/entries/redirects%2Fredirect/bulk-trash');
     });
 

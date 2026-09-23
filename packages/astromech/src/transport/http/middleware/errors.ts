@@ -109,16 +109,13 @@ export function requestSchemaError(c: Context, err: ZodError): Response {
  * themselves, so a `ZodError` and a `ValidationError` both fit.
  *
  * The failure is reported under the names the CALLER sent, not the names of the
- * method's argument object. `bodyKey` names the key the request body was
- * validated under and is stripped from the front of each field path;
- * `wireNames` renames an argument the wire spells differently (the bulk routes'
- * `id`, which is `ids` on the wire).
+ * method's argument object: `bodyKey` names the key the request body was
+ * validated under, and is stripped from the front of each field path.
  */
 export function fromZodError(
     c: Context,
     err: { issues: readonly ZodIssue[] },
-    bodyKey?: string,
-    wireNames?: Record<string, string>
+    bodyKey?: string
 ): Response {
     const fields: Record<string, string[]> = {};
     for (const issue of err.issues) {
@@ -126,12 +123,7 @@ export function fromZodError(
             bodyKey !== undefined && issue.path[0] === bodyKey
                 ? issue.path.slice(1)
                 : issue.path;
-        const [head, ...tail] = path;
-        const renamed =
-            typeof head === 'string' && wireNames?.[head] !== undefined
-                ? [wireNames[head], ...tail]
-                : path;
-        const key = renamed.join('.') || '_';
+        const key = path.join('.') || '_';
         (fields[key] ??= []).push(issue.message);
     }
     return validationFailed(c, fields);

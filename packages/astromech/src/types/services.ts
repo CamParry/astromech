@@ -5,8 +5,8 @@
  * Entry surface design:
  *  - Every entry method takes a single options object.
  *  - `type` is required on every method.
- *  - Bulk-capable methods accept `id: string | string[]`; single id → single
- *    return, array id → array return. Bulk is all-or-nothing transactional.
+ *  - Bulk-capable methods take `id` for one entry or `ids` for a list; `id`
+ *    answers one entry, `ids` a list. Bulk is all-or-nothing transactional.
  */
 
 import type {
@@ -91,13 +91,18 @@ export type EntryUpdateData = z.input<typeof updateEntryPayloadSchema>;
 export type ParsedEntryUpdateData = z.output<typeof updateEntryPayloadSchema>;
 
 /**
+ * Which entries a bulk-capable method acts on: one `id`, or a list of `ids`.
+ * Exactly one is given; the method's input schema refuses both or neither.
+ */
+export type EntryAddress = { id?: string; ids?: readonly string[] };
+
+/**
  * Caller input for `update`: which entries, which locale, and the patch to
  * apply to each. A locale with no content row yet is created, so this is how a
  * translation is written.
  */
-export type EntryUpdateParams = {
+export type EntryUpdateParams = EntryAddress & {
     type: string;
-    id: string | readonly string[];
     locale?: string;
     /** Write the entry's staged change for this locale rather than its canonical row. */
     staged?: boolean;
@@ -109,9 +114,9 @@ export type EntryDuplicateOverrides = z.input<typeof duplicateOverridesSchema>;
 
 /**
  * The entries domain's service contract: unified, type-scoped, options-object.
- * The five methods that take one id or a list answer to match, and each ends
- * with a union signature for a caller holding either. `defineService` reads a
- * method's types off that last signature.
+ * The five methods that take `id` or `ids` answer one entry or a list to match,
+ * and each ends with a signature taking either, for a caller holding a union.
+ * `defineService` reads a method's types off that last signature.
  */
 export type EntriesService = {
     query(
@@ -133,7 +138,7 @@ export type EntriesService = {
     create(params: EntryCreateParams): Promise<Entry>;
 
     update(params: EntryUpdateParams & { id: string }): Promise<Entry>;
-    update(params: EntryUpdateParams & { id: readonly string[] }): Promise<Entry[]>;
+    update(params: EntryUpdateParams & { ids: readonly string[] }): Promise<Entry[]>;
     update(params: EntryUpdateParams): Promise<Entry | Entry[]>;
 
     duplicate(params: {
@@ -142,16 +147,13 @@ export type EntriesService = {
         overrides?: EntryDuplicateOverrides;
     }): Promise<Entry>;
 
-    trash(params: { type: string; id: string | readonly string[] }): Promise<void>;
+    trash(params: { type: string } & EntryAddress): Promise<void>;
 
     restore(params: { type: string; id: string }): Promise<Entry>;
-    restore(params: { type: string; id: readonly string[] }): Promise<Entry[]>;
-    restore(params: {
-        type: string;
-        id: string | readonly string[];
-    }): Promise<Entry | Entry[]>;
+    restore(params: { type: string; ids: readonly string[] }): Promise<Entry[]>;
+    restore(params: { type: string } & EntryAddress): Promise<Entry | Entry[]>;
 
-    delete(params: { type: string; id: string | readonly string[] }): Promise<void>;
+    delete(params: { type: string } & EntryAddress): Promise<void>;
 
     emptyTrash(params: { type: string }): Promise<void>;
 
@@ -170,26 +172,22 @@ export type EntriesService = {
     publish(params: { type: string; id: string; locale?: string }): Promise<Entry>;
     publish(params: {
         type: string;
-        id: readonly string[];
+        ids: readonly string[];
         locale?: string;
     }): Promise<Entry[]>;
-    publish(params: {
-        type: string;
-        id: string | readonly string[];
-        locale?: string;
-    }): Promise<Entry | Entry[]>;
+    publish(
+        params: { type: string; locale?: string } & EntryAddress
+    ): Promise<Entry | Entry[]>;
 
     unpublish(params: { type: string; id: string; locale?: string }): Promise<Entry>;
     unpublish(params: {
         type: string;
-        id: readonly string[];
+        ids: readonly string[];
         locale?: string;
     }): Promise<Entry[]>;
-    unpublish(params: {
-        type: string;
-        id: string | readonly string[];
-        locale?: string;
-    }): Promise<Entry | Entry[]>;
+    unpublish(
+        params: { type: string; locale?: string } & EntryAddress
+    ): Promise<Entry | Entry[]>;
 
     /** `publishedAt` is a `Date`, or the offset ISO string one is coerced from. */
     schedule(params: {
@@ -200,16 +198,17 @@ export type EntriesService = {
     }): Promise<Entry>;
     schedule(params: {
         type: string;
-        id: readonly string[];
+        ids: readonly string[];
         publishedAt: Date | string;
         locale?: string;
     }): Promise<Entry[]>;
-    schedule(params: {
-        type: string;
-        id: string | readonly string[];
-        publishedAt: Date | string;
-        locale?: string;
-    }): Promise<Entry | Entry[]>;
+    schedule(
+        params: {
+            type: string;
+            publishedAt: Date | string;
+            locale?: string;
+        } & EntryAddress
+    ): Promise<Entry | Entry[]>;
 
     /** Every reference to this entry, from any resource. */
     usedBy(params: { type: string; id: string }): Promise<Usage[]>;

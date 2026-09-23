@@ -158,7 +158,7 @@ describe('bind', () => {
         });
         const many = await entries.update({
             type: 'post',
-            id: [first.id, second.id],
+            ids: [first.id, second.id],
             data: { title: 'Many' },
         });
 

@@ -248,10 +248,10 @@ async function queryBodyArgs(c: Context<Env>): Promise<Record<string, unknown>> 
     return { ...body, type: param(c, 'type'), full: body['full'] === true };
 }
 
-/** A bulk route's arguments: the wire's `ids` list is the method's `id`. */
+/** A bulk route's arguments: the body, with the path's type. */
 async function bulkArgs(c: Context<Env>): Promise<Record<string, unknown>> {
     const body = await c.req.json<Record<string, unknown>>();
-    return { ...body, type: param(c, 'type'), id: body['ids'] };
+    return { ...body, type: param(c, 'type') };
 }
 
 /** {@link bulkArgs} for the bulk routes that address one locale of each entry. */

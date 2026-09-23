@@ -2,7 +2,7 @@ import type { Entry } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
-import { fromBatch } from '../internal/from-batch';
+import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
 import { restoreEntryBatch } from '../internal/restore-batch';
 
 /** One id is a batch of one, and its result and errors are unwrapped. */
@@ -15,10 +15,12 @@ const restoreOne = fromBatch(restoreEntryBatch);
  */
 export const restoreEntries = defineServiceMethod({
     summary: 'Restore a trashed entry.',
-    input: z.object({
-        type: z.string(),
-        id: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]),
-    }),
+    input: oneOrMany(
+        z.object({
+            type: z.string(),
+            ...batchAddress,
+        })
+    ),
     access: entryGate('update'),
     requires: 'trash',
     mutates: true,

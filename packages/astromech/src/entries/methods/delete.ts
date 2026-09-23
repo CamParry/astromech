@@ -2,7 +2,7 @@ import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
 import { deleteEntryBatch } from '../internal/delete-batch';
-import { fromBatch } from '../internal/from-batch';
+import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
 
 /** One id is a batch of one, and its errors are unwrapped. */
 const deleteOne = fromBatch(deleteEntryBatch);
@@ -14,10 +14,12 @@ const deleteOne = fromBatch(deleteEntryBatch);
  */
 export const deleteEntries = defineServiceMethod({
     summary: 'Delete an entry.',
-    input: z.object({
-        type: z.string(),
-        id: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]),
-    }),
+    input: oneOrMany(
+        z.object({
+            type: z.string(),
+            ...batchAddress,
+        })
+    ),
     access: entryGate('delete'),
     mutates: true,
     destructive: true,

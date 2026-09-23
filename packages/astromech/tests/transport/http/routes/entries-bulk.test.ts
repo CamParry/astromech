@@ -197,7 +197,7 @@ describe('POST /entries/:type/bulk-delete', () => {
 
 describe('POST /entries/:type/bulk-restore', () => {
     it('restores every id and returns { data: entries }', async () => {
-        await api.trash({ type: 'post', id: ids });
+        await api.trash({ type: 'post', ids });
 
         const res = await post('/post/bulk-restore', { ids });
         expect(res.status).toBe(200);
@@ -238,7 +238,7 @@ describe('POST /entries/:type/bulk-publish', () => {
 
 describe('POST /entries/:type/bulk-unpublish', () => {
     it('unpublishes every id and returns { data: entries }', async () => {
-        await api.publish({ type: 'post', id: ids });
+        await api.publish({ type: 'post', ids });
 
         const res = await post('/post/bulk-unpublish', { ids });
         expect(res.status).toBe(200);

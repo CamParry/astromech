@@ -9,6 +9,7 @@ import { z } from '@hono/zod-openapi';
 import { sortSchema } from '@/content/list';
 import { isCapability } from '@/entries/capabilities';
 import { resolveAccess } from '@/permissions/access';
+import { batchAddress, oneOrMany } from './internal/from-batch';
 import {
     createEntrySchema,
     duplicateOverridesSchema,
@@ -148,8 +149,6 @@ function entryInputSchemas(
 ): Record<EntryMethodName, z.ZodType> {
     const type = z.literal(typeId);
     const id = z.string();
-    /** Bulk-capable methods take one id or a non-empty list of them. */
-    const ids = z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]);
     const canonical = z.object({ type, id });
     /** A content-level method addresses one locale of the entry. */
     const locale = z.string().optional();
@@ -178,27 +177,31 @@ function entryInputSchemas(
             staged: z.boolean().optional(),
         }),
         create: z.object({ type, data: createEntrySchema({ titled }) }),
-        update: z.object({
-            type,
-            id: ids,
-            locale,
-            staged: z.boolean().optional(),
-            data: updateEntrySchema({ titled }),
-        }),
-        delete: z.object({ type, id: ids }),
+        update: oneOrMany(
+            z.object({
+                type,
+                ...batchAddress,
+                locale,
+                staged: z.boolean().optional(),
+                data: updateEntrySchema({ titled }),
+            })
+        ),
+        delete: oneOrMany(z.object({ type, ...batchAddress })),
         duplicate: z.object({
             type,
             id,
             overrides: duplicateOverridesSchema.optional(),
         }),
-        trash: z.object({ type, id: ids }),
-        restore: z.object({ type, id: ids }),
+        trash: oneOrMany(z.object({ type, ...batchAddress })),
+        restore: oneOrMany(z.object({ type, ...batchAddress })),
         emptyTrash: z.object({ type }),
         versions: localised,
         restoreVersion: z.object({ type, id, locale, versionId: z.string() }),
-        publish: z.object({ type, id: ids, locale }),
-        unpublish: z.object({ type, id: ids, locale }),
-        schedule: z.object({ type, id: ids, locale }).extend(scheduleEntrySchema.shape),
+        publish: oneOrMany(z.object({ type, ...batchAddress, locale })),
+        unpublish: oneOrMany(z.object({ type, ...batchAddress, locale })),
+        schedule: oneOrMany(
+            z.object({ type, ...batchAddress, locale }).extend(scheduleEntrySchema.shape)
+        ),
         usedBy: canonical,
         createStaged: localised,
         getStaged: localised,

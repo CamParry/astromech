@@ -2,7 +2,7 @@ import type { Entry } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
-import { fromBatch } from '../internal/from-batch';
+import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
 import { updateEntryBatch } from '../internal/update-batch';
 import { updateEntryPayloadSchema } from '../schema';
 
@@ -19,15 +19,17 @@ export const updateEntries = defineServiceMethod({
     summary:
         'Update an entry. Fields merge: omitted fields keep their current ' +
         'value, and arrays are replaced whole.',
-    input: z.object({
-        type: z.string(),
-        id: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]),
-        locale: z.string().optional(),
-        staged: z.boolean().optional(),
-        // The titleless payload, since one schema covers every type here;
-        // `update-batch.ts` re-parses under the type's own, which is stricter.
-        data: updateEntryPayloadSchema,
-    }),
+    input: oneOrMany(
+        z.object({
+            type: z.string(),
+            ...batchAddress,
+            locale: z.string().optional(),
+            staged: z.boolean().optional(),
+            // The titleless payload, since one schema covers every type here;
+            // `update-batch.ts` re-parses under the type's own, which is stricter.
+            data: updateEntryPayloadSchema,
+        })
+    ),
     access: entryGate('update'),
     mutates: true,
     // Re-applying the same update lands the same end-state — matches the core

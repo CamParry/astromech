@@ -4,7 +4,7 @@ import { transaction } from '@/database/transaction';
 import { CapabilityError } from '@/errors/capability';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
-import { fromBatch } from '../internal/from-batch';
+import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
 import { trashEntryBatch } from '../internal/trash-batch';
 import { getEntryRepository } from '../repository/registry';
 
@@ -18,10 +18,12 @@ const trashOne = fromBatch(trashEntryBatch);
  */
 export const trashEntries = defineServiceMethod({
     summary: 'Move an entry to the trash (reversible).',
-    input: z.object({
-        type: z.string(),
-        id: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]),
-    }),
+    input: oneOrMany(
+        z.object({
+            type: z.string(),
+            ...batchAddress,
+        })
+    ),
     access: entryGate('delete'),
     requires: 'trash',
     mutates: true,

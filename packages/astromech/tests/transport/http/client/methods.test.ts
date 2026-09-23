@@ -183,7 +183,7 @@ const CASES: Case[] = [
         call: () =>
             client.entries.update({
                 type: 'post',
-                id: ['e1', 'e2'],
+                ids: ['e1', 'e2'],
                 data: { title: 'Two' },
             }),
         url: '/cms/api/entries/post/bulk-update',
@@ -202,7 +202,7 @@ const CASES: Case[] = [
     {
         name: 'entries.trash — a list of ids',
         payload: { success: true },
-        call: () => client.entries.trash({ type: 'post', id: ['e1', 'e2'] }),
+        call: () => client.entries.trash({ type: 'post', ids: ['e1', 'e2'] }),
         url: '/cms/api/entries/post/bulk-trash',
         method: 'POST',
         body: { ids: ['e1', 'e2'] },
@@ -219,7 +219,7 @@ const CASES: Case[] = [
     {
         name: 'entries.delete — a list of ids',
         payload: { success: true },
-        call: () => client.entries.delete({ type: 'post', id: ['e1', 'e2'] }),
+        call: () => client.entries.delete({ type: 'post', ids: ['e1', 'e2'] }),
         url: '/cms/api/entries/post/bulk-delete',
         method: 'POST',
         body: { ids: ['e1', 'e2'] },
@@ -256,7 +256,7 @@ const CASES: Case[] = [
     {
         name: 'entries.restore — a list of ids',
         payload: { data: entries },
-        call: () => client.entries.restore({ type: 'post', id: ['e1', 'e2'] }),
+        call: () => client.entries.restore({ type: 'post', ids: ['e1', 'e2'] }),
         url: '/cms/api/entries/post/bulk-restore',
         method: 'POST',
         body: { ids: ['e1', 'e2'] },
@@ -311,7 +311,7 @@ const CASES: Case[] = [
     {
         name: 'entries.publish — a list of ids',
         payload: { data: entries },
-        call: () => client.entries.publish({ type: 'post', id: ['e1', 'e2'] }),
+        call: () => client.entries.publish({ type: 'post', ids: ['e1', 'e2'] }),
         url: '/cms/api/entries/post/bulk-publish',
         method: 'POST',
         body: { ids: ['e1', 'e2'] },
@@ -327,7 +327,7 @@ const CASES: Case[] = [
     {
         name: 'entries.unpublish — a list of ids',
         payload: { data: entries },
-        call: () => client.entries.unpublish({ type: 'post', id: ['e1', 'e2'] }),
+        call: () => client.entries.unpublish({ type: 'post', ids: ['e1', 'e2'] }),
         url: '/cms/api/entries/post/bulk-unpublish',
         method: 'POST',
         body: { ids: ['e1', 'e2'] },
@@ -352,7 +352,7 @@ const CASES: Case[] = [
         call: () =>
             client.entries.schedule({
                 type: 'post',
-                id: ['e1', 'e2'],
+                ids: ['e1', 'e2'],
                 publishedAt: new Date('2030-01-01T00:00:00.000Z'),
             }),
         url: '/cms/api/entries/post/bulk-schedule',
