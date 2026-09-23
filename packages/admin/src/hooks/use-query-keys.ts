@@ -82,6 +82,7 @@ export const queryKeys = {
         setupCheck: () => ['setup-check'] as const,
     },
 
-    /** The command palette's search across entries, users and media. */
-    search: (query: string) => ['search', query] as const,
+    /** The command palette's search across the entry types it may read, users and media. */
+    search: (query: string, types: readonly string[]) =>
+        ['search', query, types] as const,
 } as const;

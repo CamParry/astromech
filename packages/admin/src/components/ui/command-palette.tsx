@@ -259,7 +259,7 @@ export function CommandPalette(): React.ReactElement {
     );
 
     const liveQuery = useQuery({
-        queryKey: queryKeys.search(debouncedQuery),
+        queryKey: queryKeys.search(debouncedQuery, readableTypes),
         enabled: debouncedQuery !== '',
         staleTime: 0,
         queryFn: async (): Promise<LiveResults> => {

@@ -94,6 +94,8 @@ Live choices and what each one beat. An entry is here because the losing option 
 
 **The admin calls `astromechUntypedClient`**, the same object as `astromechClient` with `entries` and `globals` typed as the wide services, because it addresses entry types and globals by runtime strings. The name follows tRPC's `createTRPCUntypedClient` and this codebase's `Typed*` facades. Rejected: casting the typed client back in each admin route, which left nine copies of one cast.
 
+**Admin pages compose controllers over one table of queries and writes per resource.** `hooks/use-query-keys.ts` is the one key factory, keyed by the type or global id, so a plugin's never collides. Each resource module exports an `xMutations()` table of TanStack `mutationOptions` whose `meta` names the keys it invalidates and its toasts, and `useAdminMutation` runs them. The entry and global edit pages share `useEditController` and the entries list uses `useListController`, after react-admin's controllers and Payload's one edit view for collections and globals; a page reads its entry type or global through `useAdminEntryType` or `useAdminGlobal`. Rejected: a hook per write (fifteen copies of one invalidation), a key factory per cache scope beside the plain one, invalidation in a global `MutationCache` (the toasts need React context), and a binding object built by each route.
+
 **Authentication is its own module.** `auth/` holds the better-auth wiring, sessions, first-run setup and better-auth's tables, and imports `users`, never the reverse. Rejected: auth inside `users/` (Strapi's layout), because a session, an account and a verification are not users.
 
 **Nothing enforces the layer model.** The layer list in `ARCHITECTURE.md` is convention; the browser boundary is checked by `shared-browser.test.ts` and `check:boot`'s headless load. Rejected: dependency-cruiser, which cost more than it caught (ports guarding no real cycle, a growing exemption list), eslint `import/no-cycle`, and a browser-only config.
@@ -177,6 +179,8 @@ Live choices and what each one beat. An entry is here because the losing option 
 **Coverage thresholds are per directory and only raised.** Rejected: one global number, whose average hides a directory near zero.
 
 **Type-aware lint catches defects, not style.** `lint` runs `switch-exhaustiveness-check`, where a `default` does not cover a missing union member, and `no-unnecessary-type-assertion` over the packages' sources. Rejected: the `recommendedTypeChecked` and `strictTypeChecked` presets, which mostly police shape, and a separate `lint:types` check, since the two rules add about 2 s to `verify:fast`.
+
+**The admin and plugin pages run `@tanstack/eslint-plugin-query`'s recommended rules**, which catch a query key missing a dependency and an unstable client. They passed with one fix, a missing key dependency in the command palette.
 
 **Drift is reported, not enforced.** `pnpm run report:drift` finds a second copy of a helper, a cast or a query key, and review decides whether to share it, schedule it or keep it. Rejected: lint bans on code shapes and a count that may only fall (they force awkward structure, as dependency-cruiser did), and periodic clean-up passes, after which the drift returns.
 

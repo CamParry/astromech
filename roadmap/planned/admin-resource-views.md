@@ -95,9 +95,11 @@ seed the input through `formatDatetimeForInput`.
 - [x] `entries-list-page.tsx`'s `patchSearch` casts its `navigate` argument
       `as unknown as`; the list controller's search update is typed instead
       (`navigate({ to: '.', search })` with the merged search object).
-- [ ] Guard: the recommended rules of `@tanstack/eslint-plugin-query`, and a
+- [x] Guard: the recommended rules of `@tanstack/eslint-plugin-query`, and a
       drift-report pattern for a literal `queryKey` array outside
-      `hooks/use-query-keys.ts`.
+      `hooks/use-query-keys.ts`. The rules passed after one fix (the command
+      palette's key missed its entry types); the existing drift pattern now
+      also reports a key array held in a variable, as the backups page does.
 
 Depends on `resource-module-shape.md` (`globals.update` with status),
 `one-service-handle.md` and `plugin-types-in-core-registries.md`.

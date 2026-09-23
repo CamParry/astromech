@@ -1,4 +1,5 @@
 import eslint from '@eslint/js';
+import pluginQuery from '@tanstack/eslint-plugin-query';
 import tseslint from 'typescript-eslint';
 
 const noJsExtension = [
@@ -257,6 +258,16 @@ export default tseslint.config(
         rules: {
             'no-restricted-syntax': ['error', ...noJsExtension, noModuleScopeConfigRead],
         },
+    },
+    {
+        // TanStack Query's recommended rules, where the admin and plugin pages
+        // use it.
+        files: [
+            'packages/admin/src/**/*.{ts,tsx}',
+            'packages/plugins/*/src/admin/**/*.{ts,tsx}',
+        ],
+        plugins: { '@tanstack/query': pluginQuery },
+        rules: pluginQuery.configs['flat/recommended'][0].rules,
     },
     {
         // Repo tooling: plain Node, run by npm scripts rather than bundled.

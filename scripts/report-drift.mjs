@@ -31,9 +31,10 @@ const PATTERNS = [
     },
     {
         name: 'Inline query key',
-        pattern: /\bqueryKey:\s*\[/,
+        // `queryKey: [` inline, or a key array held in a variable first.
+        pattern: /\bqueryKey:\s*\[|\b\w+Key\s*=\s*\[\s*['"]/,
         except: ['packages/admin/src/hooks/use-query-keys.ts'],
-        why: 'Query keys come from the factory in hooks/use-query-keys.ts.',
+        why: "Admin query keys come from the factory in hooks/use-query-keys.ts; a plugin page's sit under ['plugin', name].",
     },
     {
         name: 'Field `.type` compared with a structural type',
