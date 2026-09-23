@@ -12,7 +12,7 @@
 
 import type { Entry, Media, Notification, User } from '@/types/index';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { astromechClient as client } from '@/transport/http/client';
+import { AstromechApiError, astromechClient as client } from '@/transport/http/client';
 
 type Request = { url: string; method: string; body: unknown };
 
@@ -623,5 +623,37 @@ describe('configure', () => {
         await client.entries.get({ type: 'post', id: 'e1' });
 
         expect(only().url).toBe('https://cms.example.com/api/entries/post/e1?full=true');
+    });
+});
+
+describe('a failed response', () => {
+    it('rejects with an AstromechApiError carrying the error envelope', async () => {
+        const error = {
+            id: 'req-1',
+            code: 'VALIDATION_FAILED',
+            message: 'Invalid input',
+            status: 422,
+            details: { title: ['Required'] },
+        };
+        stub({ error }, 422);
+
+        const rejection = client.entries.get({ type: 'post', id: 'e1' });
+
+        await expect(rejection).rejects.toBeInstanceOf(AstromechApiError);
+        await expect(rejection).rejects.toMatchObject({
+            code: 'VALIDATION_FAILED',
+            status: 422,
+            details: { title: ['Required'] },
+        });
+    });
+
+    it('rejects with the bare status when the body is not an error envelope', async () => {
+        vi.stubGlobal('fetch', () =>
+            Promise.resolve(new Response('upstream down', { status: 502 }))
+        );
+
+        await expect(client.entries.get({ type: 'post', id: 'e1' })).rejects.toThrow(
+            'HTTP 502'
+        );
     });
 });
