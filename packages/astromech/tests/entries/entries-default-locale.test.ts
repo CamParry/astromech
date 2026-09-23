@@ -6,7 +6,9 @@
 
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
+
+const entriesService = currentServices.entries;
 
 const api = entriesService;
 

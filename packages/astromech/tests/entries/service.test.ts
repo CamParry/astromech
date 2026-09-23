@@ -13,7 +13,7 @@ import {
     setupTestConfig,
 } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { entriesService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { decodeWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { entriesTable } from '@/database/tables';
@@ -25,6 +25,8 @@ import {
 import { ResourceNotFoundError } from '@/errors/resource';
 import { ValidationError } from '@/errors/validation';
 import { defineHook } from '@/plugins/define-hook';
+
+const entriesService = currentServices.entries;
 
 const api = entriesService;
 

@@ -30,10 +30,12 @@ import {
 } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService as localEntries } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { defineHook } from '@/plugins/define-hook';
-import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { redirects } from '../src/index';
+
+const localEntries = currentServices.entries;
+const pluginServices = currentServices.plugins;
 
 // Type-level proof: redirects.lookup carries real Input/Output via
 // self-augmentation of `PluginServiceNamespace`, which is the type behind

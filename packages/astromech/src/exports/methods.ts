@@ -17,8 +17,8 @@ export { buildScopedTools } from '@/transport/tools/scoped-tools';
 export { filterMethods } from '@/policies/method-filter';
 export { annotateManifest } from '@/policies/annotate-manifest';
 
-export { scopedServices } from '@/policies/scoped-services';
-export type { ScopedServices } from '@/policies/scoped-services';
+export { createServices } from '@/app-context/services';
+export type { CreateServicesOptions } from '@/app-context/services';
 
 export {
     CONFIRM_KEY,

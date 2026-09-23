@@ -12,11 +12,7 @@ import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
-import {
-    entriesService as api,
-    mediaService,
-    usersService,
-} from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { defineTable } from '@/database/define-table';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
@@ -28,6 +24,10 @@ import {
     checkRelationshipIndex,
     rebuildRelationshipIndex,
 } from '@/transport/cli/relationship-index';
+
+const api = currentServices.entries;
+const mediaService = currentServices.media;
+const usersService = currentServices.users;
 
 const linksTable = defineTable('test_links', ({ col }) => ({
     id: col.id(),

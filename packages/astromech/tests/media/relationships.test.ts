@@ -11,11 +11,14 @@ import type { AstromechConfig } from '@/types/index';
 import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService, mediaService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { rebuildRelationshipIndex } from '@/transport/cli/relationship-index';
+
+const entriesService = currentServices.entries;
+const mediaService = currentServices.media;
 
 /** Two locales, and one per-locale relationship field on media. */
 function makeConfig(): AstromechConfig {

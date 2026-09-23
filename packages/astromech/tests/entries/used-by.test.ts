@@ -12,16 +12,16 @@ import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
-import {
-    entriesService as api,
-    globalsService,
-    mediaService,
-    usersService,
-} from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { defineTable } from '@/database/define-table';
 import { tableRepository } from '@/entries/repository/table';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
+
+const api = currentServices.entries;
+const globalsService = currentServices.globals;
+const mediaService = currentServices.media;
+const usersService = currentServices.users;
 
 const linksTable = defineTable('test_links', ({ col }) => ({
     id: col.id(),

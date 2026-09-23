@@ -14,14 +14,14 @@ import type {
 } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import {
-    globalsService,
-    entriesService as localEntries,
-    mediaService,
-} from '@/app-context/services';
-import { pluginServices } from '@/plugins/runtime/plugin-services';
+import { currentServices } from '@/app-context/services';
 import { setStorageDriver } from '@/storage/registry';
 import { seo } from '../../src/index';
+
+const globalsService = currentServices.globals;
+const localEntries = currentServices.entries;
+const mediaService = currentServices.media;
+const pluginServices = currentServices.plugins;
 
 type SeoService = Record<string, (input?: unknown) => Promise<unknown>>;
 

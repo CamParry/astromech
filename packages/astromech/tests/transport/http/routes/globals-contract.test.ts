@@ -11,11 +11,13 @@ import type { AuthVariables } from '@/transport/http/middleware/auth';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { globalsService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { globalsDefinition } from '@/globals/service';
 import { createGlobalsRouter } from '@/transport/http/routes/globals';
 import { GLOBALS_ROUTE_SPECS, HTTP_ROUTES } from '@/transport/http/routes/http-routes';
 import { configWithGlobals } from './globals-app';
+
+const globalsService = currentServices.globals;
 
 type Document = { paths: Record<string, Record<string, unknown>> };
 

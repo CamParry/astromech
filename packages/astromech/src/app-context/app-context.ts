@@ -19,18 +19,16 @@ import type {
 } from '@/types/index';
 import type { Kysely } from 'kysely';
 import type { ReactElement } from 'react';
+import { createServices } from '@/app-context/services';
 import { getConfig } from '@/config/registry';
 import { getDatabaseDriver } from '@/database/driver-registry';
 import { getDb } from '@/database/registry';
 import { getEmailDriver } from '@/email/registry';
 import { renderEmail } from '@/email/render';
-import { entriesDefinition } from '@/entries/service';
 import { getEnvRecord } from '@/env';
 import { AstromechError } from '@/errors/astromech-error';
-import { globalsDefinition } from '@/globals/service';
 import { runHook } from '@/hooks/hooks';
-import { mediaDefinition } from '@/media/service';
-import { notificationsDefinition, notify } from '@/notifications/service';
+import { notify } from '@/notifications/service';
 import { createRegistry } from '@/registry';
 import {
     getCurrentRole,
@@ -38,7 +36,6 @@ import {
     getRequestScope,
 } from '@/request-scope/request-scope';
 import { buildScopedTools } from '@/transport/tools/scoped-tools';
-import { usersDefinition } from '@/users/service';
 import { log } from '@/utilities/log';
 
 /** Who a context acts as, and where the call came from. */
@@ -54,12 +51,6 @@ export type AppContextInput = {
  */
 export function createAppContext(input: AppContextInput): AppContext {
     const { user, role, clientAddress } = input;
-    /** Bound once per context, so a handler reaching a sibling acts as this user. */
-    let entries: EntriesService | undefined;
-    let globals: GlobalsService | undefined;
-    let media: MediaService | undefined;
-    let notifications: NotificationsService | undefined;
-    let users: UsersService | undefined;
 
     const context: AppContext = {
         get db(): Kysely<DB> {
@@ -71,25 +62,21 @@ export function createAppContext(input: AppContextInput): AppContext {
         user,
         role,
         clientAddress,
+        // Bound once per context, so a handler reaching a sibling acts as this user.
         get entries(): EntriesService {
-            entries ??= entriesDefinition.bind(context);
-            return entries;
+            return createServices(context).entries;
         },
         get globals(): GlobalsService {
-            globals ??= globalsDefinition.bind(context);
-            return globals;
+            return createServices(context).globals;
         },
         get media(): MediaService {
-            media ??= mediaDefinition.bind(context);
-            return media;
+            return createServices(context).media;
         },
         get users(): UsersService {
-            users ??= usersDefinition.bind(context);
-            return users;
+            return createServices(context).users;
         },
         get notifications(): NotificationsService {
-            notifications ??= notificationsDefinition.bind(context);
-            return notifications;
+            return createServices(context).notifications;
         },
         email: { send: sendEmail },
         notify,

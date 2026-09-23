@@ -11,11 +11,12 @@ import type {
     ConfirmDecision,
     ConfirmOptions,
     ConfirmRequest,
+    CreateServicesOptions,
     DispatchResult,
-    ScopedServices,
     ToolDefinition,
 } from '@/exports/methods';
 import { describe, expect, it } from 'vitest';
+import { createServices } from '@/app-context/services';
 import { getMethodManifest } from '@/codegen/manifest-registry';
 import * as methods from '@/exports/methods';
 import { annotateManifest } from '@/policies/annotate-manifest';
@@ -25,7 +26,6 @@ import {
     triggersConfirmation,
 } from '@/policies/confirmation';
 import { filterMethods } from '@/policies/method-filter';
-import { scopedServices } from '@/policies/scoped-services';
 import { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch';
 import { buildScopedTools } from '@/transport/tools/scoped-tools';
 import { formatAiContextMessage } from '@/utilities/ai-context';
@@ -35,8 +35,8 @@ export type Exported = [
     ConfirmOptions,
     ConfirmationResult,
     ConfirmRequest,
+    CreateServicesOptions,
     DispatchResult,
-    ScopedServices,
     ToolDefinition,
 ];
 
@@ -48,7 +48,7 @@ describe('astromech/methods', () => {
         expect(methods.buildScopedTools).toBe(buildScopedTools);
         expect(methods.filterMethods).toBe(filterMethods);
         expect(methods.annotateManifest).toBe(annotateManifest);
-        expect(methods.scopedServices).toBe(scopedServices);
+        expect(methods.createServices).toBe(createServices);
         expect(methods.evaluateConfirmation).toBe(evaluateConfirmation);
         expect(methods.triggersConfirmation).toBe(triggersConfirmation);
         expect(methods.CONFIRM_KEY).toBe(CONFIRM_KEY);
@@ -62,11 +62,11 @@ describe('astromech/methods', () => {
             'buildDispatch',
             'buildScopedDispatch',
             'buildScopedTools',
+            'createServices',
             'evaluateConfirmation',
             'filterMethods',
             'formatAiContextMessage',
             'getMethodManifest',
-            'scopedServices',
             'triggersConfirmation',
         ]);
     });

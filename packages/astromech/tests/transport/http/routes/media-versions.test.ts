@@ -11,11 +11,13 @@ import { adminRole, noopStorage, roleWith } from '@tests/fixtures';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { mountRouter, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { mediaService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
 import { makeTranslatableMediaConfig } from '../../../media/media-config';
+
+const mediaService = currentServices.media;
 
 /** The media router mounted in isolation, acting as `role`. */
 function app(role = adminRole) {

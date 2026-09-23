@@ -1,6 +1,6 @@
 import type { ImageFormat } from './image/url';
 import type { ImageSource, StorageDriver } from '@/types/index';
-import { mediaService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { getConfig } from '@/config/registry';
 import { getStorageDriver } from '@/storage/registry';
 import { isOptimisableImage } from './image/dimensions';
@@ -77,7 +77,7 @@ export async function handleMediaRequest(info: MediaRequestInfo): Promise<Respon
 async function serveMedia(info: MediaRequestInfo): Promise<Response> {
     const { id, search, origin, ifNoneMatch, range } = info;
 
-    const media = await mediaService.get({ id });
+    const media = await currentServices.media.get({ id });
     if (!media) {
         return new Response('Media not found', { status: 404 });
     }

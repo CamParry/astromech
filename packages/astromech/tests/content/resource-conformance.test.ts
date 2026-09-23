@@ -9,16 +9,16 @@ import type { JsonObject, ResourceType } from '@/types/index';
 import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import {
-    entriesService,
-    globalsService,
-    mediaService,
-    usersService,
-} from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { RESOURCE_TYPES } from '@/types/domain';
+
+const entriesService = currentServices.entries;
+const globalsService = currentServices.globals;
+const mediaService = currentServices.media;
+const usersService = currentServices.users;
 
 /** How the conformance checks reach one resource. `id` is a global's key. */
 type Adapter = {

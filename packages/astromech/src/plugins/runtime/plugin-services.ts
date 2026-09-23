@@ -1,7 +1,8 @@
 /**
  * The plugin service namespace, `plugins.<serviceKey>.<method>(input)`. Calls
  * through it are trusted server code and skip `access`; an untrusted caller goes
- * through `scopedServices(ctx).plugins`, which enforces it.
+ * through `createServices(ctx, { overrideAccess: false }).plugins`, which
+ * enforces it.
  */
 
 import type {
@@ -11,7 +12,6 @@ import type {
     PluginServiceNamespace,
     ResolvedPluginIdentity,
 } from '@/types/index';
-import { currentAppContext } from '@/app-context/app-context';
 import {
     createPluginContext,
     getPluginIdentity,
@@ -26,7 +26,7 @@ type MethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
  * layered over `ctx`, so it acts as the caller did.
  */
 export function pluginServicesFor(ctx: AppContext): PluginServiceNamespace {
-    return namespace(
+    return pluginNamespace(
         (resolved, method) => async (input) =>
             (method.handler as (i: unknown, c: PluginContext) => unknown)(
                 parseMethodInput(method, input),
@@ -35,17 +35,11 @@ export function pluginServicesFor(ctx: AppContext): PluginServiceNamespace {
     );
 }
 
-/** The namespace acting as whoever the current request is — `app.plugins`. */
-export const pluginServices: PluginServiceNamespace = namespace(
-    (resolved, _method, name) => async (input) =>
-        pluginServicesFor(await currentAppContext())[resolved.serviceKey]?.[name]?.(input)
-);
-
 /**
  * A namespace whose methods `call` builds. An unknown plugin or method reads as
  * undefined, and `then` is never a method, so the namespace is not a thenable.
  */
-function namespace(
+export function pluginNamespace(
     call: (
         resolved: ResolvedPluginIdentity,
         method: AnyServiceMethod,

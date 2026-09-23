@@ -13,12 +13,15 @@ import type { MenuItem } from '../src/index';
 import type { AstromechConfig, JsonObject, PluginDefinition } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService, globalsService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { resolveConfig } from '@/config/resolve';
 import { derivePluginNav } from '@/plugins/runtime/plugin-admin';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
-import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { menus } from '../src/index';
+
+const entriesService = currentServices.entries;
+const globalsService = currentServices.globals;
+const pluginServices = currentServices.plugins;
 
 type MenusService = {
     get(input: { key: string; locale?: string }): Promise<MenuItem[] | null>;

@@ -2,10 +2,12 @@ import type { ImageFormat } from '@/media/serving/image/url';
 import type { ImageDriver, ImageSource, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { mediaService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { handleMediaRequest } from '@/media/serving/handler';
 import { setImageConfig } from '@/media/serving/image/registry';
 import { setStorageDriver } from '@/storage/registry';
+
+const mediaService = currentServices.media;
 
 function makeJpegBytes(): Uint8Array {
     // Minimal valid JPEG: SOI + APP0 + SOF0 + EOI

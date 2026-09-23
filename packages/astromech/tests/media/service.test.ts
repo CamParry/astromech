@@ -1,8 +1,10 @@
 import type { StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { mediaService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { setStorageDriver } from '@/storage/registry';
+
+const mediaService = currentServices.media;
 
 // Minimal 1x1 JPEG (SOI + APP0 + SOF0 + EOI) — an optimisable raster image.
 function jpegBytes(): Uint8Array {

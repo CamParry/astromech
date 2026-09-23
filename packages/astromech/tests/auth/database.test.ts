@@ -9,10 +9,13 @@ import type { Kysely } from 'kysely';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService, usersService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { getAuth } from '@/auth/better-auth';
 import { transaction } from '@/database/transaction';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
+
+const entriesService = currentServices.entries;
+const usersService = currentServices.users;
 
 const EMAIL = 'reset@test.dev';
 

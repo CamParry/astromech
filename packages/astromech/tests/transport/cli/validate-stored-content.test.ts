@@ -10,16 +10,16 @@ import type { AstromechConfig, JsonObject } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { systemAppContext } from '@/app-context/app-context';
-import {
-    entriesService as api,
-    globalsService,
-    usersService,
-} from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { createRepository } from '@/database/repository/create-repository';
 import { entryContentTable } from '@/entries/tables';
 import { globalContentTable } from '@/globals/tables';
 import { validateStoredContent } from '@/transport/cli/validate-stored-content';
 import { createUserRepository } from '@/users/repository';
+
+const api = currentServices.entries;
+const globalsService = currentServices.globals;
+const usersService = currentServices.users;
 
 /**
  * `article` carries a bounded number and a unique code; `report` carries the

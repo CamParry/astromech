@@ -7,7 +7,9 @@
 import type { AstromechConfig } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { usersService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
+
+const usersService = currentServices.users;
 
 function makeUserFieldConfig(): AstromechConfig {
     return {

@@ -46,7 +46,7 @@ export function buildDispatch(manifest: ManifestMethod): DispatchResult {
 }
 
 /**
- * The same dispatch, with `invoke` calling through `scopedServices(ctx)` so
+ * The same dispatch, with `invoke` calling through the scoped handle for `ctx` so
  * every call runs as `ctx` and is checked against what its role holds. A
  * missing role is allowed nothing, never treated as trusted; that is what
  * `buildDispatch` is for.

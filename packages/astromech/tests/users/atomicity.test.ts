@@ -13,10 +13,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createFileTestDb, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { usersService as api } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { createRepository } from '@/database/repository/create-repository';
 import { entriesTable } from '@/database/tables';
 import { makeTranslatableUsersConfig } from './users-config';
+
+const api = currentServices.users;
 
 // The relationship writes only reject once `state.failing` is set, so the
 // earlier setup writes still succeed.

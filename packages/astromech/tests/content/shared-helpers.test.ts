@@ -8,7 +8,7 @@ import type { ContentRowId } from '@/content/repository/types';
 import type { AstromechConfig, Field, ResolvedConfig } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { entriesService, globalsService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { pruneDanglingRelations } from '@/content/dangling-relations';
 import { mergeContentReferences } from '@/content/relationships';
 import { RESOURCE_SPECS } from '@/content/resources';
@@ -19,6 +19,9 @@ import { restoreVersion } from '@/content/versions';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { syncGlobalRelationships } from '@/globals/internal/relationships';
 import { RESOURCE_TYPES } from '@/types/domain';
+
+const entriesService = currentServices.entries;
+const globalsService = currentServices.globals;
 
 /** `post` translatable with a shared field; one global; nothing on users or media. */
 function makeConfig(): AstromechConfig {

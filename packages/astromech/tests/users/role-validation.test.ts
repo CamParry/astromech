@@ -13,10 +13,12 @@ import type { Kysely } from 'kysely';
 import { signInTestUser } from '@tests/auth';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { usersService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { getSession } from '@/auth/session';
 import { ValidationError } from '@/errors/validation';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
+
+const usersService = currentServices.users;
 
 let db: Kysely<DB>;
 

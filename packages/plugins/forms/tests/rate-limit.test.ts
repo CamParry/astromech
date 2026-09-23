@@ -12,7 +12,7 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
-import { entriesService as localEntries } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { setEmailDriver } from '@/email/registry';
 import {
     createPluginContext,
@@ -21,6 +21,8 @@ import {
 } from '@/plugins/runtime/plugin-runtime';
 import { forms } from '../src/index';
 import { consumeRateLimit, resetRateLimit } from '../src/service/rate-limit';
+
+const localEntries = currentServices.entries;
 
 const FORM = 'forms/form';
 

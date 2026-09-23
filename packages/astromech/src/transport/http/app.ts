@@ -11,7 +11,7 @@ import { swaggerUI } from '@hono/swagger-ui';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
-import { usersService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { getAuth } from '@/auth/better-auth';
 import { createFirstAdmin, firstAdminSchema, SIGN_UP_CLOSED } from '@/auth/setup';
 import { resolveNodeEnv } from '@/env';
@@ -137,7 +137,7 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
     // `users.query` — a `users:read` method — ungated, because before the first
     // user exists there is no role to hold the grant.
     app.get(`${api}/setup/check`, async (c) => {
-        const result = await usersService.query({ limit: 'all' });
+        const result = await currentServices.users.query({ limit: 'all' });
         return c.json({ needsSetup: result.data.length === 0 });
     });
 

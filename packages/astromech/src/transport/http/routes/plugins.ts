@@ -8,13 +8,13 @@ import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { ResolvedPluginIdentity, ServiceMethodAccess } from '@/types/index';
 import type { Context } from 'hono';
 import { Hono } from 'hono';
+import { createServices } from '@/app-context/services';
 import { resolveAccess } from '@/permissions/access';
 import { permissionsFor } from '@/permissions/permissions-for';
 import {
     createPluginContext,
     getPluginRawRoutes,
 } from '@/plugins/runtime/plugin-runtime';
-import { scopedServices } from '@/policies/scoped-services';
 import { optionalAuth } from '@/transport/http/middleware/auth';
 import { forbidden, notFound, unauthorized } from '@/transport/http/middleware/errors';
 
@@ -22,7 +22,8 @@ type PluginEnv = { Variables: AuthVariables };
 
 /**
  * Enforce a raw route's declared access. Returns a denial Response, or null to
- * proceed. RPC methods are checked by `scopedServices(ctx).plugins` instead.
+ * proceed. RPC methods are checked by the scoped handle's `plugins` instead
+ * (`createServices(ctx, { overrideAccess: false })`).
  */
 function enforceAccess(
     c: Context<PluginEnv>,
@@ -51,7 +52,7 @@ export function createPluginsRouter(): Hono<PluginEnv> {
     // Raw escape-hatch routes, registered before the RPC catch-all.
     // Not in a route table: the verb and path are plugin-declared, the handler
     // takes a Web `Request`, and access is `PluginAccess` rather than a contract
-    // permission — so `scopedServices` has nothing to scope.
+    // permission — so the scoped handle has nothing to scope.
     for (const { identity, route } of getPluginRawRoutes()) {
         const method = (route.method ?? 'GET').toUpperCase();
         const path = `/${identity.serviceKey}${route.path}`;
@@ -87,7 +88,7 @@ export async function answerPluginMethod(
     name: string,
     method: string
 ): Promise<Response> {
-    const plugin = scopedServices(c.var.ctx).plugins[name];
+    const plugin = createServices(c.var.ctx, { overrideAccess: false }).plugins[name];
     if (plugin === undefined) return notFound(c, `Plugin "${name}" not found`);
     const call = plugin[method];
     if (call === undefined) {

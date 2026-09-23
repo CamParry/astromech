@@ -6,9 +6,11 @@
 import type { PluginHooks } from '@/types/index';
 import { createTestDb, registerTestPlugins, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { globalsService as api } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { defineHook } from '@/plugins/define-hook';
 import { makeGlobalsConfig } from './globals-config';
+
+const api = currentServices.globals;
 
 beforeEach(async () => {
     await createTestDb();

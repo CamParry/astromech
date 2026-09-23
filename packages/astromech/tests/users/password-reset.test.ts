@@ -9,11 +9,13 @@ import type { ReactElement } from 'react';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { createElement } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { usersService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { getEmailOverride } from '@/email/email-overrides';
 import { setEmailDriver } from '@/email/registry';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { createHttpApp } from '@/transport/http/app';
+
+const usersService = currentServices.users;
 
 type EmailMessage = Parameters<EmailDriver['send']>[0];
 

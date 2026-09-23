@@ -11,8 +11,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createFileTestDb, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { entriesService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { getDb } from '@/database/registry';
+
+const entriesService = currentServices.entries;
 
 // `duplicate` persists the new row and its index rows inside a database
 // transaction. `replaceForSource` only rejects once `state.failing` is set,

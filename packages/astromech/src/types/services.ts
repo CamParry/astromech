@@ -21,12 +21,15 @@ import type {
     User,
     UserVersion,
 } from './domain';
+import type { PluginServiceNamespace } from './plugins';
 import type {
     EntryQueryParams,
     MediaQueryParams,
     QueryResult,
     UserQueryParams,
 } from './query';
+import type { TypedEntriesService } from './typed-entries';
+import type { TypedGlobalsService } from './typed-globals';
 import type {
     createEntryPayloadSchema,
     duplicateOverridesSchema,
@@ -419,4 +422,29 @@ export type NotificationsService = {
     count(): Promise<number>;
     dismiss(params: { id: string }): Promise<void>;
     dismissAll(): Promise<void>;
+};
+
+/** Every content service and the plugin namespace: the handle `createServices` builds. */
+export type Services = {
+    /** Entry reads and writes, for any entry type. */
+    entries: EntriesService;
+    /** Global reads and writes, for any declared global. */
+    globals: GlobalsService;
+    /** Media items: store, transform, and serve. */
+    media: MediaService;
+    /** Users, roles, and authentication. */
+    users: UsersService;
+    /** Notifications for the acting user. */
+    notifications: NotificationsService;
+    /** The services each installed plugin exposes, namespaced by plugin. */
+    plugins: PluginServiceNamespace;
+};
+
+/**
+ * `Services` with `entries` and `globals` under their typed facades, which
+ * narrow a result by the site's generated entry types and global keys.
+ */
+export type TypedServices = Omit<Services, 'entries' | 'globals'> & {
+    entries: TypedEntriesService;
+    globals: TypedGlobalsService;
 };

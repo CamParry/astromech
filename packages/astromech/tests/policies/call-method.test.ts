@@ -23,21 +23,31 @@ import {
 } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { entriesService, usersService } from '@/app-context/services';
+import { createServices, currentServices } from '@/app-context/services';
 import { PermissionDeniedError } from '@/errors/permission';
 import { callMethod } from '@/policies/call-method';
 
+const entriesService = currentServices.entries;
+const usersService = currentServices.users;
+
 // Stubs, so a test can see whether the call reached the service and with what.
-// Every other bound service on the module is the real one.
-vi.mock('@/app-context/services', async (importOriginal) => ({
-    ...(await importOriginal<typeof appServices>()),
-    usersService: {
-        query: vi.fn(() => Promise.resolve({ items: [], total: 0 })),
-    },
-    entriesService: {
-        query: vi.fn((input: unknown) => Promise.resolve(input)),
-    },
-}));
+// The trusted handle's users and entries are replaced; every other service on
+// it is the real one.
+vi.mock('@/app-context/services', async (importOriginal) => {
+    const real = await importOriginal<typeof appServices>();
+    return {
+        ...real,
+        currentServices: {
+            ...real.currentServices,
+            users: {
+                query: vi.fn(() => Promise.resolve({ items: [], total: 0 })),
+            },
+            entries: {
+                query: vi.fn((input: unknown) => Promise.resolve(input)),
+            },
+        },
+    };
+});
 
 const echoHandler = vi.fn((input: unknown) => input);
 
@@ -110,13 +120,12 @@ function role(...permissions: Permission[]): Role {
 
 /**
  * A caller acting as `actingRole` (and `user`, when given), whose users and
- * entries services are this file's stubs.
+ * entries services are this file's stubs: the scoped handle wraps the
+ * context's trusted handle, so the stubs go there.
  */
 function as(actingRole: Role, user: User | null = null): { ctx: AppContext } {
-    const ctx = Object.create(contextAs(actingRole, user), {
-        users: { value: usersService },
-        entries: { value: entriesService },
-    }) as AppContext;
+    const ctx = contextAs(actingRole, user);
+    Object.assign(createServices(ctx), { users: usersService, entries: entriesService });
     return { ctx };
 }
 

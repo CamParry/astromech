@@ -12,7 +12,9 @@
 import type { AstromechConfig, Entry } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService as api } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
+
+const api = currentServices.entries;
 
 beforeEach(async () => {
     await createTestDb();

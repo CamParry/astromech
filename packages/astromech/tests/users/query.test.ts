@@ -8,8 +8,10 @@ import type { DB } from '@/database/types';
 import type { Kysely } from 'kysely';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { usersService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
+
+const usersService = currentServices.users;
 
 let db: Kysely<DB>;
 

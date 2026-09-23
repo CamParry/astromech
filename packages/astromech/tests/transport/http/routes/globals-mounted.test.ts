@@ -15,9 +15,11 @@ import { adminRole } from '@tests/fixtures';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { globalsService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { GLOBALS_ROUTE_SPECS } from '@/transport/http/routes/http-routes';
 import { app, configWithGlobals, put, SEO } from './globals-app';
+
+const globalsService = currentServices.globals;
 
 beforeEach(async () => {
     const db = await createTestDb();

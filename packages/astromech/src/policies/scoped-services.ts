@@ -1,33 +1,17 @@
 /**
- * The service handles a caller cannot exceed — an untrusted transport is
- * handed this instead of the raw domain services, so authority is a property
+ * The role checks the scoped handle wraps each method in
+ * (`createServices(ctx, { overrideAccess: false })`). An untrusted transport is
+ * handed that handle instead of the raw services, so authority is a property
  * of the handle, not of checks each caller remembered to write. Fails CLOSED.
  */
 import type { Permissions } from '@/permissions/permissions-for';
-import type {
-    AppContext,
-    EntriesService,
-    GlobalsService,
-    MediaService,
-    NotificationsService,
-    PluginServiceNamespace,
-    ServiceMethodContract,
-    User,
-    UsersService,
-} from '@/types/index';
-import { entriesDefinition } from '@/entries/service';
+import type { PluginServiceNamespace, ServiceMethodContract, User } from '@/types/index';
 import { PermissionDeniedError } from '@/errors/permission';
-import { globalsDefinition } from '@/globals/service';
-import { mediaDefinition } from '@/media/service';
-import { notificationsDefinition } from '@/notifications/service';
 import { deniedPermission, resolveAccess } from '@/permissions/access';
-import { permissionsFor } from '@/permissions/permissions-for';
 import {
     getPluginIdentities,
     getPluginServiceMethods,
 } from '@/plugins/runtime/plugin-runtime';
-import { pluginServicesFor } from '@/plugins/runtime/plugin-services';
-import { usersDefinition } from '@/users/service';
 
 /**
  * A domain's contract catalogue, keyed by service method name. Read at
@@ -101,11 +85,13 @@ type PluginMethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
 
 /**
  * Wrap every registered plugin's service methods in their declared `access`,
- * resolved under the plugin's permission namespace, each running as `ctx`. A
- * denied method still exists on the returned object and rejects.
+ * resolved under the plugin's permission namespace, each calling on to
+ * `services`. A denied method still exists on the returned object and rejects.
  */
-function scopePlugins(ctx: AppContext, permissions: Permissions): PluginServiceNamespace {
-    const services = pluginServicesFor(ctx);
+export function scopePlugins(
+    services: PluginServiceNamespace,
+    permissions: Permissions
+): PluginServiceNamespace {
     const scoped: Record<string, PluginMethodMap> = {};
 
     for (const identity of getPluginIdentities()) {
@@ -140,58 +126,4 @@ function scopePlugins(ctx: AppContext, permissions: Permissions): PluginServiceN
 
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- a plugin augments `PluginServiceNamespace`, and in its program `scoped` is not one
     return scoped as PluginServiceNamespace;
-}
-
-/** The domains a caller can reach, each scoped to one role. */
-export type ScopedServices = {
-    users: UsersService;
-    media: MediaService;
-    entries: EntriesService;
-    globals: GlobalsService;
-    notifications: NotificationsService;
-    plugins: PluginServiceNamespace;
-};
-
-const HANDLES = new WeakMap<AppContext, ScopedServices>();
-
-/**
- * The handle over every domain for `ctx`: its services, each method refused
- * unless `ctx.role` may call it. Built once per context and reused.
- */
-export function scopedServices(ctx: AppContext): ScopedServices {
-    const existing = HANDLES.get(ctx);
-    if (existing) return existing;
-
-    const caller: ScopedCaller = {
-        permissions: permissionsFor(ctx.role),
-        user: ctx.user,
-    };
-    const handle: ScopedServices = {
-        users: scopeMethods(ctx.users, usersDefinition.catalogue, caller, 'users'),
-        media: scopeMethods(ctx.media, mediaDefinition.catalogue, caller, 'media'),
-        // An entry's and a global's permissions depend on the call's `type` or
-        // `key`, and each contract states that in the function form, the
-        // `full` and publish gates included.
-        entries: scopeMethods(
-            ctx.entries,
-            entriesDefinition.catalogue,
-            caller,
-            'entries'
-        ),
-        globals: scopeMethods(
-            ctx.globals,
-            globalsDefinition.catalogue,
-            caller,
-            'globals'
-        ),
-        notifications: scopeMethods(
-            ctx.notifications,
-            notificationsDefinition.catalogue,
-            caller,
-            'notifications'
-        ),
-        plugins: scopePlugins(ctx, caller.permissions),
-    };
-    HANDLES.set(ctx, handle);
-    return handle;
 }

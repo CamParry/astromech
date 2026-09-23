@@ -12,9 +12,11 @@ import type { OpenAPIHono } from '@hono/zod-openapi';
 import { adminRole } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { usersService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { getSession } from '@/auth/session';
 import { createHttpApp } from '@/transport/http/app';
+
+const usersService = currentServices.users;
 
 vi.mock('@/auth/session', () => ({ getSession: vi.fn() }));
 

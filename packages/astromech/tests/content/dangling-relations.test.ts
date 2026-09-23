@@ -19,7 +19,7 @@ import type {
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService as api, usersService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { pruneDanglingRelations } from '@/content/dangling-relations';
 import { defineTable } from '@/database/define-table';
 import { setDb } from '@/database/registry';
@@ -28,6 +28,9 @@ import { transaction } from '@/database/transaction';
 import { tableRepository } from '@/entries/repository/table';
 import { createMediaRepository } from '@/media/repository';
 import { createUserRepository } from '@/users/repository';
+
+const api = currentServices.entries;
+const usersService = currentServices.users;
 
 const linksTable = defineTable('test_links', ({ col }) => ({
     id: col.id(),

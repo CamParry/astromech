@@ -11,13 +11,16 @@ import type { AstromechConfig } from '@/types/index';
 import type { Kysely } from 'kysely';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService, usersService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { encodeWith } from '@/database/codec';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { usersTable } from '@/database/tables';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { rebuildRelationshipIndex } from '@/transport/cli/relationship-index';
 import { makeTranslatableUsersConfig } from './users-config';
+
+const entriesService = currentServices.entries;
+const usersService = currentServices.users;
 
 /** Two locales, and one per-locale relationship field on users. */
 function makeConfig(): AstromechConfig {

@@ -23,9 +23,11 @@ import { createFileTestDb, makeTestConfig, setupTestConfig } from '@tests/harnes
 import { seedTestUser, testUser } from '@tests/mount-router';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
-import { entriesService as api } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { onError } from '@/transport/http/middleware/errors';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
+
+const api = currentServices.entries;
 
 const fakeUser = testUser;
 

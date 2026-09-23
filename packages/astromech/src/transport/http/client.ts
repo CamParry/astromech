@@ -14,10 +14,9 @@ import type {
     NotificationsService,
     PluginServiceNamespace,
     SortOption,
-    TypedEntriesService,
-    TypedGlobalsService,
     UsersService,
 } from '@/types/index';
+import { typedServices } from '@/services/typed-services';
 import { HTTP_ROUTES } from '@/transport/http/routes/http-routes';
 
 /** A non-2xx response, carrying the error envelope's id, code and status. */
@@ -421,9 +420,14 @@ const pluginsApi: PluginServiceNamespace = new Proxy({} as PluginServiceNamespac
     },
 });
 
-export const astromechClient = {
-    entries: entriesService as unknown as TypedEntriesService,
-    globals: globalsService as unknown as TypedGlobalsService,
+/**
+ * The client with `entries` and `globals` typed as the wide services, for code
+ * that addresses entry types and globals by a runtime string, such as the
+ * admin. Same object as `astromechClient`.
+ */
+export const astromechUntypedClient = {
+    entries: entriesService,
+    globals: globalsService,
     media: mediaService,
     users: usersService,
     notifications: notificationsService,
@@ -433,5 +437,8 @@ export const astromechClient = {
         apiBase = baseUrl;
     },
 };
+
+/** The client, with `entries` and `globals` under their typed facades. */
+export const astromechClient = typedServices(astromechUntypedClient);
 
 export default astromechClient;

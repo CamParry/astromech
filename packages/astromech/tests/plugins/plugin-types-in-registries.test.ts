@@ -7,7 +7,7 @@ import type { AstromechConfig, JsonObject, PluginDefinition } from '@/types/inde
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { systemAppContext } from '@/app-context/app-context';
-import { entriesService, globalsService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { generateClientTypes } from '@/codegen/type-generator';
 import { buildAdminConfig } from '@/config/admin-config';
@@ -17,6 +17,9 @@ import { entryContentTable } from '@/entries/tables';
 import { globalContentTable } from '@/globals/tables';
 import { buildPermissionCatalogue } from '@/permissions/catalogue';
 import { validateStoredContent } from '@/transport/cli/validate-stored-content';
+
+const entriesService = currentServices.entries;
+const globalsService = currentServices.globals;
 
 const fixturePlugin: PluginDefinition = {
     package: 'fixture',

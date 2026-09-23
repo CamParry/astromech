@@ -19,12 +19,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createFileTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { entriesService as api } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { getDb } from '@/database/registry';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { getEntryRepository } from '@/entries/repository/registry';
 import { CapabilityError } from '@/errors/capability';
 import { StagedChangeExistsError } from '@/errors/resource';
+
+const api = currentServices.entries;
 
 let dbCounter = 0;
 let dbPath = '';

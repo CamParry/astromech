@@ -13,12 +13,14 @@ import type { AstromechConfig, PluginDefinition } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { entriesService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { defineTable } from '@/database/define-table';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { transaction } from '@/database/transaction';
 import { tableRepository } from '@/entries/repository/table';
 import { UnknownSortKeyError } from '@/errors/query';
+
+const entriesService = currentServices.entries;
 
 /** Crockford base32, the ULID alphabet — ids are 26 uppercase chars. */
 const ULID = /^[0-9A-HJKMNP-TV-Z]{26}$/;

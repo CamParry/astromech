@@ -8,10 +8,12 @@ import type { AstromechConfig, MediaAccess, StorageDriver } from '@/types/index'
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mediaService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { setImageConfig } from '@/media/serving/image/registry';
 import { setStorageDriver } from '@/storage/registry';
 import { createHttpApp } from '@/transport/http/app';
+
+const mediaService = currentServices.media;
 
 // Minimal 1x1 JPEG (SOI + APP0 + SOF0 + EOI).
 const JPEG = new Uint8Array([

@@ -10,7 +10,7 @@ import type { Kysely } from 'kysely';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { usersService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { getAuth } from '@/auth/better-auth';
 import { createFirstAdmin } from '@/auth/setup';
 import { getDefaultContentLocale } from '@/config/content-locale';
@@ -18,6 +18,8 @@ import { decodeWith } from '@/database/codec';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { createUserRepository } from '@/users/repository';
 import { usersTable } from '@/users/tables';
+
+const usersService = currentServices.users;
 
 let db: Kysely<DB>;
 

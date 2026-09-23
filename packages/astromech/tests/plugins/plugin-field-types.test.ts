@@ -7,7 +7,9 @@
 import type { AstromechConfig, PluginFieldType } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService as api } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
+
+const api = currentServices.entries;
 
 // The demo plugin's own module, loaded as the site loads it.
 const { ratingField } = (await import(

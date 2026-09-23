@@ -294,7 +294,7 @@ const DOCUMENTED_CONTRACTS: ContractCatalogue = entryCatalogue({
  * per-(type, action) permission, then the type's existence. The capability a
  * method requires is the method's own check.
  *
- * The permission is READ here, not enforced here — `scopedServices` refuses the
+ * The permission is READ here, not enforced here — the scoped handle refuses the
  * call whatever this returns. What it decides is the ORDER: an unknown type
  * answers 403 to an under-privileged role and 404 to a privileged one, so a
  * caller cannot enumerate the entry types it has no grant for. No contract can

@@ -6,10 +6,12 @@
 
 import { createTestDb, createTestUser, runAsUser, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { globalsService as api } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { getDb } from '@/database/registry';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { makeGlobalsConfig } from './globals-config';
+
+const api = currentServices.globals;
 
 beforeEach(async () => {
     await createTestDb();

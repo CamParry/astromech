@@ -17,11 +17,13 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
-import { entriesService as api } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { defineTable } from '@/database/define-table';
 import { tableRepository } from '@/entries/repository/table';
 import { onError } from '@/transport/http/middleware/errors';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
+
+const api = currentServices.entries;
 
 const fakeUser = { id: 'u1', email: 'a@b.dev' } as unknown as User;
 

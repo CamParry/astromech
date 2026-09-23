@@ -9,12 +9,16 @@ import type { AstromechConfig } from '@/types/index';
 import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService, globalsService, mediaService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { assertRequiredCapability } from '@/globals/internal/global';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { rebuildRelationshipIndex } from '@/transport/cli/relationship-index';
+
+const entriesService = currentServices.entries;
+const globalsService = currentServices.globals;
+const mediaService = currentServices.media;
 
 /** A staged global holding a media field and a relationship field. */
 function makeConfig(): AstromechConfig {

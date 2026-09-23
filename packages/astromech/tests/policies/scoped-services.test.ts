@@ -22,11 +22,12 @@ import { contextAs, createTestDb, makeTestConfig, setupTestConfig } from '@tests
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { createAppContext } from '@/app-context/app-context';
+import { createServices } from '@/app-context/services';
 import { entriesDefinition } from '@/entries/service';
 import { PermissionDeniedError } from '@/errors/permission';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { annotateManifest } from '@/policies/annotate-manifest';
-import { scopedServices, scopeMethods } from '@/policies/scoped-services';
+import { scopeMethods } from '@/policies/scoped-services';
 import { noInput } from '@/services/define-service-method';
 
 beforeEach(() => {
@@ -383,7 +384,7 @@ function globalsConfig(): AstromechConfig {
  * The globals handle refuses before the service is entered, so these assert on
  * the refusal alone — the service itself has no database here.
  */
-describe('scopedServices — globals', () => {
+describe('the scoped handle — globals', () => {
     beforeEach(async () => {
         // The ungated branch reaches the real service, so it needs a database
         // to answer from; every other case refuses before the call.
@@ -392,7 +393,9 @@ describe('scopedServices — globals', () => {
     });
 
     it('derives the read permission per key', () => {
-        const scoped = scopedServices(contextAs(role('global:internal:read')));
+        const scoped = createServices(contextAs(role('global:internal:read')), {
+            overrideAccess: false,
+        });
 
         try {
             void scoped.globals.get({ key: 'site', full: true });
@@ -404,7 +407,7 @@ describe('scopedServices — globals', () => {
     });
 
     it('refuses the full shape of a public global without the read permission', () => {
-        const scoped = scopedServices(contextAs(role()));
+        const scoped = createServices(contextAs(role()), { overrideAccess: false });
 
         expect(() => scoped.globals.get({ key: 'site', full: true })).toThrow(
             PermissionDeniedError
@@ -415,14 +418,14 @@ describe('scopedServices — globals', () => {
     });
 
     it('allows a public global\u2019s plain read with no role at all', async () => {
-        const scoped = scopedServices(contextAs(null));
+        const scoped = createServices(contextAs(null), { overrideAccess: false });
 
         // Reaches the service, which answers null: nothing is saved.
         await expect(scoped.globals.get({ key: 'site' })).resolves.toBeNull();
     });
 
     it('refuses a private global\u2019s plain read', () => {
-        const scoped = scopedServices(contextAs(null));
+        const scoped = createServices(contextAs(null), { overrideAccess: false });
 
         try {
             void scoped.globals.get({ key: 'internal' });
@@ -433,7 +436,9 @@ describe('scopedServices — globals', () => {
     });
 
     it('gates a plugin global on the plugin permission form', () => {
-        const scoped = scopedServices(contextAs(role('global:site:update')));
+        const scoped = createServices(contextAs(role('global:site:update')), {
+            overrideAccess: false,
+        });
 
         try {
             void scoped.globals.update({
@@ -449,7 +454,9 @@ describe('scopedServices — globals', () => {
     });
 
     it('derives the permission per action', () => {
-        const scoped = scopedServices(contextAs(role('global:internal:update')));
+        const scoped = createServices(contextAs(role('global:internal:update')), {
+            overrideAccess: false,
+        });
 
         try {
             void scoped.globals.publish({ key: 'internal' });
@@ -462,9 +469,11 @@ describe('scopedServices — globals', () => {
     });
 });
 
-describe('scopedServices', () => {
+describe('the scoped handle', () => {
     it('refuses a real core method the role lacks', () => {
-        const scoped = scopedServices(contextAs(role('users:read')));
+        const scoped = createServices(contextAs(role('users:read')), {
+            overrideAccess: false,
+        });
 
         try {
             void scoped.users.create({ data: { email: 'a@b.dev', name: 'A' } });
@@ -477,7 +486,9 @@ describe('scopedServices', () => {
     });
 
     it('refuses media.replace to a role without media:upload', () => {
-        const scoped = scopedServices(contextAs(role('media:read', 'media:update')));
+        const scoped = createServices(contextAs(role('media:read', 'media:update')), {
+            overrideAccess: false,
+        });
 
         try {
             void scoped.media.replace({
@@ -493,7 +504,7 @@ describe('scopedServices', () => {
     });
 
     it('treats a null role the same as an absent one', () => {
-        const scoped = scopedServices(contextAs(null));
+        const scoped = createServices(contextAs(null), { overrideAccess: false });
 
         expect(() => scoped.users.query()).toThrow(PermissionDeniedError);
     });
@@ -534,12 +545,13 @@ function probeMethod(
     actingRole: Role | null,
     key: string
 ): (input?: unknown) => Promise<unknown> {
-    const method = scopedServices(contextAs(actingRole)).plugins.probe?.[key];
+    const method = createServices(contextAs(actingRole), { overrideAccess: false })
+        .plugins.probe?.[key];
     if (method === undefined) throw new Error(`probe.${key} is missing from the handle`);
     return method;
 }
 
-describe('scopedServices — plugins', () => {
+describe('the scoped handle — plugins', () => {
     beforeEach(() => {
         setupTestConfig({ ...makeTestConfig(), plugins: [probePlugin] });
     });
@@ -569,9 +581,10 @@ describe('scopedServices — plugins', () => {
     });
 
     it('keeps a denied method on the handle', () => {
-        expect(scopedServices(contextAs(null)).plugins.probe?.whoami).toBeTypeOf(
-            'function'
-        );
+        expect(
+            createServices(contextAs(null), { overrideAccess: false }).plugins.probe
+                ?.whoami
+        ).toBeTypeOf('function');
     });
 
     it('hands the plugin method the context the handle was built for', async () => {
@@ -580,14 +593,16 @@ describe('scopedServices — plugins', () => {
             role: null,
             clientAddress: '203.0.113.9',
         });
-        await expect(scopedServices(ctx).plugins.probe?.address?.()).resolves.toBe(
-            '203.0.113.9'
-        );
+        await expect(
+            createServices(ctx, { overrideAccess: false }).plugins.probe?.address?.()
+        ).resolves.toBe('203.0.113.9');
     });
 
     it('builds one handle per context', () => {
         const ctx = contextAs(role());
-        expect(scopedServices(ctx)).toBe(scopedServices(ctx));
+        expect(createServices(ctx, { overrideAccess: false })).toBe(
+            createServices(ctx, { overrideAccess: false })
+        );
     });
 });
 

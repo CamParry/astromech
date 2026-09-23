@@ -12,9 +12,11 @@ import type { MediaMimeTypeFilter } from '@/types/index';
 import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { mediaService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
+
+const mediaService = currentServices.media;
 
 const FIXTURES = [
     ['a.png', 'image/png'],

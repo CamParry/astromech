@@ -15,10 +15,12 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { seedTestUser, testUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
-import { mediaService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
+
+const mediaService = currentServices.media;
 
 const fakeUser = testUser;
 

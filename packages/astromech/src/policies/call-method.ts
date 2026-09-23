@@ -3,18 +3,9 @@
  * method by its manifest id: find the method on a service handle, scoped to a
  * role or trusted, and call it with the caller's argument object.
  */
-import type { ScopedServices } from '@/policies/scoped-services';
-import type { AppContext, CoreManifestMethod, ManifestMethod } from '@/types/index';
-import {
-    entriesService,
-    globalsService,
-    mediaService,
-    notificationsService,
-    usersService,
-} from '@/app-context/services';
+import type { AppContext, ManifestMethod, Services } from '@/types/index';
+import { createServices, currentServices } from '@/app-context/services';
 import { PermissionDeniedError } from '@/errors/permission';
-import { pluginServices } from '@/plugins/runtime/plugin-services';
-import { scopedServices } from '@/policies/scoped-services';
 
 /**
  * Who a call acts for: a context, whose role the scoped handle checks, or a
@@ -25,8 +16,8 @@ export type MethodCaller = { ctx: AppContext } | 'trusted';
 /** Anything callable through a string key. */
 type ServiceRecord = Record<string, unknown>;
 
-/** The handle keys a core manifest method may name. */
-type CoreModule = Exclude<keyof ScopedServices, 'entries' | 'plugins'>;
+/** The handle keys that hold a content service. */
+type ContentModule = Exclude<keyof Services, 'plugins'>;
 
 /**
  * Call the service method `method` names, on the handle `caller` gets. A
@@ -46,11 +37,14 @@ export async function callMethod(
         );
     }
 
-    const handle = caller === 'trusted' ? trustedServices() : scopedServices(caller.ctx);
+    const handle =
+        caller === 'trusted'
+            ? currentServices
+            : createServices(caller.ctx, { overrideAccess: false });
 
     switch (method.source) {
         case 'core':
-            return callOn(coreService(handle, method), method.method, args);
+            return callOn(contentService(handle, method.module), method.method, args);
         case 'entries':
             // The type id is pinned last, qualified for a plugin-mounted type, so
             // a caller cannot redirect the call at another type by passing one.
@@ -63,25 +57,15 @@ export async function callMethod(
     }
 }
 
-/** The raw services in the scoped handle's shape, for a caller that is trusted. */
-function trustedServices(): ScopedServices {
-    return {
-        users: usersService,
-        media: mediaService,
-        entries: entriesService,
-        globals: globalsService,
-        notifications: notificationsService,
-        plugins: pluginServices,
-    };
-}
-
-/** The core domain service a manifest method's `module` names on the handle. */
-function coreService(handle: ScopedServices, method: CoreManifestMethod): ServiceRecord {
-    const { module } = method;
-    if (module === 'entries' || module === 'plugins' || !Object.hasOwn(handle, module)) {
+/**
+ * The content service `module` names on `handle`. Plugins are addressed per
+ * plugin, so `plugins` is not one.
+ */
+export function contentService(handle: Services, module: string): ServiceRecord {
+    if (module === 'plugins' || !Object.hasOwn(handle, module)) {
         throw new Error(`no service registered for domain "${module}"`);
     }
-    return handle[module as CoreModule];
+    return handle[module as ContentModule];
 }
 
 /**

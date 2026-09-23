@@ -7,10 +7,14 @@ import type { AstromechConfig } from '@/types/index';
 import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService, mediaService, usersService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
+
+const entriesService = currentServices.entries;
+const mediaService = currentServices.media;
+const usersService = currentServices.users;
 
 /**
  * `article` holds a media field flat and another inside a repeater; users hold

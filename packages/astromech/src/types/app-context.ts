@@ -31,7 +31,7 @@ export type AppContext = {
     user: User | null;
     /**
      * The acting user's role, or null for a system context. Fixed when the
-     * context is built; `scopedServices(ctx)` checks calls against it.
+     * context is built; the scoped handle checks calls against it.
      */
     role: Role | null;
     /**

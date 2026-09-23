@@ -35,7 +35,7 @@ import {
 import { seedTestUser, testUser } from '@tests/mount-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
-import { mediaService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { entriesDefinition } from '@/entries/service';
 import { ValidationError } from '@/errors/validation';
 import { setStorageDriver } from '@/storage/registry';
@@ -43,6 +43,8 @@ import { onError } from '@/transport/http/middleware/errors';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
 import { mediaRouter } from '@/transport/http/routes/media';
 import { usersRouter } from '@/transport/http/routes/users';
+
+const mediaService = currentServices.media;
 
 type ErrorBody = {
     error: {

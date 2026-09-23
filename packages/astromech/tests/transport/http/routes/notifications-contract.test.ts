@@ -13,9 +13,11 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { mountRouter } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
-import { usersService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { notificationsDefinition, notify } from '@/notifications/service';
 import { notificationsRouter } from '@/transport/http/routes/notifications';
+
+const usersService = currentServices.users;
 
 /** No permission holds any authority here — the session is the whole of it. */
 const noPermissions = roleWith([]);

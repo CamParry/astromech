@@ -14,7 +14,7 @@ import type { AstromechConfig, PluginDefinition } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService as api } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { defineTable } from '@/database/define-table';
 import {
     CustomTableCrossTypeQueryError,
@@ -24,6 +24,8 @@ import {
 import { tableRepository } from '@/entries/repository/table';
 import { UnknownSortKeyError } from '@/errors/query';
 import { createMediaRepository } from '@/media/repository';
+
+const api = currentServices.entries;
 
 const linksTable = defineTable('test_links', ({ col }) => ({
     id: col.id(),

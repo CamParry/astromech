@@ -7,10 +7,11 @@
 import { roleWith } from '@tests/fixtures';
 import { contextAs, createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService } from '@/app-context/services';
+import { createServices, currentServices } from '@/app-context/services';
 import { CapabilityError } from '@/errors/capability';
 import { PermissionDeniedError } from '@/errors/permission';
-import { scopedServices } from '@/policies/scoped-services';
+
+const entriesService = currentServices.entries;
 
 beforeEach(async () => {
     await createTestDb();
@@ -40,7 +41,9 @@ describe('publishing through a write, on the scoped handle', () => {
     it('refuses a create that publishes without the publish grant', async () => {
         await expect(
             attempt(() =>
-                scopedServices(contextAs(writer)).entries.create({
+                createServices(contextAs(writer), {
+                    overrideAccess: false,
+                }).entries.create({
                     type: 'post',
                     data: { title: 'Live', status: 'published' },
                 })
@@ -58,7 +61,9 @@ describe('publishing through a write, on the scoped handle', () => {
 
         await expect(
             attempt(() =>
-                scopedServices(contextAs(writer)).entries.update({
+                createServices(contextAs(writer), {
+                    overrideAccess: false,
+                }).entries.update({
                     type: 'post',
                     id: entry.id,
                     data: { status: 'published' },
@@ -79,7 +84,9 @@ describe('publishing through a write, on the scoped handle', () => {
 
         await expect(
             attempt(() =>
-                scopedServices(contextAs(writer)).entries.duplicate({
+                createServices(contextAs(writer), {
+                    overrideAccess: false,
+                }).entries.duplicate({
                     type: 'post',
                     id: entry.id,
                     overrides: { status: 'published' },
@@ -89,7 +96,9 @@ describe('publishing through a write, on the scoped handle', () => {
     });
 
     it('lets a write that does not publish through on the write grant alone', async () => {
-        const entry = await scopedServices(contextAs(writer)).entries.create({
+        const entry = await createServices(contextAs(writer), {
+            overrideAccess: false,
+        }).entries.create({
             type: 'post',
             data: { title: 'Draft' },
         });
@@ -97,7 +106,9 @@ describe('publishing through a write, on the scoped handle', () => {
     });
 
     it('publishes through a write for a role holding the publish grant', async () => {
-        const entry = await scopedServices(contextAs(publisher)).entries.create({
+        const entry = await createServices(contextAs(publisher), {
+            overrideAccess: false,
+        }).entries.create({
             type: 'post',
             data: { title: 'Live', status: 'published' },
         });

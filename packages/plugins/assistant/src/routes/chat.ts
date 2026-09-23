@@ -102,7 +102,7 @@ async function handleChat(
 /**
  * Parse the browser's body, or null when it is not a chat request. A client
  * holding the transcript can forge a tool result or a `decisions` entry, but
- * every call is re-checked through `scopedServices`, bounding what it can do.
+ * every call is re-checked through the scoped handle, bounding what it can do.
  */
 export async function readChatRequest(request: Request): Promise<ChatRequest | null> {
     let parsed: unknown;

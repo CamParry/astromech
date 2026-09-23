@@ -10,7 +10,8 @@ import {
     currentAppContext,
     systemAppContext,
 } from '@/app-context/app-context';
-import { bindCurrent } from '@/app-context/services';
+import { createServices, currentServices } from '@/app-context/services';
+import { PermissionDeniedError } from '@/errors/permission';
 import { createPluginContext } from '@/plugins/runtime/plugin-runtime';
 import { runInRequestScope } from '@/request-scope/request-scope';
 
@@ -82,13 +83,54 @@ describe('currentAppContext', () => {
     });
 });
 
-describe('bindCurrent', () => {
+describe('createServices', () => {
+    it('builds one trusted and one scoped handle per context', () => {
+        const ctx = createAppContext({ user: null, role: editor });
+
+        const trusted = createServices(ctx);
+        const scoped = createServices(ctx, { overrideAccess: false });
+
+        expect(createServices(ctx)).toBe(trusted);
+        expect(createServices(ctx, { overrideAccess: true })).toBe(trusted);
+        expect(createServices(ctx, { overrideAccess: false })).toBe(scoped);
+        expect(scoped).not.toBe(trusted);
+        expect(createServices(createAppContext({ user: null, role: editor }))).not.toBe(
+            trusted
+        );
+    });
+
+    it('is what the context’s own getters hand out', () => {
+        const ctx = createAppContext({ user: null, role: editor });
+        const services = createServices(ctx);
+
+        expect(ctx.entries).toBe(services.entries);
+        expect(ctx.globals).toBe(services.globals);
+        expect(ctx.media).toBe(services.media);
+        expect(ctx.users).toBe(services.users);
+        expect(ctx.notifications).toBe(services.notifications);
+    });
+
+    it('refuses on the scoped handle what the role lacks, and not on the trusted one', async () => {
+        const ctx = createAppContext({ user: null, role: editor });
+        const get = vi.spyOn(createServices(ctx).users, 'get').mockResolvedValue(null);
+
+        expect(() =>
+            createServices(ctx, { overrideAccess: false }).users.get({ id: 'user-1' })
+        ).toThrow(PermissionDeniedError);
+        expect(get).not.toHaveBeenCalled();
+
+        await createServices(ctx).users.get({ id: 'user-1' });
+        expect(get).toHaveBeenCalledWith({ id: 'user-1' });
+    });
+});
+
+describe('currentServices', () => {
     it('calls the service the current request’s context holds', async () => {
-        const get = vi.fn(() => Promise.resolve(null));
-        const app = { users: { get } } as unknown as AppContext;
+        const app = createAppContext({ user: null, role: editor });
+        const get = vi.spyOn(createServices(app).users, 'get').mockResolvedValue(null);
 
         await runInRequestScope({ request: new Request('http://localhost/'), app }, () =>
-            bindCurrent('users').get({ id: 'user-1' })
+            currentServices.users.get({ id: 'user-1' })
         );
         expect(get).toHaveBeenCalledWith({ id: 'user-1' });
     });
@@ -100,6 +142,16 @@ describe('bindCurrent', () => {
 });
 
 describe('createPluginContext', () => {
+    it('holds the app context’s own services', () => {
+        const app = createAppContext({ user: null, role: editor });
+        const ctx = createPluginContext(identity, app);
+        const services = createServices(app);
+
+        expect(ctx.entries).toBe(services.entries);
+        expect(ctx.globals).toBe(services.globals);
+        expect(ctx.plugins).toBe(services.plugins);
+    });
+
     it('is the app context, plus the plugin layer and nothing else', () => {
         const ctx = createPluginContext(
             identity,

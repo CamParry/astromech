@@ -12,7 +12,7 @@ import type {
 } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService as api } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { generateClientTypes } from '@/codegen/type-generator';
 import { resolveConfig } from '@/config/resolve';
 import { applyVisibility } from '@/content/visibility';
@@ -20,6 +20,8 @@ import { relationship, tab, tabs, text } from '@/fields/builder';
 import { flattenEntryFields } from '@/fields/flatten';
 import { safeParseFields } from '@/fields/parse-fields';
 import { collectRelationshipSchemaPaths, findReferences } from '@/fields/references';
+
+const api = currentServices.entries;
 
 /** A list of cards: an array container no core code knows by name. */
 const cardList: PluginFieldType = {

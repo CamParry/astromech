@@ -135,7 +135,7 @@ export type ServiceMethodDefinition<S extends z.ZodType, Output, Ctx = AppContex
 
 /**
  * The interim handler-less form the readers (the manifest generator,
- * `permissionsFor`, `scopedServices`, the REST mount) are typed over while the
+ * `permissionsFor`, `createServices`, the REST mount) are typed over while the
  * core catalogues still declare no handlers. Deleted when they all do.
  *
  * Variance-safe over any concrete method, as `AnyServiceMethod` is: `Input` is

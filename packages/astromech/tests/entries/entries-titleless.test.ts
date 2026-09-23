@@ -18,8 +18,10 @@
 
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { ValidationError } from '@/errors/validation';
+
+const entriesService = currentServices.entries;
 
 const api = entriesService;
 

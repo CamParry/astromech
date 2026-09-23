@@ -12,9 +12,11 @@ import type { Kysely } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService as localEntries } from '@/app-context/services';
-import { pluginServices } from '@/plugins/runtime/plugin-services';
+import { currentServices } from '@/app-context/services';
 import { redirects } from '../../src/index';
+
+const localEntries = currentServices.entries;
+const pluginServices = currentServices.plugins;
 
 type RedirectsService = Record<string, (input?: unknown) => Promise<unknown>>;
 

@@ -25,16 +25,22 @@ import { filterMethods } from '@/policies/method-filter';
 import { buildTools } from '@/transport/mcp/tools';
 import { buildDispatch } from '@/transport/tools/dispatch';
 
-// The dispatcher resolves the entries service at CALL time, so a stub here is
-// enough to observe exactly what arguments a tool passes it — which is the only
-// thing the dispatcher is responsible for. Only `entriesService` is replaced:
-// the module's other bound services are what the core tools dispatch through.
-vi.mock('@/app-context/services', async (importOriginal) => ({
-    ...(await importOriginal<Record<string, unknown>>()),
-    entriesService: {
-        get: async (params: unknown) => params,
-    },
-}));
+// The dispatcher calls the trusted handle at CALL time, so a stub there is
+// enough to observe exactly what arguments a tool passes it, which is the only
+// thing the dispatcher is responsible for. Only `entries` is replaced: the
+// handle's other services are what the core tools dispatch through.
+vi.mock('@/app-context/services', async (importOriginal) => {
+    const real = await importOriginal<{ currentServices: Record<string, unknown> }>();
+    return {
+        ...real,
+        currentServices: {
+            ...real.currentServices,
+            entries: {
+                get: async (params: unknown) => params,
+            },
+        },
+    };
+});
 
 const driver: DatabaseDriver = {
     type: 'test',

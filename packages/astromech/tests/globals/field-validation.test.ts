@@ -7,8 +7,10 @@
 import type { AstromechConfig } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { globalsService as api } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { ValidationError } from '@/errors/validation';
+
+const api = currentServices.globals;
 
 function config(): AstromechConfig {
     return {

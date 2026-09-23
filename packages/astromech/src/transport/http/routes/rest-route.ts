@@ -5,9 +5,10 @@ import type { OpenAPIHono } from '@hono/zod-openapi';
 import type { Context } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from '@hono/zod-openapi';
+import { createServices } from '@/app-context/services';
 import { ValidationError } from '@/errors/validation';
 import { permissionsFor } from '@/permissions/permissions-for';
-import { scopedServices } from '@/policies/scoped-services';
+import { contentService } from '@/policies/call-method';
 import {
     badRequest,
     forbidden,
@@ -21,16 +22,13 @@ import {
  *
  * The rows are data, in `http-routes.ts`; this file attaches the
  * per-route server code — `args` — and `mountRestRoutes` validates, dispatches
- * through `scopedServices` and wraps the result in the envelope.
+ * through the scoped handle and wraps the result in the envelope.
  */
 
 type Env = { Variables: AuthVariables };
 
 /** A domain's contract catalogue, keyed by service method name. */
 export type ContractCatalogue = Record<string, ServiceMethodContract>;
-
-/** Anything callable through a string key — a scoped domain handle. */
-type ServiceRecord = Record<string, (args: unknown) => unknown>;
 
 /** The server code one route needs beyond the facts the shared table states. */
 export type RestHandlers = {
@@ -185,15 +183,17 @@ async function handleRestRoute(
 
 /** Call `<domain>.<method>` on the handle scoped to the caller's role. */
 function invoke(c: Context<Env>, id: string, args: unknown): Promise<unknown> {
-    const handle = scopedServices(c.var.ctx) as unknown as Record<string, ServiceRecord>;
-    const fn = handle[domainName(id)]?.[methodName(id)];
+    const handle = createServices(c.var.ctx, { overrideAccess: false });
+    const service = contentService(handle, domainName(id));
+    const fn = service[methodName(id)];
     if (typeof fn !== 'function') {
         throw new Error(`Method '${id}' is absent from the scoped services handle.`);
     }
 
-    // A session-scoped method takes its subject from the request scope rather
-    // than from its arguments; the scope is already established here.
-    return Promise.resolve(fn(args));
+    // Called on the service, as `callMethod` does. A session-scoped method takes
+    // its subject from the request scope rather than from its arguments; the
+    // scope is already established here.
+    return Promise.resolve((fn as (args: unknown) => unknown).call(service, args));
 }
 
 /** Wrap a result in the route's envelope. */

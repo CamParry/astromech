@@ -6,8 +6,10 @@
 import type { AstromechConfig, StorageDriver } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { mediaService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { setStorageDriver } from '@/storage/registry';
+
+const mediaService = currentServices.media;
 
 function textFile(name = 'doc.txt'): File {
     return new File(['hello' as BlobPart], name, { type: 'text/plain' });

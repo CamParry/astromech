@@ -15,9 +15,11 @@ import type { AstromechConfig, StorageDriver } from '@/types/index';
 import type { Kysely } from 'kysely';
 import { createTestDb } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { entriesService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { createAstromech, getAstromech } from '@/astromech';
 import { getEntryRepository } from '@/entries/repository/registry';
+
+const entriesService = currentServices.entries;
 
 const storageDriver: StorageDriver = {
     name: 'noop',

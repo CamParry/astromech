@@ -45,12 +45,12 @@ function takes no `shape` option.
 
 ## The work
 
-- [ ] `createServices(ctx, { overrideAccess })` in `app-context/` builds every
+- [x] `createServices(ctx, { overrideAccess })` in `app-context/` builds every
       handle: the `AppContext` getters, the scoped handle, trusted calls,
       plugin `ctx`, `currentServices` and `rest-route.ts`. The typed facades
       are applied in one file. **Public API**: `astromech/methods` exports
       `createServices` in place of `scopedServices`.
-- [ ] Declare the entries definition against `EntriesService` so `bind` needs
+- [x] Declare the entries definition against `EntriesService` so `bind` needs
       no cast: each of the five one-or-many methods ends with a union
       signature, which `MethodsFor` reads. `EntriesMethods` goes.
 - [ ] `astromech/fetch` exports `astromechUntypedClient` for the admin; delete

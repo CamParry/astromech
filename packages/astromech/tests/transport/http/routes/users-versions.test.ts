@@ -12,9 +12,11 @@ import { adminRole, roleWith } from '@tests/fixtures';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { mountRouter, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { usersService } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { usersRouter } from '@/transport/http/routes/users';
 import { makeTranslatableUsersConfig } from '../../../users/users-config';
+
+const usersService = currentServices.users;
 
 /** The users router mounted in isolation, acting as `role`. */
 function app(role = adminRole) {

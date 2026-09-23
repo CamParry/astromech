@@ -7,11 +7,13 @@
 import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { mediaService as api } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { ResourceValidationError } from '@/errors/resource';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { makeTranslatableMediaConfig } from './media-config';
+
+const api = currentServices.media;
 
 let id: string;
 

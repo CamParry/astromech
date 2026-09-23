@@ -7,9 +7,11 @@
 import type { AstromechConfig, PluginDefinition } from '@/types/index';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { globalsService as api } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { makeGlobalsConfig } from './globals-config';
+
+const api = currentServices.globals;
 
 const seoPlugin: PluginDefinition = {
     package: '@astromech/seo',

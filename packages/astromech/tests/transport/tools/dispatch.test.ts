@@ -5,7 +5,6 @@
  */
 import type * as appServices from '@/app-context/services';
 import type {
-    AppContext,
     CoreManifestMethod,
     JsonSchemaObject,
     ManifestMethod,
@@ -18,20 +17,27 @@ import type {
 import { contextAs, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { usersService } from '@/app-context/services';
+import { createServices, currentServices } from '@/app-context/services';
 import { PermissionDeniedError } from '@/errors/permission';
 import { buildDispatch, buildScopedDispatch } from '@/transport/tools/dispatch';
 
-// The scoped handle resolves the users service at CALL time, so a stub is enough
-// to observe whether a refusal happened before the service was entered. Only
-// `usersService` is replaced — the module is the composition root, and the other
-// bound services on it are what the rest of the dispatch path reaches for.
-vi.mock('@/app-context/services', async (importOriginal) => ({
-    ...(await importOriginal<typeof appServices>()),
-    usersService: {
-        query: vi.fn(() => Promise.resolve({ items: [], total: 0 })),
-    },
-}));
+const usersService = currentServices.users;
+
+// The trusted handle's users service is replaced with a stub, so a test can
+// see whether a refusal happened before the service was entered. The other
+// services are what the rest of the dispatch path reaches for.
+vi.mock('@/app-context/services', async (importOriginal) => {
+    const real = await importOriginal<typeof appServices>();
+    return {
+        ...real,
+        currentServices: {
+            ...real.currentServices,
+            users: {
+                query: vi.fn(() => Promise.resolve({ items: [], total: 0 })),
+            },
+        },
+    };
+});
 
 const objectSchema: JsonSchemaObject = {
     type: 'object',
@@ -112,10 +118,10 @@ function scopedTool(
     manifest: ManifestMethod,
     actingRole: Role | undefined
 ): ToolDefinition {
-    // The users service is this file's stub, so a call that gets through is seen.
-    const ctx = Object.create(contextAs(actingRole ?? null), {
-        users: { value: usersService },
-    }) as AppContext;
+    // The users service is this file's stub, so a call that gets through is
+    // seen. The scoped handle wraps the context's trusted handle.
+    const ctx = contextAs(actingRole ?? null);
+    Object.assign(createServices(ctx), { users: usersService });
     const result = buildScopedDispatch(manifest, ctx);
     if (!result.ok) expect.unreachable(`expected a tool, got: ${result.reason}`);
     return result.tool;

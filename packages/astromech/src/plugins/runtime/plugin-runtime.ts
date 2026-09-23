@@ -21,6 +21,7 @@ import type {
     TypedGlobalsService,
 } from '@/types/index';
 import { systemAppContext } from '@/app-context/app-context';
+import { createServices } from '@/app-context/services';
 import { registerCronJob } from '@/cron/registry';
 import { kyselyTableKey, registerTableCodec } from '@/database/codec';
 import { clearEmailOverrides, registerEmailOverride } from '@/email/email-overrides';
@@ -29,10 +30,10 @@ import { flattenEntryFields } from '@/fields/flatten';
 import { addHook, clearHooks } from '@/hooks/hooks';
 import { notify } from '@/notifications/service';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
-import { pluginServicesFor } from '@/plugins/runtime/plugin-services';
 import { isTable } from '@/plugins/runtime/plugin-tables';
 import { createPluginTrackingRepository } from '@/plugins/runtime/plugin-tracking-repository';
 import { createRegistry } from '@/registry';
+import { typedServices } from '@/services/typed-services';
 import { listAll } from '@/storage/prefix';
 import { getStorageDriver } from '@/storage/registry';
 import { log } from '@/utilities/log';
@@ -285,13 +286,13 @@ export function createPluginContext(
         // The app's own services under their typed facades. Reads answer the
         // public shape unless the call passes `full: true`, as everywhere else.
         get entries(): TypedEntriesService {
-            return app.entries as unknown as TypedEntriesService;
+            return typedServices(createServices(app)).entries;
         },
         get globals(): TypedGlobalsService {
-            return app.globals;
+            return typedServices(createServices(app)).globals;
         },
         get plugins(): PluginServiceNamespace | undefined {
-            return pluginServicesFor(app);
+            return createServices(app).plugins;
         },
         notify: (input: NotifyInput) =>
             notify({

@@ -13,10 +13,12 @@ import { join } from 'node:path';
 import { noopStorage } from '@tests/fixtures';
 import { createFileTestDb, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { mediaService as api } from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { createMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { makeTranslatableMediaConfig } from './media-config';
+
+const api = currentServices.media;
 
 // `replaceForSource` only rejects once `state.failing` is set, so the earlier
 // setup writes still succeed.

@@ -6,26 +6,15 @@
 
 import type {
     AstromechConfig,
-    MediaService,
-    NotificationsService,
-    PluginServiceNamespace,
     ResolvedConfig,
     Role,
-    TypedEntriesService,
-    TypedGlobalsService,
+    TypedServices,
     User,
-    UsersService,
 } from '@/types/index';
 import { buildAiModels } from '@/ai/models';
 import { setAiModels } from '@/ai/registry';
 import { systemAppContext } from '@/app-context/app-context';
-import {
-    mediaService,
-    notificationsService,
-    typedEntriesService,
-    typedGlobalsService,
-    usersService,
-} from '@/app-context/services';
+import { currentServices } from '@/app-context/services';
 import { setMethodManifest } from '@/codegen/manifest-registry';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { setConfig } from '@/config/registry';
@@ -47,27 +36,19 @@ import { AstromechError } from '@/errors/astromech-error';
 import { defaultImageWidths, normaliseWidths } from '@/media/image-widths';
 import { setImageConfig } from '@/media/serving/image/registry';
 import { bootPlugins, registerPlugins } from '@/plugins/runtime/plugin-runtime';
-import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { createRegistry } from '@/registry';
 import { getCurrentRole, getCurrentUser } from '@/request-scope/request-scope';
+import { typedServices } from '@/services/typed-services';
 import { setStorageDriver } from '@/storage/registry';
 import { createHttpApp } from '@/transport/http/app';
 
-export type Astromech = {
+/**
+ * The application instance: every service, trusted and acting as the current
+ * request (the system outside one), under the typed facades.
+ */
+export type Astromech = TypedServices & {
     /** The resolved, read-only config this runtime serves. */
     config: ResolvedConfig;
-    /** Typed read and write access to the entry types. */
-    entries: TypedEntriesService;
-    /** Typed read and write access to the declared globals. */
-    globals: TypedGlobalsService;
-    /** Media items: store, transform, and serve. */
-    media: MediaService;
-    /** Users, roles, and authentication. */
-    users: UsersService;
-    /** Notifications for the acting user. */
-    notifications: NotificationsService;
-    /** The services each installed plugin exposes, namespaced by plugin. */
-    plugins: PluginServiceNamespace;
     /** The acting user for the current request, or null outside one. */
     getCurrentUser(): Promise<User | null>;
     /** The acting role for the current request, or null outside one. */
@@ -180,12 +161,7 @@ async function build(config: AstromechConfig): Promise<Astromech> {
 
     return {
         config: resolved,
-        entries: typedEntriesService,
-        globals: typedGlobalsService,
-        media: mediaService,
-        users: usersService,
-        notifications: notificationsService,
-        plugins: pluginServices,
+        ...typedServices(currentServices),
         getCurrentUser,
         getCurrentRole,
         fetch: async (request: Request): Promise<Response> => http.fetch(request),
