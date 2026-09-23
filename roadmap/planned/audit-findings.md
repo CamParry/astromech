@@ -38,7 +38,8 @@ read at review, and studying where a pattern repeats before changing it.
 - [ ] **Drift goes unnoticed until a sweep.** The drift report, test-only
       exports, typed lint, retired words, lookup verbs, names, stale comments:
       `planned/conventions-and-drift.md`.
-- [ ] The unused `settings` module: `planned/remove-settings-module.md`.
+- [x] The unused `settings` module, removed:
+      `roadmap/completed/remove-settings-module.md`.
 - [x] Plugin raw routes kept as closures, and the stale `virtual:` reasoning
       rewritten; `check:install` installs a packed plugin: `DECISIONS.md`.
 - [x] The one-at-a-time lookups in `media/methods/used-by.ts`, now batched.

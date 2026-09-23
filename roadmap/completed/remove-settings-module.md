@@ -14,21 +14,21 @@ a table.
 
 ## The work
 
-- [ ] Delete `packages/astromech/src/settings/`, `transport/http/routes/settings.ts`,
+- [x] Delete `packages/astromech/src/settings/`, `transport/http/routes/settings.ts`,
       the settings rows in `transport/http/routes/http-routes.ts`, the `settings`
       members of `ScopedServices`, `trustedServices`, `AppContext` and the
       `Astromech` instance, its entry in `codegen/method-manifest.ts`,
       `settingsService`/`settingValue` in `transport/http/client.ts`, and
       `withDefaultSettingsShape`.
-- [ ] Delete `config/public-settings.ts`, the `publicSettings` config key,
+- [x] Delete `config/public-settings.ts`, the `publicSettings` config key,
       `publicSettingKeys` on `ResolvedConfig` and `PluginConfigView`, the
       `settings:read`/`settings:update` permissions, and the admin's unused
       `queryKeys.settings`.
-- [ ] Drop `settingsTable` from `CORE_TABLES`, run `pnpm run db:generate`, and
+- [x] Drop `settingsTable` from `CORE_TABLES`, run `pnpm run db:generate`, and
       hand-apply the change to `apps/demo-cloudflare`'s migration and snapshot.
-- [ ] Delete the settings tests and the settings rows in the client, MCP, CLI,
+- [x] Delete the settings tests and the settings rows in the client, MCP, CLI,
       method-filter and app-context tests.
-- [ ] Rewrite the `DECISIONS.md` entry to: core ships no key-value store; plugin
+- [x] Rewrite the `DECISIONS.md` entry to: core ships no key-value store; plugin
       state is a global, a plugin table or `ctx.storage`. Fix every other
       mention in `DECISIONS.md`, `TERMINOLOGY.md`, `ARCHITECTURE.md`,
       `apps/docs/` and the assistant's prompt (`loop/request.ts`).
