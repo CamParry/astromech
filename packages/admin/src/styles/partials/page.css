@@ -702,3 +702,19 @@
     font-size: 0.875rem;
     color: var(--am-color-text-muted);
 }
+
+.am-user-summary {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1.25rem;
+}
+
+.am-user-summary-name {
+    font-weight: 500;
+}
+
+.am-user-summary-email {
+    font-size: 0.8125rem;
+    color: var(--am-color-text-muted);
+}

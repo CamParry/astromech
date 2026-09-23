@@ -87,7 +87,11 @@ seed the input through `formatDatetimeForInput`.
       the shape matches. Neither does: each is one typed route whose
       `Route.useNavigate` needs no cast, and `useMediaBrowser` already serves
       the media library and the picker.
-- [ ] The five large pages become compositions of the above.
+- [x] The five large pages become compositions of the above:
+      `entries-list-page.tsx` 441 lines, `entry-edit-page.tsx` 375,
+      `entry-new-page.tsx` 237, `global-edit-page.tsx` 178,
+      `user-edit-page.tsx` 372 (it keeps its own profile panel: name, email
+      and role are account fields, not the entry form's).
 - [x] `entries-list-page.tsx`'s `patchSearch` casts its `navigate` argument
       `as unknown as`; the list controller's search update is typed instead
       (`navigate({ to: '.', search })` with the merged search object).

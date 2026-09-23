@@ -23,16 +23,23 @@ import { usePermissions } from '../../hooks/use-permissions';
 import { userMutations, useUser } from '../../hooks/users';
 import { EntryNamespaceProvider, labelNamespace } from '../../i18n/entry-namespace';
 import { defaultContentLocale, localeOptions } from '../../utilities/content-locale';
-import { formatDatetime } from '../../utilities/dates';
 import { EntryFormLayout, FieldColumn } from '../entries/entry-form-fields';
-import { Avatar } from '../ui/avatar';
 import { Breadcrumb } from '../ui/breadcrumb';
 import { Button } from '../ui/button';
 import { useConfirm } from '../ui/confirm';
 import { Input } from '../ui/input';
-import { Page, PageContent, PageHeader, PageLoading, PageTitle } from '../ui/page';
+import {
+    ButtonGroup,
+    Page,
+    PageContent,
+    PageHeader,
+    PageLoading,
+    PageTitle,
+    Stack,
+} from '../ui/page';
 import { Panel } from '../ui/panel';
 import { Select } from '../ui/select';
+import { UserSummaryPanel } from './user-summary-panel';
 import { UserVersionsPanel } from './user-versions-panel';
 
 export type UserEditPageProps = {
@@ -180,13 +187,7 @@ function UserEditBody({
                         main={
                             <>
                                 <Panel title={t('users.profilePanel')}>
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: '1.25rem',
-                                        }}
-                                    >
+                                    <Stack gap={5}>
                                         <form.Field
                                             name="title"
                                             validators={{
@@ -266,7 +267,7 @@ function UserEditBody({
                                                 />
                                             </div>
                                         )}
-                                    </div>
+                                    </Stack>
                                 </Panel>
 
                                 {(isTranslatable || fieldDefinitions.length > 0) && (
@@ -275,13 +276,7 @@ function UserEditBody({
                                             ? { title: t('users.fieldsPanel') }
                                             : {})}
                                     >
-                                        <div
-                                            style={{
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                gap: '1.25rem',
-                                            }}
-                                        >
+                                        <Stack gap={5}>
                                             {isTranslatable && (
                                                 <div className="am-content-locale">
                                                     <Select
@@ -312,7 +307,7 @@ function UserEditBody({
                                                 nodes={fieldDefinitions}
                                                 disabled={!canSave}
                                             />
-                                        </div>
+                                        </Stack>
                                     </Panel>
                                 )}
 
@@ -329,96 +324,44 @@ function UserEditBody({
                         sidebar={
                             <>
                                 <Panel title={t('users.actionsPanel')}>
-                                    {canSave && (
-                                        <Button
-                                            onClick={handleSave}
-                                            loading={saveMutation.isPending}
-                                            disabled={!isDirty || saveMutation.isPending}
-                                        >
-                                            {t('common.save')}
-                                        </Button>
-                                    )}
-                                    {canDeleteUsers() && (
-                                        <Button
-                                            variant="danger"
-                                            onClick={() =>
-                                                confirm({
-                                                    title: t('users.confirmDeleteTitle'),
-                                                    description: t(
-                                                        'users.confirmDeleteMessage',
-                                                        { name: user.name }
-                                                    ),
-                                                    confirmLabel: t('common.delete'),
-                                                    onConfirm: () =>
-                                                        deleteMutation.mutate(id),
-                                                })
-                                            }
-                                            loading={deleteMutation.isPending}
-                                            style={{
-                                                marginTop: canSave ? '0.5rem' : undefined,
-                                            }}
-                                        >
-                                            {t('common.delete')}
-                                        </Button>
-                                    )}
+                                    <ButtonGroup>
+                                        {canSave && (
+                                            <Button
+                                                onClick={handleSave}
+                                                loading={saveMutation.isPending}
+                                                disabled={
+                                                    !isDirty || saveMutation.isPending
+                                                }
+                                            >
+                                                {t('common.save')}
+                                            </Button>
+                                        )}
+                                        {canDeleteUsers() && (
+                                            <Button
+                                                variant="danger"
+                                                onClick={() =>
+                                                    confirm({
+                                                        title: t(
+                                                            'users.confirmDeleteTitle'
+                                                        ),
+                                                        description: t(
+                                                            'users.confirmDeleteMessage',
+                                                            { name: user.name }
+                                                        ),
+                                                        confirmLabel: t('common.delete'),
+                                                        onConfirm: () =>
+                                                            deleteMutation.mutate(id),
+                                                    })
+                                                }
+                                                loading={deleteMutation.isPending}
+                                            >
+                                                {t('common.delete')}
+                                            </Button>
+                                        )}
+                                    </ButtonGroup>
                                 </Panel>
 
-                                <Panel title={t('users.metadataPanel')}>
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: '0.75rem',
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '0.75rem',
-                                                marginBottom: '0.5rem',
-                                            }}
-                                        >
-                                            <Avatar
-                                                name={user.name}
-                                                src={user.image}
-                                                size="md"
-                                            />
-                                            <div>
-                                                <div style={{ fontWeight: 500 }}>
-                                                    {user.name}
-                                                </div>
-                                                <div
-                                                    style={{
-                                                        fontSize: '0.8125rem',
-                                                        color: 'var(--am-color-text-muted)',
-                                                    }}
-                                                >
-                                                    {user.email}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <dl className="am-meta">
-                                            <div>
-                                                <dt className="am-meta-label">
-                                                    {t('users.joinedLabel')}
-                                                </dt>
-                                                <dd className="am-meta-value">
-                                                    {formatDatetime(user.createdAt)}
-                                                </dd>
-                                            </div>
-                                            <div>
-                                                <dt className="am-meta-label">
-                                                    {t('users.lastUpdatedLabel')}
-                                                </dt>
-                                                <dd className="am-meta-value">
-                                                    {formatDatetime(user.updatedAt)}
-                                                </dd>
-                                            </div>
-                                        </dl>
-                                    </div>
-                                </Panel>
+                                <UserSummaryPanel user={user} />
                             </>
                         }
                     />
