@@ -92,7 +92,7 @@ An **entry type** is declared with `defineEntryType`. Entry features (versions, 
 
 ### Resources
 
-Entries, media items and users each live in three tables: a resource row (what is shared across locales), a content row per locale (what editors author, including `fields` as JSON), and a versions table that snapshots content rows. `content/repository/versions.ts` owns versions for all three. The differences:
+Entries, globals, media items and users each live in three tables: a resource row (what is shared across locales), a content row per locale (what editors author, including `fields` as JSON), and a versions table that snapshots content rows. `content/repository/versions.ts` owns versions for all four, and `RESOURCE_SPECS` in `content/resources.ts` is what the shared helpers read about each. The differences:
 
 - **Entries** (`entries/tables.ts`): the resource row holds `type`, the preview token and `deletedAt`; the content row holds title, slug and status. `entries/repository/entries-table.ts` reads the two joined.
 - **Media** (`media/tables.ts`): the resource row holds the file and its metadata; the bytes are in the storage driver under a key derived from the media id. `media/repository.ts` adds the library list queries. No statuses, staging or trash.

@@ -26,10 +26,10 @@ read at review, and studying where a pattern repeats before changing it.
 - [x] **Field behaviour is split between `FieldType` and walkers** that branch
       on type names; plugin field types never reach the server:
       `completed/field-tree-traversal.md`.
-- [ ] **The resource module shape stops at the repository.** Copied versions,
+- [x] **The resource module shape stops at the repository.** Copied versions,
       staging, locale, uniqueness and error code; globals missing from the
       relationships index; sort allow-lists; globals' status run in the
-      browser: `planned/resource-module-shape.md`.
+      browser: `completed/resource-module-shape.md`.
 - [ ] **Plugin contributions take a parallel path** through config, codegen,
       permissions and the admin: `planned/plugin-types-in-core-registries.md`.
 - [ ] **Admin pages share no composition.** Copied staging controls, 16
