@@ -331,7 +331,7 @@ function json(o?: { notNull?: boolean }): Column<ColConfig> {
         onUpdate: false,
         serialize: jsonSerialize,
         parse: jsonParse,
-    } as Column<ColConfig>;
+    };
 }
 
 function enum_<

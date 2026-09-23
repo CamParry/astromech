@@ -29,7 +29,7 @@ async function footprintEntries(
     const collected: { type: string; entry: Entry }[] = [];
     for (const type of types) {
         const { data } = await ctx.entries.query({ type, limit: 'all', ...shape });
-        for (const entry of data as Entry[]) {
+        for (const entry of data) {
             collected.push({ type, entry });
         }
     }
@@ -100,7 +100,7 @@ export const seoService = {
             }
 
             const { data } = await ctx.entries.query({ type, limit: 'all' });
-            const entry = (data as Entry[]).find(
+            const entry = data.find(
                 (candidate) => candidate.slug === slug && candidate.status === 'published'
             );
             if (!entry) return null;

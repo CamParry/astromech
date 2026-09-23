@@ -289,7 +289,7 @@ export function createPluginContext(
             return app.entries as unknown as TypedEntriesService;
         },
         get globals(): TypedGlobalsService {
-            return app.globals as unknown as TypedGlobalsService;
+            return app.globals;
         },
         get plugins(): PluginServiceNamespace | undefined {
             return pluginServicesFor(app);

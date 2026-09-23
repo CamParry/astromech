@@ -55,7 +55,7 @@ export async function callMethod(
         case 'entries':
             // The type id is pinned last, qualified for a plugin-mounted type, so
             // a caller cannot redirect the call at another type by passing one.
-            return callOn(handle.entries as unknown as ServiceRecord, method.method, {
+            return callOn(handle.entries, method.method, {
                 ...args,
                 type: method.typeId,
             });
@@ -83,7 +83,7 @@ function coreService(handle: ScopedServices, method: CoreManifestMethod): Servic
     if (module === 'entries' || module === 'plugins' || !Object.hasOwn(handle, module)) {
         throw new Error(`no service registered for domain "${module}"`);
     }
-    return handle[module as CoreModule] as unknown as ServiceRecord;
+    return handle[module as CoreModule];
 }
 
 /**

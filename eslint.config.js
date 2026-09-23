@@ -119,6 +119,22 @@ export default tseslint.config(
         },
     },
     {
+        // Type-aware rules, for correctness only (DECISIONS.md, "Type-aware lint
+        // catches defects, not style"). Tests are left out: `projectService` reads
+        // each package's tsconfig.json, which does not include them.
+        files: ['packages/*/src/**/*.{ts,tsx}', 'packages/plugins/*/src/**/*.{ts,tsx}'],
+        languageOptions: {
+            parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+        },
+        rules: {
+            '@typescript-eslint/switch-exhaustiveness-check': [
+                'error',
+                { considerDefaultExhaustiveForUnions: false },
+            ],
+            '@typescript-eslint/no-unnecessary-type-assertion': 'error',
+        },
+    },
+    {
         files: ['**/*.test.ts', '**/*.test.tsx'],
         rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
     },

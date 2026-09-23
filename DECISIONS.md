@@ -172,6 +172,8 @@ Live choices and what each one beat. An entry is here because the losing option 
 
 **Coverage thresholds are per directory and only raised.** Rejected: one global number, whose average hides a directory near zero.
 
+**Type-aware lint catches defects, not style.** `lint` runs `switch-exhaustiveness-check`, where a `default` does not cover a missing union member, and `no-unnecessary-type-assertion` over the packages' sources. Rejected: the `recommendedTypeChecked` and `strictTypeChecked` presets, which mostly police shape, and a separate `lint:types` check, since the two rules add about 2 s to `verify:fast`.
+
 **Drift is reported, not enforced.** `pnpm run report:drift` finds a second copy of a helper, a cast or a query key, and review decides whether to share it, schedule it or keep it. Rejected: lint bans on code shapes and a count that may only fall (they force awkward structure, as dependency-cruiser did), and periodic clean-up passes, after which the drift returns.
 
 **`check:install` follows the installation guide on packed tarballs.** Workspace links hide packaging and generator defects, and the script reads its commands from `apps/docs/installation.md`, so the guide cannot drift from what is tested. Rejected: a fixture site, which drifts from the guide, and a stage in `verify`, which would stop the gate running offline.

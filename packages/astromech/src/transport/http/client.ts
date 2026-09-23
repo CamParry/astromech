@@ -18,7 +18,6 @@ import type {
     SortOption,
     TypedEntriesService,
     TypedGlobalsService,
-    UserQueryParams,
     UsersService,
 } from '@/types/index';
 import { HTTP_ROUTES } from '@/transport/http/routes/http-routes';
@@ -210,7 +209,8 @@ function unwrap(envelope: ResponseEnvelope | undefined, payload: unknown): unkno
             return payload;
         // `{ success: true }` and 204 both mean "it worked"; the methods that
         // answer with one return void.
-        default:
+        case 'success':
+        case 'empty':
             return undefined;
     }
 }
@@ -330,7 +330,7 @@ async function uploadFile(path: string, file: File): Promise<Media> {
         method: 'POST',
         credentials: 'include',
         body: formData,
-    } as RequestInit);
+    });
 
     if (!response.ok) throw await errorFrom(response);
 
@@ -396,8 +396,7 @@ const globalsService = restService<GlobalsService>('globals', callRoute, {
 });
 
 const usersService = restService<UsersService>('users', callRoute, {
-    query: (params) =>
-        callRoute('users.query', listingArgs((params ?? {}) as UserQueryParams)),
+    query: (params) => callRoute('users.query', listingArgs(params ?? {})),
 });
 
 const notificationsService = restService<NotificationsService>(
@@ -421,6 +420,7 @@ const notificationsService = restService<NotificationsService>(
  */
 type FetchMethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
 
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- a plugin augments `PluginServiceNamespace`, and in its program `{}` is not one
 const pluginsApi: PluginServiceNamespace = new Proxy({} as PluginServiceNamespace, {
     get(_target, nameProp): FetchMethodMap | undefined {
         if (typeof nameProp !== 'string' || nameProp === 'then') return undefined;
@@ -430,18 +430,21 @@ const pluginsApi: PluginServiceNamespace = new Proxy({} as PluginServiceNamespac
         // deriving one from the other on this side would mean inverting a lossy
         // mapping (`acme_2fa` → `acme2fa` → ?).
         const name = nameProp;
-        return new Proxy({} as FetchMethodMap, {
-            get(_t, methodProp) {
-                if (typeof methodProp !== 'string' || methodProp === 'then')
-                    return undefined;
-                const method = methodProp;
-                return (input?: unknown) =>
-                    apiFetch<unknown>(`/plugins/${name}/${method}`, {
-                        method: 'POST',
-                        body: input ?? {},
-                    });
-            },
-        });
+        return new Proxy(
+            {},
+            {
+                get(_t, methodProp) {
+                    if (typeof methodProp !== 'string' || methodProp === 'then')
+                        return undefined;
+                    const method = methodProp;
+                    return (input?: unknown) =>
+                        apiFetch<unknown>(`/plugins/${name}/${method}`, {
+                            method: 'POST',
+                            body: input ?? {},
+                        });
+                },
+            }
+        );
     },
 });
 

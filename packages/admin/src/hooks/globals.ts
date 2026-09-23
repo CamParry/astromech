@@ -30,7 +30,7 @@ export type GlobalHookScope = {
 };
 
 function resolveApi(scope?: GlobalHookScope): GlobalsService {
-    return scope?.api ?? (astromechClient.globals as unknown as GlobalsService);
+    return scope?.api ?? astromechClient.globals;
 }
 
 function resolveKeys(scope?: GlobalHookScope) {

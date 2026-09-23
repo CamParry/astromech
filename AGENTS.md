@@ -23,7 +23,7 @@ Run `pnpm run verify:fast` while working (typecheck, tests, lint, `check:unused`
 | `pnpm run typecheck`             | `tsc` over every package, then `astro sync && tsc --noEmit` in both demo apps                              |
 | `pnpm run test:run`              | vitest over every package, with per-directory coverage thresholds; the assistant suite needs `build` first |
 | `pnpm run build`                 | tsup (out of memory: see `packages/astromech/AGENTS.md`)                                                   |
-| `pnpm run lint`                  | eslint over packages and scripts                                                                           |
+| `pnpm run lint`                  | eslint over packages and scripts, type-aware over package sources                                          |
 | `pnpm run lint:css`              | stylelint over the admin's styles                                                                          |
 | `pnpm run format:check`          | prettier over the repo                                                                                     |
 | `pnpm run check:config`          | loads both demo configs the way Astro does                                                                 |

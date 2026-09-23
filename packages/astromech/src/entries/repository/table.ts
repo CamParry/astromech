@@ -44,7 +44,7 @@ export type TableRepositoryOptions = {
 };
 
 class TableRepository implements EntryRepository<EntryRow> {
-    public readonly supports: readonly never[] = Object.freeze([]) as readonly never[];
+    public readonly supports: readonly never[] = Object.freeze([]);
 
     private readonly table: Table;
     private readonly repository: Repository<Table>;

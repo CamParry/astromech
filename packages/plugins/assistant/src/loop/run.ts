@@ -95,7 +95,7 @@ export async function* runAssistantLoop(input: {
             allowSystemInMessages: true,
             providerOptions: { anthropic: { effort: input.options.effort } },
             onStepEnd: (step) => {
-                completed.push(step.response.messages as ChatMessage[]);
+                completed.push(step.response.messages);
             },
         });
 

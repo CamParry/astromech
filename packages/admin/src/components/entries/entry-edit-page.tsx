@@ -5,7 +5,7 @@
  */
 
 import type { EntriesBinding } from './binding';
-import type { Entry, EntryStatus } from 'astromech';
+import type { Entry } from 'astromech';
 import { Menu } from '@base-ui/react/menu';
 import { useStore } from '@tanstack/react-form';
 import { useQueryClient } from '@tanstack/react-query';
@@ -215,7 +215,7 @@ function EntryEditPageBody({
         defaultValues: {
             title: entry?.title ?? '',
             slug: entry?.slug ?? '',
-            status: entry?.status ?? ('unpublished' as EntryStatus),
+            status: entry?.status ?? 'unpublished',
             publishedAt: formatDatetimeForInput(entry?.publishedAt),
             fields: (entry?.fields as Record<string, unknown>) ?? {},
         },

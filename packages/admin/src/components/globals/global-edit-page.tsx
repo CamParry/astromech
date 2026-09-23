@@ -9,7 +9,7 @@
 
 import type { EntryPayload } from '../../hooks/use-entry-form';
 import type { GlobalsBinding } from './binding';
-import type { EntryStatus, Global } from 'astromech';
+import type { Global } from 'astromech';
 import { useStore } from '@tanstack/react-form';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link as RouterLink, useNavigate } from '@tanstack/react-router';
@@ -192,7 +192,7 @@ function GlobalEditPageBody({
         operation: 'update',
         namespace,
         defaultValues: {
-            status: global?.status ?? ('unpublished' as EntryStatus),
+            status: global?.status ?? 'unpublished',
             publishedAt: formatDatetimeForInput(global?.publishedAt),
             fields: (global?.fields as Record<string, unknown>) ?? {},
         },

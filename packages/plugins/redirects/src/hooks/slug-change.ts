@@ -24,9 +24,7 @@ async function enabledRules(
 ): Promise<Entry[]> {
     // The plugin's own rules, whatever their visibility.
     const { data } = await ctx.entries.query({ type, where, limit: 'all', full: true });
-    return (data as Entry[]).filter(
-        (rule) => (rule.fields as RedirectFields).enabled !== false
-    );
+    return data.filter((rule) => (rule.fields as RedirectFields).enabled !== false);
 }
 
 export const slugChangeHook: Hook = defineHook(

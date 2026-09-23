@@ -8,7 +8,7 @@ export function deepEqual(a: unknown, b: unknown): boolean {
         if (a.length !== (b as unknown[]).length) return false;
         return (a as unknown[]).every((v, i) => deepEqual(v, (b as unknown[])[i]));
     }
-    const keysA = Object.keys(a as object).sort();
+    const keysA = Object.keys(a).sort();
     const keysB = Object.keys(b as object).sort();
     if (keysA.length !== keysB.length) return false;
     return keysA.every((k) =>

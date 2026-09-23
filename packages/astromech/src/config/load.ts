@@ -16,9 +16,9 @@ export async function loadConfigFile(
     configFile?: string
 ): Promise<AstromechConfig> {
     const jiti = createJiti(import.meta.url);
-    const configModule = (await jiti.import(resolveConfigPath(rootDir, configFile))) as {
-        default: AstromechConfig;
-    };
+    const configModule = await jiti.import<{ default: AstromechConfig }>(
+        resolveConfigPath(rootDir, configFile)
+    );
     return configModule.default;
 }
 

@@ -387,9 +387,7 @@ export function createRepository<D extends Table>(table: D, db?: Db): Repository
         // stamping as `update`. The default set reuses the already-encoded insert
         // values, which `encodeWith` has stamped via each column's app default.
         const setValues =
-            opts?.set === undefined
-                ? omit(values, target)
-                : encodeUpdate(opts.set as object);
+            opts?.set === undefined ? omit(values, target) : encodeUpdate(opts.set);
         if (Object.keys(setValues).length === 0) {
             throw new AstromechError(
                 `createRepository("${table.name}"): upsert has nothing ` +

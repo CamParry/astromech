@@ -117,9 +117,7 @@ export function createFormsService(
                     },
                     data: values,
                     ...(typeof input?.token === 'string' ? { token: input.token } : {}),
-                    ...(isRecord(input?.meta)
-                        ? { meta: input.meta as SubmissionMeta }
-                        : {}),
+                    ...(isRecord(input?.meta) ? { meta: input.meta } : {}),
                 };
 
                 // A throwing subscriber (spam, or a third party's) propagates

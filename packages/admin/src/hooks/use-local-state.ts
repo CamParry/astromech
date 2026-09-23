@@ -12,7 +12,7 @@ export function useLocalState<T extends string>(
         if (allow.includes(initialValue)) {
             return initialValue as T;
         }
-        return defaultValue as T;
+        return defaultValue;
     });
 
     function setValue(value: T) {

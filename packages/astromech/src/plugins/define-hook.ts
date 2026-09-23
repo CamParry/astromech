@@ -8,5 +8,5 @@ export function defineHook<E extends HookEvent>(
     event: E,
     handler: HookHandlerFor<E>
 ): Hook {
-    return { event, handler: handler as Hook['handler'] };
+    return { event, handler: handler };
 }

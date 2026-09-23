@@ -5,7 +5,6 @@
  */
 import type { Capability } from '@/entries/capabilities';
 import type {
-    AnyServiceMethod,
     CoreManifestMethod,
     EntriesManifestMethod,
     JsonSchemaObject,
@@ -196,7 +195,7 @@ function buildPluginServiceMethods(plugins: PluginDefinition[]): PluginManifestM
     for (const def of plugins) {
         const identity = resolvePluginIdentity(def);
         for (const [key, m] of Object.entries(def.service ?? {})) {
-            const serviceMethod = m as AnyServiceMethod;
+            const serviceMethod = m;
             const method: PluginManifestMethod = {
                 // Service keys are collision-checked at boot, so the name is
                 // already unique — id and name coincide.

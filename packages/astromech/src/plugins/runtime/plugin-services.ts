@@ -52,6 +52,7 @@ function namespace(
         name: string
     ) => (input?: unknown) => Promise<unknown>
 ): PluginServiceNamespace {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- a plugin augments `PluginServiceNamespace`, and in its program `{}` is not one
     return new Proxy({} as PluginServiceNamespace, {
         get(_target, keyProp): MethodMap | undefined {
             if (typeof keyProp !== 'string' || keyProp === 'then') return undefined;
@@ -61,15 +62,18 @@ function namespace(
             if (!resolved) return undefined;
             const methods = getPluginServiceMethods().get(resolved.namespace) ?? {};
 
-            return new Proxy({} as MethodMap, {
-                get(_t, methodProp) {
-                    if (typeof methodProp !== 'string' || methodProp === 'then') {
-                        return undefined;
-                    }
-                    const method = methods[methodProp];
-                    return method ? call(resolved, method, methodProp) : undefined;
-                },
-            });
+            return new Proxy(
+                {},
+                {
+                    get(_t, methodProp) {
+                        if (typeof methodProp !== 'string' || methodProp === 'then') {
+                            return undefined;
+                        }
+                        const method = methods[methodProp];
+                        return method ? call(resolved, method, methodProp) : undefined;
+                    },
+                }
+            );
         },
     });
 }

@@ -6,7 +6,6 @@
  */
 
 import type { FieldValidator, RichTextAllow } from '@/types/fields';
-import type { JSONContent } from '@tiptap/core';
 import { Node } from '@tiptap/pm/model';
 import { findUnsafeLink } from './safe-links';
 import { schemaFor } from './schema';
@@ -57,7 +56,7 @@ export function validateRichTextDocument(
         return describe(error);
     }
 
-    const unsafe = findUnsafeLink(value as JSONContent);
+    const unsafe = findUnsafeLink(value);
     if (unsafe !== null) {
         return `Invalid rich text: link href uses an unsafe scheme (${truncate(unsafe)})`;
     }

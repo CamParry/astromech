@@ -129,9 +129,9 @@ export function useEntryForm<TSaved = Entry>({
         defaultValues: {
             title: defaultValues?.title ?? '',
             slug: defaultValues?.slug ?? '',
-            status: defaultValues?.status ?? ('unpublished' as EntryStatus),
+            status: defaultValues?.status ?? 'unpublished',
             publishedAt: defaultValues?.publishedAt ?? '',
-            fields: defaultValues?.fields ?? ({} as Record<string, unknown>),
+            fields: defaultValues?.fields ?? {},
         },
         onSubmit: async ({ value }) => {
             const publishing = publishIntentRef.current;

@@ -278,7 +278,7 @@ export function EntryNewPage({
         return api.create({
             type,
             data: { ...payload, ...(hasI18n ? { locale: requestedLocale } : {}) },
-        }) as Promise<Entry>;
+        });
     }
 
     function handleModalCancel(): void {

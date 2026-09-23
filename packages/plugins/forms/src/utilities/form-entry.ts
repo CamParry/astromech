@@ -5,7 +5,7 @@ import { FORM_TYPE } from '../types';
 
 /** An entry's stored field values. */
 export function entryFields(entry: Entry): Record<string, unknown> {
-    return (entry.fields ?? {}) as Record<string, unknown>;
+    return entry.fields ?? {};
 }
 
 /**
@@ -23,7 +23,7 @@ export async function loadForm(ctx: PluginContext, slug: unknown): Promise<Entry
         full: true,
     });
 
-    const form = (data as Entry[])[0];
+    const form = data[0];
     if (!form) return null;
     if (form.status !== 'published') return null;
     // Absent means "on": the field's declared default is true.

@@ -46,6 +46,7 @@ export function formatDatetimeForInput(value: unknown): string {
 export function formatValueForInput(value: unknown, fieldType: FieldTypeName): string {
     if (value == null) return '';
 
+    // eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check -- every other field type displays as its string form
     switch (fieldType) {
         case 'date':
             return formatDateForInput(value);

@@ -107,7 +107,7 @@ export function useBlocksField({
                     if (b._id !== id) return b;
                     if (b._disabled === true) {
                         const { _disabled: _removed, ...rest } = b;
-                        return rest as BlockWithId;
+                        return rest;
                     }
                     return { ...b, _disabled: true };
                 })
@@ -125,7 +125,7 @@ export function useBlocksField({
                     if (b._id !== id) return b;
                     if (title === undefined || title === '') {
                         const { _title: _removed, ...rest } = b;
-                        return rest as BlockWithId;
+                        return rest;
                     }
                     return { ...b, _title: title };
                 })

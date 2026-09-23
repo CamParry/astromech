@@ -82,8 +82,7 @@ export async function restoreVersion<R, V extends StoredVersion>(params: {
     if (!version || version.contentId !== current.contentId) {
         throw new ResourceNotFoundError(spec.kind, params.address);
     }
-    const fields = ((version.fields as JsonObject | null) ??
-        current.fields) as JsonObject;
+    const fields = (version.fields as JsonObject | null) ?? current.fields;
     return transaction(async () => {
         await snapshotVersion(spec, versions, current, params.user);
         return params.write({ fields, columns: pick(version, spec.versionedColumns) });

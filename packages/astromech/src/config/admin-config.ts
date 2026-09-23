@@ -7,7 +7,6 @@ import type {
     AdminConfig,
     AdminEntryType,
     AdminGlobal,
-    ResolvedAdminPage,
     ResolvedEntryType,
     ResolvedGlobal,
 } from '@/types/config';
@@ -75,7 +74,7 @@ export function buildAdminConfig(
                 label: resolvePluginLabel(p, identity),
                 permissionNamespace: identity.permissionNamespace,
                 nav: derivePluginNav(identity, p, resolvedConfig),
-                pages: derivePluginPages(identity, p) as ResolvedAdminPage[],
+                pages: derivePluginPages(identity, p),
             };
         }),
         basePath: resolvedConfig.basePath,

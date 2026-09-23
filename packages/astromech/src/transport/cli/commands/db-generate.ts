@@ -19,9 +19,7 @@ import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 /** Load an ops file's default export, failing loudly if it is not a function. */
 async function loadOpsAuthor(path: string): Promise<MigrationOpsAuthor> {
     const jiti = createJiti(import.meta.url);
-    const mod = (await jiti.import(resolve(process.cwd(), path))) as {
-        default?: unknown;
-    };
+    const mod = await jiti.import<{ default?: unknown }>(resolve(process.cwd(), path));
     if (typeof mod.default !== 'function') {
         throw new Error(
             `[astromech db:generate] --ops file "${path}" must default-export a function ` +

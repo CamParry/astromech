@@ -216,10 +216,7 @@ export function compileWhere<D extends Table>(
                     conditions.push(eb(ref, 'in', listOperand(key, 'in', col, value)));
                 } else if (value instanceof Date) {
                     conditions.push(eb(ref, '=', serialize(col, value)));
-                } else if (
-                    typeof value === 'object' &&
-                    isOperatorObject(col, value as object)
-                ) {
+                } else if (typeof value === 'object' && isOperatorObject(col, value)) {
                     conditions.push(
                         ...operatorConditions(
                             eb,

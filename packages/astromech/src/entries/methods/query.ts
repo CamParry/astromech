@@ -55,9 +55,7 @@ export const queryEntries = defineServiceMethod({
 
         const config = ctx.config;
         const typeParam = params.type;
-        const types = Array.isArray(typeParam)
-            ? Array.from(typeParam)
-            : [typeParam as string];
+        const types = Array.isArray(typeParam) ? Array.from(typeParam) : [typeParam];
 
         // The query goes to the first type's repository, and a custom table
         // holds its own type alone, so a list mixing one with other types would

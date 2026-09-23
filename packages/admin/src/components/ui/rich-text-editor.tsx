@@ -328,6 +328,7 @@ export function RichTextEditor({
                     isBalance: false,
                     canUndo: false,
                     canRedo: false,
+                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- widens the selector's inferred return type to `BlockValue`
                     currentBlock: 'paragraph' as BlockValue,
                     linkHref: '',
                     linkTarget: '',

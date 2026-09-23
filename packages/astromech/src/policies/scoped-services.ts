@@ -140,6 +140,7 @@ function scopePlugins(ctx: AppContext, permissions: Permissions): PluginServiceN
         scoped[identity.serviceKey] = wrapped;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- a plugin augments `PluginServiceNamespace`, and in its program `scoped` is not one
     return scoped as PluginServiceNamespace;
 }
 

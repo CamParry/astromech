@@ -68,7 +68,7 @@ export function createMcpServer(
         }
 
         try {
-            const result = await invoke((args ?? {}) as Record<string, unknown>);
+            const result = await invoke(args ?? {});
             return {
                 content: [{ type: 'text' as const, text: toToolResultText(result) }],
             };

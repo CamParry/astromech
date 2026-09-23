@@ -21,13 +21,13 @@ export function createVersionsRepository<V extends Table>(
     /** Every version of a content row, newest first. */
     async function list(contentId: ContentRowId): Promise<TableSelect<V>[]> {
         return repository.findMany({
-            where: { contentId } as never,
+            where: { contentId },
             orderBy: [['version', 'desc']] as never,
         });
     }
 
     async function get(id: string): Promise<TableSelect<V> | null> {
-        return repository.findOne({ id } as never);
+        return repository.findOne({ id });
     }
 
     /** Write one snapshot. A resource's own snapshot columns pass through. */

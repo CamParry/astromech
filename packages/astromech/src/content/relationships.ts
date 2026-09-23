@@ -51,7 +51,7 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
      * that wrote the row, after that write, so the re-read sees it.
      */
     async function sync(config: ResolvedConfig, id: string): Promise<void> {
-        const owner = await createRepository(shape.table).findOne({ id } as never);
+        const owner = await createRepository(shape.table).findOne({ id });
         if (!owner) return;
         const rows = await createRepository(shape.contentTable).findMany({
             where: { [shape.ownerColumn]: id },

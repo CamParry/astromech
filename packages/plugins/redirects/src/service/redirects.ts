@@ -4,7 +4,6 @@
  */
 
 import type { RedirectFields, RedirectMatch, RedirectStatus } from '../types';
-import type { Entry } from 'astromech';
 import { defineServiceMethod, z } from 'astromech';
 import { REDIRECT_TYPE } from '../types';
 
@@ -33,7 +32,7 @@ export const redirectsService = {
 
             // An enabled rule wins over a disabled one for the same path; a rule
             // with no `enabled` value counts as enabled.
-            const match = (data as Entry[]).find(
+            const match = data.find(
                 (entry) => (entry.fields as RedirectFields).enabled !== false
             );
             if (!match) return null;

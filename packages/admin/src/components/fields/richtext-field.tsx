@@ -1,6 +1,6 @@
 import type { RichTextEditorProps } from '../ui/rich-text-editor';
 import type { JSONContent } from '@tiptap/core';
-import type { BaseFieldProps, RichTextAllow } from 'astromech';
+import type { BaseFieldProps } from 'astromech';
 import React from 'react';
 import { RichTextEditor } from '../ui/rich-text-editor';
 
@@ -13,7 +13,7 @@ export function coerceToDoc(value: unknown): JSONContent | undefined {
     if (value === null || value === undefined) return undefined;
 
     if (typeof value === 'object' && !Array.isArray(value)) {
-        return value as JSONContent;
+        return value;
     }
 
     if (typeof value === 'string' && value.trim() !== '') {
@@ -40,7 +40,7 @@ export function RichtextField({
     onChange,
     disabled,
 }: BaseFieldProps): React.ReactElement {
-    const allow = field.allow as RichTextAllow | undefined;
+    const allow = field.allow;
     const docValue = coerceToDoc(value);
 
     function handleChange(json: JSONContent): void {

@@ -84,24 +84,24 @@ function passesPreviewRowFilter(record: VisibleRecord): boolean {
  */
 function structuralStrip(value: JsonValue): JsonValue {
     if (Array.isArray(value)) {
-        const filtered = (value as JsonValue[]).filter(
+        const filtered = value.filter(
             (item) =>
                 !(
                     item !== null &&
                     typeof item === 'object' &&
                     !Array.isArray(item) &&
-                    (item as JsonObject)[RESERVED_KEY.disabled] === true
+                    item[RESERVED_KEY.disabled] === true
                 )
         );
         return filtered.map((item) => structuralStrip(item));
     }
 
     if (value !== null && typeof value === 'object') {
-        const obj = value as JsonObject;
+        const obj = value;
         const result: JsonObject = {};
         for (const [k, v] of Object.entries(obj)) {
             if (PUBLIC_STRIPPED_KEYS.has(k)) continue;
-            result[k] = structuralStrip(v as JsonValue);
+            result[k] = structuralStrip(v);
         }
         return result;
     }

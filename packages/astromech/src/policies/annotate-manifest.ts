@@ -4,7 +4,7 @@
  * in `policies/scoped-services.ts` is, and holds regardless of this.
  */
 
-import type { ManifestMethod, Permission, Role } from '@/types/index';
+import type { ManifestMethod, Role } from '@/types/index';
 import { can } from '@/permissions/roles';
 
 export type AnnotatedManifestMethod = ManifestMethod & {
@@ -28,7 +28,7 @@ function allowedFor(
     }
     if (method.permission === null) return true; // ungated
     if (!role) return false;
-    return can(role, method.permission as Permission);
+    return can(role, method.permission);
 }
 
 /** Annotate every method with whether `role` may call it. */

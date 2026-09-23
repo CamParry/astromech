@@ -12,7 +12,7 @@ export function withDefaults<T extends object>(
     for (const key of Object.keys(options) as (keyof T)[]) {
         const value = options[key];
         if (value !== undefined) {
-            result[key] = value as Required<T>[keyof T];
+            result[key] = value;
         }
     }
     return result;

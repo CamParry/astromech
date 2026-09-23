@@ -165,7 +165,7 @@ function UserEditBody({
         namespace,
         defaultValues: {
             title: user.name,
-            fields: user.fields as Record<string, unknown>,
+            fields: user.fields,
         },
         hasSlug: false,
         hasStatuses: false,

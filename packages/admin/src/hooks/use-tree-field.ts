@@ -184,7 +184,7 @@ export function useTreeField({
                             ? n._disabled === true
                                 ? (() => {
                                       const { _disabled: _removed, ...rest } = n;
-                                      return rest as TreeNode;
+                                      return rest;
                                   })()
                                 : { ...n, _disabled: true }
                             : n;

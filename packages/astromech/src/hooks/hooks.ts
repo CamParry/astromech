@@ -28,7 +28,7 @@ export function addHook<E extends HookEvent>(
     handler: HookCallback<HookPayloadFor<E>>
 ): void {
     const list = handlers.get(event) ?? [];
-    list.push(handler as HookCallback<unknown>);
+    list.push(handler);
     handlers.set(event, list);
 }
 
@@ -48,7 +48,7 @@ export async function runHook<E extends HookEvent>(
         const result = await handler(current, ctx);
         if (result !== undefined) current = result;
     }
-    return current as HookPayloadFor<E>;
+    return current;
 }
 
 /** Drop every registered handler. Plugin re-registration starts from empty. */

@@ -86,7 +86,7 @@ export default defineCommand({
         const prefix = pluginTablePrefix(pluginNamespace(pkg));
         const tablesPath = resolve(process.cwd(), args.tables);
         const jiti = createJiti(import.meta.url);
-        const mod = (await jiti.import(tablesPath)) as Record<string, unknown>;
+        const mod = await jiti.import<Record<string, unknown>>(tablesPath);
         const tables = collectTables(mod);
 
         if (tables.length === 0) {

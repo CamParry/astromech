@@ -17,9 +17,7 @@ export async function loadAppMigrations(dir: string): Promise<MigrationProvider>
     const { createJiti } = await import('jiti');
     const jiti = createJiti(import.meta.url);
     const file = resolve(dir, 'index.ts');
-    const mod = (await jiti.import(file)) as {
-        migrationProvider?: MigrationProvider;
-    };
+    const mod = await jiti.import<{ migrationProvider?: MigrationProvider }>(file);
     if (!mod.migrationProvider) {
         throw new Error(
             `${file} does not export "migrationProvider". Run \`astromech db:generate\` to regenerate it.`

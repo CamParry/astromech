@@ -38,6 +38,10 @@ function describeReference(reference: AiContextReference): string {
             return sanitizedId === undefined
                 ? `Entry list for type \`${sanitizedType}\` (\`${sanitizedLabel}\`)`
                 : `Entry \`${sanitizedLabel}\` (type \`${sanitizedType}\`, id \`${sanitizedId}\`)`;
+        case 'globals':
+            return sanitizedId === undefined
+                ? `Globals (\`${sanitizedLabel}\`)`
+                : `Global \`${sanitizedLabel}\` (key \`${sanitizedId}\`)`;
         case 'media':
             return sanitizedId === undefined
                 ? `Media library (\`${sanitizedLabel}\`)`
@@ -48,8 +52,6 @@ function describeReference(reference: AiContextReference): string {
                 : `User \`${sanitizedLabel}\` (id \`${sanitizedId}\`)`;
         case 'pages':
             return withId(`Admin page \`${sanitizedLabel}\``, sanitizedId);
-        default:
-            break;
     }
     return `${sanitize(kind)} \`${sanitizedLabel}\``;
 }

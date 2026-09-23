@@ -143,7 +143,7 @@ export function createContentRepository<
                 `${ownerKey}.${column} as ${ownerAlias(column)}` as never
             );
         }
-        return query as unknown as JoinedQuery;
+        return query;
     }
 
     async function count(where: JoinedWhere): Promise<number> {
@@ -358,7 +358,7 @@ export function createContentRepository<
         const existing = await findCanonical(ref.id, locale, true);
 
         if (!existing) {
-            const ownRow = (await owners.findOne({ id: ref.id } as never)) as Record<
+            const ownRow = (await owners.findOne({ id: ref.id })) as Record<
                 string,
                 unknown
             > | null;
@@ -449,7 +449,7 @@ export function createContentRepository<
                 [ownerColumn]: ref.id,
                 locale: ref.locale ?? defaultLocale(),
                 stagedFor: { ne: null },
-            } as never);
+            });
         },
     };
 
@@ -480,7 +480,7 @@ export function createContentRepository<
                     [ownerColumn]: id,
                     locale: { ne: excludeLocale },
                     ...(hasStagedFor ? { stagedFor: null } : {}),
-                } as never,
+                },
             });
 
             for (const sibling of siblings) {

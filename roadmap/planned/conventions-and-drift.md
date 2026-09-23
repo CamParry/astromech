@@ -60,7 +60,7 @@ visible where it happens and leaves the judgement to review.
       (`entries/repository/types.ts`, `entries/repository/table.ts`,
       `transport/tools/dispatch.ts`, `plugins/define-service-method.ts`,
       `database/drivers/d1.ts`).
-- [ ] Typed lint for correctness only (`switch-exhaustiveness-check`,
+- [x] Typed lint for correctness only (`switch-exhaustiveness-check`,
       `no-unnecessary-type-assertion`) through `projectService`; measure the
       cost against `verify:fast`, and give it a check of its own if it is
       slow. The missing `globals` case in `utilities/ai-context.ts` is the

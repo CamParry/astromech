@@ -1,11 +1,6 @@
 import type { EntryRecord } from '../internal/records';
 import type { EntryRepository } from '../repository/types';
-import type {
-    Entry,
-    EntryDuplicateOverrides,
-    JsonObject,
-    ResolvedConfig,
-} from '@/types/index';
+import type { Entry, EntryDuplicateOverrides, ResolvedConfig } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
@@ -112,7 +107,7 @@ async function copyLocale(params: {
         title: overrides?.title ?? row.title,
         slug: baseSlug ? await repository.uniqueSlug(type, locale, baseSlug) : null,
         locale,
-        fields: { ...(row.fields ?? {}), ...(overrides?.fields ?? {}) } as JsonObject,
+        fields: { ...(row.fields ?? {}), ...(overrides?.fields ?? {}) },
         status,
         publishedAt: status === 'published' ? new Date() : null,
         createdBy,

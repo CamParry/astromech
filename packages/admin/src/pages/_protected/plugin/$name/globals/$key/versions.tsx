@@ -4,7 +4,6 @@
  * link here.
  */
 
-import type { GlobalsService } from 'astromech';
 import { createFileRoute } from '@tanstack/react-router';
 import { astromechClient } from 'astromech/fetch';
 import React from 'react';
@@ -20,7 +19,7 @@ function PluginGlobalVersionsPage(): React.ReactElement {
     const { name, key } = Route.useParams();
     const { locale } = Route.useSearch();
     const { t } = useTranslation();
-    const api = astromechClient.globals as unknown as GlobalsService;
+    const api = astromechClient.globals;
     const binding = buildPluginGlobalsBinding(adminConfig, name, key, api);
     if (!binding) {
         return (

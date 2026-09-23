@@ -304,7 +304,7 @@ export function RepeaterField({
                 if (i !== index) return item;
                 if (title === undefined || title === '') {
                     const { _title: _removed, ...rest } = item;
-                    return rest as ItemWithId;
+                    return rest;
                 }
                 return { ...item, _title: title };
             })
@@ -319,7 +319,7 @@ export function RepeaterField({
                 if (i !== index) return item;
                 if (item._disabled === true) {
                     const { _disabled: _removed, ...rest } = item;
-                    return rest as ItemWithId;
+                    return rest;
                 }
                 return { ...item, _disabled: true };
             })

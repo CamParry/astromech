@@ -49,9 +49,7 @@ export function resolveAccess(
     }
     return {
         kind: 'permission',
-        permissions: [
-            resolvePluginPermission(namespace, access.permission) as Permission,
-        ],
+        permissions: [resolvePluginPermission(namespace, access.permission)],
     };
 }
 

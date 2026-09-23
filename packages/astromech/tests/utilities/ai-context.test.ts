@@ -73,6 +73,20 @@ describe('formatAiContextMessage', () => {
         });
     });
 
+    describe('globals', () => {
+        it('renders a single global with its key', () => {
+            expect(lineFor({ kind: 'globals', id: 'site', label: 'Site settings' })).toBe(
+                'Global `Site settings` (key `site`)'
+            );
+        });
+
+        it('renders the globals index without a key', () => {
+            expect(lineFor({ kind: 'globals', label: 'Globals' })).toBe(
+                'Globals (`Globals`)'
+            );
+        });
+    });
+
     describe('media', () => {
         it('renders a single item with id', () => {
             expect(lineFor({ kind: 'media', id: 'm1', label: 'logo.png' })).toBe(

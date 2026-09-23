@@ -15,11 +15,11 @@ import type {
 } from './types';
 import type { ContentRowId, JoinedWhere } from '@/content/repository/types';
 import type { Where } from '@/database/repository/where';
-import type { DB, Db } from '@/database/types';
+import type { Db } from '@/database/types';
 import type { Capability } from '@/entries/capabilities';
 import type { EntryRow as EntriesTableRow, EntryContentRow } from '@/entries/tables';
 import type { JsonObject, ReferencesFilter, SortOption } from '@/types/index';
-import type { Expression, SqlBool, Updateable } from 'kysely';
+import type { Expression, SqlBool } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
@@ -129,7 +129,7 @@ function buildListWhere(
                     conditions.push(
                         compileWhere(
                             entryContentTable,
-                            { [key]: value } as Where<typeof entryContentTable>,
+                            { [key]: value },
                             (column) => `entryContent.${column}`
                         )(eb)
                     );
@@ -364,7 +364,7 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
                         deletedAt: null,
                         updatedAt: new Date(),
                         ...(actor === undefined ? {} : { updatedBy: actor }),
-                    }) as unknown as Updateable<DB['entries']>
+                    })
                 )
                 .where((eb) =>
                     eb.and([eb('id', '=', id), eb('deletedAt', 'is not', null)])

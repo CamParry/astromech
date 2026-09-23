@@ -28,10 +28,10 @@ export default defineCommand({
         try {
             // Dynamic import keeps @modelcontextprotocol/sdk out of the module
             // graph until the user actually runs `astromech mcp`.
-            mod = (await import(
+            mod = await import(
                 /* @vite-ignore */
                 '@/transport/mcp/index'
-            )) as { runMcpServer: RunMcpServer };
+            );
         } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
             if (

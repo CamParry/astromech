@@ -479,12 +479,11 @@ export function EntriesListPage({
     );
 
     const availableViews = entryType?.views ?? ['list'];
-    const defaultView: ViewMode =
-        (entryType?.defaultView as ViewMode | undefined) ?? 'list';
+    const defaultView: ViewMode = entryType?.defaultView ?? 'list';
     const showViewToggle =
         availableViews.includes('list') && availableViews.includes('grid');
 
-    const urlSearch = useSearch({ strict: false }) as EntriesListSearch;
+    const urlSearch = useSearch({ strict: false });
 
     const hasI18n = capabilities?.translatable === true;
     const configuredLocales = adminConfig.locales;
@@ -592,6 +591,7 @@ export function EntriesListPage({
     // Evaluate a derived column's declarative `requires` gate against the page's
     // runtime capability/visibility flags.
     function capabilityGate(col: TableColumn): boolean {
+        if (col.requires == null) return true;
         switch (col.requires) {
             case 'title':
                 return hasTitle;
@@ -603,8 +603,6 @@ export function EntriesListPage({
                 return showLocaleColumn;
             case 'translatable':
                 return hasI18n;
-            default:
-                return true;
         }
     }
     const visibleColumnDefs = resolvedTable.columns.filter(

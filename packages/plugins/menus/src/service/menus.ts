@@ -5,7 +5,7 @@
  */
 
 import type { MenuConfig, MenuItem } from '../types';
-import type { AnyServiceMethod, Entry, PluginContext } from 'astromech';
+import type { AnyServiceMethod, PluginContext } from 'astromech';
 import { defineServiceMethod, resolveEntryUrl, z } from 'astromech';
 
 /** Raw stored node shape (with reserved underscore keys). */
@@ -37,14 +37,11 @@ async function resolveEntryRef(
         // the default locale, so a menu never loses an item to a missing
         // translation.
         const entry =
-            ((await ctx.entries.get({
+            (await ctx.entries.get({
                 type,
                 id: entryId,
                 ...(locale ? { locale } : {}),
-            })) as Entry | null) ??
-            (locale
-                ? ((await ctx.entries.get({ type, id: entryId })) as Entry | null)
-                : null);
+            })) ?? (locale ? await ctx.entries.get({ type, id: entryId }) : null);
         if (entry) return resolveEntryUrl(config.url, entry);
     }
     return null;
