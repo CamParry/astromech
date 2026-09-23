@@ -114,7 +114,7 @@ become `_`.
 The two forms split cleanly by audience:
 
 - **namespace** — everything that lives in your database or your permission
-  strings: `plugin_acme_seo_settings`, `plugin:acme_seo:view`, a global's
+  strings: `plugin_acme_seo_settings`, `plugin:acme_seo:read`, a global's
   qualified key `acme_seo/settings`, the i18n bundle
   key, and the admin URL `/cms/plugin/acme_seo/*`.
 - **service key** — everything an API caller says: `Astromech.plugins.acmeSeo`
@@ -309,7 +309,7 @@ export const overviewPage = defineAdminPage({
     label: 'Overview',
     icon: 'ChartBar',
     component: './admin/pages/overview-page.tsx',
-    permission: 'view', // a bare key → plugin:<namespace>:view
+    permission: 'read', // a bare key → plugin:<namespace>:read
 });
 ```
 
@@ -341,7 +341,7 @@ Plugin paths lead with a `/` (`'/overview'` → `/cms/plugin/seo/overview`);
 **Do not namespace the path yourself.** A declaration is relative by design and
 there is no double-prefix guard — writing `path: '/myplugin/overview'` inside
 `@acme/myplugin` gets you `/cms/plugin/myplugin/myplugin/overview`. The same rule holds for
-`permission`, which takes a bare key (`'view'` → `plugin:<namespace>:view`).
+`permission`, which takes a bare key (`'read'` → `plugin:<namespace>:read`).
 
 Page components call `useAstromechPlugin()` (from `astromech/ui/app`) for context:
 
@@ -445,7 +445,7 @@ you never write a prefix and never have to know one.
 import { definePermissions } from 'astromech';
 
 export const ratingPermissions = definePermissions({
-    view: {
+    read: {
         label: 'View rating reports',
         description: 'See the ratings overview dashboard.',
     },
@@ -469,13 +469,13 @@ enumeration is the point of an opt-in model:
 roles: {
     editor: {
         name: 'Editor',
-        permissions: [...permissionsForBuiltInRole('editor'), ...myPlugin.permissions('view', 'export')],
+        permissions: [...permissionsForBuiltInRole('editor'), ...myPlugin.permissions('read', 'export')],
     },
 }
 ```
 
-Keys are literal-typed, so `myPlugin.permissions('view')` type-checks and
-`myPlugin.permissions('viwe')` does not — and an unknown key throws at config
+Keys are literal-typed, so `myPlugin.permissions('read')` type-checks and
+`myPlugin.permissions('raed')` does not — and an unknown key throws at config
 load rather than silently granting nothing. Calling `permissions()` with no
 keys throws too.
 

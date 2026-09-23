@@ -23,7 +23,7 @@ export type ChatSession = {
 };
 
 /** The `getSession` / `clearSession` service methods for the signed-in user's chat. */
-export function buildSessionsService(options: ResolvedAssistantOptions) {
+export function createSessionsService(options: ResolvedAssistantOptions) {
     return {
         getSession: defineServiceMethod({
             access: { permission: 'use' },

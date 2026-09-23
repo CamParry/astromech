@@ -43,7 +43,7 @@ export type SubmitResult = { ok: true; id: string } | { ok: false; errors: Field
 export const FORM_ERROR_KEY = '_form';
 
 /** Build the service surface from the resolved plugin options. */
-export function buildFormsService(
+export function createFormsService(
     options: Required<Pick<FormsOptions, 'storeMeta' | 'rateLimit'>> & {
         spam?: SpamProvider | undefined;
     }

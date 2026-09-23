@@ -1,5 +1,5 @@
 /**
- * The seo plugin's public `sitemap` and `meta` methods and its `overview`
+ * The seo plugin's public `getSitemap` and `getMeta` methods and its `getOverview`
  * report, against a real database and the real plugin registration. Calls go
  * through `pluginServices`, which is trusted server code and skips `access`.
  */
@@ -32,12 +32,13 @@ function callSeo(method: string, input?: unknown): Promise<unknown> {
     return fn(input);
 }
 
-const sitemap = (): Promise<SeoSitemap> => callSeo('sitemap') as Promise<SeoSitemap>;
+const sitemap = (): Promise<SeoSitemap> => callSeo('getSitemap') as Promise<SeoSitemap>;
 
 const meta = (type: string, slug: string): Promise<SeoResolvedMeta | null> =>
-    callSeo('meta', { type, slug }) as Promise<SeoResolvedMeta | null>;
+    callSeo('getMeta', { type, slug }) as Promise<SeoResolvedMeta | null>;
 
-const overview = (): Promise<SeoOverview> => callSeo('overview') as Promise<SeoOverview>;
+const overview = (): Promise<SeoOverview> =>
+    callSeo('getOverview') as Promise<SeoOverview>;
 
 /** The one entries service, typed to the wide API for these round-trips. */
 const entries = (): EntriesService => localEntries as unknown as EntriesService;

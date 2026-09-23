@@ -62,7 +62,7 @@ export const seoService = {
      * Published entries across the plugin footprint, as sitemap URL data.
      * Public so the app's `/sitemap.xml` endpoint can call it.
      */
-    sitemap: defineServiceMethod({
+    getSitemap: defineServiceMethod({
         access: 'public',
         summary: 'List sitemap URLs for all SEO-tracked entries.',
         input: noInput(),
@@ -86,7 +86,7 @@ export const seoService = {
      * Resolved meta for one published entry: the `seo` field with fallbacks
      * to the entry title and the default OG image setting.
      */
-    meta: defineServiceMethod({
+    getMeta: defineServiceMethod({
         access: 'public',
         summary: 'Resolve the SEO meta tags for one entry by type + slug.',
         input: z.object({ type: z.string(), slug: z.string() }),
@@ -116,8 +116,8 @@ export const seoService = {
     }),
 
     /** SEO health across every entry in the footprint — drives the overview dashboard page. */
-    overview: defineServiceMethod({
-        access: { permission: 'view' },
+    getOverview: defineServiceMethod({
+        access: { permission: 'read' },
         summary: 'Report SEO coverage across all tracked entries.',
         input: noInput(),
         mutates: false,

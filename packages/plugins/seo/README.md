@@ -2,7 +2,7 @@
 
 Search metadata for any entry type: a composed `seo` field group (meta title +
 description with length recommendations and a search preview), an SEO health
-dashboard, a default Open Graph image setting, and public `sitemap` / `meta`
+dashboard, a default Open Graph image setting, and public `getSitemap` / `getMeta`
 service methods. Non-AI affordances only — AI metadata writing is a future phase.
 
 ## Install
@@ -19,7 +19,7 @@ export default defineConfig({
         page: {
             single: 'Page',
             plural: 'Pages',
-            url: '/{slug}', // lets `sitemap` / `meta` resolve this type's paths
+            url: '/{slug}', // lets `getSitemap` / `getMeta` resolve this type's paths
             fields: [
                 // ...your fields
                 seoSection(), // adds the SEO field group
@@ -31,7 +31,7 @@ export default defineConfig({
 
 Attachment is explicit composition — the plugin never injects fields. Every
 entry type whose `fields` include `seoSection()` is part of the plugin's
-_footprint_; the overview dashboard and the `sitemap` method cover exactly
+_footprint_; the overview dashboard and the `getSitemap` method cover exactly
 those types. Drop `seoSection()` inside an unnamed tab,
 `fields.tab({ label: 'SEO', fields: [seoSection()] })`, to give it its own tab
 on the edit page. A named tab would store the group under the tab's name.
@@ -42,7 +42,7 @@ seoSection({ label: 'Search' }); // group heading; defaults to a localized "SEO"
 
 ## Paths
 
-`seo()` takes no options. The `sitemap` and `meta` methods derive each entry's
+`seo()` takes no options. The `getSitemap` and `getMeta` methods derive each entry's
 public path from its entry type's `url` template (e.g. `url: '/blog/{slug}'`) —
 the same template that powers the admin **View** link and redirect generation.
 Entry types without a `url` template are skipped, so SEO never guesses a path.
@@ -52,7 +52,7 @@ Entry types without a `url` template are skipped, so SEO never guesses a path.
 The plugin declares one permission, which the factory's `permissions()`
 accessor returns already namespaced:
 
-- `view` — read the SEO overview dashboard, i.e. `plugin:seo:view`
+- `read` — read the SEO overview dashboard, i.e. `plugin:seo:read`
 
 Nothing is granted automatically: `admin` holds `*` and so has it already,
 every other role opts in by naming the key.
@@ -69,7 +69,7 @@ export default defineConfig({
             name: 'Content Editor',
             permissions: [
                 ...permissionsForBuiltInRole('editor'),
-                ...seo.permissions('view'),
+                ...seo.permissions('read'),
             ],
         },
     },
@@ -82,14 +82,14 @@ export default defineConfig({
   description inputs with live character counters
   (title 30–60, description 70–160 characters), and a search-result preview.
 - **Overview dashboard** — `/admin/plugin/seo/overview` (requires
-  `plugin:seo:view`) shows SEO health totals and a per-entry
+  `plugin:seo:read`) shows SEO health totals and a per-entry
   breakdown across the footprint.
 - **Settings** — `/admin/plugin/seo/settings` holds the default Open Graph
-  image, returned by `meta` when an entry has no image of its own.
+  image, returned by `getMeta` when an entry has no image of its own.
 
 ## Sitemap (recipe)
 
-The plugin exposes **data**; your app owns the route. The `sitemap` method is
+The plugin exposes **data**; your app owns the route. The `getSitemap` method is
 `public` and returns the published entries across the footprint:
 
 ```ts
@@ -101,7 +101,7 @@ const SITE = 'https://example.com';
 
 export const GET: APIRoute = async () => {
     const app = await getAstromech();
-    const { urls } = await app.plugins.seo.sitemap();
+    const { urls } = await app.plugins.seo.getSitemap();
     const body =
         '<?xml version="1.0" encoding="UTF-8"?>\n' +
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
@@ -120,7 +120,7 @@ export const GET: APIRoute = async () => {
 
 ## Meta tags (recipe)
 
-`meta` resolves one published entry's metadata with fallbacks: the entry title
+`getMeta` resolves one published entry's metadata with fallbacks: the entry title
 when no meta title is set, and the default OG image setting:
 
 ```astro
@@ -129,7 +129,7 @@ when no meta title is set, and the default OG image setting:
 import { getAstromech } from 'astromech';
 
 const app = await getAstromech();
-const meta = await app.plugins.seo.meta({
+const meta = await app.plugins.seo.getMeta({
     type: 'page',
     slug: Astro.params.slug,
 });

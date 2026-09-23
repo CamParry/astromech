@@ -61,14 +61,14 @@ is where the two derived forms are actually distinguishable:
 
 ## Permissions
 
-The plugin declares one permission, `view`. The factory's `permissions()`
-accessor returns it already namespaced, as `plugin:demo_rating:view`. There are
+The plugin declares one permission, `read`. The factory's `permissions()`
+accessor returns it already namespaced, as `plugin:demo_rating:read`. There are
 no bundles — a role names the keys it grants:
 
 ```ts
 roles: {
     'content-editor': {
-        permissions: [...permissionsForBuiltInRole('editor'), ...rating.permissions('view')],
+        permissions: [...permissionsForBuiltInRole('editor'), ...rating.permissions('read')],
     },
 }
 ```
@@ -86,7 +86,7 @@ HTTP as `POST /cms/api/plugins/demoRating/describe`. The namespace form
 ## Admin surface
 
 - **Overview** — `/cms/plugin/demo_rating/overview` (requires
-  `plugin:demo_rating:view`).
+  `plugin:demo_rating:read`).
 - **Settings** — `/cms/plugin/demo_rating/globals/settings`, the `settings`
   global holding `minimumQuality` and `showInListing`. It is addressed as
   `demo_rating/settings` from `ctx.globals`.

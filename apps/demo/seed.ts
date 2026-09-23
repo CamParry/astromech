@@ -1432,7 +1432,7 @@ async function seed(): Promise<void> {
                     heading(2, text('Reading SEO data')),
                     para(
                         text('Call '),
-                        text('Astromech.plugins.seo.meta({ entry, locale })', 'code'),
+                        text('Astromech.plugins.seo.getMeta({ entry, locale })', 'code'),
                         text(
                             ' to get a resolved object with title, description, og:title, og:description, and canonical. Pass it to your '
                         ),
@@ -1441,7 +1441,7 @@ async function seed(): Promise<void> {
                     ),
                     heading(2, text('Sitemap')),
                     para(
-                        text('Astromech.plugins.seo.sitemap()', 'code'),
+                        text('Astromech.plugins.seo.getSitemap()', 'code'),
                         text(
                             ' returns all published entries with their URLs and locale alternates formatted for a '
                         ),

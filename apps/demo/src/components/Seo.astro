@@ -1,6 +1,6 @@
 ---
 /**
- * SEO head tags. Resolves via `app.plugins.seo.meta` when type+slug are
+ * SEO head tags. Resolves via `app.plugins.seo.getMeta` when type+slug are
  * given; falls back to props.
  */
 import type { Locale } from '../lib/site.ts';
@@ -8,11 +8,11 @@ import { getAstromech } from 'astromech';
 import { localizedPath } from '../lib/site.ts';
 
 interface Props {
-    /** Entry type — used for seo.meta lookup. */
+    /** Entry type — used for seo.getMeta lookup. */
     type?: string;
-    /** Entry slug — used for seo.meta lookup. */
+    /** Entry slug — used for seo.getMeta lookup. */
     slug?: string | null;
-    /** Fallback title when seo.meta returns nothing. */
+    /** Fallback title when seo.getMeta returns nothing. */
     title?: string;
     /** Fallback description. */
     description?: string | null;
@@ -50,7 +50,7 @@ let resolvedOgImage = propOgImage ?? null;
 if (type && slug) {
     try {
         const app = await getAstromech();
-        const meta = await app.plugins.seo.meta({ type, slug });
+        const meta = await app.plugins.seo.getMeta({ type, slug });
         if (meta) {
             resolvedTitle = meta.title ?? resolvedTitle;
             resolvedDescription = meta.description ?? resolvedDescription;

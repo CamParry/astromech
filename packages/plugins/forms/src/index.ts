@@ -10,7 +10,7 @@ import { definePlugin, withDefaults } from 'astromech';
 import { migrationProvider } from '../migrations/index';
 import { formEntryType } from './entries/form';
 import { submissionEntryType } from './entries/submission';
-import { buildFormsService } from './service/forms';
+import { createFormsService } from './service/forms';
 import { spamHook } from './spam/hook';
 import { submissionsTable } from './tables/submissions';
 import { FORMS_PACKAGE } from './types';
@@ -21,7 +21,7 @@ const tables = [submissionsTable] as const;
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
     interface AstromechPluginServices {
-        forms: ServiceInterface<ReturnType<typeof buildFormsService>>;
+        forms: ServiceInterface<ReturnType<typeof createFormsService>>;
     }
 
     // Puts this plugin's tables on a site's `db` handle.
@@ -62,7 +62,7 @@ export const forms = definePlugin((options?: FormsOptions) => {
         tables,
         migrations: migrationProvider,
         entries: [formEntryType, submissionEntryType],
-        service: buildFormsService({ storeMeta, rateLimit, spam }),
+        service: createFormsService({ storeMeta, rateLimit, spam }),
         hookEvents: ['forms:beforeSubmit', 'forms:afterSubmit'],
         // Registered through the same public extension point a third party
         // would use, and only when the site configured a provider.

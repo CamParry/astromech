@@ -1,7 +1,7 @@
 /**
  * @astromech/seo — search metadata for any entry type: a composed `seo` field
  * group, an SEO health dashboard, a default-OG-image global, and public
- * `sitemap` / `meta` service methods. Attach via `seoSection()` on an entry type's `fields`.
+ * `getSitemap` / `getMeta` service methods. Attach via `seoSection()` on an entry type's `fields`.
  */
 
 import type { ServiceInterface } from 'astromech';

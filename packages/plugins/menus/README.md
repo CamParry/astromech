@@ -15,7 +15,7 @@ menus/
   types.ts                MenuConfig / MenusOptions / MenuItem
   fields/menu-item.ts     menuItemFields — the node schema used at every depth of the tree
   pages/menus.ts          buildMenuPages() — one defineAdminPage per configured menu
-  service/menus.ts        buildMenusService() — the public `get` service method
+  service/menus.ts        createMenusService() — the public `get` service method
 ```
 
 ## Install

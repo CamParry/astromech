@@ -8,7 +8,7 @@ import type { MenuItem, MenusOptions } from './types';
 import type { ServiceInterface } from 'astromech';
 import { definePlugin, defineServiceMethod, z } from 'astromech';
 import { buildMenuGlobals } from './globals/menus';
-import { buildMenusService } from './service/menus';
+import { createMenusService } from './service/menus';
 
 /** Typed service shape — used only for the module augmentation. */
 const _menusServiceTyped = {
@@ -33,7 +33,7 @@ export type { MenuItem, MenuConfig, MenusOptions } from './types';
 export const menus = definePlugin((options?: MenusOptions) => {
     const menuConfigs = options?.menus ?? [];
 
-    const service = buildMenusService(menuConfigs);
+    const service = createMenusService(menuConfigs);
 
     return {
         package: '@astromech/menus',

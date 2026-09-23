@@ -1,7 +1,7 @@
 /**
  * SEO overview dashboard (`/admin/plugin/seo/overview`): SEO health totals
  * plus a per-entry breakdown across the plugin footprint, fed by the
- * `overview` service method.
+ * `getOverview` service method.
  */
 
 import type { SeoOverview } from '../../types';
@@ -29,11 +29,11 @@ function HealthBadge({ status }: { status: LengthStatus }): React.ReactElement {
 
 export default function SeoOverviewPage(): React.ReactElement {
     const { plugin, service, t, navigate } = useAstromechPlugin();
-    const seoService = service as { overview: () => Promise<SeoOverview> };
+    const seoService = service as { getOverview: () => Promise<SeoOverview> };
 
     const { data, isLoading, isError } = useQuery({
         queryKey: ['plugin', plugin, 'overview'],
-        queryFn: () => seoService.overview(),
+        queryFn: () => seoService.getOverview(),
     });
 
     if (isLoading) {

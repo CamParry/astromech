@@ -10,7 +10,7 @@ import { definePlugin, withDefaults } from 'astromech';
 import { migrationProvider } from '../migrations/index';
 import { assistantPermissions } from './permissions/assistant';
 import { chatRoutes } from './routes/chat';
-import { buildSessionsService } from './service/sessions';
+import { createSessionsService } from './service/sessions';
 import { approvalsTable } from './tables/approvals';
 import { sessionsTable } from './tables/sessions';
 import { ASSISTANT_PACKAGE } from './types';
@@ -47,7 +47,7 @@ export const assistant = definePlugin((options?: AssistantOptions) => {
         tables,
         migrations: migrationProvider,
         permissions: assistantPermissions,
-        service: buildSessionsService(resolved),
+        service: createSessionsService(resolved),
         // Streaming only — the chat response is server-sent events.
         rawRoutes: chatRoutes(resolved),
         admin: {

@@ -1,6 +1,6 @@
 /**
  * SEO overview dashboard — a component view at `/admin/plugin/seo/overview`,
- * gated on the plugin's `view` permission. The renderer lives in
+ * gated on the plugin's `read` permission. The renderer lives in
  * `admin/pages/overview-page.tsx`; this is its admin-page registration.
  */
 
@@ -11,5 +11,5 @@ export const overviewPage = defineAdminPage({
     label: 'Overview',
     icon: 'Gauge',
     component: './admin/pages/overview-page.tsx',
-    permission: 'view',
+    permission: 'read',
 });

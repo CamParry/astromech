@@ -173,7 +173,7 @@ export default defineConfig({
             name: 'Content Editor',
             permissions: [
                 ...permissionsForBuiltInRole('editor'),
-                ...seo.permissions('view'),
+                ...seo.permissions('read'),
                 // Redirects declares no permissions — its entry type's are
                 // derived by core, so a site enumerates the actions it grants.
                 ...entryPermissions(

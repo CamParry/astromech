@@ -11,5 +11,5 @@ export const overviewPage = defineAdminPage({
     label: 'Overview',
     icon: 'ChartBar',
     component: './admin/pages/overview-page.tsx',
-    permission: 'view',
+    permission: 'read',
 });

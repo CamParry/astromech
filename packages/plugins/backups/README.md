@@ -22,7 +22,7 @@ backups/
   migrations/                   generated — never hand-edited
   src/repository.ts             createRepository over the table — the only DB access
   src/backup.ts                 performBackup / rotate / resolveKeep — the core work
-  src/service/backups.ts        listRuns, triggerRun, deleteRun (JSON, over RPC)
+  src/service/backups.ts        list, run, delete (JSON, over RPC)
   src/routes/backups.ts         download + restore (raw routes — they stream)
   src/permissions/backups.ts    definePermissions — the grantable permission keys
   src/pages/backups.ts          defineAdminPage — the run history page
@@ -110,16 +110,16 @@ down. Grant `download` only to roles you would trust with the database itself.
 ## Service methods
 
 ```ts
-const { runs, capabilities } = await Astromech.plugins.backups.listRuns();
-const result = await Astromech.plugins.backups.triggerRun();
-await Astromech.plugins.backups.deleteRun({ id: run.id });
+const { runs, capabilities } = await Astromech.plugins.backups.list();
+const result = await Astromech.plugins.backups.run();
+await Astromech.plugins.backups.delete({ id: run.id });
 ```
 
 `capabilities` is feature-detected per request (`canDump`, `canRestore`) —
 whether a backup is even possible depends on the database driver, so the UI
 greys out actions rather than failing them.
 
-`triggerRun` and `deleteRun` return a result rather than throwing on the
+`run` and `delete` return a result rather than throwing on the
 expected failures: `{ ok: false, reason: 'already-running' }` and
 `{ ok: false, reason: 'not-found' }`.
 

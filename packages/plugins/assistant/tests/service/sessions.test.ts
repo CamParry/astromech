@@ -9,7 +9,7 @@ import type { FakeApprovals } from '../loop/fake-approvals';
 import type { FakeSessions } from '../sessions/fake-sessions';
 import type { ToolDefinition } from 'astromech';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildSessionsService } from '../../src/service/sessions';
+import { createSessionsService } from '../../src/service/sessions';
 import { approvalRow, fakeApprovals } from '../loop/fake-approvals';
 import { fakeSessions } from '../sessions/fake-sessions';
 
@@ -53,7 +53,7 @@ let approvals: FakeApprovals;
 
 /** What a session method's handler is called with. */
 type HandlerContext = Parameters<
-    ReturnType<typeof buildSessionsService>['getSession']['handler']
+    ReturnType<typeof createSessionsService>['getSession']['handler']
 >[1];
 
 /** A request context for `user`, carrying the one tool the fixtures name. */
@@ -71,7 +71,7 @@ function call<K extends 'getSession' | 'clearSession'>(
     user: { id: string } | null
 ): Promise<ChatSession | null> {
     return Promise.resolve(
-        buildSessionsService(OPTIONS)[method].handler(undefined, context(user))
+        createSessionsService(OPTIONS)[method].handler(undefined, context(user))
     );
 }
 

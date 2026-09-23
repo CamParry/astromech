@@ -402,7 +402,7 @@ export type PluginDefinition = PluginIdentity & {
  * from the package — and enumerates exactly what it grants.
  *
  * `Def` is the definition's own type, which is what keeps the keys literal —
- * `seo.permissions('view')` type-checks, `seo.permissions('viwe')` does not.
+ * `seo.permissions('read')` type-checks, `seo.permissions('raed')` does not.
  */
 export type PluginFactory<
     Options = void,

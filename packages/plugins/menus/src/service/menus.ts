@@ -92,7 +92,7 @@ async function walkNodes(
 }
 
 /** The `get` service method, scoped to the plugin's configured menus. */
-export function buildMenusService(
+export function createMenusService(
     configs: MenuConfig[]
 ): Record<string, AnyServiceMethod> {
     const configuredKeys = new Set(configs.map((c) => c.key));

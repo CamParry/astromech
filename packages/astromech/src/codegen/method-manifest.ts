@@ -209,7 +209,7 @@ function buildPluginServiceMethods(plugins: PluginDefinition[]): PluginManifestM
                 method: key,
                 access: normaliseAccess(serviceMethod.access),
                 // Mirror the route's enforcement: bare keys are plugin-scoped
-                // (`view` → `plugin:<ns>:view`); keys with a `:` pass through.
+                // (`read` → `plugin:<ns>:read`); keys with a `:` pass through.
                 permission:
                     typeof serviceMethod.access === 'object'
                         ? resolvePluginPermission(

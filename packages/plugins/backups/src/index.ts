@@ -13,7 +13,7 @@ import { settingsGlobal } from './globals/settings';
 import { backupsPage } from './pages/backups';
 import { backupsPermissions } from './permissions/backups';
 import { buildBackupRoutes } from './routes/backups';
-import { buildBackupsService } from './service/backups';
+import { createBackupsService } from './service/backups';
 import { backupRunsTable } from './tables/runs';
 import { BACKUPS_PACKAGE } from './types';
 
@@ -23,7 +23,7 @@ const tables = [backupRunsTable] as const;
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
     interface AstromechPluginServices {
-        backups: ServiceInterface<ReturnType<typeof buildBackupsService>>;
+        backups: ServiceInterface<ReturnType<typeof createBackupsService>>;
     }
 
     // Puts this plugin's tables on a site's `db` handle.
@@ -61,7 +61,7 @@ export const backups = definePlugin((options?: BackupsOptions) => {
             pages: [backupsPage],
             optimizeDeps: { include: ['@tanstack/react-query'] },
         },
-        service: buildBackupsService(keep),
+        service: createBackupsService(keep),
         // Streaming only — the JSON endpoints live on the service above.
         rawRoutes: buildBackupRoutes(keep),
         cron: [

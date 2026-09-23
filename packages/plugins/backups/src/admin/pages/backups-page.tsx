@@ -30,9 +30,9 @@ import React, { useState } from 'react';
  * routes and are called through `pluginFetch` / `downloadUrl` below.
  */
 type BackupsService = {
-    listRuns: () => Promise<ListRunsResult>;
-    triggerRun: () => Promise<TriggerRunResult>;
-    deleteRun: (input: { id: string }) => Promise<DeleteRunResult>;
+    list: () => Promise<ListRunsResult>;
+    run: () => Promise<TriggerRunResult>;
+    delete: (input: { id: string }) => Promise<DeleteRunResult>;
 };
 
 type ConfirmState =
@@ -97,11 +97,11 @@ export default function BackupsPage(): React.ReactElement {
 
     const { data, isLoading, isError } = useQuery<ListRunsResult>({
         queryKey: runsKey,
-        queryFn: () => backupsService.listRuns(),
+        queryFn: () => backupsService.list(),
     });
 
     const triggerMutation = useMutation({
-        mutationFn: () => backupsService.triggerRun(),
+        mutationFn: () => backupsService.run(),
         onSuccess: (result) => {
             if (!result.ok) {
                 toast({ message: t('backups.alreadyRunning'), variant: 'warning' });
@@ -140,7 +140,7 @@ export default function BackupsPage(): React.ReactElement {
     });
 
     const deleteMutation = useMutation({
-        mutationFn: (id: string) => backupsService.deleteRun({ id }),
+        mutationFn: (id: string) => backupsService.delete({ id }),
         onSuccess: (result: DeleteRunResult) => {
             if (!result.ok) {
                 toast({ message: t('backups.delete.failed'), variant: 'error' });

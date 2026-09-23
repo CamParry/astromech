@@ -10,7 +10,7 @@ export const GET: APIRoute = async ({ site, url: requestUrl }) => {
 
     try {
         const app = await getAstromech();
-        const result = await app.plugins.seo.sitemap();
+        const result = await app.plugins.seo.getSitemap();
         // For each URL, also emit locale alternates
         for (const url of result.urls) {
             urls.push({ loc: url.loc, lastmod: url.lastmod });
