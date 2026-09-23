@@ -48,6 +48,19 @@ is guessable from any other.
 A REST route keeps a flat body under this: the route spec declares
 `bodyKey: 'data'` and the generated client sends that key alone.
 
+## Resources
+
+Entries, globals, media and users share their behaviour through `content/`, read
+off `RESOURCE_SPECS` in `content/resources.ts`.
+
+- **A helper a second resource needs moves to `content/`.** Copying it into the
+  second module is how the four drifted apart.
+- **A "mirrors …" comment is a defect**, not documentation: share the code, or
+  say in one line why this resource differs.
+- **A new resource-wide rule gets a case in
+  `tests/content/resource-conformance.test.ts`**, which runs every check over
+  `RESOURCE_TYPES`.
+
 ## File ordering
 
 - **The main thing comes first.** A file's primary export — the service builder, the component, the entry-type config — goes at the top, and its private helpers follow below it. Never stack helpers above the payoff.
