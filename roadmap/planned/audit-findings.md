@@ -21,8 +21,8 @@ read at review, and studying where a pattern repeats before changing it.
 - [x] **Two contexts leak into each other.** Hooks rebuilding context from the
       store, user and role held three times, `CronContext`, the session
       resolved twice: `completed/explicit-app-context.md`.
-- [ ] **The service handle is built in seven places**, each with its own cast
-      and default shape: `planned/one-service-handle.md`.
+- [x] **The service handle is built in seven places**, each with its own cast
+      and default shape: `completed/one-service-handle.md`.
 - [x] **Field behaviour is split between `FieldType` and walkers** that branch
       on type names; plugin field types never reach the server:
       `completed/field-tree-traversal.md`.

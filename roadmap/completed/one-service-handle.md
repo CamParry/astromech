@@ -61,8 +61,16 @@ function takes no `shape` option.
       `global-edit-page.tsx` and `version-history.tsx`.
 - [x] Record in the `code` skill that `defineService` returns
       `ServiceDefinition` because `XService` is the bound interface.
-- [ ] Guard: the drift report's `as unknown as` count falls to the files that
-      need one (the database codec and drivers, the repository factories,
-      `services/json.ts`, `auth/better-auth.ts`, the facade file).
+- [x] Guard: the drift report's `as unknown as` count falls to the files that
+      need one: the database codec and drivers, the repository factories,
+      `services/json.ts`, `auth/better-auth.ts` and the facade file
+      (`services/typed-services.ts`). Also left, each for a generic TypeScript
+      cannot follow: `services/define-service.ts` walks any catalogue by string
+      key, `entries/catalogue.ts` rebuilds one through `Object.fromEntries`,
+      and `entries/internal/from-batch.ts` spreads into a generic batch input.
+      In the admin, `rendering/cells/link.ts` is the one string-addressed
+      router `Link`, and the list page's `navigate` cast is left to
+      `admin-resource-views.md`, which rewrites that page. The branch removed
+      22 casts and added one.
 
 Depends on `explicit-app-context.md` and `remove-settings-module.md`.

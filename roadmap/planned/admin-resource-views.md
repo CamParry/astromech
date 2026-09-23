@@ -45,6 +45,8 @@ and read query keys and mutations from one factory per resource.
 - [ ] `useListController` for the entries list; users and media adopt it where
       the shape matches.
 - [ ] The five large pages become compositions of the above.
+- [ ] `entries-list-page.tsx`'s `patchSearch` casts its `navigate` argument
+      `as unknown as`; the list controller's search update is typed instead.
 - [ ] Guard: the recommended rules of `@tanstack/eslint-plugin-query`, and a
       drift-report pattern for a literal `queryKey` array outside
       `hooks/use-query-keys.ts`.

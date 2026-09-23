@@ -270,7 +270,7 @@ function EntryTableRow({
                     const value =
                         col.source === 'field'
                             ? (entry.fields as Record<string, unknown>)[col.key]
-                            : (entry as unknown as Record<string, unknown>)[col.key];
+                            : (entry as Record<string, unknown>)[col.key];
                     return (
                         <Table.Td key={col.key}>
                             {getCellRenderer(col.kind)({
