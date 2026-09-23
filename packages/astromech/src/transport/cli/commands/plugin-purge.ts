@@ -12,7 +12,7 @@ import { defineCommand } from 'citty';
 import { sql } from 'kysely';
 import { getDb } from '@/database/registry';
 import { pluginNamespace } from '@/plugins/runtime/plugin-identity';
-import { loadConfig, loadRawConfig } from '../config';
+import { loadConfig } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export type PurgeResult = {
@@ -100,8 +100,11 @@ export default defineCommand({
         const pkg = args.package;
 
         // `resolveConfig` strips `plugins`, so the still-installed guard reads the
-        // raw config; `loadConfig` is still what initialises the DB.
-        const rawConfig = await loadRawConfig(args.config);
+        // raw config.
+        const { config: rawConfig } = await loadConfig(
+            args.config,
+            toAllowRemoteOption(args)
+        );
         const installed = (rawConfig.plugins ?? []).some(
             (plugin) => plugin.package === pkg
         );
@@ -113,7 +116,6 @@ export default defineCommand({
             process.exit(1);
         }
 
-        await loadConfig(args.config, toAllowRemoteOption(args));
         const result = await purgePlugin(getDb(), pkg);
 
         if (result.tables.length === 0) {

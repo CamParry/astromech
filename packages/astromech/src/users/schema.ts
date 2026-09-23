@@ -10,6 +10,9 @@ export const createUserSchema = z
         // Defaulted here, not by the column: a create that names no role gets
         // the least-privileged built-in rather than whatever the DDL says.
         role: z.string().default(DEFAULT_ROLE_SLUG),
+        // Without one the user sets a password through the reset link. Eight
+        // characters is better-auth's own floor.
+        password: z.string().min(8, 'Password must be at least 8 characters').optional(),
     })
     .openapi('CreateUser');
 

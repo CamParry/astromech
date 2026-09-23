@@ -1,8 +1,8 @@
-import type { EntryStatus, EntryUpdateData, JsonObject } from '@/types/index';
+import type { Entry, EntryStatus, EntryUpdateData, JsonObject } from '@/types/index';
 import { defineCommand } from 'citty';
-import { entriesService } from '@/app-context/services';
-import { loadConfig } from '../config';
-import { parseJsonArg, printError, printResult } from '../output';
+import { bootApplication } from '../config';
+import { callEntryMethod } from '../methods';
+import { describeCallError, parseJsonArg, printError, printResult } from '../output';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
@@ -29,7 +29,7 @@ export default defineCommand({
     },
     async run({ args }) {
         try {
-            await loadConfig(args.config, toAllowRemoteOption(args));
+            await bootApplication(args.config, toAllowRemoteOption(args));
 
             const base: EntryUpdateData = args.data
                 ? ((await parseJsonArg(args.data)) as EntryUpdateData)
@@ -46,8 +46,7 @@ export default defineCommand({
 
             // A locale with no content row yet is created, so this is also
             // how the CLI writes a translation.
-            const entry = await entriesService.update({
-                type: args.type,
+            const entry = await callEntryMethod<Entry>(args.type, 'update', {
                 id: args.id,
                 ...(args.locale ? { locale: args.locale } : {}),
                 data: base,
@@ -58,7 +57,7 @@ export default defineCommand({
                 text: () => console.log(`Updated ${args.type} ${args.id}`),
             });
         } catch (e) {
-            printError(e, { json: args.json });
+            printError(describeCallError(e), { json: args.json });
         }
     },
 });

@@ -48,7 +48,10 @@ export default defineCommand({
         },
     },
     async run({ args }) {
-        const config = await loadConfig(args.config, toAllowRemoteOption(args));
+        const { resolved: config } = await loadConfig(
+            args.config,
+            toAllowRemoteOption(args)
+        );
         const common = {
             dir: resolveMigrationsDir(config.migrationsDir),
             tables: CORE_TABLES,

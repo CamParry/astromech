@@ -1,6 +1,7 @@
+import type { QueryResult, User } from '@/types/index';
 import { defineCommand } from 'citty';
-import { usersService } from '@/app-context/services';
-import { loadConfig } from '../config';
+import { bootApplication } from '../config';
+import { callCoreMethod } from '../methods';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
@@ -10,8 +11,10 @@ export default defineCommand({
         ...allowRemoteArgs,
     },
     async run({ args }) {
-        await loadConfig(args.config, toAllowRemoteOption(args));
-        const result = await usersService.query({ limit: 'all' });
+        await bootApplication(args.config, toAllowRemoteOption(args));
+        const result = await callCoreMethod<QueryResult<User>>('users.query', {
+            limit: 'all',
+        });
         const users = result.data;
         if (users.length === 0) {
             console.log('No users found.');

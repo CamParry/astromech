@@ -66,7 +66,7 @@ Live choices and what each one beat. An entry is here because the losing option 
 
 **A plugin types its own tables onto the site's handle** by extending `AstromechPluginTables` in its own source. Rejected: generating declarations into `.astro/`, which buys nothing because a plugin's tables are fixed by its package. Accepted cost: a plugin in the program but not the config still adds its types.
 
-**Unset `NODE_ENV` means production, and the middleware refuses requests while `BETTER_AUTH_SECRET` is unset.** Better Auth accepts a public default secret whenever `NODE_ENV` is not `production`. Rejected: Hono's `env()`, and refusing in `build()`, which the CLI's `validate`, `index:rebuild` and `mcp` also run.
+**Unset `NODE_ENV` means production, and the middleware refuses requests while `BETTER_AUTH_SECRET` is unset.** Better Auth accepts a public default secret whenever `NODE_ENV` is not `production`. Rejected: Hono's `env()`, and refusing in `build()`, which every CLI command but `db:*` and codegen also runs.
 
 **No runtime is declared: the entry a site deploys says which one it is.** `createWorkerEntry` supplies bindings and nominates `cloudflareCron()`, and workerd fills `process.env` from wrangler `vars`. Rejected: a `runtime` config key, whose main job would be refusing `d1({ binding })` off Workers, which works in Node through wrangler's proxy; a `RuntimeIntegration` interface with one member; and importing `env` from `cloudflare:workers`, which resolves only inside a workerd bundle.
 

@@ -6,12 +6,10 @@
 
 import type { ManifestMethod, ToolDefinition } from '@/types/index';
 import { defineCommand } from 'citty';
-import { z } from 'zod';
-import { generateMethodManifest } from '@/codegen/method-manifest';
-import { ValidationError } from '@/errors/validation';
 import { buildDispatch } from '@/transport/tools/dispatch';
-import { loadConfig, loadRawConfig } from '../config';
-import { parseJsonArg, printError } from '../output';
+import { bootApplication } from '../config';
+import { bootedManifest } from '../methods';
+import { describeCallError, parseJsonArg, printError } from '../output';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
@@ -29,11 +27,8 @@ export default defineCommand({
     },
     async run({ args }) {
         try {
-            const rawConfig = await loadRawConfig(args.config);
-            const resolved = await loadConfig(args.config, toAllowRemoteOption(args));
-            const manifest = generateMethodManifest(resolved, rawConfig.plugins ?? []);
-
-            const { tool } = resolveCallable(manifest.methods, args.id);
+            await bootApplication(args.config, toAllowRemoteOption(args));
+            const { tool } = resolveCallable(bootedManifest().methods, args.id);
             const result = await tool.invoke(await callArguments(args.args));
             // Always JSON: an arbitrary method's result has no human shape to
             // render it in.
@@ -64,19 +59,6 @@ export function resolveCallable(
         throw new Error(`Method "${id}" is not callable: ${dispatch.reason}`);
     }
     return { method, tool: dispatch.tool };
-}
-
-/**
- * The error to print for a failed call. The method's own input parse throws a
- * `ValidationError`, which prints as its issues rather than "Validation failed".
- */
-export function describeCallError(error: unknown): unknown {
-    if (error instanceof ValidationError && error.fields === undefined) {
-        return new Error(
-            `Invalid arguments:\n${z.prettifyError(new z.ZodError(error.issues))}`
-        );
-    }
-    return error;
 }
 
 /** The argument object off the command line — inline JSON, `@file`, or none. */

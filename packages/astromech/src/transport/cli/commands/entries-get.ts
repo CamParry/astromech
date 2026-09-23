@@ -1,6 +1,7 @@
+import type { Entry } from '@/types/index';
 import { defineCommand } from 'citty';
-import { entriesService } from '@/app-context/services';
-import { loadConfig } from '../config';
+import { bootApplication } from '../config';
+import { callEntryMethod } from '../methods';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
@@ -16,9 +17,8 @@ export default defineCommand({
         ...allowRemoteArgs,
     },
     async run({ args }) {
-        await loadConfig(args.config, toAllowRemoteOption(args));
-        const entry = await entriesService.get({
-            type: args.type,
+        await bootApplication(args.config, toAllowRemoteOption(args));
+        const entry = await callEntryMethod<Entry | null>(args.type, 'get', {
             id: args.id,
             ...(args.locale ? { locale: args.locale } : {}),
         });

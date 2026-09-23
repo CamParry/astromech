@@ -1,18 +1,18 @@
 /**
  * MCP Server Entry
  *
- * Loads config, creates the application so a tool call actually lands,
- * generates the method manifest, builds the tool list, then connects the server
- * over stdio. All logging goes to stderr — stdout is the JSON-RPC channel.
+ * Boots the application so a tool call actually lands, builds the tool list
+ * from the manifest the boot generated, then connects the server over stdio.
+ * All logging goes to stderr — stdout is the JSON-RPC channel.
  */
 
 import type { ConfirmOptions } from '@/policies/confirmation';
 import type { MethodFilter } from '@/policies/method-filter';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { createAstromech } from '@/astromech';
-import { generateMethodManifest } from '@/codegen/method-manifest';
+import { getDatabaseDriver } from '@/database/driver-registry';
 import { filterMethods } from '@/policies/method-filter';
-import { loadConfig, loadRawConfig } from '@/transport/cli/config';
+import { bootApplication } from '@/transport/cli/config';
+import { bootedManifest } from '@/transport/cli/methods';
 import { createMcpServer } from './server';
 
 /** Above this many exclusions, the per-method lines stop being readable. */
@@ -69,12 +69,9 @@ export async function runMcpServer(
     confirm?: ConfirmOptions,
     options?: { allowRemote?: boolean }
 ): Promise<void> {
-    const raw = await loadRawConfig(configPath);
-    // Guards the database and fills the config shim the local transport reads.
-    const resolved = await loadConfig(configPath, options);
-    await createAstromech({ config: raw });
-
-    const manifest = generateMethodManifest(resolved, raw.plugins ?? []);
+    await bootApplication(configPath, options);
+    const manifest = bootedManifest();
+    const db = getDatabaseDriver();
 
     const { methods, excluded } = filterMethods(manifest.methods, filter);
     const { server, tools, skipped } = createMcpServer({ ...manifest, methods }, confirm);
@@ -85,8 +82,8 @@ export async function runMcpServer(
             `confirm: ${describeConfirm(confirm)}`
     );
     console.error(
-        `[astromech mcp] database: ${raw.db.type} ` +
-            `(${raw.db.isRemote?.() === true ? 'remote' : 'local'})`
+        `[astromech mcp] database: ${db?.type ?? 'unknown'} ` +
+            `(${db?.isRemote?.() === true ? 'remote' : 'local'})`
     );
 
     // Skipped and excluded stay distinct: a skip is a method that could not be

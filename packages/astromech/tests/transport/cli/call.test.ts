@@ -10,7 +10,8 @@ import type { ManifestMethod } from '@/types/index';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { ValidationError } from '@/errors/validation';
-import { describeCallError, resolveCallable } from '@/transport/cli/commands/call';
+import { resolveCallable } from '@/transport/cli/commands/call';
+import { describeCallError } from '@/transport/cli/output';
 
 function coreMethod(overrides: Partial<ManifestMethod> = {}): ManifestMethod {
     return {
@@ -104,5 +105,17 @@ describe('describeCallError', () => {
     it('passes any other error through', () => {
         const error = new Error('boom');
         expect(describeCallError(error)).toBe(error);
+    });
+});
+
+describe('describeCallError on a field failure', () => {
+    it('lists each field message and form message', () => {
+        const error = ValidationError.fromFieldErrors(
+            { role: ['Unknown role "wizard".'] },
+            ['Whole-resource rule failed.']
+        );
+        expect((describeCallError(error) as Error).message).toBe(
+            'Validation failed:\n  Whole-resource rule failed.\n  role: Unknown role "wizard".'
+        );
     });
 });

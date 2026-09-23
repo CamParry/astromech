@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
 import { buildPermissionCatalogue } from '@/permissions/catalogue';
-import { loadConfig, loadRawConfig } from '../config';
+import { loadConfig } from '../config';
 import { printError } from '../output';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
@@ -21,8 +21,10 @@ export default defineCommand({
     },
     async run({ args }) {
         try {
-            const rawConfig = await loadRawConfig(args.config);
-            const resolved = await loadConfig(args.config, toAllowRemoteOption(args));
+            const { config: rawConfig, resolved } = await loadConfig(
+                args.config,
+                toAllowRemoteOption(args)
+            );
             const plugins = rawConfig.plugins ?? [];
 
             let permissions = buildPermissionCatalogue(resolved, plugins);

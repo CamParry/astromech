@@ -1,11 +1,10 @@
 import type { DriftReport } from '@/transport/cli/relationship-index';
 import { defineCommand } from 'citty';
-import { createAstromech } from '@/astromech';
 import {
     checkRelationshipIndex,
     rebuildRelationshipIndex,
 } from '@/transport/cli/relationship-index';
-import { loadConfig, loadRawConfig } from '../config';
+import { bootApplication } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
@@ -24,12 +23,10 @@ export default defineCommand({
         },
     },
     async run({ args }) {
-        // `loadConfig` guards the database and fills the config shim; the
-        // application registers the plugin runtime. Without it a custom-table
+        // Booted, so the plugin runtime is registered: without it a custom-table
         // plugin entry type resolves to the entries-table repository, its rows go
         // unread, and a rebuild deletes every reference it has.
-        await loadConfig(args.config, toAllowRemoteOption(args));
-        await createAstromech({ config: await loadRawConfig(args.config) });
+        await bootApplication(args.config, toAllowRemoteOption(args));
 
         const scope = args.type ? { type: args.type } : {};
 

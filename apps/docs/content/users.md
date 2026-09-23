@@ -160,6 +160,10 @@ reading or updating their own user row passes without `users:read` or
 `users:update`. `versions` and `restoreVersion` have no such rule and always
 need the permission, even for the caller's own row.
 
+`create` takes an optional `password` of at least eight characters, and with
+one writes the credential account the user signs in with; without one the user
+sets a password through the reset link.
+
 `update` and `delete` refuse to take the `admin` role from the only user
 holding it, whether the call comes from the admin, the CLI, MCP or a plugin.
 

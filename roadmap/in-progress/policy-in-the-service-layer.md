@@ -35,14 +35,14 @@ workstream.
       envelope with a code missing from `ApiErrorCode`.
 - [x] **Cross-type `POST /entries/query` 500s on bad input**: an unmapped
       `ZodError` from `entrySortSchema.parse` and an uncaught `c.req.json()`.
-- [ ] **Most CLI commands never boot the app.** Only `index:rebuild` and
+- [x] **Most CLI commands never boot the app.** Only `index:rebuild` and
       `validate` call `createAstromech`; the rest use `transport/cli/config.ts`
       `loadConfig`, so no plugin hooks run (redirects' slug-change hook misses
       `entries:update`), plugin repositories are unmounted, and storage and
       email are unset. `call.ts`, `mcp/index.ts`, `index-rebuild.ts` and
       `validate.ts` also load the config file twice, and MCP regenerates the
       manifest instead of reading `getMethodManifest()`.
-- [ ] **`users:create` skips the service.** It accepts any role string and
+- [x] **`users:create` skips the service.** It accepts any role string and
       writes the user and its credential account without a transaction. It is
       the third copy of "user plus credential account", beside `auth/setup.ts`
       and `users/methods/create.ts`.
@@ -80,9 +80,13 @@ workstream.
       `requires` can state.
 - [x] Express the entries per-type and `full` gate in `entryGate` and scope
       entries with `scopeMethods`; delete `scopeEntries`.
-- [ ] CLI commands boot through `createAstromech` (except `db:*`) and call
+- [x] CLI commands boot through `createAstromech` (except `db:*`) and call
       methods through `callMethod(…, 'trusted')`; one "create credential
-      account" helper serves setup, the CLI and `users.create`.
+      account" helper serves setup, the CLI and `users.create`. The codegen
+      commands (`generate:*`, `plugin:generate`), `plugin:purge` and
+      `permissions` also only load the config: they need no running
+      application, and booting would demand a migrated database and every
+      plugin's `requiredEnv`.
 - [ ] Merge the two plugin-method HTTP routes (`/plugins/:name/:method` and
       `/rpc/plugins.*`) onto one envelope and one set of 401/403 rules; the admin
       uses the first.

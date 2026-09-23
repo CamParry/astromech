@@ -1,8 +1,8 @@
-import type { EntryCreateData, EntryStatus, JsonObject } from '@/types/index';
+import type { Entry, EntryCreateData, EntryStatus, JsonObject } from '@/types/index';
 import { defineCommand } from 'citty';
-import { entriesService } from '@/app-context/services';
-import { loadConfig } from '../config';
-import { parseJsonArg, printError, printResult } from '../output';
+import { bootApplication } from '../config';
+import { callEntryMethod } from '../methods';
+import { describeCallError, parseJsonArg, printError, printResult } from '../output';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
@@ -24,7 +24,7 @@ export default defineCommand({
     },
     async run({ args }) {
         try {
-            await loadConfig(args.config, toAllowRemoteOption(args));
+            await bootApplication(args.config, toAllowRemoteOption(args));
 
             const data: EntryCreateData = {};
 
@@ -38,7 +38,7 @@ export default defineCommand({
                 data.fields = (await parseJsonArg(args.fields)) as JsonObject;
             }
 
-            const entry = await entriesService.create({ type: args.type, data });
+            const entry = await callEntryMethod<Entry>(args.type, 'create', { data });
 
             printResult(entry, {
                 json: args.json,
@@ -46,7 +46,7 @@ export default defineCommand({
                     console.log(`Created ${entry.type} ${entry.id} (${entry.status})`),
             });
         } catch (e) {
-            printError(e, { json: args.json });
+            printError(describeCallError(e), { json: args.json });
         }
     },
 });

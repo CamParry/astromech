@@ -2,12 +2,12 @@ import type { AnnotatedManifestMethod } from '@/policies/annotate-manifest';
 import type { ExcludedMethod } from '@/policies/method-filter';
 import type { ManifestMethod, ResolvedConfig } from '@/types/index';
 import { defineCommand } from 'citty';
-import { generateMethodManifest } from '@/codegen/method-manifest';
 import { resolveRole } from '@/permissions/roles';
 import { annotateManifest } from '@/policies/annotate-manifest';
 import { filterMethods } from '@/policies/method-filter';
-import { loadConfig, loadRawConfig } from '../config';
+import { bootApplication } from '../config';
 import { filterArgs, toMethodFilter } from '../filter-args';
+import { bootedManifest } from '../methods';
 import { printError } from '../output';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
@@ -75,10 +75,9 @@ export default defineCommand({
     },
     async run({ args }) {
         try {
-            const rawConfig = await loadRawConfig(args.config);
-            const resolved = await loadConfig(args.config, toAllowRemoteOption(args));
-            const plugins = rawConfig.plugins ?? [];
-            const manifest = generateMethodManifest(resolved, plugins);
+            const app = await bootApplication(args.config, toAllowRemoteOption(args));
+            const resolved = app.config;
+            const manifest = bootedManifest();
 
             let listed: ManifestMethod[] = manifest.methods;
 

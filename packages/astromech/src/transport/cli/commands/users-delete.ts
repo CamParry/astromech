@@ -1,6 +1,6 @@
 import { defineCommand } from 'citty';
-import { usersService } from '@/app-context/services';
-import { loadConfig } from '../config';
+import { bootApplication } from '../config';
+import { callCoreMethod } from '../methods';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
@@ -12,7 +12,7 @@ export default defineCommand({
         config: { type: 'string', description: 'Path to astromech.config.ts' },
     },
     async run({ args }) {
-        await loadConfig(args.config, toAllowRemoteOption(args));
+        await bootApplication(args.config, toAllowRemoteOption(args));
         if (!args.force) {
             const readline = await import('node:readline/promises');
             const rl = readline.createInterface({
@@ -26,7 +26,7 @@ export default defineCommand({
                 return;
             }
         }
-        await usersService.delete({ id: args.id });
+        await callCoreMethod('users.delete', { id: args.id });
         console.log(`User ${args.id} deleted`);
     },
 });

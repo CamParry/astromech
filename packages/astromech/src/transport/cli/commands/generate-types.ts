@@ -3,7 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { defineCommand } from 'citty';
 import { generateClientTypes } from '@/codegen/type-generator';
 import { collectPluginFieldTypes } from '@/plugins/runtime/plugin-fields';
-import { loadConfig, loadRawConfig } from '../config';
+import { loadConfig } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
@@ -21,8 +21,10 @@ export default defineCommand({
         ...allowRemoteArgs,
     },
     async run({ args }) {
-        const rawConfig = await loadRawConfig(args.config);
-        const resolved = await loadConfig(args.config, toAllowRemoteOption(args));
+        const { config: rawConfig, resolved } = await loadConfig(
+            args.config,
+            toAllowRemoteOption(args)
+        );
         const plugins = rawConfig.plugins ?? [];
         const types = generateClientTypes(
             resolved,

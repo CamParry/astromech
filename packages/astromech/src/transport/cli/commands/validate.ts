@@ -3,9 +3,8 @@ import type {
     ValidationReport,
 } from '@/transport/cli/validate-stored-content';
 import { defineCommand } from 'citty';
-import { createAstromech } from '@/astromech';
 import { validateStoredContent } from '@/transport/cli/validate-stored-content';
-import { loadConfig, loadRawConfig } from '../config';
+import { bootApplication } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
@@ -19,12 +18,10 @@ export default defineCommand({
         type: { type: 'string', description: 'Limit to one entry type' },
     },
     async run({ args }) {
-        // `loadConfig` guards the database and fills the config shim; the
-        // application registers the plugin runtime. Without it a custom-table
-        // plugin entry type resolves to the entries-table repository and its rows go
-        // unread.
-        await loadConfig(args.config, toAllowRemoteOption(args));
-        await createAstromech({ config: await loadRawConfig(args.config) });
+        // Booted, so the plugin runtime is registered: without it a custom-table
+        // plugin entry type resolves to the entries-table repository and its rows
+        // go unread.
+        await bootApplication(args.config, toAllowRemoteOption(args));
 
         reportFindings(
             await validateStoredContent(

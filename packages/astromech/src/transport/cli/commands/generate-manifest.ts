@@ -6,7 +6,7 @@ import {
     METHOD_MANIFEST_FILENAME,
     serialiseMethodManifest,
 } from '@/codegen/method-manifest';
-import { loadConfig, loadRawConfig } from '../config';
+import { loadConfig } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
@@ -24,8 +24,10 @@ export default defineCommand({
         ...allowRemoteArgs,
     },
     async run({ args }) {
-        const rawConfig = await loadRawConfig(args.config);
-        const resolved = await loadConfig(args.config, toAllowRemoteOption(args));
+        const { config: rawConfig, resolved } = await loadConfig(
+            args.config,
+            toAllowRemoteOption(args)
+        );
         const plugins = rawConfig.plugins ?? [];
         const json = serialiseMethodManifest(generateMethodManifest(resolved, plugins));
         const outPath = resolve(process.cwd(), args.out);

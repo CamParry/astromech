@@ -8,13 +8,17 @@ import { flattenFieldNodes } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { requireRole } from '@/permissions/roles';
 import { defineServiceMethod } from '@/services/define-service-method';
+import { createCredentialAccount, hashCredential } from '../internal/credential-account';
 import { syncUserRelationships } from '../internal/relationships';
 import { toUser } from '../internal/to-user';
 import { userIsUnique } from '../internal/unique';
 import { createUserRepository } from '../repository';
 import { createUserSchema } from '../schema';
 
-/** Create a CMS user, running its custom fields through the field pipeline. */
+/**
+ * Create a CMS user, running its custom fields through the field pipeline. A
+ * `password` also writes the credential account it signs in with.
+ */
 export const createUser = defineServiceMethod({
     summary: 'Create a new CMS user.',
     input: z.object({ data: createUserSchema }),
@@ -46,9 +50,13 @@ export const createUser = defineServiceMethod({
             parsedFields as JsonObject
         );
 
-        // The account row, its content row and the index write are one
-        // transaction: an index that outlived a failed create would name a user
-        // that is not there.
+        // Hashed before the transaction opens, so no lock is held while it runs.
+        const passwordHash =
+            data.password === undefined ? undefined : await hashCredential(data.password);
+
+        // The account row, its credential, its content row and the index write
+        // are one transaction: an index that outlived a failed create would name
+        // a user that is not there.
         const userId = ctx.user?.id ?? null;
         const created = await transaction(async () => {
             const row = await createUserRepository(ctx.config).create(
@@ -59,6 +67,9 @@ export const createUser = defineServiceMethod({
                 },
                 { fields, createdBy: userId, updatedBy: userId }
             );
+            if (passwordHash !== undefined) {
+                await createCredentialAccount(row.id, passwordHash);
+            }
             await syncUserRelationships(ctx.config, row.id);
             return row;
         });

@@ -1,6 +1,7 @@
+import type { User } from '@/types/index';
 import { defineCommand } from 'citty';
-import { usersService } from '@/app-context/services';
-import { loadConfig } from '../config';
+import { bootApplication } from '../config';
+import { callCoreMethod } from '../methods';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
@@ -11,8 +12,8 @@ export default defineCommand({
         ...allowRemoteArgs,
     },
     async run({ args }) {
-        await loadConfig(args.config, toAllowRemoteOption(args));
-        const user = await usersService.get({ id: args.id });
+        await bootApplication(args.config, toAllowRemoteOption(args));
+        const user = await callCoreMethod<User | null>('users.get', { id: args.id });
         if (!user) {
             console.error('User not found');
             process.exit(1);

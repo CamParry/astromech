@@ -1,6 +1,7 @@
+import type { Entry, QueryResult } from '@/types/index';
 import { defineCommand } from 'citty';
-import { entriesService } from '@/app-context/services';
-import { loadConfig } from '../config';
+import { bootApplication } from '../config';
+import { callEntryMethod } from '../methods';
 import { printResult } from '../output';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
@@ -19,10 +20,9 @@ export default defineCommand({
         ...allowRemoteArgs,
     },
     async run({ args }) {
-        await loadConfig(args.config, toAllowRemoteOption(args));
+        await bootApplication(args.config, toAllowRemoteOption(args));
         const limitNum = parseInt(args.limit, 10);
-        const { data } = await entriesService.query({
-            type: args.type,
+        const { data } = await callEntryMethod<QueryResult<Entry>>(args.type, 'query', {
             limit: limitNum,
             ...(args.locale ? { locale: args.locale } : {}),
             ...(args.status ? { where: { status: args.status } } : {}),

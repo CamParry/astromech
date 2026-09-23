@@ -27,7 +27,10 @@ export default defineCommand({
         ...allowRemoteArgs,
     },
     async run({ args }) {
-        const config = await loadConfig(args.config, toAllowRemoteOption(args));
+        const { resolved: config } = await loadConfig(
+            args.config,
+            toAllowRemoteOption(args)
+        );
         const folder = config.migrationsDir;
 
         let result;

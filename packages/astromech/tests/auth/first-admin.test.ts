@@ -1,7 +1,8 @@
 /**
  * What first-run setup writes: the first admin, its credential account and its
  * content row, with one conditional insert as the gate. Better Auth's own
- * sign-up is refused whatever the database holds.
+ * sign-up is refused whatever the database holds. `users.create` writes a
+ * credential account the same way when given a password.
  */
 
 import type { DB } from '@/database/types';
@@ -242,5 +243,33 @@ describe('first-run setup', () => {
             .executeTakeFirst();
 
         expect(decodeWith(usersTable, raw)).toBeUndefined();
+    });
+});
+
+describe('users.create with a password', () => {
+    it('writes a credential account the password signs in through', async () => {
+        await usersService.create({
+            data: { name: 'Later', email: 'later@test.dev', password: 'password123' },
+        });
+
+        const signedIn = await getAuth().api.signInEmail({
+            body: { email: 'later@test.dev', password: 'password123' },
+        });
+        expect(signedIn.user.email).toBe('later@test.dev');
+    });
+
+    it('writes no credential account without one', async () => {
+        await usersService.create({ data: { name: 'Later', email: 'later@test.dev' } });
+
+        expect(await rowCount('accounts')).toBe(0);
+    });
+
+    it('refuses a password under eight characters, writing nothing', async () => {
+        await expect(
+            usersService.create({
+                data: { name: 'Later', email: 'later@test.dev', password: 'short' },
+            })
+        ).rejects.toMatchObject({ name: 'ValidationError' });
+        expect(await rowCount('users')).toBe(0);
     });
 });

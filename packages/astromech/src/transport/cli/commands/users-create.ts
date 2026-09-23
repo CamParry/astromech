@@ -1,9 +1,8 @@
+import type { User } from '@/types/index';
 import { defineCommand } from 'citty';
-import { encodeWith } from '@/database/codec';
-import { getDb } from '@/database/registry';
-import { accountsTable } from '@/database/tables';
-import { createUserRepository } from '@/users/repository';
-import { loadConfig } from '../config';
+import { bootApplication } from '../config';
+import { callCoreMethod } from '../methods';
+import { describeCallError, printError } from '../output';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
@@ -13,64 +12,35 @@ export default defineCommand({
         email: { type: 'string', description: 'Email address' },
         password: { type: 'string', description: 'Password' },
         role: { type: 'string', description: 'Role slug', default: 'admin' },
+        json: { type: 'boolean', default: false, description: 'Report errors as JSON' },
         config: { type: 'string', description: 'Path to astromech.config.ts' },
         ...allowRemoteArgs,
     },
     async run({ args }) {
-        await loadConfig(args.config, toAllowRemoteOption(args));
+        try {
+            await bootApplication(args.config, toAllowRemoteOption(args));
 
-        let { name, email, password } = args;
-        const role = args.role ?? 'admin';
+            let { name, email, password } = args;
+            if (!name || !email || !password) {
+                const readline = await import('node:readline/promises');
+                const rl = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout,
+                });
+                name = name || (await rl.question('Name: '));
+                email = email || (await rl.question('Email: '));
+                password = password || (await rl.question('Password: '));
+                rl.close();
+            }
 
-        if (!name || !email || !password) {
-            const readline = await import('node:readline/promises');
-            const rl = readline.createInterface({
-                input: process.stdin,
-                output: process.stdout,
+            // `users.create` checks the role against the config and writes the
+            // user, its content row and its credential account in one transaction.
+            const user = await callCoreMethod<User>('users.create', {
+                data: { name, email, password, role: args.role ?? 'admin' },
             });
-            name = name || (await rl.question('Name: '));
-            email = email || (await rl.question('Email: '));
-            password = password || (await rl.question('Password: '));
-            rl.close();
+            console.log(`User created: ${user.email} (${user.id})`);
+        } catch (e) {
+            printError(describeCallError(e), { json: args.json });
         }
-
-        const { hashPassword } = await import('better-auth/crypto');
-        const db = getDb();
-        const now = new Date();
-        const userId = crypto.randomUUID();
-        const accountId = crypto.randomUUID();
-        const hashedPassword = await hashPassword(password);
-
-        await createUserRepository().create(
-            {
-                id: userId,
-                email,
-                name,
-                emailVerified: true,
-                role,
-                createdAt: now,
-                updatedAt: now,
-            },
-            { fields: {} }
-        );
-
-        // `accounts` is a better-auth table with no repository of its own, and
-        // it is not the `users` domain's to own — so this one insert stays raw.
-        await db
-            .insertInto('accounts')
-            .values(
-                encodeWith(accountsTable, {
-                    id: accountId,
-                    accountId: userId,
-                    providerId: 'credential',
-                    userId,
-                    password: hashedPassword,
-                    createdAt: now,
-                    updatedAt: now,
-                })
-            )
-            .execute();
-
-        console.log(`User created: ${email} (${userId})`);
     },
 });

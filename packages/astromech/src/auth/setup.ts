@@ -8,13 +8,16 @@ import type { Db } from '@/database/types';
 import type { BuiltInRoleSlug } from '@/permissions/roles';
 import type { NewUserTableRow } from '@/users/tables';
 import { z } from '@hono/zod-openapi';
-import { hashPassword } from 'better-auth/crypto';
 import { sql } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { encodeWith } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
-import { accountsTable, userContentTable, usersTable } from '@/database/tables';
+import { userContentTable, usersTable } from '@/database/tables';
 import { transaction } from '@/database/transaction';
+import {
+    createCredentialAccount,
+    hashCredential,
+} from '@/users/internal/credential-account';
 
 /** The refusal every closed sign-up path answers with. */
 export const SIGN_UP_CLOSED = {
@@ -38,9 +41,8 @@ export async function createFirstAdmin(
     input: z.infer<typeof firstAdminSchema>
 ): Promise<'created' | 'closed'> {
     const id = crypto.randomUUID();
-    const now = new Date();
     // Hashed before the transaction opens, so no lock is held while it runs.
-    const password = await hashPassword(input.password);
+    const passwordHash = await hashCredential(input.password);
 
     // libSQL runs the three writes as one transaction. D1 has no interactive
     // transactions, so there the first statement is the gate on its own: a
@@ -56,14 +58,7 @@ export async function createFirstAdmin(
         });
         if (!inserted) return 'closed';
 
-        await createRepository(accountsTable).create({
-            accountId: id,
-            providerId: 'credential',
-            userId: id,
-            password,
-            createdAt: now,
-            updatedAt: now,
-        });
+        await createCredentialAccount(id, passwordHash);
         await createRepository(userContentTable).create({
             userId: id,
             locale: getDefaultContentLocale(),

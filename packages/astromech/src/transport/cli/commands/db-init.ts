@@ -4,7 +4,7 @@ import { loadAppMigrations, resolveMigrationsDir } from '@/database/app-migratio
 import { assertForeignKeysEnforced } from '@/database/migrations';
 import { collectPluginMigrations } from '@/database/plugin-migrations';
 import { getDb } from '@/database/registry';
-import { loadConfig, loadRawConfig } from '../config';
+import { loadConfig } from '../config';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
@@ -14,10 +14,12 @@ export default defineCommand({
         ...allowRemoteArgs,
     },
     async run({ args }) {
-        const config = await loadConfig(args.config, toAllowRemoteOption(args));
-        // `resolveConfig` strips `plugins`, so read the raw config for the
-        // plugin definitions (same pattern as generate-types / generate-manifest).
-        const rawConfig = await loadRawConfig(args.config);
+        // `resolveConfig` strips `plugins`, so the raw config gives the plugin
+        // definitions.
+        const { config: rawConfig, resolved: config } = await loadConfig(
+            args.config,
+            toAllowRemoteOption(args)
+        );
         const migrationProvider = await loadAppMigrations(
             resolveMigrationsDir(config.migrationsDir)
         );

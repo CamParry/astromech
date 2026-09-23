@@ -1,5 +1,7 @@
 /** Shared CLI output helpers: uniform JSON mode + error reporting + JSON arg parsing. */
 import { readFile } from 'node:fs/promises';
+import { z } from 'zod';
+import { ValidationError } from '@/errors/validation';
 
 /** Print a successful result. `--json` → pretty JSON to stdout; else run the text formatter. */
 export function printResult(
@@ -37,4 +39,25 @@ export async function parseJsonArg(value: string): Promise<unknown> {
             { cause: e }
         );
     }
+}
+
+/**
+ * The error to print for a failed call. A `ValidationError` prints as its
+ * messages rather than "Validation failed": the method's own input parse as its
+ * issues, and a field-pipeline or rule failure as each field's messages.
+ */
+export function describeCallError(error: unknown): unknown {
+    if (!(error instanceof ValidationError)) return error;
+    if (error.fields === undefined) {
+        return new Error(
+            `Invalid arguments:\n${z.prettifyError(new z.ZodError(error.issues))}`
+        );
+    }
+    const lines = [
+        ...(error.form ?? []),
+        ...Object.entries(error.fields).flatMap(([field, messages]) =>
+            messages.map((message) => `${field}: ${message}`)
+        ),
+    ];
+    return new Error(`Validation failed:\n${lines.map((l) => `  ${l}`).join('\n')}`);
 }

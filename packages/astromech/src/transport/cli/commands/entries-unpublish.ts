@@ -1,7 +1,8 @@
+import type { Entry } from '@/types/index';
 import { defineCommand } from 'citty';
-import { entriesService } from '@/app-context/services';
-import { loadConfig } from '../config';
-import { printError, printResult } from '../output';
+import { bootApplication } from '../config';
+import { callEntryMethod } from '../methods';
+import { describeCallError, printError, printResult } from '../output';
 import { allowRemoteArgs, toAllowRemoteOption } from '../remote-args';
 
 export default defineCommand({
@@ -22,9 +23,8 @@ export default defineCommand({
     },
     async run({ args }) {
         try {
-            await loadConfig(args.config, toAllowRemoteOption(args));
-            const entry = await entriesService.unpublish({
-                type: args.type,
+            await bootApplication(args.config, toAllowRemoteOption(args));
+            const entry = await callEntryMethod<Entry>(args.type, 'unpublish', {
                 id: args.id,
                 ...(args.locale ? { locale: args.locale } : {}),
             });
@@ -33,7 +33,7 @@ export default defineCommand({
                 text: () => console.log(`Unpublished ${args.type} ${args.id}`),
             });
         } catch (e) {
-            printError(e, { json: args.json });
+            printError(describeCallError(e), { json: args.json });
         }
     },
 });

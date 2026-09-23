@@ -1,21 +1,39 @@
 /**
- * Loads astromech.config.ts using jiti (so TypeScript files are supported
- * without a pre-build step) and initialises the DB registry so service methods work.
+ * How a CLI command reaches the site: `bootApplication` boots it through
+ * `createAstromech`, and `loadConfig` only loads and resolves the config, for
+ * the commands that must run before the application can (`db:*`, codegen).
  */
 
+import type { Astromech } from '@/astromech';
 import type { AstromechConfig, ResolvedConfig } from '@/types/index';
+import { createAstromech } from '@/astromech';
 import { loadConfigFile } from '@/config/load';
 import { setConfig } from '@/config/registry';
 import { resolveConfig } from '@/config/resolve';
 import { setDb } from '@/database/registry';
 import { log } from '@/utilities/log';
 
-export async function loadRawConfig(configPath?: string): Promise<AstromechConfig> {
-    return loadConfigFile(process.cwd(), configPath);
+/** The remote-database guard every command that opens the database takes. */
+type LoadOptions = { allowRemote?: boolean };
+
+/**
+ * Load the config file once, guard it, and boot the application, so plugin
+ * hooks, plugin repositories, storage and email are all wired as they are when
+ * serving.
+ */
+export async function bootApplication(
+    configPath?: string,
+    options?: LoadOptions
+): Promise<Astromech> {
+    const config = await loadConfigFile(process.cwd(), configPath);
+    assertLocalDatabase(config, options?.allowRemote === true);
+    return createAstromech({ config });
 }
 
 /**
- * Load, guard and resolve the config, and initialise the DB registry.
+ * Load the config file once, guard it, resolve it, and register the config and
+ * the database, without booting. For the commands the application cannot boot
+ * without (`db:*`) and those that only read the config.
  *
  * `allowRemote` is `--allow-remote`: a remote database is refused by default so a
  * command meant for a dev machine cannot hit production by inheriting whatever
@@ -23,19 +41,17 @@ export async function loadRawConfig(configPath?: string): Promise<AstromechConfi
  */
 export async function loadConfig(
     configPath?: string,
-    options?: { allowRemote?: boolean }
-): Promise<ResolvedConfig> {
-    const rawConfig = await loadRawConfig(configPath);
-    assertLocalDatabase(rawConfig, options?.allowRemote === true);
+    options?: LoadOptions
+): Promise<{ config: AstromechConfig; resolved: ResolvedConfig }> {
+    const config = await loadConfigFile(process.cwd(), configPath);
+    assertLocalDatabase(config, options?.allowRemote === true);
 
-    // Initialise DB before resolving — resolveConfig strips db from the result
-    const db = rawConfig.db.getInstance();
-    setDb(db);
+    // Before resolving: `resolveConfig` strips `db` from the result.
+    setDb(config.db.getInstance());
 
-    const resolved = resolveConfig(rawConfig);
+    const resolved = resolveConfig(config);
     setConfig(resolved);
-
-    return resolved;
+    return { config, resolved };
 }
 
 /**

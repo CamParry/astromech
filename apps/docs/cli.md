@@ -1,9 +1,13 @@
 # CLI
 
-The `astromech` CLI is a **trusted transport** — it talks to the services
-directly and does **not** enforce permissions (like seeding, it runs with full
-access). Use it for local administration, scripting, and as the reference
-consumer of the [method manifest](#method-discovery).
+The `astromech` CLI is a **trusted transport**: it calls the service methods as
+the system and does **not** enforce permissions (like seeding, it runs with full
+access). Everything else holds, because it boots the application the way the
+server does: plugin hooks fire, plugin tables and storage are wired, and each
+method applies its own rules (a publish on a type without statuses is refused,
+a role the config does not define is rejected). Use it for local administration,
+scripting, and as the reference consumer of the
+[method manifest](#method-discovery).
 
 ```sh
 astromech <command> [args] [--config path/to/astromech.config.ts]
@@ -11,6 +15,10 @@ astromech <command> [args] [--config path/to/astromech.config.ts]
 
 `--config` points at your `astromech.config.ts` (defaults to one in the current
 directory). Every command accepts it.
+
+The `db:*` commands, `generate:types`, `generate:manifest`, `plugin:generate`,
+`plugin:purge` and `permissions` load the config without booting, since the
+application cannot boot against a database that is not migrated yet.
 
 `db:generate`, `db:init` and `db:rebaseline` use the migrations folder your
 config's `migrationsDir` names, `./migrations` by default, as
@@ -61,8 +69,8 @@ astromech entries:publish post <id> --json
 ## Method discovery
 
 `methods` reflects the [method manifest](#cli) — every callable across core,
-entries, and plugins, with effect hints and permission strings. It regenerates
-from your config in-memory, so it needs no prior build.
+entries, and plugins, with effect hints and permission strings. It reads the
+manifest the boot generates, so it needs no prior build.
 
 ```sh
 astromech methods                     # text: name, [effects], (permission)
@@ -92,8 +100,8 @@ signed-in user on a trusted transport. Both are reachable over HTTP instead, at
 `POST {basePath}/api/rpc/{method id}`.
 
 The per-domain commands above stay: they hold flag parsing `call` has no way to
-offer — `--fields @file`, an ISO date coerced to a `Date`, `users:create`'s
-password prompt and the credential row it writes alongside the user.
+offer — `--fields @file`, an ISO date coerced to a `Date`, and `users:create`'s
+password prompt. Each one calls the same method `call` would.
 
 ## Permission discovery
 
