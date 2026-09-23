@@ -1,6 +1,6 @@
 import type { Entry, QueryResult } from '@/types/index';
 import { defineCommand } from 'citty';
-import { configArgs, jsonArgs } from '../common-args';
+import { configArgs, jsonArgs, localeArgs } from '../common-args';
 import { withApplication } from '../config';
 import { callEntryMethod } from '../methods';
 import { printResult } from '../output';
@@ -10,10 +10,7 @@ export default defineCommand({
     args: {
         type: { type: 'positional', required: true, description: 'Entry type slug' },
         status: { type: 'string', description: 'Filter by status' },
-        locale: {
-            type: 'string',
-            description: 'Locale to act on (defaults to the site default)',
-        },
+        ...localeArgs,
         limit: { type: 'string', description: 'Max results', default: '20' },
         ...jsonArgs,
         ...configArgs,

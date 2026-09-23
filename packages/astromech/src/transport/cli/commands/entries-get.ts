@@ -1,18 +1,14 @@
 import type { Entry } from '@/types/index';
 import { defineCommand } from 'citty';
-import { configArgs } from '../common-args';
+import { configArgs, entryArgs, localeArgs } from '../common-args';
 import { withApplication } from '../config';
 import { callEntryMethod } from '../methods';
 
 export default defineCommand({
     meta: { name: 'entries:get', description: 'Get a single entry' },
     args: {
-        type: { type: 'positional', required: true, description: 'Entry type slug' },
-        id: { type: 'positional', required: true, description: 'Entry ID' },
-        locale: {
-            type: 'string',
-            description: 'Locale to act on (defaults to the site default)',
-        },
+        ...entryArgs,
+        ...localeArgs,
         ...configArgs,
     },
     run: ({ args }) =>

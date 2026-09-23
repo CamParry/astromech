@@ -27,6 +27,20 @@ export const jsonArgs = {
     },
 } satisfies ArgsDef;
 
+/** The entry type and id an entry command acts on. */
+export const entryArgs = {
+    type: { type: 'positional', required: true, description: 'Entry type slug' },
+    id: { type: 'positional', required: true, description: 'Entry ID' },
+} satisfies ArgsDef;
+
+/** `--locale`, for a command acting on one locale. */
+export const localeArgs = {
+    locale: {
+        type: 'string',
+        description: 'Locale to act on (defaults to the site default)',
+    },
+} satisfies ArgsDef;
+
 /** Read `--allow-remote` off parsed citty args, as the `loadConfig` option shape. */
 export function toAllowRemoteOption(args: { 'allow-remote'?: boolean | undefined }): {
     allowRemote: boolean;

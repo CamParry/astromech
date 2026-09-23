@@ -1,6 +1,6 @@
 import type { Entry, EntryStatus, EntryUpdateData, JsonObject } from '@/types/index';
 import { defineCommand } from 'citty';
-import { configArgs, jsonArgs } from '../common-args';
+import { configArgs, entryArgs, jsonArgs, localeArgs } from '../common-args';
 import { withApplication } from '../config';
 import { callEntryMethod } from '../methods';
 import { parseJsonArg, printResult } from '../output';
@@ -8,12 +8,8 @@ import { parseJsonArg, printResult } from '../output';
 export default defineCommand({
     meta: { name: 'entries:update', description: 'Update an existing entry' },
     args: {
-        type: { type: 'positional', required: true, description: 'Entry type slug' },
-        id: { type: 'positional', required: true, description: 'Entry ID' },
-        locale: {
-            type: 'string',
-            description: 'Locale to act on (defaults to the site default)',
-        },
+        ...entryArgs,
+        ...localeArgs,
         title: { type: 'string', description: 'New title' },
         slug: { type: 'string', description: 'New slug' },
         status: { type: 'string', description: 'New status (draft|published|scheduled)' },
