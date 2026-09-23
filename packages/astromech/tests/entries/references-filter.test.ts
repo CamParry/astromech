@@ -427,6 +427,12 @@ describe('a cross-type query naming a custom-table type', () => {
 });
 
 describe('where with an unrecognized key', () => {
+    it('refuses `_search`, which is `search` spelled as a where key', async () => {
+        await expect(
+            api.query({ type: 'post', full: true, where: { _search: 'x' } })
+        ).rejects.toThrow(UnknownWhereKeyError);
+    });
+
     it('throws rather than silently returning every row', async () => {
         await api.create({ type: 'post', data: { title: 'Target' } });
 

@@ -127,13 +127,7 @@ function buildListWhere(
                 if (value === undefined) continue;
                 if (key === 'locale') continue; // handled above
 
-                if (key === '_search') {
-                    // Not a column: a LIKE against null says nothing, so only a
-                    // term filters.
-                    if (typeof value === 'string') {
-                        conditions.push(eb('entryContent.title', 'like', `%${value}%`));
-                    }
-                } else if (key === 'status') {
+                if (key === 'status') {
                     if (Array.isArray(value)) {
                         conditions.push(
                             eb('entryContent.status', 'in', value as EntryStatus[])
