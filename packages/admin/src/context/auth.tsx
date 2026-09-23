@@ -6,6 +6,7 @@
 
 import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { createContext, useContext } from 'react';
+import { queryKeys } from '../hooks/use-query-keys';
 
 declare const __ASTROMECH_BASE_PATH__: string;
 
@@ -54,7 +55,7 @@ async function fetchSession(): Promise<AuthUser | null> {
 
 /** React Query options for the session; shared so route `beforeLoad` guards and the React tree read the same cache entry. */
 export const sessionQueryOptions = queryOptions({
-    queryKey: ['session'] as const,
+    queryKey: queryKeys.auth.session(),
     queryFn: fetchSession,
     staleTime: 30_000,
     retry: false,
@@ -62,7 +63,7 @@ export const sessionQueryOptions = queryOptions({
 
 /** React Query options for whether the install still needs first-run setup; the login route reads it and the setup page writes it. */
 export const setupCheckQueryOptions = queryOptions({
-    queryKey: ['setup-check'] as const,
+    queryKey: queryKeys.auth.setupCheck(),
     queryFn: fetchSetupCheck,
     retry: false,
 });

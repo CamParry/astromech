@@ -437,7 +437,6 @@ export function EntriesListPage({
     binding: EntriesBinding;
 }): React.ReactElement {
     const { type, cacheScope, config: entryType, basePath } = binding;
-    const scope = { cacheScope };
     const navigate = useNavigate();
     const { toast } = useToast();
     const { t } = useTranslation();
@@ -570,22 +569,19 @@ export function EntriesListPage({
             ? 'all'
             : localeFilter
         : 'all';
-    const { data: listData, isLoading } = useEntriesQuery(
-        {
-            type,
-            locale: effectiveLocale,
-            ...(statusFilter === 'trashed'
-                ? { trashed: true }
-                : statusFilter !== 'all'
-                  ? { where: { status: statusFilter } }
-                  : {}),
-            page,
-            limit: PER_PAGE,
-            search,
-            ...(sort ? { sort: { [sort.key]: sort.direction } } : {}),
-        },
-        scope
-    );
+    const { data: listData, isLoading } = useEntriesQuery({
+        type,
+        locale: effectiveLocale,
+        ...(statusFilter === 'trashed'
+            ? { trashed: true }
+            : statusFilter !== 'all'
+              ? { where: { status: statusFilter } }
+              : {}),
+        page,
+        limit: PER_PAGE,
+        search,
+        ...(sort ? { sort: { [sort.key]: sort.direction } } : {}),
+    });
     const showLocaleColumn = hasI18n && localeFilter === LOCALE_FILTER_ALL;
 
     // Evaluate a derived column's declarative `requires` gate against the page's
@@ -654,28 +650,24 @@ export function EntriesListPage({
     const confirm = useConfirm();
 
     // Mutations
-    const trashMutation = useTrashEntry(type, scope);
-    const deleteMutation = useDeleteEntry(type, scope);
+    const trashMutation = useTrashEntry(type);
+    const deleteMutation = useDeleteEntry(type);
     const duplicateMutation = useDuplicateEntry(type, {
-        ...scope,
         onSuccess: (entry) => {
             void navigate({
                 to: entryEditPath(basePath, entry.id, { locale: entry.locale }),
             });
         },
     });
-    const restoreMutation = useRestoreEntry(type, scope);
+    const restoreMutation = useRestoreEntry(type);
     const bulkPublishMutation = useBulkPublishEntries(type, {
-        ...scope,
         onSuccess: reset,
     });
     const bulkUnpublishMutation = useBulkUnpublishEntries(type, {
-        ...scope,
         onSuccess: reset,
     });
-    const bulkTrashMutation = useBulkTrashEntries(type, { ...scope, onSuccess: reset });
+    const bulkTrashMutation = useBulkTrashEntries(type, { onSuccess: reset });
     const bulkForceDeleteMutation = useBulkDeleteEntries(type, {
-        ...scope,
         onSuccess: reset,
     });
 

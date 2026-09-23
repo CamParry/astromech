@@ -15,23 +15,10 @@ import {
 import { AstromechApiError, astromechUntypedClient } from 'astromech/fetch';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../components/ui/toast';
-import { scopedGlobalKeys } from './use-query-keys';
+import { queryKeys } from './use-query-keys';
 
-/**
- * Optional mount binding: host callers omit it (unprefixed keys); plugin
- * callers pass the plugin name as cache scope.
- */
-export type GlobalHookScope = {
-    /** Cache-key scope. `''` (default) = host keys; plugin name = namespaced. */
-    cacheScope?: string;
-};
-
-function resolveKeys(scope?: GlobalHookScope) {
-    return scopedGlobalKeys(scope?.cacheScope ?? '');
-}
-
-export function globalQueryOptions(key: string, locale: string, scope?: GlobalHookScope) {
-    const keys = resolveKeys(scope);
+export function globalQueryOptions(key: string, locale: string) {
+    const keys = queryKeys.globals;
     return queryOptions({
         queryKey: keys.get(key, locale),
         // `full` is the admin read: the whole row whatever its status, not the
@@ -40,12 +27,8 @@ export function globalQueryOptions(key: string, locale: string, scope?: GlobalHo
     });
 }
 
-export function globalVersionsQueryOptions(
-    key: string,
-    locale: string,
-    scope?: GlobalHookScope
-) {
-    const keys = resolveKeys(scope);
+export function globalVersionsQueryOptions(key: string, locale: string) {
+    const keys = queryKeys.globals;
     return queryOptions({
         queryKey: keys.versions(key, locale),
         queryFn: () => astromechUntypedClient.globals.versions({ key, locale }),
@@ -57,28 +40,23 @@ export function globalVersionsQueryOptions(
  * nobody has saved yet — not an error, so the edit page renders a blank form
  * whose first save creates the row.
  */
-export function useGlobal(key: string, locale: string, scope?: GlobalHookScope) {
-    return useQuery(globalQueryOptions(key, locale, scope));
+export function useGlobal(key: string, locale: string) {
+    return useQuery(globalQueryOptions(key, locale));
 }
 
-export function useGlobalVersions(
-    key: string,
-    locale: string,
-    enabled = true,
-    scope?: GlobalHookScope
-) {
-    return useQuery({ ...globalVersionsQueryOptions(key, locale, scope), enabled });
+export function useGlobalVersions(key: string, locale: string, enabled = true) {
+    return useQuery({ ...globalVersionsQueryOptions(key, locale), enabled });
 }
 
 export function useRestoreGlobalVersion(
     key: string,
     locale: string,
-    options?: { onSuccess?: () => void } & GlobalHookScope
+    options?: { onSuccess?: () => void }
 ) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const keys = resolveKeys(options);
+    const keys = queryKeys.globals;
 
     return useMutation({
         mutationFn: (versionId: string) =>
@@ -100,13 +78,8 @@ export function useRestoreGlobalVersion(
 
 // Forward versioning: hooks for staged globals.
 /** This locale's staged change, or null. */
-export function useGetStagedGlobal(
-    key: string,
-    locale: string,
-    enabled = true,
-    scope?: GlobalHookScope
-) {
-    const keys = resolveKeys(scope);
+export function useGetStagedGlobal(key: string, locale: string, enabled = true) {
+    const keys = queryKeys.globals;
     return useQuery({
         queryKey: keys.staged(key, locale),
         queryFn: () => astromechUntypedClient.globals.getStaged({ key, locale }),
@@ -124,12 +97,12 @@ export function useCreateStagedGlobal(
     options?: {
         onSuccess?: (global: Global) => void;
         onConflict?: () => void;
-    } & GlobalHookScope
+    }
 ) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const keys = resolveKeys(options);
+    const keys = queryKeys.globals;
 
     return useMutation({
         mutationFn: () => astromechUntypedClient.globals.createStaged({ key, locale }),
@@ -155,12 +128,12 @@ export function useCreateStagedGlobal(
 export function useMergeStagedGlobal(
     key: string,
     locale: string,
-    options?: { onSuccess?: (global: Global) => void } & GlobalHookScope
+    options?: { onSuccess?: (global: Global) => void }
 ) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const keys = resolveKeys(options);
+    const keys = queryKeys.globals;
 
     return useMutation({
         mutationFn: () => astromechUntypedClient.globals.mergeStaged({ key, locale }),
@@ -184,12 +157,12 @@ export function useMergeStagedGlobal(
 export function useDeleteStagedGlobal(
     key: string,
     locale: string,
-    options?: { onSuccess?: () => void } & GlobalHookScope
+    options?: { onSuccess?: () => void }
 ) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const keys = resolveKeys(options);
+    const keys = queryKeys.globals;
 
     return useMutation({
         mutationFn: () => astromechUntypedClient.globals.deleteStaged({ key, locale }),

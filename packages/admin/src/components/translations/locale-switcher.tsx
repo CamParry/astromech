@@ -7,7 +7,6 @@
  * whose first save creates the row.
  */
 
-import type { EntryHookScope } from '../../hooks/entries';
 import { useNavigate } from '@tanstack/react-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -30,8 +29,6 @@ type LocaleSwitcherProps = {
     basePath: string;
     /** Entry type id. Needed only for the create-translation write. */
     type?: string;
-    /** Binding for the create-translation write (plugin types bind theirs). */
-    scope?: EntryHookScope;
     /**
      * Take over a locale the resource has no row for. When given, the switcher
      * calls this instead of writing the row itself.
@@ -48,7 +45,6 @@ export function LocaleSwitcher({
     defaultLocale,
     basePath,
     type,
-    scope,
     onSelectMissing,
     compact = false,
 }: LocaleSwitcherProps): React.ReactElement {
@@ -58,7 +54,6 @@ export function LocaleSwitcher({
     const [isCreating, setIsCreating] = useState(false);
 
     const createMutation = useCreateTranslation(type ?? '', {
-        ...scope,
         onSuccess: (entry) => {
             setIsCreating(false);
             void navigate({

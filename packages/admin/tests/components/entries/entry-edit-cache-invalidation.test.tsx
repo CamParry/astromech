@@ -43,7 +43,7 @@ import { ConfirmProvider } from '@/admin/components/ui/confirm';
 import { ToastProvider } from '@/admin/components/ui/toast';
 import { AiContextProvider } from '@/admin/context/ai-context';
 import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
-import { queryKeys, scopedEntryKeys } from '@/admin/hooks/use-query-keys';
+import { queryKeys } from '@/admin/hooks/use-query-keys';
 import '@/admin/rendering/register-fields';
 import type { EntriesBinding } from '@/admin/components/entries/binding';
 import type {
@@ -131,9 +131,7 @@ function mountEditPage(queryClient: QueryClient) {
     const api = {
         get: vi.fn(
             async () =>
-                queryClient.getQueryData(
-                    scopedEntryKeys(CACHE_SCOPE).get(TYPE, ID, LOCALE)
-                ) ?? null
+                queryClient.getQueryData(queryKeys.entries.get(TYPE, ID, LOCALE)) ?? null
         ),
         update,
     } as unknown as EntriesService;
@@ -195,7 +193,7 @@ describe('the entry edit page after a save', () => {
             defaultOptions: { queries: { staleTime: 30_000 } },
         });
         queryClient.setQueryData(
-            scopedEntryKeys(CACHE_SCOPE).get(TYPE, ID, LOCALE),
+            queryKeys.entries.get(TYPE, ID, LOCALE),
             makeEntry('Lumenflow')
         );
         // Session, so `usePermissions()` grants the update action without a

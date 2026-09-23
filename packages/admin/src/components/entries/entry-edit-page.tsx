@@ -41,7 +41,7 @@ import {
 } from '../../hooks/entries';
 import { useEntryForm } from '../../hooks/use-entry-form';
 import { usePermissions } from '../../hooks/use-permissions';
-import { scopedEntryKeys } from '../../hooks/use-query-keys';
+import { queryKeys } from '../../hooks/use-query-keys';
 import { EntryNamespaceProvider, namespaceForScope } from '../../i18n/entry-namespace';
 import { Link } from '../../rendering/cells/link';
 import { resolveAdminEntryType, resolveForm } from '../../rendering/resolve';
@@ -125,7 +125,6 @@ function EntryEditPageBody({
     staged: boolean;
 }): React.ReactElement {
     const { type, cacheScope, config: entryType, basePath } = binding;
-    const scope = { cacheScope };
     const { toast } = useToast();
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -147,8 +146,7 @@ function EntryEditPageBody({
     const { data: canonicalEntry, isLoading: canonicalLoading } = useEntry(
         type,
         id,
-        locale,
-        scope
+        locale
     );
     // The staged change for this locale: what the staged editor shows, and what
     // tells the canonical view whether to offer "Stage" or "View staged".
@@ -156,8 +154,7 @@ function EntryEditPageBody({
         type,
         id,
         locale,
-        hasStaging,
-        scope
+        hasStaging
     );
     const entry = isStaged ? (stagedChange ?? undefined) : canonicalEntry;
     const authorNames = useAuthorNames();
@@ -180,18 +177,15 @@ function EntryEditPageBody({
         type,
         id,
         locale,
-        hasVersioning && !isStaged,
-        scope
+        hasVersioning && !isStaged
     );
     const versionCount = versions?.length ?? 0;
 
     const trashEntry = useTrashEntry(type, {
-        ...scope,
         onSuccess: () => void navigate({ to: basePath }),
     });
 
     const duplicateEntry = useDuplicateEntry(type, {
-        ...scope,
         onSuccess: (newEntry) =>
             void navigate({
                 to: entryEditPath(basePath, newEntry.id, { locale: newEntry.locale }),
@@ -237,7 +231,7 @@ function EntryEditPageBody({
                 data,
             }),
         onSuccess: (updated) => {
-            const keys = scopedEntryKeys(cacheScope);
+            const keys = queryKeys.entries;
             // Seed the cache with the saved entry before invalidating, so the
             // re-render `form.reset` triggers already sees fresh defaultValues
             // instead of the stale one the invalidated query hasn't refetched yet.
@@ -266,20 +260,17 @@ function EntryEditPageBody({
     const stagedPath = entryEditPath(basePath, id, { locale, staged: true });
 
     const createStaged = useCreateStaged(type, locale, {
-        ...scope,
         onSuccess: () => void navigate({ to: stagedPath }),
         onConflict: () => void navigate({ to: stagedPath }),
     });
     const mergeStaged = useMergeStaged(type, id, locale, {
-        ...scope,
         onSuccess: () => void navigate({ to: canonicalPath }),
     });
     const deleteStaged = useDeleteStaged(type, id, locale, {
-        ...scope,
         onSuccess: () => void navigate({ to: canonicalPath }),
     });
     const issueToken = useIssuePreviewToken(type, id);
-    const revokeToken = useRevokePreviewToken(type, id, scope);
+    const revokeToken = useRevokePreviewToken(type, id);
 
     const previewUrl =
         entryType?.url && entry != null ? resolveEntryUrl(entryType.url, entry) : null;
@@ -379,7 +370,6 @@ function EntryEditPageBody({
                                 locales={entry.locales}
                                 allLocales={adminConfig.locales}
                                 defaultLocale={defaultContentLocale()}
-                                scope={scope}
                                 compact
                             />
                         )}

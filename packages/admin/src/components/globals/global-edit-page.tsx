@@ -29,7 +29,7 @@ import {
 } from '../../hooks/globals';
 import { useEntryForm } from '../../hooks/use-entry-form';
 import { usePermissions } from '../../hooks/use-permissions';
-import { scopedGlobalKeys } from '../../hooks/use-query-keys';
+import { queryKeys } from '../../hooks/use-query-keys';
 import { EntryNamespaceProvider, namespaceForScope } from '../../i18n/entry-namespace';
 import { resolveLabel } from '../../i18n/labels';
 import { Link } from '../../rendering/cells/link';
@@ -102,7 +102,6 @@ function GlobalEditPageBody({
     staged: boolean;
 }): React.ReactElement {
     const { key, cacheScope, config, basePath } = binding;
-    const scope = { cacheScope };
     const namespace = namespaceForScope(cacheScope);
     const { toast } = useToast();
     const { t } = useTranslation();
@@ -128,16 +127,11 @@ function GlobalEditPageBody({
 
     // `null` is a declared global nobody has saved yet: an empty form, whose
     // first save is the `update` that creates the row.
-    const { data: canonical, isLoading: canonicalLoading } = useGlobal(
-        key,
-        locale,
-        scope
-    );
+    const { data: canonical, isLoading: canonicalLoading } = useGlobal(key, locale);
     const { data: stagedChange, isLoading: stagedLoading } = useGetStagedGlobal(
         key,
         locale,
-        hasStaging,
-        scope
+        hasStaging
     );
     const global = (isStaged ? stagedChange : canonical) ?? null;
     const isLoading = isStaged ? canonicalLoading || stagedLoading : canonicalLoading;
@@ -145,12 +139,7 @@ function GlobalEditPageBody({
     // A global's label comes from the config, so it is known before the row is.
     useAiContext({ kind: 'globals', id: key, label }, { depth: 1 });
 
-    const { data: versions } = useGlobalVersions(
-        key,
-        locale,
-        hasVersioning && !isStaged,
-        scope
-    );
+    const { data: versions } = useGlobalVersions(key, locale, hasVersioning && !isStaged);
     const versionCount = versions?.length ?? 0;
 
     const canonicalPath = globalEditPath(basePath, { locale });
@@ -200,7 +189,7 @@ function GlobalEditPageBody({
         saveFn: writeGlobal,
         publishFn: (payload) => writeGlobal({ ...payload, status: 'published' }),
         onSuccess: (updated) => {
-            const keys = scopedGlobalKeys(cacheScope);
+            const keys = queryKeys.globals;
             // Seed the cache before invalidating, so the re-render `form.reset`
             // triggers sees fresh defaultValues rather than the stale row the
             // invalidated query has not refetched yet.
@@ -218,16 +207,13 @@ function GlobalEditPageBody({
     const isDirty = useStore(form.store, (state) => state.isDirty);
 
     const createStaged = useCreateStagedGlobal(key, locale, {
-        ...scope,
         onSuccess: () => void navigate({ to: stagedPath }),
         onConflict: () => void navigate({ to: stagedPath }),
     });
     const mergeStaged = useMergeStagedGlobal(key, locale, {
-        ...scope,
         onSuccess: () => void navigate({ to: canonicalPath }),
     });
     const deleteStaged = useDeleteStagedGlobal(key, locale, {
-        ...scope,
         onSuccess: () => void navigate({ to: canonicalPath }),
     });
 

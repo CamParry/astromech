@@ -14,78 +14,47 @@ import {
 import { AstromechApiError, astromechUntypedClient } from 'astromech/fetch';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../components/ui/toast';
-import { queryKeys, scopedEntryKeys } from './use-query-keys';
+import { queryKeys } from './use-query-keys';
 
-/**
- * Optional mount binding: root callers omit it (unprefixed keys); plugin
- * callers pass the plugin name as cache scope.
- */
-export type EntryHookScope = {
-    /** Cache-key scope. `''` (default) = root keys; plugin name = namespaced. */
-    cacheScope?: string;
-};
-
-function resolveKeys(scope?: EntryHookScope) {
-    return scopedEntryKeys(scope?.cacheScope ?? '');
-}
-
-export function useEntriesQuery(
-    params: EntryQueryParams & { type: string | readonly string[] },
-    scope?: EntryHookScope
-) {
-    const typeKey = Array.isArray(params.type)
-        ? params.type.join(',')
-        : (params.type as string);
-    const keys = resolveKeys(scope);
-    return useQuery({
-        queryKey: keys.list(typeKey, params as Record<string, unknown>),
+/** One page of one entry type, keyed under `entries.all(type)` so every entry mutation refreshes it. */
+export function entriesQueryOptions(params: EntryQueryParams & { type: string }) {
+    return queryOptions({
+        queryKey: queryKeys.entries.list(params.type, params),
         queryFn: () => astromechUntypedClient.entries.query(params),
     });
 }
 
-export function entryQueryOptions(
-    type: string,
-    id: string,
-    locale: string,
-    scope?: EntryHookScope
-) {
-    const keys = resolveKeys(scope);
+export function useEntriesQuery(params: EntryQueryParams & { type: string }) {
+    return useQuery(entriesQueryOptions(params));
+}
+
+export function entryQueryOptions(type: string, id: string, locale: string) {
+    const keys = queryKeys.entries;
     return queryOptions({
         queryKey: keys.get(type, id, locale),
         queryFn: () => astromechUntypedClient.entries.get({ type, id, locale }),
     });
 }
 
-export function entryVersionsQueryOptions(
-    type: string,
-    id: string,
-    locale: string,
-    scope?: EntryHookScope
-) {
-    const keys = resolveKeys(scope);
+export function entryVersionsQueryOptions(type: string, id: string, locale: string) {
+    const keys = queryKeys.entries;
     return queryOptions({
         queryKey: keys.versions(type, id, locale),
         queryFn: () => astromechUntypedClient.entries.versions({ type, id, locale }),
     });
 }
 
-export function useEntry(
-    type: string,
-    id: string,
-    locale: string,
-    scope?: EntryHookScope
-) {
-    return useQuery(entryQueryOptions(type, id, locale, scope));
+export function useEntry(type: string, id: string, locale: string) {
+    return useQuery(entryQueryOptions(type, id, locale));
 }
 
 export function useEntryVersions(
     type: string,
     id: string,
     locale: string,
-    enabled = true,
-    scope?: EntryHookScope
+    enabled = true
 ) {
-    return useQuery({ ...entryVersionsQueryOptions(type, id, locale, scope), enabled });
+    return useQuery({ ...entryVersionsQueryOptions(type, id, locale), enabled });
 }
 
 /**
@@ -100,14 +69,11 @@ export function useEntryUsage(type: string, id: string, enabled = true) {
     });
 }
 
-export function useTrashEntry(
-    type: string,
-    options?: { onSuccess?: () => void } & EntryHookScope
-) {
+export function useTrashEntry(type: string, options?: { onSuccess?: () => void }) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const keys = resolveKeys(options);
+    const keys = queryKeys.entries;
 
     return useMutation({
         mutationFn: (id: string) => astromechUntypedClient.entries.trash({ type, id }),
@@ -130,14 +96,11 @@ export function useTrashEntry(
     });
 }
 
-export function useDeleteEntry(
-    type: string,
-    options?: { onSuccess?: () => void } & EntryHookScope
-) {
+export function useDeleteEntry(type: string, options?: { onSuccess?: () => void }) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const keys = resolveKeys(options);
+    const keys = queryKeys.entries;
 
     return useMutation({
         mutationFn: (id: string) => astromechUntypedClient.entries.delete({ type, id }),
@@ -162,12 +125,12 @@ export function useDeleteEntry(
 
 export function useDuplicateEntry(
     type: string,
-    options?: { onSuccess?: (entry: Entry) => void } & EntryHookScope
+    options?: { onSuccess?: (entry: Entry) => void }
 ) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const keys = resolveKeys(options);
+    const keys = queryKeys.entries;
 
     return useMutation({
         mutationFn: (id: string) =>
@@ -192,14 +155,11 @@ export function useDuplicateEntry(
     });
 }
 
-export function useRestoreEntry(
-    type: string,
-    options?: { onSuccess?: () => void } & EntryHookScope
-) {
+export function useRestoreEntry(type: string, options?: { onSuccess?: () => void }) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const keys = resolveKeys(options);
+    const keys = queryKeys.entries;
 
     return useMutation({
         mutationFn: (id: string) => astromechUntypedClient.entries.restore({ type, id }),
@@ -233,14 +193,11 @@ function bulkErrorMessage(err: unknown, fallback: string): string {
     return fallback;
 }
 
-export function useBulkTrashEntries(
-    type: string,
-    options?: { onSuccess?: () => void } & EntryHookScope
-) {
+export function useBulkTrashEntries(type: string, options?: { onSuccess?: () => void }) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const keys = resolveKeys(options);
+    const keys = queryKeys.entries;
 
     return useMutation({
         mutationFn: (ids: string[]) =>
@@ -261,14 +218,11 @@ export function useBulkTrashEntries(
     });
 }
 
-export function useBulkDeleteEntries(
-    type: string,
-    options?: { onSuccess?: () => void } & EntryHookScope
-) {
+export function useBulkDeleteEntries(type: string, options?: { onSuccess?: () => void }) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const keys = resolveKeys(options);
+    const keys = queryKeys.entries;
 
     return useMutation({
         mutationFn: (ids: string[]) =>
@@ -291,12 +245,12 @@ export function useBulkDeleteEntries(
 
 export function useBulkPublishEntries(
     type: string,
-    options?: { onSuccess?: () => void } & EntryHookScope
+    options?: { onSuccess?: () => void }
 ) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const keys = resolveKeys(options);
+    const keys = queryKeys.entries;
 
     return useMutation({
         mutationFn: (ids: string[]) =>
@@ -319,12 +273,12 @@ export function useBulkPublishEntries(
 
 export function useBulkUnpublishEntries(
     type: string,
-    options?: { onSuccess?: () => void } & EntryHookScope
+    options?: { onSuccess?: () => void }
 ) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const keys = resolveKeys(options);
+    const keys = queryKeys.entries;
 
     return useMutation({
         mutationFn: (ids: string[]) =>
@@ -349,12 +303,12 @@ export function useRestoreEntryVersion(
     type: string,
     id: string,
     locale: string,
-    options?: { onSuccess?: () => void } & EntryHookScope
+    options?: { onSuccess?: () => void }
 ) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const keys = resolveKeys(options);
+    const keys = queryKeys.entries;
 
     return useMutation({
         mutationFn: (versionId: string) =>
@@ -393,12 +347,12 @@ export function useCreateTranslation(
     options?: {
         onSuccess?: (entry: Entry) => void;
         onError?: (err: Error) => void;
-    } & EntryHookScope
+    }
 ) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const keys = resolveKeys(options);
+    const keys = queryKeys.entries;
 
     return useMutation({
         mutationFn: ({ id, locale }: { id: string; locale: string }): Promise<Entry> =>
@@ -421,14 +375,8 @@ export function useCreateTranslation(
 
 // Forward versioning: hooks for staged entries.
 /** This locale's staged change, or null. */
-export function useGetStaged(
-    type: string,
-    id: string,
-    locale: string,
-    enabled = true,
-    scope?: EntryHookScope
-) {
-    const keys = resolveKeys(scope);
+export function useGetStaged(type: string, id: string, locale: string, enabled = true) {
+    const keys = queryKeys.entries;
     return useQuery({
         queryKey: keys.staged(type, id, locale),
         queryFn: () => astromechUntypedClient.entries.getStaged({ type, id, locale }),
@@ -447,12 +395,12 @@ export function useCreateStaged(
     options?: {
         onSuccess?: (entry: Entry) => void;
         onConflict?: () => void;
-    } & EntryHookScope
+    }
 ) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const keys = resolveKeys(options);
+    const keys = queryKeys.entries;
 
     return useMutation({
         mutationFn: (id: string) =>
@@ -482,12 +430,12 @@ export function useMergeStaged(
     type: string,
     id: string,
     locale: string,
-    options?: { onSuccess?: (entry: Entry) => void } & EntryHookScope
+    options?: { onSuccess?: (entry: Entry) => void }
 ) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const keys = resolveKeys(options);
+    const keys = queryKeys.entries;
 
     return useMutation({
         mutationFn: () =>
@@ -515,12 +463,12 @@ export function useDeleteStaged(
     type: string,
     id: string,
     locale: string,
-    options?: { onSuccess?: () => void } & EntryHookScope
+    options?: { onSuccess?: () => void }
 ) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { t } = useTranslation();
-    const keys = resolveKeys(options);
+    const keys = queryKeys.entries;
 
     return useMutation({
         mutationFn: () =>
@@ -562,7 +510,7 @@ export function useIssuePreviewToken(type: string, id: string) {
 export function useRevokePreviewToken(
     type: string,
     id: string,
-    options?: { onSuccess?: () => void } & EntryHookScope
+    options?: { onSuccess?: () => void }
 ) {
     const { toast } = useToast();
     const { t } = useTranslation();

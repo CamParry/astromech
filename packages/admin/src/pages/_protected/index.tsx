@@ -3,9 +3,8 @@
  */
 
 import type { Entry } from 'astromech';
-import { useQuery } from '@tanstack/react-query';
+import { useQueries } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { astromechUntypedClient } from 'astromech/fetch';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -22,6 +21,7 @@ import {
 import { Panel } from '../../components/ui/panel';
 import { Skeleton } from '../../components/ui/spinner';
 import { useAiContext } from '../../context/ai-context';
+import { entriesQueryOptions, useEntriesQuery } from '../../hooks/entries';
 import { formatDate } from '../../utilities/dates';
 
 function statusVariant(
@@ -34,17 +34,13 @@ function statusVariant(
 }
 
 function StatCard({
-    collectionKey,
+    typeId,
     label,
 }: {
-    collectionKey: string;
+    typeId: string;
     label: string;
 }): React.ReactElement {
-    const { data, isLoading } = useQuery({
-        queryKey: ['collection-count', collectionKey],
-        queryFn: () =>
-            astromechUntypedClient.entries.query({ type: collectionKey, limit: 1 }),
-    });
+    const { data, isLoading } = useEntriesQuery({ type: typeId, limit: 1 });
 
     const total = data?.pagination?.total ?? 0;
 
@@ -62,7 +58,7 @@ function StatCard({
     );
 }
 
-type RecentEntry = Entry & { collectionKey: string; collectionLabel: string };
+type RecentEntry = Entry & { typeId: string; typeLabel: string };
 
 type RecentActivityResult = {
     data: RecentEntry[];
@@ -76,48 +72,37 @@ const siteEntryTypes = Object.fromEntries(
     )
 );
 
+/**
+ * The five most recently updated entries across the site's types. Each type is
+ * its own list query, so an entry mutation refreshes the type it touched.
+ */
 function useRecentEntries(): RecentActivityResult {
-    const collectionKeys = Object.keys(siteEntryTypes);
-    const collectionKeysStr = collectionKeys.join(',');
-
-    const { data, isLoading } = useQuery({
-        queryKey: ['recent-entries-all', collectionKeysStr],
-        queryFn: async () => {
-            const results = await Promise.all(
-                collectionKeys.map(async (key) => {
-                    const result = await astromechUntypedClient.entries.query({
-                        type: key,
-                        limit: 5,
-                        sort: { updatedAt: 'desc' },
-                    });
-                    const collectionLabel = siteEntryTypes[key]?.plural ?? key;
-                    return result.data.map(
-                        (entry): RecentEntry => ({
-                            ...entry,
-                            collectionKey: key,
-                            collectionLabel,
-                        })
+    return useQueries({
+        queries: Object.keys(siteEntryTypes).map((type) =>
+            entriesQueryOptions({ type, limit: 5, sort: { updatedAt: 'desc' } })
+        ),
+        combine: (results) => ({
+            data: results
+                .flatMap((result, index) => {
+                    const typeId = Object.keys(siteEntryTypes)[index] ?? '';
+                    const typeLabel = siteEntryTypes[typeId]?.plural ?? typeId;
+                    return (result.data?.data ?? []).map(
+                        (entry): RecentEntry => ({ ...entry, typeId, typeLabel })
                     );
                 })
-            );
-            const allEntries = results.flat();
-            allEntries.sort((a, b) => {
-                const aTime = new Date(a.updatedAt).getTime();
-                const bTime = new Date(b.updatedAt).getTime();
-                return bTime - aTime;
-            });
-            return allEntries.slice(0, 5);
-        },
-        enabled: collectionKeys.length > 0,
+                .sort(
+                    (a, b) =>
+                        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+                )
+                .slice(0, 5),
+            isLoading: results.some((result) => result.isLoading),
+        }),
     });
-
-    return { data: data ?? [], isLoading };
 }
 
 function DashboardPage(): React.ReactElement {
     const { t } = useTranslation();
-    const collections = siteEntryTypes;
-    const collectionEntries = Object.entries(collections);
+    const typeEntries = Object.entries(siteEntryTypes);
     const { data: recentEntries, isLoading: recentLoading } = useRecentEntries();
 
     useAiContext(
@@ -133,18 +118,18 @@ function DashboardPage(): React.ReactElement {
 
             <PageContent>
                 {/* Stat cards */}
-                {collectionEntries.length > 0 && (
+                {typeEntries.length > 0 && (
                     <section>
                         <SectionTitle>{t('dashboard.collections')}</SectionTitle>
                         <div className="am-stat-grid">
-                            {collectionEntries.map(([key, col]) => (
+                            {typeEntries.map(([key, entryType]) => (
                                 <Link
                                     key={key}
                                     to="/entries/$type"
                                     params={{ type: key }}
                                     className="am-link-inherit"
                                 >
-                                    <StatCard collectionKey={key} label={col.plural} />
+                                    <StatCard typeId={key} label={entryType.plural} />
                                 </Link>
                             ))}
                         </div>
@@ -166,14 +151,14 @@ function DashboardPage(): React.ReactElement {
                             <ul className="am-activity-list">
                                 {recentEntries.map((entry) => (
                                     <li
-                                        key={`${entry.collectionKey}-${entry.id}`}
+                                        key={`${entry.typeId}-${entry.id}`}
                                         className="am-activity-list-item"
                                     >
                                         <div className="am-activity-list-body">
                                             <Link
                                                 to="/entries/$type/$id"
                                                 params={{
-                                                    type: entry.collectionKey,
+                                                    type: entry.typeId,
                                                     id: entry.id,
                                                 }}
                                                 className="am-link"
@@ -181,7 +166,7 @@ function DashboardPage(): React.ReactElement {
                                                 {entry.title}
                                             </Link>
                                             <div className="am-activity-list-meta">
-                                                {entry.collectionLabel} ·{' '}
+                                                {entry.typeLabel} ·{' '}
                                                 {t('dashboard.updated', {
                                                     date: formatDate(entry.updatedAt),
                                                 })}

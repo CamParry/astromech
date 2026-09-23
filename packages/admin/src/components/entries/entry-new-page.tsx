@@ -72,14 +72,11 @@ function CreateLocaleModal({
     const [selectedId, setSelectedId] = useState<string>('');
 
     // Source entries are existing rows in the default locale (the dominant case).
-    const { data: sourceList } = useEntriesQuery(
-        {
-            type: binding.type,
-            locale: defaultLocale,
-            limit: 'all',
-        },
-        { cacheScope: binding.cacheScope }
-    );
+    const { data: sourceList } = useEntriesQuery({
+        type: binding.type,
+        locale: defaultLocale,
+        limit: 'all',
+    });
 
     const sourceEntries = sourceList?.data ?? [];
 

@@ -27,16 +27,14 @@ export function GlobalVersionsPage({
     const { key, cacheScope, config, basePath } = binding;
     const locale = localeProp ?? defaultContentLocale();
     const editPath = globalEditPath(basePath, { locale });
-    const scope = { cacheScope };
     const { t } = useTranslation();
     const navigate = useNavigate();
 
     const label = resolveLabel(config?.label, key, t, namespaceForScope(cacheScope));
 
-    const { data: versions, isLoading } = useGlobalVersions(key, locale, true, scope);
+    const { data: versions, isLoading } = useGlobalVersions(key, locale, true);
 
     const restoreMutation = useRestoreGlobalVersion(key, locale, {
-        ...scope,
         onSuccess: () => void navigate({ to: editPath }),
     });
 

@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { globalQueryOptions, globalVersionsQueryOptions } from '@/admin/hooks/globals';
-import { queryKeys, scopedGlobalKeys } from '@/admin/hooks/use-query-keys';
+import { queryKeys } from '@/admin/hooks/use-query-keys';
 
 describe('global detail keys', () => {
     it('separates two locales of the same global', () => {
@@ -41,18 +41,10 @@ describe('global detail keys', () => {
         ]);
     });
 
-    it('namespaces a plugin global the same way', () => {
-        const keys = scopedGlobalKeys('seo');
-        expect(keys.get('seo/settings', 'en')).not.toEqual(
-            keys.get('seo/settings', 'fr')
+    it('keys a plugin global by its qualified id, apart from a site global of the same key', () => {
+        expect(queryKeys.globals.all('seo/settings')).not.toEqual(
+            queryKeys.globals.all('settings')
         );
-        expect(keys.get('seo/settings', 'en')).not.toEqual([
-            ...queryKeys.globals.get('seo/settings', 'en'),
-        ]);
-    });
-
-    it('gives a host global the unscoped keys', () => {
-        expect(scopedGlobalKeys('')).toBe(queryKeys.globals);
     });
 });
 

@@ -5,9 +5,14 @@
  * locale's history.
  */
 
+import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
-import { entryQueryOptions, entryVersionsQueryOptions } from '@/admin/hooks/entries';
-import { queryKeys, scopedEntryKeys } from '@/admin/hooks/use-query-keys';
+import {
+    entriesQueryOptions,
+    entryQueryOptions,
+    entryVersionsQueryOptions,
+} from '@/admin/hooks/entries';
+import { queryKeys } from '@/admin/hooks/use-query-keys';
 
 describe('entry detail keys', () => {
     it('separates two locales of the same entry', () => {
@@ -29,14 +34,10 @@ describe('entry detail keys', () => {
         ]);
     });
 
-    it('namespaces a plugin type the same way', () => {
-        const keys = scopedEntryKeys('forms');
-        expect(keys.get('forms/form', 'e1', 'en')).not.toEqual(
-            keys.get('forms/form', 'e1', 'fr')
+    it('keys a plugin type by its qualified id, apart from a site type of the same name', () => {
+        expect(queryKeys.entries.all('forms/form')).not.toEqual(
+            queryKeys.entries.all('form')
         );
-        expect(keys.get('forms/form', 'e1', 'en')).not.toEqual([
-            ...queryKeys.entries.get('forms/form', 'e1', 'en'),
-        ]);
     });
 });
 
@@ -51,5 +52,22 @@ describe('the query options the routes prefetch with', () => {
         expect(entryVersionsQueryOptions('post', 'e1', 'fr').queryKey).toEqual([
             ...queryKeys.entries.versions('post', 'e1', 'fr'),
         ]);
+    });
+});
+
+describe('list reads', () => {
+    it('go stale when an entry mutation invalidates their type', async () => {
+        // The dashboard's counts read one-row pages; an entry mutation
+        // invalidates `entries.all(type)`, which must reach them.
+        const queryClient = new QueryClient();
+        const count = entriesQueryOptions({ type: 'post', limit: 1 });
+        queryClient.setQueryData(count.queryKey, { data: [], pagination: null });
+
+        await queryClient.invalidateQueries({
+            queryKey: queryKeys.entries.all('post'),
+            refetchType: 'none',
+        });
+
+        expect(queryClient.getQueryState(count.queryKey)?.isInvalidated).toBe(true);
     });
 });

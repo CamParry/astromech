@@ -26,6 +26,7 @@ import adminConfig from 'virtual:astromech/admin-config';
 import adminIcons from 'virtual:astromech/admin-icons';
 import { useDebounce } from '../../hooks/use-debounce';
 import { usePermissions } from '../../hooks/use-permissions';
+import { queryKeys } from '../../hooks/use-query-keys';
 import { entryAdminPath } from '../../utilities/entry-admin-path';
 import { entryLabel } from '../entries/entry-label';
 import { EntryTypeIcon } from './entry-type-icon';
@@ -258,7 +259,7 @@ export function CommandPalette(): React.ReactElement {
     );
 
     const liveQuery = useQuery({
-        queryKey: ['cmdpal-search', debouncedQuery] as const,
+        queryKey: queryKeys.search(debouncedQuery),
         enabled: debouncedQuery !== '',
         staleTime: 0,
         queryFn: async (): Promise<LiveResults> => {

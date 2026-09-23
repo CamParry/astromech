@@ -6,25 +6,68 @@ and read query keys and mutations from one factory per resource.
 
 ## Why
 
-- The entry and global edit pages copy their staging controls, and copied the
-  scheduled-publish date bug between them.
-- `hooks/entries.ts` has 16 `useMutation` bodies. Six plugin route files
-  mirror the core ones, each building a binding with a cast.
+- The entry and global edit pages copy their staging controls, status panel
+  wiring and versions link.
+- `hooks/entries.ts` has 15 `useMutation` bodies, each repeating the same
+  invalidation and toasts; globals, media, users and notifications repeat the
+  shape. Six plugin route files mirror the core ones, each building a binding.
 - `scopedEntryKeys`/`scopedGlobalKeys` repeat the key factory under a
   `cacheScope` prefix, although plugin type ids are already qualified.
-- Seven query keys are written inline despite the factory's header. The
-  dashboard's counts (`pages/_protected/index.tsx`) use two of them, which no
-  entry mutation invalidates, so with the 30-second `staleTime` it shows old
-  numbers.
-- `utilities/ai-context.ts` ends in `default: break`, which hides its missing
-  `globals` case.
-- The pages are large: `entries-list-page.tsx` 1161 lines,
-  `entry-edit-page.tsx` 785, `entry-new-page.tsx` 568, `global-edit-page.tsx`
-  507, `user-edit-page.tsx` 485.
+- Seven query keys are written inline despite the factory's header: five in
+  the admin (`session`, `setup-check`, the command palette's search and the
+  dashboard's two) and two in plugin pages. The dashboard's counts
+  (`pages/_protected/index.tsx`) are keyed outside `entries.all(type)`, which
+  every entry mutation invalidates, so with the 30-second `staleTime` it shows
+  old numbers.
+- The entry create page writes without invalidating the entries list.
+- The pages are large: `entries-list-page.tsx` 1159 lines,
+  `entry-edit-page.tsx` 795, `entry-new-page.tsx` 569, `global-edit-page.tsx`
+  491, `user-edit-page.tsx` 485.
+
+Checked against the code on 2026-09-23: the `globals` case in
+`utilities/ai-context.ts` (core) already exists with no `default`, and the
+type-aware `switch-exhaustiveness-check` lint rule already fails on a missing
+case. The scheduled-publish date bug was fixed by `3f040f10`; both edit pages
+seed the input through `formatDatetimeForInput`.
+
+## The plan
+
+- **Keys.** `hooks/use-query-keys.ts` is the one factory. Entry keys take the
+  type id and global keys the global id, bare or plugin-qualified, so
+  `scopedEntryKeys`, `scopedGlobalKeys` and `cacheScope` go. The dashboard
+  reads through `useEntriesQuery`, so its counts and recent entries sit under
+  `entries.list(type, …)`. `auth.session`, `auth.setupCheck` and `search` move
+  in. The two plugin keys stay in the plugins, under `['plugin', name]`: a
+  plugin imports `astromech/ui`, not the admin's factory.
+- **Mutations.** Each resource module (`hooks/entries.ts`, `globals.ts`,
+  `media.ts`, `users.ts`, `notifications.ts`) exports one
+  `xMutations(address)` factory of TanStack `mutationOptions`, whose `meta`
+  names the keys it invalidates and its toasts. `useAdminMutation(options,
+callbacks)` runs any of them: it invalidates `meta.invalidates` and toasts.
+  Bulk restore sends one `restore` with every id. A staged change that already
+  exists resolves the create as `null`, so both callers open it without an
+  `onConflict` branch.
+- **`useAdminEntryType(type)` and `useAdminGlobal(id)`** (`hooks/`) read
+  `AdminConfig.entryTypes`/`globals`, the i18n namespace, the base path and
+  `can(action)` from `entryPermission`/`globalPermission`. The pages take a
+  type or global id; the route files pass their params (the plugin routes
+  qualify theirs) and prefetch the same query options.
+- **`useEditController({ resource, id, locale, staged })`** loads the
+  canonical row or its staged change, builds the form values and the one
+  `update` payload (status only on a canonical write), and exposes staging
+  create, merge and discard with their confirms. `StagingControls`,
+  `StagingBanner`, `VersionsLink` and the form fields (`TitleField`,
+  `SlugField`, `StatusField` over `PublishPanel`, `FieldColumn`) are shared by
+  the entry and global edit pages and the create page.
+- **`useListController`** for the entries list: typed URL search (no cast),
+  query params, pagination and sort. Users and media keep their own: each is
+  one typed route whose `Route.useNavigate` needs no cast, and media's
+  `useMediaBrowser` already serves the library and the picker.
 
 ## The work
 
-- [ ] Add the `globals` case to `utilities/ai-context.ts` with no `default`.
+- [x] Add the `globals` case to `utilities/ai-context.ts` with no `default`.
+      Already true; lint covers exhaustiveness.
 - [ ] One key factory keyed by the entry type id; delete `scopedEntryKeys`,
       `scopedGlobalKeys` and `cacheScope`; move the inline keys in, with the
       dashboard's counts under `entries.all(type)` so mutations invalidate
@@ -33,12 +76,7 @@ and read query keys and mutations from one factory per resource.
       `hooks/entries.ts`'s bodies become one table; bulk restore sends one
       request.
 - [ ] `useAdminEntryType(typeId)` replaces `EntriesBinding` and
-      `GlobalsBinding`; the core and plugin route files only map params. It
-      reads `AdminConfig.entryTypes[typeId]` (or `globals[id]`), which already
-      holds every type and global keyed by id with `plugin?`, and permissions
-      come from `entryPermission`/`globalPermission` in `astromech/shared`.
-      The `/plugin/$name/…` routes stay; `pluginEntryRouteParams` and
-      `pluginGlobalRouteParams` already find the owner through the config.
+      `GlobalsBinding`; the core and plugin route files only map params.
 - [ ] `useEditController(resource, target)`: loading canonical or staged, one
       form codec, one `update` carrying status, staging create, merge and
       discard. Shared `StagingControls` and `PublishPanel`.

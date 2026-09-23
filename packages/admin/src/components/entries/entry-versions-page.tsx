@@ -24,21 +24,19 @@ export function EntryVersionsPage({
     /** Locale from the route search params; defaults to the default content locale. */
     locale: string | undefined;
 }): React.ReactElement {
-    const { type, cacheScope, config: entryType, basePath } = binding;
+    const { type, config: entryType, basePath } = binding;
     const locale = localeProp ?? defaultContentLocale();
     const editPath = entryEditPath(basePath, id, { locale });
-    const scope = { cacheScope };
     const { t } = useTranslation();
     const navigate = useNavigate();
 
     const plural = entryType?.plural ?? type;
     const hasTitle = entryType?.titleField !== false;
 
-    const { data: entry } = useEntry(type, id, locale, scope);
-    const { data: versions, isLoading } = useEntryVersions(type, id, locale, true, scope);
+    const { data: entry } = useEntry(type, id, locale);
+    const { data: versions, isLoading } = useEntryVersions(type, id, locale, true);
 
     const restoreMutation = useRestoreEntryVersion(type, id, locale, {
-        ...scope,
         onSuccess: () => void navigate({ to: editPath }),
     });
 
