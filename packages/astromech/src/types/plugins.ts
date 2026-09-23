@@ -381,7 +381,7 @@ export type PluginDefinition = PluginIdentity & {
      * `./locales/<code>.json` and resolve against {@link PluginDefinition.root}
      * like any other asset. Pass a `{ locale: specifier }` map instead when the
      * bundles don't follow that layout. Values are import specifiers (STRINGS)
-     * so the code-gen virtual module can emit lazy `import()` calls (spec §11).
+     * so the code-gen virtual module can emit lazy `import()` calls.
      */
     i18n?: string[] | Record<string, string>;
     requiredEnv?: string[];

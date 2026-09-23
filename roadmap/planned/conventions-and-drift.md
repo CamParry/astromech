@@ -65,7 +65,7 @@ visible where it happens and leaves the judgement to review.
       cost against `verify:fast`, and give it a check of its own if it is
       slow. The missing `globals` case in `utilities/ai-context.ts` is the
       kind of defect it catches.
-- [ ] Stale text: `check:docs` also resolves backticked paths in
+- [x] Stale text: `check:docs` also resolves backticked paths in
       `eslint.config.js`, `.claude/skills/` and source doc comments. Fix
       `decisions/0093` in `eslint.config.js`, `ARCHITECTURE.md`'s missing
       `entries/repository/versions.ts`, and the history comments (`Phase n`,

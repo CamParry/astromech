@@ -22,8 +22,8 @@ export type FieldReference = {
 };
 
 /**
- * What a relation field points at. `media` fields are relations too — the old
- * subsystem ignored them, which is why no media row was ever written.
+ * What a relation field points at. `media` fields are relations too, so a media
+ * field writes a relationship row like any other.
  */
 function targetKindOf(field: DataField): TargetKind {
     if (field.type === 'media') return 'media';

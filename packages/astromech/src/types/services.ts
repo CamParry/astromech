@@ -69,7 +69,7 @@ export type Usage = {
  *
  * `title` is required for titled types, runtime-enforced by the per-type schema
  * with an identical 422. It stays optional here because `titleField: false`
- * types omit it; Phase 3 typegen restores per-type static strictness.
+ * types omit it.
  */
 export type EntryCreateData = z.input<typeof createEntryPayloadSchema>;
 

@@ -1,5 +1,5 @@
 /**
- * Public layout surface (`astromech/ui/layout`, spec §8) — the pieces plugin
+ * Public layout surface (`astromech/ui/layout`) — the pieces plugin
  * pages compose: the page shell, breadcrumbs, toolbars, and form layout.
  */
 

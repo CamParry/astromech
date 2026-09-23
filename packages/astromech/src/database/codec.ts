@@ -19,7 +19,7 @@ const PLUGIN_TABLES = new Map<string, Table>();
  * *snake-case* mapper, so the key is whatever snake-cases back to `sqlName`:
  * camelCase for ordinary names, and the name itself for a leading-underscore
  * one (`_astromech_cron` snake-cases to itself). Runtime twin of the
- * `KyselyTableKey` type in `database/define-plugin.ts`.
+ * `KyselyTableKey` type in `database/define-plugin-table.ts`.
  */
 export function kyselyTableKey(sqlName: string): string {
     if (sqlName.startsWith('_')) return sqlName;

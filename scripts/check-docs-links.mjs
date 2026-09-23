@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Fails when a markdown link or a backticked path in the repo's documentation no longer resolves.
- * A path resolves only if git tracks it, so a local-only file (a gitignored .env, a build output)
- * cannot hide a broken reference, and a local run gives the same result as CI's fresh checkout.
+ * Fails when a markdown link or backticked path in the docs, `eslint.config.js` or a package's doc
+ * comments no longer resolves, or a source comment carries a history marker. A path resolves only
+ * if git tracks it, so a local-only file cannot hide a broken reference.
  */
 import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
@@ -64,6 +64,32 @@ const PATH_EXTENSIONS = new Set([
     '.yaml',
 ]);
 
+// A source comment names a path relative to its own directory, its package or
+// its package's `src`, and markdown names core's modules from `src` down
+// (`content/resources.ts`), so each package's root and `src` are bases too.
+const PACKAGE_ROOTS = [...trackedFiles]
+    .filter((file) => /^packages\/(plugins\/)?[^/]+\/package\.json$/.test(file))
+    .map((file) => resolve(repoRoot, dirname(file)));
+const PACKAGE_SRC_DIRS = PACKAGE_ROOTS.map((root) => join(root, 'src'));
+
+// The comments that are checked: every comment in the lint config, and the doc
+// comments of the packages' sources.
+const LINT_CONFIG = 'eslint.config.js';
+const SOURCE_FILE = /^packages\/(plugins\/)?[^/]+\/src\/.*\.tsx?$/;
+
+// A module path in a comment may leave off its extension, as an import does.
+const MODULE_SUFFIXES = ['', '.ts', '.tsx', '.mjs', '.js', '/index.ts'];
+
+// Words that date a comment: a plan's phase or step numbers, a spec section,
+// and the state of the code before a change. The reasoning belongs in
+// DECISIONS.md and the history in git.
+const HISTORY_MARKERS = [
+    /\bPhase \d/,
+    /(^|[^\w/])P\d+\//,
+    /\bspec §/,
+    /\bpre-extraction\b/,
+];
+
 const failures = [];
 
 for (const file of markdownFiles(repoRoot)) {
@@ -73,23 +99,61 @@ for (const file of markdownFiles(repoRoot)) {
     const body = withoutFencedBlocks(source);
 
     for (const { target, raw } of markdownLinks(body)) {
-        if (!resolvesFrom(file, target)) {
+        if (!resolvesIn([dirname(file), repoRoot], target)) {
             failures.push({ file, raw, target });
         }
     }
 
     if (PATHS_UNCHECKED_TREES.some((tree) => local.startsWith(tree))) continue;
 
+    // User docs name files in the reader's own project, not in this repo's packages.
+    const bases = local.startsWith(join('apps', 'docs', ''))
+        ? [dirname(file), repoRoot]
+        : [dirname(file), repoRoot, ...ownPackageBases(file), ...PACKAGE_SRC_DIRS];
     for (const token of backtickedPaths(body)) {
-        if (!isPathCandidate(file, token)) continue;
-        if (!resolvesFrom(file, token)) {
+        if (!isPathCandidate(bases, token)) continue;
+        if (!resolvesIn(bases, token)) {
             failures.push({ file, raw: `\`${token}\``, target: token });
         }
     }
 }
 
+for (const local of trackedFiles) {
+    const isLintConfig = local === LINT_CONFIG;
+    if (!isLintConfig && !SOURCE_FILE.test(local)) continue;
+    const file = resolve(repoRoot, local);
+    const source = readFileSync(file, 'utf8');
+    const bases = [
+        dirname(file),
+        repoRoot,
+        ...ownPackageBases(file),
+        ...PACKAGE_SRC_DIRS,
+    ];
+
+    const checked = isLintConfig ? allComments(source) : docComments(source);
+    for (const token of backtickedPaths(checked.join('\n'))) {
+        if (!isSourcePathCandidate(bases, token)) continue;
+        if (!resolvesIn(bases, token)) {
+            failures.push({ file, raw: `\`${token}\``, target: token });
+        }
+    }
+
+    for (const comment of allComments(source)) {
+        for (const marker of HISTORY_MARKERS) {
+            const match = comment.match(marker);
+            if (match) {
+                failures.push({
+                    file,
+                    raw: `history marker "${match[0].trim()}"`,
+                    target: 'a comment says what the code does now',
+                });
+            }
+        }
+    }
+}
+
 if (failures.length > 0) {
-    console.error(`check:docs — ${failures.length} unresolved reference(s):\n`);
+    console.error(`check:docs — ${failures.length} problem(s):\n`);
     for (const { file, raw, target } of failures) {
         console.error(`  ${relative(repoRoot, file)}\n    ${raw} → ${target}`);
     }
@@ -97,7 +161,7 @@ if (failures.length > 0) {
     process.exit(1);
 }
 
-console.log('check:docs — all markdown references resolve');
+console.log('check:docs — all references in markdown and source comments resolve');
 
 function* markdownFiles(dir) {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -139,7 +203,38 @@ function stripAnchor(value) {
     return value.split('#')[0].trim();
 }
 
-function isPathCandidate(file, token) {
+/** The `/** … *\/` blocks of a source file. */
+function docComments(source) {
+    return source.match(/\/\*\*[\s\S]*?\*\//g) ?? [];
+}
+
+/** Every block and line comment. A `//` inside a string or URL is skipped by the leading-space rule. */
+function allComments(source) {
+    const blocks = source.match(/\/\*[\s\S]*?\*\//g) ?? [];
+    const lines = [...source.matchAll(/(?:^|\s)(\/\/[^\n]*)/g)].map((match) => match[1]);
+    return [...blocks, ...lines];
+}
+
+/** A `./` or `../` path is relative to the file itself (the first base), and nothing else. */
+function basesFor(bases, token) {
+    return token.startsWith('./') || token.startsWith('../') ? bases.slice(0, 1) : bases;
+}
+
+/** The root and `src` of the package a file sits in, if any. */
+function ownPackageBases(file) {
+    const root = PACKAGE_ROOTS.find((dir) => file.startsWith(dir + sep));
+    return root === undefined ? [] : [root, join(root, 'src')];
+}
+
+// A source comment names many things that are not repo paths (package
+// subpaths, MIME types, URL routes, example layouts), so only a token with a
+// slash whose first segment exists under one of the bases is checked.
+function isSourcePathCandidate(bases, token) {
+    if (!token.includes('/')) return false;
+    return isPathCandidate(bases, token);
+}
+
+function isPathCandidate(allBases, token) {
     if (/[\s*<>(){}|?=,'"$!]/.test(token)) return false;
     if (/^(https?:|mailto:|@|#|\/|~)/.test(token)) return false;
     if (token.includes(':')) return false;
@@ -150,13 +245,16 @@ function isPathCandidate(file, token) {
 
     const [head] = token.replace(/^\.\//, '').split('/');
     if (!head) return false;
-    return isTracked(resolve(dirname(file), head)) || isTracked(resolve(repoRoot, head));
+    return basesFor(allBases, token).some((base) => isTracked(resolve(base, head)));
 }
 
-function resolvesFrom(file, target) {
+function resolvesIn(allBases, target) {
+    const bases = basesFor(allBases, target);
     const clean = target.replace(/\/$/, '');
-    const candidates = [resolve(dirname(file), clean), resolve(repoRoot, clean)];
-    return candidates.some((candidate) => isTracked(candidate));
+    const suffixes = extname(clean) === '' ? MODULE_SUFFIXES : [''];
+    return bases.some((base) =>
+        suffixes.some((suffix) => isTracked(resolve(base, clean + suffix)))
+    );
 }
 
 // Every path in the git index, which includes files staged but not yet committed,

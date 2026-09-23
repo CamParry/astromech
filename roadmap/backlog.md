@@ -98,7 +98,7 @@ not be re-derived.
 
 ### Console logging follow-ups
 
-- [ ] Browser-safe `log`. `utilities/log.ts` writes to stderr via `console.error` (Node/serving side). Two admin browser-side calls still hardcode the `[Astromech]`/`[astromech]` prefix — `admin/i18n.ts` and `admin/support/ui-instance-guard.ts` — because stderr routing is wrong in a browser. Needs a browser log variant before they can move off the hardcoded string.
+- [ ] Browser-safe `log`. `utilities/log.ts` writes to stderr via `console.error` (Node/serving side). Two admin browser-side calls still hardcode the `[Astromech]`/`[astromech]` prefix — `packages/admin/src/i18n.ts` and `packages/admin/src/components/ui/instance-guard.ts` — because stderr routing is wrong in a browser. Needs a browser log variant before they can move off the hardcoded string.
 
 ### Runtime integrations follow-ups
 

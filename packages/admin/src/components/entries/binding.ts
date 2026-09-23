@@ -19,8 +19,7 @@ export type EntriesBinding = {
     /**
      * Single-type admin config (works for plugin types too). Possibly
      * undefined for an unknown root type — the page components guard with
-     * optional access and bare-type fallbacks, matching the pre-extraction
-     * behaviour.
+     * optional access and bare-type fallbacks.
      */
     config: AdminConfig['entryTypes'][string] | undefined;
     /** Link base: `/entries/post` vs `/plugin/redirects/entries/redirect`. */

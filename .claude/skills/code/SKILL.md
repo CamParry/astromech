@@ -90,7 +90,7 @@ off `RESOURCE_SPECS` in `content/resources.ts`.
 - Inline comments only for non-obvious behaviour. Never restate the code.
 - **No section banners.** No `// ====`, `// ----`, or any ruled divider used to label a region of a file. A file that feels like it needs internal signposts wants splitting, not banners.
 - **No flair, no rhetorical emphasis** ("this is the whole point", "THIS IS THE ONLY…").
-- **No history, no rejected alternatives, no naming justifications.** Established naming needs no defence in a comment; put the record in `DECISIONS.md`.
+- **No history, no rejected alternatives, no naming justifications.** Established naming needs no defence in a comment; put the record in `DECISIONS.md`. `check:docs` fails on `Phase n`, `Pn/`, `spec §` and "pre-extraction" in a comment, and on a backticked path in a doc comment that no longer resolves.
 
 ## Data access (repository pattern)
 

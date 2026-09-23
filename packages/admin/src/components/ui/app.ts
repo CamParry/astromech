@@ -8,7 +8,7 @@ import { assertSingleUiInstance } from './instance-guard';
 
 assertSingleUiInstance();
 
-// Plugin runtime context hook (spec §8) — only usable inside plugin surfaces.
+// Plugin runtime context hook — only usable inside plugin surfaces.
 export { useAstromechPlugin } from '../../context/plugin';
 
 export {

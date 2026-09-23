@@ -1,7 +1,7 @@
 /**
  * Renderer for the presentational `seo-preview` field: a search-result (SERP)
  * mock that reads its sibling `title`/`description` values via `useFieldValue`.
- * Stores no data of its own. Composes public `astromech/ui` only (spec §8).
+ * Stores no data of its own. Composes public `astromech/ui` only.
  */
 
 import type { BaseFieldProps } from 'astromech';

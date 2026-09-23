@@ -2,7 +2,7 @@
  * Global admin binding: the parameter object that lets the shared global page
  * components serve both host and plugin-namespaced globals without
  * behavioural divergence. The entries counterpart is
- * `admin/components/entries/binding.ts`.
+ * `components/entries/binding.ts`.
  */
 
 import type { AdminConfig, AdminGlobal, GlobalsService } from 'astromech';

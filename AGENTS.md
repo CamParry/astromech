@@ -18,23 +18,23 @@ Run `pnpm run verify:fast` while working (typecheck, tests, lint, `check:unused`
 
 `verify` runs every check below except four: `format:check` and `lint:css` (the hook runs them), `check:config` (run it when you edit the config path) and `check:install` (needs the npm registry, so CI runs it separately).
 
-| Command                          | Checks                                                                                                     |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `pnpm run typecheck`             | `tsc` over every package, then `astro sync && tsc --noEmit` in both demo apps                              |
-| `pnpm run test:run`              | vitest over every package, with per-directory coverage thresholds; the assistant suite needs `build` first |
-| `pnpm run build`                 | tsup (out of memory: see `packages/astromech/AGENTS.md`)                                                   |
-| `pnpm run lint`                  | eslint over packages and scripts, type-aware over package sources                                          |
-| `pnpm run lint:css`              | stylelint over the admin's styles                                                                          |
-| `pnpm run format:check`          | prettier over the repo                                                                                     |
-| `pnpm run check:config`          | loads both demo configs the way Astro does                                                                 |
-| `pnpm run check:node-imports`    | imports core's plugin-facing subpaths and each plugin in plain Node; needs `build`                         |
-| `pnpm run check:exports`         | `exports` and `publishConfig.exports` agree                                                                |
-| `pnpm run check:docs`            | every repo-relative link and backticked path in markdown resolves                                          |
-| `pnpm run check:unused`          | knip: unused files, exports and dependencies, and undeclared imports; then exports only tests use          |
-| `pnpm run check:boot`            | boots the built demo and drives the admin in chromium; needs `build`                                       |
-| `pnpm run check:boot:cloudflare` | serves `apps/demo-cloudflare` on workerd (see its `AGENTS.md`)                                             |
-| `pnpm run check:install`         | installs packed tarballs into a scratch site per `apps/docs/installation.md`, plus `@astromech/backups`    |
-| `pnpm run report:drift`          | not a check: lists drift patterns and copies a branch adds; always exits 0                                 |
+| Command                          | Checks                                                                                                                                                 |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm run typecheck`             | `tsc` over every package, then `astro sync && tsc --noEmit` in both demo apps                                                                          |
+| `pnpm run test:run`              | vitest over every package, with per-directory coverage thresholds; the assistant suite needs `build` first                                             |
+| `pnpm run build`                 | tsup (out of memory: see `packages/astromech/AGENTS.md`)                                                                                               |
+| `pnpm run lint`                  | eslint over packages and scripts, type-aware over package sources                                                                                      |
+| `pnpm run lint:css`              | stylelint over the admin's styles                                                                                                                      |
+| `pnpm run format:check`          | prettier over the repo                                                                                                                                 |
+| `pnpm run check:config`          | loads both demo configs the way Astro does                                                                                                             |
+| `pnpm run check:node-imports`    | imports core's plugin-facing subpaths and each plugin in plain Node; needs `build`                                                                     |
+| `pnpm run check:exports`         | `exports` and `publishConfig.exports` agree                                                                                                            |
+| `pnpm run check:docs`            | every repo-relative link and backticked path in markdown, `eslint.config.js` and doc comments resolves, and no source comment carries a history marker |
+| `pnpm run check:unused`          | knip: unused files, exports and dependencies, and undeclared imports; then exports only tests use                                                      |
+| `pnpm run check:boot`            | boots the built demo and drives the admin in chromium; needs `build`                                                                                   |
+| `pnpm run check:boot:cloudflare` | serves `apps/demo-cloudflare` on workerd (see its `AGENTS.md`)                                                                                         |
+| `pnpm run check:install`         | installs packed tarballs into a scratch site per `apps/docs/installation.md`, plus `@astromech/backups`                                                |
+| `pnpm run report:drift`          | not a check: lists drift patterns and copies a branch adds; always exits 0                                                                             |
 
 Each script's header has the detail.
 
