@@ -60,7 +60,9 @@ export type TypedGlobalsServiceFor<GlobalMap> = {
         key: K;
         locale?: string;
         staged?: boolean;
-        data: { fields: Partial<FieldsForMap<GlobalMap, K>> };
+        data: Omit<GlobalUpdateData, 'fields'> & {
+            fields?: Partial<FieldsForMap<GlobalMap, K>>;
+        };
     }): Promise<TypedGlobal<FieldsForMap<GlobalMap, K>>>;
     update(params: {
         key: string;
@@ -113,7 +115,7 @@ export type TypedGlobalsServiceFor<GlobalMap> = {
     createStaged(params: {
         key: string;
         locale?: string;
-        data?: GlobalUpdateData;
+        data?: Pick<GlobalUpdateData, 'fields'>;
     }): Promise<Global>;
 
     getStaged<K extends keyof GlobalMap>(params: {

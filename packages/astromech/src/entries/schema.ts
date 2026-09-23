@@ -1,8 +1,8 @@
 import { z } from '@hono/zod-openapi';
 import { jsonObject } from '@/services/json';
 
-/** The three publication states an entry row may carry. */
-const entryStatusEnum = z.enum(['unpublished', 'published', 'scheduled']);
+/** The three publication states an entry or global row may carry. */
+export const statusSchema = z.enum(['unpublished', 'published', 'scheduled']);
 
 const slugField = z
     .string()
@@ -13,7 +13,7 @@ const slugField = z
     .optional();
 
 /** A `Date`, or an offset ISO string coerced to one — nullable and optional. */
-const optionalDate = z
+export const optionalDate = z
     .union([
         z.date(),
         z
@@ -34,7 +34,7 @@ export const createEntryPayloadSchema = z.object({
     slug: slugField,
     locale: z.string().min(1).optional(),
     fields: jsonObject.optional(),
-    status: entryStatusEnum.optional(),
+    status: statusSchema.optional(),
     publishedAt: optionalDate,
 });
 
@@ -60,7 +60,7 @@ export const updateEntryPayloadSchema = z.object({
     title: z.string().optional(),
     slug: slugField,
     fields: jsonObject.optional(),
-    status: entryStatusEnum.optional(),
+    status: statusSchema.optional(),
     publishedAt: optionalDate,
 });
 
@@ -99,7 +99,7 @@ export const duplicateOverridesSchema = z
         slug: slugField,
         locale: z.string().min(1).optional(),
         fields: jsonObject.optional(),
-        status: entryStatusEnum.optional(),
+        status: statusSchema.optional(),
     })
     .partial();
 

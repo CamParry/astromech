@@ -189,8 +189,19 @@ await app.globals.unpublish({ key: 'site', locale: 'en' });
 await app.globals.schedule({ key: 'site', publishedAt: new Date('2026-01-01') });
 ```
 
+`update` takes the same `status` and `publishedAt` an entry update does, so a
+save and a publish can be one call:
+
+```ts
+await app.globals.update({
+    key: 'site',
+    data: { fields: { siteName: 'Astromech' }, status: 'published' },
+});
+```
+
 Each locale publishes independently. A scheduled global goes live unattended, so
-it validates as a publish: `required` fields must be filled.
+it validates as a publish: `required` fields must be filled. A staged write takes
+no status: merge the staged change, then publish.
 
 ## Staged changes
 

@@ -51,6 +51,7 @@ export const mergeStagedGlobal = defineServiceMethod({
             locale,
             patch: staged.fields,
             current,
+            status: current.status,
             user: ctx.user,
             defaultLocale: defaultContentLocale(ctx.config),
             config: ctx.config,

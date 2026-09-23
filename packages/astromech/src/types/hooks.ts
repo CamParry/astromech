@@ -6,7 +6,7 @@
 
 import type { Entry, EntryStatus, Global, JsonObject, User } from './domain';
 import type { PluginContext } from './plugins';
-import type { ParsedEntryUpdateData } from './services';
+import type { ParsedEntryUpdateData, ParsedGlobalUpdateData } from './services';
 
 /**
  * `data` is the row about to be written, not a copy of it: a `beforeCreate`
@@ -48,7 +48,8 @@ export type GlobalUpdateContext = {
     locale: string;
     /** Null when the global has never been saved in this locale. */
     global: Global | null;
-    data: { fields: JsonObject };
+    /** The patch being written, as `globals.update` parsed it. */
+    data: ParsedGlobalUpdateData;
     user: User | null;
 };
 

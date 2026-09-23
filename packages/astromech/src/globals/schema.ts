@@ -1,13 +1,18 @@
 import { z } from '@hono/zod-openapi';
-import { scheduleEntrySchema } from '@/entries/schema';
+import { optionalDate, scheduleEntrySchema, statusSchema } from '@/entries/schema';
 import { jsonObject } from '@/services/json';
 
 /**
- * The payload a `globals.update` call carries. A global has no title, slug or
- * status to write: status moves through `publish`/`unpublish`/`schedule`.
+ * The payload a `globals.update` call carries: a fields patch and, on a global
+ * with statuses, the status and publish gate, as an entry update takes them. A
+ * global has no title or slug.
  */
 export const updateGlobalSchema = z
-    .object({ fields: jsonObject })
+    .object({
+        fields: jsonObject.optional(),
+        status: statusSchema.optional(),
+        publishedAt: optionalDate,
+    })
     .openapi('UpdateGlobal');
 
 /**
@@ -30,5 +35,5 @@ export const localised = z.object({ key, locale });
  * /:key/staged` route parses its body against it directly.
  */
 export const createStagedGlobalSchema = localised.extend({
-    data: updateGlobalSchema.optional(),
+    data: updateGlobalSchema.pick({ fields: true }).optional(),
 });

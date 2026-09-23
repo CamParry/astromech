@@ -39,7 +39,7 @@ export const createStagedGlobal = defineServiceMethod({
             const staged = await repository.staging.create(
                 { id, locale },
                 {
-                    fields: (params.data
+                    fields: (params.data?.fields !== undefined
                         ? mergePatch(current.fields, params.data.fields)
                         : current.fields) as JsonObject,
                     status: 'unpublished',

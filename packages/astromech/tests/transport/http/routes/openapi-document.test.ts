@@ -181,7 +181,7 @@ describe('the emitted document', () => {
         // The write takes both on the URL and the `data` key alone as its body.
         const write = doc.paths['/globals/{key}']?.['put'];
         expect(queryParameters(write).sort()).toEqual(['locale', 'staged']);
-        expect(bodyProperties(write, doc)).toEqual(['fields']);
+        expect(bodyProperties(write, doc)).toEqual(['fields', 'status', 'publishedAt']);
     });
 
     it('keeps a query-param argument out of the request body', () => {

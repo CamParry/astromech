@@ -96,8 +96,8 @@ describe('PUT /globals/:key', () => {
         expect(body.error.details.form[0]).toContain('not translatable');
     });
 
-    it('422s a body with no fields key', async () => {
-        const res = await app().request('/globals/contact', put({}));
+    it('422s a body whose status is not one the global can hold', async () => {
+        const res = await app().request('/globals/contact', put({ status: 'archived' }));
         expect(res.status).toBe(422);
     });
 

@@ -219,8 +219,14 @@ export type EntriesService = {
     revokePreviewToken(params: { type: string; id: string }): Promise<void>;
 };
 
-/** The patch one `globals.update` call writes. Omitted fields keep their value. */
+/**
+ * The patch one `globals.update` call writes: fields, where omitted ones keep
+ * their value, and optionally the status and publish gate.
+ */
 export type GlobalUpdateData = z.input<typeof updateGlobalSchema>;
+
+/** The same patch once the method has parsed it: what the global update hooks see. */
+export type ParsedGlobalUpdateData = z.output<typeof updateGlobalSchema>;
 
 /**
  * The globals domain's service contract. Every method takes one options object
@@ -308,7 +314,7 @@ export type GlobalsService = {
     createStaged(params: {
         key: string;
         locale?: string;
-        data?: GlobalUpdateData;
+        data?: Pick<GlobalUpdateData, 'fields'>;
     }): Promise<Global>;
     /** This locale's staged change, or null. Needs the `staging` capability. */
     getStaged(params: { key: string; locale?: string }): Promise<Global | null>;

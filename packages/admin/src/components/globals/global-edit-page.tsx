@@ -159,36 +159,24 @@ function GlobalEditPageBody({
     const stagedPath = globalEditPath(basePath, { locale, staged: true });
 
     /**
-     * `useEntryForm` builds one payload for both resources, but a global's
-     * `update` takes only fields — its status moves through `publish`,
-     * `unpublish` and `schedule`. So the write is the field save followed by
-     * the status transition the form asked for, when it differs from the row's.
+     * One `update` carries the fields and, on a canonical write, the status and
+     * publish gate the form asked for. A staged row carries no status of its
+     * own: it takes the canonical's when it is merged.
      */
-    async function writeGlobal(payload: EntryPayload): Promise<Global> {
-        const saved = await api.update({
+    function writeGlobal(payload: EntryPayload): Promise<Global> {
+        const { fields, status, publishedAt } = payload;
+        return api.update({
             key,
             locale,
             staged: isStaged,
-            data: { fields: payload.fields },
+            data: isStaged
+                ? { fields }
+                : {
+                      fields,
+                      ...(status !== undefined ? { status } : {}),
+                      ...(publishedAt !== undefined ? { publishedAt } : {}),
+                  },
         });
-        // A staged row carries no status of its own: it takes the canonical's
-        // when it is merged.
-        if (!hasStatuses || isStaged) return saved;
-        const wanted = payload.status;
-        if (wanted === undefined || wanted === saved.status) {
-            // A reschedule keeps the status and moves the gate, so it is the
-            // one transition a same-status write still has to make.
-            if (wanted === 'scheduled' && payload.publishedAt != null) {
-                return api.schedule({ key, locale, publishedAt: payload.publishedAt });
-            }
-            return saved;
-        }
-        if (wanted === 'published') return api.publish({ key, locale });
-        if (wanted === 'unpublished') return api.unpublish({ key, locale });
-        if (payload.publishedAt != null) {
-            return api.schedule({ key, locale, publishedAt: payload.publishedAt });
-        }
-        return saved;
     }
 
     const {

@@ -3,8 +3,8 @@
  *
  * The global edit page. A global is declared by config and its row is created
  * on demand, so a `null` read is an empty form whose first save is the write
- * that creates it. Status lives on `publish`/`unpublish`/`schedule` rather than
- * on `update`, and a locale with no row is opened, not written.
+ * that creates it. One `update` carries the fields and the status the publish
+ * panel asks for, and a locale with no row is opened, not written.
  */
 
 import type { GlobalsBinding } from '@/admin/components/globals/binding';
@@ -278,7 +278,7 @@ describe('the global edit page', () => {
         expect(document.querySelector('.am-badge')).toBeNull();
     });
 
-    it('saves through `update` with the fields alone', async () => {
+    it('saves through `update` with the fields and the status', async () => {
         const user = userEvent.setup({ delay: null });
         const { api, update } = makeApi({ canonical: makeGlobal() });
         mountPage({ api, config: config() });
@@ -295,11 +295,11 @@ describe('the global edit page', () => {
             key: KEY,
             locale: 'en',
             staged: false,
-            data: { fields: { tagline: 'A new tagline' } },
+            data: { fields: { tagline: 'A new tagline' }, status: 'unpublished' },
         });
     });
 
-    it('follows the save with `publish` when the panel moved the status', async () => {
+    it('publishes through the same `update` when the panel moved the status', async () => {
         const user = userEvent.setup({ delay: null });
         const { api, update, publish } = makeApi({ canonical: makeGlobal() });
         mountPage({ api, config: config() });
@@ -310,10 +310,14 @@ describe('the global edit page', () => {
         await user.click(await screen.findByRole('button', { name: 'common.update' }));
 
         await waitFor(() => {
-            expect(publish).toHaveBeenCalledTimes(1);
+            expect(update).toHaveBeenCalledTimes(1);
         });
-        expect(update).toHaveBeenCalledTimes(1);
-        expect(publish.mock.calls[0]?.[0]).toEqual({ key: KEY, locale: 'en' });
+        expect(update.mock.calls[0]?.[0]).toMatchObject({
+            key: KEY,
+            locale: 'en',
+            data: { status: 'published' },
+        });
+        expect(publish).not.toHaveBeenCalled();
     });
 
     it('shows no locale switcher on a global that is not translatable', async () => {

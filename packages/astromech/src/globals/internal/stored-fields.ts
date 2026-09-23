@@ -6,6 +6,7 @@
 
 import type { GlobalRow, GlobalsRepository } from '../repository/globals-table';
 import type {
+    EntryStatus,
     Global,
     JsonObject,
     ResolvedConfig,
@@ -37,6 +38,8 @@ export async function toStoredFields(input: {
     locale: string;
     patch: Record<string, unknown>;
     current: GlobalRow | null;
+    /** The status the row has after the write; it decides the validation mode. */
+    status: EntryStatus | undefined;
     /** Who the write is attributed to; the field validators read it. */
     user: User | null;
     /** The locale a translatable global inherits its shared fields from. */
@@ -67,9 +70,7 @@ export async function toStoredFields(input: {
     const parsed = await parseFields(values, definitions, {
         operation: current ? 'update' : 'create',
         validation: entryValidationMode({
-            // An update that changes no status keeps the row's current one, so
-            // editing an already-published global still enforces completeness.
-            status: current?.status,
+            status: input.status,
             hasStatuses: global.capabilities.statuses,
         }),
         resource: { kind: 'global', record },

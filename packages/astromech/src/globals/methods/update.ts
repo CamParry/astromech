@@ -1,5 +1,5 @@
 import type { GlobalRow, GlobalsRepository } from '../repository/globals-table';
-import type { Global, JsonObject, ResolvedGlobal } from '@/types/index';
+import type { EntryStatus, Global, JsonObject, ResolvedGlobal } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
 import { assertCapability } from '@/content/capabilities';
@@ -8,7 +8,7 @@ import { RESOURCE_SPECS } from '@/content/resources';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
-import { ResourceNotFoundError } from '@/errors/resource';
+import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resource';
 import { parseInput } from '@/errors/validation';
 import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
@@ -76,13 +76,15 @@ export const updateGlobal = defineServiceMethod({
             key: params.key,
             locale,
             global: current ? asGlobal(current) : null,
-            data: { fields: params.data.fields },
+            data: params.data,
             user,
         });
         // Parsed here, not on the way in: the method's own input schema already
         // checked what the caller sent, and a hook may have replaced `data`
         // wholesale with something it did not.
-        const patch = parseInput(updateGlobalSchema, context.data).fields;
+        const data = parseInput(updateGlobalSchema, context.data);
+        const patch = data.fields ?? {};
+        assertWritableStatus(global, data, staged, ctx.method.name);
 
         const fields = await toStoredFields({
             repository,
@@ -91,6 +93,9 @@ export const updateGlobal = defineServiceMethod({
             locale,
             patch,
             current,
+            // A write that changes no status keeps the row's own, so editing a
+            // published global still enforces completeness.
+            status: data.status ?? current?.status,
             user,
             defaultLocale: defaultContentLocale(ctx.config),
             config: ctx.config,
@@ -129,6 +134,8 @@ export const updateGlobal = defineServiceMethod({
                 locale,
                 current,
                 fields,
+                status: data.status,
+                publishedAt: data.publishedAt,
                 userId: user?.id ?? null,
                 patchedNames: patchedFieldNames(patch),
             });
@@ -140,7 +147,7 @@ export const updateGlobal = defineServiceMethod({
             key: params.key,
             locale,
             global: saved,
-            data: { fields: patch },
+            data,
             user,
         });
 
@@ -161,10 +168,17 @@ async function writeRow(params: {
     locale: string;
     current: GlobalRow | null;
     fields: JsonObject;
+    status: EntryStatus | undefined;
+    publishedAt: Date | null | undefined;
     userId: string | null;
     patchedNames: string[];
 }): Promise<Global> {
-    const { repository, global, id, locale, current, fields, userId } = params;
+    const { repository, global, id, locale, current, fields, userId, status } = params;
+    // Publishing stamps the gate when the row has none yet, as `publish` does.
+    const publishedAt =
+        status === 'published' && !current?.publishedAt
+            ? (params.publishedAt ?? new Date())
+            : params.publishedAt;
 
     const row =
         id === null
@@ -173,8 +187,8 @@ async function writeRow(params: {
                   {
                       locale,
                       fields,
-                      status: 'unpublished',
-                      publishedAt: null,
+                      status: status ?? 'unpublished',
+                      publishedAt: publishedAt ?? null,
                       createdBy: userId,
                       updatedBy: userId,
                   }
@@ -183,6 +197,8 @@ async function writeRow(params: {
                   { id, locale },
                   {
                       fields,
+                      status,
+                      publishedAt,
                       // Moves with `updatedAt`, not with the version snapshot.
                       updatedBy: userId,
                       // A locale being written for the first time is authored
@@ -201,4 +217,23 @@ async function writeRow(params: {
     });
 
     return asGlobal(row);
+}
+
+/**
+ * Refuse a status or publish gate the call cannot write: a global without
+ * statuses has neither, and a staged change takes the canonical's on merge.
+ */
+function assertWritableStatus(
+    global: ResolvedGlobal,
+    data: { status?: unknown; publishedAt?: unknown },
+    staged: boolean,
+    method: string
+): void {
+    if (data.status === undefined && data.publishedAt === undefined) return;
+    assertCapability('global', global, 'statuses');
+    if (staged) {
+        throw new ResourceValidationError([
+            `${method}: a staged change carries no status; merge it, then publish.`,
+        ]);
+    }
 }

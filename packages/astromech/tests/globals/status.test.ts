@@ -83,3 +83,57 @@ describe('the capability and the row', () => {
         );
     });
 });
+
+describe('status through update', () => {
+    it('publishes on the first write, stamping publishedAt', async () => {
+        const saved = await api.update({
+            key: 'contact',
+            data: { fields: { email: 'a@b.dev' }, status: 'published' },
+        });
+
+        expect(saved.status).toBe('published');
+        expect(saved.publishedAt).toBeInstanceOf(Date);
+    });
+
+    it('schedules an existing row with the gate it names', async () => {
+        await api.update({ key: 'contact', data: { fields: {} } });
+        const future = new Date(Date.now() + 86_400_000);
+        const saved = await api.update({
+            key: 'contact',
+            data: { status: 'scheduled', publishedAt: future.toISOString() },
+        });
+
+        expect(saved.status).toBe('scheduled');
+        expect(saved.publishedAt?.getTime()).toBe(future.getTime());
+    });
+
+    it('writes no version for a status change alone', async () => {
+        await api.update({ key: 'contact', data: { fields: { email: 'a@b.dev' } } });
+        await api.update({ key: 'contact', data: { status: 'published' } });
+
+        expect(await api.versions({ key: 'contact' })).toEqual([]);
+    });
+
+    it('checks completeness against the status being written', async () => {
+        await api.update({ key: 'announcement', data: { fields: { body: 'Soon' } } });
+
+        await expect(
+            api.update({ key: 'announcement', data: { status: 'published' } })
+        ).rejects.toMatchObject({ name: 'ValidationError' });
+    });
+
+    it('refuses a status on a global without statuses', async () => {
+        await expect(
+            api.update({ key: 'banner', data: { fields: {}, status: 'published' } })
+        ).rejects.toBeInstanceOf(CapabilityError);
+    });
+
+    it('refuses a status on a staged write', async () => {
+        await api.update({ key: 'site', data: { fields: { title: 'Live' } } });
+        await api.createStaged({ key: 'site' });
+
+        await expect(
+            api.update({ key: 'site', staged: true, data: { status: 'published' } })
+        ).rejects.toMatchObject({ name: 'ResourceValidationError' });
+    });
+});

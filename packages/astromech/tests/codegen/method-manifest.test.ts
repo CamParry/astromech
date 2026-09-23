@@ -270,6 +270,8 @@ describe('generateMethodManifest — globals', () => {
         ]);
         expect(Object.keys(input?.properties?.['data']?.properties ?? {})).toEqual([
             'fields',
+            'status',
+            'publishedAt',
         ]);
     });
 
