@@ -34,10 +34,9 @@ astromech.ts · plugins/runtime/plugin-runtime.ts ·   composition root
 transport (http · tools)                             delivery
 codegen                                              generation
 policies                                             who may call what
-entries · globals · media · users · settings ·       the content modules
-  notifications
+entries · globals · media · users · settings ·       the content modules, and content, what four of them share
+  notifications · content
 auth                                                 beside them: the better-auth wiring, and it may import users
-content                                              the shared content repository, under entries, globals, media and users
 plugins · config · database · storage · fields ·     the modules those build on
   permissions · hooks · request-scope · email ·
   ai · cron
@@ -61,7 +60,7 @@ types · services · utilities · errors ·              pure leaves
 
 A handler reaches the user, config, hooks and sibling services through its `AppContext`, never the request scope, config registry, hook runner or the current request's bound services (lint enforces this). `defineService.bind()` has already checked the capability its `requires` names on the call's target, and parsed its input. One content module may call another's service, but reaches tables through `database/tables.ts`. A content module does not import the composition root; `media/serving/handler.ts` is the one exception.
 
-`content/` holds the shared repository over `{ table, contentTable, versionsTable }`, the translatable, versioning and visibility helpers, and the relationship-index policy that users and media share.
+`content/` holds what entries, globals, media and users share: the repository over `{ table, contentTable, versionsTable }`, the translatable, versioning and visibility helpers, the relationship-index policy, and the prune of dead relation ids. It sits on the content modules' line because the prune reads the entry repository registry.
 
 ## The admin package
 

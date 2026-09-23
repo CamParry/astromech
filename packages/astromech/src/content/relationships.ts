@@ -1,14 +1,17 @@
 /**
- * Relationship indexing for a resource whose content is one row per locale and
- * nothing else: users and media. Entries keep their own policy, where staging
- * and custom tables change the rule.
+ * Relationship indexing for a resource whose content is one row per locale, plus
+ * a staged row per locale where it has staging: globals, users and media.
+ * Entries share the merge rule here and keep their own policy for custom tables.
  */
 
 import type { Table } from '@/database/define-table';
-import type { RelationshipIndexSource } from '@/database/repository/relationships';
-import type { FieldReference, TargetKind } from '@/fields/references';
+import type {
+    IndexedReference,
+    RelationshipIndexSource,
+} from '@/database/repository/relationships';
+import type { FieldReference } from '@/fields/references';
 import type { Field } from '@/types/fields';
-import type { JsonObject, ResolvedConfig } from '@/types/index';
+import type { JsonObject, ResolvedConfig, ResourceType } from '@/types/index';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { flattenFieldNodes } from '@/fields/flatten';
@@ -19,12 +22,18 @@ type ContentRelationshipsShape = {
     table: Table;
     contentTable: Table;
     ownerColumn: string;
-    kind: TargetKind;
-    fields: (config: ResolvedConfig) => Field[];
+    kind: ResourceType;
+    /** The field tree one resource row's content is read against. */
+    fields: (config: ResolvedConfig, owner: Record<string, unknown>) => Field[];
+    /** The index's `sourceType` for one resource row; absent means null. */
+    sourceType?: (owner: Record<string, unknown>) => string | null;
 };
 
-/** The columns this policy reads; every other column of a content row is ignored. */
-type ContentFields = { fields?: unknown };
+/**
+ * The columns the merge reads; every other column of a content row is ignored.
+ * `stagedFor` is absent on a resource without staging.
+ */
+type ContentFields = { fields?: unknown; stagedFor?: string | null };
 
 /**
  * The write seam and the rebuild side of one resource's relationship index,
@@ -42,19 +51,19 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
      * that wrote the row, after that write, so the re-read sees it.
      */
     async function sync(config: ResolvedConfig, id: string): Promise<void> {
+        const owner = await createRepository(shape.table).findOne({ id } as never);
+        if (!owner) return;
         const rows = await createRepository(shape.contentTable).findMany({
             where: { [shape.ownerColumn]: id },
         });
-        await createRelationshipRepository().replaceForSource(
-            { id, kind: shape.kind },
-            contentReferences(config, rows)
-        );
+        const { source, references } = indexSource(config, owner, rows);
+        await createRelationshipRepository().replaceForSource(source, references);
     }
 
     /**
      * Every resource of this kind as a relationship source, with the references
      * its STORED content holds across all locales. The rebuild side of `sync`,
-     * read straight from the tables rather than through `repository.list()`,
+     * read straight from the tables rather than through a repository `list()`,
      * whose join is pinned to the default locale. Stored data has already been
      * through `parseFields`, so the traversal mints no ids here.
      */
@@ -70,36 +79,55 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
             else rowsByOwner.set(ownerId, [row]);
         }
 
-        return owners.map((owner) => {
-            const id = String(owner['id']);
-            return {
-                source: { id, kind: shape.kind },
-                references: contentReferences(config, rowsByOwner.get(id) ?? []),
-            };
-        });
+        return owners.map((owner) =>
+            indexSource(config, owner, rowsByOwner.get(String(owner['id'])) ?? [])
+        );
     }
 
-    /**
-     * One reference per (instancePath, target) across a resource's content rows:
-     * two locales holding the same reference are one row, and the index's
-     * primary key would reject the second. Neither resource has staging, so
-     * every reference is canonical.
-     */
-    function contentReferences(
+    function indexSource(
         config: ResolvedConfig,
+        owner: Record<string, unknown>,
         rows: readonly ContentFields[]
-    ): FieldReference[] {
-        const definitions = flattenFieldNodes(shape.fields(config));
-        const byKey = new Map<string, FieldReference>();
-        for (const row of rows) {
-            const fields = (row.fields ?? {}) as JsonObject;
-            for (const reference of findReferences(definitions, fields)) {
-                const key = `${reference.instancePath}\0${reference.targetKind}\0${reference.targetId}`;
-                byKey.set(key, reference);
-            }
-        }
-        return Array.from(byKey.values());
+    ): RelationshipIndexSource {
+        const definitions = flattenFieldNodes(shape.fields(config, owner));
+        return {
+            // A resource with a staged row is still live, so the source is
+            // never itself staged; the per-reference flag carries staging.
+            source: {
+                id: String(owner['id']),
+                kind: shape.kind,
+                type: shape.sourceType?.(owner) ?? null,
+                staged: false,
+            },
+            references: mergeContentReferences(rows, (fields) =>
+                findReferences(definitions, fields)
+            ),
+        };
     }
 
     return { sync, all };
+}
+
+/**
+ * One reference per (instancePath, target) across a resource's content rows:
+ * two locales holding the same reference are one row, and the index's primary
+ * key would reject the second. A reference any canonical row carries is
+ * canonical; one only a staged row carries is staged, so a pending merge's new
+ * reference blocks a delete without appearing in a reverse lookup.
+ */
+export function mergeContentReferences(
+    rows: readonly ContentFields[],
+    referencesOf: (fields: JsonObject) => FieldReference[]
+): IndexedReference[] {
+    const byKey = new Map<string, IndexedReference>();
+    for (const row of rows) {
+        const staged = row.stagedFor !== undefined && row.stagedFor !== null;
+        for (const reference of referencesOf((row.fields ?? {}) as JsonObject)) {
+            const key = `${reference.instancePath}\0${reference.targetKind}\0${reference.targetId}`;
+            const held = byKey.get(key);
+            if (held === undefined) byKey.set(key, { ...reference, staged });
+            else if (!staged) held.staged = false;
+        }
+    }
+    return Array.from(byKey.values());
 }

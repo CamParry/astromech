@@ -5,6 +5,7 @@ import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
 import { asGlobal, requireCanonical } from '../../internal/global';
+import { syncGlobalRelationships } from '../../internal/relationships';
 import { toStoredFields } from '../../internal/stored-fields';
 import { localised } from '../../schema';
 
@@ -44,6 +45,7 @@ export const mergeStagedGlobal = defineServiceMethod({
             current,
             user: ctx.user,
             defaultLocale: defaultContentLocale(ctx.config),
+            config: ctx.config,
         });
 
         const merged = await transaction(async () => {
@@ -53,7 +55,10 @@ export const mergeStagedGlobal = defineServiceMethod({
                 await snapshotVersion(repository.versions, current, ctx.user);
             }
             const row = await repository.update({ id, locale }, { fields });
+            // Discard the staged row before re-indexing, so the references it
+            // held on its own do not survive the merge.
             await repository.staging.delete({ id, locale });
+            await syncGlobalRelationships(ctx.config, id);
             return row;
         });
 

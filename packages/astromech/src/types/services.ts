@@ -18,6 +18,7 @@ import type {
     Media,
     MediaVersion,
     Notification,
+    ResourceType,
     Setting,
     User,
     UserVersion,
@@ -63,12 +64,8 @@ export type MediaUsage = {
     sourceId: string;
     /** Display name of the source; empty when it could not be loaded. */
     sourceTitle: string;
-    /**
-     * entry | user | media — what holds the reference. Duplicated from
-     * `fields/references.ts`'s `TargetKind` because a pure leaf may not
-     * import `fields/`.
-     */
-    sourceKind: 'entry' | 'user' | 'media';
+    /** What holds the reference. */
+    sourceKind: ResourceType;
     /** The source's entry type, qualified for a plugin type. Null for user and media sources. */
     sourceType: string | null;
     /** Schema path of the field holding the reference (`sections[].gallery`). */

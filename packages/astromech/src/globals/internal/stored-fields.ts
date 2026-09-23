@@ -1,12 +1,19 @@
 /**
  * The values a global write stores: a pre-step (inherit the global's shared
  * fields on a first write to a locale, or merge the patch over the current row),
- * then the field parse. No slug, no title and no relationship pruning — a global
- * has none of the three.
+ * then the field parse, then a prune of dead relation ids.
  */
 
 import type { GlobalRow, GlobalsRepository } from '../repository/globals-table';
-import type { DataField, Global, JsonObject, ResolvedGlobal, User } from '@/types/index';
+import type {
+    DataField,
+    Global,
+    JsonObject,
+    ResolvedConfig,
+    ResolvedGlobal,
+    User,
+} from '@/types/index';
+import { pruneDanglingRelations } from '@/content/dangling-relations';
 import { inheritSharedFields } from '@/content/translatable';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { entryValidationMode } from '@/entries/validation-mode';
@@ -47,6 +54,8 @@ export async function toStoredFields(input: {
     user: User | null;
     /** The locale a translatable global inherits its shared fields from. */
     defaultLocale: string;
+    /** The config the prune reads. */
+    config: ResolvedConfig;
 }): Promise<JsonObject> {
     const { global, current, patch } = input;
     const definitions = flattenEntryFields(global.fields);
@@ -85,8 +94,15 @@ export async function toStoredFields(input: {
     });
 
     // On a merge, drop keys the schema no longer declares, so data left behind
-    // by a removed field does not survive every subsequent patch.
-    return (current ? projectToSchema(parsed, definitions) : parsed) as JsonObject;
+    // by a removed field does not survive every subsequent patch. The prune runs
+    // after `parseFields` (its minted item ids are what the traversal needs)
+    // and before the write, so the index derives from pruned values.
+    const pruned = await pruneDanglingRelations(
+        input.config,
+        definitions,
+        (current ? projectToSchema(parsed, definitions) : parsed) as JsonObject
+    );
+    return pruned.values;
 }
 
 /** Root field names the caller actually sent; an `undefined` value is absent. */

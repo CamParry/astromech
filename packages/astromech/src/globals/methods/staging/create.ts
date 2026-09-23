@@ -1,9 +1,11 @@
 import type { Global, JsonObject } from '@/types/index';
+import { transaction } from '@/database/transaction';
 import { mergePatch } from '@/fields/values';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { StagedGlobalExistsError } from '../../errors';
 import { gate } from '../../internal/access';
 import { asGlobal, requireCanonical } from '../../internal/global';
+import { syncGlobalRelationships } from '../../internal/relationships';
 import { createStagedGlobalSchema } from '../../schema';
 
 /**
@@ -31,18 +33,23 @@ export const createStagedGlobal = defineServiceMethod({
         // The staged row copies the canonical's content and is always
         // unpublished: it becomes live by being merged, not by carrying a status
         // of its own.
-        const row = await repository.staging.create(
-            { id, locale },
-            {
-                fields: (params.data
-                    ? mergePatch(current.fields, params.data.fields)
-                    : current.fields) as JsonObject,
-                status: 'unpublished',
-                publishedAt: null,
-                createdBy: user?.id ?? null,
-                updatedBy: user?.id ?? null,
-            }
-        );
+        // The row and its index write are one transaction.
+        const row = await transaction(async () => {
+            const staged = await repository.staging.create(
+                { id, locale },
+                {
+                    fields: (params.data
+                        ? mergePatch(current.fields, params.data.fields)
+                        : current.fields) as JsonObject,
+                    status: 'unpublished',
+                    publishedAt: null,
+                    createdBy: user?.id ?? null,
+                    updatedBy: user?.id ?? null,
+                }
+            );
+            await syncGlobalRelationships(ctx.config, id);
+            return staged;
+        });
         return asGlobal(row);
     },
 });

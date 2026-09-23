@@ -6,6 +6,7 @@ import * as m0002 from './0002_globals';
 import * as m0003 from './0003_media-content';
 import * as m0004 from './0004_users-role';
 import * as m0005 from './0005_user-content';
+import * as m0006 from './0006_global-relationship-source';
 
 export const migrationProvider: MigrationProvider = {
     async getMigrations() {
@@ -16,6 +17,7 @@ export const migrationProvider: MigrationProvider = {
             '0003_media-content': m0003,
             '0004_users-role': m0004,
             '0005_user-content': m0005,
+            '0006_global-relationship-source': m0006,
         };
     },
 };

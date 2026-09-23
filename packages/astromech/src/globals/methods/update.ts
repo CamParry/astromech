@@ -17,6 +17,7 @@ import {
     resolveGlobal,
     resolveLocale,
 } from '../internal/global';
+import { syncGlobalRelationships } from '../internal/relationships';
 import { patchedFieldNames, toStoredFields } from '../internal/stored-fields';
 import { localised, updateGlobalSchema } from '../schema';
 
@@ -90,26 +91,30 @@ export const updateGlobal = defineServiceMethod({
             current,
             user,
             defaultLocale: defaultContentLocale(ctx.config),
+            config: ctx.config,
         });
 
+        // The version, the row write and the index write are one transaction:
+        // an index that outlived a failed write would name relations the stored
+        // fields do not.
         const saved = await transaction(async () => {
             if (stagedRef) {
                 // No version and no propagation: the history and the shared
                 // fields belong to the canonical row, which the merge is what
                 // writes to.
-                return asGlobal(
-                    await repository.staging.update(stagedRef, {
-                        fields,
-                        updatedBy: user?.id ?? null,
-                    })
-                );
+                const row = await repository.staging.update(stagedRef, {
+                    fields,
+                    updatedBy: user?.id ?? null,
+                });
+                await syncGlobalRelationships(ctx.config, row.id);
+                return asGlobal(row);
             }
             if (current && global.capabilities.versioning) {
                 if (changesVersionedContent(current, { fields })) {
                     await snapshotVersion(repository.versions, current, user);
                 }
             }
-            return writeRow({
+            const written = await writeRow({
                 repository,
                 global,
                 key: params.key,
@@ -120,6 +125,8 @@ export const updateGlobal = defineServiceMethod({
                 userId: user?.id ?? null,
                 patchedNames: patchedFieldNames(patch),
             });
+            await syncGlobalRelationships(ctx.config, written.id);
+            return written;
         });
 
         await ctx.runHook('global:afterUpdate', {

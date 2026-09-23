@@ -4,17 +4,12 @@
  * Run it only on parsed data: `children()` mints ids on raw input.
  */
 
+import type { TargetKind } from '@/types/domain';
 import type { DataField, Field, FieldPathSegment } from '@/types/fields';
 import { formatInstancePath, formatSchemaPath } from '@/fields/field-path';
 import { getFieldType } from '@/fields/field-type-registry';
 import { fieldAffectsData, flattenFieldNodes } from '@/fields/flatten';
 import { traverseFields } from '@/fields/traverse';
-
-/**
- * What a relation points at — the relation-eligible subset of `ResourceType`
- * (`types/domain.ts`). Mirrors the index's `targetKind` column.
- */
-export type TargetKind = 'entry' | 'user' | 'media';
 
 /** One id a relation field holds, and where in the field data it sits. */
 export type FieldReference = {

@@ -240,7 +240,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     await sql`
         CREATE TABLE \`relationships\` (
             \`source_id\` text NOT NULL,
-            \`source_kind\` text NOT NULL CHECK (\`source_kind\` IN ('entry', 'user', 'media')),
+            \`source_kind\` text NOT NULL CHECK (\`source_kind\` IN ('entry', 'global', 'user', 'media')),
             \`source_type\` text,
             \`schema_path\` text NOT NULL,
             \`instance_path\` text NOT NULL,

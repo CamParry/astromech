@@ -16,13 +16,13 @@ import type {
     User,
 } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
+import { pruneDanglingRelations } from '@/content/dangling-relations';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { flattenEntryFields } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { entryIsUnique } from '../unique';
 import { entryValidationMode } from '../validation-mode';
-import { pruneDanglingRelations } from './dangling-relations';
 import { inheritSharedFields } from './translatable';
 
 /**

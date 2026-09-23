@@ -1,9 +1,10 @@
 import type { RelationshipIndexSource } from '@/database/repository/relationships';
 import type { RelationshipRow } from '@/database/tables';
-import type { TargetKind } from '@/fields/references';
+import type { ResourceType } from '@/types/domain';
 import { getConfig } from '@/config/registry';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { allEntryRelationships } from '@/entries/internal/relationships';
+import { allGlobalRelationships } from '@/globals/internal/relationships';
 import { allMediaRelationships } from '@/media/internal/relationships';
 import { allUserRelationships } from '@/users/internal/relationships';
 
@@ -15,7 +16,7 @@ import { allUserRelationships } from '@/users/internal/relationships';
  * recomputes and replaces; `checkRelationshipIndex` recomputes and diffs only.
  */
 
-/** Scope of a repair run. `type` is an ENTRY type; it never covers user or media. */
+/** Scope of a repair run. `type` is an ENTRY type; it never covers globals, users or media. */
 export type RelationshipIndexScope = { type?: string };
 
 export type RebuildReport = {
@@ -54,7 +55,7 @@ export async function rebuildRelationshipIndex(
     // longer exist, which no `replaceForSource` would ever reach.
     const stored = await repository.findAll(storedScope(opts));
     const live = new Set(sources.map(({ source }) => sourceKey(source.id, source.kind)));
-    const orphanSources = new Map<string, { id: string; kind: TargetKind }>();
+    const orphanSources = new Map<string, { id: string; kind: ResourceType }>();
     let orphanRowsRemoved = 0;
     for (const row of stored) {
         const key = sourceKey(row.sourceId, row.sourceKind);
@@ -133,14 +134,15 @@ async function collectSources(
     }
     return [
         ...(await allEntryRelationships(config)),
+        ...(await allGlobalRelationships(config)),
         ...(await allUserRelationships(config)),
         ...(await allMediaRelationships(config)),
     ];
 }
 
 /** The stored rows a scoped run is allowed to compare against or delete. */
-function storedScope(opts?: RelationshipIndexScope): { sourceType?: string } {
-    return opts?.type !== undefined ? { sourceType: opts.type } : {};
+function storedScope(opts?: RelationshipIndexScope): { entryType?: string } {
+    return opts?.type !== undefined ? { entryType: opts.type } : {};
 }
 
 /**
@@ -158,6 +160,6 @@ function rowKey(row: RelationshipRow): string {
 }
 
 /** The (id, kind) half of the key — what `deleteBySource` addresses. */
-function sourceKey(id: string, kind: TargetKind): string {
+function sourceKey(id: string, kind: ResourceType): string {
     return `${id}\u0000${kind}`;
 }

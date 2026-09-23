@@ -1,9 +1,9 @@
 import type { JsonObject, User } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
+import { pruneDanglingRelations } from '@/content/dangling-relations';
 import { existingEntryTypes } from '@/database/repository/resource-existence';
 import { transaction } from '@/database/transaction';
-import { pruneDanglingRelations } from '@/entries/internal/dangling-relations';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { requireRole } from '@/permissions/roles';

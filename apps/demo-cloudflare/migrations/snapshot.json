@@ -1334,7 +1334,7 @@
                     "type": "text",
                     "notNull": true,
                     "primaryKey": false,
-                    "enumValues": ["entry", "user", "media"]
+                    "enumValues": ["entry", "global", "user", "media"]
                 },
                 {
                     "key": "sourceType",

@@ -6,6 +6,7 @@ import { defineServiceMethod } from '@/services/define-service-method';
 import { GlobalNotFoundError } from '../../errors';
 import { gate } from '../../internal/access';
 import { asGlobal, requireCanonical } from '../../internal/global';
+import { syncGlobalRelationships } from '../../internal/relationships';
 import { localised } from '../../schema';
 
 /**
@@ -35,7 +36,12 @@ export const restoreGlobalVersion = defineServiceMethod({
 
         const updated = await transaction(async () => {
             await snapshotVersion(repository.versions, current, ctx.user);
-            return repository.update({ id, locale }, { fields: restoredFields });
+            const row = await repository.update(
+                { id, locale },
+                { fields: restoredFields }
+            );
+            await syncGlobalRelationships(ctx.config, id);
+            return row;
         });
 
         return asGlobal(updated);

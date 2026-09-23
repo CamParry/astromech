@@ -10,6 +10,7 @@ import type {
 } from '@/database/repository/relationships';
 import type { FieldReference } from '@/fields/references';
 import type { JsonObject, ResolvedConfig } from '@/types/index';
+import { mergeContentReferences } from '@/content/relationships';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { entriesTable, entryContentTable } from '@/database/tables';
@@ -90,34 +91,18 @@ async function storedEntryReferences(
 }
 
 /**
- * One reference per (instancePath, target) across an entry's content rows: two
- * locales holding the same reference are one row, and the index's primary key
- * would reject the second. A reference any canonical row carries is canonical;
- * one only a staged row carries is staged, so a pending merge's new reference
- * blocks a delete without appearing in a reverse lookup.
- *
- * The one place the rule lives — the write seam and the rebuild both call it.
+ * An entry's references across its content rows, staged rows included, merged
+ * by the shared rule. The write seam and the rebuild both call it.
  */
 function entryContentReferences(
     config: ResolvedConfig,
     type: string,
     rows: readonly { fields: unknown; stagedFor: string | null }[]
 ): IndexedReference[] {
-    const byKey = new Map<string, IndexedReference>();
-    for (const row of rows) {
-        const staged = row.stagedFor !== null;
-        for (const reference of entryReferences(
-            config,
-            type,
-            (row.fields ?? {}) as JsonObject
-        ) ?? []) {
-            const key = `${reference.instancePath}\0${reference.targetKind}\0${reference.targetId}`;
-            const held = byKey.get(key);
-            if (held === undefined) byKey.set(key, { ...reference, staged });
-            else if (!staged) held.staged = false;
-        }
-    }
-    return Array.from(byKey.values());
+    return mergeContentReferences(
+        rows,
+        (fields) => entryReferences(config, type, fields) ?? []
+    );
 }
 
 /**

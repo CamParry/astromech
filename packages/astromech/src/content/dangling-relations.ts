@@ -1,20 +1,20 @@
 /**
  * Drops a reference to a resource that no longer exists on the next write of its
- * holder. Shared by the entry, user and media write paths. Operates on relation
- * FIELD values, not the derived `relationships` index (`internal/relationships.ts`).
+ * holder, whichever resource holds it. Operates on relation FIELD values, not
+ * the derived `relationships` index (`content/relationships.ts`).
  */
 
-import type { RelationshipDeclaration, TargetKind } from '@/fields/references';
+import type { RelationshipDeclaration } from '@/fields/references';
+import type { TargetKind } from '@/types/domain';
 import type { Field } from '@/types/fields';
 import type { JsonObject, ResolvedConfig } from '@/types/index';
 import { existingResourceIds } from '@/database/repository/resource-existence';
 import { resolveEntryType } from '@/entries/entry-types';
+import { getEntryRepository, hasCustomTable } from '@/entries/repository/registry';
 import { parseInstancePath } from '@/fields/field-path';
 import { collectRelationshipDeclarations, findReferences } from '@/fields/references';
 import { RESERVED_KEY } from '@/fields/reserved-keys';
-import { getEntryRepository, hasCustomTable } from '../repository/registry';
-
-const TARGET_KINDS = ['entry', 'user', 'media'] as const satisfies readonly TargetKind[];
+import { TARGET_KINDS } from '@/types/domain';
 
 /** One repository's answer to "which of these ids do you hold". */
 type ExistingIds = (ids: string[]) => Promise<Set<string>>;

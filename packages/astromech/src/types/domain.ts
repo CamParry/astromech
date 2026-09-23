@@ -8,11 +8,27 @@ export type JsonObject = { [key: string]: JsonValue };
 export type JsonArray = JsonValue[];
 
 /**
- * What carries fields and runs the field pipeline — an entry, a global, a user
- * or a media item. `TargetKind` (`fields/references.ts`) is the
- * relation-eligible subset.
+ * Every resource kind: what carries fields and runs the field pipeline. The
+ * relationships index's source column and `TargetKind` (`fields/references.ts`),
+ * the relation-eligible subset, are built from it.
  */
-export type ResourceType = 'entry' | 'global' | 'user' | 'media';
+export const RESOURCE_TYPES = ['entry', 'global', 'user', 'media'] as const;
+
+/** An entry, a global, a user or a media item. */
+export type ResourceType = (typeof RESOURCE_TYPES)[number];
+
+/**
+ * What a relation can point at: every resource but a global, which is addressed
+ * by its key and never referenced. The index's `targetKind` column is built from it.
+ */
+export const TARGET_KINDS = [
+    'entry',
+    'user',
+    'media',
+] as const satisfies readonly ResourceType[];
+
+/** One of {@link TARGET_KINDS}. */
+export type TargetKind = (typeof TARGET_KINDS)[number];
 
 export type EntryStatus = 'unpublished' | 'published' | 'scheduled';
 

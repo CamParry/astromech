@@ -11,6 +11,7 @@ import { mediaContentTable, mediaTable, mediaVersionsTable } from '@/media/table
 import { notificationsTable } from '@/notifications/tables';
 import { rolesTable } from '@/permissions/tables';
 import { settingsTable } from '@/settings/tables';
+import { RESOURCE_TYPES, TARGET_KINDS } from '@/types/domain';
 import { userContentTable, usersTable, userVersionsTable } from '@/users/tables';
 
 /**
@@ -86,15 +87,18 @@ export const relationshipsTable = defineTable(
     'relationships',
     ({ col }) => ({
         sourceId: col.text({ notNull: true }),
-        sourceKind: col.enum(['entry', 'user', 'media'], { notNull: true }),
-        /** The entry type ('post', 'ns/type'); null for user and media sources. */
+        sourceKind: col.enum(RESOURCE_TYPES, { notNull: true }),
+        /**
+         * The entry type ('post', 'ns/type') or the global's key; null for user
+         * and media sources.
+         */
         sourceType: col.text(),
         /** `sections[].gallery` — indexed, and what a query matches on. */
         schemaPath: col.text({ notNull: true }),
         /** `sections[a1].gallery` — for deep-linking; never pattern-matched. */
         instancePath: col.text({ notNull: true }),
         targetId: col.text({ notNull: true }),
-        targetKind: col.enum(['entry', 'user', 'media'], { notNull: true }),
+        targetKind: col.enum(TARGET_KINDS, { notNull: true }),
         /** Derived from the source row's `stagedFor`, so reverse lookup and
          *  filter-by-relation can exclude staged sources without a join. */
         sourceStaged: col.boolean({ notNull: true, default: false }),

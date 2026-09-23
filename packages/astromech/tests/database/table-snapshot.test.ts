@@ -292,7 +292,7 @@ describe('createSnapshot', () => {
         const sourceKind = snapshot.tables.relationships?.columns.find(
             (c) => c.key === 'sourceKind'
         );
-        expect(sourceKind?.enumValues).toEqual(['entry', 'user', 'media']);
+        expect(sourceKind?.enumValues).toEqual(['entry', 'global', 'user', 'media']);
     });
 
     it('excludes app-side-only facts (appDefault, onUpdate, serialize, parse) from columns', () => {
