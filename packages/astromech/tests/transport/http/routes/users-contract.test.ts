@@ -101,7 +101,7 @@ describe('GET /users', () => {
         expect(unlisted.status).toBe(400);
     });
 
-    it('400s an unrecognised dir — the route schema rejects it before the handler', async () => {
+    it('400s an unrecognised dir', async () => {
         const res = await app().request('/users?sort=name&dir=sideways');
         expect(res.status).toBe(400);
     });

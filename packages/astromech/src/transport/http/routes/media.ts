@@ -3,86 +3,22 @@
  *
  * File upload, listing, replace, update, and delete.
  */
-import type { RestRoute } from './rest-route';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { MediaQueryParams, SortDirection } from '@/types/index';
-import type { Context } from 'hono';
-import { OpenAPIHono, z } from '@hono/zod-openapi';
+import { OpenAPIHono } from '@hono/zod-openapi';
 import { mediaDefinition } from '@/media/service';
 import { permissionsFor } from '@/permissions/permissions-for';
 import { badRequest, forbidden, notFound } from '@/transport/http/middleware/errors';
-import { MEDIA_MIME_TYPE_FILTERS } from '@/types/query';
 import { MEDIA_ROUTE_SPECS } from './http-routes';
-import { attachHandlers, documentBespokeRoutes, mountRestRoutes } from './rest-route';
+import { mountRestRoutes } from './rest-route';
 
 type Env = { Variables: AuthVariables };
 
 const router = new OpenAPIHono<Env>();
 
-/** The query string the list route accepts. `dir` is the only one that can fail. */
-const listQuery = z.object({
-    locale: z.string().optional(),
-    search: z.string().optional(),
-    page: z.string().optional(),
-    limit: z.string().optional(),
-    mimeType: z.string().optional(),
-    sort: z.string().optional(),
-    dir: z.enum(['asc', 'desc']).optional(),
+mountRestRoutes(router, {
+    catalogue: mediaDefinition.catalogue,
+    specs: MEDIA_ROUTE_SPECS,
 });
-
-export const MEDIA_ROUTES: RestRoute[] = attachHandlers(MEDIA_ROUTE_SPECS, {
-    'get /': { args: queryArgs, query: listQuery },
-    'get /:id': {
-        args: contentArgs,
-        notFound: (c) => `Media '${c.req.param('id')}' not found`,
-    },
-    'put /:id': {
-        args: async (c) => ({
-            ...contentArgs(c),
-            data: await c.req.json<Record<string, unknown>>(),
-        }),
-    },
-    'delete /:id': { args: (c) => ({ id: c.req.param('id') }) },
-    'get /:id/used-by': { args: (c) => ({ id: c.req.param('id') }) },
-    'get /:id/versions': { args: contentArgs },
-    'post /:id/versions/:versionId/restore': {
-        args: (c) => ({ ...contentArgs(c), versionId: c.req.param('versionId') ?? '' }),
-    },
-});
-
-mountRestRoutes(router, mediaDefinition.catalogue, MEDIA_ROUTES);
-documentBespokeRoutes(router, mediaDefinition.catalogue, MEDIA_ROUTE_SPECS);
-
-/**
- * The `{ id }` a media route addresses, plus the locale a content-level one
- * names. An absent locale leaves the service to fill in the default.
- */
-function contentArgs(c: Context<Env>): { id: string; locale?: string } {
-    const locale = c.req.query('locale');
-    return { id: c.req.param('id') ?? '', ...(locale ? { locale } : {}) };
-}
-
-/** `media.query` arguments, read off the query string. */
-function queryArgs(c: Context<Env>): MediaQueryParams {
-    const q = c.req.query();
-    const params: MediaQueryParams = {};
-    if (q['locale']) params.locale = q['locale'];
-    if (q['search']) params.search = q['search'];
-    if (q['page']) params.page = Number(q['page']);
-    if (q['limit'] === 'all') params.limit = 'all';
-    else if (q['limit']) params.limit = Number(q['limit']);
-    const mimeType = MEDIA_MIME_TYPE_FILTERS.find((filter) => filter === q['mimeType']);
-    if (mimeType !== undefined) {
-        params.where = { mimeType };
-    }
-    const sortField = q['sort'];
-    // `dir` is already 'asc' or 'desc' — the route schema 400s anything else. A
-    // field the list cannot order by is the method's 400.
-    if (sortField) {
-        params.sort = { [sortField]: (q['dir'] as SortDirection | undefined) ?? 'desc' };
-    }
-    return params;
-}
 
 // POST /media/upload — bespoke
 // Not in the table: `binaryInput`. The body is multipart and a `File` has no

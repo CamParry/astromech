@@ -160,16 +160,17 @@ describe('POST /entries/:type', () => {
         expect(body.data.status).toBe('published');
     });
 
-    it('400s a titled type with no title, in OpenAPIHono’s validator envelope', async () => {
+    it('422s a titled type with no title, naming the field', async () => {
         const res = await app().request('/entries/post', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ fields: {} }),
         });
-        expect(res.status).toBe(400);
-        const body = (await res.json()) as { success: boolean; error: unknown };
-        expect(body.success).toBe(false);
-        expect(body.error).toBeDefined();
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as {
+            error: { details: { fields: Record<string, string[]> } };
+        };
+        expect(Object.keys(body.error.details.fields)).toContain('title');
     });
 
     it('admits a titleless type with no title', async () => {

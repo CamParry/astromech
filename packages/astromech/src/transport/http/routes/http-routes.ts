@@ -34,12 +34,17 @@ export type HttpRouteSpec = {
      */
     bodyKey?: string;
     /**
-     * Argument names this route carries on the query string. `locale` is the
-     * case: a content-level route addresses one locale of an entry, and that
-     * addressing belongs in the URL beside `:id`. Read by the document, and by
-     * the client when it decides what goes in the body of a POST or PUT.
+     * Argument names a POST or PUT carries on the query string rather than in
+     * its body. `locale` is the case: a content-level route addresses one locale
+     * of an entry, and that addressing belongs in the URL beside `:id`. A GET or
+     * DELETE carries every argument the path does not, so it names none.
      */
     queryArgs?: readonly string[];
+    /**
+     * When given, a null result answers 404, naming the resource this word
+     * labels and the route's last path param: `Entry 'abc' not found`.
+     */
+    notFound?: string;
     /** Marks a route whose server handler is written by hand, not generated. */
     handler?: 'bespoke';
     /**
@@ -64,7 +69,7 @@ export type MountedRoute = HttpRouteSpec & { base: string };
  */
 export const ENTRIES_ROUTE_SPECS = [
     { verb: 'get', path: '/:type', id: 'entries.query', envelope: 'raw', client: 'none' },
-    { verb: 'get', path: '/:type/:id', id: 'entries.get' },
+    { verb: 'get', path: '/:type/:id', id: 'entries.get', notFound: 'Entry' },
     { verb: 'post', path: '/:type/query', id: 'entries.query', envelope: 'raw' },
     {
         verb: 'post',
@@ -186,7 +191,6 @@ export const ENTRIES_ROUTE_SPECS = [
         verb: 'get',
         path: '/:type/:id/versions',
         id: 'entries.versions',
-        queryArgs: ['locale'],
     },
     {
         verb: 'post',
@@ -206,7 +210,6 @@ export const ENTRIES_ROUTE_SPECS = [
         verb: 'get',
         path: '/:type/:id/staged',
         id: 'entries.getStaged',
-        queryArgs: ['locale'],
     },
     {
         verb: 'post',
@@ -219,7 +222,6 @@ export const ENTRIES_ROUTE_SPECS = [
         path: '/:type/:id/staged',
         id: 'entries.deleteStaged',
         envelope: 'success',
-        queryArgs: ['locale'],
     },
     {
         verb: 'post',
@@ -239,12 +241,9 @@ export const ENTRIES_ROUTE_SPECS = [
  * Every global is served here, addressed by the key the globals service uses —
  * bare for a host global, `<namespace>/<key>` for a plugin's, URL-encoded into
  * the `:key` segment.
- *
- * One row is bespoke; `transport/http/routes/globals.ts` records the reason
- * against its handler.
  */
 export const GLOBALS_ROUTE_SPECS = [
-    { verb: 'get', path: '/:key', id: 'globals.get', handler: 'bespoke' },
+    { verb: 'get', path: '/:key', id: 'globals.get', notFound: 'Global' },
     {
         verb: 'put',
         path: '/:key',
@@ -269,7 +268,6 @@ export const GLOBALS_ROUTE_SPECS = [
         verb: 'get',
         path: '/:key/versions',
         id: 'globals.versions',
-        queryArgs: ['locale'],
     },
     {
         verb: 'post',
@@ -288,7 +286,6 @@ export const GLOBALS_ROUTE_SPECS = [
         verb: 'get',
         path: '/:key/staged',
         id: 'globals.getStaged',
-        queryArgs: ['locale'],
     },
     {
         verb: 'post',
@@ -301,7 +298,6 @@ export const GLOBALS_ROUTE_SPECS = [
         path: '/:key/staged',
         id: 'globals.deleteStaged',
         envelope: 'success',
-        queryArgs: ['locale'],
     },
 ] as const satisfies readonly HttpRouteSpec[];
 
@@ -313,7 +309,6 @@ export const USERS_ROUTE_SPECS = [
         path: '/:id',
         id: 'users.get',
         handler: 'bespoke',
-        queryArgs: ['locale'],
     },
     {
         verb: 'put',
@@ -328,7 +323,6 @@ export const USERS_ROUTE_SPECS = [
         verb: 'get',
         path: '/:id/versions',
         id: 'users.versions',
-        queryArgs: ['locale'],
     },
     {
         verb: 'post',
@@ -345,7 +339,7 @@ export const USERS_ROUTE_SPECS = [
  */
 export const MEDIA_ROUTE_SPECS = [
     { verb: 'get', path: '/', id: 'media.query', envelope: 'raw' },
-    { verb: 'get', path: '/:id', id: 'media.get', queryArgs: ['locale'] },
+    { verb: 'get', path: '/:id', id: 'media.get', notFound: 'Media' },
     {
         verb: 'put',
         path: '/:id',
@@ -359,7 +353,6 @@ export const MEDIA_ROUTE_SPECS = [
         verb: 'get',
         path: '/:id/versions',
         id: 'media.versions',
-        queryArgs: ['locale'],
     },
     {
         verb: 'post',

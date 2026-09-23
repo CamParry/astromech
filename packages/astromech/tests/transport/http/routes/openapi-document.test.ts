@@ -1,9 +1,6 @@
 /**
  * `/openapi.json` is emitted from the route table, so every row has to appear in
- * it — including the rows whose server handler is written by hand. A bespoke
- * handler is still public API: `POST /entries/{type}`, `PUT /entries/{type}/{id}`
- * and `DELETE /entries/{type}/{id}` are three of the most-used routes in the API
- * and were documented before they were hand-written.
+ * it, including the rows whose server handler is written by hand.
  *
  * This is the check that a row and its document entry cannot drift: adding a row
  * with no document entry, or renaming a path in only one of the two places,
@@ -11,20 +8,15 @@
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { MountedRoute } from '@/transport/http/routes/http-routes';
-import type { RestRoute } from '@/transport/http/routes/rest-route';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createEntriesRouter, ENTRIES_ROUTES } from '@/transport/http/routes/entries';
-import { createGlobalsRouter, GLOBALS_ROUTES } from '@/transport/http/routes/globals';
+import { createEntriesRouter } from '@/transport/http/routes/entries';
+import { createGlobalsRouter } from '@/transport/http/routes/globals';
 import { HTTP_ROUTES } from '@/transport/http/routes/http-routes';
-import { MEDIA_ROUTES, mediaRouter } from '@/transport/http/routes/media';
-import {
-    NOTIFICATIONS_ROUTES,
-    notificationsRouter,
-} from '@/transport/http/routes/notifications';
-import { USERS_ROUTES, usersRouter } from '@/transport/http/routes/users';
+import { mediaRouter } from '@/transport/http/routes/media';
+import { notificationsRouter } from '@/transport/http/routes/notifications';
+import { usersRouter } from '@/transport/http/routes/users';
 
 type Schema = { properties?: Record<string, unknown>; $ref?: string };
 
@@ -40,22 +32,6 @@ type Document = {
     paths: Record<string, Record<string, Operation>>;
     components?: { schemas?: Record<string, Schema> };
 };
-
-/** Every mounted table, against the base path its router serves from. */
-function tables(): [string, RestRoute[]][] {
-    return [
-        ['/entries', ENTRIES_ROUTES],
-        ['/globals', GLOBALS_ROUTES],
-        ['/users', USERS_ROUTES],
-        ['/media', MEDIA_ROUTES],
-        ['/notifications', NOTIFICATIONS_ROUTES],
-    ];
-}
-
-/** The rows whose handler is hand-written — documented, not mounted generically. */
-function bespokeRoutes(): MountedRoute[] {
-    return HTTP_ROUTES.filter((route) => route.handler === 'bespoke');
-}
 
 /**
  * The JSON request body an operation documents, by property name. A `bodyKey`
@@ -103,13 +79,11 @@ beforeEach(async () => {
 });
 
 describe('the emitted document', () => {
-    it('carries every route in every table', () => {
+    it('carries every row in the table, bespoke ones included', () => {
         const paths = document().paths;
-        for (const [base, routes] of tables()) {
-            for (const route of routes) {
-                const key = documentPath(base, route.path);
-                expect(Object.keys(paths[key] ?? {}), key).toContain(route.verb);
-            }
+        for (const route of HTTP_ROUTES) {
+            const key = documentPath(route.base, route.path);
+            expect(Object.keys(paths[key] ?? {}), key).toContain(route.verb);
         }
     });
 
@@ -119,28 +93,7 @@ describe('the emitted document', () => {
         expect(paths['/media/{id}']?.['delete']?.summary).toBe('Delete a media item.');
     });
 
-    it('covers more than the five paths the hand-written routes described', () => {
-        const total = tables().reduce((sum, [, routes]) => sum + routes.length, 0);
-        expect(total).toBe(53);
-        expect(Object.keys(document().paths).length).toBeGreaterThan(5);
-    });
-
-    it('carries the three entry routes whose handlers are bespoke', () => {
-        const paths = document().paths;
-        expect(Object.keys(paths['/entries/{type}'] ?? {})).toContain('post');
-        expect(Object.keys(paths['/entries/{type}/{id}'] ?? {})).toContain('put');
-        expect(Object.keys(paths['/entries/{type}/{id}'] ?? {})).toContain('delete');
-    });
-
-    it('carries every other bespoke row too', () => {
-        const paths = document().paths;
-        for (const route of bespokeRoutes()) {
-            const key = documentPath(route.base, route.path);
-            expect(Object.keys(paths[key] ?? {}), key).toContain(route.verb);
-        }
-    });
-
-    it('describes a bespoke route from its own method contract', () => {
+    it('describes a route from its own method contract', () => {
         const doc = document();
         const post = doc.paths['/entries/{type}']?.['post'];
         expect(post?.summary).toBe('Create a "{type}" entry.');
@@ -169,9 +122,8 @@ describe('the emitted document', () => {
         ]);
     });
 
-    it('documents the bespoke global read’s own query string', () => {
-        // The row is bespoke, so nothing but the router declares its query
-        // string; `full` and `staged` are the two shapes it accepts.
+    it('documents a read’s query string from the method’s input', () => {
+        // `full` and `staged` are the two shapes the global read accepts.
         const doc = document();
         const get = doc.paths['/globals/{key}']?.['get'];
         expect(queryParameters(get).sort()).toEqual(['full', 'locale', 'staged']);

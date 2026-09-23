@@ -6,7 +6,7 @@
  * converted route where the argument shape could leak into the response.
  */
 
-import type { RestRoute } from '@/transport/http/routes/rest-route';
+import type { HttpRouteSpec } from '@/transport/http/routes/http-routes';
 import type { Role, ServiceMethodContract } from '@/types/index';
 import type { RouteEnv } from '@tests/mount-router';
 import { OpenAPIHono, z } from '@hono/zod-openapi';
@@ -83,47 +83,57 @@ const catalogue: Record<string, ServiceMethodContract> = {
     present: { access: 'media:update', input: z.object({}), mutates: false },
 };
 
-/**
- * `GET /probe/x` naming `probe.present`. Its args throw a `SyntaxError`, which
- * the mount answers 400, so a 400 means the route got as far as reading args.
- */
-function probeRoute(precondition?: RestRoute['precondition']): RestRoute {
-    return {
-        verb: 'get',
-        path: '/x',
-        id: 'probe.present',
-        args: () => {
-            throw new SyntaxError('reached args');
-        },
-        ...(precondition !== undefined ? { precondition } : {}),
-    };
-}
-
-/** Mount `route` against {@link catalogue} and request it under `role`. */
-function probe(route: RestRoute, role: Role): Promise<Response> | Response {
-    const router = new OpenAPIHono<RouteEnv>();
-    mountRestRoutes(router, catalogue, [route]);
-    return mountRouter('/probe', router, role).request('/probe/x');
+/** `GET /probe/x`, naming `probe.present` or the method `id` names. */
+function probeRow(id = 'probe.present'): HttpRouteSpec {
+    return { verb: 'get', path: '/x', id };
 }
 
 describe('mountRestRoutes', () => {
     it('throws at mount when a route names a method the catalogue lacks', () => {
-        const route = { ...probeRoute(), id: 'probe.missing' };
-        expect(() => mountRestRoutes(new OpenAPIHono(), catalogue, [route])).toThrow(
-            "names 'probe.missing', which this catalogue does not describe"
-        );
+        expect(() =>
+            mountRestRoutes(new OpenAPIHono(), {
+                catalogue,
+                specs: [probeRow('probe.missing')],
+            })
+        ).toThrow("names 'probe.missing', which this catalogue does not describe");
     });
 
-    it('403s a role the catalogue refuses when the route has no precondition', async () => {
-        const res = await probe(probeRoute(), denied);
+    it('403s a role the method’s access refuses, before anything else', async () => {
+        const router = new OpenAPIHono<RouteEnv>();
+        mountRestRoutes(router, { catalogue, specs: [probeRow()] });
+        const res = await mountRouter('/probe', router, denied).request('/probe/x');
         expect(res.status).toBe(403);
     });
+});
 
-    it('skips the catalogue check when the route declares a precondition', async () => {
-        const res = await probe(
-            probeRoute(() => null),
-            denied
-        );
-        expect(res.status).toBe(400);
+/** `GET /media` with `query`, under a role that may read media. */
+function list(query: string): Promise<Response> | Response {
+    return mountRouter('/media', mediaRouter, roleWith(['media:read'])).request(
+        `/media?${query}`
+    );
+}
+
+describe('arguments from the query string', () => {
+    it('converts a value the method types as a number', async () => {
+        const res = await list('limit=1&page=1');
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { pagination: { limit: number } };
+        expect(body.pagination.limit).toBe(1);
+    });
+
+    it('passes a value it cannot convert on, for the method to refuse', async () => {
+        const res = await list('limit=lots');
+        expect(res.status).toBe(422);
+    });
+
+    it('reads `sort` and `dir` as one sort, and `where[field]` as a filter', async () => {
+        const res = await list('sort=filename&dir=asc&where[mimeType]=images');
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { data: { id: string }[] };
+        expect(body.data.map((row) => row.id)).toEqual([id]);
+
+        const none = await list('where[mimeType]=documents');
+        const empty = (await none.json()) as { data: unknown[] };
+        expect(empty.data).toEqual([]);
     });
 });

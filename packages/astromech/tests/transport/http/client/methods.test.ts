@@ -441,7 +441,7 @@ const CASES: Case[] = [
                 limit: 10,
                 sort: { createdAt: 'desc' },
             }),
-        url: '/cms/api/media?search=a&page=2&limit=10&sort=createdAt&dir=desc&mimeType=images',
+        url: '/cms/api/media?search=a&where%5BmimeType%5D=images&page=2&limit=10&sort=createdAt&dir=desc',
         method: 'GET',
         result: page,
     },

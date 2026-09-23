@@ -1,4 +1,5 @@
 import type { HttpRouteSpec } from './http-routes';
+import type { MissingTarget } from './route-access';
 import type { AuthVariables } from '@/transport/http/middleware/auth';
 import type { ServiceMethodContract } from '@/types/index';
 import type { OpenAPIHono } from '@hono/zod-openapi';
@@ -7,22 +8,18 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from '@hono/zod-openapi';
 import { createServices } from '@/app-context/services';
 import { ValidationError } from '@/errors/validation';
-import { permissionsFor } from '@/permissions/permissions-for';
 import { contentService } from '@/policies/call-method';
-import {
-    badRequest,
-    forbidden,
-    fromZodError,
-    notFound,
-    requestSchemaError,
-} from '@/transport/http/middleware/errors';
+import { badRequest, fromZodError, notFound } from '@/transport/http/middleware/errors';
+import { fromQueryParams } from './query-string';
+import { routeAccess } from './route-access';
 
 /**
  * The server half of the REST route table.
  *
- * The rows are data, in `http-routes.ts`; this file attaches the
- * per-route server code — `args` — and `mountRestRoutes` validates, dispatches
- * through the scoped handle and wraps the result in the envelope.
+ * The rows are data, in `http-routes.ts`. `mountRestRoutes` serves each one
+ * from the row alone: it builds the method's argument object from the path, the
+ * query string and the body, checks access, calls the scoped handle and wraps
+ * the result in the row's envelope. The method's own input parse validates.
  */
 
 type Env = { Variables: AuthVariables };
@@ -30,155 +27,168 @@ type Env = { Variables: AuthVariables };
 /** A domain's contract catalogue, keyed by service method name. */
 export type ContractCatalogue = Record<string, ServiceMethodContract>;
 
-/** The server code one route needs beyond the facts the shared table states. */
-export type RestHandlers = {
-    /** How this request becomes the method's argument object. */
-    args: (c: Context<Env>) => unknown | Promise<unknown>;
-    /** When given, a null result answers 404 with this message. */
-    notFound?: (c: Context<Env>) => string;
-    /** The query string this route accepts. Documented, and validated first. */
-    query?: z.ZodObject;
+/** What a router hands `mountRestRoutes`. */
+export type RestMount = {
+    /** The catalogue the service binds: each method's access and input schema. */
+    catalogue: ContractCatalogue;
     /**
-     * The request schema the route's document declares for its body, checked
-     * after the precondition and answered in OpenAPIHono's validator envelope.
-     * The method still parses its own input; this only keeps the 400 a
-     * generated client expects for a body outside the documented operation.
+     * The catalogue the OpenAPI document is written from, when it differs. The
+     * entries router documents `{type}` rather than any one type.
      */
-    body?: (c: Context<Env>) => z.ZodType;
-    /**
-     * Checks run before the body is read, in place of the catalogue's permission
-     * check, so a route that declares one makes its own access check. A Response
-     * short-circuits the route.
-     */
-    precondition?: (c: Context<Env>, route: RestRoute) => Response | null;
+    documented?: ContractCatalogue;
+    /** The domain's rows. A bespoke row is documented here and served by hand. */
+    specs: readonly HttpRouteSpec[];
+    /** The 404 a route answers, after the permission, when its target is absent. */
+    missingTarget?: MissingTarget;
 };
 
-/** One mountable REST route: its shared row, plus this file's half. */
-export type RestRoute = HttpRouteSpec & RestHandlers;
-
-/** `'get /:type/:id'` — how a handler names the row it serves. */
-type HandlerKey<T extends readonly HttpRouteSpec[]> = {
-    [I in keyof T]: T[I] extends { handler: 'bespoke' }
-        ? never
-        : `${T[I]['verb']} ${T[I]['path']}`;
-}[number];
-
 /**
- * Pair each generic row of `specs` with its handler. The key union is derived
- * from the rows themselves, so a row with no handler and a handler for a row
- * that is bespoke (or absent) are both type errors rather than a 500 in
- * production.
- */
-export function attachHandlers<const T extends readonly HttpRouteSpec[]>(
-    specs: T,
-    handlers: Record<HandlerKey<T>, RestHandlers>
-): RestRoute[] {
-    const byKey = handlers as Record<string, RestHandlers | undefined>;
-    return specs
-        .filter((spec) => spec.handler !== 'bespoke')
-        .map((spec) => {
-            const key = `${spec.verb} ${spec.path}`;
-            const handler = byKey[key];
-            if (handler === undefined) throw new Error(`Route '${key}' has no handler.`);
-            return { ...spec, ...handler };
-        });
-}
-
-/**
- * Mount every route in `routes`, validating against `contracts`. A route that
- * names a method the catalogue does not describe is a wiring mistake, so it
+ * Document every row in `specs` and serve every row that is not bespoke. A row
+ * naming a method the catalogue does not describe is a wiring mistake, so it
  * fails here, at boot, rather than on the first request.
  */
-export function mountRestRoutes(
-    router: OpenAPIHono<Env>,
-    contracts: ContractCatalogue,
-    routes: RestRoute[]
-): void {
-    for (const route of routes) {
-        const contract = contracts[methodName(route.id)];
+export function mountRestRoutes(router: OpenAPIHono<Env>, mount: RestMount): void {
+    const documented = mount.documented ?? mount.catalogue;
+    for (const route of mount.specs) {
+        documentRoute(router, documented, route);
+        if (route.handler === 'bespoke') continue;
+
+        const contract = mount.catalogue[methodName(route.id)];
         if (contract === undefined) {
             throw new Error(
                 `Route ${route.verb.toUpperCase()} ${route.path} names '${route.id}', which this catalogue does not describe.`
             );
         }
-        documentRoute(router, contracts, route);
         router.on(route.verb.toUpperCase(), route.path, (c) =>
-            handleRestRoute(c, route, contract)
+            handleRestRoute(c, route, contract, mount.missingTarget)
         );
     }
 }
 
-/**
- * Document the bespoke rows of `specs` — the routes this domain writes out by
- * hand. They are public API and were documented before they were hand-written,
- * so the row carries their path and the contract carries their schema; only the
- * handler is bespoke.
- */
-export function documentBespokeRoutes(
-    router: OpenAPIHono<Env>,
-    contracts: ContractCatalogue,
-    specs: readonly (HttpRouteSpec & { query?: z.ZodObject })[]
-): void {
-    for (const spec of specs) {
-        if (spec.handler === 'bespoke') documentRoute(router, contracts, spec);
-    }
-}
-
-/** Validate, dispatch and envelope one table route. */
+/** Build the arguments, check access, dispatch and envelope one table route. */
 async function handleRestRoute(
     c: Context<Env>,
-    route: RestRoute,
-    contract: ServiceMethodContract
+    route: HttpRouteSpec,
+    contract: ServiceMethodContract,
+    missingTarget: MissingTarget | undefined
 ): Promise<Response> {
-    // First, as OpenAPIHono's own request validator was: a query string outside
-    // the documented operation never reaches the handler.
-    if (route.query !== undefined) {
-        const query = route.query.safeParse(c.req.query());
-        if (!query.success) return requestSchemaError(c, query.error);
+    // `dir` is the one query param no method reads, so the wire checks it.
+    const dir = c.req.query('dir');
+    if (dir !== undefined && dir !== 'asc' && dir !== 'desc') {
+        return badRequest(c, '`dir` must be `asc` or `desc`');
     }
+    const urlArgs = { ...queryArgs(c, route, contract.input), ...c.req.param() };
 
     // Checked before the body is read, so a caller that may not call this method
-    // learns nothing about the request it sent. A precondition replaces the
-    // catalogue check: it makes its own. The scoped handle below is still what
-    // enforces; this only decides when the refusal arrives.
-    if (route.precondition !== undefined) {
-        const denied = route.precondition(c, route);
-        if (denied) return denied;
-    } else if (!permissionsFor(c.var.ctx.role).allowsMethod(contract)) {
-        return forbidden(c);
-    }
+    // learns nothing about the request it sent.
+    const denied = routeAccess(c, contract.access, urlArgs, missingTarget);
+    if (denied) return denied;
 
-    if (route.body !== undefined) {
-        const json: unknown = await c.req.json().catch(() => undefined);
-        if (json === undefined) return badRequest(c, 'Invalid JSON body');
-        const parsed = route.body(c).safeParse(json);
-        if (!parsed.success) return requestSchemaError(c, parsed.error);
-    }
+    const body = await readBody(c, route);
+    if (body instanceof Response) return body;
 
-    let args: unknown;
-    try {
-        args = await route.args(c);
-    } catch (error) {
-        // An unparseable JSON body is the caller's bug, not the server's.
-        if (error instanceof SyntaxError) return badRequest(c, 'Invalid JSON body');
-        throw error;
-    }
+    // The URL wins over the body: a body cannot re-address the call.
+    const args = { ...body, ...urlArgs };
 
     try {
         const result = await invoke(c, route.id, args);
         if (route.notFound !== undefined && (result === null || result === undefined)) {
-            return notFound(c, route.notFound(c));
+            return notFound(c, `${route.notFound} '${lastParam(c, route)}' not found`);
         }
         return respond(c, route, result);
     } catch (error) {
-        // The method parses its own input, so its 422 arrives here rather than
-        // from an edge parse — rendered under the names the caller sent. Every
-        // other error, the scoped handle's refusal included, is onError's.
-        if (isMethodInputError(error)) {
-            return fromZodError(c, error, route.bodyKey);
-        }
+        // The method parses its own input, so its 422 arrives here, rendered
+        // under the names the caller sent. Every other error, the scoped
+        // handle's refusal included, is onError's.
+        if (isMethodInputError(error)) return fromZodError(c, error, route.bodyKey);
         throw error;
     }
+}
+
+/**
+ * The arguments the query string carries: every param on a `GET` or `DELETE`,
+ * the row's `queryArgs` on a `POST` or `PUT`. A value the method's input declares
+ * a boolean or a number is converted; anything it cannot read is passed on
+ * as sent, for the method's parse to refuse.
+ */
+function queryArgs(
+    c: Context<Env>,
+    route: HttpRouteSpec,
+    input: z.ZodType
+): Record<string, unknown> {
+    const shape = input instanceof z.ZodObject ? input.shape : {};
+    const readsAll = route.verb === 'get' || route.verb === 'delete';
+    const names = new Set(route.queryArgs ?? []);
+    const query = Object.fromEntries(
+        Object.entries(c.req.query()).filter(([name]) => readsAll || names.has(name))
+    );
+
+    const args = fromQueryParams(query);
+    for (const [name, value] of Object.entries(args)) {
+        if (typeof value === 'string') args[name] = fromQueryString(value, shape[name]);
+    }
+    return args;
+}
+
+/** A query-string value as the input field `schema` types it. */
+function fromQueryString(value: string, schema: z.ZodType | undefined): unknown {
+    if (accepts(schema, z.ZodBoolean)) {
+        if (value === 'true' || value === '1') return true;
+        if (value === 'false' || value === '0') return false;
+    }
+    if (accepts(schema, z.ZodNumber) && value.trim() !== '' && !Number.isNaN(+value)) {
+        return Number(value);
+    }
+    return value;
+}
+
+/**
+ * Whether `schema`, under any optional, default or catch wrapper, is a `kind`
+ * or a union with one among its options.
+ */
+function accepts(
+    schema: z.ZodType | undefined,
+    kind: typeof z.ZodBoolean | typeof z.ZodNumber
+): boolean {
+    let inner: unknown = schema;
+    while (
+        inner instanceof z.ZodOptional ||
+        inner instanceof z.ZodNullable ||
+        inner instanceof z.ZodDefault ||
+        inner instanceof z.ZodCatch
+    ) {
+        inner = inner.unwrap();
+    }
+    if (inner instanceof z.ZodUnion) {
+        return (inner.options as z.ZodType[]).some((option) => accepts(option, kind));
+    }
+    return inner instanceof kind;
+}
+
+/**
+ * The body's contribution to the arguments: none for a `GET` or `DELETE` or an
+ * empty body, the body under the row's `bodyKey`, or the body object itself. A
+ * body that is not JSON, or not an object where the arguments need one, is 400.
+ */
+async function readBody(
+    c: Context<Env>,
+    route: HttpRouteSpec
+): Promise<Record<string, unknown> | Response> {
+    if (route.verb === 'get' || route.verb === 'delete') return {};
+    const text = await c.req.text();
+    if (text.trim() === '') return {};
+
+    let body: unknown;
+    try {
+        body = JSON.parse(text);
+    } catch {
+        return badRequest(c, 'Invalid JSON body');
+    }
+    if (route.bodyKey !== undefined) return { [route.bodyKey]: body };
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+        return badRequest(c, 'The request body must be a JSON object');
+    }
+    return body as Record<string, unknown>;
 }
 
 /** Call `<domain>.<method>` on the handle scoped to the caller's role. */
@@ -211,6 +221,12 @@ function respond(c: Context<Env>, route: HttpRouteSpec, result: unknown): Respon
     }
 }
 
+/** The value of the route's last path param: the id or key a 404 names. */
+function lastParam(c: Context<Env>, route: HttpRouteSpec): string {
+    const name = paramNames(route.path).at(-1);
+    return name === undefined ? '' : (c.req.param(name) ?? '');
+}
+
 /**
  * Register one row in the router's OpenAPI document, if a contract describes it.
  * A row whose method has no contract in this catalogue is silently absent. Only
@@ -219,7 +235,7 @@ function respond(c: Context<Env>, route: HttpRouteSpec, result: unknown): Respon
 function documentRoute(
     router: OpenAPIHono<Env>,
     contracts: ContractCatalogue,
-    route: HttpRouteSpec & { query?: z.ZodObject }
+    route: HttpRouteSpec
 ): void {
     const contract = contracts[methodName(route.id)];
     if (contract === undefined) return;
@@ -245,24 +261,51 @@ function documentRoute(
 }
 
 /**
- * The query string this route documents: the schema its handler declares, plus
- * each `queryArgs` name under the schema the method's own input gives it.
+ * The query string this route documents, under the schemas the method's input
+ * gives each argument: on a `GET` or `DELETE`, every argument the path does not
+ * carry; on a `POST` or `PUT`, the row's `queryArgs`. `sort` is documented as
+ * the `sort` and `dir` pair it travels as.
  */
 function documentedQuery(
-    route: HttpRouteSpec & { query?: z.ZodObject },
+    route: HttpRouteSpec,
     contract: ServiceMethodContract
 ): z.ZodObject | undefined {
-    const names = route.queryArgs ?? [];
-    if (names.length === 0) return route.query;
-
     const input = contract.input;
     const shape = input instanceof z.ZodObject ? input.shape : {};
-    const declared = Object.fromEntries(
-        names.map((name) => [name, shape[name] ?? z.string().optional()])
+    const onPath = new Set(paramNames(route.path));
+    const names =
+        route.verb === 'get' || route.verb === 'delete'
+            ? Object.keys(shape).filter((name) => !onPath.has(name))
+            : [...(route.queryArgs ?? [])];
+    if (names.length === 0) return undefined;
+
+    return z.object(
+        Object.fromEntries(names.flatMap((name) => queryParams(name, shape[name])))
     );
-    return route.query === undefined
-        ? z.object(declared)
-        : z.object({ ...route.query.shape, ...declared });
+}
+
+/**
+ * The query params one argument travels as, each with its schema: `sort` as
+ * `sort` and `dir`, an object `where` as one `where[field]` per field, and any
+ * other object (a free-form `where`) not at all.
+ */
+function queryParams(name: string, schema: z.ZodType | undefined): [string, z.ZodType][] {
+    if (name === 'sort') {
+        return [
+            ['sort', z.string().optional()],
+            ['dir', z.enum(['asc', 'desc']).optional()],
+        ];
+    }
+    const inner = schema instanceof z.ZodOptional ? schema.unwrap() : schema;
+    if (inner instanceof z.ZodObject) {
+        if (name !== 'where') return [];
+        return Object.entries(inner.shape).map(([field, fieldSchema]) => [
+            `where[${field}]`,
+            fieldSchema,
+        ]);
+    }
+    if (inner instanceof z.ZodRecord) return [];
+    return [[name, schema ?? z.string().optional()]];
 }
 
 /** `/:type/:id` → `/{type}/{id}`, the form an OpenAPI path takes. */
@@ -285,8 +328,7 @@ function pathParams(path: string): z.ZodObject | undefined {
 /**
  * The request body this route documents: the key it declares as `bodyKey`, or
  * the method's argument object minus whatever the URL already carries (path
- * params and `queryArgs`). A route left
- * with no fields sends no body.
+ * params and `queryArgs`). A route left with no fields sends no body.
  */
 function requestBody(
     route: HttpRouteSpec,

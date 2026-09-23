@@ -35,6 +35,10 @@ export const getGlobal = defineServiceMethod({
             params.locale
         );
 
+        // Before the row lookup, so every caller gets the capability's 409 for
+        // `staged` whether or not the global has been saved.
+        if (params.staged === true) assertCapability('global', global, 'staging');
+
         // A staged change is never published, so a public read of one would
         // answer null for every global; asking for it in the public shape is a
         // mistake worth naming rather than an empty result.
@@ -49,7 +53,6 @@ export const getGlobal = defineServiceMethod({
         const id = await repository.idByKey(params.key);
         if (id === null) return null;
 
-        if (params.staged === true) assertCapability('global', global, 'staging');
         const row =
             params.staged === true
                 ? await repository.staging.getByCanonical(id, locale)

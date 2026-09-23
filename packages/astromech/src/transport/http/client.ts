@@ -9,15 +9,14 @@ import type {
     EntriesService,
     GlobalsService,
     Media,
-    MediaQueryParams,
     MediaService,
     NotificationsService,
     PluginServiceNamespace,
-    SortOption,
     UsersService,
 } from '@/types/index';
 import { typedServices } from '@/services/typed-services';
 import { HTTP_ROUTES } from '@/transport/http/routes/http-routes';
+import { toQueryParams } from '@/transport/http/routes/query-string';
 
 /** A non-2xx response, carrying the error envelope's id, code and status. */
 export class AstromechApiError extends Error {
@@ -60,27 +59,13 @@ function emitApiError(err: AstromechApiError | Error): void {
 type FetchOptions = {
     method?: string;
     body?: unknown;
-    params?: Record<string, unknown>;
+    params?: Record<string, string>;
 };
 
+/** The API URL for `path`, with `params` as its query string. */
 function buildUrl(path: string, params?: FetchOptions['params']): string {
-    // Build URL with query params - works in browser without relying on window global
-    let url = `${apiBase}${path}`;
-
-    if (params) {
-        const searchParams = new URLSearchParams();
-        for (const [key, value] of Object.entries(params)) {
-            if (value !== undefined) {
-                searchParams.set(key, String(value));
-            }
-        }
-        const queryString = searchParams.toString();
-        if (queryString) {
-            url += `?${queryString}`;
-        }
-    }
-
-    return url;
+    const query = new URLSearchParams(params).toString();
+    return `${apiBase}${path}${query ? `?${query}` : ''}`;
 }
 
 /**
@@ -225,15 +210,15 @@ async function callRoute(id: string, args: Args = {}, base?: string): Promise<un
         // `queryArgs` go on the URL whatever the body is — a content-level route
         // addresses its locale there, next to the id.
         const { query, body } = splitQueryArgs(route, rest);
-        if (Object.keys(query).length > 0) options.params = query;
+        if (Object.keys(query).length > 0) options.params = toQueryParams(query);
         // A `bodyKey` route sends that key ALONE as the body — the rest of the
         // method's argument object is on the URL.
         if (route.bodyKey !== undefined) options.body = args[route.bodyKey] ?? {};
         else if (Object.keys(body).length > 0) options.body = body;
     } else if (Object.keys(rest).length > 0) {
         // Every argument a GET or DELETE did not spend on the path is a query
-        // param already, so `queryArgs` has nothing left to say here.
-        options.params = rest;
+        // param, so `queryArgs` has nothing to say here.
+        options.params = toQueryParams(rest);
     }
 
     return unwrap(route.envelope, await apiFetch<unknown>(path, options));
@@ -300,22 +285,6 @@ export function createEntriesService(
 const entriesService: EntriesService = createEntriesService('/entries', 'full');
 
 /**
- * The wire's listing params. `sort` is an object on the service and two query
- * params on the wire, and a multi-key sort has no wire form at all — the REST
- * routes have always taken one field and one direction.
- */
-function listingArgs(params: {
-    search?: string | undefined;
-    page?: number | undefined;
-    limit?: number | 'all' | undefined;
-    sort?: SortOption | SortOption[] | undefined;
-}): Args {
-    const { sort, ...rest } = params;
-    if (sort === undefined || Array.isArray(sort)) return { ...rest };
-    return { ...rest, sort: Object.keys(sort)[0], dir: Object.values(sort)[0] };
-}
-
-/**
  * A multipart upload — the two media routes with no row in the table, because a
  * `File` has no JSON representation and so no schema either side could state.
  */
@@ -336,14 +305,6 @@ async function uploadFile(path: string, file: File): Promise<Media> {
 }
 
 const mediaService = restService<MediaService>('media', callRoute, {
-    // `where.mimeType` is one query param, not a nested object.
-    query: (params) => {
-        const { where, ...rest } = (params ?? {}) as MediaQueryParams;
-        return callRoute('media.query', {
-            ...listingArgs(rest),
-            ...(where?.mimeType !== undefined ? { mimeType: where.mimeType } : {}),
-        });
-    },
     upload: (params) => uploadFile('/media/upload', (params as { file: File }).file),
     replace: (params) => {
         const { id, file } = params as { id: string; file: File };
@@ -367,9 +328,7 @@ const globalsService = restService<GlobalsService>('globals', callRoute, {
     },
 });
 
-const usersService = restService<UsersService>('users', callRoute, {
-    query: (params) => callRoute('users.query', listingArgs(params ?? {})),
-});
+const usersService = restService<UsersService>('users', callRoute, {});
 
 const notificationsService = restService<NotificationsService>(
     'notifications',

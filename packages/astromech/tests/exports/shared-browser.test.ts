@@ -27,7 +27,7 @@ const allowlist = [
     /^src\/media\/image-widths\.ts$/,
     /^src\/permissions\/(entry|global)-permission\.ts$/,
     /^src\/media\/serving\/image\/url\.ts$/,
-    /^src\/transport\/http\/routes\/http-routes\.ts$/,
+    /^src\/transport\/http\/routes\/(http-routes|query-string)\.ts$/,
     /^src\/transport\/http\/client\.ts$/,
     /^src\/services\/typed-services\.ts$/,
 ];

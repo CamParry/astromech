@@ -63,10 +63,10 @@ describe('GET /media', () => {
             {}
         );
 
-        const images = await app().request('/media?mimeType=images');
+        const images = await app().request('/media?where[mimeType]=images');
         expect(((await images.json()) as { data: Media[] }).data).toHaveLength(1);
 
-        const documents = await app().request('/media?mimeType=documents');
+        const documents = await app().request('/media?where[mimeType]=documents');
         expect(
             ((await documents.json()) as { data: Media[] }).data.map((m) => m.filename)
         ).toEqual(['notes.pdf']);
@@ -100,7 +100,7 @@ describe('GET /media', () => {
         ).toEqual(['apple.png', 'photo.png']);
     });
 
-    it('400s an unrecognised dir — the route schema rejects it before the handler', async () => {
+    it('400s an unrecognised dir', async () => {
         const res = await app().request('/media?sort=filename&dir=sideways');
         expect(res.status).toBe(400);
     });

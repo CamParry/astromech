@@ -84,13 +84,13 @@ describe('parseQueryParams — search, locale and trashed', () => {
         expect((await get('?locale=de')).data).toHaveLength(0);
     });
 
-    it('reads trashed only as the exact string "true"', async () => {
+    it('reads trashed as `true` or `1`, and `false` or `0` as live rows', async () => {
         const [first] = (await api.query({ type: 'post', full: true })).data;
         await api.trash({ type: 'post', id: first?.id ?? '' });
 
-        // `trashed=1` is not "true", so it is ignored and the live rows come back.
-        expect((await get('?trashed=1&full=true')).data).toHaveLength(2);
+        expect((await get('?trashed=1&full=true')).data).toHaveLength(1);
         expect((await get('?trashed=true&full=true')).data).toHaveLength(1);
+        expect((await get('?trashed=0&full=true')).data).toHaveLength(2);
     });
 });
 
@@ -122,7 +122,7 @@ describe('SORTABLE_FIELDS on the query string', () => {
         ]);
     });
 
-    it('400s an unrecognised dir — the OpenAPI route schema rejects it before the handler', async () => {
+    it('400s an unrecognised dir', async () => {
         const res = await app().request('/entries/post?sort=title&dir=sideways');
         expect(res.status).toBe(400);
     });
@@ -192,13 +192,17 @@ describe('the full flag', () => {
         expect(fromBody.status).toBe(200);
     });
 
-    it('treats any other query value as not asking for the full shape', async () => {
+    it('reads full=1 as the full shape, as every boolean query param is read', async () => {
         const [first] = (await api.query({ type: 'post', full: true })).data;
         await api.trash({ type: 'post', id: first?.id ?? '' });
 
-        // `full=1` is not "true", so the trashed read is refused as a public one.
         const res = await app().request('/entries/post?trashed=true&full=1');
-        expect(res.status).toBe(400);
+        expect(res.status).toBe(200);
+    });
+
+    it('passes any other value on, for the method’s parse to refuse', async () => {
+        const res = await app().request('/entries/post?full=yes');
+        expect(res.status).toBe(422);
     });
 });
 
