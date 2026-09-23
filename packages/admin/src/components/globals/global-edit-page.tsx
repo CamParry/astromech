@@ -20,13 +20,12 @@ import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { useAiContext } from '../../context/ai-context';
 import {
-    useCreateStagedGlobal,
-    useDeleteStagedGlobal,
+    globalMutations,
     useGetStagedGlobal,
     useGlobal,
     useGlobalVersions,
-    useMergeStagedGlobal,
 } from '../../hooks/globals';
+import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useEntryForm } from '../../hooks/use-entry-form';
 import { usePermissions } from '../../hooks/use-permissions';
 import { queryKeys } from '../../hooks/use-query-keys';
@@ -206,14 +205,14 @@ function GlobalEditPageBody({
     // change, so the unsaved-changes indicator would miss most edits.
     const isDirty = useStore(form.store, (state) => state.isDirty);
 
-    const createStaged = useCreateStagedGlobal(key, locale, {
+    const mutations = globalMutations(key);
+    const createStaged = useAdminMutation(mutations.createStaged, {
         onSuccess: () => void navigate({ to: stagedPath }),
-        onConflict: () => void navigate({ to: stagedPath }),
     });
-    const mergeStaged = useMergeStagedGlobal(key, locale, {
+    const mergeStaged = useAdminMutation(mutations.mergeStaged, {
         onSuccess: () => void navigate({ to: canonicalPath }),
     });
-    const deleteStaged = useDeleteStagedGlobal(key, locale, {
+    const deleteStaged = useAdminMutation(mutations.deleteStaged, {
         onSuccess: () => void navigate({ to: canonicalPath }),
     });
 
@@ -231,7 +230,7 @@ function GlobalEditPageBody({
                 : t('staging.confirmMergeMessage'),
             variant: 'primary',
             confirmLabel: t('staging.merge'),
-            onConfirm: () => mergeStaged.mutate(),
+            onConfirm: () => mergeStaged.mutate({ locale }),
         });
     }
 
@@ -241,7 +240,7 @@ function GlobalEditPageBody({
             description: t('staging.confirmDiscardMessage'),
             variant: 'danger',
             confirmLabel: t('staging.discard'),
-            onConfirm: () => deleteStaged.mutate(),
+            onConfirm: () => deleteStaged.mutate({ locale }),
         });
     }
 
@@ -300,7 +299,7 @@ function GlobalEditPageBody({
                                 <Button
                                     variant="secondary"
                                     icon={<Layers size={16} />}
-                                    onClick={() => createStaged.mutate()}
+                                    onClick={() => createStaged.mutate({ locale })}
                                     loading={createStaged.isPending}
                                 >
                                     {t('staging.stageChange')}

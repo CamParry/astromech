@@ -20,8 +20,9 @@ import { Spinner } from '../../../components/ui/spinner';
 import { Table } from '../../../components/ui/table';
 import { Toolbar, ToolbarStart } from '../../../components/ui/toolbar';
 import { useAiContext } from '../../../context/ai-context';
+import { useAdminMutation } from '../../../hooks/use-admin-mutation';
 import { usePermissions } from '../../../hooks/use-permissions';
-import { useDeleteUser, useUsersQuery } from '../../../hooks/users';
+import { userMutations, useUsersQuery } from '../../../hooks/users';
 import { formatDate } from '../../../utilities/dates';
 
 const PER_PAGE = 20;
@@ -79,7 +80,7 @@ function UsersIndexPage(): React.ReactElement {
     const users = usersResult?.data;
     const totalPages = Math.max(1, usersResult?.pagination?.pages ?? 1);
     const totalItems = usersResult?.pagination?.total;
-    const deleteMutation = useDeleteUser();
+    const deleteMutation = useAdminMutation(userMutations().delete);
 
     return (
         <Page>

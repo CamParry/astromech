@@ -23,8 +23,9 @@ import {
 } from '../../../components/ui/page';
 import { Panel } from '../../../components/ui/panel';
 import { Select } from '../../../components/ui/select';
+import { useAdminMutation } from '../../../hooks/use-admin-mutation';
 import { usePermissions } from '../../../hooks/use-permissions';
-import { useCreateUser } from '../../../hooks/users';
+import { userMutations } from '../../../hooks/users';
 
 type FormValues = {
     name: string;
@@ -45,7 +46,7 @@ function UserCreatePage(): React.ReactElement {
 
     const defaultRole = adminConfig.roles[0]?.slug ?? '';
 
-    const createMutation = useCreateUser({
+    const createMutation = useAdminMutation(userMutations().create, {
         onSuccess: () => void navigate({ to: '/users' }),
     });
 

@@ -28,17 +28,12 @@ import adminConfig from 'virtual:astromech/admin-config';
 import { useAiContext } from '../../context/ai-context';
 import { authorName, useAuthorNames } from '../../hooks/author-names';
 import {
-    useCreateStaged,
-    useDeleteStaged,
-    useDuplicateEntry,
+    entryMutations,
     useEntry,
     useEntryVersions,
     useGetStaged,
-    useIssuePreviewToken,
-    useMergeStaged,
-    useRevokePreviewToken,
-    useTrashEntry,
 } from '../../hooks/entries';
+import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useEntryForm } from '../../hooks/use-entry-form';
 import { usePermissions } from '../../hooks/use-permissions';
 import { queryKeys } from '../../hooks/use-query-keys';
@@ -181,11 +176,12 @@ function EntryEditPageBody({
     );
     const versionCount = versions?.length ?? 0;
 
-    const trashEntry = useTrashEntry(type, {
+    const mutations = entryMutations(type, single);
+    const trashEntry = useAdminMutation(mutations.trash, {
         onSuccess: () => void navigate({ to: basePath }),
     });
 
-    const duplicateEntry = useDuplicateEntry(type, {
+    const duplicateEntry = useAdminMutation(mutations.duplicate, {
         onSuccess: (newEntry) =>
             void navigate({
                 to: entryEditPath(basePath, newEntry.id, { locale: newEntry.locale }),
@@ -259,18 +255,17 @@ function EntryEditPageBody({
     const canonicalPath = entryEditPath(basePath, id, { locale });
     const stagedPath = entryEditPath(basePath, id, { locale, staged: true });
 
-    const createStaged = useCreateStaged(type, locale, {
+    const createStaged = useAdminMutation(mutations.createStaged, {
         onSuccess: () => void navigate({ to: stagedPath }),
-        onConflict: () => void navigate({ to: stagedPath }),
     });
-    const mergeStaged = useMergeStaged(type, id, locale, {
+    const mergeStaged = useAdminMutation(mutations.mergeStaged, {
         onSuccess: () => void navigate({ to: canonicalPath }),
     });
-    const deleteStaged = useDeleteStaged(type, id, locale, {
+    const deleteStaged = useAdminMutation(mutations.deleteStaged, {
         onSuccess: () => void navigate({ to: canonicalPath }),
     });
-    const issueToken = useIssuePreviewToken(type, id);
-    const revokeToken = useRevokePreviewToken(type, id);
+    const issueToken = useAdminMutation(mutations.issuePreviewToken);
+    const revokeToken = useAdminMutation(mutations.revokePreviewToken);
 
     const previewUrl =
         entryType?.url && entry != null ? resolveEntryUrl(entryType.url, entry) : null;
@@ -283,7 +278,7 @@ function EntryEditPageBody({
 
     function handlePreview(staged: boolean): void {
         if (!previewUrl) return;
-        issueToken.mutate(undefined, {
+        issueToken.mutate(id, {
             onSuccess: ({ token }) => {
                 const url = `${previewUrl}?preview=${encodeURIComponent(token)}${
                     staged ? '&staged=1' : ''
@@ -307,7 +302,7 @@ function EntryEditPageBody({
                 : t('staging.confirmMergeMessage'),
             variant: 'primary',
             confirmLabel: t('staging.merge'),
-            onConfirm: () => mergeStaged.mutate(),
+            onConfirm: () => mergeStaged.mutate({ id, locale }),
         });
     }
 
@@ -317,7 +312,7 @@ function EntryEditPageBody({
             description: t('staging.confirmDiscardMessage'),
             variant: 'danger',
             confirmLabel: t('staging.discard'),
-            onConfirm: () => deleteStaged.mutate(),
+            onConfirm: () => deleteStaged.mutate({ id, locale }),
         });
     }
 
@@ -414,7 +409,7 @@ function EntryEditPageBody({
                                 <Button
                                     variant="secondary"
                                     icon={<Layers size={16} />}
-                                    onClick={() => createStaged.mutate(id)}
+                                    onClick={() => createStaged.mutate({ id, locale })}
                                     loading={createStaged.isPending}
                                 >
                                     {t('staging.stageChange')}
@@ -486,7 +481,7 @@ function EntryEditPageBody({
                                                         <Menu.Item
                                                             className="am-topbar-menu-item"
                                                             onClick={() =>
-                                                                revokeToken.mutate()
+                                                                revokeToken.mutate(id)
                                                             }
                                                             disabled={
                                                                 revokeToken.isPending

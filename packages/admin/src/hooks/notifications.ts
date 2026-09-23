@@ -1,11 +1,10 @@
 /**
- * Query and mutation hooks for notifications.
+ * Queries and mutations for notifications. `notificationMutations()` is the
+ * table of writes; `useAdminMutation` runs them.
  */
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { mutationOptions, useQuery } from '@tanstack/react-query';
 import { astromechUntypedClient } from 'astromech/fetch';
-import { useTranslation } from 'react-i18next';
-import { useToast } from '../components/ui/toast';
 import { queryKeys } from './use-query-keys';
 
 export function useNotifications(params?: Record<string, unknown>, enabled = true) {
@@ -25,44 +24,24 @@ export function useNotificationCount() {
     });
 }
 
-export function useDismiss() {
-    const queryClient = useQueryClient();
-
-    return useMutation({
-        mutationFn: (id: string) => astromechUntypedClient.notifications.dismiss({ id }),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.notifications.all(),
-            });
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.notifications.count(),
-            });
-        },
-    });
-}
-
-export function useDismissAll() {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-
-    return useMutation({
-        mutationFn: () => astromechUntypedClient.notifications.dismissAll(),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.notifications.all(),
-            });
-            void queryClient.invalidateQueries({
-                queryKey: queryKeys.notifications.count(),
-            });
-            toast({ message: t('notifications.dismissedAll'), variant: 'success' });
-        },
-        onError: (err) => {
-            toast({
-                message:
-                    err instanceof Error ? err.message : t('notifications.dismissFailed'),
-                variant: 'error',
-            });
-        },
-    });
+/** Every write the admin makes to notifications; each refreshes the list and the count. */
+export function notificationMutations() {
+    const notifications = astromechUntypedClient.notifications;
+    const invalidates = [queryKeys.notifications.all()];
+    return {
+        dismiss: mutationOptions({
+            mutationKey: ['notifications', 'dismiss'],
+            mutationFn: (id: string) => notifications.dismiss({ id }),
+            meta: { invalidates, errorMessage: 'notifications.dismissFailed' },
+        }),
+        dismissAll: mutationOptions({
+            mutationKey: ['notifications', 'dismissAll'],
+            mutationFn: () => notifications.dismissAll(),
+            meta: {
+                invalidates,
+                successMessage: 'notifications.dismissedAll',
+                errorMessage: 'notifications.dismissFailed',
+            },
+        }),
+    };
 }

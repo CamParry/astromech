@@ -43,8 +43,6 @@ export const queryKeys = {
     media: {
         all: () => ['media'] as const,
         list: (params: Record<string, unknown>) => ['media', 'list', params] as const,
-        /** Everything cached for one media item, across its locales. */
-        detailPrefix: (id: string) => ['media', 'detail', id] as const,
         /**
          * One locale of one media item. A read with no locale falls back to
          * the default locale's content, so `null` is its own cache entry.
@@ -60,8 +58,6 @@ export const queryKeys = {
     users: {
         all: () => ['users'] as const,
         list: (params?: Record<string, unknown>) => ['users', 'list', params] as const,
-        /** Everything cached for one user, across its locales. */
-        detailPrefix: (id: string) => ['users', 'detail', id] as const,
         /**
          * One locale of one user. A read with no locale falls back to the
          * default locale's content, so `null` is its own cache entry.

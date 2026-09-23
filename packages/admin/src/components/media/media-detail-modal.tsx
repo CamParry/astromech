@@ -9,13 +9,8 @@ import { useForm, useStore } from '@tanstack/react-form';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import {
-    useDeleteMedia,
-    useMediaItem,
-    useMediaUsage,
-    useReplaceMedia,
-    useUpdateMedia,
-} from '../../hooks/media';
+import { mediaMutations, useMediaItem, useMediaUsage } from '../../hooks/media';
+import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { formatBytes } from '../../utilities/bytes';
 import { defaultContentLocale, localeOptions } from '../../utilities/content-locale';
 import { formatDatetime } from '../../utilities/dates';
@@ -127,18 +122,23 @@ function MediaDetailBody({
             caption: item.caption ?? '',
         },
         onSubmit: ({ value }) => {
-            updateMutation.mutate(value);
+            updateMutation.mutate({
+                id: item.id,
+                locale: isTranslatable ? locale : undefined,
+                data: value,
+            });
         },
     });
 
-    const updateMutation = useUpdateMedia(item.id, {
-        ...(isTranslatable ? { locale } : {}),
+    const updateMutation = useAdminMutation(mediaMutations().update, {
         onSuccess: () => form.reset(form.state.values),
     });
 
-    const deleteMutation = useDeleteMedia({ onSuccess: onDeleted });
+    const deleteMutation = useAdminMutation(mediaMutations().delete, {
+        onSuccess: onDeleted,
+    });
 
-    const replaceMutation = useReplaceMedia(item.id);
+    const replaceMutation = useAdminMutation(mediaMutations().replace);
 
     // Same query key as the usage panel below, so this reads that cache entry
     // rather than fetching again.
@@ -173,7 +173,7 @@ function MediaDetailBody({
             }),
             variant: 'danger',
             confirmLabel: t('media.replaceConfirmLabel'),
-            onConfirm: () => replaceMutation.mutate(file),
+            onConfirm: () => replaceMutation.mutate({ id: item.id, file }),
         });
     }
 

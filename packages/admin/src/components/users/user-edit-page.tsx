@@ -17,9 +17,10 @@ import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { useAiContext } from '../../context/ai-context';
 import { useAuth } from '../../context/auth';
+import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useEntryForm } from '../../hooks/use-entry-form';
 import { usePermissions } from '../../hooks/use-permissions';
-import { useDeleteUser, useUpdateUser, useUser } from '../../hooks/users';
+import { userMutations, useUser } from '../../hooks/users';
 import { EntryNamespaceProvider, namespaceForScope } from '../../i18n/entry-namespace';
 import { defaultContentLocale, localeOptions } from '../../utilities/content-locale';
 import { formatDatetime } from '../../utilities/dates';
@@ -130,25 +131,26 @@ function UserEditBody({
     const [role, setRole] = useState(user.role);
     const roleDirty = role !== user.role;
 
-    const updateMutation = useUpdateUser(id, {
-        ...(isTranslatable ? { locale } : {}),
-    });
+    const updateMutation = useAdminMutation(userMutations().update);
 
-    const deleteMutation = useDeleteUser({
-        id,
+    const deleteMutation = useAdminMutation(userMutations().delete, {
         onSuccess: () => void navigate({ to: '/users' }),
     });
 
     /**
      * `useEntryForm` builds one payload shaped for entries and globals
      * (`title`, `fields`, ...); `name` rides in as its `title` and `role`
-     * merges in from its own state. Both write through `useUpdateUser`, so
-     * versions, cache invalidation and the saved toast stay the hook's job.
+     * merges in from its own state. Both write through `userMutations().update`,
+     * so cache invalidation and the saved toast stay the table's job.
      */
     async function writeUser(payload: EntryPayload): Promise<User> {
         const data: UserUpdateData = { name: payload.title, fields: payload.fields };
         if (canEditRole) data.role = role;
-        return updateMutation.mutateAsync(data);
+        return updateMutation.mutateAsync({
+            id,
+            locale: isTranslatable ? locale : undefined,
+            data,
+        });
     }
 
     const {
@@ -396,9 +398,7 @@ function UserEditBody({
                                                             confirmLabel:
                                                                 t('common.delete'),
                                                             onConfirm: () =>
-                                                                deleteMutation.mutate(
-                                                                    undefined
-                                                                ),
+                                                                deleteMutation.mutate(id),
                                                         })
                                                     }
                                                     loading={deleteMutation.isPending}

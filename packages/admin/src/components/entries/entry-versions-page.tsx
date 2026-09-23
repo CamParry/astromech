@@ -9,7 +9,8 @@ import type { EntriesBinding } from './binding';
 import { useNavigate } from '@tanstack/react-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useEntry, useEntryVersions, useRestoreEntryVersion } from '../../hooks/entries';
+import { entryMutations, useEntry, useEntryVersions } from '../../hooks/entries';
+import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { defaultContentLocale } from '../../utilities/content-locale';
 import { entryEditPath } from '../../utilities/entry-admin-path';
 import { VersionHistory } from '../versions/version-history';
@@ -36,7 +37,7 @@ export function EntryVersionsPage({
     const { data: entry } = useEntry(type, id, locale);
     const { data: versions, isLoading } = useEntryVersions(type, id, locale, true);
 
-    const restoreMutation = useRestoreEntryVersion(type, id, locale, {
+    const restoreMutation = useAdminMutation(entryMutations(type).restoreVersion, {
         onSuccess: () => void navigate({ to: editPath }),
     });
 
@@ -44,7 +45,7 @@ export function EntryVersionsPage({
         <VersionHistory
             versions={versions}
             isLoading={isLoading}
-            onRestore={(versionId) => restoreMutation.mutate(versionId)}
+            onRestore={(versionId) => restoreMutation.mutate({ id, locale, versionId })}
             isRestoring={restoreMutation.isPending}
             breadcrumb={[
                 { label: plural, to: basePath },

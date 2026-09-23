@@ -4,7 +4,8 @@
  */
 
 import React from 'react';
-import { useRestoreUserVersion, useUserVersions } from '../../hooks/users';
+import { useAdminMutation } from '../../hooks/use-admin-mutation';
+import { userMutations, useUserVersions } from '../../hooks/users';
 import { ContentVersionsPanel } from '../versions/content-versions-panel';
 
 export type UserVersionsPanelProps = {
@@ -20,14 +21,16 @@ export function UserVersionsPanel({
     canUpdate,
 }: UserVersionsPanelProps): React.ReactElement {
     const { data, isLoading } = useUserVersions(userId, locale);
-    const restoreMutation = useRestoreUserVersion(userId, locale);
+    const restoreMutation = useAdminMutation(userMutations().restoreVersion);
 
     return (
         <ContentVersionsPanel
             versions={data ?? []}
             isLoading={isLoading}
             canUpdate={canUpdate}
-            onRestore={(versionId) => restoreMutation.mutate(versionId)}
+            onRestore={(versionId) =>
+                restoreMutation.mutate({ id: userId, locale, versionId })
+            }
             isRestoring={restoreMutation.isPending}
         />
     );

@@ -6,14 +6,17 @@
 
 import type { EntriesBinding } from './binding';
 import type { Entry, EntryUpdateData } from 'astromech';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { astromechUntypedClient } from 'astromech/fetch';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
-import { useEntriesQuery } from '../../hooks/entries';
+import { entryMutations, useEntriesQuery } from '../../hooks/entries';
+import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useEntryForm } from '../../hooks/use-entry-form';
 import { usePermissions } from '../../hooks/use-permissions';
+import { queryKeys } from '../../hooks/use-query-keys';
 import { EntryNamespaceProvider, namespaceForScope } from '../../i18n/entry-namespace';
 import { resolveAdminEntryType, resolveForm } from '../../rendering/resolve';
 import { defaultContentLocale } from '../../utilities/content-locale';
@@ -222,6 +225,11 @@ export function EntryNewPage({
     // The two columns together ARE the full field tree the client validates.
     // Derived above the permission bail-out so the memo keeps its hook slot.
     const fieldDefinitions = React.useMemo(() => [...main, ...sidebar], [main, sidebar]);
+    const queryClient = useQueryClient();
+    const single = entryType?.single ?? type;
+    const createTranslation = useAdminMutation(entryMutations(type).createTranslation, {
+        onSuccess: (entry) => handleCreated(entry),
+    });
 
     if (!canCreate) {
         toast({
@@ -231,7 +239,6 @@ export function EntryNewPage({
         void navigate({ to: basePath });
         return <></>;
     }
-    const single = entryType?.single ?? type;
     const plural = entryType?.plural ?? type;
 
     const {
@@ -254,15 +261,17 @@ export function EntryNewPage({
         saveFn: (payload) => writeEntry(payload),
         publishFn: (payload) => writeEntry(payload),
         onSuccess: (entry) => {
-            toast({
-                message: t('entries.created', { name: single }),
-                variant: 'success',
-            });
-            void navigate({
-                to: entryEditPath(basePath, entry.id, { locale: entry.locale }),
-            });
+            void queryClient.invalidateQueries({ queryKey: queryKeys.entries.all(type) });
+            handleCreated(entry);
         },
     });
+
+    function handleCreated(entry: Entry): void {
+        toast({ message: t('entries.created', { name: single }), variant: 'success' });
+        void navigate({
+            to: entryEditPath(basePath, entry.id, { locale: entry.locale }),
+        });
+    }
 
     function writeEntry(payload: EntryUpdateData): Promise<Entry> {
         if (chosenEntryId !== null) {
@@ -294,25 +303,9 @@ export function EntryNewPage({
     }
 
     function handleChooseTranslate(source: Entry): void {
-        // Add the requested locale to the source entry. An empty patch is
-        // enough: the missing row inherits the source's own columns.
-        void astromechUntypedClient.entries
-            .update({ type, id: source.id, locale: requestedLocale, data: {} })
-            .then((entry) => {
-                toast({
-                    message: t('entries.created', { name: single }),
-                    variant: 'success',
-                });
-                void navigate({
-                    to: entryEditPath(basePath, entry.id, { locale: entry.locale }),
-                });
-            })
-            .catch((err: unknown) => {
-                toast({
-                    message: err instanceof Error ? err.message : 'Failed',
-                    variant: 'error',
-                });
-            });
+        // Add the requested locale to the source entry; the missing row
+        // inherits the source's own columns.
+        createTranslation.mutate({ id: source.id, locale: requestedLocale });
     }
 
     return (

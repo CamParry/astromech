@@ -12,11 +12,11 @@ import { Bell, X } from 'lucide-react';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    useDismiss,
-    useDismissAll,
+    notificationMutations,
     useNotificationCount,
     useNotifications,
 } from '../../hooks/notifications';
+import { useAdminMutation } from '../../hooks/use-admin-mutation';
 
 declare const __ASTROMECH_BASE_PATH__: string;
 
@@ -108,8 +108,8 @@ export function NotificationBell() {
     const { data: count = 0 } = useNotificationCount();
     const { data: items = [], isPending: isLoading } = useNotifications(undefined, open);
 
-    const dismiss = useDismiss();
-    const dismissAll = useDismissAll();
+    const dismiss = useAdminMutation(notificationMutations().dismiss);
+    const dismissAll = useAdminMutation(notificationMutations().dismissAll);
 
     const badgeCount = count > 9 ? '9+' : count > 0 ? String(count) : null;
 

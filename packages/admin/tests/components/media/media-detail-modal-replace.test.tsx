@@ -16,7 +16,13 @@ import { MediaDetailModal } from '@/admin/components/media/media-detail-modal';
 import { ConfirmProvider } from '@/admin/components/ui/confirm';
 import en from '@/admin/locales/en.json';
 
-const { replaceMutate } = vi.hoisted(() => ({ replaceMutate: vi.fn() }));
+const { replaceMutate, mutations } = vi.hoisted(() => {
+    const replaceMutate = vi.fn();
+    return {
+        replaceMutate,
+        mutations: { replace: replaceMutate } as Record<string, () => void>,
+    };
+});
 
 const ITEM: Media = {
     id: 'm1',
@@ -64,14 +70,19 @@ const USAGE = [
     },
 ] as Usage[];
 
-vi.mock('@/admin/hooks/media', () => ({
+vi.mock('@/admin/hooks/media', async (importOriginal) => ({
+    ...(await importOriginal<object>()),
     useMediaItem: () => ({ data: ITEM, isLoading: false, isError: false }),
-    useUpdateMedia: () => ({ mutate: vi.fn(), isPending: false }),
-    useDeleteMedia: () => ({ mutate: vi.fn(), isPending: false }),
-    useReplaceMedia: () => ({ mutate: replaceMutate, isPending: false }),
     useMediaUsage: () => ({ data: usage, isLoading: false }),
     useMediaVersions: () => ({ data: [], isLoading: false }),
-    useRestoreMediaVersion: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
+/** Each `mediaMutations()` row, answered by the spy named after it. */
+vi.mock('@/admin/hooks/use-admin-mutation', () => ({
+    useAdminMutation: (options: { mutationKey: readonly string[] }) => ({
+        mutate: mutations[options.mutationKey[1] ?? ''] ?? vi.fn(),
+        isPending: false,
+    }),
 }));
 
 beforeAll(async () => {
@@ -172,7 +183,7 @@ describe('MediaDetailModal replace', () => {
         await user.upload(fileInput(), NEW_FILE);
         await user.click(screen.getByRole('button', { name: 'Replace' }));
 
-        expect(replaceMutate).toHaveBeenCalledWith(NEW_FILE);
+        expect(replaceMutate).toHaveBeenCalledWith({ id: 'm1', file: NEW_FILE });
     });
 
     it('does not replace while the confirm is still open', async () => {

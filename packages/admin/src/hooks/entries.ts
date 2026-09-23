@@ -1,19 +1,12 @@
 /**
- * Query and mutation hooks for entries. Mutation hooks bake in cache
- * invalidation and toasts; page-specific callbacks (e.g. navigation) are
- * accepted via optional onSuccess. Options-object client surface, type required.
+ * Queries and mutations for entries. `entryMutations(type)` is the table of
+ * writes one type supports, each naming the keys it invalidates and its toasts;
+ * `useAdminMutation` runs them.
  */
 
-import type { Entry, EntryQueryParams } from 'astromech';
-import {
-    queryOptions,
-    useMutation,
-    useQuery,
-    useQueryClient,
-} from '@tanstack/react-query';
+import type { EntryQueryParams } from 'astromech';
+import { mutationOptions, queryOptions, useQuery } from '@tanstack/react-query';
 import { AstromechApiError, astromechUntypedClient } from 'astromech/fetch';
-import { useTranslation } from 'react-i18next';
-import { useToast } from '../components/ui/toast';
 import { queryKeys } from './use-query-keys';
 
 /** One page of one entry type, keyed under `entries.all(type)` so every entry mutation refreshes it. */
@@ -69,311 +62,6 @@ export function useEntryUsage(type: string, id: string, enabled = true) {
     });
 }
 
-export function useTrashEntry(type: string, options?: { onSuccess?: () => void }) {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-    const keys = queryKeys.entries;
-
-    return useMutation({
-        mutationFn: (id: string) => astromechUntypedClient.entries.trash({ type, id }),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: keys.all(type),
-            });
-            toast({
-                message: t('entries.movedToTrash', { name: type }),
-                variant: 'success',
-            });
-            options?.onSuccess?.();
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('entries.deleteFailed'),
-                variant: 'error',
-            });
-        },
-    });
-}
-
-export function useDeleteEntry(type: string, options?: { onSuccess?: () => void }) {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-    const keys = queryKeys.entries;
-
-    return useMutation({
-        mutationFn: (id: string) => astromechUntypedClient.entries.delete({ type, id }),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: keys.all(type),
-            });
-            toast({
-                message: t('entries.permanentlyDeleted', { name: type }),
-                variant: 'success',
-            });
-            options?.onSuccess?.();
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('entries.deleteFailed'),
-                variant: 'error',
-            });
-        },
-    });
-}
-
-export function useDuplicateEntry(
-    type: string,
-    options?: { onSuccess?: (entry: Entry) => void }
-) {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-    const keys = queryKeys.entries;
-
-    return useMutation({
-        mutationFn: (id: string) =>
-            astromechUntypedClient.entries.duplicate({ type, id }),
-        onSuccess: (entry) => {
-            void queryClient.invalidateQueries({
-                queryKey: keys.all(type),
-            });
-            toast({
-                message: t('entries.duplicated', { name: type }),
-                variant: 'success',
-            });
-            options?.onSuccess?.(entry);
-        },
-        onError: (err) => {
-            toast({
-                message:
-                    err instanceof Error ? err.message : t('entries.duplicateFailed'),
-                variant: 'error',
-            });
-        },
-    });
-}
-
-export function useRestoreEntry(type: string, options?: { onSuccess?: () => void }) {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-    const keys = queryKeys.entries;
-
-    return useMutation({
-        mutationFn: (id: string) => astromechUntypedClient.entries.restore({ type, id }),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: keys.all(type),
-            });
-            toast({ message: t('entries.restored', { name: type }), variant: 'success' });
-            options?.onSuccess?.();
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('entries.restoreFailed'),
-                variant: 'error',
-            });
-        },
-    });
-}
-
-// Bulk mutation hooks: each is atomic, a single client call per action.
-function bulkErrorMessage(err: unknown, fallback: string): string {
-    // The batch rolled back whole, so the id the server names is the row that
-    // stopped it; it rides in `details`, as every wire-carried id does.
-    if (err instanceof AstromechApiError) {
-        const failedId = err.details?.['failedId'];
-        return typeof failedId === 'string'
-            ? `${err.message} (${failedId})`
-            : err.message;
-    }
-    if (err instanceof Error) return err.message;
-    return fallback;
-}
-
-export function useBulkTrashEntries(type: string, options?: { onSuccess?: () => void }) {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-    const keys = queryKeys.entries;
-
-    return useMutation({
-        mutationFn: (ids: string[]) =>
-            astromechUntypedClient.entries.trash({ type, ids }),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: keys.all(type),
-            });
-            toast({ message: t('entries.bulkTrashed'), variant: 'success' });
-            options?.onSuccess?.();
-        },
-        onError: (err) => {
-            toast({
-                message: bulkErrorMessage(err, t('entries.deleteFailed')),
-                variant: 'error',
-            });
-        },
-    });
-}
-
-export function useBulkDeleteEntries(type: string, options?: { onSuccess?: () => void }) {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-    const keys = queryKeys.entries;
-
-    return useMutation({
-        mutationFn: (ids: string[]) =>
-            astromechUntypedClient.entries.delete({ type, ids }),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: keys.all(type),
-            });
-            toast({ message: t('entries.bulkDeleted'), variant: 'success' });
-            options?.onSuccess?.();
-        },
-        onError: (err) => {
-            toast({
-                message: bulkErrorMessage(err, t('entries.deleteFailed')),
-                variant: 'error',
-            });
-        },
-    });
-}
-
-export function useBulkPublishEntries(
-    type: string,
-    options?: { onSuccess?: () => void }
-) {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-    const keys = queryKeys.entries;
-
-    return useMutation({
-        mutationFn: (ids: string[]) =>
-            astromechUntypedClient.entries.publish({ type, ids }),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: keys.all(type),
-            });
-            toast({ message: t('entries.bulkPublished'), variant: 'success' });
-            options?.onSuccess?.();
-        },
-        onError: (err) => {
-            toast({
-                message: bulkErrorMessage(err, t('entries.updateFailed')),
-                variant: 'error',
-            });
-        },
-    });
-}
-
-export function useBulkUnpublishEntries(
-    type: string,
-    options?: { onSuccess?: () => void }
-) {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-    const keys = queryKeys.entries;
-
-    return useMutation({
-        mutationFn: (ids: string[]) =>
-            astromechUntypedClient.entries.unpublish({ type, ids }),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: keys.all(type),
-            });
-            toast({ message: t('entries.bulkUnpublished'), variant: 'success' });
-            options?.onSuccess?.();
-        },
-        onError: (err) => {
-            toast({
-                message: bulkErrorMessage(err, t('entries.updateFailed')),
-                variant: 'error',
-            });
-        },
-    });
-}
-
-export function useRestoreEntryVersion(
-    type: string,
-    id: string,
-    locale: string,
-    options?: { onSuccess?: () => void }
-) {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-    const keys = queryKeys.entries;
-
-    return useMutation({
-        mutationFn: (versionId: string) =>
-            astromechUntypedClient.entries.restoreVersion({
-                type,
-                id,
-                versionId,
-                locale,
-            }),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: keys.get(type, id, locale),
-            });
-            void queryClient.invalidateQueries({
-                queryKey: keys.versions(type, id, locale),
-            });
-            toast({ message: t('versions.restored'), variant: 'success' });
-            options?.onSuccess?.();
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('versions.restoreFailed'),
-                variant: 'error',
-            });
-        },
-    });
-}
-
-/**
- * Add a locale to an entry. `update` on a locale with no content row creates
- * it, inheriting the default locale's shared fields, so an empty patch is the
- * whole request. Used by the LocaleSwitcher's "Create translation" action.
- */
-export function useCreateTranslation(
-    type: string,
-    options?: {
-        onSuccess?: (entry: Entry) => void;
-        onError?: (err: Error) => void;
-    }
-) {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-    const keys = queryKeys.entries;
-
-    return useMutation({
-        mutationFn: ({ id, locale }: { id: string; locale: string }): Promise<Entry> =>
-            astromechUntypedClient.entries.update({ type, id, locale, data: {} }),
-        onSuccess: (entry, { id, locale }) => {
-            queryClient.setQueryData(keys.get(type, id, locale), entry);
-            void queryClient.invalidateQueries({ queryKey: keys.all(type) });
-            options?.onSuccess?.(entry);
-        },
-        onError: (err) => {
-            toast({
-                message:
-                    err instanceof Error ? err.message : t('translations.createFailed'),
-                variant: 'error',
-            });
-            options?.onError?.(err);
-        },
-    });
-}
-
-// Forward versioning: hooks for staged entries.
 /** This locale's staged change, or null. */
 export function useGetStaged(type: string, id: string, locale: string, enabled = true) {
     const keys = queryKeys.entries;
@@ -384,148 +72,182 @@ export function useGetStaged(type: string, id: string, locale: string, enabled =
     });
 }
 
+/** Which locale of which entry a staging or version write addresses. */
+type EntryLocale = { id: string; locale: string };
+
 /**
- * Stage a change on one locale of an entry. On a 409 (a staged change already
- * exists) `onConflict` fires, so the page can open the existing one instead —
- * it shares the entry's id, so there is nothing to carry.
+ * Every write the admin makes to one entry type. Each invalidates the type's
+ * keys, which hold its lists, rows, versions and staged changes. `name` is
+ * what the toasts call the type.
  */
-export function useCreateStaged(
-    type: string,
-    locale: string,
-    options?: {
-        onSuccess?: (entry: Entry) => void;
-        onConflict?: () => void;
+export function entryMutations(type: string, name: string = type) {
+    const entries = astromechUntypedClient.entries;
+    const all = queryKeys.entries.all(type);
+    const invalidates = [all];
+    const messageValues = { name };
+    return {
+        trash: mutationOptions({
+            mutationKey: [...all, 'trash'],
+            mutationFn: (id: string) => entries.trash({ type, id }),
+            meta: {
+                invalidates,
+                successMessage: 'entries.movedToTrash',
+                errorMessage: 'entries.deleteFailed',
+                messageValues,
+            },
+        }),
+        delete: mutationOptions({
+            mutationKey: [...all, 'delete'],
+            mutationFn: (id: string) => entries.delete({ type, id }),
+            meta: {
+                invalidates,
+                successMessage: 'entries.permanentlyDeleted',
+                errorMessage: 'entries.deleteFailed',
+                messageValues,
+            },
+        }),
+        duplicate: mutationOptions({
+            mutationKey: [...all, 'duplicate'],
+            mutationFn: (id: string) => entries.duplicate({ type, id }),
+            meta: {
+                invalidates,
+                successMessage: 'entries.duplicated',
+                errorMessage: 'entries.duplicateFailed',
+                messageValues,
+            },
+        }),
+        restore: mutationOptions({
+            mutationKey: [...all, 'restore'],
+            mutationFn: (id: string) => entries.restore({ type, id }),
+            meta: {
+                invalidates,
+                successMessage: 'entries.restored',
+                errorMessage: 'entries.restoreFailed',
+                messageValues,
+            },
+        }),
+        bulkTrash: mutationOptions({
+            mutationKey: [...all, 'bulkTrash'],
+            mutationFn: (ids: string[]) => entries.trash({ type, id: ids }),
+            meta: {
+                invalidates,
+                successMessage: 'entries.bulkTrashed',
+                errorMessage: 'entries.deleteFailed',
+            },
+        }),
+        bulkDelete: mutationOptions({
+            mutationKey: [...all, 'bulkDelete'],
+            mutationFn: (ids: string[]) => entries.delete({ type, id: ids }),
+            meta: {
+                invalidates,
+                successMessage: 'entries.bulkDeleted',
+                errorMessage: 'entries.deleteFailed',
+            },
+        }),
+        bulkRestore: mutationOptions({
+            mutationKey: [...all, 'bulkRestore'],
+            mutationFn: (ids: string[]) => entries.restore({ type, id: ids }),
+            meta: {
+                invalidates,
+                successMessage: 'entries.bulkRestored',
+                errorMessage: 'entries.restoreFailed',
+            },
+        }),
+        bulkPublish: mutationOptions({
+            mutationKey: [...all, 'bulkPublish'],
+            mutationFn: (ids: string[]) => entries.publish({ type, id: ids }),
+            meta: {
+                invalidates,
+                successMessage: 'entries.bulkPublished',
+                errorMessage: 'entries.updateFailed',
+            },
+        }),
+        bulkUnpublish: mutationOptions({
+            mutationKey: [...all, 'bulkUnpublish'],
+            mutationFn: (ids: string[]) => entries.unpublish({ type, id: ids }),
+            meta: {
+                invalidates,
+                successMessage: 'entries.bulkUnpublished',
+                errorMessage: 'entries.updateFailed',
+            },
+        }),
+        restoreVersion: mutationOptions({
+            mutationKey: [...all, 'restoreVersion'],
+            mutationFn: ({
+                id,
+                locale,
+                versionId,
+            }: EntryLocale & { versionId: string }) =>
+                entries.restoreVersion({ type, id, locale, versionId }),
+            meta: {
+                invalidates,
+                successMessage: 'versions.restored',
+                errorMessage: 'versions.restoreFailed',
+            },
+        }),
+        /**
+         * Add a locale to an entry. `update` on a locale with no content row
+         * creates it from the default locale's shared fields, so an empty
+         * patch is the whole request.
+         */
+        createTranslation: mutationOptions({
+            mutationKey: [...all, 'createTranslation'],
+            mutationFn: ({ id, locale }: EntryLocale) =>
+                entries.update({ type, id, locale, data: {} }),
+            meta: { invalidates, errorMessage: 'translations.createFailed' },
+        }),
+        /**
+         * Stage a change on one locale. A staged change that already exists
+         * resolves as `null`: it shares the entry's id, so the caller opens it.
+         */
+        createStaged: mutationOptions({
+            mutationKey: [...all, 'createStaged'],
+            mutationFn: ({ id, locale }: EntryLocale) =>
+                entries.createStaged({ type, id, locale }).catch(openExisting),
+            meta: { invalidates, errorMessage: 'staging.stageFailed' },
+        }),
+        mergeStaged: mutationOptions({
+            mutationKey: [...all, 'mergeStaged'],
+            mutationFn: ({ id, locale }: EntryLocale) =>
+                entries.mergeStaged({ type, id, locale }),
+            meta: {
+                invalidates,
+                successMessage: 'staging.merged',
+                errorMessage: 'staging.mergeFailed',
+            },
+        }),
+        deleteStaged: mutationOptions({
+            mutationKey: [...all, 'deleteStaged'],
+            mutationFn: ({ id, locale }: EntryLocale) =>
+                entries.deleteStaged({ type, id, locale }),
+            meta: {
+                invalidates,
+                successMessage: 'staging.discarded',
+                errorMessage: 'staging.discardFailed',
+            },
+        }),
+        /** A preview token for one entry; the plaintext token comes back once. */
+        issuePreviewToken: mutationOptions({
+            mutationKey: [...all, 'issuePreviewToken'],
+            mutationFn: (id: string) => entries.issuePreviewToken({ type, id }),
+            meta: { invalidates: [], errorMessage: 'staging.previewFailed' },
+        }),
+        revokePreviewToken: mutationOptions({
+            mutationKey: [...all, 'revokePreviewToken'],
+            mutationFn: (id: string) => entries.revokePreviewToken({ type, id }),
+            meta: {
+                invalidates: [],
+                successMessage: 'staging.previewRevoked',
+                errorMessage: 'staging.previewFailed',
+            },
+        }),
+    };
+}
+
+/** Resolve a create-staged conflict as `null`, and rethrow anything else. */
+export function openExisting(error: unknown): null {
+    if (error instanceof AstromechApiError && error.code === 'staged_change_exists') {
+        return null;
     }
-) {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-    const keys = queryKeys.entries;
-
-    return useMutation({
-        mutationFn: (id: string) =>
-            astromechUntypedClient.entries.createStaged({ type, id, locale }),
-        onSuccess: (entry, id) => {
-            void queryClient.invalidateQueries({
-                queryKey: keys.staged(type, id, locale),
-            });
-            void queryClient.invalidateQueries({ queryKey: keys.all(type) });
-            options?.onSuccess?.(entry);
-        },
-        onError: (err) => {
-            if (err instanceof AstromechApiError && err.code === 'staged_change_exists') {
-                options?.onConflict?.();
-                return;
-            }
-            toast({
-                message: err instanceof Error ? err.message : t('staging.stageFailed'),
-                variant: 'error',
-            });
-        },
-    });
-}
-
-/** Merge the canonical's staged change into it (content-only, backup→update→cleanup). */
-export function useMergeStaged(
-    type: string,
-    id: string,
-    locale: string,
-    options?: { onSuccess?: (entry: Entry) => void }
-) {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-    const keys = queryKeys.entries;
-
-    return useMutation({
-        mutationFn: () =>
-            astromechUntypedClient.entries.mergeStaged({ type, id, locale }),
-        onSuccess: (entry) => {
-            void queryClient.invalidateQueries({ queryKey: keys.get(type, id, locale) });
-            void queryClient.invalidateQueries({
-                queryKey: keys.staged(type, id, locale),
-            });
-            void queryClient.invalidateQueries({ queryKey: keys.all(type) });
-            toast({ message: t('staging.merged'), variant: 'success' });
-            options?.onSuccess?.(entry);
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('staging.mergeFailed'),
-                variant: 'error',
-            });
-        },
-    });
-}
-
-/** Discard the canonical's staged change (hard delete). */
-export function useDeleteStaged(
-    type: string,
-    id: string,
-    locale: string,
-    options?: { onSuccess?: () => void }
-) {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-    const keys = queryKeys.entries;
-
-    return useMutation({
-        mutationFn: () =>
-            astromechUntypedClient.entries.deleteStaged({ type, id, locale }),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({
-                queryKey: keys.staged(type, id, locale),
-            });
-            void queryClient.invalidateQueries({ queryKey: keys.all(type) });
-            toast({ message: t('staging.discarded'), variant: 'success' });
-            options?.onSuccess?.();
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('staging.discardFailed'),
-                variant: 'error',
-            });
-        },
-    });
-}
-
-/** Issue a preview token for a canonical entry (plaintext token returned once). */
-export function useIssuePreviewToken(type: string, id: string) {
-    const { toast } = useToast();
-    const { t } = useTranslation();
-
-    return useMutation({
-        mutationFn: () => astromechUntypedClient.entries.issuePreviewToken({ type, id }),
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('staging.previewFailed'),
-                variant: 'error',
-            });
-        },
-    });
-}
-
-/** Revoke a canonical entry's preview token(s). */
-export function useRevokePreviewToken(
-    type: string,
-    id: string,
-    options?: { onSuccess?: () => void }
-) {
-    const { toast } = useToast();
-    const { t } = useTranslation();
-
-    return useMutation({
-        mutationFn: () => astromechUntypedClient.entries.revokePreviewToken({ type, id }),
-        onSuccess: () => {
-            toast({ message: t('staging.previewRevoked'), variant: 'success' });
-            options?.onSuccess?.();
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('staging.previewFailed'),
-                variant: 'error',
-            });
-        },
-    });
+    throw error;
 }

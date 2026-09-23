@@ -1,9 +1,13 @@
-import type { Media } from 'astromech';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { astromechUntypedClient } from 'astromech/fetch';
+/**
+ * Upload files to the media library, toasting how many went. The library page
+ * and the field picker both run it.
+ */
+
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useToast } from '../components/ui/toast';
-import { queryKeys } from './use-query-keys';
+import { mediaMutations } from './media';
+import { useAdminMutation } from './use-admin-mutation';
 
 export type UseUploadMediaResult = {
     upload: (files: File[]) => void;
@@ -11,39 +15,25 @@ export type UseUploadMediaResult = {
 };
 
 export function useUploadMedia(): UseUploadMediaResult {
-    const queryClient = useQueryClient();
     const { toast } = useToast();
+    const { t } = useTranslation();
 
-    const mutation = useMutation({
-        mutationFn: async (files: File[]) => {
-            const results: Media[] = [];
-            for (const file of files) {
-                const uploaded = await astromechUntypedClient.media.upload({ file });
-                results.push(uploaded);
-            }
-            return results;
-        },
+    const mutation = useAdminMutation(mediaMutations().upload, {
         onSuccess: (uploaded) => {
-            void queryClient.invalidateQueries({ queryKey: queryKeys.media.all() });
             toast({
-                message: `${uploaded.length} file${uploaded.length > 1 ? 's' : ''} uploaded.`,
+                message: t('media.uploadedToast', { count: uploaded.length }),
                 variant: 'success',
             });
         },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : 'Upload failed',
-                variant: 'error',
-            });
-        },
     });
+    const { mutate } = mutation;
 
     const upload = useCallback(
         (files: File[]) => {
             if (files.length === 0) return;
-            mutation.mutate(files);
+            mutate(files);
         },
-        [mutation]
+        [mutate]
     );
 
     return { upload, isUploading: mutation.isPending };

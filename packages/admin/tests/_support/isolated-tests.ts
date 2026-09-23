@@ -27,6 +27,7 @@ export const isolatedTests = [
     'tests/components/plugins/plugin-slot.test.tsx',
     'tests/components/users/user-edit-page.test.tsx',
     'tests/hooks/author-names.test.tsx',
+    'tests/hooks/entry-mutations.test.tsx',
     'tests/hooks/use-bulk-delete-media.test.tsx',
     'tests/hooks/use-media-browser.test.tsx',
     'tests/hooks/use-media-versions.test.tsx',

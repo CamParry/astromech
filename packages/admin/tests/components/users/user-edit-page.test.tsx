@@ -18,7 +18,7 @@ import {
     Outlet,
     RouterProvider,
 } from '@tanstack/react-router';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -30,10 +30,8 @@ import { AiContextProvider } from '@/admin/context/ai-context';
 import { AuthProvider, sessionQueryOptions } from '@/admin/context/auth';
 import en from '@/admin/locales/en.json';
 
-const { updateMutate, updateOptions, adminConfig } = vi.hoisted(() => ({
+const { updateMutate, adminConfig } = vi.hoisted(() => ({
     updateMutate: vi.fn(),
-    // The locale reaches the service through the hook's options, not `mutate`.
-    updateOptions: { current: undefined as { locale?: string } | undefined },
     adminConfig: {
         defaultLocale: 'en',
         locales: ['en'],
@@ -66,25 +64,25 @@ function makeUser(overrides: Partial<User> = {}): User {
 
 let user: User = makeUser();
 
-vi.mock('@/admin/hooks/users', () => ({
+vi.mock('@/admin/hooks/users', async (importOriginal) => ({
+    ...(await importOriginal<object>()),
     useUser: (_id: string, locale?: string) => {
         requestedLocale.current = locale;
         return { data: user, isLoading: false };
     },
-    useUpdateUser: (_id: string, options?: { locale?: string }) => {
-        updateOptions.current = options;
-        return {
-            mutate: updateMutate,
-            mutateAsync: async (data: unknown) => {
-                updateMutate(data);
-                return user;
-            },
-            isPending: false,
-        };
-    },
-    useDeleteUser: () => ({ mutate: vi.fn(), isPending: false }),
     useUserVersions: () => ({ data: [], isLoading: false }),
-    useRestoreUserVersion: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
+/** `userMutations().update` answers with the user; every other row does nothing. */
+vi.mock('@/admin/hooks/use-admin-mutation', () => ({
+    useAdminMutation: (options: { mutationKey: readonly string[] }) => ({
+        mutate: vi.fn(),
+        mutateAsync: async (variables: unknown) => {
+            if (options.mutationKey[1] === 'update') updateMutate(variables);
+            return user;
+        },
+        isPending: false,
+    }),
 }));
 
 beforeAll(async () => {
@@ -97,7 +95,6 @@ beforeAll(async () => {
 
 afterEach(() => {
     updateMutate.mockReset();
-    updateOptions.current = undefined;
     requestedLocale.current = undefined;
     adminConfig.locales = ['en'];
     adminConfig.users.translatable = false;
@@ -206,6 +203,14 @@ describe('UserEditPage locales', () => {
             await screen.findByText('Showing the EN content until this locale is saved.')
         ).not.toBeNull();
         expect(requestedLocale.current).toBe('fr');
-        expect(updateOptions.current?.locale).toBe('fr');
+
+        const eventUser = userEvent.setup();
+        await eventUser.type(screen.getByLabelText('Name'), ' B');
+        await eventUser.click(screen.getByRole('button', { name: 'Save' }));
+        await waitFor(() =>
+            expect(updateMutate).toHaveBeenCalledWith(
+                expect.objectContaining({ id: 'u1', locale: 'fr' })
+            )
+        );
     });
 });

@@ -128,6 +128,7 @@
         "deleteFailed": "Delete failed",
         "duplicateFailed": "Duplicate failed",
         "restoreFailed": "Restore failed",
+        "updateFailed": "Update failed",
         "confirmDeleteTitle": "Move to trash?",
         "confirmDeleteMessage": "This {{name}} will be moved to the trash.",
         "confirmForceDeleteTitle": "Delete permanently?",

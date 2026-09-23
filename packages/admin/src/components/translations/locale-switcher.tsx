@@ -2,7 +2,7 @@
  * Switches which locale of a resource is being edited. A resource keeps one
  * address across its locales, so a switch changes the `locale` search param
  * and keeps that address. What a locale with no row yet costs differs by
- * resource: an entry is written first by `useCreateTranslation`, while a
+ * resource: an entry is written first by `createTranslation`, while a
  * global's caller passes `onSelectMissing` and simply opens the empty form,
  * whose first save creates the row.
  */
@@ -10,7 +10,8 @@
 import { useNavigate } from '@tanstack/react-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useCreateTranslation } from '../../hooks/entries';
+import { entryMutations } from '../../hooks/entries';
+import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { entryEditPath } from '../../utilities/entry-admin-path';
 import { Select } from '../ui/select';
 
@@ -53,15 +54,18 @@ export function LocaleSwitcher({
 
     const [isCreating, setIsCreating] = useState(false);
 
-    const createMutation = useCreateTranslation(type ?? '', {
-        onSuccess: (entry) => {
-            setIsCreating(false);
-            void navigate({
-                to: entryEditPath(basePath, entry.id, { locale: entry.locale }),
-            });
-        },
-        onError: () => setIsCreating(false),
-    });
+    const createMutation = useAdminMutation(
+        entryMutations(type ?? '').createTranslation,
+        {
+            onSuccess: (entry) => {
+                setIsCreating(false);
+                void navigate({
+                    to: entryEditPath(basePath, entry.id, { locale: entry.locale }),
+                });
+            },
+            onError: () => setIsCreating(false),
+        }
+    );
 
     function handleValueChange(value: string | null): void {
         if (value == null || value === currentLocale) return;

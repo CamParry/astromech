@@ -1,20 +1,12 @@
 /**
- * Query and mutation hooks for globals — the subset of `hooks/entries.ts` a
- * global needs. There is no list, trash, delete, duplicate, preview token or
- * create-translation hook: a global exists because the config declares it, and
- * a locale it has never been saved in is written by the first `update` there.
+ * Queries and mutations for globals: the subset of `hooks/entries.ts` a global
+ * needs. A global exists because the config declares it, and a locale it was
+ * never saved in is written by the first `update` there.
  */
 
-import type { Global } from 'astromech';
-import {
-    queryOptions,
-    useMutation,
-    useQuery,
-    useQueryClient,
-} from '@tanstack/react-query';
-import { AstromechApiError, astromechUntypedClient } from 'astromech/fetch';
-import { useTranslation } from 'react-i18next';
-import { useToast } from '../components/ui/toast';
+import { mutationOptions, queryOptions, useQuery } from '@tanstack/react-query';
+import { astromechUntypedClient } from 'astromech/fetch';
+import { openExisting } from './entries';
 import { queryKeys } from './use-query-keys';
 
 export function globalQueryOptions(key: string, locale: string) {
@@ -48,35 +40,6 @@ export function useGlobalVersions(key: string, locale: string, enabled = true) {
     return useQuery({ ...globalVersionsQueryOptions(key, locale), enabled });
 }
 
-export function useRestoreGlobalVersion(
-    key: string,
-    locale: string,
-    options?: { onSuccess?: () => void }
-) {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-    const keys = queryKeys.globals;
-
-    return useMutation({
-        mutationFn: (versionId: string) =>
-            astromechUntypedClient.globals.restoreVersion({ key, locale, versionId }),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({ queryKey: keys.get(key, locale) });
-            void queryClient.invalidateQueries({ queryKey: keys.versions(key, locale) });
-            toast({ message: t('versions.restored'), variant: 'success' });
-            options?.onSuccess?.();
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('versions.restoreFailed'),
-                variant: 'error',
-            });
-        },
-    });
-}
-
-// Forward versioning: hooks for staged globals.
 /** This locale's staged change, or null. */
 export function useGetStagedGlobal(key: string, locale: string, enabled = true) {
     const keys = queryKeys.globals;
@@ -87,96 +50,48 @@ export function useGetStagedGlobal(key: string, locale: string, enabled = true) 
     });
 }
 
-/**
- * Stage a change on one locale of a global. A staged row already existing is
- * not a failure the editor can act on — `onConflict` opens the existing one.
- */
-export function useCreateStagedGlobal(
-    key: string,
-    locale: string,
-    options?: {
-        onSuccess?: (global: Global) => void;
-        onConflict?: () => void;
-    }
-) {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-    const keys = queryKeys.globals;
-
-    return useMutation({
-        mutationFn: () => astromechUntypedClient.globals.createStaged({ key, locale }),
-        onSuccess: (global) => {
-            void queryClient.invalidateQueries({ queryKey: keys.staged(key, locale) });
-            void queryClient.invalidateQueries({ queryKey: keys.all(key) });
-            options?.onSuccess?.(global);
-        },
-        onError: (err) => {
-            if (err instanceof AstromechApiError && err.code === 'staged_change_exists') {
-                options?.onConflict?.();
-                return;
-            }
-            toast({
-                message: err instanceof Error ? err.message : t('staging.stageFailed'),
-                variant: 'error',
-            });
-        },
-    });
-}
-
-/** Merge this locale's staged change into the canonical row. */
-export function useMergeStagedGlobal(
-    key: string,
-    locale: string,
-    options?: { onSuccess?: (global: Global) => void }
-) {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-    const keys = queryKeys.globals;
-
-    return useMutation({
-        mutationFn: () => astromechUntypedClient.globals.mergeStaged({ key, locale }),
-        onSuccess: (global) => {
-            void queryClient.invalidateQueries({ queryKey: keys.get(key, locale) });
-            void queryClient.invalidateQueries({ queryKey: keys.staged(key, locale) });
-            void queryClient.invalidateQueries({ queryKey: keys.all(key) });
-            toast({ message: t('staging.merged'), variant: 'success' });
-            options?.onSuccess?.(global);
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('staging.mergeFailed'),
-                variant: 'error',
-            });
-        },
-    });
-}
-
-/** Discard this locale's staged change (hard delete). */
-export function useDeleteStagedGlobal(
-    key: string,
-    locale: string,
-    options?: { onSuccess?: () => void }
-) {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const { t } = useTranslation();
-    const keys = queryKeys.globals;
-
-    return useMutation({
-        mutationFn: () => astromechUntypedClient.globals.deleteStaged({ key, locale }),
-        onSuccess: () => {
-            void queryClient.invalidateQueries({ queryKey: keys.staged(key, locale) });
-            void queryClient.invalidateQueries({ queryKey: keys.all(key) });
-            toast({ message: t('staging.discarded'), variant: 'success' });
-            options?.onSuccess?.();
-        },
-        onError: (err) => {
-            toast({
-                message: err instanceof Error ? err.message : t('staging.discardFailed'),
-                variant: 'error',
-            });
-        },
-    });
+/** Every write the admin makes to one global, each invalidating the global's keys. */
+export function globalMutations(key: string) {
+    const globals = astromechUntypedClient.globals;
+    const all = queryKeys.globals.all(key);
+    const invalidates = [all];
+    return {
+        restoreVersion: mutationOptions({
+            mutationKey: [...all, 'restoreVersion'],
+            mutationFn: ({ locale, versionId }: { locale: string; versionId: string }) =>
+                globals.restoreVersion({ key, locale, versionId }),
+            meta: {
+                invalidates,
+                successMessage: 'versions.restored',
+                errorMessage: 'versions.restoreFailed',
+            },
+        }),
+        /** Stage a change on one locale; one that already exists resolves as `null`. */
+        createStaged: mutationOptions({
+            mutationKey: [...all, 'createStaged'],
+            mutationFn: ({ locale }: { locale: string }) =>
+                globals.createStaged({ key, locale }).catch(openExisting),
+            meta: { invalidates, errorMessage: 'staging.stageFailed' },
+        }),
+        mergeStaged: mutationOptions({
+            mutationKey: [...all, 'mergeStaged'],
+            mutationFn: ({ locale }: { locale: string }) =>
+                globals.mergeStaged({ key, locale }),
+            meta: {
+                invalidates,
+                successMessage: 'staging.merged',
+                errorMessage: 'staging.mergeFailed',
+            },
+        }),
+        deleteStaged: mutationOptions({
+            mutationKey: [...all, 'deleteStaged'],
+            mutationFn: ({ locale }: { locale: string }) =>
+                globals.deleteStaged({ key, locale }),
+            meta: {
+                invalidates,
+                successMessage: 'staging.discarded',
+                errorMessage: 'staging.discardFailed',
+            },
+        }),
+    };
 }

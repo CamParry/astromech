@@ -15,13 +15,27 @@ import { MediaVersionsPanel } from '@/admin/components/media/media-versions-pane
 import { ConfirmProvider } from '@/admin/components/ui/confirm';
 import en from '@/admin/locales/en.json';
 
-const { restoreMutate } = vi.hoisted(() => ({ restoreMutate: vi.fn() }));
+const { restoreMutate, mutations } = vi.hoisted(() => {
+    const restoreMutate = vi.fn();
+    return {
+        restoreMutate,
+        mutations: { restoreVersion: restoreMutate } as Record<string, () => void>,
+    };
+});
 
 let versions: MediaVersion[] = [];
 
-vi.mock('@/admin/hooks/media', () => ({
+vi.mock('@/admin/hooks/media', async (importOriginal) => ({
+    ...(await importOriginal<object>()),
     useMediaVersions: () => ({ data: versions, isLoading: false }),
-    useRestoreMediaVersion: () => ({ mutate: restoreMutate, isPending: false }),
+}));
+
+/** Each `mediaMutations()` row, answered by the spy named after it. */
+vi.mock('@/admin/hooks/use-admin-mutation', () => ({
+    useAdminMutation: (options: { mutationKey: readonly string[] }) => ({
+        mutate: mutations[options.mutationKey[1] ?? ''] ?? vi.fn(),
+        isPending: false,
+    }),
 }));
 
 function makeVersion(version: number, id: string): MediaVersion {
@@ -88,7 +102,11 @@ describe('MediaVersionsPanel', () => {
         await user.click(buttons[1] as HTMLElement);
         await user.click(screen.getByRole('button', { name: 'Restore' }));
 
-        expect(restoreMutate).toHaveBeenCalledWith('v1');
+        expect(restoreMutate).toHaveBeenCalledWith({
+            id: 'm1',
+            locale: 'en',
+            versionId: 'v1',
+        });
     });
 
     it('renders no restore action without update permission', () => {

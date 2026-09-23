@@ -15,11 +15,10 @@ import { MediaDetailModal } from '@/admin/components/media/media-detail-modal';
 import { ConfirmProvider } from '@/admin/components/ui/confirm';
 import en from '@/admin/locales/en.json';
 
-const { updateMutate, deleteMutate, updateOptions, adminConfig } = vi.hoisted(() => ({
+const { updateMutate, deleteMutate, mutations, adminConfig } = vi.hoisted(() => ({
     updateMutate: vi.fn(),
     deleteMutate: vi.fn(),
-    // The locale reaches the service through the hook's options, not `mutate`.
-    updateOptions: { current: undefined as { locale?: string } | undefined },
+    mutations: {} as Record<string, () => void>,
     adminConfig: {
         defaultLocale: 'en',
         locales: ['en', 'fr'],
@@ -52,21 +51,25 @@ const ITEM: Media = {
 };
 
 // The usage panel queries too, so the whole hooks module is stood in for.
-vi.mock('@/admin/hooks/media', () => ({
+vi.mock('@/admin/hooks/media', async (importOriginal) => ({
+    ...(await importOriginal<object>()),
     useMediaItem: (_id: string, _enabled: boolean, locale?: string) => {
         requestedLocale.current = locale;
         // The item has an `en` row alone, so every read falls back to it.
         return { data: ITEM, isLoading: false, isError: false };
     },
-    useUpdateMedia: (_id: string, options?: { locale?: string }) => {
-        updateOptions.current = options;
-        return { mutate: updateMutate, isPending: false };
-    },
-    useDeleteMedia: () => ({ mutate: deleteMutate, isPending: false }),
-    useReplaceMedia: () => ({ mutate: vi.fn(), isPending: false }),
     useMediaUsage: () => ({ data: [], isLoading: false }),
     useMediaVersions: () => ({ data: [], isLoading: false }),
-    useRestoreMediaVersion: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+mutations['update'] = updateMutate;
+mutations['delete'] = deleteMutate;
+
+/** Each `mediaMutations()` row, answered by the spy named after it. */
+vi.mock('@/admin/hooks/use-admin-mutation', () => ({
+    useAdminMutation: (options: { mutationKey: readonly string[] }) => ({
+        mutate: mutations[options.mutationKey[1] ?? ''] ?? vi.fn(),
+        isPending: false,
+    }),
 }));
 
 beforeAll(async () => {
@@ -82,7 +85,6 @@ beforeAll(async () => {
 afterEach(() => {
     updateMutate.mockReset();
     deleteMutate.mockReset();
-    updateOptions.current = undefined;
     requestedLocale.current = undefined;
     adminConfig.media.translatable = false;
 });
@@ -132,9 +134,9 @@ describe('MediaDetailModal save gate', () => {
         await user.click(saveButton());
 
         expect(updateMutate).toHaveBeenCalledWith({
-            alt: 'A cat',
-            title: 'Cat photo',
-            caption: 'Sitting on a mat',
+            id: 'm1',
+            locale: undefined,
+            data: { alt: 'A cat', title: 'Cat photo', caption: 'Sitting on a mat' },
         });
     });
 });
@@ -220,11 +222,10 @@ describe('MediaDetailModal locales', () => {
         await user.type(screen.getByLabelText('Alt text'), 'Un chat');
         await user.click(saveButton());
 
-        expect(updateOptions.current?.locale).toBe('fr');
         expect(updateMutate).toHaveBeenCalledWith({
-            alt: 'Un chat',
-            title: '',
-            caption: '',
+            id: 'm1',
+            locale: 'fr',
+            data: { alt: 'Un chat', title: '', caption: '' },
         });
     });
 });

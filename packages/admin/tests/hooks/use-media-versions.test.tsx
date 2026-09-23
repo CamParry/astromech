@@ -1,7 +1,7 @@
 /**
- * `useMediaVersions` and `useRestoreMediaVersion` address one locale's content
- * row, so the locale travels with every call and a restore invalidates the
- * whole item — the versions key sits under the detail prefix.
+ * `useMediaVersions` and `mediaMutations().restoreVersion` address one
+ * locale's content row, so the locale travels with every call, and a restore
+ * invalidates the media keys, which hold the item's versions.
  *
  * @vitest-environment happy-dom
  */
@@ -13,7 +13,8 @@ import React from 'react';
 import { initReactI18next } from 'react-i18next';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/admin/components/ui/toast';
-import { useMediaVersions, useRestoreMediaVersion } from '@/admin/hooks/media';
+import { mediaMutations, useMediaVersions } from '@/admin/hooks/media';
+import { useAdminMutation } from '@/admin/hooks/use-admin-mutation';
 import { queryKeys } from '@/admin/hooks/use-query-keys';
 import en from '@/admin/locales/en.json';
 
@@ -72,15 +73,15 @@ describe('useMediaVersions', () => {
     });
 });
 
-describe('useRestoreMediaVersion', () => {
+describe('mediaMutations().restoreVersion', () => {
     it('restores into the locale and invalidates the item', async () => {
         restoreVersion.mockResolvedValue({ id: 'm1' });
         const onSuccess = vi.fn();
         const { result, invalidate } = mount(() =>
-            useRestoreMediaVersion('m1', 'fr', { onSuccess })
+            useAdminMutation(mediaMutations().restoreVersion, { onSuccess })
         );
 
-        result.current.mutate('v2');
+        result.current.mutate({ id: 'm1', locale: 'fr', versionId: 'v2' });
 
         await waitFor(() => expect(onSuccess).toHaveBeenCalled());
         expect(restoreVersion).toHaveBeenCalledWith({
@@ -89,7 +90,7 @@ describe('useRestoreMediaVersion', () => {
             versionId: 'v2',
         });
         expect(invalidate).toHaveBeenCalledWith({
-            queryKey: queryKeys.media.detailPrefix('m1'),
+            queryKey: queryKeys.media.all(),
         });
     });
 });

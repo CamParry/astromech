@@ -26,17 +26,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { useAuthorNames } from '../../hooks/author-names';
-import {
-    useBulkDeleteEntries,
-    useBulkPublishEntries,
-    useBulkTrashEntries,
-    useBulkUnpublishEntries,
-    useDeleteEntry,
-    useDuplicateEntry,
-    useEntriesQuery,
-    useRestoreEntry,
-    useTrashEntry,
-} from '../../hooks/entries';
+import { entryMutations, useEntriesQuery } from '../../hooks/entries';
+import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useIsMobile } from '../../hooks/use-is-mobile';
 import { usePermissions } from '../../hooks/use-permissions';
 import { useSelection } from '../../hooks/use-selection';
@@ -67,7 +58,6 @@ import { SearchInput } from '../ui/search-input';
 import { Select } from '../ui/select';
 import { Spinner } from '../ui/spinner';
 import { Table } from '../ui/table';
-import { useToast } from '../ui/toast';
 import { ToggleGroup } from '../ui/toggle-group';
 import { Toolbar, ToolbarEnd, ToolbarStart } from '../ui/toolbar';
 import { DeleteEntryModal } from './delete-entry-modal';
@@ -438,7 +428,6 @@ export function EntriesListPage({
 }): React.ReactElement {
     const { type, cacheScope, config: entryType, basePath } = binding;
     const navigate = useNavigate();
-    const { toast } = useToast();
     const { t } = useTranslation();
     const ns = namespaceForScope(cacheScope);
     // System columns label via i18n key; admin/grid columns via the Label seam.
@@ -650,24 +639,28 @@ export function EntriesListPage({
     const confirm = useConfirm();
 
     // Mutations
-    const trashMutation = useTrashEntry(type);
-    const deleteMutation = useDeleteEntry(type);
-    const duplicateMutation = useDuplicateEntry(type, {
+    const mutations = entryMutations(type, single);
+    const trashMutation = useAdminMutation(mutations.trash);
+    const deleteMutation = useAdminMutation(mutations.delete);
+    const duplicateMutation = useAdminMutation(mutations.duplicate, {
         onSuccess: (entry) => {
             void navigate({
                 to: entryEditPath(basePath, entry.id, { locale: entry.locale }),
             });
         },
     });
-    const restoreMutation = useRestoreEntry(type);
-    const bulkPublishMutation = useBulkPublishEntries(type, {
+    const restoreMutation = useAdminMutation(mutations.restore);
+    const bulkPublishMutation = useAdminMutation(mutations.bulkPublish, {
         onSuccess: reset,
     });
-    const bulkUnpublishMutation = useBulkUnpublishEntries(type, {
+    const bulkUnpublishMutation = useAdminMutation(mutations.bulkUnpublish, {
         onSuccess: reset,
     });
-    const bulkTrashMutation = useBulkTrashEntries(type, { onSuccess: reset });
-    const bulkForceDeleteMutation = useBulkDeleteEntries(type, {
+    const bulkTrashMutation = useAdminMutation(mutations.bulkTrash, { onSuccess: reset });
+    const bulkDeleteMutation = useAdminMutation(mutations.bulkDelete, {
+        onSuccess: reset,
+    });
+    const bulkRestoreMutation = useAdminMutation(mutations.bulkRestore, {
         onSuccess: reset,
     });
 
@@ -677,15 +670,8 @@ export function EntriesListPage({
         if (action === 'publish') bulkPublishMutation.mutate(ids);
         if (action === 'unpublish') bulkUnpublishMutation.mutate(ids);
         if (action === 'trash') bulkTrashMutation.mutate(ids);
-        if (action === 'delete') bulkForceDeleteMutation.mutate(ids);
-        if (action === 'restore') {
-            void Promise.all(ids.map((id) => restoreMutation.mutateAsync(id))).then(
-                () => {
-                    reset();
-                    toast({ message: t('entries.bulkRestored'), variant: 'success' });
-                }
-            );
-        }
+        if (action === 'delete') bulkDeleteMutation.mutate(ids);
+        if (action === 'restore') bulkRestoreMutation.mutate(ids);
     }
 
     function handleSort(key: string, direction: SortDirection) {
