@@ -1,7 +1,7 @@
 /**
  * Test harness for the entry data layer.
  *
- * `createTestDb` spins up a file-based libsql database in the OS temp dir,
+ * `createTestDb` spins up a file-based libsql database in the run's temp dir,
  * applies `apps/demo/migrations`' full migration chain, and registers it via
  * `setDb` so service modules (which call `getDb()` per-op) hit it. Running the real
  * migration chain (rather than a throwaway test-only schema) means every
@@ -39,14 +39,15 @@ import type {
     User,
 } from '@/types/index';
 import type { MigrationProvider } from 'kysely/migration';
-import * as fs from 'node:fs';
-import * as os from 'node:os';
+// Declares `testDbDir` on vitest's `ProvidedContext`, for `inject` below.
+import type {} from './global-setup';
 import * as path from 'node:path';
 import { mergeMigrationProviders, migrateToLatest } from '@astromech/schema-engine';
 import { createClient } from '@libsql/client';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { noopStorage } from '@tests/fixtures';
 import { CamelCasePlugin, Kysely } from 'kysely';
+import { inject } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
 import { setConfig } from '@/config/registry';
 import { resolveConfig } from '@/config/resolve';
@@ -106,13 +107,9 @@ async function buildTestDb(url: string): Promise<Db> {
     return db;
 }
 
-// Temp dir for test databases — created once per worker process and removed by
-// the exit handler below. The worker PID in the name avoids collisions when
-// several workers run in parallel.
-const TEST_DB_DIR = fs.mkdtempSync(
-    path.join(os.tmpdir(), `astromech-test-${process.pid}-`)
-);
-process.on('exit', () => fs.rmSync(TEST_DB_DIR, { recursive: true, force: true }));
+// Temp dir for test databases, one per run: `global-setup.ts` creates it and
+// removes it once every worker has finished.
+const TEST_DB_DIR = inject('testDbDir');
 
 /**
  * Create a fresh temp-file database, migrate it, and register it globally.
