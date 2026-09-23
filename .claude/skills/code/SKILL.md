@@ -35,6 +35,11 @@ is guessable from any other.
   `getUser({ id })`. The key is `data` unless a more specific word says what the
   object does, which is true of `duplicate`'s `overrides` and nowhere else.
 
+- **`defineService` returns a `ServiceDefinition`, not the service.**
+  `XService` in `types/services.ts` is the bound interface a caller holds, and
+  `definition.bind(ctx)` produces it. Only `createServices`
+  (`app-context/services.ts`) binds; everything else reads its handle.
+
 - **A handler never re-parses its own `input`.** `defineService.bind()` has
   already parsed it, on every call path. Parse only a slot the method's schema
   cannot express, such as an entry type's own create schema.

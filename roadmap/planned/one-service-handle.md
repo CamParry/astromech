@@ -57,9 +57,9 @@ function takes no `shape` option.
       `api` from the entry and global bindings and hook scopes, and the nine
       casts. The admin uses it for every call, so it holds one client.
       **Public API** (additive).
-- [ ] One typed `Link` (`rendering/cells/link.ts`) for `entry-edit-page.tsx`,
+- [x] One typed `Link` (`rendering/cells/link.ts`) for `entry-edit-page.tsx`,
       `global-edit-page.tsx` and `version-history.tsx`.
-- [ ] Record in the `code` skill that `defineService` returns
+- [x] Record in the `code` skill that `defineService` returns
       `ServiceDefinition` because `XService` is the bound interface.
 - [ ] Guard: the drift report's `as unknown as` count falls to the files that
       need one (the database codec and drivers, the repository factories,

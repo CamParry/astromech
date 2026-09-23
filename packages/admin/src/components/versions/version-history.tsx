@@ -6,21 +6,17 @@
  */
 
 import type { EntryStatus, JsonObject } from 'astromech';
-import { Link as RouterLink } from '@tanstack/react-router';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { authorName, useAuthorNames } from '../../hooks/author-names';
+import { Link } from '../../rendering/cells/link';
 import { formatDatetime } from '../../utilities/dates';
 import { Breadcrumb } from '../ui/breadcrumb';
 import { Button } from '../ui/button';
 import { useConfirm } from '../ui/confirm';
 import { Page, PageContent, PageHeader, PageLoading, PageTitle } from '../ui/page';
 import { Panel } from '../ui/panel';
-
-// Binding link bases are runtime strings; address `Link` by string `to`.
-type LinkProps = Omit<React.ComponentProps<typeof RouterLink>, 'to'> & { to: string };
-const Link = RouterLink as unknown as (props: LinkProps) => React.ReactElement;
 
 /**
  * The part of a saved version this UI reads — the structural subset both

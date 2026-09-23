@@ -1,7 +1,7 @@
 /**
- * Shared router-link cast: surface link bases are runtime strings, so the
- * shared entry components address `Link` by string `to` rather than the
- * typed route union. One definition shared by the list page and the cells.
+ * The router `Link`, addressed by a string `to`: admin link bases are runtime
+ * strings, not the typed route union. Every admin component that links by a
+ * built path imports this one.
  */
 import type * as React from 'react';
 import { Link as RouterLink } from '@tanstack/react-router';

@@ -9,7 +9,7 @@ import type { Entry } from 'astromech';
 import { Menu } from '@base-ui/react/menu';
 import { useStore } from '@tanstack/react-form';
 import { useQueryClient } from '@tanstack/react-query';
-import { Link as RouterLink, useNavigate } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { astromechUntypedClient } from 'astromech/fetch';
 import { resolveEntryUrl } from 'astromech/shared';
 import {
@@ -43,6 +43,7 @@ import { useEntryForm } from '../../hooks/use-entry-form';
 import { usePermissions } from '../../hooks/use-permissions';
 import { scopedEntryKeys } from '../../hooks/use-query-keys';
 import { EntryNamespaceProvider, namespaceForScope } from '../../i18n/entry-namespace';
+import { Link } from '../../rendering/cells/link';
 import { resolveAdminEntryType, resolveForm } from '../../rendering/resolve';
 import { defaultContentLocale } from '../../utilities/content-locale';
 import { formatDatetime } from '../../utilities/dates';
@@ -78,10 +79,6 @@ import { EntryFieldColumn } from './entry-fields-renderer';
 import { EntryFormErrors } from './entry-form-errors';
 import { entryLabel } from './entry-label';
 import { PublishPanel } from './publish-panel';
-
-// Surface link bases are runtime strings; address `Link` by string `to`.
-type LinkProps = Omit<React.ComponentProps<typeof RouterLink>, 'to'> & { to: string };
-const Link = RouterLink as unknown as (props: LinkProps) => React.ReactElement;
 
 /**
  * Keyed by the row in view: duplicate navigates to a different id, and the

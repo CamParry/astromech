@@ -12,7 +12,7 @@ import type { GlobalsBinding } from './binding';
 import type { Global } from 'astromech';
 import { useStore } from '@tanstack/react-form';
 import { useQueryClient } from '@tanstack/react-query';
-import { Link as RouterLink, useNavigate } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { astromechUntypedClient } from 'astromech/fetch';
 import { ArrowLeft, GitMerge, Layers, Trash2 } from 'lucide-react';
 import React from 'react';
@@ -32,6 +32,7 @@ import { usePermissions } from '../../hooks/use-permissions';
 import { scopedGlobalKeys } from '../../hooks/use-query-keys';
 import { EntryNamespaceProvider, namespaceForScope } from '../../i18n/entry-namespace';
 import { resolveLabel } from '../../i18n/labels';
+import { Link } from '../../rendering/cells/link';
 import { defaultContentLocale } from '../../utilities/content-locale';
 import { formatDatetimeForInput } from '../../utilities/formatters';
 import { globalEditPath, globalVersionsPath } from '../../utilities/global-admin-path';
@@ -61,10 +62,6 @@ import {
 import { Panel } from '../ui/panel';
 import { StatusBadge } from '../ui/status-badge';
 import { useToast } from '../ui/toast';
-
-// Binding link bases are runtime strings; address `Link` by string `to`.
-type LinkProps = Omit<React.ComponentProps<typeof RouterLink>, 'to'> & { to: string };
-const Link = RouterLink as unknown as (props: LinkProps) => React.ReactElement;
 
 type GlobalEditPageProps = {
     binding: GlobalsBinding;
