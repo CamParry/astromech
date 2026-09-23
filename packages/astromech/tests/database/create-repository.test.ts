@@ -7,7 +7,7 @@
  * These tests assert against real stored rows (temp-file libsql via the
  * harness), not against generated SQL.
  */
-import type { Where } from '@/database/repository/create-repository';
+import type { Where } from '@/database/repository/where';
 import { createTestDb } from '@tests/harness';
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

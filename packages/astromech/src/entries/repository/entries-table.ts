@@ -16,14 +16,10 @@ import type {
     PreviewTokenRecord,
 } from './types';
 import type { JoinedWhere } from '@/content/repository/types';
+import type { Where } from '@/database/repository/where';
 import type { DB, Db } from '@/database/types';
 import type { EntryRow as EntriesTableRow, EntryContentRow } from '@/entries/tables';
-import type {
-    EntryStatus,
-    JsonObject,
-    ReferencesFilter,
-    SortOption,
-} from '@/types/index';
+import type { JsonObject, ReferencesFilter, SortOption } from '@/types/index';
 import type { Expression, SqlBool, Updateable } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
@@ -33,6 +29,7 @@ import { encodePatchWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { existingResourceIds } from '@/database/repository/resource-existence';
+import { compileWhere } from '@/database/repository/where';
 import { entriesTable, entryContentTable, entryVersionsTable } from '@/database/tables';
 import { ALL_CAPABILITIES } from '@/entries/capabilities';
 import { ResourceNotFoundError } from '@/errors/resource';
@@ -41,6 +38,9 @@ import { isReferencesFilter } from './references-filter';
 
 /** The expression builder the joined list query is compiled against. */
 type JoinedEb = Parameters<JoinedWhere>[0];
+
+/** The `where` keys that name a content-row column; `id` names the entry row's. */
+const CONTENT_WHERE_KEYS = new Set(['status', 'slug', 'title']);
 
 type OrderPair = [column: string, direction: 'asc' | 'desc'];
 
@@ -117,50 +117,31 @@ function buildListWhere(
             );
         }
 
-        // where filters. Column comparisons follow the shared `where` DSL
-        // (database/repository/create-repository.ts): `undefined` or an absent key means
-        // unfiltered, a deliberate `null` renders `IS NULL`. Reading a bare `null`
-        // as unfiltered instead returned every row to a caller asking for the
-        // null ones.
+        // where filters. Column keys compile through the shared `where` DSL
+        // (database/repository/where.ts): `undefined` or an absent key means
+        // unfiltered, a deliberate `null` renders `IS NULL`, and an array or
+        // `{ in }` is a membership test.
         if (params.where) {
             for (const [key, value] of Object.entries(params.where)) {
                 if (value === undefined) continue;
                 if (key === 'locale') continue; // handled above
 
-                if (key === 'status') {
-                    if (Array.isArray(value)) {
-                        conditions.push(
-                            eb('entryContent.status', 'in', value as EntryStatus[])
-                        );
-                    } else if (value === null) {
-                        conditions.push(eb('entryContent.status', 'is', null));
-                    } else {
-                        conditions.push(
-                            eb('entryContent.status', '=', value as EntryStatus)
-                        );
-                    }
-                } else if (key === 'slug') {
+                if (CONTENT_WHERE_KEYS.has(key)) {
                     conditions.push(
-                        value === null
-                            ? eb('entryContent.slug', 'is', null)
-                            : eb('entryContent.slug', '=', value as string)
-                    );
-                } else if (key === 'title') {
-                    conditions.push(
-                        value === null
-                            ? eb('entryContent.title', 'is', null)
-                            : eb('entryContent.title', '=', value as string)
+                        compileWhere(
+                            entryContentTable,
+                            { [key]: value } as Where<typeof entryContentTable>,
+                            (column) => `entryContent.${column}`
+                        )(eb)
                     );
                 } else if (key === 'id') {
-                    const inClause =
-                        value === null ? undefined : (value as { in?: unknown }).in;
-                    if (Array.isArray(inClause)) {
-                        conditions.push(eb('entries.id', 'in', inClause as string[]));
-                    } else if (value === null) {
-                        conditions.push(eb('entries.id', 'is', null));
-                    } else {
-                        conditions.push(eb('entries.id', '=', value as string));
-                    }
+                    conditions.push(
+                        compileWhere(
+                            entriesTable,
+                            { id: value } as Where<typeof entriesTable>,
+                            (column) => `entries.${column}`
+                        )(eb)
+                    );
                 } else if (key === 'references') {
                     // Shape guard only: `entries.query` validates the filter and
                     // its schema path and throws before the repository sees a

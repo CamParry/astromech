@@ -223,6 +223,27 @@ describe('query', () => {
         expect(res.data.map((e) => e.title)).toEqual(['Pub']);
     });
 
+    it('compiles a column filter through the shared where DSL', async () => {
+        await api.create({ type: 'post', data: { title: 'Draft', slug: 'draft' } });
+        await api.create({
+            type: 'post',
+            data: { title: 'Pub', slug: 'pub', status: 'published' },
+        });
+        const notPublished = await api.query({
+            type: 'post',
+            full: true,
+            where: { status: { ne: 'published' } },
+        });
+        expect(notPublished.data.map((e) => e.title)).toEqual(['Draft']);
+
+        const bySlug = await api.query({
+            type: 'post',
+            full: true,
+            where: { slug: { in: ['pub', 'missing'] } },
+        });
+        expect(bySlug.data.map((e) => e.title)).toEqual(['Pub']);
+    });
+
     it('excludes trashed by default and includes them with trashed: true', async () => {
         const a = await api.create({
             type: 'post',

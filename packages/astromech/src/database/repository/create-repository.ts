@@ -4,6 +4,7 @@
  * wrapper serializes every value crossing into SQL via the column codec.
  */
 
+import type { Where, WhereFn } from './where';
 import type {
     ColumnRuntime,
     Table,
@@ -12,14 +13,7 @@ import type {
     TableUpdate,
 } from '@/database/define-table';
 import type { Db } from '@/database/types';
-import type {
-    Expression,
-    ExpressionBuilder,
-    Kysely,
-    SelectQueryBuilder,
-    SqlBool,
-} from 'kysely';
-import { sql } from 'kysely';
+import type { Kysely, SelectQueryBuilder } from 'kysely';
 import {
     decodeWith,
     encodePatchWith,
@@ -28,6 +22,7 @@ import {
 } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { AstromechError } from '@/errors/astromech-error';
+import { compileWhere, serialize } from './where';
 
 /**
  * A `Table` may be any shape, so the wrapper queries through a fully
@@ -38,57 +33,6 @@ type Schema = Record<string, Record<string, unknown>>;
 
 /** The generic Kysely handle handed out by `kysely()`. */
 export type GenericDb = Kysely<Schema>;
-
-type WhereFn = (eb: ExpressionBuilder<Schema, string>) => Expression<SqlBool>;
-
-type WhereOps<V> = {
-    eq?: V | null;
-    ne?: V | null;
-    in?: readonly V[];
-    notIn?: readonly V[];
-    gt?: V;
-    gte?: V;
-    lt?: V;
-    lte?: V;
-    /** A raw SQL LIKE pattern, passed through verbatim: `%` and `_` in it are
-     *  wildcards. For plain user-supplied text, use `contains`. */
-    like?: string;
-    /** Plain substring match. `%`, `_` and `\` are escaped, so a search for
-     *  `100%` matches that literal text rather than everything after `100`. */
-    contains?: string;
-};
-
-type WhereColumns<D> = {
-    [K in keyof TableSelect<D>]?:
-        | TableSelect<D>[K]
-        | WhereOps<NonNullable<TableSelect<D>[K]>>
-        | undefined;
-};
-
-/**
- * A `where` clause: bare value → `=`, bare `null` → `IS NULL`, and every key ANDs
- * with the rest. `or` is the one key that is not a column.
- *
- * `undefined` is in the union (not just implied by `?`) because
- * `exactOptionalPropertyTypes` would otherwise reject the conditional form
- * `{ deletedAt: includeTrashed ? undefined : null }` — the exact distinction the
- * null/undefined split exists to express.
- *
- * The runtime additionally reads a bare array as `in`, for loosely-typed callers
- * migrating off `tableRepository`. Typed callers use `{ in: [...] }`.
- */
-export type Where<D> = WhereColumns<D> & {
-    /**
-     * Branches OR-ed together, then ANDed with the sibling keys:
-     * `{ enabled: true, or: [{ nextRun: { lte: now } }, { nextRun: null }] }`.
-     * A branch is an ordinary `Where`, so nesting falls out of the recursion,
-     * and an empty array matches nothing (`1 = 0`).
-     *
-     * There is no `and` — sibling keys already AND. One arrives when a call
-     * site needs `(A OR B) AND (C OR D)`; none does today.
-     */
-    or?: readonly Where<D>[] | undefined;
-};
 
 export type OrderBy<D> = readonly (readonly [
     keyof TableSelect<D> & string,
@@ -205,26 +149,6 @@ export type Repository<D extends Table> = {
     kysely(): KyselyHandle<D>;
 };
 
-const OPERATORS = [
-    'eq',
-    'ne',
-    'in',
-    'notIn',
-    'gt',
-    'gte',
-    'lt',
-    'lte',
-    'like',
-    'contains',
-] as const;
-
-const OPERATOR_KEYS = new Set<string>(OPERATORS);
-
-const RANGE_SQL = { gt: '>', gte: '>=', lt: '<', lte: '<=' } as const;
-
-/** The escape character `contains` emits. */
-const LIKE_ESCAPE = '\\';
-
 export function createRepository<D extends Table>(table: D, db?: Db): Repository<D> {
     const tableKey = kyselyTableKey(table.name);
     const columns: Record<string, ColumnRuntime> = table.columns;
@@ -273,166 +197,12 @@ export function createRepository<D extends Table>(table: D, db?: Db): Repository
         return only;
     }
 
-    function serialize(col: ColumnRuntime, value: unknown): unknown {
-        if (value === null || value === undefined) return value;
-        return col.serialize(value);
+    function whereFn(where?: Where<D>): WhereFn {
+        return compileWhere(table, where);
     }
 
     function decodeRow(row: Record<string, unknown>): TableSelect<D> {
         return decodeWith(table, row);
-    }
-
-    // where
-
-    /**
-     * `true` when a plain object should be read as `{ gte: …, like: … }` rather
-     * than as the column's value. Column-kind-driven: a json column's domain
-     * value IS an object, so operator detection never applies to one.
-     */
-    function isOperatorObject(col: ColumnRuntime, value: object): boolean {
-        if (col.kind === 'json') return false;
-        const keys = Object.keys(value);
-        return keys.length > 0 && keys.every((key) => OPERATOR_KEYS.has(key));
-    }
-
-    function operatorConditions(
-        eb: ExpressionBuilder<Schema, string>,
-        key: string,
-        col: ColumnRuntime,
-        ops: Record<string, unknown>
-    ): Expression<SqlBool>[] {
-        const out: Expression<SqlBool>[] = [];
-        for (const [op, operand] of Object.entries(ops)) {
-            if (operand === undefined) continue;
-            switch (op) {
-                case 'eq':
-                    out.push(
-                        operand === null
-                            ? eb(key, 'is', null)
-                            : eb(key, '=', serialize(col, operand))
-                    );
-                    break;
-                case 'ne':
-                    out.push(
-                        operand === null
-                            ? eb(key, 'is not', null)
-                            : eb(key, '!=', serialize(col, operand))
-                    );
-                    break;
-                case 'in':
-                    out.push(eb(key, 'in', listOperand(key, op, col, operand)));
-                    break;
-                case 'notIn':
-                    out.push(eb(key, 'not in', listOperand(key, op, col, operand)));
-                    break;
-                case 'gt':
-                case 'gte':
-                case 'lt':
-                case 'lte':
-                    out.push(eb(key, RANGE_SQL[op], serialize(col, operand)));
-                    break;
-                case 'like':
-                    // A LIKE pattern is a SQL literal, never a domain value.
-                    out.push(eb(key, 'like', operand));
-                    break;
-                case 'contains':
-                    out.push(containsCondition(eb, key, operand));
-                    break;
-                default:
-                    throw new AstromechError(
-                        `createRepository("${table.name}"): ` +
-                            `unknown operator "${op}" on column "${key}"`
-                    );
-            }
-        }
-        return out;
-    }
-
-    function listOperand(
-        key: string,
-        op: string,
-        col: ColumnRuntime,
-        operand: unknown
-    ): unknown[] {
-        if (!Array.isArray(operand)) {
-            throw new AstromechError(
-                `createRepository("${table.name}"): "${op}" on column ` +
-                    `"${key}" expects an array`
-            );
-        }
-        return (operand as unknown[]).map((item) => serialize(col, item));
-    }
-
-    /**
-     * `contains` compiles to a raw fragment because Kysely's `like` operator
-     * emits no ESCAPE clause, and without one a backslash is just a literal
-     * character — the escaping would silently do nothing. `eb.ref` keeps the
-     * column name under `CamelCasePlugin`, which does not transform raw text.
-     */
-    function containsCondition(
-        eb: ExpressionBuilder<Schema, string>,
-        key: string,
-        operand: unknown
-    ): Expression<SqlBool> {
-        if (typeof operand !== 'string') {
-            throw new AstromechError(
-                `createRepository("${table.name}"): "contains" on column ` +
-                    `"${key}" expects a string`
-            );
-        }
-        const pattern = `%${escapeLikeText(operand)}%`;
-        return sql<SqlBool>`${eb.ref(key)} like ${pattern} escape '\\'`;
-    }
-
-    function orBranches(value: unknown): Where<D>[] {
-        if (!Array.isArray(value)) {
-            throw new AstromechError(
-                `createRepository("${table.name}"): "or" expects an array of ` +
-                    `where clauses`
-            );
-        }
-        return value as Where<D>[];
-    }
-
-    function whereFn(where?: Where<D>): WhereFn {
-        return (eb) => {
-            const conditions: Expression<SqlBool>[] = [];
-            for (const [key, value] of Object.entries(where ?? {})) {
-                // `undefined` means "no filter"; a deliberate `null` filters.
-                if (value === undefined) continue;
-                if (key === 'or') {
-                    conditions.push(
-                        eb.or(orBranches(value).map((branch) => whereFn(branch)(eb)))
-                    );
-                    continue;
-                }
-                const col = column(key);
-
-                if (value === null) {
-                    conditions.push(eb(key, 'is', null));
-                } else if (Array.isArray(value)) {
-                    conditions.push(eb(key, 'in', listOperand(key, 'in', col, value)));
-                } else if (value instanceof Date) {
-                    conditions.push(eb(key, '=', serialize(col, value)));
-                } else if (
-                    typeof value === 'object' &&
-                    isOperatorObject(col, value as object)
-                ) {
-                    conditions.push(
-                        ...operatorConditions(
-                            eb,
-                            key,
-                            col,
-                            value as Record<string, unknown>
-                        )
-                    );
-                } else {
-                    conditions.push(eb(key, '=', serialize(col, value)));
-                }
-            }
-            // An empty list renders as an unfiltered query.
-            return eb.and(conditions);
-        };
     }
 
     // writes
@@ -690,9 +460,6 @@ function groupByColumns(rows: Record<string, unknown>[]): Record<string, unknown
 }
 
 /** `%`, `_` and the escape character itself, so plain text matches literally. */
-function escapeLikeText(text: string): string {
-    return text.replace(/[\\%_]/g, (char) => `${LIKE_ESCAPE}${char}`);
-}
 
 function omit(
     values: Record<string, unknown>,

@@ -13,11 +13,8 @@ import type {
     ListParams,
 } from './types';
 import type { Column, Table } from '@/database/define-table';
-import type {
-    KyselyHandle,
-    Repository,
-    Where,
-} from '@/database/repository/create-repository';
+import type { KyselyHandle, Repository } from '@/database/repository/create-repository';
+import type { Where } from '@/database/repository/where';
 import type { Db } from '@/database/types';
 import type { JsonObject, ReferencesFilter } from '@/types/index';
 import type { Expression, SqlBool } from 'kysely';

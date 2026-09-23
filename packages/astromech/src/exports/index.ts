@@ -98,8 +98,8 @@ export type {
     Patch,
     Repository,
     UpsertOptions,
-    Where,
 } from '@/database/repository/create-repository';
+export type { Where } from '@/database/repository/where';
 export { tableRepository } from '@/entries/repository/table';
 export { t } from '@/utilities/labels';
 /**
