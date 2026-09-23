@@ -1,11 +1,12 @@
 /**
  * `entryAdminPath` is the single source of the rule that a plugin entry type
- * lives at `/plugin/<ns>/entries/<bare-type>/<id>` while a root type lives at
+ * lives at `/plugin/<ns>/entries/<name>/<id>` while a root type lives at
  * `/entries/<type>/<id>`. Both the media "used by" panel and the command
  * palette's live-entry results route through it, so a change here moves both.
+ * The owner comes from the admin config (the test shim declares `forms/form`).
  *
  * `pluginEntryRouteParams` is the other half of the rule: the root routes call
- * it in `beforeLoad` to redirect a qualified type param to the plugin route.
+ * it in `beforeLoad` to redirect a plugin's type id to the plugin route.
  *
  * An entry has one id across its locales, so which locale a link opens is a
  * search param on the same path.
@@ -48,19 +49,20 @@ describe('entryAdminPath', () => {
         );
     });
 
-    it('resolves the path from the type id alone, not from installed config', () => {
-        // No plugin registry is consulted, so an uninstalled namespace still
-        // produces the plugin-shaped path rather than falling back to the root
-        // route. Both 404, but only one of them 404s for the right reason.
+    it('routes an id no config declares to the root route, which renders not found', () => {
         expect(entryAdminPath('notinstalled/thing', 'x')).toBe(
-            '/plugin/notinstalled/entries/thing/x'
+            '/entries/notinstalled/thing/x'
         );
     });
 });
 
 describe('pluginEntryRouteParams', () => {
-    it('returns null for a bare type, so the root route renders', () => {
+    it('returns null for a site type, so the root route renders', () => {
         expect(pluginEntryRouteParams('post')).toBeNull();
+    });
+
+    it('returns null for an inherited property name', () => {
+        expect(pluginEntryRouteParams('constructor')).toBeNull();
     });
 
     it('splits a qualified type into the plugin route params', () => {
@@ -70,7 +72,7 @@ describe('pluginEntryRouteParams', () => {
         });
     });
 
-    it('splits on the first separator only, keeping the rest as the type', () => {
+    it('keeps everything after the owning namespace as the type', () => {
         expect(pluginEntryRouteParams('forms/nested/form')).toEqual({
             name: 'forms',
             type: 'nested/form',

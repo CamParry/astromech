@@ -26,13 +26,14 @@ vi.mock('virtual:astromech/admin-config', () => ({
     default: {
         defaultLocale: 'en',
         locales: ['en'],
-        entries: {},
+        entryTypes: {},
         pages: [],
         plugins: [],
         globals: {
             site: { label: 'Site', nav: true },
             footer: { label: 'Footer', nav: true },
             hidden: { label: 'Hidden', nav: false },
+            'seo/settings': { label: 'SEO settings', nav: true, plugin: 'seo' },
         },
     },
 }));
@@ -84,8 +85,14 @@ function globalLinks(): { label: string; href: string | null }[] {
 }
 
 describe('the sidebar globals block', () => {
-    it('lists the nav-visible globals the user may read', async () => {
-        mountSidebar(['global:site:read', 'global:footer:read', 'global:hidden:read']);
+    // A plugin's global is listed in that plugin's nav tree, not here.
+    it('lists the nav-visible site globals the user may read', async () => {
+        mountSidebar([
+            'global:site:read',
+            'global:footer:read',
+            'global:hidden:read',
+            'plugin:seo:global:settings:read',
+        ]);
 
         await waitFor(() => {
             expect(globalLinks()).toEqual([

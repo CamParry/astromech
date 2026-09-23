@@ -591,8 +591,9 @@ export type AdminConfig = {
     locales: string[];
     defaultLocale: string;
     roles: { slug: string; name: string }[];
-    entries: Record<string, AdminEntryType>;
-    /** Host-declared globals, keyed by bare key. */
+    /** Every entry type, the site's and each plugin's, keyed by id. */
+    entryTypes: Record<string, AdminEntryType>;
+    /** Every global, the site's and each plugin's, keyed by id. */
     globals: Record<string, AdminGlobal>;
     /** Host-defined admin pages, each rendering its own React component. */
     pages: ResolvedAdminPage[];
@@ -613,17 +614,6 @@ export type AdminConfig = {
         permissionNamespace: string;
         /** Sidebar tree derived from nav-visible pages. */
         nav: PluginNavItem[];
-        /**
-         * Plugin-contributed entry types, keyed by bare type. Same single-type
-         * shape as root `entries`, so the shared entry page components consume
-         * either without divergence.
-         */
-        entries: Record<string, AdminEntryType>;
-        /**
-         * Plugin-contributed globals, keyed by bare key. Same shape as root
-         * `globals`, so the shared global page components consume either.
-         */
-        globals: Record<string, AdminGlobal>;
         /** Page metadata: unified ResolvedAdminPage (origin-erased). */
         pages: ResolvedAdminPage[];
     }[];
@@ -631,6 +621,8 @@ export type AdminConfig = {
 
 /** One global's admin config, shared by host and plugin globals. */
 export type AdminGlobal = {
+    /** The namespace of the plugin that declares the global; absent for the site's own. */
+    plugin?: string;
     label: Label;
     /** Lucide icon name for the sidebar; absent falls back to a globe icon. */
     icon?: string;
@@ -642,6 +634,8 @@ export type AdminGlobal = {
 
 /** Single entry-type admin config, shared by root and plugin entry types. */
 export type AdminEntryType = {
+    /** The namespace of the plugin that declares the type; absent for the site's own. */
+    plugin?: string;
     single: string;
     plural: string;
     /** Lucide icon name for sidebar / quick-create; absent falls back to a database icon. */

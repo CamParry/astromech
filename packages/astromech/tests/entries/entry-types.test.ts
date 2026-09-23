@@ -1,10 +1,6 @@
 import type { ResolvedConfig, ResolvedEntryType } from '@/types/index';
 import { describe, expect, it } from 'vitest';
-import {
-    parseEntryTypeId,
-    qualifyEntryType,
-    resolveEntryType,
-} from '@/entries/entry-types';
+import { qualifyEntryType, resolveEntryType } from '@/entries/entry-types';
 
 const entryType = (id: string, single: string): ResolvedEntryType => ({
     id,
@@ -28,26 +24,6 @@ const config: Pick<ResolvedConfig, 'entryTypes'> = {
         'redirects/redirect': entryType('redirects/redirect', 'Redirect'),
     },
 };
-
-describe('parseEntryTypeId', () => {
-    it('returns null for bare ids', () => {
-        expect(parseEntryTypeId('post')).toBeNull();
-    });
-
-    it('parses qualified ids', () => {
-        expect(parseEntryTypeId('redirects/redirect')).toEqual({
-            plugin: 'redirects',
-            type: 'redirect',
-        });
-    });
-
-    it('splits on the first separator only', () => {
-        expect(parseEntryTypeId('plugin/nested/type')).toEqual({
-            plugin: 'plugin',
-            type: 'nested/type',
-        });
-    });
-});
 
 describe('qualifyEntryType', () => {
     it('joins plugin and type with the separator', () => {

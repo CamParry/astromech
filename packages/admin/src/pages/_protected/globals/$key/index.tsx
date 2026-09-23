@@ -8,6 +8,7 @@ import type { GlobalsBinding } from '../../../../components/globals/binding';
 import type { GlobalsService } from 'astromech';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { astromechClient } from 'astromech/fetch';
+import { globalPermission } from 'astromech/shared';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -42,7 +43,7 @@ function GlobalEditRoutePage(): React.ReactElement {
         cacheScope: '',
         config,
         basePath: `/globals/${key}`,
-        permissionFor: (action) => `global:${key}:${action}`,
+        permissionFor: (action) => globalPermission(key, action),
     };
     return <GlobalEditPage binding={binding} locale={locale} staged={staged} />;
 }

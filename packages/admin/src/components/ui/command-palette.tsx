@@ -10,7 +10,7 @@ import { Dialog } from '@base-ui/react/dialog';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { astromechClient } from 'astromech/fetch';
-import { parseEntryTypeId } from 'astromech/shared';
+import { entryPermission } from 'astromech/shared';
 import { Image, LayoutDashboard, Puzzle, Users } from 'lucide-react';
 import React, {
     createContext,
@@ -176,16 +176,19 @@ export function CommandPalette(): React.ReactElement {
         [t]
     );
 
+    // The site's own types; a plugin's are reached through its nav pages below.
     const entryTypeItems: StaticCommandItem[] = useMemo(
         () =>
-            Object.entries(adminConfig.entries).map(([key, entryType]) => ({
-                kind: 'static' as const,
-                id: `entry-type-${key}`,
-                label: entryType.plural,
-                to: `/entries/${key}`,
-                group: 'EntryTypes' as const,
-                Icon: () => <EntryTypeIcon name={entryType.icon} size={15} />,
-            })),
+            Object.entries(adminConfig.entryTypes)
+                .filter(([, entryType]) => entryType.plugin === undefined)
+                .map(([key, entryType]) => ({
+                    kind: 'static' as const,
+                    id: `entry-type-${key}`,
+                    label: entryType.plural,
+                    to: `/entries/${key}`,
+                    group: 'EntryTypes' as const,
+                    Icon: () => <EntryTypeIcon name={entryType.icon} size={15} />,
+                })),
         []
     );
 
@@ -245,30 +248,12 @@ export function CommandPalette(): React.ReactElement {
             ? allStaticItems
             : allStaticItems.filter((item) => item.label.toLowerCase().includes(q));
 
-    // Determine which root entry types are readable
-    const readableRootTypes = useMemo(
+    // Every entry type the user may read, the site's and each plugin's.
+    const readableTypes = useMemo(
         () =>
-            Object.keys(adminConfig.entries).filter((type) =>
-                hasPermission(`entry:${type}:read`)
+            Object.keys(adminConfig.entryTypes).filter((type) =>
+                hasPermission(entryPermission(type, 'read'))
             ),
-        [hasPermission]
-    );
-
-    // Determine which plugin entry types are readable per plugin
-    const readablePluginTypes = useMemo(
-        () =>
-            adminConfig.plugins
-                .map((plugin) => ({
-                    namespace: plugin.namespace,
-                    permissionNamespace: plugin.permissionNamespace,
-                    entries: plugin.entries,
-                    types: Object.keys(plugin.entries).filter((type) =>
-                        hasPermission(
-                            `plugin:${plugin.permissionNamespace}:entry:${type}:read`
-                        )
-                    ),
-                }))
-                .filter((p) => p.types.length > 0),
         [hasPermission]
     );
 
@@ -293,24 +278,9 @@ export function CommandPalette(): React.ReactElement {
                     )
                 ).then((chunks) => chunks.flat());
 
-            const rootEntriesPromise = searchEntries(
+            const entriesPromise = searchEntries(
                 astromechClient.entries,
-                queryBatches(readableRootTypes, adminConfig.entries)
-            );
-
-            const pluginEntriesPromises: Promise<Entry[]>[] = readablePluginTypes.map(
-                (p) => {
-                    const pluginNs = astromechClient.plugins;
-                    if (!pluginNs) return Promise.resolve([]);
-                    const pluginApi = pluginNs[p.namespace] as
-                        | { entries: typeof astromechClient.entries }
-                        | undefined;
-                    if (!pluginApi) return Promise.resolve([]);
-                    return searchEntries(
-                        pluginApi.entries,
-                        queryBatches(p.types, p.entries)
-                    );
-                }
+                queryBatches(readableTypes, adminConfig.entryTypes)
             );
 
             const usersPromise: Promise<User[]> = canReadUsers()
@@ -327,21 +297,13 @@ export function CommandPalette(): React.ReactElement {
                       .catch(() => [])
                 : Promise.resolve([]);
 
-            const [rootEntries, pluginEntryChunks, users, media] = await Promise.all([
-                rootEntriesPromise,
-                Promise.all(pluginEntriesPromises),
+            const [entries, users, media] = await Promise.all([
+                entriesPromise,
                 usersPromise,
                 mediaPromise,
             ]);
 
-            // Flatten plugin entries, tag with plugin name for link building
-            const taggedPluginEntries: Entry[] = pluginEntryChunks.flat();
-
-            return {
-                entries: [...(rootEntries ?? []), ...taggedPluginEntries],
-                users,
-                media,
-            };
+            return { entries, users, media };
         },
     });
 
@@ -349,26 +311,10 @@ export function CommandPalette(): React.ReactElement {
     const liveEntryItems: LiveCommandItem[] = useMemo(() => {
         if (!liveQuery.data) return [];
         return liveQuery.data.entries.map((entry) => {
-            // Resolve the entry's type config. Root entries use a bare type id
-            // (keyed directly in `adminConfig.entries`). Plugin entries arrive
-            // with a qualified id (`{plugin}/{type}`) but `plugin.entries` is
-            // keyed by the BARE type — so parse the id before looking it up.
-            let entryType: AdminEntryType | undefined =
+            const entryType: AdminEntryType | undefined =
                 typeof entry.type === 'string'
-                    ? adminConfig.entries[entry.type]
+                    ? adminConfig.entryTypes[entry.type]
                     : undefined;
-            if (entryType === undefined && typeof entry.type === 'string') {
-                const parsed = parseEntryTypeId(entry.type);
-                if (parsed) {
-                    const plugin = adminConfig.plugins.find(
-                        (p) => p.namespace === parsed.plugin
-                    );
-                    const pluginEntryType = plugin?.entries[parsed.type];
-                    if (plugin && pluginEntryType) {
-                        entryType = pluginEntryType;
-                    }
-                }
-            }
             const label = entryLabel(entry, entryType);
             const iconName = entryType?.icon;
             const to = entryAdminPath(

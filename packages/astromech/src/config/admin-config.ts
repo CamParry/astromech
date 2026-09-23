@@ -20,12 +20,10 @@ import {
 } from '@/plugins/runtime/plugin-admin';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 
-/**
- * Project a resolved entry type into the serializable admin shape. Shared by
- * root entries and plugin-namespaced entries so the two never drift.
- */
+/** Project a resolved entry type, the site's or a plugin's, into the serializable admin shape. */
 export function toAdminEntryType(entryType: ResolvedEntryType): AdminEntryType {
     return {
+        ...(entryType.plugin !== undefined ? { plugin: entryType.plugin } : {}),
         single: entryType.single,
         plural: entryType.plural,
         versioning: !!entryType.versioning,
@@ -49,12 +47,10 @@ export function toAdminEntryType(entryType: ResolvedEntryType): AdminEntryType {
     };
 }
 
-/**
- * Project a resolved global into the serializable admin shape. Shared by host
- * and plugin globals so the two never drift.
- */
+/** Project a resolved global, the site's or a plugin's, into the serializable admin shape. */
 function toAdminGlobal(global: ResolvedGlobal): AdminGlobal {
     return {
+        ...(global.plugin !== undefined ? { plugin: global.plugin } : {}),
         label: global.label,
         fields: global.fields,
         capabilities: global.capabilities,
@@ -73,33 +69,12 @@ export function buildAdminConfig(
     return {
         plugins: (config.plugins ?? []).map((p) => {
             const identity = resolvePluginIdentity(p);
-            const owned = <T extends { id: string; plugin?: string }>(
-                map: Record<string, T>
-            ): [string, T][] =>
-                Object.values(map)
-                    .filter((value) => value.plugin === identity.namespace)
-                    .map((value) => [
-                        value.id.slice(identity.namespace.length + 1),
-                        value,
-                    ]);
             return {
                 namespace: identity.namespace,
                 serviceKey: identity.serviceKey,
                 label: resolvePluginLabel(p, identity),
                 permissionNamespace: identity.permissionNamespace,
-                nav: derivePluginNav(identity, p),
-                entries: Object.fromEntries(
-                    owned(resolvedConfig.entryTypes).map(([name, entryType]) => [
-                        name,
-                        toAdminEntryType(entryType),
-                    ])
-                ),
-                globals: Object.fromEntries(
-                    owned(resolvedConfig.globals).map(([key, global]) => [
-                        key,
-                        toAdminGlobal(global),
-                    ])
-                ),
+                nav: derivePluginNav(identity, p, resolvedConfig),
                 pages: derivePluginPages(identity, p) as ResolvedAdminPage[],
             };
         }),
@@ -119,15 +94,17 @@ export function buildAdminConfig(
         locales: resolvedConfig.locales ?? [],
         defaultLocale: resolvedConfig.defaultLocale ?? 'en',
         roles: Object.entries(resolvedRoles).map(([slug, r]) => ({ slug, name: r.name })),
-        entries: Object.fromEntries(
-            Object.entries(resolvedConfig.entryTypes)
-                .filter(([, entryType]) => entryType.plugin === undefined)
-                .map(([name, entryType]) => [name, toAdminEntryType(entryType)])
+        entryTypes: Object.fromEntries(
+            Object.entries(resolvedConfig.entryTypes).map(([id, entryType]) => [
+                id,
+                toAdminEntryType(entryType),
+            ])
         ),
         globals: Object.fromEntries(
-            Object.entries(resolvedConfig.globals)
-                .filter(([, global]) => global.plugin === undefined)
-                .map(([key, global]) => [key, toAdminGlobal(global)])
+            Object.entries(resolvedConfig.globals).map(([id, global]) => [
+                id,
+                toAdminGlobal(global),
+            ])
         ),
         pages: resolvedConfig.adminPages,
     };

@@ -1,5 +1,6 @@
 import type { PluginNavItem } from 'astromech';
 import { Link, useRouterState } from '@tanstack/react-router';
+import { globalPermission } from 'astromech/shared';
 import {
     ChevronLeft,
     ChevronRight,
@@ -42,11 +43,16 @@ export function Sidebar() {
     const { t } = useTranslation();
     const { sidebarOpen, setSidebarOpen } = useUi();
     const { canReadMedia, canReadUsers, hasPermission } = usePermissions();
-    const entryTypes = Object.entries(adminConfig.entries);
-    // Host globals, each gated on its own read permission. A plugin's appear
-    // in that plugin's nav tree instead.
-    const globals = Object.entries(adminConfig.globals ?? {}).filter(
-        ([key, global]) => global.nav && hasPermission(`global:${key}:read`)
+    // The site's own types and globals; a plugin's appear in that plugin's
+    // nav tree instead. Each global is gated on its own read permission.
+    const entryTypes = Object.entries(adminConfig.entryTypes).filter(
+        ([, entryType]) => entryType.plugin === undefined
+    );
+    const globals = Object.entries(adminConfig.globals).filter(
+        ([key, global]) =>
+            global.plugin === undefined &&
+            global.nav &&
+            hasPermission(globalPermission(key, 'read'))
     );
     // Each page carries its own resolved permission, so the group gates per page.
     const appPages = (adminConfig.pages ?? []).filter(

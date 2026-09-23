@@ -23,7 +23,7 @@ function PluginEntryListPage(): React.ReactElement {
     const { name, type } = Route.useParams();
     const { t } = useTranslation();
     const api = astromechClient.entries as unknown as EntriesService;
-    const binding = buildPluginEntriesBinding(adminConfig.plugins, name, type, api);
+    const binding = buildPluginEntriesBinding(adminConfig, name, type, api);
     // The binding carries the qualified type id the entries service addresses.
     useAiContext(
         binding !== null

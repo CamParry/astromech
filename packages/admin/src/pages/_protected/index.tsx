@@ -68,8 +68,15 @@ type RecentActivityResult = {
     isLoading: boolean;
 };
 
+/** The site's own entry types; a plugin's are summarised on its own pages. */
+const siteEntryTypes = Object.fromEntries(
+    Object.entries(adminConfig.entryTypes).filter(
+        ([, entryType]) => entryType.plugin === undefined
+    )
+);
+
 function useRecentEntries(): RecentActivityResult {
-    const collectionKeys = Object.keys(adminConfig.entries);
+    const collectionKeys = Object.keys(siteEntryTypes);
     const collectionKeysStr = collectionKeys.join(',');
 
     const { data, isLoading } = useQuery({
@@ -82,7 +89,7 @@ function useRecentEntries(): RecentActivityResult {
                         limit: 5,
                         sort: { updatedAt: 'desc' },
                     });
-                    const collectionLabel = adminConfig.entries[key]?.plural ?? key;
+                    const collectionLabel = siteEntryTypes[key]?.plural ?? key;
                     return result.data.map(
                         (entry): RecentEntry => ({
                             ...entry,
@@ -108,7 +115,7 @@ function useRecentEntries(): RecentActivityResult {
 
 function DashboardPage(): React.ReactElement {
     const { t } = useTranslation();
-    const collections = adminConfig.entries;
+    const collections = siteEntryTypes;
     const collectionEntries = Object.entries(collections);
     const { data: recentEntries, isLoading: recentLoading } = useRecentEntries();
 

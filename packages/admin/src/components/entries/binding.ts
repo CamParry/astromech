@@ -5,7 +5,7 @@
  */
 
 import type { AdminConfig, EntriesService } from 'astromech';
-import { qualifyEntryType } from 'astromech/shared';
+import { entryPermission, qualifyEntryType } from 'astromech/shared';
 
 export type EntryAction = 'read' | 'create' | 'update' | 'delete' | 'publish';
 
@@ -22,7 +22,7 @@ export type EntriesBinding = {
      * optional access and bare-type fallbacks, matching the pre-extraction
      * behaviour.
      */
-    config: AdminConfig['entries'][string] | undefined;
+    config: AdminConfig['entryTypes'][string] | undefined;
     /** Link base: `/entries/post` vs `/plugin/redirects/entries/redirect`. */
     basePath: string;
     /** Resolve a permission string for an action against this binding. */
@@ -30,28 +30,28 @@ export type EntriesBinding = {
 };
 
 /**
- * Build the binding for a plugin-namespaced entry type, or `null` when the
- * plugin or type is unknown. `type` is the bare id from the route; the binding
- * carries the qualified id the entries service uses internally.
+ * Build the binding for a plugin's entry type, or `null` when that plugin
+ * declares no such type. `type` is the name from the route; the binding
+ * carries the type id the entries service is called with.
  */
 export function buildPluginEntriesBinding(
-    plugins: AdminConfig['plugins'],
+    config: Pick<AdminConfig, 'entryTypes'>,
     name: string,
     type: string,
     api: EntriesService
 ): EntriesBinding | null {
-    const plugin = plugins.find((p) => p.namespace === name);
-    if (!plugin) return null;
-    const config = plugin.entries[type];
-    if (!config) return null;
-    const ns = plugin.permissionNamespace;
+    const typeId = qualifyEntryType(name, type);
+    const entryType = Object.hasOwn(config.entryTypes, typeId)
+        ? config.entryTypes[typeId]
+        : undefined;
+    if (entryType?.plugin !== name) return null;
     return {
         api,
-        type: qualifyEntryType(name, type),
+        type: typeId,
         cacheScope: name,
-        config,
+        config: entryType,
         basePath: `/plugin/${name}/entries/${type}`,
-        permissionFor: (action) => `plugin:${ns}:entry:${type}:${action}`,
+        permissionFor: (action) => entryPermission(typeId, action),
     };
 }
 

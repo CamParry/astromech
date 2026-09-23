@@ -9,13 +9,12 @@ import type {
     PluginDefinition,
     PluginNavItem,
     ResolvedAdminPage,
+    ResolvedConfig,
     ResolvedPluginIdentity,
 } from '@/types/index';
-import {
-    pluginEntryTypes,
-    resolvePluginPermission,
-    titleCaseNamespace,
-} from './plugin-identity';
+import { entryPermission } from '@/permissions/entry-permission';
+import { globalPermission } from '@/permissions/global-permission';
+import { resolvePluginPermission, titleCaseNamespace } from './plugin-identity';
 
 /**
  * Admin display name: plugin `label` if set, otherwise the namespace
@@ -55,40 +54,33 @@ export function derivePluginPages(
 }
 
 /**
- * Sidebar tree for one plugin: pages become children of a single group
- * carrying the plugin's `label`/`icon` (no separate nav declaration). The
- * sidebar auto-flattens single-child groups.
+ * Sidebar tree for one plugin: its entry types and globals from the resolved
+ * config, then its pages, as children of a single group carrying the plugin's
+ * `label`/`icon`. The sidebar auto-flattens single-child groups.
  */
 export function derivePluginNav(
     identity: ResolvedPluginIdentity,
-    def: PluginDefinition
+    def: PluginDefinition,
+    config: Pick<ResolvedConfig, 'entryTypes' | 'globals'>
 ): PluginNavItem[] {
-    // Entry types contributed by the plugin become nav children, listed before
-    // the plugin's pages. Each links to its namespaced list route and gates on
-    // the type's read permission (`plugin:{ns}:entry:{type}:read`).
-    const entryChildren: PluginNavItem[] = pluginEntryTypes(def).map(
-        ([type, entryType]) => {
-            // Matches the mounted entries API guard exactly:
-            // `plugin:{permissionNamespace}:entry:{type}:{action}`. Built directly,
-            // not via resolvePluginPermission, which would pass this `:`-string through.
-            const item: PluginNavItem = {
-                label: entryType.plural,
-                to: `/plugin/${identity.namespace}/entries/${type}`,
-                permission: `plugin:${identity.permissionNamespace}:entry:${type}:read`,
-            };
-            return item;
-        }
-    );
+    const owned = <T extends { id: string; plugin?: string }>(map: Record<string, T>) =>
+        Object.values(map).filter((value) => value.plugin === identity.namespace);
+    const name = (id: string): string => id.slice(identity.namespace.length + 1);
 
-    // Globals contributed by the plugin, listed between its entry types and
-    // its pages, gating on `plugin:{ns}:global:{key}:read`.
-    const globalChildren: PluginNavItem[] = (def.globals ?? [])
+    // Each gates on the read permission its routes check.
+    const entryChildren: PluginNavItem[] = owned(config.entryTypes).map((entryType) => ({
+        label: entryType.plural,
+        to: `/plugin/${identity.namespace}/entries/${name(entryType.id)}`,
+        permission: entryPermission(entryType.id, 'read'),
+    }));
+
+    const globalChildren: PluginNavItem[] = owned(config.globals)
         .filter((global) => global.nav !== false)
         .map((global) => {
             const item: PluginNavItem = {
                 label: typeof global.label === 'string' ? global.label : global.label.$t,
-                to: `/plugin/${identity.namespace}/globals/${global.key}`,
-                permission: `plugin:${identity.permissionNamespace}:global:${global.key}:read`,
+                to: `/plugin/${identity.namespace}/globals/${name(global.id)}`,
+                permission: globalPermission(global.id, 'read'),
             };
             if (global.icon !== undefined) item.icon = global.icon;
             return item;

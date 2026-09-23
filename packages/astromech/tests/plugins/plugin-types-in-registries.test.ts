@@ -10,6 +10,7 @@ import { systemAppContext } from '@/app-context/app-context';
 import { entriesService, globalsService } from '@/app-context/services';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { generateClientTypes } from '@/codegen/type-generator';
+import { buildAdminConfig } from '@/config/admin-config';
 import { resolveConfig } from '@/config/resolve';
 import { createRepository } from '@/database/repository/create-repository';
 import { entryContentTable } from '@/entries/tables';
@@ -82,6 +83,31 @@ describe('a plugin entry type and global in the one registry', () => {
         expect(output).toContain(
             '"fixture/options": { fields: FixtureOptionsGlobalFields };'
         );
+    });
+
+    it('is in the admin config, owned by the plugin', () => {
+        const admin = buildAdminConfig(fixtureConfig(), resolved);
+
+        expect(admin.entryTypes['fixture/item']).toMatchObject({
+            plugin: 'fixture',
+            single: 'Item',
+        });
+        expect(admin.globals['fixture/options']).toMatchObject({
+            plugin: 'fixture',
+            label: 'Options',
+        });
+        expect(admin.plugins[0]?.nav[0]?.children).toEqual([
+            {
+                label: 'Items',
+                to: '/plugin/fixture/entries/item',
+                permission: 'plugin:fixture:entry:item:read',
+            },
+            {
+                label: 'Options',
+                to: '/plugin/fixture/globals/options',
+                permission: 'plugin:fixture:global:options:read',
+            },
+        ]);
     });
 
     it('is in the method manifest', () => {

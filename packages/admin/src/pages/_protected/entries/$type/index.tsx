@@ -7,6 +7,7 @@ import type { EntriesBinding } from '../../../../components/entries/binding';
 import type { EntriesService } from 'astromech';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { astromechClient } from 'astromech/fetch';
+import { entryPermission } from 'astromech/shared';
 import React from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
 import { validateEntriesListSearch } from '../../../../components/entries/binding';
@@ -17,16 +18,16 @@ import { pluginEntryRouteParams } from '../../../../utilities/entry-admin-path';
 function EntryIndexPage(): React.ReactElement {
     const { type } = Route.useParams();
     useAiContext(
-        { kind: 'entries', type, label: adminConfig.entries[type]?.plural ?? type },
+        { kind: 'entries', type, label: adminConfig.entryTypes[type]?.plural ?? type },
         { depth: 0 }
     );
     const binding: EntriesBinding = {
         api: astromechClient.entries as unknown as EntriesService,
         type,
         cacheScope: '',
-        config: adminConfig.entries[type],
+        config: adminConfig.entryTypes[type],
         basePath: `/entries/${type}`,
-        permissionFor: (action) => `entry:${type}:${action}`,
+        permissionFor: (action) => entryPermission(type, action),
     };
     return <EntriesListPage binding={binding} />;
 }

@@ -21,7 +21,7 @@ function PluginGlobalVersionsPage(): React.ReactElement {
     const { locale } = Route.useSearch();
     const { t } = useTranslation();
     const api = astromechClient.globals as unknown as GlobalsService;
-    const binding = buildPluginGlobalsBinding(adminConfig.plugins, name, key, api);
+    const binding = buildPluginGlobalsBinding(adminConfig, name, key, api);
     if (!binding) {
         return (
             <Page>

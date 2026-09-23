@@ -22,7 +22,7 @@ export function RelationshipField({
     const multiple = field.multiple || false;
     // When the target is a titleless entry type, never fall back to a field
     // value for the label (data-leak rule) — show the entry id instead.
-    const targetTitleless = adminConfig.entries[target]?.titleField === false;
+    const targetTitleless = adminConfig.entryTypes[target]?.titleField === false;
     const [options, setOptions] = useState<EntryOption[]>([]);
 
     useEffect(() => {

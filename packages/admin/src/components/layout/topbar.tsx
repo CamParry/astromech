@@ -35,7 +35,10 @@ export function Topbar() {
     const { setOpen: openCommandPalette } = useCommandPalette();
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const entryTypes = Object.entries(adminConfig.entries);
+    // The site's own types; a plugin's are created from that plugin's pages.
+    const entryTypes = Object.entries(adminConfig.entryTypes).filter(
+        ([, entryType]) => entryType.plugin === undefined
+    );
 
     async function handleLogout() {
         await logout();

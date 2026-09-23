@@ -6,7 +6,7 @@
  */
 
 import type { AdminConfig, AdminGlobal, GlobalsService } from 'astromech';
-import { qualifyEntryType } from 'astromech/shared';
+import { globalPermission, qualifyEntryType } from 'astromech/shared';
 
 export type GlobalAction = 'read' | 'update' | 'publish';
 
@@ -29,27 +29,27 @@ export type GlobalsBinding = {
 };
 
 /**
- * Build the binding for a plugin-namespaced global, or `null` when the plugin or
- * key is unknown. `key` is the bare key from the route; the binding carries the
- * qualified key the globals service uses.
+ * Build the binding for a plugin's global, or `null` when that plugin declares
+ * no such global. `key` is the key from the route; the binding carries the id
+ * the globals service is called with.
  */
 export function buildPluginGlobalsBinding(
-    plugins: AdminConfig['plugins'],
+    config: Pick<AdminConfig, 'globals'>,
     name: string,
     key: string,
     api: GlobalsService
 ): GlobalsBinding | null {
-    const plugin = plugins.find((p) => p.namespace === name);
-    if (!plugin) return null;
-    const config = plugin.globals[key];
-    if (!config) return null;
-    const ns = plugin.permissionNamespace;
+    const globalId = qualifyEntryType(name, key);
+    const global = Object.hasOwn(config.globals, globalId)
+        ? config.globals[globalId]
+        : undefined;
+    if (global?.plugin !== name) return null;
     return {
         api,
-        key: qualifyEntryType(name, key),
+        key: globalId,
         cacheScope: name,
-        config,
+        config: global,
         basePath: `/plugin/${name}/globals/${key}`,
-        permissionFor: (action) => `plugin:${ns}:global:${key}:${action}`,
+        permissionFor: (action) => globalPermission(globalId, action),
     };
 }

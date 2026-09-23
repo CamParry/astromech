@@ -8,6 +8,7 @@ import type { EntriesBinding } from '../../../../components/entries/binding';
 import type { EntriesService } from 'astromech';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { astromechClient } from 'astromech/fetch';
+import { entryPermission } from 'astromech/shared';
 import React from 'react';
 import adminConfig from 'virtual:astromech/admin-config';
 import { EntryNewPage } from '../../../../components/entries/entry-new-page';
@@ -24,9 +25,9 @@ function EntryCreatePage(): React.ReactElement {
         api: astromechClient.entries as unknown as EntriesService,
         type,
         cacheScope: '',
-        config: adminConfig.entries[type],
+        config: adminConfig.entryTypes[type],
         basePath: `/entries/${type}`,
-        permissionFor: (action) => `entry:${type}:${action}`,
+        permissionFor: (action) => entryPermission(type, action),
     };
     return <EntryNewPage binding={binding} requestedLocale={search.locale} />;
 }

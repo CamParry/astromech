@@ -14,6 +14,7 @@ import type { AstromechConfig, JsonObject, PluginDefinition } from '@/types/inde
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { entriesService, globalsService } from '@/app-context/services';
+import { resolveConfig } from '@/config/resolve';
 import { derivePluginNav } from '@/plugins/runtime/plugin-admin';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
@@ -89,7 +90,8 @@ describe('menus — plugin structure', () => {
             ],
         });
         const identity = resolvePluginIdentity(plugin);
-        const nav = derivePluginNav(identity, plugin);
+        const resolved = resolveConfig({ ...makeTestConfig(), plugins: [plugin] });
+        const nav = derivePluginNav(identity, plugin, resolved);
         expect(nav).toHaveLength(1);
         const group = nav[0];
         expect(group?.label).toBe('Menus');

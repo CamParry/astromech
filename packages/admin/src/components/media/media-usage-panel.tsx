@@ -5,7 +5,6 @@
  */
 
 import type { Usage } from 'astromech';
-import { parseEntryTypeId } from 'astromech/shared';
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
@@ -130,8 +129,7 @@ function groupLabel(group: UsageGroup, translate: (key: string) => string): stri
 
 /** The admin's plural label for a root or plugin entry type, or null if unknown. */
 function entryTypeLabel(typeId: string): string | null {
-    const parsed = parseEntryTypeId(typeId);
-    if (parsed === null) return adminConfig.entries[typeId]?.plural ?? null;
-    const plugin = adminConfig.plugins.find((p) => p.namespace === parsed.plugin);
-    return plugin?.entries[parsed.type]?.plural ?? null;
+    return Object.hasOwn(adminConfig.entryTypes, typeId)
+        ? (adminConfig.entryTypes[typeId]?.plural ?? null)
+        : null;
 }

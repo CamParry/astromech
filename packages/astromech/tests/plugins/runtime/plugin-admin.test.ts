@@ -5,6 +5,8 @@ import type {
     PluginNavItem,
 } from '@/types/index';
 import { describe, expect, it } from 'vitest';
+import { resolveEntryTypes } from '@/config/entry-types';
+import { resolveGlobals } from '@/config/globals';
 import { derivePluginNav, derivePluginPages } from '@/plugins/runtime/plugin-admin';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 
@@ -15,7 +17,11 @@ const entryType = (type: string, single: string, plural: string): EntryType => (
 });
 
 function nav(def: PluginDefinition): PluginNavItem[] {
-    return derivePluginNav(resolvePluginIdentity(def), def);
+    const declared = { entries: {}, plugins: [def] };
+    return derivePluginNav(resolvePluginIdentity(def), def, {
+        entryTypes: resolveEntryTypes(declared),
+        globals: resolveGlobals(declared),
+    });
 }
 
 function children(def: PluginDefinition): PluginNavItem[] {

@@ -21,7 +21,7 @@ function PluginEntryVersionsPage(): React.ReactElement {
     const { locale } = Route.useSearch();
     const { t } = useTranslation();
     const api = astromechClient.entries as unknown as EntriesService;
-    const binding = buildPluginEntriesBinding(adminConfig.plugins, name, type, api);
+    const binding = buildPluginEntriesBinding(adminConfig, name, type, api);
     if (!binding) {
         return (
             <Page>

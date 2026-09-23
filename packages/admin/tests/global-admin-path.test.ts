@@ -3,8 +3,8 @@
  * everything narrowing the view (locale, staged) is a search param.
  *
  * `pluginGlobalRouteParams` is the rule that a plugin global lives at
- * `/plugin/<ns>/globals/<bare-key>`: the root route calls it in `beforeLoad` to
- * redirect a qualified key there.
+ * `/plugin/<ns>/globals/<key>`: the root route calls it in `beforeLoad` to
+ * redirect a plugin's global id there. The owner comes from the admin config.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -62,7 +62,7 @@ describe('pluginGlobalRouteParams', () => {
         });
     });
 
-    it('splits on the first separator only', () => {
+    it('keeps everything after the owning namespace as the key', () => {
         expect(pluginGlobalRouteParams('menus/main/footer')).toEqual({
             name: 'menus',
             key: 'main/footer',

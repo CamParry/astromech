@@ -216,7 +216,7 @@ describe('buildAdminConfig', () => {
         const resolved = resolveConfig(config);
         const adminConfig = buildAdminConfig(config, resolved);
 
-        const post = adminConfig.entries['post'];
+        const post = adminConfig.entryTypes['post'];
         expect(post).toBeDefined();
         expect(post?.single).toBe('Post');
         expect(post?.plural).toBe('Posts');
@@ -226,9 +226,10 @@ describe('buildAdminConfig', () => {
         expect(Array.isArray(post?.adminColumns)).toBe(true);
         expect(post?.capabilities).toBeDefined();
         expect(post?.titleField).toBe('title');
+        expect(post?.plugin).toBeUndefined();
     });
 
-    it('produces plugin metadata with name, label, permissionNamespace, nav, entries, pages', () => {
+    it('produces plugin metadata with name, label, permissionNamespace, nav, pages', () => {
         const config = baseConfig([
             {
                 package: '@astromech/seo',
@@ -253,8 +254,8 @@ describe('buildAdminConfig', () => {
         expect(plugin?.label).toBe('Seo');
         expect(plugin?.permissionNamespace).toBe('seo');
         expect(Array.isArray(plugin?.nav)).toBe(true);
-        expect(plugin?.entries['redirect']).toBeDefined();
         expect(plugin?.pages).toHaveLength(1);
+        expect(adminConfig.entryTypes['seo/redirect']?.plugin).toBe('seo');
     });
 });
 
@@ -295,9 +296,12 @@ describe('buildAdminConfig — globals', () => {
         ]);
         const adminConfig = buildAdminConfig(config, resolveConfig(config));
 
-        const plugin = adminConfig.plugins[0];
-        expect(plugin?.globals['settings']?.label).toBe('Site');
+        expect(adminConfig.globals['seo/settings']).toMatchObject({
+            label: 'Site',
+            plugin: 'seo',
+        });
 
+        const plugin = adminConfig.plugins[0];
         const navItem = plugin?.nav[0]?.children?.[0];
         expect(navItem?.to).toBe('/plugin/seo/globals/settings');
         expect(navItem?.permission).toBe('plugin:seo:global:settings:read');
@@ -313,7 +317,7 @@ describe('buildAdminConfig — globals', () => {
         const adminConfig = buildAdminConfig(config, resolveConfig(config));
 
         expect(adminConfig.plugins[0]?.nav).toEqual([]);
-        expect(adminConfig.plugins[0]?.globals['settings']).toBeDefined();
+        expect(adminConfig.globals['seo/settings']).toBeDefined();
     });
 
     it('produces an empty globals map when none are declared', () => {

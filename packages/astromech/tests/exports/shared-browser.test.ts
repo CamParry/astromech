@@ -25,6 +25,7 @@ const allowlist = [
     /^src\/entries\/entry-url\.ts$/,
     /^src\/entries\/validation-mode\.ts$/,
     /^src\/media\/image-widths\.ts$/,
+    /^src\/permissions\/(entry|global)-permission\.ts$/,
     /^src\/media\/serving\/image\/url\.ts$/,
     /^src\/transport\/http\/routes\/http-routes\.ts$/,
     /^src\/transport\/http\/client\.ts$/,

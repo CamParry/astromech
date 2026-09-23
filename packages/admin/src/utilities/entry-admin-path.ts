@@ -1,12 +1,11 @@
 /**
- * Admin edit path for an entry, from its wire type id. A plugin entry type
- * lives at `/plugin/<ns>/entries/<bare-type>/<id>`; the root route redirects
- * there, but links are built in the canonical plugin shape. An entry has one
- * id across its locales, so the locale (and the staged row, when one is being
- * edited) rides in the search params.
+ * Admin edit path for an entry, from its type id. A plugin's entry type lives
+ * at `/plugin/<ns>/entries/<name>/<id>`; the root route redirects there, but
+ * links are built in the canonical plugin shape. The locale (and the staged
+ * row, when one is being edited) rides in the search params.
  */
 
-import { parseEntryTypeId } from 'astromech/shared';
+import adminConfig from 'virtual:astromech/admin-config';
 
 /** Which row of an entry an edit link addresses. */
 export type EntryEditSearch = {
@@ -32,11 +31,11 @@ export function entryAdminPath(
     id: string,
     search?: EntryEditSearch
 ): string {
-    const parsed = parseEntryTypeId(typeId);
+    const plugin = pluginEntryRouteParams(typeId);
     const path =
-        parsed === null
+        plugin === null
             ? `/entries/${typeId}/${id}`
-            : `/plugin/${parsed.plugin}/entries/${parsed.type}/${id}`;
+            : `/plugin/${plugin.name}/entries/${plugin.type}/${id}`;
     return `${path}${editSearchString(search)}`;
 }
 
@@ -58,16 +57,18 @@ export function entryVersionsPath(basePath: string, id: string, locale?: string)
 }
 
 /**
- * Route params for the plugin entries route when the root `/entries/$type`
- * route is given a qualified type id, or `null` for a bare one. The root routes
+ * Route params for the plugin entries route when the type id names a plugin's
+ * entry type, or `null` for the site's own or an unknown id. The root routes
  * redirect on a non-null result instead of rendering a half-working page.
  */
 export function pluginEntryRouteParams(
-    typeParam: string
+    typeId: string
 ): { name: string; type: string } | null {
-    const parsed = parseEntryTypeId(typeParam);
-    if (parsed === null) return null;
-    return { name: parsed.plugin, type: parsed.type };
+    const plugin = Object.hasOwn(adminConfig.entryTypes, typeId)
+        ? adminConfig.entryTypes[typeId]?.plugin
+        : undefined;
+    if (plugin === undefined) return null;
+    return { name: plugin, type: typeId.slice(plugin.length + 1) };
 }
 
 /** Parse/validate raw URL search into the typed entry-edit search shape. */

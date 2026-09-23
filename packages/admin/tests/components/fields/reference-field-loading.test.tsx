@@ -39,7 +39,7 @@ vi.mock('virtual:astromech/admin-config', () => ({
     default: {
         defaultLocale: 'en',
         locales: ['en'],
-        entries: { author: { titleField: 'title' } },
+        entryTypes: { author: { titleField: 'title' } },
     },
 }));
 
