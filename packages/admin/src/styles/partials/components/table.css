@@ -131,3 +131,12 @@
     color: var(--am-color-text-muted);
     text-align: center;
 }
+
+/* Narrow columns: row selection, and one icon such as an avatar or a row menu. */
+.am-table-select {
+    width: 2.5rem;
+}
+
+.am-table-icon {
+    width: 3rem;
+}

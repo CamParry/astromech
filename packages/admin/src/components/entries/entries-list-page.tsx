@@ -1,422 +1,55 @@
 /**
- * Entry list page for one entry type id, the site's or a plugin's. Searchable,
- * filterable, paginated table or grid with bulk actions and per-type view state.
+ * Entry list page for one entry type id, the site's or a plugin's: a searchable,
+ * filterable, paginated table or grid over `useListController`, with bulk
+ * actions and per-type column and view choices.
  */
 
 import type { UseAdminEntryTypeResult } from '../../hooks/use-admin-entry-type';
-import type { EntriesListSearch } from '../../utilities/entry-admin-path';
 import type { DropdownItem } from '../ui/dropdown';
-import type { SortDirection } from '../ui/table';
-import type { CellRenderContext, Entry, TableColumn } from 'astromech';
-import { Menu } from '@base-ui/react/menu';
-import { useNavigate, useSearch } from '@tanstack/react-router';
-import {
-    Check,
-    Copy,
-    LayoutGrid,
-    LayoutList,
-    MoreHorizontalIcon,
-    Pencil,
-    PlusIcon,
-    RotateCcw,
-    SlidersHorizontal,
-    Trash2,
-} from 'lucide-react';
-import React, { useCallback, useEffect, useState } from 'react';
+import type { RowActionsProps } from './entry-list-items';
+import type { Entry, TableColumn } from 'astromech';
+import { useNavigate } from '@tanstack/react-router';
+import { Check, PlusIcon, RotateCcw, Trash2 } from 'lucide-react';
+import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import adminConfig from 'virtual:astromech/admin-config';
 import { useAiContext } from '../../context/ai-context';
 import { useAuthorNames } from '../../hooks/author-names';
-import { entryMutations, useEntriesQuery } from '../../hooks/entries';
+import { entryMutations } from '../../hooks/entries';
 import { useAdminEntryType } from '../../hooks/use-admin-entry-type';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useIsMobile } from '../../hooks/use-is-mobile';
+import { LOCALE_FILTER_ALL, useListController } from '../../hooks/use-list-controller';
 import { useSelection } from '../../hooks/use-selection';
 import { useViewMode } from '../../hooks/use-view-mode';
+import { useVisibleColumns } from '../../hooks/use-visible-columns';
 import { resolveLabel } from '../../i18n/labels';
 import { defaultCellKind } from '../../rendering/cell-kind-map';
-import { getCellRenderer } from '../../rendering/cell-registry';
 import { Link } from '../../rendering/cells/link';
-import { statusVariant } from '../../rendering/cells/status-variant';
 import { fieldTypeOf, resolveTable } from '../../rendering/resolve';
-import { defaultContentLocale } from '../../utilities/content-locale';
 import { entryEditPath, entryTypeBasePath } from '../../utilities/entry-admin-path';
 import { NotFoundPage } from '../layout/not-found-page';
-import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
 import { useConfirm } from '../ui/confirm';
-import { useContextMenu } from '../ui/context-menu';
 import { Dropdown } from '../ui/dropdown';
 import { EmptyState } from '../ui/empty-state';
 import { Page, PageContent, PageHeader, PageTitle } from '../ui/page';
 import { Pagination } from '../ui/pagination';
 import { SearchInput } from '../ui/search-input';
-import { Select } from '../ui/select';
 import { Spinner } from '../ui/spinner';
 import { Table } from '../ui/table';
-import { ToggleGroup } from '../ui/toggle-group';
 import { Toolbar, ToolbarEnd, ToolbarStart } from '../ui/toolbar';
 import { DeleteEntryModal } from './delete-entry-modal';
-
-type StatusFilter = 'all' | 'unpublished' | 'published' | 'scheduled' | 'trashed';
-
-type BulkAction = 'publish' | 'unpublish' | 'trash' | 'delete' | 'restore';
-
-type ViewMode = 'list' | 'grid';
-
-const ALL_COLUMNS = [
-    'title',
-    'status',
-    'slug',
-    'locale',
-    'translations',
-    'updatedAt',
-    'updatedBy',
-] as const;
-const LOCALE_FILTER_ALL = '__all__';
-
-function colStorageKey(type: string): string {
-    return `am-cols-${type}`;
-}
-
-function defaultColumns(hasTitle: boolean): readonly string[] {
-    return hasTitle ? ALL_COLUMNS : ALL_COLUMNS.filter((c) => c !== 'title');
-}
-
-function readStoredColumns(
-    type: string,
-    adminCols: { field: string }[],
-    hasTitle: boolean
-): Set<string> {
-    try {
-        const stored = localStorage.getItem(colStorageKey(type));
-        if (stored) {
-            const parsed = JSON.parse(stored) as string[];
-            if (Array.isArray(parsed)) {
-                const cols = new Set(parsed);
-                if (!hasTitle) cols.delete('title');
-                return cols;
-            }
-        }
-    } catch {
-        // ignore
-    }
-    return new Set([...defaultColumns(hasTitle), ...adminCols.map((c) => c.field)]);
-}
-
-function writeStoredColumns(type: string, cols: Set<string>): void {
-    try {
-        localStorage.setItem(colStorageKey(type), JSON.stringify(Array.from(cols)));
-    } catch {
-        // ignore
-    }
-}
+import {
+    ColumnsMenu,
+    LocaleFilterSelect,
+    StatusFilterSelect,
+    ViewModeToggle,
+} from './entries-list-toolbar';
+import { EntryCard, EntryTableRow } from './entry-list-items';
 
 const PER_PAGE = 20;
-
-type RowActionsProps = {
-    entry: Entry;
-    isTrash: boolean;
-    type: string;
-    basePath: string;
-    canDelete: boolean;
-    hasTrashCap: boolean;
-    onRestore: (id: string) => void;
-    onConfirmDelete: (id: string, force: boolean) => void;
-    onDuplicate: (id: string) => void;
-    rowLabels: {
-        edit: string;
-        duplicate: string;
-        moveToTrash: string;
-        restore: string;
-        deletePermanently: string;
-    };
-};
-
-function buildRowItems(props: RowActionsProps): DropdownItem[] {
-    const {
-        entry,
-        isTrash,
-        basePath,
-        canDelete,
-        hasTrashCap,
-        onRestore,
-        onConfirmDelete,
-        onDuplicate,
-        rowLabels,
-    } = props;
-    if (isTrash) {
-        const items: DropdownItem[] = [
-            {
-                label: rowLabels.restore,
-                onClick: () => onRestore(entry.id),
-                icon: <RotateCcw size={14} />,
-            },
-        ];
-        if (canDelete) {
-            items.push({
-                label: rowLabels.deletePermanently,
-                variant: 'danger' as const,
-                onClick: () => onConfirmDelete(entry.id, true),
-                icon: <Trash2 size={14} />,
-            });
-        }
-        return items;
-    }
-    const items: DropdownItem[] = [
-        {
-            label: rowLabels.edit,
-            href: entryEditPath(basePath, entry.id, { locale: entry.locale }),
-            icon: <Pencil size={14} />,
-        },
-        {
-            label: rowLabels.duplicate,
-            onClick: () => onDuplicate(entry.id),
-            icon: <Copy size={14} />,
-        },
-    ];
-    if (canDelete) {
-        // When trash is off, the action is a permanent delete (force=true).
-        items.push({
-            label: hasTrashCap ? rowLabels.moveToTrash : rowLabels.deletePermanently,
-            variant: 'danger' as const,
-            onClick: () => onConfirmDelete(entry.id, !hasTrashCap),
-            icon: <Trash2 size={14} />,
-        });
-    }
-    return items;
-}
-
-type EntryTableRowProps = RowActionsProps & {
-    selected: boolean;
-    onToggleSelect: (id: string) => void;
-    columns: TableColumn[];
-    navigate: (opts: { id: string; locale: string }) => void;
-    configuredLocales: string[];
-    authorNames: Map<string, string>;
-};
-
-function EntryTableRow({
-    entry,
-    isTrash,
-    type,
-    basePath,
-    canDelete,
-    hasTrashCap,
-    onRestore,
-    onConfirmDelete,
-    onDuplicate,
-    selected,
-    onToggleSelect,
-    columns,
-    navigate,
-    rowLabels,
-    configuredLocales,
-    authorNames,
-}: EntryTableRowProps): React.ReactElement {
-    const { t } = useTranslation();
-    const items = buildRowItems({
-        entry,
-        isTrash,
-        type,
-        basePath,
-        canDelete,
-        hasTrashCap,
-        onRestore,
-        onConfirmDelete,
-        onDuplicate,
-        rowLabels,
-    });
-    const { onContextMenu, contextMenuNode } = useContextMenu(items);
-    const ctx: CellRenderContext = { basePath, configuredLocales, isTrash, authorNames };
-
-    return (
-        <>
-            <Table.Row
-                key={entry.id}
-                onContextMenu={onContextMenu}
-                onClick={
-                    !isTrash
-                        ? () =>
-                              void navigate({
-                                  id: entry.id,
-                                  locale: entry.locale,
-                              })
-                        : undefined
-                }
-                style={!isTrash ? { cursor: 'pointer' } : undefined}
-            >
-                <Table.Td onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                        checked={selected}
-                        onChange={() => onToggleSelect(entry.id)}
-                    />
-                </Table.Td>
-                {columns.map((col) => {
-                    const value =
-                        col.source === 'field'
-                            ? (entry.fields as Record<string, unknown>)[col.key]
-                            : (entry as Record<string, unknown>)[col.key];
-                    return (
-                        <Table.Td key={col.key}>
-                            {getCellRenderer(col.kind)({
-                                entry,
-                                column: col,
-                                value,
-                                ctx,
-                            })}
-                        </Table.Td>
-                    );
-                })}
-                <Table.Td onClick={(e) => e.stopPropagation()}>
-                    <Dropdown
-                        icon={<MoreHorizontalIcon size={16} />}
-                        ariaLabel={t('common.actions')}
-                        items={items}
-                    />
-                </Table.Td>
-            </Table.Row>
-            {contextMenuNode}
-        </>
-    );
-}
-
-type EntryCardProps = RowActionsProps & {
-    columns: TableColumn[];
-    columnLabel: (col: TableColumn) => string;
-    navigate: (opts: { id: string; locale: string }) => void;
-    hasTitle: boolean;
-    configuredLocales: string[];
-    authorNames: Map<string, string>;
-};
-
-function EntryCard({
-    entry,
-    isTrash,
-    type,
-    basePath,
-    canDelete,
-    hasTrashCap,
-    onRestore,
-    onConfirmDelete,
-    onDuplicate,
-    columns,
-    columnLabel,
-    navigate,
-    rowLabels,
-    hasTitle,
-    configuredLocales,
-    authorNames,
-}: EntryCardProps): React.ReactElement {
-    const { t } = useTranslation();
-    const items = buildRowItems({
-        entry,
-        isTrash,
-        type,
-        basePath,
-        canDelete,
-        hasTrashCap,
-        onRestore,
-        onConfirmDelete,
-        onDuplicate,
-        rowLabels,
-    });
-    const { onContextMenu, contextMenuNode } = useContextMenu(items);
-    const ctx: CellRenderContext = { basePath, configuredLocales, isTrash, authorNames };
-
-    function handleCardClick() {
-        if (isTrash) return;
-        void navigate({
-            id: entry.id,
-            locale: entry.locale,
-        });
-    }
-
-    return (
-        <>
-            <div
-                className="am-collection-card"
-                onContextMenu={onContextMenu}
-                onClick={handleCardClick}
-            >
-                <div
-                    className="am-collection-card-actions"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <Dropdown
-                        icon={<MoreHorizontalIcon size={16} />}
-                        ariaLabel={t('common.actions')}
-                        items={items}
-                    />
-                </div>
-
-                {isTrash ? (
-                    <span
-                        className={
-                            hasTitle
-                                ? 'am-collection-card-title am-text-muted'
-                                : 'am-collection-card-title am-text-muted am-text-mono am-text-sm'
-                        }
-                    >
-                        {hasTitle ? entry.title : entry.id}
-                    </span>
-                ) : (
-                    <Link
-                        to={entryEditPath(basePath, entry.id, { locale: entry.locale })}
-                        className={
-                            hasTitle
-                                ? 'am-collection-card-title'
-                                : 'am-collection-card-title am-text-mono am-text-sm'
-                        }
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        {hasTitle ? entry.title : entry.id}
-                    </Link>
-                )}
-
-                <div className="am-collection-card-meta">
-                    <Badge variant={statusVariant(entry.status)}>{entry.status}</Badge>
-                </div>
-
-                {columns.map((col) => (
-                    <div key={col.key} className="am-collection-card-field">
-                        <span className="am-collection-card-field-label">
-                            {columnLabel(col)}
-                        </span>
-                        <span>
-                            {getCellRenderer(col.kind)({
-                                entry,
-                                column: col,
-                                value: (entry.fields as Record<string, unknown>)[col.key],
-                                ctx,
-                            })}
-                        </span>
-                    </div>
-                ))}
-            </div>
-            {contextMenuNode}
-        </>
-    );
-}
-
-/** Partial URL-search update; an explicit `undefined` value clears that key. */
-type EntriesSearchPatch = {
-    [K in keyof EntriesListSearch]?: EntriesListSearch[K] | undefined;
-};
-
-/** Parse a `${key}:${dir}` URL sort param back into the table's sort shape. */
-function parseSortParam(
-    raw: string | undefined
-): { key: string; direction: 'asc' | 'desc' } | null {
-    if (!raw) return null;
-    const idx = raw.lastIndexOf(':');
-    if (idx === -1) return null;
-    const key = raw.slice(0, idx);
-    const direction = raw.slice(idx + 1);
-    if (!key || (direction !== 'asc' && direction !== 'desc')) return null;
-    return { key, direction };
-}
 
 export function EntriesListPage({ type }: { type: string }): React.ReactElement {
     const entryType = useAdminEntryType(type);
@@ -430,324 +63,235 @@ function EntriesListBody({
     entryType: UseAdminEntryTypeResult;
 }): React.ReactElement {
     const { type, config, basePath, namespace, can } = entryType;
-    useAiContext({ kind: 'entries', type, label: config.plural }, { depth: 0 });
-    const navigate = useNavigate();
     const { t } = useTranslation();
-    // System columns label via i18n key; admin/grid columns via the Label seam.
-    const columnLabel = useCallback(
-        (col: TableColumn): string =>
-            col.system
-                ? t(typeof col.label === 'string' ? col.label : col.label.$t)
-                : resolveLabel(col.label, col.key, t, namespace),
-        [t, namespace]
-    );
-    const canCreate = can('create');
+    const navigate = useNavigate();
+    const confirm = useConfirm();
+    const authorNames = useAuthorNames();
+    useAiContext({ kind: 'entries', type, label: config.plural }, { depth: 0 });
+
+    const { capabilities } = config;
+    const hasTitle = config.titleField !== false;
+    const hasI18n = capabilities.translatable;
+    const showSearch = hasTitle || (config.search?.length ?? 0) > 0;
     const canDelete = can('delete');
 
-    const single = config.single;
-    const plural = config.plural;
-    const adminColumns = config.adminColumns ?? [];
-    const gridFields = config.gridFields ?? [];
-    const capabilities = config.capabilities;
-    const hasStatuses = capabilities?.statuses !== false;
-    const hasTrash = capabilities?.trash !== false;
-    const hasSlugCap = capabilities?.slug !== false;
-    const hasTitle = config.titleField !== false;
-    const showSearch = config.titleField !== false || (config.search?.length ?? 0) > 0;
+    const list = useListController(entryType, { perPage: PER_PAGE });
+    const { checkedIds, toggle, toggleAll, allChecked, someChecked, reset } =
+        useSelection(list.data);
 
-    const resolvedTable = React.useMemo(() => resolveTable(config), [config]);
-
-    const availableViews = config.views ?? ['list'];
-    const defaultView: ViewMode = config.defaultView ?? 'list';
-    const showViewToggle =
-        availableViews.includes('list') && availableViews.includes('grid');
-
-    const urlSearch = useSearch({ strict: false });
-
-    const hasI18n = capabilities?.translatable === true;
-    const configuredLocales = adminConfig.locales;
-    const authorNames = useAuthorNames();
-
-    // Filter/sort/page state lives in the URL so it survives refresh,
-    // back/forward, and link-sharing. `patchSearch` applies a partial change in
-    // a single navigation; omitting a key clears it, and clearing `page` resets
-    // to the first page.
-    const search = urlSearch.q ?? '';
-    const statusFilter = (urlSearch.status ?? 'all') as StatusFilter;
-    const page = urlSearch.page ?? 1;
-    const localeFilter = urlSearch.locale ?? defaultContentLocale();
-    const sort = parseSortParam(urlSearch.sort);
-
-    const patchSearch = useCallback(
-        (patch: EntriesSearchPatch): void => {
-            void navigate({
-                search: (prev: Record<string, unknown>) => {
-                    const next: Record<string, unknown> = { ...prev, ...patch };
-                    for (const key of Object.keys(next)) {
-                        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-                        if (next[key] === undefined) delete next[key];
-                    }
-                    return next;
-                },
-            } as unknown as Parameters<typeof navigate>[0]);
-        },
-        [navigate]
+    const [visibleColumns, toggleColumn] = useVisibleColumns(
+        type,
+        config.adminColumns,
+        hasTitle
     );
-
+    const views = config.views ?? ['list'];
+    const defaultView = config.defaultView ?? 'list';
     const isMobile = useIsMobile();
-    const mobileDefault: ViewMode = availableViews.includes('grid')
-        ? 'grid'
-        : defaultView;
     const [viewMode, setViewMode] = useViewMode(`entry:${type}`, defaultView, {
         storageKey: isMobile ? `entry:${type}:mobile` : `entry:${type}`,
-        defaultView: isMobile ? mobileDefault : defaultView,
+        defaultView: isMobile && views.includes('grid') ? 'grid' : defaultView,
     });
-    const [visibleColumns, setVisibleColumns] = useState<Set<string>>(() =>
-        readStoredColumns(type, adminColumns, hasTitle)
+
+    // System columns label through an i18n key, the type's own through its label.
+    const columnLabel = useCallback(
+        (column: TableColumn): string =>
+            column.system
+                ? t(typeof column.label === 'string' ? column.label : column.label.$t)
+                : resolveLabel(column.label, column.key, t, namespace),
+        [t, namespace]
     );
-
-    const STATUS_LABELS: Record<StatusFilter, string> = {
-        all: t('entries.all'),
-        unpublished: t('entries.unpublished'),
-        published: t('entries.published'),
-        scheduled: t('entries.scheduled'),
-        trashed: t('entries.trashed'),
-    };
-
-    const STATUS_FILTER_OPTIONS = (Object.keys(STATUS_LABELS) as StatusFilter[])
-        .filter((s) => {
-            if (
-                !hasStatuses &&
-                (s === 'unpublished' || s === 'published' || s === 'scheduled')
-            )
-                return false;
-            if (!hasTrash && s === 'trashed') return false;
-            return true;
-        })
-        .map((s) => ({
-            value: s,
-            label: STATUS_LABELS[s],
-        }));
-
-    const rowLabels = {
-        edit: t('entries.rowEdit'),
-        duplicate: t('entries.rowDuplicate'),
-        moveToTrash: t('entries.rowMoveToTrash'),
-        restore: t('common.restore'),
-        deletePermanently: t('entries.rowDeletePermanently'),
-    };
-
-    useEffect(() => {
-        setVisibleColumns(readStoredColumns(type, adminColumns, hasTitle));
-    }, [type]);
-
-    const isTrash = statusFilter === 'trashed';
-
-    // Fetch entries (normal or trashed)
-    const effectiveLocale = hasI18n
-        ? localeFilter === LOCALE_FILTER_ALL
-            ? 'all'
-            : localeFilter
-        : 'all';
-    const { data: listData, isLoading } = useEntriesQuery({
-        type,
-        locale: effectiveLocale,
-        ...(statusFilter === 'trashed'
-            ? { trashed: true }
-            : statusFilter !== 'all'
-              ? { where: { status: statusFilter } }
-              : {}),
-        page,
-        limit: PER_PAGE,
-        search,
-        ...(sort ? { sort: { [sort.key]: sort.direction } } : {}),
-    });
-    const showLocaleColumn = hasI18n && localeFilter === LOCALE_FILTER_ALL;
-
-    // Evaluate a derived column's declarative `requires` gate against the page's
-    // runtime capability/visibility flags.
-    function capabilityGate(col: TableColumn): boolean {
-        if (col.requires == null) return true;
-        switch (col.requires) {
+    const table = React.useMemo(() => resolveTable(config), [config]);
+    const shownColumns = table.columns.filter((column) => {
+        if (column.requires == null) return true;
+        switch (column.requires) {
             case 'title':
                 return hasTitle;
             case 'statuses':
-                return hasStatuses;
+                return capabilities.statuses;
             case 'slug':
-                return hasSlugCap;
+                return capabilities.slug;
             case 'locale':
-                return showLocaleColumn;
+                return hasI18n && list.locale === LOCALE_FILTER_ALL;
             case 'translatable':
                 return hasI18n;
         }
-    }
-    const visibleColumnDefs = resolvedTable.columns.filter(
-        (col) => capabilityGate(col) && visibleColumns.has(col.key)
-    );
-    const menuColumnDefs = resolvedTable.columns.filter((col) => capabilityGate(col));
-
-    // Grid card field columns, routed through the cell registry so booleans
-    // render consistently with the list view.
-    const gridColumnDefs: TableColumn[] = gridFields.map((gf) => ({
-        key: gf.field,
-        label: gf.label ?? gf.field,
-        kind: defaultCellKind(fieldTypeOf(config, gf.field)),
-        source: 'field' as const,
+    });
+    const tableColumns = shownColumns.filter((column) => visibleColumns.has(column.key));
+    // Grid fields render through the cell registry, as the table's do.
+    const gridColumns: TableColumn[] = (config.gridFields ?? []).map((gridField) => ({
+        key: gridField.field,
+        label: gridField.label ?? gridField.field,
+        kind: defaultCellKind(fieldTypeOf(config, gridField.field)),
+        source: 'field',
         sortable: false,
         system: false,
     }));
 
-    const entries = listData?.data ?? [];
-    const pagination = listData?.pagination;
-    const totalPages = pagination?.pages ?? 1;
-    const totalItems = pagination?.total ?? 0;
-
-    const sortedEntries = React.useMemo(() => {
-        if (!sort) return entries;
-        return [...entries].sort((a, b) => {
-            let aVal: unknown;
-            let bVal: unknown;
-            if (sort.key === 'title') {
-                aVal = a.title;
-                bVal = b.title;
-            } else if (sort.key === 'updatedAt') {
-                aVal = a.updatedAt;
-                bVal = b.updatedAt;
-            } else {
-                aVal = (a.fields as Record<string, unknown>)[sort.key];
-                bVal = (b.fields as Record<string, unknown>)[sort.key];
-            }
-            const aStr = String(aVal ?? '');
-            const bStr = String(bVal ?? '');
-            return sort.direction === 'asc'
-                ? aStr.localeCompare(bStr)
-                : bStr.localeCompare(aStr);
-        });
-    }, [entries, sort]);
-
-    const { checkedIds, toggle, toggleAll, allChecked, someChecked, reset } =
-        useSelection(sortedEntries);
-    const confirm = useConfirm();
-
-    // Mutations
-    const mutations = entryMutations(type, single);
-    const trashMutation = useAdminMutation(mutations.trash);
-    const deleteMutation = useAdminMutation(mutations.delete);
-    const duplicateMutation = useAdminMutation(mutations.duplicate, {
-        onSuccess: (entry) => {
-            void navigate({
-                to: entryEditPath(basePath, entry.id, { locale: entry.locale }),
-            });
-        },
+    const mutations = entryMutations(type, config.single);
+    const trash = useAdminMutation(mutations.trash);
+    const remove = useAdminMutation(mutations.delete);
+    const restore = useAdminMutation(mutations.restore);
+    const duplicate = useAdminMutation(mutations.duplicate, {
+        onSuccess: (entry) => openEntry(entry),
     });
-    const restoreMutation = useAdminMutation(mutations.restore);
-    const bulkPublishMutation = useAdminMutation(mutations.bulkPublish, {
-        onSuccess: reset,
-    });
-    const bulkUnpublishMutation = useAdminMutation(mutations.bulkUnpublish, {
-        onSuccess: reset,
-    });
-    const bulkTrashMutation = useAdminMutation(mutations.bulkTrash, { onSuccess: reset });
-    const bulkDeleteMutation = useAdminMutation(mutations.bulkDelete, {
-        onSuccess: reset,
-    });
-    const bulkRestoreMutation = useAdminMutation(mutations.bulkRestore, {
-        onSuccess: reset,
-    });
+    const bulk = {
+        publish: useAdminMutation(mutations.bulkPublish, { onSuccess: reset }),
+        unpublish: useAdminMutation(mutations.bulkUnpublish, { onSuccess: reset }),
+        trash: useAdminMutation(mutations.bulkTrash, { onSuccess: reset }),
+        delete: useAdminMutation(mutations.bulkDelete, { onSuccess: reset }),
+        restore: useAdminMutation(mutations.bulkRestore, { onSuccess: reset }),
+    };
 
-    function handleBulkAction(action: BulkAction) {
-        const ids = Array.from(checkedIds);
-        if (ids.length === 0) return;
-        if (action === 'publish') bulkPublishMutation.mutate(ids);
-        if (action === 'unpublish') bulkUnpublishMutation.mutate(ids);
-        if (action === 'trash') bulkTrashMutation.mutate(ids);
-        if (action === 'delete') bulkDeleteMutation.mutate(ids);
-        if (action === 'restore') bulkRestoreMutation.mutate(ids);
-    }
-
-    function handleSort(key: string, direction: SortDirection) {
-        patchSearch({
-            sort: direction === null ? undefined : `${key}:${direction}`,
-            page: undefined,
-        });
-    }
-
-    function toggleColumn(key: string) {
-        setVisibleColumns((prev) => {
-            const next = new Set(prev);
-            if (next.has(key)) {
-                next.delete(key);
-            } else {
-                next.add(key);
-            }
-            writeStoredColumns(type, next);
-            return next;
-        });
-    }
-
-    const colSpan = 1 + visibleColumnDefs.length + 1; // checkbox + data columns + actions
-
-    // Delete modal state — drives DeleteEntryModal for both trash and force-delete.
+    // The trash or force-delete the modal is confirming.
     const [deleteTarget, setDeleteTarget] = useState<{
         entry: Entry;
         force: boolean;
     } | null>(null);
 
-    function handleRestore(id: string) {
-        restoreMutation.mutate(id);
+    function openEntry(entry: Pick<Entry, 'id' | 'locale'>): void {
+        void navigate({
+            to: entryEditPath(basePath, entry.id, { locale: entry.locale }),
+        });
     }
 
-    function handleConfirmDelete(id: string, force: boolean) {
-        const entry = sortedEntries.find((e) => e.id === id);
-        if (!entry) return;
-        setDeleteTarget({ entry, force });
+    function handleBulk(action: keyof typeof bulk): void {
+        const ids = [...checkedIds];
+        if (ids.length > 0) bulk[action].mutate(ids);
     }
 
-    function handleDuplicate(id: string) {
-        duplicateMutation.mutate(id);
+    function handleDeleteConfirm(): void {
+        if (deleteTarget === null) return;
+        const mutation = deleteTarget.force ? remove : trash;
+        mutation.mutate(deleteTarget.entry.id, {
+            onSuccess: () => setDeleteTarget(null),
+        });
     }
 
-    const navigateCompat = useCallback(
-        (opts: { id: string; locale: string }) => {
-            void navigate({
-                to: entryEditPath(basePath, opts.id, { locale: opts.locale }),
-            });
+    const bulkItems: DropdownItem[] = [
+        ...(capabilities.statuses && !list.isTrash
+            ? [
+                  {
+                      label: t('entries.bulkPublishSelected'),
+                      icon: <Check size={14} />,
+                      onClick: () => handleBulk('publish'),
+                  },
+                  {
+                      label: t('entries.bulkUnpublishSelected'),
+                      icon: <RotateCcw size={14} />,
+                      onClick: () => handleBulk('unpublish'),
+                  },
+              ]
+            : []),
+        ...(capabilities.trash && !list.isTrash
+            ? [
+                  {
+                      label: t('entries.bulkMoveToTrash'),
+                      icon: <Trash2 size={14} />,
+                      variant: 'danger' as const,
+                      onClick: () => handleBulk('trash'),
+                  },
+              ]
+            : []),
+        ...(capabilities.trash && list.isTrash
+            ? [
+                  {
+                      label: t('entries.bulkRestoreSelected'),
+                      icon: <RotateCcw size={14} />,
+                      onClick: () => handleBulk('restore'),
+                  },
+              ]
+            : []),
+        {
+            label: t('media.bulkDeleteButton'),
+            icon: <Trash2 size={14} />,
+            variant: 'danger',
+            onClick: () =>
+                confirm({
+                    title: t('media.bulkDeleteTitle', { count: checkedIds.size }),
+                    description: t('media.bulkDeleteDescription'),
+                    confirmLabel: t('common.delete'),
+                    onConfirm: () => handleBulk('delete'),
+                }),
         },
-        [navigate, basePath]
-    );
+    ];
 
-    function handleDeleteConfirm() {
-        if (!deleteTarget) return;
-        const { entry, force } = deleteTarget;
-        const mutation = force ? deleteMutation : trashMutation;
-        mutation.mutate(entry.id, { onSuccess: () => setDeleteTarget(null) });
-    }
+    const rowProps: Omit<RowActionsProps, 'entry'> & {
+        navigate: (entry: { id: string; locale: string }) => void;
+        configuredLocales: string[];
+        authorNames: Map<string, string>;
+    } = {
+        isTrash: list.isTrash,
+        type,
+        basePath,
+        canDelete,
+        hasTrashCap: capabilities.trash,
+        onRestore: (id) => restore.mutate(id),
+        onConfirmDelete: (id, force) => {
+            const entry = list.data.find((row) => row.id === id);
+            if (entry !== undefined) setDeleteTarget({ entry, force });
+        },
+        onDuplicate: (id) => duplicate.mutate(id),
+        navigate: openEntry,
+        rowLabels: {
+            edit: t('entries.rowEdit'),
+            duplicate: t('entries.rowDuplicate'),
+            moveToTrash: t('entries.rowMoveToTrash'),
+            restore: t('common.restore'),
+            deletePermanently: t('entries.rowDeletePermanently'),
+        },
+        configuredLocales: adminConfig.locales,
+        authorNames,
+    };
+
+    const empty = (
+        <EmptyState
+            title={t('entries.empty', { name: config.plural.toLowerCase() })}
+            description={
+                list.q
+                    ? t('entries.emptySearch')
+                    : list.isTrash
+                      ? t('entries.emptyTrash')
+                      : t('entries.emptyCreate', { name: config.single.toLowerCase() })
+            }
+            action={
+                !list.isTrash && !list.q ? (
+                    <Link to={`${basePath}/new`}>
+                        <Button size="sm">
+                            {t('entries.new', { name: config.single })}
+                        </Button>
+                    </Link>
+                ) : undefined
+            }
+        />
+    );
+    // Checkbox, data columns, actions.
+    const colSpan = tableColumns.length + 2;
 
     return (
         <>
             <DeleteEntryModal
-                open={deleteTarget != null}
+                open={deleteTarget !== null}
                 entry={deleteTarget?.entry ?? null}
-                typeLabel={single}
+                typeLabel={config.single}
                 force={deleteTarget?.force ?? false}
                 onCancel={() => setDeleteTarget(null)}
                 onConfirm={handleDeleteConfirm}
-                loading={trashMutation.isPending || deleteMutation.isPending}
+                loading={trash.isPending || remove.isPending}
             />
             <Page>
                 <PageHeader>
-                    <PageTitle>{plural}</PageTitle>
-                    {canCreate && (
+                    <PageTitle>{config.plural}</PageTitle>
+                    {can('create') && (
                         <Link
                             to={`${basePath}/new`}
                             search={
-                                hasI18n && localeFilter !== LOCALE_FILTER_ALL
-                                    ? { locale: localeFilter }
+                                hasI18n && list.locale !== LOCALE_FILTER_ALL
+                                    ? { locale: list.locale }
                                     : {}
                             }
                         >
                             <Button icon={<PlusIcon size={16} />}>
-                                {t('entries.new', { name: single })}
+                                {t('entries.new', { name: config.single })}
                             </Button>
                         </Link>
                     )}
@@ -761,353 +305,122 @@ function EntriesListBody({
                                     label={`${t('media.bulkActions')} (${checkedIds.size})`}
                                     variant="secondary"
                                     align="start"
-                                    items={[
-                                        ...(hasStatuses && !isTrash
-                                            ? [
-                                                  {
-                                                      label: t(
-                                                          'entries.bulkPublishSelected'
-                                                      ),
-                                                      icon: <Check size={14} />,
-                                                      onClick: () =>
-                                                          handleBulkAction('publish'),
-                                                  },
-                                                  {
-                                                      label: t(
-                                                          'entries.bulkUnpublishSelected'
-                                                      ),
-                                                      icon: <RotateCcw size={14} />,
-                                                      onClick: () =>
-                                                          handleBulkAction('unpublish'),
-                                                  },
-                                              ]
-                                            : []),
-                                        ...(hasTrash && !isTrash
-                                            ? [
-                                                  {
-                                                      label: t('entries.bulkMoveToTrash'),
-                                                      icon: <Trash2 size={14} />,
-                                                      variant: 'danger' as const,
-                                                      onClick: () =>
-                                                          handleBulkAction('trash'),
-                                                  },
-                                              ]
-                                            : []),
-                                        ...(isTrash && hasTrash
-                                            ? [
-                                                  {
-                                                      label: t(
-                                                          'entries.bulkRestoreSelected'
-                                                      ),
-                                                      icon: <RotateCcw size={14} />,
-                                                      onClick: () =>
-                                                          handleBulkAction('restore'),
-                                                  },
-                                              ]
-                                            : []),
-                                        {
-                                            label: t('media.bulkDeleteButton'),
-                                            icon: <Trash2 size={14} />,
-                                            variant: 'danger' as const,
-                                            onClick: () => {
-                                                const ids = Array.from(checkedIds);
-                                                confirm({
-                                                    title: t('media.bulkDeleteTitle', {
-                                                        count: ids.length,
-                                                    }),
-                                                    description: t(
-                                                        'media.bulkDeleteDescription'
-                                                    ),
-                                                    confirmLabel: t('common.delete'),
-                                                    onConfirm: () =>
-                                                        handleBulkAction('delete'),
-                                                });
-                                            },
-                                        },
-                                    ]}
+                                    items={bulkItems}
                                 />
                             )}
-
-                            {/* Search — shown for titled types, or titleless types
-                                that declare searchable fields. */}
                             {showSearch && (
                                 <SearchInput
                                     placeholder={t('entries.searchPlaceholder', {
-                                        name: plural.toLowerCase(),
+                                        name: config.plural.toLowerCase(),
                                     })}
-                                    value={search}
-                                    onChange={(e) => {
-                                        patchSearch({
-                                            q: e.target.value || undefined,
-                                            page: undefined,
-                                        });
-                                    }}
+                                    value={list.q}
+                                    onChange={(e) => list.setQuery(e.target.value)}
                                 />
                             )}
-
-                            {/* Status filter — only when statuses or trash capabilities are on */}
-                            {(hasStatuses || hasTrash) && (
-                                <Select
-                                    value={statusFilter}
-                                    onValueChange={(v) => {
-                                        patchSearch({
-                                            status: v && v !== 'all' ? v : undefined,
-                                            page: undefined,
-                                        });
+                            {(capabilities.statuses || capabilities.trash) && (
+                                <StatusFilterSelect
+                                    value={list.status}
+                                    hasStatuses={capabilities.statuses}
+                                    hasTrash={capabilities.trash}
+                                    onChange={(value) => {
+                                        list.setStatus(value);
                                         reset();
                                     }}
-                                    options={STATUS_FILTER_OPTIONS}
-                                    triggerPrefix={t('entries.statusFilterPrefix')}
                                 />
                             )}
-
-                            {/* Locale filter (only when translatable) */}
                             {hasI18n && (
-                                <Select
-                                    value={localeFilter}
-                                    onValueChange={(v) => {
-                                        patchSearch({
-                                            locale:
-                                                v && v !== defaultContentLocale()
-                                                    ? v
-                                                    : undefined,
-                                            page: undefined,
-                                        });
+                                <LocaleFilterSelect
+                                    value={list.locale}
+                                    locales={adminConfig.locales}
+                                    onChange={(value) => {
+                                        list.setLocale(value);
                                         reset();
                                     }}
-                                    options={[
-                                        ...configuredLocales.map((loc) => ({
-                                            value: loc,
-                                            label: loc.toUpperCase(),
-                                        })),
-                                        {
-                                            value: LOCALE_FILTER_ALL,
-                                            label: t('entries.allLocales'),
-                                        },
-                                    ]}
-                                    triggerPrefix={t('entries.localeFilterPrefix')}
                                 />
                             )}
                         </ToolbarStart>
-
                         <ToolbarEnd>
-                            {/* Columns visibility */}
-                            <Menu.Root>
-                                <Menu.Trigger
-                                    className="am-btn am-btn-secondary am-btn-md am-btn-icon"
-                                    aria-label={t('entries.toggleColumns')}
-                                >
-                                    <SlidersHorizontal size={14} />
-                                </Menu.Trigger>
-                                <Menu.Portal>
-                                    <Menu.Positioner
-                                        className="am-dropdown-positioner"
-                                        sideOffset={4}
-                                        align="end"
-                                    >
-                                        <Menu.Popup className="am-dropdown-popup">
-                                            {menuColumnDefs
-                                                .map((col) => ({
-                                                    key: col.key,
-                                                    label: columnLabel(col),
-                                                }))
-                                                .map((col) => (
-                                                    <Menu.Item
-                                                        key={col.key}
-                                                        className="am-dropdown-item"
-                                                        onClick={() =>
-                                                            toggleColumn(col.key)
-                                                        }
-                                                    >
-                                                        <span className="am-dropdown-item-icon">
-                                                            {visibleColumns.has(
-                                                                col.key
-                                                            ) ? (
-                                                                <Check size={14} />
-                                                            ) : (
-                                                                <span
-                                                                    style={{ width: 14 }}
-                                                                />
-                                                            )}
-                                                        </span>
-                                                        {col.label}
-                                                    </Menu.Item>
-                                                ))}
-                                        </Menu.Popup>
-                                    </Menu.Positioner>
-                                </Menu.Portal>
-                            </Menu.Root>
-                            {showViewToggle && (
-                                <ToggleGroup
-                                    value={viewMode}
-                                    onValueChange={setViewMode}
-                                    items={[
-                                        {
-                                            value: 'grid',
-                                            icon: <LayoutGrid size={15} />,
-                                            label: t('common.gridView'),
-                                        },
-                                        {
-                                            value: 'list',
-                                            icon: <LayoutList size={15} />,
-                                            label: t('common.listView'),
-                                        },
-                                    ]}
-                                />
+                            <ColumnsMenu
+                                columns={shownColumns.map((column) => ({
+                                    key: column.key,
+                                    label: columnLabel(column),
+                                }))}
+                                visible={visibleColumns}
+                                onToggle={toggleColumn}
+                            />
+                            {views.includes('list') && views.includes('grid') && (
+                                <ViewModeToggle value={viewMode} onChange={setViewMode} />
                             )}
                         </ToolbarEnd>
                     </Toolbar>
 
-                    {/* Grid view */}
-                    {viewMode === 'grid' && (
-                        <>
-                            {isLoading ? (
-                                <div
-                                    style={{
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        padding: '2rem',
-                                    }}
-                                >
-                                    <Spinner />
-                                </div>
-                            ) : entries.length === 0 ? (
-                                <EmptyState
-                                    title={t('entries.empty', {
-                                        name: plural.toLowerCase(),
-                                    })}
-                                    description={
-                                        search
-                                            ? t('entries.emptySearch')
-                                            : isTrash
-                                              ? t('entries.emptyTrash')
-                                              : t('entries.emptyCreate', {
-                                                    name: single.toLowerCase(),
-                                                })
-                                    }
-                                    action={
-                                        !isTrash && !search ? (
-                                            <Link to={`${basePath}/new`}>
-                                                <Button size="sm">
-                                                    {t('entries.new', {
-                                                        name: single,
-                                                    })}
-                                                </Button>
-                                            </Link>
-                                        ) : undefined
-                                    }
-                                />
-                            ) : (
-                                <div className="am-collection-grid">
-                                    {sortedEntries.map((entry) => (
-                                        <EntryCard
-                                            key={entry.id}
-                                            entry={entry}
-                                            isTrash={isTrash}
-                                            type={type}
-                                            basePath={basePath}
-                                            canDelete={canDelete}
-                                            hasTrashCap={hasTrash}
-                                            onRestore={handleRestore}
-                                            onConfirmDelete={handleConfirmDelete}
-                                            onDuplicate={handleDuplicate}
-                                            columns={gridColumnDefs}
-                                            columnLabel={columnLabel}
-                                            navigate={navigateCompat}
-                                            rowLabels={rowLabels}
-                                            hasTitle={hasTitle}
-                                            configuredLocales={configuredLocales}
-                                            authorNames={authorNames}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </>
-                    )}
+                    {viewMode === 'grid' &&
+                        (list.isLoading ? (
+                            <div className="am-collection-grid-loading">
+                                <Spinner />
+                            </div>
+                        ) : list.data.length === 0 ? (
+                            empty
+                        ) : (
+                            <div className="am-collection-grid">
+                                {list.data.map((entry) => (
+                                    <EntryCard
+                                        key={entry.id}
+                                        entry={entry}
+                                        {...rowProps}
+                                        columns={gridColumns}
+                                        columnLabel={columnLabel}
+                                        hasTitle={hasTitle}
+                                    />
+                                ))}
+                            </div>
+                        ))}
 
-                    {/* List (table) view */}
                     {viewMode === 'list' && (
                         <Table.Root>
                             <Table.Head>
                                 <Table.Row>
-                                    <Table.Th style={{ width: '2.5rem' }}>
+                                    <Table.Th className="am-table-select">
                                         <Checkbox
                                             checked={allChecked}
                                             onChange={() => toggleAll()}
                                         />
                                     </Table.Th>
-                                    {visibleColumnDefs.map((col) =>
-                                        col.sortable ? (
+                                    {tableColumns.map((column) =>
+                                        column.sortable ? (
                                             <Table.SortTh
-                                                key={col.key}
-                                                sortKey={col.key}
-                                                currentSort={sort}
-                                                onSort={handleSort}
+                                                key={column.key}
+                                                sortKey={column.key}
+                                                currentSort={list.sort}
+                                                onSort={list.setSort}
                                             >
-                                                {columnLabel(col)}
+                                                {columnLabel(column)}
                                             </Table.SortTh>
                                         ) : (
-                                            <Table.Th key={col.key}>
-                                                {columnLabel(col)}
+                                            <Table.Th key={column.key}>
+                                                {columnLabel(column)}
                                             </Table.Th>
                                         )
                                     )}
-                                    <Table.Th style={{ width: '3rem' }} />
+                                    <Table.Th className="am-table-icon" />
                                 </Table.Row>
                             </Table.Head>
                             <Table.Body>
-                                {isLoading ? (
+                                {list.isLoading ? (
                                     <Table.Empty colSpan={colSpan}>
                                         <Spinner />
                                     </Table.Empty>
-                                ) : entries.length === 0 ? (
-                                    <Table.Empty colSpan={colSpan}>
-                                        <EmptyState
-                                            title={t('entries.empty', {
-                                                name: plural.toLowerCase(),
-                                            })}
-                                            description={
-                                                search
-                                                    ? t('entries.emptySearch')
-                                                    : isTrash
-                                                      ? t('entries.emptyTrash')
-                                                      : t('entries.emptyCreate', {
-                                                            name: single.toLowerCase(),
-                                                        })
-                                            }
-                                            action={
-                                                !isTrash && !search ? (
-                                                    <Link to={`${basePath}/new`}>
-                                                        <Button size="sm">
-                                                            {t('entries.new', {
-                                                                name: single,
-                                                            })}
-                                                        </Button>
-                                                    </Link>
-                                                ) : undefined
-                                            }
-                                        />
-                                    </Table.Empty>
+                                ) : list.data.length === 0 ? (
+                                    <Table.Empty colSpan={colSpan}>{empty}</Table.Empty>
                                 ) : (
-                                    sortedEntries.map((entry) => (
+                                    list.data.map((entry) => (
                                         <EntryTableRow
                                             key={entry.id}
                                             entry={entry}
-                                            isTrash={isTrash}
-                                            type={type}
-                                            basePath={basePath}
-                                            canDelete={canDelete}
-                                            hasTrashCap={hasTrash}
-                                            onRestore={handleRestore}
-                                            onConfirmDelete={handleConfirmDelete}
-                                            onDuplicate={handleDuplicate}
+                                            {...rowProps}
                                             selected={checkedIds.has(entry.id)}
                                             onToggleSelect={toggle}
-                                            columns={visibleColumnDefs}
-                                            navigate={navigateCompat}
-                                            rowLabels={rowLabels}
-                                            configuredLocales={configuredLocales}
-                                            authorNames={authorNames}
+                                            columns={tableColumns}
                                         />
                                     ))
                                 )}
@@ -1116,10 +429,10 @@ function EntriesListBody({
                     )}
 
                     <Pagination
-                        currentPage={page}
-                        totalPages={totalPages}
-                        onPage={(p) => patchSearch({ page: p > 1 ? p : undefined })}
-                        totalItems={totalItems}
+                        currentPage={list.page}
+                        totalPages={list.pages}
+                        onPage={list.setPage}
+                        totalItems={list.total}
                     />
                 </PageContent>
             </Page>

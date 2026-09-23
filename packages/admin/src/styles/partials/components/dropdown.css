@@ -54,6 +54,11 @@
     align-items: center;
 }
 
+/* Holds its place in a column of checkmarks while unchecked. */
+.am-dropdown-item-icon--hidden {
+    visibility: hidden;
+}
+
 .am-dropdown-separator {
     height: 1px;
     margin: calc(var(--am-space) * 1) 0;

@@ -56,3 +56,9 @@
     top: 0.75rem;
     right: 0.75rem;
 }
+
+.am-collection-grid-loading {
+    display: flex;
+    justify-content: center;
+    padding: 2rem;
+}

@@ -110,11 +110,11 @@ function UsersIndexPage(): React.ReactElement {
                 <Table.Root>
                     <Table.Head>
                         <Table.Row>
-                            <Table.Th style={{ width: '3rem' }} />
+                            <Table.Th className="am-table-icon" />
                             <Table.Th>{t('users.columnName')}</Table.Th>
                             <Table.Th>{t('users.columnEmail')}</Table.Th>
                             <Table.Th>{t('users.columnJoined')}</Table.Th>
-                            <Table.Th style={{ width: '3rem' }} />
+                            <Table.Th className="am-table-icon" />
                         </Table.Row>
                     </Table.Head>
                     <Table.Body>

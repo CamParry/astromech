@@ -16,6 +16,7 @@ export const isolatedTests = [
     'tests/components/entries/entry-edit-cache-invalidation.test.tsx',
     'tests/components/entries/entry-edit-locale-switch.test.tsx',
     'tests/components/entries/entry-edit-meta.test.tsx',
+    'tests/components/entries/entries-list-page.test.tsx',
     'tests/components/globals/global-edit-page.test.tsx',
     'tests/components/layout/sidebar-globals.test.tsx',
     'tests/components/fields/plugin-field-loading.test.tsx',

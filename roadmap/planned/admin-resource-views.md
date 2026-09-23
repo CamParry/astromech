@@ -83,11 +83,14 @@ seed the input through `formatDatetimeForInput`.
       discard. Shared `StagingControls` and `PublishPanel`. The resource is
       `entryEditResource` or `globalEditResource`; the staged entry view shows
       Discard as a button, as the global one did, instead of a menu item.
-- [ ] `useListController` for the entries list; users and media adopt it where
-      the shape matches.
+- [x] `useListController` for the entries list; users and media adopt it where
+      the shape matches. Neither does: each is one typed route whose
+      `Route.useNavigate` needs no cast, and `useMediaBrowser` already serves
+      the media library and the picker.
 - [ ] The five large pages become compositions of the above.
-- [ ] `entries-list-page.tsx`'s `patchSearch` casts its `navigate` argument
-      `as unknown as`; the list controller's search update is typed instead.
+- [x] `entries-list-page.tsx`'s `patchSearch` casts its `navigate` argument
+      `as unknown as`; the list controller's search update is typed instead
+      (`navigate({ to: '.', search })` with the merged search object).
 - [ ] Guard: the recommended rules of `@tanstack/eslint-plugin-query`, and a
       drift-report pattern for a literal `queryKey` array outside
       `hooks/use-query-keys.ts`.
