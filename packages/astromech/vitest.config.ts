@@ -160,10 +160,10 @@ export default defineConfig({
                     statements: 97,
                 },
                 'src/plugins/**': {
-                    lines: 88,
-                    functions: 79,
-                    branches: 76,
-                    statements: 84,
+                    lines: 90,
+                    functions: 85,
+                    branches: 79,
+                    statements: 87,
                 },
                 'src/policies/**': {
                     lines: 96,

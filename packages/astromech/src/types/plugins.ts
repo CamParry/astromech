@@ -388,6 +388,12 @@ export type PluginDefinition = PluginIdentity & {
     /** Package name → semver range. Existence + basic range check only. */
     dependsOn?: Record<string, string>;
     emails?: EmailTemplateOverride[];
+    /**
+     * Functions a site calls off the factory in its config, such as
+     * `seo.section()`. Each takes the plugin's resolved identity first, which
+     * `definePlugin` supplies, so the site passes only the rest.
+     */
+    helpers?: Record<string, PluginHelper>;
 
     // Imperative escape hatch
     /** Runs once per runtime boot. Optional. */
@@ -395,11 +401,32 @@ export type PluginDefinition = PluginIdentity & {
 };
 
 /**
+ * A plugin helper: a function a site calls off the plugin's factory. It
+ * receives the plugin's resolved identity first, then the site's arguments.
+ */
+export type PluginHelper = (plugin: ResolvedPluginIdentity, ...args: never[]) => unknown;
+
+/** A definition's helpers as a site calls them, with the identity parameter applied. */
+type BoundPluginHelpers<Def> = Def extends {
+    helpers: infer H extends Record<string, PluginHelper>;
+}
+    ? {
+          [K in keyof H]: H[K] extends (
+              plugin: ResolvedPluginIdentity,
+              ...args: infer A
+          ) => infer R
+              ? (...args: A) => R
+              : never;
+      }
+    : unknown;
+
+/**
  * What `definePlugin` returns and a plugin package exports. Calling it yields
  * the definition a site places in `config.plugins`; `permissions(...keys)`
  * selects keys from the definition's `permissions` declaration and returns them
  * fully namespaced, so a site composes roles without importing anything else
- * from the package — and enumerates exactly what it grants.
+ * from the package — and enumerates exactly what it grants. Each of the
+ * definition's `helpers` hangs off it too, bound to the plugin's identity.
  *
  * `Def` is the definition's own type, which is what keeps the keys literal —
  * `seo.permissions('read')` type-checks, `seo.permissions('raed')` does not.
@@ -411,7 +438,7 @@ export type PluginFactory<
     permissions: (
         ...keys: (Def extends { permissions: infer P } ? keyof P & string : string)[]
     ) => Permission[];
-};
+} & BoundPluginHelpers<Def>;
 
 /**
  * Fully-derived plugin identity, computed once during config resolution.

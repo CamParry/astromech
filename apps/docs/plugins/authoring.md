@@ -65,6 +65,7 @@ my-plugin/
   globals/               global definitions (defineGlobal), one per file
   fields/                custom field-type registrations
   pages/                 admin page registrations
+  helpers/               plugin helpers a site calls in its config
   permissions/           definePermissions() — the grantable permission keys
   service/               service-method definitions (defineServiceMethod)
   hooks/                 defineHook subscribers, and your own event names
@@ -127,7 +128,9 @@ another, read both off the identity rather than transforming the string. Both
 steps are lossy, so a reverse transform is a guess. At runtime, read it off
 `ctx.plugin` (`package`, `namespace`, `serviceKey`, `permissionNamespace`)
 rather than deriving it yourself — see [Runtime identity](#runtime-identity)
-below.
+below. In a site's config there is no `ctx`, and a
+[plugin helper](#plugin-helpers) receives the same identity as its first
+argument.
 
 Which is why a collision on either form is a hard install error. npm already
 guarantees package names are unique, so you can only hit it via one of the lossy
@@ -503,6 +506,46 @@ has every permission any plugin will ever declare; every other role opts in
 explicitly. If a role really should get everything one plugin offers, present
 and future, `plugin:<namespace>:*` is the all-or-nothing escape hatch — but
 naming the keys is the honest default.
+
+### Plugin helpers
+
+A function a site calls in its config, such as a field section to compose
+into an entry type, belongs on your factory as a **plugin helper**. Declare it
+under `helpers`, taking your plugin's resolved identity as its first parameter:
+
+```ts
+// helpers/section.ts
+import type { Field, ResolvedPluginIdentity } from 'astromech';
+import { t } from 'astromech';
+import { group, text } from 'astromech/fields';
+
+export function section(
+    plugin: ResolvedPluginIdentity,
+    options?: { label?: string }
+): Field {
+    return group('seo', {
+        label: options?.label ?? t(`${plugin.namespace}:seo.sectionTitle`),
+        fields: [text('title')],
+    });
+}
+```
+
+```ts
+// index.ts
+helpers: { section },
+```
+
+`definePlugin` supplies the identity, so a site passes only the rest:
+
+```ts
+fields: [fields.text('title'), seo.section({ label: 'Search' })],
+```
+
+A helper's parameters and return type carry through, so `seo.section` is typed
+`(options?: { label?: string }) => Field`. The identity comes from the
+definition your factory returns without options. A helper named after
+something the factory already has, such as `permissions`, `name` or `call`,
+throws when the plugin is defined.
 
 ### Database tables
 

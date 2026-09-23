@@ -9,7 +9,7 @@ service methods. Non-AI affordances only — AI metadata writing is a future pha
 
 ```ts
 // astromech.config.ts
-import { seo, seoSection } from '@astromech/seo';
+import { seo } from '@astromech/seo';
 import { defineConfig } from 'astromech';
 import * as fields from 'astromech/fields';
 
@@ -22,7 +22,7 @@ export default defineConfig({
             url: '/{slug}', // lets `getSitemap` / `getMeta` resolve this type's paths
             fields: [
                 // ...your fields
-                seoSection(), // adds the SEO field group
+                seo.section(), // adds the SEO field group
             ],
         },
     },
@@ -30,14 +30,14 @@ export default defineConfig({
 ```
 
 Attachment is explicit composition — the plugin never injects fields. Every
-entry type whose `fields` include `seoSection()` is part of the plugin's
+entry type whose `fields` include `seo.section()` is part of the plugin's
 _footprint_; the overview dashboard and the `getSitemap` method cover exactly
-those types. Drop `seoSection()` inside an unnamed tab,
-`fields.tab({ label: 'SEO', fields: [seoSection()] })`, to give it its own tab
+those types. Drop `seo.section()` inside an unnamed tab,
+`fields.tab({ label: 'SEO', fields: [seo.section()] })`, to give it its own tab
 on the edit page. A named tab would store the group under the tab's name.
 
 ```ts
-seoSection({ label: 'Search' }); // group heading; defaults to a localized "SEO"
+seo.section({ label: 'Search' }); // group heading; defaults to a localized "SEO"
 ```
 
 ## Paths
@@ -78,7 +78,7 @@ export default defineConfig({
 
 ## Admin surface
 
-- **Edit page** — `seoSection()` adds the `seo` field group: meta title and
+- **Edit page** — `seo.section()` adds the `seo` field group: meta title and
   description inputs with live character counters
   (title 30–60, description 70–160 characters), and a search-result preview.
 - **Overview dashboard** — `/admin/plugin/seo/overview` (requires

@@ -122,7 +122,7 @@ const ENTRY_TYPE_CONFIG: AdminEntryType = {
     fields: {
         main: [
             { name: 'excerpt', type: 'textarea', label: 'Excerpt' },
-            // The demo's `seoSection()` shape: a named group of two sub-keys.
+            // The demo's `seo.section()` shape: a named group of two sub-keys.
             {
                 name: 'seo',
                 type: 'group',

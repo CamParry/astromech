@@ -1,17 +1,17 @@
 /**
  * @astromech/seo — search metadata for any entry type: a composed `seo` field
  * group, an SEO health dashboard, a default-OG-image global, and public
- * `getSitemap` / `getMeta` service methods. Attach via `seoSection()` on an entry type's `fields`.
+ * `getSitemap` / `getMeta` service methods. Attach via `seo.section()` on an entry type's `fields`.
  */
 
 import type { ServiceInterface } from 'astromech';
 import { definePlugin } from 'astromech';
 import { seoPreviewField } from './fields/seo-preview';
 import { settingsGlobal } from './globals/settings';
+import { section } from './helpers/section';
 import { overviewPage } from './pages/overview';
 import { seoPermissions } from './permissions/seo';
 import { seoService } from './service/seo';
-import { SEO_PACKAGE } from './types';
 
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
@@ -20,8 +20,7 @@ declare module 'astromech' {
     }
 }
 
-export { seoSection } from './fields/groups';
-export type { SeoSectionOptions } from './fields/groups';
+export type { SeoSectionOptions } from './helpers/section';
 export { SEO_FIELD_NAME } from './types';
 export type {
     SeoFieldHealth,
@@ -37,7 +36,7 @@ export { parseSeoMetaValue } from './utilities/meta-value';
 export type { SeoMetaValue } from './utilities/meta-value';
 
 export const seo = definePlugin({
-    package: SEO_PACKAGE,
+    package: '@astromech/seo',
     version: '0.1.0',
     label: 'SEO',
     icon: 'Search',
@@ -50,6 +49,7 @@ export const seo = definePlugin({
         optimizeDeps: { include: ['@tanstack/react-query'] },
     },
     service: seoService,
+    helpers: { section },
 });
 
 export default seo;

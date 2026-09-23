@@ -5,7 +5,7 @@
 (2026-07-29), gate + CLI verified.
 
 The three items under "Still candidates" moved to
-`roadmap/planned/plugin-factory-extras.md` — they were never designed, and one
+`roadmap/completed/plugin-factory-extras.md` — they were never designed, and one
 of them (host-facing factory extras) is what the seo namespace remainder below
 is really waiting on.
 
@@ -139,7 +139,7 @@ takes a bare `permission: 'view'` and namespaces it, and computes a settings
     This bullet used to say "— Phase 3", which was wrong and stayed wrong
     through the Phase 3 build: Phase 3 as designed is `definePermissions` and
     nothing else, and the factory-extras mechanism was never designed. Tracked
-    in `roadmap/planned/plugin-factory-extras.md`; the stand-in survives until
+    in `roadmap/completed/plugin-factory-extras.md`; the stand-in survives until
     then and is harmless (seo has no tables, so no identifier derives from it).
 
 - **Service module augmentation stays hand-written.** `declare module
@@ -541,4 +541,4 @@ Verified against the demo: 48 permissions — 11 core, 30 derived entry, 7
 plugin-declared. `publish` appears only for `page` and `post`, the only two
 versioned types, so the capability gate is real and not assumed.
 
-Follow-ups moved to `roadmap/planned/plugin-factory-extras.md`.
+Follow-ups moved to `roadmap/completed/plugin-factory-extras.md`.

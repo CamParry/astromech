@@ -51,12 +51,6 @@ export type {
 /** Plugin schema authoring surface. */
 export { definePluginTable } from '@/database/define-plugin-table';
 export type { KyselyTableKey, PluginDB } from '@/database/define-plugin-table';
-/**
- * The namespace the runtime assigns a plugin, derived from its package name.
- * For host-facing helpers that run before a plugin has a context.
- */
-export { pluginNamespace } from '@/utilities/plugin-namespace';
-export type { PluginNamespace } from '@/utilities/plugin-namespace';
 /** A plugin package augments this to put its tables on a site's `db` handle. */
 export type { AstromechPluginTables } from '@/database/types';
 /**

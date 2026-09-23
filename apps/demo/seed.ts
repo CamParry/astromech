@@ -1421,10 +1421,10 @@ async function seed(): Promise<void> {
                             'Search engine optimisation in a headless CMS requires careful attention to meta tags, canonical URLs, and locale alternates. The Astromech SEO plugin handles all three — and is designed to compose cleanly with the blocks system and the symmetric locale model.'
                         )
                     ),
-                    heading(2, text('The seoSection field group')),
+                    heading(2, text('The seo.section() field group')),
                     para(
                         text('Add '),
-                        text('seoSection()', 'code'),
+                        text('seo.section()', 'code'),
                         text(
                             " to any entry type's fields to get a collapsible group with title, description, canonical URL override, and robots fields. All per-locale, all editable in the admin without code."
                         )

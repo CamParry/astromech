@@ -117,6 +117,9 @@ Its code runs with the plugin context: the app context plus the plugin's own
 identity, a storage handle prefixed to the plugin, other plugins' service
 methods, and a restricted view of the site config.
 
+**Plugin helper.** A function a site calls off a plugin's factory in its config,
+such as `seo.section()`, with the plugin's identity already applied.
+
 **Policy.** Code that answers what an actor may do, not how a request reaches it.
 Not "guard", which means a per-request route interceptor.
 

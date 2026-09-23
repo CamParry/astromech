@@ -1,5 +1,11 @@
-import type { Permission, PluginDefinition, PluginFactory } from '@/types/index';
-import { pluginNamespace } from '@/utilities/plugin-namespace';
+import type {
+    Permission,
+    PluginDefinition,
+    PluginFactory,
+    PluginHelper,
+    ResolvedPluginIdentity,
+} from '@/types/index';
+import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 
 /**
  * Define a plugin from one object — identity and behaviour together. Pass a
@@ -12,11 +18,10 @@ export function definePlugin<const Def extends PluginDefinition, Options = void>
     const build = (options?: Options): Def =>
         typeof source === 'function' ? source(options) : source;
 
-    // One no-options build backs the surfaces a site reads *without*
-    // instantiating the plugin — identity and permission declarations. Cached so
-    // a factory is not re-run per `permissions()` call.
-    let base: Def | undefined;
-    const baseDefinition = (): Def => (base ??= build());
+    // The no-options build backs what a site reads without instantiating the
+    // plugin: its permission declarations and its helpers.
+    const base = build();
+    const identity = resolvePluginIdentity(base);
 
     const factory = ((options?: Options) => build(options)) as PluginFactory<
         Options,
@@ -24,11 +29,10 @@ export function definePlugin<const Def extends PluginDefinition, Options = void>
     >;
 
     factory.permissions = (...keys: string[]) => {
-        const definition = baseDefinition();
-        const declared = definition.permissions ?? {};
+        const declared = base.permissions ?? {};
         if (keys.length === 0) {
             throw new Error(
-                `\`${definition.package}\`.permissions() needs at least one permission key. ` +
+                `\`${base.package}\`.permissions() needs at least one permission key. ` +
                     `Name the permissions to grant, e.g. permissions('read', 'update').`
             );
         }
@@ -36,16 +40,34 @@ export function definePlugin<const Def extends PluginDefinition, Options = void>
         for (const key of keys) {
             if (!(key in declared)) {
                 throw new Error(
-                    `Unknown permission "${key}" for plugin "${definition.package}". ` +
+                    `Unknown permission "${key}" for plugin "${base.package}". ` +
                         (available.length > 0
                             ? `Available: ${available.join(', ')}.`
                             : `The plugin declares no \`permissions\`.`)
                 );
             }
         }
-        const namespace = pluginNamespace(definition.package);
-        return keys.map((key) => `plugin:${namespace}:${key}` as Permission);
+        return keys.map(
+            (key) => `plugin:${identity.permissionNamespace}:${key}` as Permission
+        );
     };
 
+    for (const [key, helper] of Object.entries(base.helpers ?? {})) {
+        if (key in factory) {
+            throw new Error(
+                `Plugin "${base.package}" declares a helper named "${key}", which the ` +
+                    `plugin factory already has. Rename the helper.`
+            );
+        }
+        Object.defineProperty(factory, key, {
+            value: bindHelper(helper, identity),
+            enumerable: true,
+        });
+    }
+
     return factory;
+}
+
+function bindHelper(helper: PluginHelper, identity: ResolvedPluginIdentity) {
+    return (...args: never[]): unknown => helper(identity, ...args);
 }

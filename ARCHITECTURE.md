@@ -112,6 +112,8 @@ Fields are shared by entry types, globals, media, users and plugin tables. `fiel
 
 A plugin is a separate npm package that registers tables, field types, routes, service methods, hooks, cron jobs and admin pages through its `PluginContext` (`ctx`). `ctx` is the `AppContext` every method receives (the content services, `ctx.db`, `ctx.email`, `ctx.database`, `ctx.methods`, `ctx.runHook`, `ctx.env`), plus the plugin layer: `ctx.plugin` (its identity), `ctx.storage` (keys prefixed `plugin/<alias>/`), `ctx.plugins` (other plugins' services, when any are registered) and `ctx.config`, an allow-listed view of the resolved config. The types are in `types/app-context.ts` and `types/plugins.ts`.
 
+`plugins/define-plugin.ts` turns a definition into the factory a site calls. It resolves the plugin's identity once, from the no-options definition, and hangs off the factory what a site uses in its config before any runtime exists: `permissions(...)` and the plugin helpers the definition declares under `helpers`, each bound to that identity.
+
 A plugin's entry types and globals resolve into the same maps as the site's, `ResolvedConfig.entryTypes` and `ResolvedConfig.globals`, keyed by id (`post` for the site's, `<namespace>/<name>` for a plugin's), each carrying `plugin` when a plugin declares it. `config/entry-types.ts` and `config/globals.ts` build them, and every consumer (permissions, codegen, the method manifest, the admin config, the CLI) reads them once. Only the admin's URLs and grouping read `plugin`.
 
 ### Plugin runtime boundary

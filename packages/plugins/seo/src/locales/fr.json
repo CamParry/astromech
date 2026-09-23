@@ -12,7 +12,7 @@
     "overview": {
         "loadError": "Impossible de charger l'aperçu SEO.",
         "emptyTitle": "Rien à analyser",
-        "emptyDescription": "Aucun type d'entrée n'inclut encore le champ SEO. Ajoutez seoSection() aux champs d'un type d'entrée.",
+        "emptyDescription": "Aucun type d'entrée n'inclut encore le champ SEO. Ajoutez seo.section() aux champs d'un type d'entrée.",
         "totals": {
             "entries": "Entrées",
             "complete": "Complètes",

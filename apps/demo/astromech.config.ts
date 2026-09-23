@@ -7,7 +7,7 @@ import { backups } from '@astromech/backups';
 import { forms } from '@astromech/forms';
 import { menus } from '@astromech/menus';
 import { redirects } from '@astromech/redirects';
-import { seo, seoSection } from '@astromech/seo';
+import { seo } from '@astromech/seo';
 import {
     defineAdminPage,
     defineConfig,
@@ -275,7 +275,7 @@ export default defineConfig({
                     fields.blocks('content', { blocks: blockCatalog }),
                     fields.tabs({
                         fields: [
-                            fields.tab({ label: 'SEO', fields: [seoSection()] }),
+                            fields.tab({ label: 'SEO', fields: [seo.section()] }),
                             fields.tab({
                                 label: 'Social',
                                 fields: [
@@ -338,7 +338,7 @@ export default defineConfig({
                     fields.richtext('body', { required: true }),
                     fields.textarea('excerpt'),
                     fields.date('publishedDate', { label: 'Published Date' }),
-                    seoSection(),
+                    seo.section(),
                 ],
                 sidebar: [
                     fields.group({
@@ -395,7 +395,7 @@ export default defineConfig({
                         ],
                     }),
                     { name: 'contentQuality', type: 'rating', label: 'Content Quality' },
-                    seoSection(),
+                    seo.section(),
                 ],
                 sidebar: [
                     fields.media('logo', { label: 'Logo', translatable: false }),

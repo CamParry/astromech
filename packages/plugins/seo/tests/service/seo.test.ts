@@ -21,7 +21,7 @@ import {
 } from '@/app-context/services';
 import { pluginServices } from '@/plugins/runtime/plugin-services';
 import { setStorageDriver } from '@/storage/registry';
-import { seo, seoSection } from '../../src/index';
+import { seo } from '../../src/index';
 
 type SeoService = Record<string, (input?: unknown) => Promise<unknown>>;
 
@@ -85,9 +85,9 @@ function configWithSeo(postUrl = '/blog/{slug}'): AstromechConfig {
             post: {
                 ...post,
                 url: postUrl,
-                fields: [...post.fields, seoSection()],
+                fields: [...post.fields, seo.section()],
             },
-            note: { ...note, fields: [...note.fields, seoSection()] },
+            note: { ...note, fields: [...note.fields, seo.section()] },
             bookmark: { ...bookmark, url: '/bookmarks/{slug}' },
         },
         plugins: [seo()],

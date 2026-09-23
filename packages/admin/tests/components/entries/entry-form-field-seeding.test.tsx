@@ -39,7 +39,7 @@ beforeAll(async () => {
     });
 });
 
-/** The demo's `seoSection()`: a named group, drawn as a titled panel. */
+/** The demo's `seo.section()`: a named group, drawn as a titled panel. */
 const SEO_GROUP: Field = {
     name: 'seo',
     type: 'group',
