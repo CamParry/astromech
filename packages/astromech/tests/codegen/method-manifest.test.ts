@@ -60,6 +60,7 @@ const testPlugin: PluginDefinition = {
         readOnly: {
             access: 'public',
             input: z.object({}),
+            output: z.object({ count: z.number() }),
             mutates: false,
             handler: async () => undefined,
         },
@@ -531,5 +532,17 @@ describe('generateMethodManifest — plugin service methods', () => {
         const m = findMethod(methods, 'plugins.testMyPlugin.scoped');
         // @test/my-plugin → permissionNamespace test_my_plugin; bare `manage` → plugin:test_my_plugin:manage
         expect(m?.['permission']).toBe('plugin:test_my_plugin:manage');
+    });
+});
+
+describe('generateMethodManifest — plugin method output', () => {
+    it('describes a declared output schema', () => {
+        const { methods } = parseManifest();
+        const output = findMethod(methods, 'plugins.testMyPlugin.readOnly')?.[
+            'output'
+        ] as {
+            properties?: Record<string, unknown>;
+        };
+        expect(output?.properties?.['count']).toEqual({ type: 'number' });
     });
 });

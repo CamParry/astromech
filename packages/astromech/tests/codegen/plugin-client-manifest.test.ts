@@ -18,7 +18,7 @@ const seoPlugin: PluginDefinition = {
                 path: '/overview',
                 label: 'Overview',
                 component: '@astromech/seo/pages/Overview',
-                permission: 'view',
+                permission: 'read',
             },
         ],
     },
@@ -69,8 +69,8 @@ describe('generatePluginClientManifest', () => {
 
     it('resolves permission with plugin namespace for bare permission key', () => {
         const result = generatePluginClientManifest([seoPlugin]);
-        // bare `view` → `plugin:seo:view`
-        expect(result).toContain('permission: "plugin:seo:view"');
+        // bare `read` → `plugin:seo:read`
+        expect(result).toContain('permission: "plugin:seo:read"');
     });
 
     it('contains i18n export keyed by permissionNamespace', () => {
@@ -262,5 +262,38 @@ describe('generatePluginClientManifest — slots', () => {
         expect(result).toContain('"global-overlay": [\n\n\t],');
         expect(result).toContain('"right-drawer": [\n\n\t],');
         expect(result).toContain('"toolbar": [\n\n\t],');
+    });
+});
+
+describe('generatePluginClientManifest — relative plugin assets', () => {
+    const page = (component: string): AdminPage => ({
+        path: '/overview',
+        label: 'Overview',
+        component,
+    });
+
+    it('resolves a relative specifier against the package name', () => {
+        const result = generatePluginClientManifest([
+            {
+                package: '@acme/seo',
+                admin: { pages: [page('./admin/pages/overview-page.tsx')] },
+                i18n: ['en'],
+            },
+        ]);
+        expect(result).toContain('import("@acme/seo/admin/pages/overview-page.tsx")');
+        expect(result).toContain('import("@acme/seo/locales/en.json")');
+    });
+
+    it('resolves a relative specifier against a file root to a path', () => {
+        const result = generatePluginClientManifest([
+            {
+                package: 'rating',
+                root: 'file:///repo/apps/demo/src/plugins/rating/index.ts',
+                admin: { pages: [page('./admin/pages/overview-page.tsx')] },
+            },
+        ]);
+        expect(result).toContain(
+            'import("/repo/apps/demo/src/plugins/rating/admin/pages/overview-page.tsx")'
+        );
     });
 });
