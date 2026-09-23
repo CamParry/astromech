@@ -25,7 +25,6 @@ import type {
     relationshipsTable,
     rolesTable,
     sessionsTable,
-    settingsTable,
     userContentTable,
     usersTable,
     userVersionsTable,
@@ -71,7 +70,6 @@ export interface DB extends AstromechPluginTables {
     media: KyselyOf<typeof mediaTable>;
     mediaContent: KyselyOf<typeof mediaContentTable>;
     mediaVersions: KyselyOf<typeof mediaVersionsTable>;
-    settings: KyselyOf<typeof settingsTable>;
     notifications: KyselyOf<typeof notificationsTable>;
     relationships: KyselyOf<typeof relationshipsTable>;
     // Leading-underscore table name has no camelCase humps, so CamelCasePlugin

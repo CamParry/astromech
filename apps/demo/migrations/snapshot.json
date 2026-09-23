@@ -1635,52 +1635,6 @@
         }
       ]
     },
-    "settings": {
-      "name": "settings",
-      "columns": [
-        {
-          "key": "key",
-          "name": "key",
-          "kind": "text",
-          "type": "text",
-          "notNull": true,
-          "primaryKey": true
-        },
-        {
-          "key": "value",
-          "name": "value",
-          "kind": "json",
-          "type": "text",
-          "notNull": false,
-          "primaryKey": false
-        },
-        {
-          "key": "updatedAt",
-          "name": "updated_at",
-          "kind": "timestamp",
-          "type": "text",
-          "notNull": true,
-          "primaryKey": false
-        },
-        {
-          "key": "updatedBy",
-          "name": "updated_by",
-          "kind": "reference",
-          "type": "text",
-          "notNull": false,
-          "primaryKey": false
-        }
-      ],
-      "fks": [
-        {
-          "column": "updated_by",
-          "targetTable": "users",
-          "targetColumn": "id",
-          "onDelete": "set null"
-        }
-      ],
-      "indexes": []
-    },
     "user_content": {
       "name": "user_content",
       "columns": [

@@ -10,7 +10,6 @@ import { globalContentTable, globalsTable, globalVersionsTable } from '@/globals
 import { mediaContentTable, mediaTable, mediaVersionsTable } from '@/media/tables';
 import { notificationsTable } from '@/notifications/tables';
 import { rolesTable } from '@/permissions/tables';
-import { settingsTable } from '@/settings/tables';
 import { RESOURCE_TYPES, TARGET_KINDS } from '@/types/domain';
 import { userContentTable, usersTable, userVersionsTable } from '@/users/tables';
 
@@ -71,7 +70,6 @@ export {
     type MediaVersionRow,
     type NewMediaVersionRow,
 } from '@/media/tables';
-export { settingsTable, type SettingRow, type NewSettingRow } from '@/settings/tables';
 export {
     notificationsTable,
     type NotificationRow,
@@ -169,7 +167,6 @@ export const CORE_TABLES: Table[] = [
     mediaTable,
     mediaContentTable,
     mediaVersionsTable,
-    settingsTable,
     notificationsTable,
     relationshipsTable,
     cronTable,

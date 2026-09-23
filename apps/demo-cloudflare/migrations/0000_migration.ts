@@ -267,15 +267,6 @@ export async function up(db: Kysely<unknown>): Promise<void> {
         )
     `.execute(db);
     await sql`
-        CREATE TABLE \`settings\` (
-            \`key\` text PRIMARY KEY NOT NULL,
-            \`value\` text,
-            \`updated_at\` text NOT NULL,
-            \`updated_by\` text,
-            CONSTRAINT \`settings_updated_by_fkey\` FOREIGN KEY (\`updated_by\`) REFERENCES \`users\`(\`id\`) ON UPDATE no action ON DELETE set null
-        )
-    `.execute(db);
-    await sql`
         CREATE TABLE \`users\` (
             \`id\` text PRIMARY KEY NOT NULL,
             \`email\` text NOT NULL,

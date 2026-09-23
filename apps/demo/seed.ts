@@ -268,10 +268,9 @@ async function seed(): Promise<void> {
     await db.deleteFrom('entryContent').where('type', 'in', CLEARED_TYPES).execute();
     await db.deleteFrom('entries').where('type', 'in', CLEARED_TYPES).execute();
 
-    // Clear globals, settings and redirects. Deleting the `globals` row
+    // Clear globals and redirects. Deleting the `globals` row
     // cascades to its content and versions.
     await db.deleteFrom('globals').execute();
-    await db.deleteFrom('settings').execute();
     await db.deleteFrom('pluginRedirectsRedirects').execute();
 
     // Clear leftover media rows (no files on disk referenced). Content rows go
