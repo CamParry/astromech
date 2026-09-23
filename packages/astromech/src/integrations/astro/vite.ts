@@ -83,6 +83,7 @@ export function createViteConfig({
                     'astromech > @tiptap/extension-text-align',
                     'astromech > @tiptap/pm/model',
                     'astromech > @tiptap/starter-kit',
+                    'astromech > @tiptap/static-renderer/pm/html-string',
                     'astromech > lodash-es',
                     'astromech > zod',
                     ...plugins.flatMap(pluginOptimizeDeps),

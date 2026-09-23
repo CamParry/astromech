@@ -14,6 +14,7 @@ import type {
     FieldValidator,
     SubFields,
 } from '@/types/fields';
+import type { JSONContent } from '@tiptap/core';
 import {
     blocks,
     boolean,
@@ -65,6 +66,7 @@ import {
     validateUrl,
 } from './built-in-rules';
 import { RESERVED_KEY } from './reserved-keys';
+import { renderRichText } from './rich-text/render';
 import { coerceRichText, validateRichText } from './rich-text/validate';
 
 // Container children — normalization + scope discovery
@@ -218,6 +220,8 @@ const dataFieldTypes: CoreDataFieldType[] = [
         build: richtext,
         coerce: coerceRichText,
         validate: validateRichText,
+        toPublic: (field, value) =>
+            renderRichText(value as JSONContent | null | undefined, field.allow),
         tsType: (_field, shape) =>
             shape === 'public' ? 'string' : "import('astromech').JsonValue",
     },

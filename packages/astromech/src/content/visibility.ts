@@ -8,18 +8,10 @@
  * columns it carries, so an entry and a global go through the same filter.
  */
 
-import type {
-    DataField,
-    EntryStatus,
-    Field,
-    JsonObject,
-    JsonValue,
-    RichTextAllow,
-} from '@/types/index';
-import type { JSONContent } from '@tiptap/core';
+import type { EntryStatus, Field, JsonObject, JsonValue } from '@/types/index';
+import { getFieldType } from '@/fields/field-type-registry';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { PUBLIC_STRIPPED_KEYS, RESERVED_KEY } from '@/fields/reserved-keys';
-import { renderRichText } from '@/fields/rich-text/render';
 
 /**
  * The record shape the filter reads. Every member but `fields` is optional: a
@@ -118,138 +110,29 @@ function structuralStrip(value: JsonValue): JsonValue {
 }
 
 /**
- * Map each data field in one value scope by name. The input is flattened here,
- * so every recursion path unwraps layout fields and inherits their `private`.
+ * Strip private fields from one value scope, in place, and give each kept value
+ * its public form. Nested scopes come from the field type's `children`, so a
+ * container of any type, core or plugin, is stripped the same way. A key with
+ * no definition (a system or unknown plugin field) is kept as it is.
  */
-function fieldMap(fields: Field[]): Map<string, DataField> {
-    const map = new Map<string, DataField>();
-    for (const f of flattenFieldNodes(fields)) {
-        map.set(f.name, f);
+function stripPrivateFields(values: Record<string, unknown>, definitions: Field[]): void {
+    for (const field of flattenFieldNodes(definitions)) {
+        if (!(field.name in values)) continue;
+        if (field.private === true) {
+            Reflect.deleteProperty(values, field.name);
+            continue;
+        }
+        const fieldType = getFieldType(field.type);
+        let value = values[field.name];
+        if (fieldType?.children !== undefined && value !== null && value !== undefined) {
+            const { next, scopes } = fieldType.children(field, value);
+            for (const scope of scopes)
+                stripPrivateFields(scope.values, scope.definitions);
+            value = next;
+        }
+        if (fieldType?.toPublic !== undefined) value = fieldType.toPublic(field, value);
+        values[field.name] = value;
     }
-    return map;
-}
-
-/**
- * Strip private fields from a cloned `fields` object using the field definitions.
- * Recurses into group/repeater/blocks/tree child definitions.
- */
-function stripPrivateFields(fields: JsonObject, fieldDefs: Field[]): JsonObject {
-    const defs = fieldMap(fieldDefs);
-    const result: JsonObject = {};
-
-    for (const [key, rawValue] of Object.entries(fields)) {
-        const def = defs.get(key);
-
-        // No definition → keep as-is (e.g. system fields, unknown plugin fields)
-        if (!def) {
-            result[key] = rawValue;
-            continue;
-        }
-
-        // Step 1: drop private fields
-        if (def.private === true) continue;
-
-        // Recurse into group children
-        if (def.type === 'group' && def.fields && def.fields.length > 0) {
-            if (
-                rawValue !== null &&
-                typeof rawValue === 'object' &&
-                !Array.isArray(rawValue)
-            ) {
-                result[key] = stripPrivateFields(rawValue as JsonObject, def.fields);
-            } else {
-                result[key] = rawValue;
-            }
-            continue;
-        }
-
-        // Recurse into repeater items (each item is an object with child fields)
-        if (def.type === 'repeater' && def.fields && def.fields.length > 0) {
-            const repeaterFields = def.fields;
-            if (Array.isArray(rawValue)) {
-                result[key] = (rawValue as JsonValue[]).map((item) => {
-                    if (
-                        item !== null &&
-                        typeof item === 'object' &&
-                        !Array.isArray(item)
-                    ) {
-                        return stripPrivateFields(item as JsonObject, repeaterFields);
-                    }
-                    return item;
-                });
-            } else {
-                result[key] = rawValue;
-            }
-            continue;
-        }
-
-        // Recurse into blocks items — each item has a `_type` key; match to block def
-        if (def.type === 'blocks' && def.blocks && def.blocks.length > 0) {
-            const blockDefsByType = new Map(def.blocks.map((b) => [b.type, b.fields]));
-            if (Array.isArray(rawValue)) {
-                result[key] = (rawValue as JsonValue[]).map((item) => {
-                    if (
-                        item !== null &&
-                        typeof item === 'object' &&
-                        !Array.isArray(item)
-                    ) {
-                        const obj = item as JsonObject;
-                        const blockType = obj['_type'] as string | undefined;
-                        const blockFields = blockType
-                            ? blockDefsByType.get(blockType)
-                            : undefined;
-                        if (blockFields) {
-                            return stripPrivateFields(obj, blockFields);
-                        }
-                    }
-                    return item;
-                });
-            } else {
-                result[key] = rawValue;
-            }
-            continue;
-        }
-
-        // Recurse into tree items (recursive structure with `_children`)
-        if (def.type === 'tree' && def.fields && def.fields.length > 0) {
-            result[key] = stripTreeItems(rawValue as JsonValue, def.fields);
-            continue;
-        }
-
-        // Richtext: render JSON → HTML string for public shape
-        if (def.type === 'richtext') {
-            result[key] = renderRichText(
-                rawValue as JSONContent | null | undefined,
-                def.allow as RichTextAllow | undefined
-            );
-            continue;
-        }
-
-        // All other field types — pass value through
-        result[key] = rawValue;
-    }
-
-    return result;
-}
-
-/**
- * Recursively strip private fields from tree items.
- * Tree items are objects with child field data + a `_children` array of more tree items.
- */
-function stripTreeItems(value: JsonValue, childFields: Field[]): JsonValue {
-    if (Array.isArray(value)) {
-        return (value as JsonValue[]).map((item) => stripTreeItems(item, childFields));
-    }
-    if (value !== null && typeof value === 'object') {
-        const obj = value as JsonObject;
-        const { _children, ...rest } = obj;
-        const stripped = stripPrivateFields(rest, childFields);
-        if (_children !== undefined) {
-            stripped['_children'] = stripTreeItems(_children as JsonValue, childFields);
-        }
-        return stripped;
-    }
-    return value;
 }
 
 /**
@@ -272,8 +155,10 @@ export function applyVisibility<T extends VisibleRecord>(
         : passesPublicRowFilter(record, audience.now);
     if (!rowOk) return null;
 
-    // Clone fields first — never mutate the stored object.
-    const projectedFields = stripPrivateFields({ ...record.fields }, fields);
+    // Clone the root first — `children` clones every nested scope it reports,
+    // so the stored object is never mutated.
+    const projectedFields: Record<string, unknown> = { ...record.fields };
+    stripPrivateFields(projectedFields, fields);
     const cleanFields = structuralStrip(projectedFields as JsonValue) as JsonObject;
 
     return { ...record, fields: cleanFields };

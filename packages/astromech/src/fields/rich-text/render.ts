@@ -1,12 +1,12 @@
 /**
  * Rich-text render helper — JSON → HTML string via `@tiptap/static-renderer`
  * (DOM-free, Worker-safe). Shares extensions with the editor so they cannot
- * drift. Called by the public-shape projection in `visibility.ts`.
+ * drift. The rich-text field type's `toPublic`.
  */
 
 import type { RichTextAllow } from '@/types/fields';
 import type { JSONContent } from '@tiptap/core';
-import { renderToHTMLString } from '@tiptap/static-renderer';
+import { renderToHTMLString } from '@tiptap/static-renderer/pm/html-string';
 import { buildRichTextExtensions } from './extensions';
 import { isUnsafeHref } from './safe-links';
 
