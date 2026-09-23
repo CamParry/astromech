@@ -17,7 +17,7 @@ read at review, and studying where a pattern repeats before changing it.
       last-admin checks, domain errors answering 500, CLI commands that never
       boot the app, drafts exposed through plugin reads, the hardcoded `'en'`:
       `completed/policy-in-the-service-layer.md`. The remaining route and parity
-      work: `planned/route-table-handlers.md`.
+      work: `completed/route-table-handlers.md`.
 - [x] **Two contexts leak into each other.** Hooks rebuilding context from the
       store, user and role held three times, `CronContext`, the session
       resolved twice: `completed/explicit-app-context.md`.
