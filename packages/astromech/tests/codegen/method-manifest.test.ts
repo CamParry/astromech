@@ -366,19 +366,30 @@ describe('generateMethodManifest — root entries', () => {
         }
     });
 
-    it('should include id in the input of the id-taking entry methods', () => {
+    it('should require id in the input of a one-entry method', () => {
         const { methods } = parseManifest([]);
-        for (const name of ['entries.get', 'entries.update', 'entries.delete']) {
+        const input = findMethod(methods, 'entries.get', 'posts')?.['input'] as {
+            required?: string[];
+        };
+        expect(input?.required).toContain('id');
+    });
+
+    it('should offer id or ids, requiring neither, on a bulk-capable method', () => {
+        const { methods } = parseManifest([]);
+        for (const name of ['entries.update', 'entries.delete']) {
             const input = findMethod(methods, name, 'posts')?.['input'] as {
                 properties?: Record<string, unknown>;
                 required?: string[];
             };
-            expect(Object.keys(input?.properties ?? {}), name).toContain('id');
-            expect(input?.required, name).toContain('id');
+            expect(Object.keys(input?.properties ?? {}), name).toEqual(
+                expect.arrayContaining(['id', 'ids'])
+            );
+            expect(input?.required ?? [], name).not.toContain('id');
+            expect(input?.required ?? [], name).not.toContain('ids');
         }
     });
 
-    it('should describe the update method as { type, id, locale, staged, data }', () => {
+    it('should describe the update method as { type, id, ids, locale, staged, data }', () => {
         const { methods } = parseManifest([]);
         const input = findMethod(methods, 'entries.update', 'posts')?.['input'] as {
             properties?: Record<string, { properties?: Record<string, unknown> }>;
@@ -386,6 +397,7 @@ describe('generateMethodManifest — root entries', () => {
         expect(Object.keys(input?.properties ?? {})).toEqual([
             'type',
             'id',
+            'ids',
             'locale',
             'staged',
             'data',

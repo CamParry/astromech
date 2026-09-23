@@ -9,8 +9,12 @@ import { BulkOperationError } from '../errors';
 
 /** The keys a batch-backed method is addressed by: one `id`, or a list of `ids`. */
 export const batchAddress = {
-    id: z.string().min(1).optional(),
-    ids: z.array(z.string().min(1)).min(1).optional(),
+    id: z.string().min(1).optional().describe('One entry. Pass this or `ids`.'),
+    ids: z
+        .array(z.string().min(1))
+        .min(1)
+        .optional()
+        .describe('A list of entries, acted on atomically. Pass this or `id`.'),
 };
 
 /**
