@@ -96,7 +96,7 @@ Entries, globals, media items and users each live in three tables: a resource ro
 
 - **Entries** (`entries/tables.ts`): the resource row holds `type`, the preview token and `deletedAt`; the content row holds title, slug and status. `entries/repository/entries-table.ts` reads the two joined.
 - **Media** (`media/tables.ts`): the resource row holds the file and its metadata; the bytes are in the storage driver under a key derived from the media id. `media/repository.ts` adds the library list queries. No statuses, staging or trash.
-- **Users** (`users/tables.ts`): better-auth owns the `users` row. First-run setup writes the first one through better-auth and the users service writes the rest. `name`, `email` and `role` ignore locale. Sessions, accounts and verifications are better-auth's rows, in `auth/tables.ts`.
+- **Users** (`users/tables.ts`): better-auth owns the `users` row. First-run setup writes the first one with a conditional insert (`createIfEmpty` on the user repository) and the users service writes the rest. `name`, `email` and `role` ignore locale. Sessions, accounts and verifications are better-auth's rows, in `auth/tables.ts`.
 
 Media and users opt into translation with `media: { translatable: true }` and `users: { translatable: true }`; versioning is always on. Deleting a user leaves the rest to the database: each reference to `users` declares `onDelete: 'set null'` or `'cascade'`, and the migration runner refuses a database that does not enforce foreign keys. The `relationships` table is a derived index over field data.
 

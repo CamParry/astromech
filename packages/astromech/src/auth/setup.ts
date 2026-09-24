@@ -8,11 +8,8 @@ import type { BuiltInRoleSlug } from '@/permissions/roles';
 import { z } from '@hono/zod-openapi';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { transaction } from '@/database/transaction';
-import {
-    createCredentialAccount,
-    hashCredential,
-} from '@/users/internal/credential-account';
-import { createUserRepository, insertFirstUser } from '@/users/repository';
+import { hashCredential } from '@/users/internal/credential-account';
+import { getUserRepository } from '@/users/repository';
 
 /** The refusal every closed sign-up path answers with. */
 export const SIGN_UP_CLOSED = {
@@ -43,8 +40,9 @@ export async function createFirstAdmin(
     // transactions, so there the first statement is the gate on its own: a
     // failure after it leaves an admin with no password, and
     // `astromech users:create` is how that install recovers.
+    const repository = getUserRepository();
     return transaction(async () => {
-        const inserted = await insertFirstUser({
+        const inserted = await repository.createIfEmpty({
             id,
             email: input.email,
             name: input.name,
@@ -53,9 +51,9 @@ export async function createFirstAdmin(
         });
         if (!inserted) return 'closed';
 
-        await createCredentialAccount(id, passwordHash);
+        await repository.createCredentialAccount(id, passwordHash);
         // A write to a locale with no content row creates it.
-        await createUserRepository().update(
+        await repository.update(
             { id, locale: getDefaultContentLocale() },
             { fields: {} }
         );

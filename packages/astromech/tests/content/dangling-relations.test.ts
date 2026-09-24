@@ -27,7 +27,7 @@ import { createRelationshipRepository } from '@/database/repository/relationship
 import { transaction } from '@/database/transaction';
 import { tableRepository } from '@/entries/repository/table';
 import { createMediaRepository } from '@/media/repository';
-import { createUserRepository } from '@/users/repository';
+import { getUserRepository } from '@/users/repository';
 
 const api = currentServices.entries;
 const usersService = currentServices.users;
@@ -281,7 +281,7 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
         });
 
         await createMediaRepository().delete(mediaId);
-        await createUserRepository().delete(user.id);
+        await getUserRepository().delete(user.id);
         const updated = await touch(doc.id);
 
         expect(updated.fields.avatar).toBeNull();

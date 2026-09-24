@@ -6,10 +6,10 @@ import { writeFields } from '@/content/write-fields';
 import { transaction } from '@/database/transaction';
 import { getRole } from '@/permissions/roles';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { createCredentialAccount, hashCredential } from '../internal/credential-account';
+import { hashCredential } from '../internal/credential-account';
 import { syncUserRelationships } from '../internal/relationships';
 import { toUser } from '../internal/to-user';
-import { createUserRepository } from '../repository';
+import { getUserRepository } from '../repository';
 import { createUserSchema } from '../schema';
 
 /**
@@ -27,7 +27,7 @@ export const createUser = defineServiceMethod({
         const config = ctx.config;
         getRole(config, data.role);
 
-        const repository = createUserRepository(config);
+        const repository = getUserRepository();
         const fields = await writeFields(
             RESOURCE_SPECS.user,
             config,
@@ -36,7 +36,7 @@ export const createUser = defineServiceMethod({
                 operation: 'create',
                 record: null,
                 user: ctx.user,
-                scan: () => repository.listContent(defaultContentLocale(config)),
+                scan: () => repository.findByLocale(defaultContentLocale(config)),
             }
         );
 
@@ -58,7 +58,7 @@ export const createUser = defineServiceMethod({
                 { fields, createdBy: userId, updatedBy: userId }
             );
             if (passwordHash !== undefined) {
-                await createCredentialAccount(row.id, passwordHash);
+                await repository.createCredentialAccount(row.id, passwordHash);
             }
             await syncUserRelationships(ctx.config, row.id);
             return row;

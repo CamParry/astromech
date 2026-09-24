@@ -10,7 +10,7 @@
 
 import type { NotificationsService, NotifyInput } from '@/types/index';
 import { defineService } from '@/services/define-service';
-import { createUserRepository } from '@/users/repository';
+import { getUserRepository } from '@/users/repository';
 import { countNotifications } from './methods/count';
 import { dismissNotification } from './methods/dismiss';
 import { dismissAllNotifications } from './methods/dismiss-all';
@@ -33,18 +33,16 @@ export const notificationsDefinition = defineService<NotificationsService>(
  * session.
  */
 export async function notify(input: NotifyInput): Promise<void> {
-    const users = createUserRepository();
+    const users = getUserRepository();
 
     let userIds: string[];
 
     if ('user' in input.target) {
         userIds = [input.target.user];
     } else if ('role' in input.target) {
-        userIds = await users.owners.pluck('id', {
-            where: { role: input.target.role },
-        });
+        userIds = await users.findIdsByRole(input.target.role);
     } else {
-        userIds = await users.owners.pluck('id');
+        userIds = await users.findIds();
     }
 
     if (userIds.length === 0) return;

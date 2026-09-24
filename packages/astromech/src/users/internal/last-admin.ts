@@ -20,6 +20,6 @@ export async function assertKeepsAnAdmin(
     message: string
 ): Promise<void> {
     if (current.role !== ADMIN || nextRole === ADMIN) return;
-    const admins = await repository.owners.count({ role: ADMIN });
+    const admins = await repository.countByRole(ADMIN);
     if (admins <= 1) throw new LastAdminError(message);
 }

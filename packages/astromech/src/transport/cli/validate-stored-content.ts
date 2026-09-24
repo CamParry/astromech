@@ -17,7 +17,7 @@ import { getEntryRepository, hasCustomTable } from '@/entries/repository/registr
 import { entriesTable, entryContentTable } from '@/entries/tables';
 import { safeParseFields } from '@/fields/parse-fields';
 import { createMediaRepository } from '@/media/repository';
-import { createUserRepository } from '@/users/repository';
+import { getUserRepository } from '@/users/repository';
 
 /** Scope of a report run. `type` is an ENTRY type; it never covers media, users or globals. */
 export type ValidationScope = { type?: string };
@@ -161,7 +161,7 @@ async function checkContentRows(
     const listContent = (locale: string): Promise<readonly ContentFieldsRow[]> =>
         kind === 'media'
             ? createMediaRepository(ctx.config).listContent(locale)
-            : createUserRepository(ctx.config).listContent(locale);
+            : getUserRepository().findByLocale(locale);
     for (const locale of locales(ctx, RESOURCE_SPECS[kind].translatable(ctx.config))) {
         // One load per locale: the run writes nothing, so it cannot go stale.
         const scan = memoize(() => listContent(locale));

@@ -7,25 +7,16 @@
 import type { EntryRepository } from './types';
 import type { AstromechConfig } from '@/types/index';
 import { declaredEntryTypes } from '@/config/entry-types';
-import { createKeyedRegistry, createRegistry } from '@/registry';
+import { createKeyedRegistry, createLazyRegistry } from '@/registry';
 import { createEntriesTableRepository } from './entries-table';
 
-const entriesTable = createRegistry<EntryRepository>('entriesTableRepository', {
-    required: false,
-});
+const entriesTable = createLazyRegistry<EntryRepository>('entriesTableRepository', () =>
+    createEntriesTableRepository()
+);
 const overrides = createKeyedRegistry<EntryRepository>('entryRepositoryOverrides');
 
-/** The shared entries-table repository, constructed on first use. */
-function getEntriesTable(): EntryRepository {
-    const existing = entriesTable.get();
-    if (existing) return existing;
-    const created = createEntriesTableRepository();
-    entriesTable.set(created);
-    return created;
-}
-
 export function getEntryRepository(type: string): EntryRepository {
-    return overrides.get(type) ?? getEntriesTable();
+    return overrides.get(type) ?? entriesTable.get();
 }
 
 /**

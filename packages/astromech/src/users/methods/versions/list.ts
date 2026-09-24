@@ -4,7 +4,7 @@ import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { createUserRepository } from '../../repository';
+import { getUserRepository } from '../../repository';
 
 /**
  * Lists the saved versions of one locale of a user's fields, newest first.
@@ -23,8 +23,8 @@ export const listUserVersions = defineServiceMethod({
             undefined,
             params.locale
         );
-        const repository = createUserRepository(ctx.config);
-        const current = await repository.get(params.id, locale);
+        const repository = getUserRepository();
+        const current = await repository.findOne(params.id, { locale });
         if (!current) throw new ResourceNotFoundError('user', { id: params.id, locale });
 
         const rows = await repository.versions.findMany(current.contentId);

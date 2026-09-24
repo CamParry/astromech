@@ -1,5 +1,6 @@
 import type { User } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { defaultContentLocale } from '@/config/content-locale';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { propagateSharedFields } from '@/content/translatable';
@@ -9,11 +10,10 @@ import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { getRole } from '@/permissions/roles';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { findUser } from '../internal/find-user';
 import { assertKeepsAnAdmin } from '../internal/last-admin';
 import { syncUserRelationships } from '../internal/relationships';
 import { toUser } from '../internal/to-user';
-import { createUserRepository } from '../repository';
+import { getUserRepository } from '../repository';
 import { updateUserSchema } from '../schema';
 
 /**
@@ -42,12 +42,13 @@ export const updateUser = defineServiceMethod({
             undefined,
             params.locale
         );
-        const repository = createUserRepository(ctx.config);
+        const repository = getUserRepository();
+        const fallbackLocale = defaultContentLocale(ctx.config);
 
         // The row this write edits, or — when the locale has none — the
         // default-locale row the new one is copied from.
-        const current = await repository.get(id, locale);
-        const base = current ?? (await findUser(repository, id));
+        const current = await repository.findOne(id, { locale });
+        const base = current ?? (await repository.findOne(id, { fallbackLocale }));
         if (!base) throw new ResourceNotFoundError('user', { id });
 
         const config = ctx.config;
@@ -78,7 +79,7 @@ export const updateUser = defineServiceMethod({
                           operation: 'update',
                           record: toUser(base),
                           user: ctx.user,
-                          scan: () => repository.listContent(locale),
+                          scan: () => repository.findByLocale(locale),
                           excludeId: id,
                       }
                   );
@@ -102,7 +103,7 @@ export const updateUser = defineServiceMethod({
                 );
             }
             if (name !== undefined || email !== undefined || role !== undefined) {
-                await repository.owners.update(id, { name, email, role });
+                await repository.updateAccount(id, { name, email, role });
             }
             if (fields !== undefined) {
                 await repository.update(
@@ -129,7 +130,7 @@ export const updateUser = defineServiceMethod({
             }
         });
 
-        const updated = await findUser(repository, id, locale);
+        const updated = await repository.findOne(id, { locale, fallbackLocale });
         if (!updated) throw new ResourceNotFoundError('user', { id });
         return toUser(updated);
     },

@@ -1,11 +1,9 @@
 /**
- * The credential account behind a password sign-in: the `accounts` row
- * better-auth reads, written the one way setup, the CLI and `users.create` share.
+ * The password behind a credential account: hashed the way better-auth checks
+ * it. The user repository writes the `accounts` row.
  */
 
 import { hashPassword } from 'better-auth/crypto';
-import { createRepository } from '@/database/repository/create-repository';
-import { accountsTable } from '@/database/tables';
 
 /**
  * Hash `password` the way better-auth checks it. Separate from the write so a
@@ -13,20 +11,4 @@ import { accountsTable } from '@/database/tables';
  */
 export function hashCredential(password: string): Promise<string> {
     return hashPassword(password);
-}
-
-/** Write the credential account that lets `userId` sign in with `passwordHash`. */
-export async function createCredentialAccount(
-    userId: string,
-    passwordHash: string
-): Promise<void> {
-    const now = new Date();
-    await createRepository(accountsTable).create({
-        accountId: userId,
-        providerId: 'credential',
-        userId,
-        password: passwordHash,
-        createdAt: now,
-        updatedAt: now,
-    });
 }

@@ -2,7 +2,7 @@ import { z } from '@hono/zod-openapi';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { assertKeepsAnAdmin } from '../internal/last-admin';
-import { createUserRepository } from '../repository';
+import { getUserRepository } from '../repository';
 
 /**
  * Delete a user row, refusing the last admin. The database's `ON DELETE set
@@ -15,9 +15,9 @@ export const deleteUser = defineServiceMethod({
     access: 'users:delete',
     mutates: true,
     destructive: true,
-    async handler(params, ctx): Promise<void> {
-        const repository = createUserRepository(ctx.config);
-        const account = await repository.owners.findOne({ id: params.id });
+    async handler(params): Promise<void> {
+        const repository = getUserRepository();
+        const account = await repository.findAccount(params.id);
         if (account) {
             await assertKeepsAnAdmin(
                 repository,

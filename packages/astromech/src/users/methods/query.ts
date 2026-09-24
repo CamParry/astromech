@@ -4,7 +4,7 @@ import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { toUser } from '../internal/to-user';
-import { createUserRepository } from '../repository';
+import { getUserRepository } from '../repository';
 import { userQuerySchema } from '../schema';
 
 /**
@@ -24,10 +24,11 @@ export const queryUsers = defineServiceMethod({
             undefined,
             params.locale
         );
-        const repository = createUserRepository(ctx.config);
+        const repository = getUserRepository();
+        const { search, sort } = params;
         const result = await queryPage(params, {
-            list: (page) => repository.list(params, page, locale),
-            count: () => repository.count(params),
+            list: (page) => repository.findMany({ search, sort, locale, ...page }),
+            count: () => repository.count({ search }),
         });
         return { ...result, data: result.data.map(toUser) };
     },

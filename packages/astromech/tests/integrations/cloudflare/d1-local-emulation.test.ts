@@ -23,13 +23,14 @@ import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { d1 } from '@/database/drivers/d1';
 import { assertForeignKeysEnforced } from '@/database/migrations';
+import { setDb } from '@/database/registry';
 import { clearEnvSource } from '@/env';
 import {
     disposeBindings,
     resetBindings,
     resolveBinding,
 } from '@/integrations/cloudflare/bindings';
-import { insertFirstUser } from '@/users/repository';
+import { getUserRepository } from '@/users/repository';
 
 /** Test-only schema; deliberately unrelated to the app's `DB` type. */
 type TestSchema = {
@@ -160,16 +161,19 @@ describe('d1() against local emulation', () => {
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )`.execute(db);
-        const appDb = db as unknown as Db;
+        setDb(db as unknown as Db);
+        const users = getUserRepository();
 
-        const first = await insertFirstUser(
-            { email: 'first@test.dev', name: 'First', role: 'admin' },
-            appDb
-        );
-        const second = await insertFirstUser(
-            { email: 'second@test.dev', name: 'Second', role: 'admin' },
-            appDb
-        );
+        const first = await users.createIfEmpty({
+            email: 'first@test.dev',
+            name: 'First',
+            role: 'admin',
+        });
+        const second = await users.createIfEmpty({
+            email: 'second@test.dev',
+            name: 'Second',
+            role: 'admin',
+        });
 
         expect([first, second]).toEqual([true, false]);
         const { rows } = await sql<{ email: string }>`

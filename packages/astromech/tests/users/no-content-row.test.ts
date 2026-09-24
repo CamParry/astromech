@@ -13,8 +13,7 @@ import { currentServices } from '@/app-context/services';
 import { encodeWith } from '@/database/codec';
 import { usersTable } from '@/database/tables';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
-import { findUser } from '@/users/internal/find-user';
-import { createUserRepository } from '@/users/repository';
+import { getUserRepository } from '@/users/repository';
 
 const api = currentServices.users;
 
@@ -53,9 +52,22 @@ describe('a user with no content row', () => {
     });
 
     it('reads through the repository the session resolves with', async () => {
-        const row = await findUser(createUserRepository(), id);
+        const row = await getUserRepository().findOne(id, { fallbackLocale: 'en' });
         expect(row?.email).toBe('noprofile@test.dev');
         expect(row?.fields).toEqual({});
+        expect(row?.locales).toEqual([]);
+    });
+
+    it('reads as null through the repository without a fallback locale', async () => {
+        expect(await getUserRepository().findOne(id)).toBeNull();
+    });
+
+    it('reads the account row when neither the asked nor the fallback locale has a row', async () => {
+        const row = await getUserRepository().findOne(id, {
+            locale: 'fr',
+            fallbackLocale: 'en',
+        });
+        expect(row?.email).toBe('noprofile@test.dev');
         expect(row?.locales).toEqual([]);
     });
 
