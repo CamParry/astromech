@@ -17,7 +17,7 @@ import type { ContentRowId, JoinedWhere } from '@/content/repository/types';
 import type { Where } from '@/database/repository/where';
 import type { Db } from '@/database/types';
 import type { Capability } from '@/entries/capabilities';
-import type { EntryRow as EntriesTableRow, EntryContentRow } from '@/entries/tables';
+import type { EntryContentRow, EntryTableRow } from '@/entries/tables';
 import type { JsonObject, ReferencesFilter, SortOption } from '@/types/index';
 import type { Expression, SqlBool } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
@@ -180,7 +180,7 @@ function referencesExists(eb: JoinedEb, filter: ReferencesFilter): Expression<Sq
 
 /** The two joined rows plus the locale list, in the shape the service reads. */
 function toEntryRow(
-    entry: EntriesTableRow,
+    entry: EntryTableRow,
     content: EntryContentRow,
     locales: string[]
 ): EntryRow {

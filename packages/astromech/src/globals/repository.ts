@@ -7,7 +7,7 @@
 
 import type { ContentRepository, ContentRow } from '@/content/repository/types';
 import type { Db } from '@/database/types';
-import type { GlobalContentRow, GlobalRow as GlobalsTableRow } from '@/globals/tables';
+import type { GlobalContentRow, GlobalTableRow } from '@/globals/tables';
 import type { JsonObject } from '@/types/index';
 import { createContentRepository } from '@/content/repository/content-table';
 import { createRepository } from '@/database/repository/create-repository';
@@ -26,7 +26,7 @@ export type GlobalRepository = ContentRepository<
 
 /** The two joined rows plus the locale list, in the shape the service reads. */
 function toGlobalRow(
-    global: GlobalsTableRow,
+    global: GlobalTableRow,
     content: GlobalContentRow,
     locales: string[]
 ): GlobalRow {

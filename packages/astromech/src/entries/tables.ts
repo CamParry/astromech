@@ -93,8 +93,8 @@ export const entryVersionsTable = defineTable(
     ({ index }) => [index('idx_entry_versions_content', ['contentId', 'version'])]
 );
 
-export type EntryRow = TableSelect<typeof entriesTable>;
-export type NewEntryRow = TableInsert<typeof entriesTable>;
+export type EntryTableRow = TableSelect<typeof entriesTable>;
+export type NewEntryTableRow = TableInsert<typeof entriesTable>;
 
 export type EntryContentRow = TableSelect<typeof entryContentTable>;
 export type NewEntryContentRow = TableInsert<typeof entryContentTable>;

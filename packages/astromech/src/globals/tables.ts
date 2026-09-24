@@ -72,8 +72,8 @@ export const globalVersionsTable = defineTable(
     ({ index }) => [index('idx_global_versions_content', ['contentId', 'version'])]
 );
 
-export type GlobalRow = TableSelect<typeof globalsTable>;
-export type NewGlobalRow = TableInsert<typeof globalsTable>;
+export type GlobalTableRow = TableSelect<typeof globalsTable>;
+export type NewGlobalTableRow = TableInsert<typeof globalsTable>;
 
 export type GlobalContentRow = TableSelect<typeof globalContentTable>;
 export type NewGlobalContentRow = TableInsert<typeof globalContentTable>;
