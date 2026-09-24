@@ -159,17 +159,21 @@ AsyncLocalStorage, as ours do.
 One branch, `repository-consistency`, one commit per step, full gate per step.
 Once step 2 lands, steps 3 to 7 can run two at a time.
 
-- [ ] **1. Rules.**
+- [x] **1. Rules.**
     - Add the vocabulary, access and layout rules to `.claude/skills/code/SKILL.md`.
     - Add three `DECISIONS.md` entries: no shared resource base (Directus
       rejected), repositories reached through registries, and the vocabulary.
     - Add the `report:drift` patterns.
-- [ ] **2. Content repository.** - Rename `get` to `findOne`, `anyLocale` to `findAnyLocale`, and
+- [x] **2. Content repository.**
+    - Rename `get` to `findOne`, `anyLocale` to `findAnyLocale`, and
       `staging.getByCanonical` to `staging.findOne`. In versions, `list`/`get`
-      become `findMany`/`findOne`. - Split the `query` namespace: a `kysely()` escape hatch returning `{ db,
-ownerKey, contentKey, joined }` to match the base, with the decoding
-      helpers (`rows`, `overlayLocale`, `count`, `list`) as plain members. - No new read policy.
-- [ ] **3. Users.**
+      become `findMany`/`findOne`.
+    - Split the `query` namespace: a `kysely()` escape hatch returning
+      `{ db, ownerKey, contentKey, joined }` to match the base, with the
+      decoding helpers (`rows`, `overlayLocale`, `count`, `list`) as plain
+      members.
+    - No new read policy.
+- [x] **3. Users.**
     - `getUserRepository()` replaces every `createUserRepository(...)` call.
     - Its own `findOne(ref, { fallbackLocale })` includes the account-row step,
       `findMany(params)` and `count(params)` take the shared params, and the
@@ -180,7 +184,7 @@ ownerKey, contentKey, joined }` to match the base, with the decoding
       parameter.
     - Delete `users/internal/find-user.ts`, and move the account insert in
       `users/internal/credential-account.ts` onto the repository.
-- [ ] **4. Media.**
+- [x] **4. Media.**
     - `getMediaRepository()` replaces every construction.
     - It gets its own `findOne(ref, { fallbackLocale })`, `findMany` and
       `count`.
@@ -189,12 +193,12 @@ ownerKey, contentKey, joined }` to match the base, with the decoding
     - Delete `media/internal/find-media.ts`.
     - The account and file reads in `content/usage.ts` move onto the user and
       media repositories.
-- [ ] **5. Globals.**
+- [x] **5. Globals.**
     - `getGlobalRepository()` replaces the `globalRepository(config)` wrapper.
     - Hand-pick from the content repository instead of spreading it.
     - `findByKey(key, locale)` becomes one joined read in place of `idByKey`
       plus `get`.
-- [ ] **6. Entries.** This breaks the public contract for custom repositories.
+- [x] **6. Entries.** This breaks the public contract for custom repositories.
     - `EntryRepository.get` becomes `findOne`, `list` becomes `findMany` plus
       `count` on the shared params, and `anyLocale` becomes `findAnyLocale`.
     - `tableRepository` and the entries-table repository follow.
@@ -202,7 +206,7 @@ ownerKey, contentKey, joined }` to match the base, with the decoding
       double default-locale read.
     - The raw table reads in `entries/internal/relationships.ts` and
       `transport/cli/validate-stored-content.ts` move onto repository methods.
-- [ ] **7. Single-table repositories and layout.**
+- [x] **7. Single-table repositories and layout.**
     - Notifications: `findByUser`, `countByUser` and `deleteByUser`.
     - Cron keeps its domain verbs.
     - Plugin tracking: `findPackages`, and the file moves to
@@ -213,10 +217,9 @@ ownerKey, contentKey, joined }` to match the base, with the decoding
       `database/repository/` to `content/repository/`.
     - `content/relationships.ts` reads through the content repository.
     - Every repository gets its registry accessor.
-- [ ] **8. Plugins.**
+- [x] **8. Plugins.**
     - The assistant and backups repositories follow the vocabulary.
-    - Decide how plugins reach theirs: `createRegistry` is core-internal and
-      plugins import only `astromech`, `astromech/ui` and `astromech/ui/app`.
-      Either export a small registry helper from `astromech`, or keep
-      module-level instances and record why.
+    - Plugins keep building their repository per call from `ctx.db`, and
+      core exports no registry helper (`DECISIONS.md`, "Every repository is
+      reached through a registry, built on first use.").
     - Update the plugin note in `exports/index.ts`.
