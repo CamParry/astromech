@@ -2,7 +2,7 @@ import type { EntryVersion } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
-import { getEntryOfType } from '../../internal/records';
+import { getEntryOfType } from '../../internal/read-entry';
 import { toEntryVersion } from '../../internal/versions';
 import { getEntryRepository } from '../../repository/registry';
 
@@ -23,7 +23,7 @@ export const listEntryVersions = defineServiceMethod({
     mutates: false,
     async handler(params, ctx): Promise<EntryVersion[]> {
         const repository = getEntryRepository(params.type);
-        const record = await getEntryOfType(
+        const entry = await getEntryOfType(
             ctx.config,
             repository,
             params.type,
@@ -31,7 +31,7 @@ export const listEntryVersions = defineServiceMethod({
             params.locale
         );
         if (!repository.versions) return [];
-        const rows = await repository.versions.list(record.contentId);
-        return rows.map((row) => toEntryVersion(row, record));
+        const rows = await repository.versions.list(entry.contentId);
+        return rows.map((row) => toEntryVersion(row, entry));
     },
 });

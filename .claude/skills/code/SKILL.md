@@ -99,11 +99,12 @@ off `RESOURCE_SPECS` in `content/resources.ts`.
 ## Data access (repository pattern)
 
 - **The DB-access unit is a _repository_.** Name `createXRepository`, type `XRepository`, never `createXStorage`. `storage` means file/blob storage only.
-- **A `defineTable` / `definePluginTable` export is named `<noun>Table`** — `entriesTable`, `cronTable`, `submissionsTable`. The noun matches the SQL table name; the suffix keeps the table distinct from the module and its service. Row types stay `EntryRow` / `NewEntryRow`.
+- **A `defineTable` / `definePluginTable` export is named `<noun>Table`** — `entriesTable`, `cronTable`, `submissionsTable`. The noun matches the SQL table name; the suffix keeps the table distinct from the module and its service.
 - **A repository is the only place `getDb` or a Kysely query appears.** Services, methods, jobs, and helpers call a repository — never raw queries.
 - Repositories are **factory functions** closing over the db handle: `createUserRepository(db) => ({ … })`. The one class is `TableRepository`, the pluggable `EntryRepository` implementation.
 - Business logic is split **method-per-file** (`methods/create.ts`, …) wrapping the repository; shared per-module helpers live in `<module>/internal/`.
-- Module-local data → `<module>/repository/`. Cross-module subsystems (e.g. relationships, spanning entry/user/media) → `database/repository/`, composed by the services that need them.
+- **Row and mapper names.** A table's row types are `XTableRow` / `NewXTableRow`; the joined row a repository returns is `XRow`; a mapper from a row to the public type is `toX` (`toEntry`, `toGlobal`); a module's own table repository, inside its repository, is `owners`.
+- A module's repository is `<module>/repository.ts`, or a `<module>/repository/` directory once it needs more than one file. Cross-module subsystems (e.g. relationships, spanning entry/user/media) → `database/repository/`, composed by the services that need them.
 - `<module>/repository/` (DB access) is a different concept from top-level `storage/` (media binary/blob drivers), and the two words are kept apart deliberately.
 
 ## Commits

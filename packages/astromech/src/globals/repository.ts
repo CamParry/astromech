@@ -16,7 +16,7 @@ import { globalContentTable, globalsTable, globalVersionsTable } from '@/databas
 /** One locale of one global, as the globals service reads it. */
 export type GlobalRow = ContentRow & { key: string };
 
-export type GlobalsRepository = ContentRepository<
+export type GlobalRepository = ContentRepository<
     GlobalRow,
     typeof globalVersionsTable
 > & {
@@ -51,12 +51,12 @@ function toGlobalRow(
  * Build the globals repository, optionally bound to a specific db handle and
  * default locale. Unbound it resolves the db per operation via `getDb()`.
  */
-export function createGlobalsRepository(opts?: {
+export function createGlobalRepository(opts?: {
     db?: Db;
     defaultLocale?: string;
-}): GlobalsRepository {
+}): GlobalRepository {
     const dbOverride = opts?.db;
-    const globals = createRepository(globalsTable, dbOverride);
+    const owners = createRepository(globalsTable, dbOverride);
 
     const content = createContentRepository(
         {
@@ -73,7 +73,7 @@ export function createGlobalsRepository(opts?: {
     );
 
     async function idByKey(key: string): Promise<string | null> {
-        const row = await globals.findOne({ key });
+        const row = await owners.findOne({ key });
         return row?.id ?? null;
     }
 

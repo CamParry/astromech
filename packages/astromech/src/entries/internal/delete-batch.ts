@@ -3,7 +3,7 @@ import { createRelationshipRepository } from '@/database/repository/relationship
 import { transaction } from '@/database/transaction';
 import { BulkOperationError } from '../errors';
 import { getEntryRepository } from '../repository/registry';
-import { asEntry, getEntryResources } from './records';
+import { getEntryResources, toEntry } from './read-entry';
 
 /**
  * Permanently delete a batch of entries, atomically, firing the entry delete
@@ -26,7 +26,7 @@ export async function deleteEntryBatch(
     for (const entry of entries) {
         await ctx.runHook('entry:beforeDelete', {
             type,
-            entry: asEntry(entry),
+            entry: toEntry(entry),
             user,
             permanent: true,
         });
@@ -55,7 +55,7 @@ export async function deleteEntryBatch(
         // A throw here propagates; the write above stays (`DECISIONS.md`).
         await ctx.runHook('entry:afterDelete', {
             type,
-            entry: asEntry(entry),
+            entry: toEntry(entry),
             user,
             permanent: true,
         });

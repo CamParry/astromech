@@ -2,7 +2,7 @@ import type { Entry } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
-import { asEntry } from '../../internal/records';
+import { toEntry } from '../../internal/read-entry';
 import { resolveStagingTarget } from '../../internal/staging';
 
 /**
@@ -22,6 +22,6 @@ export const getStagedEntry = defineServiceMethod({
     async handler(params, ctx): Promise<Entry | null> {
         const { staging, canonical } = await resolveStagingTarget(ctx.config, params);
         const staged = await staging.getByCanonical(params.id, canonical.locale);
-        return staged ? asEntry(staged) : null;
+        return staged ? toEntry(staged) : null;
     },
 });

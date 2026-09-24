@@ -21,7 +21,7 @@ import {
 } from '../errors';
 import { entryGate } from '../internal/access';
 import { queryPreviewEntries } from '../internal/preview-read';
-import { asEntry } from '../internal/records';
+import { toEntry } from '../internal/read-entry';
 import { getEntryRepository, hasCustomTable } from '../repository/registry';
 
 /**
@@ -115,7 +115,7 @@ export const queryEntries = defineServiceMethod({
             limit: params.limit,
         });
 
-        const data = rows.map(asEntry);
+        const data = rows.map(toEntry);
 
         const audience = { role: ctx.user?.role ?? null, now };
 

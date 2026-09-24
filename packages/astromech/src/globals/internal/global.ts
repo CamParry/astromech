@@ -4,14 +4,14 @@
  * and the row → `Global` narrowing.
  */
 
-import type { GlobalRow, GlobalsRepository } from '../repository/globals-table';
+import type { GlobalRepository, GlobalRow } from '../repository';
 import type { Global, ResolvedConfig, ResolvedGlobal } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
 import { assertCapability } from '@/content/capabilities';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { ResourceNotFoundError } from '@/errors/resource';
-import { createGlobalsRepository } from '../repository/globals-table';
+import { createGlobalRepository } from '../repository';
 import { resolveGlobal } from '../resolve-global';
 
 /** Every capability a global may declare, for narrowing a bare string to one. */
@@ -59,15 +59,15 @@ export function assertRequiredCapability(
 }
 
 /** The globals repository, bound to the configured default content locale. */
-export function globalRepository(config: ResolvedConfig): GlobalsRepository {
-    return createGlobalsRepository({ defaultLocale: defaultContentLocale(config) });
+export function globalRepository(config: ResolvedConfig): GlobalRepository {
+    return createGlobalRepository({ defaultLocale: defaultContentLocale(config) });
 }
 
 /** What an operation on an already-saved locale of a global works from. */
 export type CanonicalGlobal = {
     global: ResolvedGlobal;
     locale: string;
-    repository: GlobalsRepository;
+    repository: GlobalRepository;
     /** The `globals.id` — the row exists, so this is never null. */
     id: string;
     current: GlobalRow;
@@ -106,7 +106,7 @@ export async function getCanonicalGlobal(
  * no such column); `global_content` always has both, so the cast is the one
  * place that fact is stated.
  */
-export function asGlobal(row: GlobalRow): Global {
+export function toGlobal(row: GlobalRow): Global {
     const { contentId: _contentId, ...global } = row;
     return global as Global;
 }

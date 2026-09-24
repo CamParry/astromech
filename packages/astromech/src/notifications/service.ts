@@ -40,11 +40,11 @@ export async function notify(input: NotifyInput): Promise<void> {
     if ('user' in input.target) {
         userIds = [input.target.user];
     } else if ('role' in input.target) {
-        userIds = await users.accounts.pluck('id', {
+        userIds = await users.owners.pluck('id', {
             where: { role: input.target.role },
         });
     } else {
-        userIds = await users.accounts.pluck('id');
+        userIds = await users.owners.pluck('id');
     }
 
     if (userIds.length === 0) return;

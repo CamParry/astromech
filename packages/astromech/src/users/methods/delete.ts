@@ -17,7 +17,7 @@ export const deleteUser = defineServiceMethod({
     destructive: true,
     async handler(params, ctx): Promise<void> {
         const repository = createUserRepository(ctx.config);
-        const account = await repository.accounts.findOne({ id: params.id });
+        const account = await repository.owners.findOne({ id: params.id });
         if (account) {
             await assertKeepsAnAdmin(
                 repository,

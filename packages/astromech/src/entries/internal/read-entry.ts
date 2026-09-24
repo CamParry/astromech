@@ -14,21 +14,21 @@ import { ResourceNotFoundError } from '@/errors/resource';
  * One locale of one entry as the operations read it: the public shape plus the
  * content row it came from, which versions and staging key on.
  */
-export type EntryRecord = Entry & { contentId: ContentRowId };
+export type EntryWithContentId = Entry & { contentId: ContentRowId };
 
 /**
  * Narrow a repository `EntryRow` to the public `Entry`. The contract is
  * intentionally wider than `Entry` so a repository need not carry every
  * capability column; `contentId` is dropped, as it never leaves the service.
  */
-export function asEntry(row: EntryRow): Entry {
-    const { contentId: _contentId, ...entry } = asRecord(row);
+export function toEntry(row: EntryRow): Entry {
+    const { contentId: _contentId, ...entry } = toEntryWithContentId(row);
     return entry;
 }
 
 /** The same narrowing, keeping the content row an operation still needs. */
-export function asRecord(row: EntryRow): EntryRecord {
-    return row as EntryRecord;
+export function toEntryWithContentId(row: EntryRow): EntryWithContentId {
+    return row as EntryWithContentId;
 }
 
 /**
@@ -42,12 +42,12 @@ export async function findEntryOfType(
     type: string,
     id: string,
     locale?: string
-): Promise<EntryRecord | null> {
+): Promise<EntryWithContentId | null> {
     const row = await repository.get(
         { type, id, locale: locale ?? defaultContentLocale(config) },
         { includeTrashed: true }
     );
-    return row ? asRecord(row) : null;
+    return row ? toEntryWithContentId(row) : null;
 }
 
 /** `findEntryOfType`, throwing when the entry or that locale's row is missing. */
@@ -57,15 +57,15 @@ export async function getEntryOfType(
     type: string,
     id: string,
     locale?: string
-): Promise<EntryRecord> {
-    const record = await findEntryOfType(config, repository, type, id, locale);
-    if (!record) {
+): Promise<EntryWithContentId> {
+    const entry = await findEntryOfType(config, repository, type, id, locale);
+    if (!entry) {
         throw new ResourceNotFoundError('entry', {
             id: id,
             locale: locale ?? defaultContentLocale(config),
         });
     }
-    return record;
+    return entry;
 }
 
 /**
@@ -78,13 +78,13 @@ export async function getEntryResource(
     repository: EntryRepository,
     type: string,
     id: string
-): Promise<EntryRecord> {
-    const record = await findEntryOfType(config, repository, type, id);
-    if (record) return record;
+): Promise<EntryWithContentId> {
+    const entry = await findEntryOfType(config, repository, type, id);
+    if (entry) return entry;
 
     const row = await repository.anyLocale?.({ type, id }, { includeTrashed: true });
     if (!row) throw new ResourceNotFoundError('entry', { id: id });
-    return asRecord(row);
+    return toEntryWithContentId(row);
 }
 
 /**
@@ -114,6 +114,6 @@ export async function getEntryResources(
     repository: EntryRepository,
     type: string,
     ids: readonly string[]
-): Promise<EntryRecord[]> {
+): Promise<EntryWithContentId[]> {
     return Promise.all(ids.map((id) => getEntryResource(config, repository, type, id)));
 }

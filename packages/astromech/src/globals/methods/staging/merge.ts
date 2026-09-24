@@ -5,7 +5,7 @@ import { snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
-import { asGlobal, getCanonicalGlobal } from '../../internal/global';
+import { getCanonicalGlobal, toGlobal } from '../../internal/global';
 import { syncGlobalRelationships } from '../../internal/relationships';
 import { toStoredFields } from '../../internal/stored-fields';
 import { localised } from '../../schema';
@@ -71,6 +71,6 @@ export const mergeStagedGlobal = defineServiceMethod({
             return row;
         });
 
-        return asGlobal(merged);
+        return toGlobal(merged);
     },
 });

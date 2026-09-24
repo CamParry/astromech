@@ -47,7 +47,7 @@ export function createUserRepository(config?: ResolvedConfig) {
     const defaultLocale = config
         ? defaultContentLocale(config)
         : getDefaultContentLocale();
-    const accounts = createRepository(usersTable);
+    const owners = createRepository(usersTable);
 
     /** The two joined rows plus the locale list, in the shape the service reads. */
     function decode(
@@ -143,7 +143,7 @@ export function createUserRepository(config?: ResolvedConfig) {
 
     /** The account row alone, read as a `UserRow` with no content. */
     async function accountRow(id: string): Promise<UserRow | null> {
-        const own = await accounts.findOne({ id });
+        const own = await owners.findOne({ id });
         if (!own) return null;
         return {
             id: own.id,
@@ -190,7 +190,7 @@ export function createUserRepository(config?: ResolvedConfig) {
          * The account row alone, the one better-auth writes, for the reads and
          * writes that never touch content.
          */
-        accounts,
+        owners,
         list,
         listContent,
         count,

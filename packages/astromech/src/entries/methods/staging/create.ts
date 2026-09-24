@@ -4,7 +4,7 @@ import { transaction } from '@/database/transaction';
 import { StagedChangeExistsError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
-import { asEntry } from '../../internal/records';
+import { toEntry } from '../../internal/read-entry';
 import { syncEntryRelationships } from '../../internal/relationships';
 import { resolveStagingTarget } from '../../internal/staging';
 
@@ -52,6 +52,6 @@ export const createStagedEntry = defineServiceMethod({
             return row;
         });
 
-        return asEntry(created);
+        return toEntry(created);
     },
 });

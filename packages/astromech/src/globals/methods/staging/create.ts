@@ -4,7 +4,7 @@ import { StagedChangeExistsError } from '@/errors/resource';
 import { mergePatch } from '@/fields/values';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
-import { asGlobal, getCanonicalGlobal } from '../../internal/global';
+import { getCanonicalGlobal, toGlobal } from '../../internal/global';
 import { syncGlobalRelationships } from '../../internal/relationships';
 import { createStagedGlobalSchema } from '../../schema';
 
@@ -51,6 +51,6 @@ export const createStagedGlobal = defineServiceMethod({
             await syncGlobalRelationships(ctx.config, id);
             return staged;
         });
-        return asGlobal(row);
+        return toGlobal(row);
     },
 });

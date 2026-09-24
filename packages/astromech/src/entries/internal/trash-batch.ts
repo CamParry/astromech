@@ -3,7 +3,7 @@ import { transaction } from '@/database/transaction';
 import { CapabilityError } from '@/errors/capability';
 import { BulkOperationError } from '../errors';
 import { getEntryRepository } from '../repository/registry';
-import { asEntry, getEntryResources } from './records';
+import { getEntryResources, toEntry } from './read-entry';
 
 /**
  * Soft-delete a batch of entries, atomically, firing the entry delete hooks
@@ -26,7 +26,7 @@ export async function trashEntryBatch(
     for (const entry of entries) {
         await ctx.runHook('entry:beforeDelete', {
             type,
-            entry: asEntry(entry),
+            entry: toEntry(entry),
             user,
             permanent: false,
         });
@@ -55,7 +55,7 @@ export async function trashEntryBatch(
         // A throw here propagates; the write above stays (`DECISIONS.md`).
         await ctx.runHook('entry:afterDelete', {
             type,
-            entry: asEntry(entry),
+            entry: toEntry(entry),
             user,
             permanent: false,
         });

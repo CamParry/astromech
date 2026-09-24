@@ -4,7 +4,7 @@
  * merges its patch over the current row.
  */
 
-import type { GlobalRow, GlobalsRepository } from '../repository/globals-table';
+import type { GlobalRepository, GlobalRow } from '../repository';
 import type {
     EntryStatus,
     JsonObject,
@@ -15,7 +15,7 @@ import type {
 import { RESOURCE_SPECS } from '@/content/resources';
 import { inheritSharedFields } from '@/content/translatable';
 import { writeFields } from '@/content/write-fields';
-import { asGlobal } from './global';
+import { toGlobal } from './global';
 
 /**
  * Turns what a caller sent into the values that go in the row. Throws a 422 when
@@ -26,7 +26,7 @@ import { asGlobal } from './global';
  * from its default-locale row rather than taken from the patch.
  */
 export async function toStoredFields(input: {
-    repository: GlobalsRepository;
+    repository: GlobalRepository;
     global: ResolvedGlobal;
     /** The global's row id, or null when nothing has been saved at all. */
     id: string | null;
@@ -60,7 +60,7 @@ export async function toStoredFields(input: {
         {
             target: global.id,
             operation: current ? 'update' : 'create',
-            record: current ? asGlobal(current) : null,
+            record: current ? toGlobal(current) : null,
             user: input.user,
             status: input.status,
             // One row per locale, so there is nothing else to be unique among.

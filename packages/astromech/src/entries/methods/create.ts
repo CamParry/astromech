@@ -9,7 +9,7 @@ import { defineServiceMethod } from '@/services/define-service-method';
 import { UnknownEntryTypeError } from '../errors';
 import { entryGate } from '../internal/access';
 import { assertWritableFields } from '../internal/entry-type';
-import { asEntry } from '../internal/records';
+import { toEntry } from '../internal/read-entry';
 import { syncEntryRelationships } from '../internal/relationships';
 import { deriveSlug } from '../internal/slug';
 import { toStoredFields } from '../internal/stored-fields';
@@ -96,7 +96,7 @@ export const createEntry = defineServiceMethod({
 
         // Write the row and its relationship index atomically.
         const entry = await transaction(async () => {
-            const created = asEntry(await repository.create({ type, ...row }));
+            const created = toEntry(await repository.create({ type, ...row }));
             await syncEntryRelationships(ctx.config, created, row.fields, type);
             return created;
         });

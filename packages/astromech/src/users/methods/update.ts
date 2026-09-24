@@ -102,7 +102,7 @@ export const updateUser = defineServiceMethod({
                 );
             }
             if (name !== undefined || email !== undefined || role !== undefined) {
-                await repository.accounts.update(id, { name, email, role });
+                await repository.owners.update(id, { name, email, role });
             }
             if (fields !== undefined) {
                 await repository.update(

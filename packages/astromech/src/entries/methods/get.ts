@@ -9,7 +9,7 @@ import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
 import { getPreviewEntry } from '../internal/preview-read';
-import { asEntry } from '../internal/records';
+import { toEntry } from '../internal/read-entry';
 import { getEntryRepository } from '../repository/registry';
 
 /**
@@ -55,7 +55,7 @@ export const getEntry = defineServiceMethod({
 
         if (!record) return null;
 
-        const result = asEntry(record);
+        const result = toEntry(record);
         // tableRepository-backed records carry no `type` column — stamp it so the
         // returned entry is complete.
         if (result.type === undefined) result.type = type;

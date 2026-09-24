@@ -11,15 +11,15 @@ import type { Db } from '@/database/types';
 import type { JsonObject } from '@/types/index';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createGlobalsRepository } from '@/globals/repository/globals-table';
+import { createGlobalRepository } from '@/globals/repository';
 
 let db: Db;
-let repository: ReturnType<typeof createGlobalsRepository>;
+let repository: ReturnType<typeof createGlobalRepository>;
 
 beforeEach(async () => {
     db = await createTestDb();
     setupTestConfig();
-    repository = createGlobalsRepository();
+    repository = createGlobalRepository();
 });
 
 async function createSite(fields: JsonObject = { title: 'Site' }) {

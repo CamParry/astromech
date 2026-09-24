@@ -9,7 +9,7 @@ import { ResourceValidationError } from '@/errors/resource';
 import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { readGate } from '../internal/access';
-import { asGlobal, getDeclaredGlobal, globalRepository } from '../internal/global';
+import { getDeclaredGlobal, globalRepository, toGlobal } from '../internal/global';
 import { localised } from '../schema';
 
 /**
@@ -59,7 +59,7 @@ export const getGlobal = defineServiceMethod({
                 : await repository.get({ id, locale });
         if (!row) return null;
 
-        const record = asGlobal(row);
+        const record = toGlobal(row);
         const shape: VisibilityShape = params.full ? 'full' : 'public';
 
         const filtered = applyVisibility(

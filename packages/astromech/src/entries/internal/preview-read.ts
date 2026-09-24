@@ -11,7 +11,7 @@ import { resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
 import { getEntryRepository } from '../repository/registry';
 import { projectPreview, verifyPreviewToken } from './preview';
-import { asEntry } from './records';
+import { toEntry } from './read-entry';
 
 /**
  * Preview list read by filters (see the file header). Returns an empty result
@@ -51,7 +51,7 @@ export async function queryPreviewEntries(
 
     const out: Entry[] = [];
     for (const row of rows) {
-        const canonical = asEntry(row);
+        const canonical = toEntry(row);
         if (!(await verifyPreviewToken(canonical.id, token))) continue;
 
         let target: Entry = canonical;
@@ -61,7 +61,7 @@ export async function queryPreviewEntries(
                 canonical.locale
             );
             if (!staged) continue;
-            target = asEntry(staged);
+            target = toEntry(staged);
         }
 
         const projected = projectPreview(target, fields);
@@ -105,7 +105,7 @@ export async function getPreviewEntry(
     });
     if (!record) return null;
 
-    const canonical = asEntry(record);
+    const canonical = toEntry(record);
     if (!(await verifyPreviewToken(canonical.id, token))) return null;
 
     let target: Entry = canonical;
@@ -115,7 +115,7 @@ export async function getPreviewEntry(
             canonical.locale
         );
         if (!staged) return null;
-        target = asEntry(staged);
+        target = toEntry(staged);
     }
 
     const entryTypeCfg = resolveEntryType(config, type);

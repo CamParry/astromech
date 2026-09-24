@@ -1,28 +1,14 @@
 import type { AnnotatedManifestMethod } from '@/policies/annotate-manifest';
 import type { ExcludedMethod } from '@/policies/method-filter';
-import type { ManifestMethod, ResolvedConfig } from '@/types/index';
+import type { ManifestMethod } from '@/types/index';
 import { defineCommand } from 'citty';
-import { resolveRole } from '@/permissions/roles';
+import { getRole } from '@/permissions/roles';
 import { annotateManifest } from '@/policies/annotate-manifest';
 import { filterMethods } from '@/policies/method-filter';
 import { configArgs, jsonArgs } from '../common-args';
 import { withApplication } from '../config';
 import { filterArgs, toMethodFilter } from '../filter-args';
 import { bootedManifest } from '../methods';
-
-/**
- * Resolve a role slug, rejecting one that is not configured. The `getRole` in
- * `permissions/roles.ts` raises a 422, which is the wrong shape for a CLI
- * flag, so the message is built here instead.
- */
-function getRole(config: ResolvedConfig, slug: string) {
-    const role = resolveRole(config, slug);
-    if (!role) {
-        const configured = Object.keys(config.resolvedRoles).join(', ');
-        throw new Error(`Unknown role "${slug}". Configured roles: ${configured}`);
-    }
-    return role;
-}
 
 /**
  * The trailing "n excluded" summary, one line per reason.

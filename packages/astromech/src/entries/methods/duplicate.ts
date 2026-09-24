@@ -1,11 +1,11 @@
-import type { EntryRecord } from '../internal/records';
+import type { EntryWithContentId } from '../internal/read-entry';
 import type { EntryRepository } from '../repository/types';
 import type { Entry, EntryDuplicateOverrides, ResolvedConfig } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
-import { asEntry, getEntryOfType, getEntryResource } from '../internal/records';
+import { getEntryOfType, getEntryResource, toEntry } from '../internal/read-entry';
 import { syncEntryRelationships } from '../internal/relationships';
 import { getEntryRepository } from '../repository/registry';
 import { duplicateOverridesSchema } from '../schema';
@@ -69,7 +69,7 @@ export const duplicateEntry = defineServiceMethod({
             // Once, at the end: the index is per entry and reads every locale back.
             await syncEntryRelationships(ctx.config, first, first.fields, type);
             // Re-read so `locales` names every copied locale, not just the first.
-            return asEntry(
+            return toEntry(
                 await getEntryOfType(ctx.config, repository, type, first.id, firstLocale)
             );
         });
@@ -87,7 +87,7 @@ async function copyLocale(params: {
     repository: EntryRepository;
     type: string;
     id: string;
-    source: EntryRecord;
+    source: EntryWithContentId;
     locale: string;
     overrides: EntryDuplicateOverrides | undefined;
     createdBy: string | null;
@@ -114,7 +114,7 @@ async function copyLocale(params: {
         updatedBy: createdBy,
     };
 
-    return asEntry(
+    return toEntry(
         into === undefined
             ? await repository.create({ type, ...write })
             : await repository.update({ id: into, locale }, write)

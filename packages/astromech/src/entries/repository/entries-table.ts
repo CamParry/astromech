@@ -218,7 +218,7 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
 
     // Unbound when there is no override, so it follows `setDb` per call exactly
     // as `handle()` does.
-    const entries = createRepository(entriesTable, dbOverride);
+    const owners = createRepository(entriesTable, dbOverride);
 
     const content = createContentRepository(
         {
@@ -342,12 +342,12 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
 
     const trash = {
         trash: async (id: string, actor?: string | null): Promise<void> => {
-            const row = await entries.findOne({ id });
+            const row = await owners.findOne({ id });
             if (!row) throw new ResourceNotFoundError('entry', { id });
 
             // Idempotent: re-trashing an already-trashed entry is a no-op.
             if (row.deletedAt === null) {
-                await entries.update(id, {
+                await owners.update(id, {
                     deletedAt: new Date(),
                     ...(actor === undefined ? {} : { updatedBy: actor }),
                 });
@@ -377,27 +377,27 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
         },
 
         emptyTrash: async (type: string): Promise<void> => {
-            await entries.deleteMany({ type, deletedAt: { ne: null } });
+            await owners.deleteMany({ type, deletedAt: { ne: null } });
         },
     };
 
     const previewToken = {
         set: async (id: string, hash: string, expiresAt: Date | null): Promise<void> => {
-            await entries.update(id, {
+            await owners.update(id, {
                 previewToken: hash,
                 previewTokenExpiresAt: expiresAt,
             });
         },
 
         clear: async (id: string): Promise<void> => {
-            await entries.update(id, {
+            await owners.update(id, {
                 previewToken: null,
                 previewTokenExpiresAt: null,
             });
         },
 
         findByHash: async (hash: string): Promise<PreviewTokenRecord | null> => {
-            const row = await entries.findOne({ previewToken: hash });
+            const row = await owners.findOne({ previewToken: hash });
             if (!row) return null;
             return { id: row.id, expiresAt: row.previewTokenExpiresAt };
         },

@@ -50,7 +50,7 @@ export type FieldsFor<T extends keyof AstromechEntryTypes> = FieldsForMap<
  * Resolves to the public field type for entry type `T` — full fields minus any
  * `private: true` fields, with `_disabled`/`_title` stripped from instance types.
  * Degrades to `JsonObject & { readonly __shape?: 'public' }` before the type
- * generator (Step 2) emits the real per-collection public types.
+ * generator emits the real per-entry-type public types.
  */
 export type PublicFieldsFor<T extends keyof AstromechEntryTypes> = PublicFieldsForMap<
     AstromechEntryTypes,

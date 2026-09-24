@@ -3,7 +3,7 @@ import { z } from '@hono/zod-openapi';
 import { listUsage } from '@/content/usage';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
-import { getEntryResource } from '../internal/records';
+import { getEntryResource } from '../internal/read-entry';
 import { getEntryRepository } from '../repository/registry';
 
 /**

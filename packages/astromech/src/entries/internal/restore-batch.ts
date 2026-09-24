@@ -3,7 +3,7 @@ import { transaction } from '@/database/transaction';
 import { CapabilityError } from '@/errors/capability';
 import { BulkOperationError } from '../errors';
 import { getEntryRepository } from '../repository/registry';
-import { asEntry, getEntryResources } from './records';
+import { getEntryResources, toEntry } from './read-entry';
 
 /**
  * Restore a batch of trashed entries, atomically, returning each one's
@@ -29,7 +29,7 @@ export async function restoreEntryBatch(
         const succeeded: string[] = [];
         for (const entry of entries) {
             try {
-                rows.push(asEntry(await trash.restore(entry.id, user?.id ?? null)));
+                rows.push(toEntry(await trash.restore(entry.id, user?.id ?? null)));
                 succeeded.push(entry.id);
             } catch (err) {
                 throw new BulkOperationError({

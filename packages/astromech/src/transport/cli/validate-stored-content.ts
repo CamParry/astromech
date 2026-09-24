@@ -12,7 +12,7 @@ import { RESOURCE_SPECS } from '@/content/resources';
 import { definitionsOf, fieldParseContext } from '@/content/write-fields';
 import { createRepository } from '@/database/repository/create-repository';
 import { resolveEntryType } from '@/entries/entry-types';
-import { listEntryRows } from '@/entries/internal/records';
+import { listEntryRows } from '@/entries/internal/read-entry';
 import { getEntryRepository, hasCustomTable } from '@/entries/repository/registry';
 import { entriesTable, entryContentTable } from '@/entries/tables';
 import { safeParseFields } from '@/fields/parse-fields';

@@ -40,7 +40,7 @@ export const replaceMedia = defineServiceMethod({
 
         // The file columns only: replacing the bytes changes no authored
         // content, so no content row and no version is written.
-        await repository.files.update(id, {
+        await repository.owners.update(id, {
             filename: file.name,
             mimeType: file.type,
             size: file.size,

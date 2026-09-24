@@ -9,7 +9,7 @@ import type { ResolvedConfig, TargetKind, Usage } from '@/types/index';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { mediaTable, usersTable } from '@/database/tables';
-import { getEntryResource } from '@/entries/internal/records';
+import { getEntryResource } from '@/entries/internal/read-entry';
 import { getEntryRepository } from '@/entries/repository/registry';
 import { resolveGlobal } from '@/globals/resolve-global';
 

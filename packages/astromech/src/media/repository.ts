@@ -108,7 +108,7 @@ export function createMediaRepository(config?: ResolvedConfig) {
     const defaultLocale = config
         ? defaultContentLocale(config)
         : getDefaultContentLocale();
-    const files = createRepository(mediaTable);
+    const owners = createRepository(mediaTable);
 
     const content = createContentRepository(
         {
@@ -198,7 +198,7 @@ export function createMediaRepository(config?: ResolvedConfig) {
          * The file row alone, for the reads and writes that never touch
          * authored content.
          */
-        files,
+        owners,
         list,
         listContent,
         count,

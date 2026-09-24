@@ -7,7 +7,7 @@ import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
 import { isVersioningEnabled } from '../../internal/entry-type';
-import { asEntry, asRecord } from '../../internal/records';
+import { toEntry, toEntryWithContentId } from '../../internal/read-entry';
 import { syncEntryRelationships } from '../../internal/relationships';
 import { resolveStagingTarget } from '../../internal/staging';
 import { toStoredFields } from '../../internal/stored-fields';
@@ -34,7 +34,7 @@ export const mergeStagedEntry = defineServiceMethod({
             ctx.config,
             params
         );
-        const staged = asRecord(
+        const staged = toEntryWithContentId(
             await requireStagedChange(staging, 'entry', {
                 rowId: id,
                 id,
@@ -87,7 +87,7 @@ export const mergeStagedEntry = defineServiceMethod({
             await staging.delete({ id, locale: canonical.locale });
             await syncEntryRelationships(ctx.config, updated, mergedFields, type);
 
-            return asEntry(updated);
+            return toEntry(updated);
         });
     },
 });

@@ -1,17 +1,17 @@
 /** What every staging operation on one locale of an entry starts from. */
 
 import type { EntryRepository } from '../repository/types';
-import type { EntryRecord } from './records';
+import type { EntryWithContentId } from './read-entry';
 import type { ResolvedConfig } from '@/types/index';
 import { CapabilityError } from '@/errors/capability';
 import { getEntryRepository } from '../repository/registry';
-import { getEntryOfType } from './records';
+import { getEntryOfType } from './read-entry';
 
 /** An entry's repository with its staging group, and the canonical row addressed. */
 export type StagingTarget = {
     repository: EntryRepository;
     staging: NonNullable<EntryRepository['staging']>;
-    canonical: EntryRecord;
+    canonical: EntryWithContentId;
 };
 
 /**

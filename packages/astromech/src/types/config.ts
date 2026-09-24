@@ -1,5 +1,5 @@
 /**
- * Configuration types — collection config, drivers, Astromech config
+ * Configuration types: entry type config, drivers, Astromech config
  */
 
 import type { AiConfig } from './ai';

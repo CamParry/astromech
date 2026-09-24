@@ -5,7 +5,7 @@
  */
 
 import type { EntryRepository } from '../repository/types';
-import type { EntryRecord } from './records';
+import type { EntryWithContentId } from './read-entry';
 import type { FieldSource } from '@/content/write-fields';
 import type {
     EntryStatus,
@@ -17,7 +17,7 @@ import type {
 import { RESOURCE_SPECS } from '@/content/resources';
 import { inheritSharedFields } from '@/content/translatable';
 import { writeFields } from '@/content/write-fields';
-import { listEntryRows } from './records';
+import { listEntryRows } from './read-entry';
 
 /**
  * The three write paths that store field values, each with what its own
@@ -42,15 +42,15 @@ export type StoredFieldsInput = {
     | {
           kind: 'update';
           entryType: ResolvedEntryType;
-          currentEntry: EntryRecord;
+          currentEntry: EntryWithContentId;
           patch: Record<string, unknown>;
           status: EntryStatus | undefined;
       }
     | {
           kind: 'merge';
           type: string;
-          canonical: EntryRecord;
-          staged: EntryRecord;
+          canonical: EntryWithContentId;
+          staged: EntryWithContentId;
       }
 );
 

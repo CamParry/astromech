@@ -1,7 +1,7 @@
 import type { Global } from '@/types/index';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
-import { asGlobal, getCanonicalGlobal } from '../../internal/global';
+import { getCanonicalGlobal, toGlobal } from '../../internal/global';
 import { localised } from '../../schema';
 
 /**
@@ -17,6 +17,6 @@ export const getStagedGlobal = defineServiceMethod({
     async handler(params, ctx): Promise<Global | null> {
         const { repository, id, locale } = await getCanonicalGlobal(ctx.config, params);
         const staged = await repository.staging.getByCanonical(id, locale);
-        return staged ? asGlobal(staged) : null;
+        return staged ? toGlobal(staged) : null;
     },
 });

@@ -1,4 +1,4 @@
-import type { GlobalRow, GlobalsRepository } from '../repository/globals-table';
+import type { GlobalRepository, GlobalRow } from '../repository';
 import type {
     EntryStatus,
     Global,
@@ -18,7 +18,7 @@ import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resourc
 import { parseInput } from '@/errors/validation';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../internal/access';
-import { asGlobal, getDeclaredGlobal, globalRepository } from '../internal/global';
+import { getDeclaredGlobal, globalRepository, toGlobal } from '../internal/global';
 import { syncGlobalRelationships } from '../internal/relationships';
 import { toStoredFields } from '../internal/stored-fields';
 import { localised, updateGlobalSchema } from '../schema';
@@ -80,7 +80,7 @@ export const updateGlobal = defineServiceMethod({
         const context = await ctx.runHook('global:beforeUpdate', {
             key: params.key,
             locale,
-            global: current ? asGlobal(current) : null,
+            global: current ? toGlobal(current) : null,
             data: params.data,
             user,
         });
@@ -118,7 +118,7 @@ export const updateGlobal = defineServiceMethod({
                     updatedBy: user?.id ?? null,
                 });
                 await syncGlobalRelationships(ctx.config, row.id);
-                return asGlobal(row);
+                return toGlobal(row);
             }
             if (current && global.capabilities.versioning) {
                 if (changesVersionedContent(RESOURCE_SPECS.global, current, { fields })) {
@@ -167,7 +167,7 @@ export const updateGlobal = defineServiceMethod({
  */
 async function writeRow(params: {
     config: ResolvedConfig;
-    repository: GlobalsRepository;
+    repository: GlobalRepository;
     global: ResolvedGlobal;
     key: string;
     id: string | null;
@@ -222,7 +222,7 @@ async function writeRow(params: {
         patchedFieldNames: params.patchedNames,
     });
 
-    return asGlobal(row);
+    return toGlobal(row);
 }
 
 /**

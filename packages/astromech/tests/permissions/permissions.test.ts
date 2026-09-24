@@ -38,7 +38,7 @@ describe('hasPermission', () => {
     });
 
     describe('viewer shape — action-last with mid-wildcard', () => {
-        it('entry:*:read grants any collection:read', () => {
+        it('entry:*:read grants read on any entry type', () => {
             expect(hasPermission(['entry:*:read'], 'entry:posts:read')).toBe(true);
         });
 
@@ -48,7 +48,7 @@ describe('hasPermission', () => {
     });
 
     describe('editor collapse — trailing wildcard', () => {
-        it('entry:* grants any entry action on any collection', () => {
+        it('entry:* grants any entry action on any entry type', () => {
             expect(hasPermission(['entry:*'], 'entry:posts:publish')).toBe(true);
             expect(hasPermission(['entry:*'], 'entry:pages:create')).toBe(true);
         });

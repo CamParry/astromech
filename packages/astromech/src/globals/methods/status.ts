@@ -4,12 +4,12 @@
  * nothing a version preserves, which is the rule entries apply too.
  */
 
-import type { GlobalRow } from '../repository/globals-table';
+import type { GlobalRow } from '../repository';
 import type { ContentWrite } from '@/content/repository/types';
 import type { Global, ResolvedConfig, User } from '@/types/index';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../internal/access';
-import { asGlobal, getCanonicalGlobal } from '../internal/global';
+import { getCanonicalGlobal, toGlobal } from '../internal/global';
 import { localised, scheduleGlobalSchema } from '../schema';
 
 /** Publishes one locale, stamping `publishedAt` when it has none yet. */
@@ -79,5 +79,5 @@ async function writeStatus(
         { id, locale },
         { ...write(current), updatedBy: user?.id ?? null }
     );
-    return asGlobal(row);
+    return toGlobal(row);
 }

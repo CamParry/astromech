@@ -5,7 +5,7 @@ import { restoreVersion } from '@/content/versions';
 import { CapabilityError } from '@/errors/capability';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
-import { asEntry, getEntryOfType } from '../../internal/records';
+import { getEntryOfType, toEntry } from '../../internal/read-entry';
 import { syncEntryRelationships } from '../../internal/relationships';
 import { uniqueSlugIfChanged } from '../../internal/slug';
 import { getEntryRepository } from '../../repository/registry';
@@ -64,7 +64,7 @@ export const restoreEntryVersion = defineServiceMethod({
                     }
                 );
                 await syncEntryRelationships(ctx.config, row, fields, type);
-                return asEntry(row);
+                return toEntry(row);
             },
         });
     },

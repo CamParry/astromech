@@ -4,7 +4,7 @@ import { RESOURCE_SPECS } from '@/content/resources';
 import { restoreVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
-import { asGlobal, getCanonicalGlobal } from '../../internal/global';
+import { getCanonicalGlobal, toGlobal } from '../../internal/global';
 import { syncGlobalRelationships } from '../../internal/relationships';
 import { localised } from '../../schema';
 
@@ -35,7 +35,7 @@ export const restoreGlobalVersion = defineServiceMethod({
             write: async ({ fields }) => {
                 const row = await repository.update({ id, locale }, { fields });
                 await syncGlobalRelationships(ctx.config, id);
-                return asGlobal(row);
+                return toGlobal(row);
             },
         });
     },
