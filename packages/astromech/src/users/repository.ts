@@ -14,6 +14,7 @@ import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
 import { RESOURCE_SPECS } from '@/content/resources';
+import { chunks } from '@/database/chunks';
 import { encodeWith, kyselyTableKey } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
@@ -194,6 +195,15 @@ function createUserRepository() {
         return findAccountRow(id);
     }
 
+    /** The account rows for `ids`, in slices small enough for one `IN (…)` each. */
+    async function findAccounts(ids: Iterable<string>): Promise<UserTableRow[]> {
+        const rows: UserTableRow[] = [];
+        for (const chunk of chunks(ids)) {
+            rows.push(...(await owners.findMany({ where: { id: { in: chunk } } })));
+        }
+        return rows;
+    }
+
     async function create(own: NewUserTableRow, write: ContentWrite): Promise<UserRow> {
         return content.create(own, write);
     }
@@ -260,6 +270,7 @@ function createUserRepository() {
         findByLocale,
         /** The account row alone, the one better-auth writes, or null. */
         findAccount: (id: string): Promise<UserTableRow | null> => owners.findOne({ id }),
+        findAccounts,
         /** Every user's id. */
         findIds: (): Promise<string[]> => owners.pluck('id'),
         /** The ids of the users holding `role`. */

@@ -20,6 +20,7 @@ import type { JsonObject, ReferencesFilter } from '@/types/index';
 import type { Expression, SqlBool } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
+import { chunks } from '@/database/chunks';
 import { decodeWith } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 import { isReferencesFilter } from './references-filter';
@@ -28,9 +29,6 @@ type OrderPair = [column: string, direction: 'asc' | 'desc'];
 
 /** The expression builder the list predicate is compiled against. */
 type ListEb = Parameters<ReturnType<KyselyHandle<Table>['where']>>[0];
-
-/** D1 caps a query at 100 bound parameters, and each id binds one. */
-const ID_CHUNK = 100;
 
 export type TableRepositoryOptions = {
     /** Primary key column name, declared with `col.id()`. Default 'id'. */
@@ -245,14 +243,13 @@ class TableRepository implements EntryRepository<EntryRow> {
      * decodes every column of every matched row to answer a yes/no.
      */
     async existingIds(ids: string[]): Promise<Set<string>> {
-        const unique = Array.from(new Set(ids));
         const found = new Set<string>();
         const { db, table, where } = this.repository.kysely();
-        for (let i = 0; i < unique.length; i += ID_CHUNK) {
+        for (const chunk of chunks(ids)) {
             const rows = await db
                 .selectFrom(table)
                 .select(this.idCol)
-                .where(where({ [this.idCol]: { in: unique.slice(i, i + ID_CHUNK) } }))
+                .where(where({ [this.idCol]: { in: chunk } }))
                 .execute();
             for (const row of rows) found.add(String(row[this.idCol]));
         }

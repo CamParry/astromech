@@ -7,7 +7,7 @@ import { getStorageDriver } from '@/storage/registry';
 import { originalKey } from '../internal/keys';
 import { storeFile } from '../internal/store-file';
 import { toMedia } from '../internal/to-media';
-import { createMediaRepository } from '../repository';
+import { getMediaRepository } from '../repository';
 import { variantPrefix } from '../serving/image/url';
 
 /** Swap a media item's file, keeping its id, URL shape and metadata row. */
@@ -20,10 +20,10 @@ export const replaceMedia = defineServiceMethod({
     destructive: true,
     async handler(params, ctx): Promise<Media> {
         const { id, file } = params;
-        const repository = createMediaRepository(ctx.config);
+        const repository = getMediaRepository();
         const driver = getStorageDriver();
 
-        const row = await repository.get(id);
+        const row = await repository.findOne(id);
         if (!row) throw new ResourceNotFoundError('media', { id });
 
         const newKey = originalKey(id, file.name);
@@ -40,7 +40,7 @@ export const replaceMedia = defineServiceMethod({
 
         // The file columns only: replacing the bytes changes no authored
         // content, so no content row and no version is written.
-        await repository.owners.update(id, {
+        await repository.updateFile(id, {
             filename: file.name,
             mimeType: file.type,
             size: file.size,
@@ -50,7 +50,7 @@ export const replaceMedia = defineServiceMethod({
             updatedBy: ctx.user?.id ?? null,
         });
 
-        const updated = await repository.get(id);
+        const updated = await repository.findOne(id);
         if (!updated) throw new ResourceNotFoundError('media', { id });
         return toMedia(ctx.config, updated);
     },

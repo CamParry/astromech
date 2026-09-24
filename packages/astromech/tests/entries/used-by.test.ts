@@ -15,7 +15,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { defineTable } from '@/database/define-table';
 import { tableRepository } from '@/entries/repository/table';
-import { createMediaRepository } from '@/media/repository';
+import { getMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 
 const api = currentServices.entries;
@@ -256,7 +256,7 @@ describe('usedBy', () => {
                 fields: { featured: target.id },
             },
         });
-        const media = await createMediaRepository().create(
+        const media = await getMediaRepository().create(
             { filename: 'photo.png', mimeType: 'image/png', size: 1 },
             {}
         );

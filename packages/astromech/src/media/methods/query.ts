@@ -4,7 +4,7 @@ import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { toMedia } from '../internal/to-media';
-import { createMediaRepository } from '../repository';
+import { getMediaRepository } from '../repository';
 import { mediaQuerySchema } from '../schema';
 
 /**
@@ -24,10 +24,11 @@ export const queryMedia = defineServiceMethod({
             undefined,
             params.locale
         );
-        const repository = createMediaRepository(ctx.config);
+        const repository = getMediaRepository();
+        const { search, where, sort } = params;
         const result = await queryPage(params, {
-            list: (page) => repository.list(params, page, locale),
-            count: () => repository.count(params),
+            list: (page) => repository.findMany({ search, where, sort, locale, ...page }),
+            count: () => repository.count({ search, where }),
         });
         return { ...result, data: result.data.map((row) => toMedia(ctx.config, row)) };
     },

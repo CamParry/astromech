@@ -9,7 +9,7 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { ResourceValidationError } from '@/errors/resource';
-import { createMediaRepository } from '@/media/repository';
+import { getMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { makeTranslatableMediaConfig } from './media-config';
 
@@ -19,7 +19,7 @@ let id: string;
 
 /** One media item with its default-locale content already authored. */
 async function seed(): Promise<string> {
-    const row = await createMediaRepository().create(
+    const row = await getMediaRepository().create(
         { filename: 'photo.png', mimeType: 'image/png', size: 1 },
         {}
     );
@@ -49,6 +49,20 @@ describe('reading a locale with no content row', () => {
         expect(fr?.locales).toEqual(['en']);
         expect(fr?.title).toBe('EN title');
         expect(fr?.fields['credit']).toBe('EN credit');
+    });
+
+    it('reads the fallback locale through the repository only when asked', async () => {
+        const repository = getMediaRepository();
+        expect(await repository.findOne(id, { locale: 'fr' })).toBeNull();
+        const fr = await repository.findOne(id, { locale: 'fr', fallbackLocale: 'en' });
+        expect(fr?.locale).toBe('en');
+        expect(fr?.title).toBe('EN title');
+    });
+
+    it('answers null when the fallback locale is the one asked', async () => {
+        const repository = getMediaRepository();
+        const fr = await repository.findOne(id, { locale: 'fr', fallbackLocale: 'fr' });
+        expect(fr).toBeNull();
     });
 
     it('lists the item in the query too', async () => {

@@ -4,7 +4,7 @@ import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { createMediaRepository } from '../../repository';
+import { getMediaRepository } from '../../repository';
 
 /**
  * Lists the saved versions of one locale of a media item, newest first. Unlike a
@@ -23,8 +23,8 @@ export const listMediaVersions = defineServiceMethod({
             undefined,
             params.locale
         );
-        const repository = createMediaRepository(ctx.config);
-        const current = await repository.get(params.id, locale);
+        const repository = getMediaRepository();
+        const current = await repository.findOne(params.id, { locale });
         if (!current) throw new ResourceNotFoundError('media', { id: params.id, locale });
 
         const rows = await repository.versions.findMany(current.contentId);

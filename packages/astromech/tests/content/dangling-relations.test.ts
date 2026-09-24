@@ -26,7 +26,7 @@ import { setDb } from '@/database/registry';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { transaction } from '@/database/transaction';
 import { tableRepository } from '@/entries/repository/table';
-import { createMediaRepository } from '@/media/repository';
+import { getMediaRepository } from '@/media/repository';
 import { getUserRepository } from '@/users/repository';
 
 const api = currentServices.entries;
@@ -162,7 +162,7 @@ async function touch(id: string): Promise<Entry> {
 
 /** A media row, inserted through the repository so no driver or real bytes are needed. */
 async function createMedia(): Promise<string> {
-    const row = await createMediaRepository().create(
+    const row = await getMediaRepository().create(
         {
             filename: 'a.png',
             mimeType: 'image/png',
@@ -280,7 +280,7 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
             data: { title: 'Doc', fields: { avatar: mediaId, owner: user.id } },
         });
 
-        await createMediaRepository().delete(mediaId);
+        await getMediaRepository().delete(mediaId);
         await getUserRepository().delete(user.id);
         const updated = await touch(doc.id);
 

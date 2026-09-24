@@ -12,7 +12,7 @@ import { createTestDb, setupTestConfig } from '@tests/harness';
 import { mountRouter, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { createMediaRepository } from '@/media/repository';
+import { getMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
 import { makeTranslatableMediaConfig } from '../../../media/media-config';
@@ -31,7 +31,7 @@ beforeEach(async () => {
     setupTestConfig(makeTranslatableMediaConfig());
     setStorageDriver(noopStorage);
     await seedTestUser(db);
-    const row = await createMediaRepository().create(
+    const row = await getMediaRepository().create(
         { filename: 'photo.png', mimeType: 'image/png', size: 1 },
         { alt: 'english alt' }
     );

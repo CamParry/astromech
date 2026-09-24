@@ -6,10 +6,8 @@
 
 import type { Db } from '@/database/types';
 import type { TargetKind } from '@/types/domain';
+import { chunks } from '@/database/chunks';
 import { getDb } from '@/database/registry';
-
-/** D1 caps a query at 100 bound parameters, and each id binds one. */
-const ID_CHUNK = 100;
 
 /**
  * Which of these ids actually exist. Ids absent from the result do not.
@@ -23,12 +21,9 @@ export async function existingResourceIds(
     db?: Db
 ): Promise<Set<string>> {
     const database = db ?? getDb();
-    const unique = Array.from(new Set(ids));
-    if (unique.length === 0) return new Set();
-
     const found = new Set<string>();
-    for (let i = 0; i < unique.length; i += ID_CHUNK) {
-        for (const id of await selectIds(database, kind, unique.slice(i, i + ID_CHUNK))) {
+    for (const chunk of chunks(ids)) {
+        for (const id of await selectIds(database, kind, chunk)) {
             found.add(id);
         }
     }
@@ -45,13 +40,12 @@ export async function existingEntryTypes(
     db?: Db
 ): Promise<Map<string, string>> {
     const database = db ?? getDb();
-    const unique = Array.from(new Set(ids));
     const types = new Map<string, string>();
-    for (let i = 0; i < unique.length; i += ID_CHUNK) {
+    for (const chunk of chunks(ids)) {
         const rows = await database
             .selectFrom('entries')
             .select(['id', 'type'])
-            .where('id', 'in', unique.slice(i, i + ID_CHUNK))
+            .where('id', 'in', chunk)
             .execute();
         for (const row of rows) types.set(row.id, row.type);
     }

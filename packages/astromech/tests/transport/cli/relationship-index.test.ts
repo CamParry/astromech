@@ -18,7 +18,7 @@ import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { relationshipsTable } from '@/database/tables';
 import { tableRepository } from '@/entries/repository/table';
-import { createMediaRepository } from '@/media/repository';
+import { getMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import {
     checkRelationshipIndex,
@@ -132,7 +132,7 @@ beforeEach(async () => {
 
 /** A media row, inserted through the repository so no driver or real bytes are needed. */
 async function createMedia(filename = 'a.png'): Promise<string> {
-    const row = await createMediaRepository().create(
+    const row = await getMediaRepository().create(
         {
             filename,
             mimeType: 'image/png',

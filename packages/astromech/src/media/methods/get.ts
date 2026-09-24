@@ -1,11 +1,11 @@
 import type { Media } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { defaultContentLocale } from '@/config/content-locale';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { findMedia } from '../internal/find-media';
 import { toMedia } from '../internal/to-media';
-import { createMediaRepository } from '../repository';
+import { getMediaRepository } from '../repository';
 
 /**
  * Read one media item by id, or null when there is no such row. A locale with no
@@ -24,7 +24,10 @@ export const getMedia = defineServiceMethod({
             undefined,
             params.locale
         );
-        const row = await findMedia(createMediaRepository(ctx.config), params.id, locale);
+        const row = await getMediaRepository().findOne(params.id, {
+            locale,
+            fallbackLocale: defaultContentLocale(ctx.config),
+        });
         return row ? toMedia(ctx.config, row) : null;
     },
 });

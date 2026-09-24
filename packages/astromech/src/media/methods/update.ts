@@ -9,10 +9,9 @@ import { patchedFieldNames, writeFields } from '@/content/write-fields';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { findMedia } from '../internal/find-media';
 import { syncMediaRelationships } from '../internal/relationships';
 import { toMedia } from '../internal/to-media';
-import { createMediaRepository } from '../repository';
+import { getMediaRepository } from '../repository';
 import { updateMediaSchema } from '../schema';
 
 /**
@@ -40,12 +39,12 @@ export const updateMedia = defineServiceMethod({
             undefined,
             params.locale
         );
-        const repository = createMediaRepository(ctx.config);
+        const repository = getMediaRepository();
 
-        // The row this write edits, or — when the locale has none — the
+        // The row this write edits or, when the locale has none, the
         // default-locale row the new one is copied from.
-        const current = await repository.get(id, locale);
-        const base = current ?? (await findMedia(repository, id));
+        const current = await repository.findOne(id, { locale });
+        const base = current ?? (await repository.findOne(id));
         if (!base) throw new ResourceNotFoundError('media', { id });
 
         const config = ctx.config;
@@ -64,7 +63,7 @@ export const updateMedia = defineServiceMethod({
                     operation: 'update',
                     record: toMedia(config, base),
                     user: ctx.user,
-                    scan: () => repository.listContent(locale),
+                    scan: () => repository.findByLocale(locale),
                     excludeId: id,
                 }
             );

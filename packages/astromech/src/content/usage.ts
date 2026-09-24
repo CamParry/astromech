@@ -6,12 +6,12 @@
 
 import type { RelationshipRow } from '@/database/tables';
 import type { ResolvedConfig, TargetKind, Usage } from '@/types/index';
-import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
-import { mediaTable, usersTable } from '@/database/tables';
 import { getEntryResource } from '@/entries/internal/read-entry';
 import { getEntryRepository } from '@/entries/repository/registry';
 import { resolveGlobal } from '@/globals/resolve-global';
+import { getMediaRepository } from '@/media/repository';
+import { getUserRepository } from '@/users/repository';
 
 /**
  * Every reference pointing at one target, one row per reference: a source using
@@ -83,25 +83,16 @@ async function loadSourceTitles(
     }
 
     // A name or an email is all a title needs, so the account row is enough.
-    const accounts = createRepository(usersTable);
-    for (const ids of chunks(userIds)) {
-        for (const user of await accounts.findMany({ where: { id: { in: ids } } })) {
-            titles.set(
-                sourceKey({ sourceKind: 'user', sourceId: user.id }),
-                user.name || user.email
-            );
-        }
+    for (const user of await getUserRepository().findAccounts(userIds)) {
+        titles.set(
+            sourceKey({ sourceKind: 'user', sourceId: user.id }),
+            user.name || user.email
+        );
     }
 
     // The filename lives on the file row, so the content join is not needed.
-    const files = createRepository(mediaTable);
-    for (const ids of chunks(mediaIds)) {
-        for (const item of await files.findMany({ where: { id: { in: ids } } })) {
-            titles.set(
-                sourceKey({ sourceKind: 'media', sourceId: item.id }),
-                item.filename
-            );
-        }
+    for (const item of await getMediaRepository().findFiles(mediaIds)) {
+        titles.set(sourceKey({ sourceKind: 'media', sourceId: item.id }), item.filename);
     }
 
     return titles;
@@ -133,19 +124,6 @@ async function entryTitles(
         if (record !== null) titles.set(record.id, record.title);
     }
     return titles;
-}
-
-/** D1 caps a query at 100 bound parameters, and each id binds one. */
-const ID_CHUNK = 100;
-
-/** The ids in slices small enough for one `IN (…)` each. */
-function chunks(ids: ReadonlySet<string>): string[][] {
-    const all = Array.from(ids);
-    const slices: string[][] = [];
-    for (let i = 0; i < all.length; i += ID_CHUNK) {
-        slices.push(all.slice(i, i + ID_CHUNK));
-    }
-    return slices;
 }
 
 /** Kind and id, NUL-joined so no id can spell another kind's key. */

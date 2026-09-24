@@ -16,7 +16,7 @@ import { listEntryRows } from '@/entries/internal/read-entry';
 import { getEntryRepository, hasCustomTable } from '@/entries/repository/registry';
 import { entriesTable, entryContentTable } from '@/entries/tables';
 import { safeParseFields } from '@/fields/parse-fields';
-import { createMediaRepository } from '@/media/repository';
+import { getMediaRepository } from '@/media/repository';
 import { getUserRepository } from '@/users/repository';
 
 /** Scope of a report run. `type` is an ENTRY type; it never covers media, users or globals. */
@@ -160,7 +160,7 @@ async function checkContentRows(
 ): Promise<void> {
     const listContent = (locale: string): Promise<readonly ContentFieldsRow[]> =>
         kind === 'media'
-            ? createMediaRepository(ctx.config).listContent(locale)
+            ? getMediaRepository().findByLocale(locale)
             : getUserRepository().findByLocale(locale);
     for (const locale of locales(ctx, RESOURCE_SPECS[kind].translatable(ctx.config))) {
         // One load per locale: the run writes nothing, so it cannot go stale.

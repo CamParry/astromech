@@ -13,7 +13,7 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { createRelationshipRepository } from '@/database/repository/relationships';
-import { createMediaRepository } from '@/media/repository';
+import { getMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { rebuildRelationshipIndex } from '@/transport/cli/relationship-index';
 
@@ -45,7 +45,7 @@ beforeEach(async () => {
     setStorageDriver(noopStorage);
     postA = (await entriesService.create({ type: 'post', data: { title: 'A' } })).id;
     postB = (await entriesService.create({ type: 'post', data: { title: 'B' } })).id;
-    const row = await createMediaRepository().create(
+    const row = await getMediaRepository().create(
         { filename: 'photo.png', mimeType: 'image/png', size: 1 },
         {}
     );

@@ -12,7 +12,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { assertRequiredCapability } from '@/globals/internal/global';
-import { createMediaRepository } from '@/media/repository';
+import { getMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { rebuildRelationshipIndex } from '@/transport/cli/relationship-index';
 
@@ -46,7 +46,7 @@ beforeEach(async () => {
     setupTestConfig(makeConfig());
     setStorageDriver(noopStorage);
     mediaId = (
-        await createMediaRepository().create(
+        await getMediaRepository().create(
             { filename: 'logo.png', mimeType: 'image/png', size: 1 },
             {}
         )

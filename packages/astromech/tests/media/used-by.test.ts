@@ -6,10 +6,10 @@
 import type { AstromechConfig } from '@/types/index';
 import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { createRelationshipRepository } from '@/database/repository/relationships';
-import { createMediaRepository } from '@/media/repository';
+import { getMediaRepository, setMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 
 const entriesService = currentServices.entries;
@@ -49,7 +49,7 @@ function makeUsageConfig(): AstromechConfig {
 
 /** A media row, inserted through the repository so no driver or real bytes are needed. */
 async function createMedia(filename = 'a.png'): Promise<string> {
-    const row = await createMediaRepository().create(
+    const row = await getMediaRepository().create(
         {
             filename,
             mimeType: 'image/png',
@@ -227,5 +227,20 @@ describe('mediaService.usedBy', () => {
     // rather than reporting "no usage" for an id that is not a media item.
     it('throws for an unknown media id', async () => {
         await expect(mediaService.usedBy({ id: 'nope' })).rejects.toThrow(/not found/);
+    });
+});
+
+describe('the file-row read', () => {
+    const registered = getMediaRepository();
+
+    afterEach(() => {
+        setMediaRepository(registered);
+    });
+
+    it('comes from the registered media repository', async () => {
+        const mediaId = await createMedia();
+        setMediaRepository({ ...registered, findFile: () => Promise.resolve(null) });
+
+        await expect(mediaService.usedBy({ id: mediaId })).rejects.toThrow(/not found/);
     });
 });

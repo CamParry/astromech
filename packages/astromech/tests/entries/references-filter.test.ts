@@ -23,7 +23,7 @@ import {
 } from '@/entries/errors';
 import { tableRepository } from '@/entries/repository/table';
 import { UnknownSortKeyError } from '@/errors/query';
-import { createMediaRepository } from '@/media/repository';
+import { getMediaRepository } from '@/media/repository';
 
 const api = currentServices.entries;
 
@@ -115,7 +115,7 @@ beforeEach(async () => {
 
 /** A media row, inserted through the repository so no driver or real bytes are needed. */
 async function createMedia(filename: string): Promise<string> {
-    const row = await createMediaRepository().create(
+    const row = await getMediaRepository().create(
         {
             filename,
             mimeType: 'image/png',

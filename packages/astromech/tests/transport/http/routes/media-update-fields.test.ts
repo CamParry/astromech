@@ -16,7 +16,7 @@ import { seedTestUser, testUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
 import { currentServices } from '@/app-context/services';
-import { createMediaRepository } from '@/media/repository';
+import { getMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
 
@@ -40,7 +40,7 @@ beforeEach(async () => {
     await seedTestUser(await createTestDb());
     setupTestConfig(makeTestConfig());
     setStorageDriver(noopStorage);
-    const row = await createMediaRepository().create(
+    const row = await getMediaRepository().create(
         {
             filename: 'a.png',
             mimeType: 'image/png',

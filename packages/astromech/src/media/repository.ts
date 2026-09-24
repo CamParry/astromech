@@ -1,28 +1,30 @@
 /**
- * The media repository — the shared content repository over
- * `media`/`media_content`/`media_versions`, plus the file-row repository and the
- * library list query with its filename search and mime bucket.
+ * The media repository: the shared content repository over
+ * `media`/`media_content`/`media_versions`, the media reads with their locale
+ * fallback, filename search and mime bucket, and the named file-row reads and writes.
  */
 
 import type { MediaContentRow, MediaTableRow, NewMediaTableRow } from './tables';
-import type { ListPage } from '@/content/list';
 import type { ContentRow, ContentWrite, JoinedWhere } from '@/content/repository/types';
+import type { Patch } from '@/database/repository/create-repository';
 import type {
     JsonObject,
     MediaMetadata,
     MediaMimeTypeFilter,
-    MediaQueryParams,
-    ResolvedConfig,
+    SortOption,
 } from '@/types/index';
 import type { Expression, SqlBool } from 'kysely';
 import { sql } from 'kysely';
-import { defaultContentLocale, getDefaultContentLocale } from '@/config/content-locale';
+import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
 import { RESOURCE_SPECS } from '@/content/resources';
+import { chunks } from '@/database/chunks';
+import { kyselyTableKey } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { mediaContentTable, mediaTable, mediaVersionsTable } from '@/database/tables';
+import { createLazyRegistry } from '@/registry';
 
 /** One locale of one media item, as the media service reads it. */
 export type MediaRow = ContentRow & {
@@ -39,6 +41,23 @@ export type MediaRow = ContentRow & {
     fileUpdatedAt: Date;
     fileUpdatedBy: string | null;
 };
+
+/** What `findMany` and `count` filter, order and page by. */
+export type MediaListParams = {
+    search?: string | undefined;
+    where?: { mimeType?: MediaMimeTypeFilter | undefined } | undefined;
+    sort?: SortOption | SortOption[] | undefined;
+    /** The locale each row is read in where it has one; the default otherwise. */
+    locale?: string | undefined;
+    limit?: number | undefined;
+    offset?: number | undefined;
+};
+
+/** The file-row columns a file replace writes. */
+type MediaFilePatch = Pick<
+    Patch<typeof mediaTable>,
+    'filename' | 'mimeType' | 'size' | 'width' | 'height' | 'metadata' | 'updatedBy'
+>;
 
 /** The expression builder the joined list query is compiled against. */
 type JoinedEb = Parameters<JoinedWhere>[0];
@@ -93,7 +112,7 @@ function mimeBucket(
     }
     if (bucket === 'other') {
         // NOT (image/* OR video/* OR application/* OR text/*)
-        // Raw sql uses the table-qualified snake_case column — CamelCasePlugin
+        // Raw sql uses the table-qualified snake_case column: CamelCasePlugin
         // does not transform raw fragments, and `media_content` is joined in.
         return sql<SqlBool>`media.mime_type NOT LIKE 'image/%' AND media.mime_type NOT LIKE 'video/%' AND media.mime_type NOT LIKE 'application/%' AND media.mime_type NOT LIKE 'text/%'`;
     }
@@ -101,15 +120,11 @@ function mimeBucket(
 }
 
 /**
- * Build the media repository. It resolves its db handle per call, so a write
- * inside `transaction()` joins that transaction without being handed one.
+ * Every handle and the default locale resolve per call, so the one registered
+ * repository follows a transaction scope and a config reload.
  */
-export function createMediaRepository(config?: ResolvedConfig) {
-    const defaultLocale = config
-        ? defaultContentLocale(config)
-        : getDefaultContentLocale();
+function createMediaRepository() {
     const owners = createRepository(mediaTable);
-
     const content = createContentRepository(
         {
             table: mediaTable,
@@ -117,18 +132,20 @@ export function createMediaRepository(config?: ResolvedConfig) {
             versionsTable: mediaVersionsTable,
             ownerColumn: 'mediaId',
         },
-        { decode: toMediaRow, defaultLocale }
+        { decode: toMediaRow }
     );
 
-    const { ownerKey, contentKey } = content.kysely();
+    const ownerKey = kyselyTableKey(mediaTable.name);
+    const contentKey = kyselyTableKey(mediaContentTable.name);
 
     /**
      * The library list predicate. Rows and count share it so the two cannot
      * drift; the locale is pinned to the default, which every media item has a
      * row in.
      */
-    function filter(params?: MediaQueryParams): JoinedWhere {
-        const search = params?.search;
+    function filter(params: MediaListParams): JoinedWhere {
+        const { search } = params;
+        const defaultLocale = getDefaultContentLocale();
         return (eb) => {
             const conditions: Expression<SqlBool>[] = [
                 eb(`${contentKey}.locale`, '=', defaultLocale),
@@ -136,7 +153,7 @@ export function createMediaRepository(config?: ResolvedConfig) {
             if (search) {
                 conditions.push(eb(`${ownerKey}.filename`, 'like', `%${search}%`));
             }
-            const bucket = mimeBucket(eb, ownerKey, params?.where?.mimeType);
+            const bucket = mimeBucket(eb, ownerKey, params.where?.mimeType);
             if (bucket) conditions.push(bucket);
             return eb.and(conditions);
         };
@@ -144,29 +161,26 @@ export function createMediaRepository(config?: ResolvedConfig) {
 
     /**
      * Newest first unless `params.sort` says otherwise; an unknown sort throws.
-     * Omit `page` for every match. Each row is read in `locale` where it has one.
+     * Omit `limit` for every match.
      */
-    async function list(
-        params?: MediaQueryParams,
-        page?: ListPage,
-        locale?: string
-    ): Promise<MediaRow[]> {
+    async function findMany(params: MediaListParams = {}): Promise<MediaRow[]> {
         return content.findMany({
             where: filter(params),
-            orderBy: buildOrderBy(RESOURCE_SPECS.media.sortable, params?.sort, [
+            orderBy: buildOrderBy(RESOURCE_SPECS.media.sortable, params.sort, [
                 { field: 'createdAt', direction: 'desc' },
             ]),
-            ...page,
-            locale,
+            limit: params.limit,
+            offset: params.offset,
+            locale: params.locale,
         });
     }
 
-    async function count(params?: MediaQueryParams): Promise<number> {
+    async function count(params: MediaListParams = {}): Promise<number> {
         return content.count(filter(params));
     }
 
-    /** Every media item's content row in `locale`, for the uniqueness scan. */
-    async function listContent(locale: string): Promise<MediaRow[]> {
+    /** Every content row written in `locale`, for the uniqueness and validity scans. */
+    async function findByLocale(locale: string): Promise<MediaRow[]> {
         const raw = await content
             .kysely()
             .joined()
@@ -175,9 +189,30 @@ export function createMediaRepository(config?: ResolvedConfig) {
         return content.decodeRows(raw);
     }
 
-    /** One locale of one item, with no fallback. `findMedia` holds the fallback policy. */
-    async function get(id: string, locale?: string): Promise<MediaRow | null> {
-        return content.findOne({ id, locale });
+    /**
+     * One media item in `locale` (the default when absent). With
+     * `fallbackLocale`, a miss reads that locale instead.
+     */
+    async function findOne(
+        id: string,
+        options?: { locale?: string | undefined; fallbackLocale?: string | undefined }
+    ): Promise<MediaRow | null> {
+        const locale = options?.locale ?? getDefaultContentLocale();
+        const found = await content.findOne({ id, locale });
+        const fallbackLocale = options?.fallbackLocale;
+        if (found || fallbackLocale === undefined || fallbackLocale === locale) {
+            return found;
+        }
+        return content.findOne({ id, locale: fallbackLocale });
+    }
+
+    /** The file rows for `ids`, in slices small enough for one `IN (…)` each. */
+    async function findFiles(ids: Iterable<string>): Promise<MediaTableRow[]> {
+        const rows: MediaTableRow[] = [];
+        for (const chunk of chunks(ids)) {
+            rows.push(...(await owners.findMany({ where: { id: { in: chunk } } })));
+        }
+        return rows;
     }
 
     async function create(own: NewMediaTableRow, write: ContentWrite): Promise<MediaRow> {
@@ -195,21 +230,41 @@ export function createMediaRepository(config?: ResolvedConfig) {
     }
 
     return {
-        /**
-         * The file row alone, for the reads and writes that never touch
-         * authored content.
-         */
-        owners,
-        list,
-        listContent,
+        findOne,
+        findAnyLocale: content.findAnyLocale,
+        findMany,
         count,
-        get,
+        findByLocale,
+        /** The file row alone, with no authored content, or null. */
+        findFile: (id: string): Promise<MediaTableRow | null> => owners.findOne({ id }),
+        findFiles,
         create,
         update: content.update,
+        /** Write the file-row columns, whatever the locale. */
+        updateFile: async (id: string, patch: MediaFilePatch): Promise<void> => {
+            await owners.update(id, patch);
+        },
         delete: del,
         versions: content.versions,
         translatable: content.translatable,
         locales: content.locales,
-        anyLocale: content.findAnyLocale,
     };
+}
+
+const mediaRepository = createLazyRegistry<MediaRepository>(
+    'mediaRepository',
+    createMediaRepository
+);
+
+/** The media repository, built on first use. */
+export function getMediaRepository(): MediaRepository {
+    return mediaRepository.get();
+}
+
+/**
+ * Swap the media repository, so a test can replace one method.
+ * @internal
+ */
+export function setMediaRepository(repository: MediaRepository): void {
+    mediaRepository.set(repository);
 }

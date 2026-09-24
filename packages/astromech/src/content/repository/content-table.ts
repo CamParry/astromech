@@ -22,6 +22,7 @@ import type { GenericDb } from '@/database/repository/create-repository';
 import type { JsonObject } from '@/types/index';
 import type { Expression, SqlBool } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
+import { chunks, MAX_BOUND_PARAMETERS } from '@/database/chunks';
 import { decodeWith, kyselyTableKey } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
@@ -39,9 +40,6 @@ const OWNER_PREFIX = 'owner';
 function ownerAlias(column: string): string {
     return `${OWNER_PREFIX}${column.charAt(0).toUpperCase()}${column.slice(1)}`;
 }
-
-/** D1 caps a query at 100 bound parameters; each id binds one, and the locale one more. */
-const ID_CHUNK = 90;
 
 /** The write keys that are not content columns and never reach a row patch. */
 const NON_COLUMN_KEYS = new Set(['locale']);
@@ -219,9 +217,11 @@ export function createContentRepository<
      */
     async function overlayLocale(read: R[], locale: string): Promise<R[]> {
         const byId = new Map<string, R>();
-        const ids = Array.from(new Set(read.map((row) => row.id)));
-        for (let i = 0; i < ids.length; i += ID_CHUNK) {
-            const chunk = ids.slice(i, i + ID_CHUNK);
+        // The locale binds one parameter beside the ids.
+        for (const chunk of chunks(
+            read.map((row) => row.id),
+            MAX_BOUND_PARAMETERS - 1
+        )) {
             const raw = await joined()
                 .where((eb) =>
                     eb.and([

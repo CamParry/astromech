@@ -7,7 +7,7 @@ import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { syncMediaRelationships } from '../../internal/relationships';
 import { toMedia } from '../../internal/to-media';
-import { createMediaRepository } from '../../repository';
+import { getMediaRepository } from '../../repository';
 
 /**
  * Restores one locale of a media item to one of its saved versions, snapshotting
@@ -31,8 +31,8 @@ export const restoreMediaVersion = defineServiceMethod({
             undefined,
             params.locale
         );
-        const repository = createMediaRepository(ctx.config);
-        const current = await repository.get(id, locale);
+        const repository = getMediaRepository();
+        const current = await repository.findOne(id, { locale });
         if (!current) throw new ResourceNotFoundError('media', { id, locale });
 
         return restoreVersion({

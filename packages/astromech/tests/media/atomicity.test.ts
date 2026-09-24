@@ -14,7 +14,7 @@ import { noopStorage } from '@tests/fixtures';
 import { createFileTestDb, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { createMediaRepository } from '@/media/repository';
+import { getMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { makeTranslatableMediaConfig } from './media-config';
 
@@ -58,7 +58,7 @@ beforeEach(async () => {
     setStorageDriver(noopStorage);
     state.failing = false;
 
-    const row = await createMediaRepository().create(
+    const row = await getMediaRepository().create(
         { filename: 'photo.png', mimeType: 'image/png', size: 1 },
         { alt: 'first alt', fields: { credit: 'first credit' } }
     );
