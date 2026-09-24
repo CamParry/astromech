@@ -42,7 +42,7 @@ export async function* runAssistantLoop(input: {
     /** Store the transcript as it stands. A failed write must not kill the turn. */
     async function persist(): Promise<void> {
         try {
-            const stored = await input.sessions.save(input.userId, turns);
+            const stored = await input.sessions.upsert(input.userId, turns);
             if (!stored) {
                 input.logger.warn(
                     'Chat session past its size cap — this conversation will not survive a reload.'

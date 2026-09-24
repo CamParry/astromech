@@ -52,9 +52,9 @@ describe('deleting a user', () => {
         await insertUser('user_1');
         await insertUser('user_2');
         const sessions = createSessionsRepository(db);
-        await sessions.save('user_1', TRANSCRIPT);
-        await sessions.save('user_2', TRANSCRIPT);
-        await createApprovalsRepository(db).mint([
+        await sessions.upsert('user_1', TRANSCRIPT);
+        await sessions.upsert('user_2', TRANSCRIPT);
+        await createApprovalsRepository(db).createMany([
             {
                 userId: 'user_1',
                 toolCallId: 'toolu_1',

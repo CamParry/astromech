@@ -33,18 +33,18 @@ export async function performBackup(
 
     if (isBackupRunning()) {
         ctx.logger.warn('[backups] A backup is already in progress — skipping.');
-        const existing = await runs.latestRunning();
+        const existing = await runs.findRunning();
         if (existing !== null) return existing;
     }
 
-    const row = await runs.start(trigger);
+    const row = await runs.create(trigger);
     const id = row.id;
 
     globalThis.__astromechBackupRunning = true;
     try {
         // Feature-check: does this driver support dump?
         if (!ctx.database.dump) {
-            const failed = await runs.patch(id, {
+            const failed = await runs.update(id, {
                 status: 'failed',
                 error: 'dump not supported by this database driver',
                 finishedAt: new Date(),
@@ -77,7 +77,7 @@ export async function performBackup(
             const obj = await ctx.storage.get(key);
             const sizeBytes = obj?.size ?? null;
 
-            const success = await runs.patch(id, {
+            const success = await runs.update(id, {
                 status: 'success',
                 key,
                 sizeBytes,
@@ -94,7 +94,7 @@ export async function performBackup(
         }
     } catch (err) {
         ctx.logger.error('[backups] Backup failed', err);
-        const failed = await runs.patch(id, {
+        const failed = await runs.update(id, {
             status: 'failed',
             error: String(err),
             finishedAt: new Date(),
@@ -127,18 +127,19 @@ export async function resolveKeep(ctx: PluginContext, fallback: number): Promise
 
 /**
  * Rotate artifacts: delete storage objects for successful runs beyond the
- * first `keep`, ordered oldest-first. `rotationCandidates` decides what is
+ * first `keep`, ordered oldest-first. `findRotationCandidates` decides what is
  * eligible — already-rotated rows and `pre-restore` snapshots are excluded.
  */
 export async function rotate(ctx: PluginContext, keep: number): Promise<void> {
     const runs = createBackupRunsRepository(ctx.db);
-    const candidates = await runs.rotationCandidates();
+    const candidates = await runs.findRotationCandidates();
 
     const toDelete = candidates.slice(keep);
     for (const row of toDelete) {
         if (row.key !== null && row.key !== undefined) {
             await ctx.storage.delete(row.key);
         }
-        await runs.markArtifactDeleted(row.id);
+        // The row stays for audit history: only a manual delete removes it.
+        await runs.update(row.id, { artifactDeletedAt: new Date() });
     }
 }

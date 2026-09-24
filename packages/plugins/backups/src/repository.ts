@@ -8,7 +8,7 @@ import type { Patch, PluginContext } from 'astromech';
 import { createRepository } from 'astromech';
 import { backupRunsTable } from './tables/runs';
 
-/** A partial write against a run row — the status transitions below. */
+/** A partial write against a run row: a status transition or a rotation mark. */
 export type BackupRunPatch = Patch<typeof backupRunsTable>;
 
 export type BackupRunsRepository = ReturnType<typeof createBackupRunsRepository>;
@@ -18,12 +18,12 @@ export function createBackupRunsRepository(db: PluginContext['db']) {
     const repository = createRepository(backupRunsTable, db);
 
     /** By id; `null` when there is no such run. */
-    async function get(id: string): Promise<BackupRunRow | null> {
+    async function findOne(id: string): Promise<BackupRunRow | null> {
         return repository.findOne({ id });
     }
 
     /** Newest first, capped at `limit` — the admin list. */
-    async function recent(limit: number): Promise<BackupRunRow[]> {
+    async function findRecent(limit: number): Promise<BackupRunRow[]> {
         return repository.findMany({ orderBy: [['startedAt', 'desc']], limit });
     }
 
@@ -31,7 +31,7 @@ export function createBackupRunsRepository(db: PluginContext['db']) {
      * The newest run still marked `running` — what the overlap guard returns
      * instead of starting a second backup.
      */
-    async function latestRunning(): Promise<BackupRunRow | null> {
+    async function findRunning(): Promise<BackupRunRow | null> {
         const [newest] = await repository.findMany({
             where: { status: 'running' },
             orderBy: [['startedAt', 'desc']],
@@ -44,21 +44,21 @@ export function createBackupRunsRepository(db: PluginContext['db']) {
      * Open a run. The table fills `id` (a ULID) and `startedAt`, so the id
      * is read back off the returned row rather than minted here.
      */
-    async function start(trigger: BackupRunRow['trigger']): Promise<BackupRunRow> {
+    async function create(trigger: BackupRunRow['trigger']): Promise<BackupRunRow> {
         return repository.create({ status: 'running', trigger });
     }
 
     /**
-     * Apply a status transition, returning the updated row — or `null` when
-     * the row has vanished underneath us. Deliberately not `repository.update`,
-     * which throws on a missing row.
+     * Apply a status transition or a rotation mark, returning the updated row,
+     * or `null` when the row has vanished underneath us. Deliberately not
+     * `repository.update`, which throws on a missing row.
      */
-    async function patch(
+    async function update(
         id: string,
         values: BackupRunPatch
     ): Promise<BackupRunRow | null> {
         const updated = await repository.updateMany({ id }, values);
-        return updated > 0 ? get(id) : null;
+        return updated > 0 ? findOne(id) : null;
     }
 
     /**
@@ -66,7 +66,7 @@ export function createBackupRunsRepository(db: PluginContext['db']) {
      * to rotation, which keeps the head and drops the tail. `pre-restore`
      * snapshots are excluded, since they must never be rotated or count against `keep`.
      */
-    async function rotationCandidates(): Promise<BackupRunRow[]> {
+    async function findRotationCandidates(): Promise<BackupRunRow[]> {
         return repository.findMany({
             where: {
                 status: 'success',
@@ -80,27 +80,18 @@ export function createBackupRunsRepository(db: PluginContext['db']) {
         });
     }
 
-    /**
-     * Record that rotation dropped the artifact. The row stays for audit
-     * history — only a manual delete removes it.
-     */
-    async function markArtifactDeleted(id: string): Promise<void> {
-        await repository.updateMany({ id }, { artifactDeletedAt: new Date() });
-    }
-
     /** Hard delete — a manual delete drops the row along with its artifact. */
-    async function remove(id: string): Promise<void> {
+    async function del(id: string): Promise<void> {
         await repository.delete(id);
     }
 
     return {
-        get,
-        recent,
-        latestRunning,
-        start,
-        patch,
-        rotationCandidates,
-        markArtifactDeleted,
-        delete: remove,
+        findOne,
+        findRecent,
+        findRunning,
+        create,
+        update,
+        findRotationCandidates,
+        delete: del,
     };
 }

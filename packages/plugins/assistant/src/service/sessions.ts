@@ -41,7 +41,8 @@ export function createSessionsService(options: ResolvedAssistantOptions) {
                         ? []
                         : ctx.methods.tools({ readOnly: options.readOnly });
                 return {
-                    messages: (await createSessionsRepository(ctx.db).load(userId)) ?? [],
+                    messages:
+                        (await createSessionsRepository(ctx.db).findByUser(userId)) ?? [],
                     pending: held.map((row) => toApprovalRequest(row, tools)),
                 };
             },
@@ -57,7 +58,7 @@ export function createSessionsService(options: ResolvedAssistantOptions) {
             destructive: false,
             handler: async (_input, ctx): Promise<null> => {
                 const userId = actingUserId(ctx.user);
-                await createSessionsRepository(ctx.db).clear(userId);
+                await createSessionsRepository(ctx.db).deleteByUser(userId);
                 // A conversation nobody will answer must leave no held rows, the
                 // same rule a new message already applies.
                 await createApprovalsRepository(ctx.db).rejectPending(userId);

@@ -685,9 +685,10 @@ Don't query the table from your handlers. Give it a repository module —
 and owns encoding, `where`-value serialization and row decoding, so nothing above
 it spells the table name or touches a codec.
 
-Compose it inside your own `createXRepository(db)` factory, exactly as core's modules
-do, and give the methods your plugin's vocabulary. The handle is an argument: a
-plugin is _handed_ its database on `ctx.db`.
+Compose it inside your own `createXRepository(db)` factory and pass it `ctx.db`,
+the only database handle a plugin gets. Name the methods the way core does:
+`findOne`, `findMany`, `findBy…` for reads, and `create`, `update`, `delete`
+for writes.
 
 ```ts
 // repository.ts
@@ -699,7 +700,7 @@ import { widgetsTable } from './tables/widgets.js';
 export function createWidgetsRepository(db: PluginContext['db']) {
     const repository = createRepository(widgetsTable, db);
 
-    async function live(limit: number): Promise<WidgetRow[]> {
+    async function findLive(limit: number): Promise<WidgetRow[]> {
         return repository.findMany({
             where: { status: 'live' },
             orderBy: [['createdAt', 'desc']],
@@ -707,19 +708,19 @@ export function createWidgetsRepository(db: PluginContext['db']) {
         });
     }
 
-    return { get: (id: string) => repository.findOne({ id }), live };
+    return { findOne: (id: string) => repository.findOne({ id }), findLive };
 }
 ```
 
 ```ts
 // service/widgets.ts
-const widgets = await createWidgetsRepository(ctx.db).live(20);
+const widgets = await createWidgetsRepository(ctx.db).findLive(20);
 ```
 
-Read `ctx.db` where you query, not once up front. It is a getter that returns
-the open transaction's handle inside `transaction(fn)`, so a repository built
-before the transaction opened keeps the outer handle and its writes do not
-join.
+Build the repository inside the handler, not once at module level. `ctx.db` is
+a getter that returns the open transaction's handle inside `transaction(fn)`, so
+a repository built before the transaction opened keeps the outer handle and its
+writes do not join.
 
 `where` ANDs its keys together: a bare value means `=`, a bare `null` means
 `IS NULL` (omit the key, or pass `undefined`, for "no filter"), and a per-column

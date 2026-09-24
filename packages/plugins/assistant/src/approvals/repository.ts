@@ -32,20 +32,20 @@ export type ClaimedApproval = {
 
 export type ApprovalsRepository = ReturnType<typeof createApprovalsRepository>;
 
-/** The approval repository: mint, claim, expire and reject pending calls. */
+/** The approval repository: create, claim, expire and reject pending calls. */
 export function createApprovalsRepository(db: PluginContext['db']) {
     const repository = createRepository(approvalsTable, db);
 
     /** Record calls as pending, returning the rows the requests are built from. */
-    async function mint(rows: ApprovalDraft[]): Promise<ApprovalRow[]> {
+    async function createMany(rows: ApprovalDraft[]): Promise<ApprovalRow[]> {
         const expiresAt = new Date(Date.now() + APPROVAL_TTL_MS);
-        const minted: ApprovalRow[] = [];
+        const created: ApprovalRow[] = [];
         for (const row of rows) {
-            minted.push(
+            created.push(
                 await repository.create({ ...row, status: 'pending', expiresAt })
             );
         }
-        return minted;
+        return created;
     }
 
     /**
@@ -103,8 +103,8 @@ export function createApprovalsRepository(db: PluginContext['db']) {
     }
 
     /**
-     * Sweep this user's pending rows that are past their deadline. Called on
-     * mint, so an abandoned pause is cleared lazily rather than by a cron.
+     * Sweep this user's pending rows that are past their deadline. Called before
+     * `createMany`, so an abandoned pause is cleared lazily rather than by a cron.
      */
     async function expireStale(userId: string): Promise<void> {
         await repository.updateMany(
@@ -135,7 +135,7 @@ export function createApprovalsRepository(db: PluginContext['db']) {
         });
     }
 
-    return { mint, claim, expireStale, findPending, rejectPending };
+    return { createMany, claim, expireStale, findPending, rejectPending };
 }
 
 /** The rows a decision may still resolve: this user's, pending, unexpired. */

@@ -47,7 +47,7 @@ export function fakeApprovals(seed: ApprovalRow[] = []): FakeApprovals {
     let minted = 0;
 
     const storage: ApprovalsRepository = {
-        mint: vi.fn<ApprovalsRepository['mint']>(async (drafts) =>
+        createMany: vi.fn<ApprovalsRepository['createMany']>(async (drafts) =>
             drafts.map((draft) => {
                 minted += 1;
                 const row = approvalRow({

@@ -20,12 +20,12 @@ export const MAX_SESSION_CHARS = 512 * 1024;
 
 export type SessionsRepository = ReturnType<typeof createSessionsRepository>;
 
-/** The session repository: load, save and clear one user's transcript. */
+/** The session repository: read, replace and delete one user's transcript. */
 export function createSessionsRepository(db: PluginContext['db']) {
     const repository = createRepository(sessionsTable, db);
 
     /** This user's transcript, or null when they have never had one. */
-    async function load(userId: string): Promise<ChatMessage[] | null> {
+    async function findByUser(userId: string): Promise<ChatMessage[] | null> {
         const row = await repository.findOne({ userId });
         return row === null ? null : row.messages;
     }
@@ -35,7 +35,7 @@ export function createSessionsRepository(db: PluginContext['db']) {
      * cap and nothing was written: the previous, smaller one stays, which is
      * still a valid turn boundary to resume from.
      */
-    async function save(userId: string, messages: ChatMessage[]): Promise<boolean> {
+    async function upsert(userId: string, messages: ChatMessage[]): Promise<boolean> {
         if (JSON.stringify(messages).length > MAX_SESSION_CHARS) return false;
         // `updatedAt` is stamped by the wrapper on both branches — `defaultNow`
         // fills the insert, `onUpdate` fills the conflict update — so it is
@@ -48,9 +48,9 @@ export function createSessionsRepository(db: PluginContext['db']) {
     }
 
     /** Drop this user's transcript, so the next turn starts a new conversation. */
-    async function clear(userId: string): Promise<void> {
+    async function deleteByUser(userId: string): Promise<void> {
         await repository.deleteMany({ userId });
     }
 
-    return { load, save, clear };
+    return { findByUser, upsert, deleteByUser };
 }

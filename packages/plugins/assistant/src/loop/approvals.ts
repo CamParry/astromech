@@ -34,7 +34,7 @@ export async function pauseForApproval(input: {
     if (calls.length === 0) return [];
 
     await input.approvals.expireStale(input.userId);
-    const rows = await input.approvals.mint(
+    const rows = await input.approvals.createMany(
         calls.map(({ call, tool }) => ({
             userId: input.userId,
             toolCallId: call.toolCallId,

@@ -44,7 +44,7 @@ export function createBackupsService(defaultKeep: number) {
             mutates: false,
             handler: async (_input, ctx): Promise<ListRunsResult> => {
                 return {
-                    runs: await createBackupRunsRepository(ctx.db).recent(MAX_RUNS),
+                    runs: await createBackupRunsRepository(ctx.db).findRecent(MAX_RUNS),
                     capabilities: {
                         canDump: ctx.database.dump !== undefined,
                         canRestore: ctx.database.restore !== undefined,
@@ -74,7 +74,7 @@ export function createBackupsService(defaultKeep: number) {
             handler: async (input, ctx): Promise<DeleteRunResult> => {
                 const id = typeof input?.id === 'string' ? input.id : '';
                 const runs = createBackupRunsRepository(ctx.db);
-                const row = await runs.get(id);
+                const row = await runs.findOne(id);
                 if (row === null) return { ok: false, reason: 'not-found' };
 
                 // A manual delete hard-deletes the row. This differs from

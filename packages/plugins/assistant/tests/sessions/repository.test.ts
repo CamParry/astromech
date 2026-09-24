@@ -51,51 +51,53 @@ beforeEach(() => {
 
 describe('createSessionsRepository', () => {
     it('reads back nothing for a user who has never had a conversation', async () => {
-        await expect(createSessionsRepository(db).load('user_1')).resolves.toBeNull();
+        await expect(
+            createSessionsRepository(db).findByUser('user_1')
+        ).resolves.toBeNull();
     });
 
-    it('round-trips a transcript through save and load', async () => {
+    it('round-trips a transcript through upsert and findByUser', async () => {
         const storage = createSessionsRepository(db);
 
-        await expect(storage.save('user_1', TRANSCRIPT)).resolves.toBe(true);
+        await expect(storage.upsert('user_1', TRANSCRIPT)).resolves.toBe(true);
 
-        await expect(storage.load('user_1')).resolves.toEqual(TRANSCRIPT);
+        await expect(storage.findByUser('user_1')).resolves.toEqual(TRANSCRIPT);
     });
 
     it('replaces the row rather than adding to it', async () => {
         const storage = createSessionsRepository(db);
-        await storage.save('user_1', TRANSCRIPT);
+        await storage.upsert('user_1', TRANSCRIPT);
 
-        await storage.save('user_1', [TRANSCRIPT[0] as ChatMessage]);
+        await storage.upsert('user_1', [TRANSCRIPT[0] as ChatMessage]);
 
         expect(table.size).toBe(1);
-        await expect(storage.load('user_1')).resolves.toEqual([TRANSCRIPT[0]]);
+        await expect(storage.findByUser('user_1')).resolves.toEqual([TRANSCRIPT[0]]);
     });
 
     it('keeps a transcript to the user it belongs to', async () => {
         const storage = createSessionsRepository(db);
-        await storage.save('user_1', TRANSCRIPT);
+        await storage.upsert('user_1', TRANSCRIPT);
 
-        await expect(storage.load('user_2')).resolves.toBeNull();
+        await expect(storage.findByUser('user_2')).resolves.toBeNull();
     });
 
     it('clears the row, leaving the next turn to start a new conversation', async () => {
         const storage = createSessionsRepository(db);
-        await storage.save('user_1', TRANSCRIPT);
+        await storage.upsert('user_1', TRANSCRIPT);
 
-        await storage.clear('user_1');
+        await storage.deleteByUser('user_1');
 
-        await expect(storage.load('user_1')).resolves.toBeNull();
+        await expect(storage.findByUser('user_1')).resolves.toBeNull();
     });
 
     it('skips the write past the cap, leaving the previous transcript in place', async () => {
         const storage = createSessionsRepository(db);
-        await storage.save('user_1', TRANSCRIPT);
+        await storage.upsert('user_1', TRANSCRIPT);
 
-        await expect(storage.save('user_1', [turnOf(MAX_SESSION_CHARS)])).resolves.toBe(
+        await expect(storage.upsert('user_1', [turnOf(MAX_SESSION_CHARS)])).resolves.toBe(
             false
         );
 
-        await expect(storage.load('user_1')).resolves.toEqual(TRANSCRIPT);
+        await expect(storage.findByUser('user_1')).resolves.toEqual(TRANSCRIPT);
     });
 });

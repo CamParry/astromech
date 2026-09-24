@@ -89,7 +89,7 @@ describe('getSession', () => {
     });
 
     it('reads back the stored transcript', async () => {
-        await sessions.storage.save('user_1', TRANSCRIPT);
+        await sessions.storage.upsert('user_1', TRANSCRIPT);
 
         await expect(call('getSession', { id: 'user_1' })).resolves.toEqual({
             messages: TRANSCRIPT,
@@ -130,11 +130,11 @@ describe('getSession', () => {
 
 describe('clearSession', () => {
     it('drops the stored transcript', async () => {
-        await sessions.storage.save('user_1', TRANSCRIPT);
+        await sessions.storage.upsert('user_1', TRANSCRIPT);
 
         await call('clearSession', { id: 'user_1' });
 
-        await expect(sessions.storage.load('user_1')).resolves.toBeNull();
+        await expect(sessions.storage.findByUser('user_1')).resolves.toBeNull();
     });
 
     it('turns down every call the conversation left held', async () => {

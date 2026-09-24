@@ -78,9 +78,8 @@ export type {
 } from '@/database/define-table';
 export { decodeWith, encodeWith, encodePatchWith } from '@/database/codec';
 /**
- * The `Table`-backed CRUD wrapper, alongside the `Table` vocabulary and codec
- * it's built on: a plugin composes `createRepository` inside its own
- * `createXRepository(db)` factory, same as core's domains. Types ship for TS2742.
+ * The `Table`-backed CRUD wrapper. A plugin composes it inside its own
+ * `createXRepository(ctx.db)` factory, built per call. Types ship for TS2742.
  */
 export { createRepository } from '@/database/repository/create-repository';
 export type {

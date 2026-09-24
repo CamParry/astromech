@@ -76,7 +76,7 @@ describe('pauseForApproval', () => {
         });
 
         expect(requests).toEqual([]);
-        expect(approvals.storage.mint).not.toHaveBeenCalled();
+        expect(approvals.storage.createMany).not.toHaveBeenCalled();
         expect(query.invoke).not.toHaveBeenCalled();
     });
 
@@ -115,7 +115,7 @@ describe('pauseForApproval', () => {
         ]);
     });
 
-    it("sweeps this user's abandoned rows before minting", async () => {
+    it("sweeps this user's abandoned rows before creating new ones", async () => {
         const approvals = fakeApprovals();
 
         await pauseForApproval({

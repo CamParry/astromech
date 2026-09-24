@@ -281,7 +281,7 @@ describe('runAssistantLoop session storage', () => {
     });
 
     it('carries the turn on when the transcript is past the size cap', async () => {
-        sessions.storage.save = vi.fn(async () => false);
+        sessions.storage.upsert = vi.fn(async () => false);
         mockStreamText([{ messages: [assistant([{ type: 'text', text: 'hello' }])] }]);
 
         const events = await collect([]);
@@ -291,7 +291,7 @@ describe('runAssistantLoop session storage', () => {
     });
 
     it('carries the turn on when the write throws', async () => {
-        sessions.storage.save = vi.fn(async () => {
+        sessions.storage.upsert = vi.fn(async () => {
             throw new Error('database is locked');
         });
         mockStreamText([{ messages: [assistant([{ type: 'text', text: 'hello' }])] }]);

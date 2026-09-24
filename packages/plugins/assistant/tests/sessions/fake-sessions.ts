@@ -18,12 +18,12 @@ export function fakeSessions(seed?: Map<string, ChatMessage[]>): FakeSessions {
     const rows = new Map(seed);
 
     const storage: SessionsRepository = {
-        load: vi.fn(async (userId) => rows.get(userId) ?? null),
-        save: vi.fn(async (userId, messages) => {
+        findByUser: vi.fn(async (userId) => rows.get(userId) ?? null),
+        upsert: vi.fn(async (userId, messages) => {
             rows.set(userId, messages);
             return true;
         }),
-        clear: vi.fn(async (userId) => {
+        deleteByUser: vi.fn(async (userId) => {
             rows.delete(userId);
         }),
     };

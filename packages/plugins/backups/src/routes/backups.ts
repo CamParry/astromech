@@ -29,7 +29,7 @@ function isArtifactAvailable(row: BackupRunRow): boolean {
 }
 
 async function downloadArtifact(ctx: PluginContext, id: string): Promise<Response> {
-    const row = await createBackupRunsRepository(ctx.db).get(id);
+    const row = await createBackupRunsRepository(ctx.db).findOne(id);
     if (row === null) {
         return Response.json({ error: 'Backup run not found' }, { status: 404 });
     }
@@ -62,7 +62,7 @@ async function restoreFromBackup(
         );
     }
 
-    const row = await createBackupRunsRepository(ctx.db).get(id);
+    const row = await createBackupRunsRepository(ctx.db).findOne(id);
     if (row === null) {
         return Response.json({ error: 'Backup run not found' }, { status: 404 });
     }
