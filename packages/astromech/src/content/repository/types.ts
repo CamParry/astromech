@@ -154,6 +154,11 @@ export type ContentRepository<R extends ContentRow, V extends Table = Table> = {
     delete(id: string): Promise<void>;
     /** The canonical locales of each id, sorted. */
     locales(ids: string[]): Promise<Map<string, string[]>>;
+    /**
+     * The stored resource rows and every content row they own (all locales,
+     * staged included), decoded but not joined. No `ids` reads every resource.
+     */
+    findStoredRows(ids?: readonly string[]): Promise<StoredRows>;
     /** Decode joined rows from `kysely().joined()` and attach each one's locale list. */
     decodeRows(raw: Record<string, unknown>[]): Promise<R[]>;
     /** Each row replaced by its `locale` row where it has one. */
@@ -196,6 +201,12 @@ export type ContentRepository<R extends ContentRow, V extends Table = Table> = {
         /** A `SELECT` over the join, with every column of both tables. */
         joined(): JoinedQuery;
     };
+};
+
+/** Resource rows and their content rows, each as its table stores it. */
+export type StoredRows = {
+    owners: Record<string, unknown>[];
+    contents: Record<string, unknown>[];
 };
 
 /** A predicate over the joined tables, in Kysely's expression-builder form. */

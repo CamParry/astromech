@@ -1,14 +1,14 @@
 /**
- * Relationship index repository — the only place Kysely touches the
+ * Relationship index repository: the only place Kysely touches the
  * relationships table. Every write is a wholesale replace of one source's
  * references (DELETE then chunked INSERT), never a set-diff.
  */
 import type { RelationshipRow } from '@/database/tables';
-import type { Db } from '@/database/types';
 import type { FieldReference } from '@/fields/references';
 import type { ResourceType, TargetKind } from '@/types/domain';
+import { createRepository } from '@/database/repository/create-repository';
 import { relationshipsTable } from '@/database/tables';
-import { createRepository } from './create-repository';
+import { createLazyRegistry } from '@/registry';
 
 export type RelationshipRepository = ReturnType<typeof createRelationshipRepository>;
 
@@ -34,7 +34,7 @@ export type IndexedReference = FieldReference & { staged?: boolean };
 /**
  * One source and the references its stored field data holds. What a domain's
  * rebuild collector yields; lives here so the domains and boot (which composes
- * them) share one shape. A source with no references is still a source — it is
+ * them) share one shape. A source with no references is still a source: it is
  * how the drift check sees rows left behind by data that references nothing.
  */
 export type RelationshipIndexSource = {
@@ -48,9 +48,8 @@ export type RelationshipIndexSource = {
  */
 const INSERT_CHUNK_ROWS = 12;
 
-/** Resolves `getDb()` per call unless a handle is passed — a test seam only. */
-export function createRelationshipRepository(db?: Db) {
-    const repository = createRepository(relationshipsTable, db);
+function createRelationshipRepository() {
+    const repository = createRepository(relationshipsTable);
 
     /**
      * Replace every reference recorded for one source. The delete covers the
@@ -89,7 +88,7 @@ export function createRelationshipRepository(db?: Db) {
 
     /**
      * Every reference pointing at one target. `includeStaged` is the delete-time
-     * question — a pending merge that references the target still counts, even
+     * question: a pending merge that references the target still counts, even
      * though a reverse lookup for display would not show it.
      */
     async function findByTarget(
@@ -112,7 +111,7 @@ export function createRelationshipRepository(db?: Db) {
      * they cannot enumerate by source. A global's key shares the `sourceType`
      * column, so a type filter also names the entry kind.
      */
-    async function findAll(filter?: { entryType?: string }): Promise<RelationshipRow[]> {
+    async function findMany(filter?: { entryType?: string }): Promise<RelationshipRow[]> {
         return repository.findMany({
             where:
                 filter?.entryType !== undefined
@@ -121,7 +120,7 @@ export function createRelationshipRepository(db?: Db) {
         });
     }
 
-    /** Drop one source's references — its row is gone, so they are meaningless. */
+    /** Drop one source's references: its row is gone, so they are meaningless. */
     async function deleteBySource(
         sourceId: string,
         sourceKind: ResourceType
@@ -131,8 +130,8 @@ export function createRelationshipRepository(db?: Db) {
 
     /**
      * Drop every reference involving a resource, in both directions. Deleting a
-     * target does not rewrite the field data that references it — the dangling
-     * id stays until that source is next written — but the index must not keep
+     * target does not rewrite the field data that references it (the dangling
+     * id stays until that source is next written), but the index must not keep
      * claiming a reference to a row that no longer exists.
      */
     async function deleteByResource(id: string, kind: TargetKind): Promise<void> {
@@ -141,17 +140,35 @@ export function createRelationshipRepository(db?: Db) {
     }
 
     /** Wipe the index, optionally for one source kind. The rebuild entry point. */
-    async function clear(sourceKind?: ResourceType): Promise<void> {
+    async function deleteMany(sourceKind?: ResourceType): Promise<void> {
         await repository.deleteMany(sourceKind ? { sourceKind } : {});
     }
 
     return {
         replaceForSource,
-        findAll,
+        findMany,
         findBySource,
         findByTarget,
         deleteBySource,
         deleteByResource,
-        clear,
+        deleteMany,
     };
+}
+
+const relationshipRepository = createLazyRegistry<RelationshipRepository>(
+    'relationshipRepository',
+    createRelationshipRepository
+);
+
+/** The relationship index repository, built on first use. */
+export function getRelationshipRepository(): RelationshipRepository {
+    return relationshipRepository.get();
+}
+
+/**
+ * Swap the relationship index repository, so a test can replace one method.
+ * @internal
+ */
+export function setRelationshipRepository(repository: RelationshipRepository): void {
+    relationshipRepository.set(repository);
 }

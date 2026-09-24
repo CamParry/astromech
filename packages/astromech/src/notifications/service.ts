@@ -15,7 +15,7 @@ import { countNotifications } from './methods/count';
 import { dismissNotification } from './methods/dismiss';
 import { dismissAllNotifications } from './methods/dismiss-all';
 import { listNotifications } from './methods/list';
-import { createNotificationRepository } from './repository';
+import { getNotificationRepository } from './repository';
 
 export const notificationsDefinition = defineService<NotificationsService>(
     'notifications',
@@ -47,7 +47,7 @@ export async function notify(input: NotifyInput): Promise<void> {
 
     if (userIds.length === 0) return;
 
-    await createNotificationRepository().createMany(
+    await getNotificationRepository().createMany(
         userIds.map((userId) => ({
             userId,
             type: input.type,

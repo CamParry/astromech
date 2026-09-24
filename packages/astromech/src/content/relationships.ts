@@ -4,23 +4,23 @@
  * Entries share the merge rule here and keep their own policy for custom tables.
  */
 
-import type { Table } from '@/database/define-table';
 import type {
     IndexedReference,
     RelationshipIndexSource,
-} from '@/database/repository/relationships';
+} from '@/content/repository/relationships';
+import type { StoredRows } from '@/content/repository/types';
 import type { FieldReference } from '@/fields/references';
 import type { Field } from '@/types/fields';
 import type { JsonObject, ResolvedConfig, ResourceType } from '@/types/index';
-import { createRepository } from '@/database/repository/create-repository';
-import { createRelationshipRepository } from '@/database/repository/relationships';
+import { getRelationshipRepository } from '@/content/repository/relationships';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { findReferences } from '@/fields/references';
 
-/** The resource: its two tables, the column joining them, and its fields. */
+/** The resource: where its stored rows come from, how they join, and its fields. */
 type ContentRelationshipsShape = {
-    table: Table;
-    contentTable: Table;
+    /** Read per call, so a swapped repository is the one read. */
+    repository: () => { findStoredRows(ids?: readonly string[]): Promise<StoredRows> };
+    /** The content rows' column holding the resource id: `userId`, `globalId`. */
     ownerColumn: string;
     kind: ResourceType;
     /** The field tree one resource row's content is read against. */
@@ -51,25 +51,31 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
      * that wrote the row, after that write, so the re-read sees it.
      */
     async function sync(config: ResolvedConfig, id: string): Promise<void> {
-        const owner = await createRepository(shape.table).findOne({ id });
-        if (!owner) return;
-        const rows = await createRepository(shape.contentTable).findMany({
-            where: { [shape.ownerColumn]: id },
-        });
-        const { source, references } = indexSource(config, owner, rows);
-        await createRelationshipRepository().replaceForSource(source, references);
+        const [indexed] = await sources(config, [id]);
+        if (!indexed) return;
+        await getRelationshipRepository().replaceForSource(
+            indexed.source,
+            indexed.references
+        );
     }
 
     /**
      * Every resource of this kind as a relationship source, with the references
      * its STORED content holds across all locales. The rebuild side of `sync`,
-     * read straight from the tables rather than through a repository `list()`,
-     * whose join is pinned to the default locale. Stored data has already been
-     * through `parseFields`, so the traversal mints no ids here.
+     * read as stored rows rather than through a repository `findMany()`, whose
+     * join is pinned to one locale. Stored data has already been through
+     * `parseFields`, so the traversal mints no ids here.
      */
     async function all(config: ResolvedConfig): Promise<RelationshipIndexSource[]> {
-        const owners = await createRepository(shape.table).findMany({});
-        const contents = await createRepository(shape.contentTable).findMany({});
+        return sources(config);
+    }
+
+    /** One index source per stored resource, of `ids` or of every resource. */
+    async function sources(
+        config: ResolvedConfig,
+        ids?: readonly string[]
+    ): Promise<RelationshipIndexSource[]> {
+        const { owners, contents } = await shape.repository().findStoredRows(ids);
 
         const rowsByOwner = new Map<string, ContentFields[]>();
         for (const row of contents) {

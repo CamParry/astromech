@@ -14,8 +14,8 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
+import { getRelationshipRepository } from '@/content/repository/relationships';
 import { defineTable } from '@/database/define-table';
-import { createRelationshipRepository } from '@/database/repository/relationships';
 import { transaction } from '@/database/transaction';
 import { tableRepository } from '@/entries/repository/table';
 import { UnknownSortKeyError } from '@/errors/query';
@@ -398,7 +398,7 @@ describe('findMany – references', () => {
         sourceType: string,
         targetId: string
     ): Promise<void> {
-        await createRelationshipRepository().replaceForSource(
+        await getRelationshipRepository().replaceForSource(
             { id: sourceId, kind: 'entry', type: sourceType, staged: false },
             [{ schemaPath: 'to', instancePath: 'to', targetId, targetKind: 'entry' }]
         );

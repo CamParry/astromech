@@ -7,13 +7,16 @@
  * every other row untouched.
  */
 
-import type * as RelationshipRepositoryModule from '@/database/repository/relationships';
 import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createFileTestDb, setupTestConfig } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
+import {
+    getRelationshipRepository,
+    setRelationshipRepository,
+} from '@/content/repository/relationships';
 import { createRepository } from '@/database/repository/create-repository';
 import { entriesTable } from '@/database/tables';
 import { makeTranslatableUsersConfig } from './users-config';
@@ -22,32 +25,27 @@ const api = currentServices.users;
 
 // The relationship writes only reject once `state.failing` is set, so the
 // earlier setup writes still succeed.
-const state = vi.hoisted(() => ({ failing: false, failingDelete: false }));
+const state = { failing: false, failingDelete: false };
 
-vi.mock('@/database/repository/relationships', async (importOriginal) => {
-    const actual = await importOriginal<typeof RelationshipRepositoryModule>();
-    return {
-        ...actual,
-        createRelationshipRepository: (
-            ...args: Parameters<typeof actual.createRelationshipRepository>
-        ) => {
-            const repository = actual.createRelationshipRepository(...args);
-            return {
-                ...repository,
-                replaceForSource: (
-                    ...replaceArgs: Parameters<typeof repository.replaceForSource>
-                ): Promise<void> =>
-                    state.failing
-                        ? Promise.reject(new Error('boom'))
-                        : repository.replaceForSource(...replaceArgs),
-                deleteByResource: (
-                    ...deleteArgs: Parameters<typeof repository.deleteByResource>
-                ): Promise<void> =>
-                    state.failingDelete
-                        ? Promise.reject(new Error('boom'))
-                        : repository.deleteByResource(...deleteArgs),
-            };
-        },
+beforeEach(() => {
+    const relationships = getRelationshipRepository();
+    setRelationshipRepository({
+        ...relationships,
+        replaceForSource: (
+            ...args: Parameters<typeof relationships.replaceForSource>
+        ): Promise<void> =>
+            state.failing
+                ? Promise.reject(new Error('boom'))
+                : relationships.replaceForSource(...args),
+        deleteByResource: (
+            ...args: Parameters<typeof relationships.deleteByResource>
+        ): Promise<void> =>
+            state.failingDelete
+                ? Promise.reject(new Error('boom'))
+                : relationships.deleteByResource(...args),
+    });
+    return (): void => {
+        setRelationshipRepository(relationships);
     };
 });
 
@@ -71,7 +69,6 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-    vi.restoreAllMocks();
     for (const suffix of ['', '-wal', '-shm']) {
         try {
             rmSync(`${dbPath}${suffix}`);

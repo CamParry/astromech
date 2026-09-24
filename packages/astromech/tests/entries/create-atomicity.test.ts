@@ -5,13 +5,16 @@
  * rolled back and no orphaned record is left in the database.
  */
 
-import type * as RelationshipRepositoryModule from '@/database/repository/relationships';
 import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createFileTestDb, setupTestConfig } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
+import {
+    getRelationshipRepository,
+    setRelationshipRepository,
+} from '@/content/repository/relationships';
 import { getDb } from '@/database/registry';
 
 const entriesService = currentServices.entries;
@@ -19,16 +22,14 @@ const entriesService = currentServices.entries;
 // `create` persists the row and its index rows inside a database transaction.
 // Fail `replaceForSource` so the transaction rolls back; everything else
 // delegates to the real repository.
-vi.mock('@/database/repository/relationships', async (importOriginal) => {
-    const actual = await importOriginal<typeof RelationshipRepositoryModule>();
-    return {
-        ...actual,
-        createRelationshipRepository: (
-            ...args: Parameters<typeof actual.createRelationshipRepository>
-        ) => ({
-            ...actual.createRelationshipRepository(...args),
-            replaceForSource: (): Promise<void> => Promise.reject(new Error('boom')),
-        }),
+beforeEach(() => {
+    const relationships = getRelationshipRepository();
+    setRelationshipRepository({
+        ...relationships,
+        replaceForSource: (): Promise<void> => Promise.reject(new Error('boom')),
+    });
+    return (): void => {
+        setRelationshipRepository(relationships);
     };
 });
 
@@ -46,7 +47,6 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-    vi.restoreAllMocks();
     for (const suffix of ['', '-wal', '-shm']) {
         try {
             rmSync(`${dbPath}${suffix}`);

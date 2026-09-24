@@ -1,21 +1,21 @@
 /**
- * Maintenance repository — cross-type, whole-table upkeep for the built-in entry
+ * Maintenance repository: cross-type, whole-table upkeep for the built-in entry
  * CRON jobs. These run over every entry regardless of type, so they sit outside
  * the per-type repository contract; keeping them here keeps raw DB out of jobs.
  */
 
-import type { Db } from '@/database/types';
 import { encodePatchWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { entriesTable, entryContentTable } from '@/database/tables';
+import { createLazyRegistry } from '@/registry';
 
 export type EntryMaintenanceRepository = ReturnType<
     typeof createEntryMaintenanceRepository
 >;
 
-export function createEntryMaintenanceRepository(db: Db = getDb()) {
-    const entries = createRepository(entriesTable, db);
+function createEntryMaintenanceRepository() {
+    const entries = createRepository(entriesTable);
 
     /**
      * Transition every scheduled content row whose publish time has passed to
@@ -24,7 +24,7 @@ export function createEntryMaintenanceRepository(db: Db = getDb()) {
     async function publishDueScheduled(now: Date): Promise<number> {
         // Raw: the trash filter lives on the entry row, which the `where` DSL
         // cannot reach from `entry_content`.
-        const result = await db
+        const result = await getDb()
             .updateTable('entryContent')
             .set(encodePatchWith(entryContentTable, { status: 'published' }))
             .where((eb) =>
@@ -62,4 +62,24 @@ export function createEntryMaintenanceRepository(db: Db = getDb()) {
     }
 
     return { publishDueScheduled, purgeTrashedBefore };
+}
+
+const entryMaintenanceRepository = createLazyRegistry<EntryMaintenanceRepository>(
+    'entryMaintenanceRepository',
+    createEntryMaintenanceRepository
+);
+
+/** The entry maintenance repository, built on first use. */
+export function getEntryMaintenanceRepository(): EntryMaintenanceRepository {
+    return entryMaintenanceRepository.get();
+}
+
+/**
+ * Swap the entry maintenance repository, so a test can replace one method.
+ * @internal
+ */
+export function setEntryMaintenanceRepository(
+    repository: EntryMaintenanceRepository
+): void {
+    entryMaintenanceRepository.set(repository);
 }

@@ -21,9 +21,13 @@ import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { pruneDanglingRelations } from '@/content/dangling-relations';
+import { getRelationshipRepository } from '@/content/repository/relationships';
+import {
+    getResourceExistenceRepository,
+    setResourceExistenceRepository,
+} from '@/content/repository/resource-existence';
 import { defineTable } from '@/database/define-table';
 import { setDb } from '@/database/registry';
-import { createRelationshipRepository } from '@/database/repository/relationships';
 import { transaction } from '@/database/transaction';
 import { tableRepository } from '@/entries/repository/table';
 import { getMediaRepository } from '@/media/repository';
@@ -181,16 +185,16 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
             data: { title: 'Doc', fields: { author: target.id } },
         });
         expect(
-            await createRelationshipRepository().findBySource(doc.id, 'entry')
+            await getRelationshipRepository().findBySource(doc.id, 'entry')
         ).toHaveLength(1);
 
         await api.delete({ type: 'post', id: target.id });
         const updated = await touch(doc.id);
 
         expect(updated.fields.author).toBeNull();
-        expect(
-            await createRelationshipRepository().findBySource(doc.id, 'entry')
-        ).toEqual([]);
+        expect(await getRelationshipRepository().findBySource(doc.id, 'entry')).toEqual(
+            []
+        );
     });
 
     it('drops only the dead id from a multi-relation and keeps the order of the rest', async () => {
@@ -305,9 +309,9 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
         const merged = await api.mergeStaged({ type: 'doc', id: doc.id });
 
         expect(merged.fields.author).toBeNull();
-        expect(
-            await createRelationshipRepository().findBySource(doc.id, 'entry')
-        ).toEqual([]);
+        expect(await getRelationshipRepository().findBySource(doc.id, 'entry')).toEqual(
+            []
+        );
     });
 
     it('prunes a relation nested in a repeater at its nested path', async () => {
@@ -326,7 +330,7 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
 
         const sections = updated.fields.sections as { ref: string | null }[];
         expect(sections.map((section) => section.ref)).toEqual([null, alive.id]);
-        const rows = await createRelationshipRepository().findBySource(doc.id, 'entry');
+        const rows = await getRelationshipRepository().findBySource(doc.id, 'entry');
         expect(rows.map((row) => row.targetId)).toEqual([alive.id]);
     });
 });
@@ -398,5 +402,31 @@ describe('pruneDanglingRelations (directly)', () => {
 
         expect(result.dropped).toBe(2);
         expect(result.values).toEqual({ author: null, related: [alive.id] });
+    });
+
+    it('asks which ids exist once per target kind', async () => {
+        const registered = getResourceExistenceRepository();
+        const asked: [string, string[]][] = [];
+        setResourceExistenceRepository({
+            ...registered,
+            findIds: (kind, ids) => {
+                asked.push([kind, ids]);
+                return registered.findIds(kind, ids);
+            },
+        });
+        try {
+            await pruneDanglingRelations(config, docFields, {
+                author: 'gone-1',
+                related: ['gone-2', 'gone-3'],
+                owner: 'gone-user',
+            });
+        } finally {
+            setResourceExistenceRepository(registered);
+        }
+
+        expect(asked).toEqual([
+            ['entry', ['gone-1', 'gone-2', 'gone-3']],
+            ['user', ['gone-user']],
+        ]);
     });
 });

@@ -8,7 +8,7 @@ import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { createRelationshipRepository } from '@/database/repository/relationships';
+import { getRelationshipRepository } from '@/content/repository/relationships';
 import { getMediaRepository, setMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 
@@ -190,7 +190,7 @@ describe('mediaService.usedBy', () => {
             await createMedia('second.png'),
             'missing-media',
         ];
-        const relationships = createRelationshipRepository();
+        const relationships = getRelationshipRepository();
         for (const sourceId of mediaSources) {
             await relationships.replaceForSource({ id: sourceId, kind: 'media' }, [
                 {

@@ -23,11 +23,11 @@ import type { Expression, SqlBool } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
+import { getResourceExistenceRepository } from '@/content/repository/resource-existence';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { encodePatchWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
-import { existingResourceIds } from '@/database/repository/resource-existence';
 import { compileWhere } from '@/database/repository/where';
 import { entriesTable, entryContentTable, entryVersionsTable } from '@/database/tables';
 import { ALL_CAPABILITIES } from '@/entries/capabilities';
@@ -237,7 +237,7 @@ export function createEntriesTableRepository() {
 
     /** Ids with a row in `entries` — trashed entries included. */
     async function existingIds(ids: string[]): Promise<Set<string>> {
-        return existingResourceIds('entry', ids, getDb());
+        return getResourceExistenceRepository().findIds('entry', ids);
     }
 
     async function uniqueSlug(

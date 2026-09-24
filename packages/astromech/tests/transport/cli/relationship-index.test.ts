@@ -13,9 +13,9 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
+import { getRelationshipRepository } from '@/content/repository/relationships';
 import { defineTable } from '@/database/define-table';
 import { createRepository } from '@/database/repository/create-repository';
-import { createRelationshipRepository } from '@/database/repository/relationships';
 import { relationshipsTable } from '@/database/tables';
 import { tableRepository } from '@/entries/repository/table';
 import { getMediaRepository } from '@/media/repository';
@@ -184,7 +184,7 @@ async function seedContent(): Promise<{ article: string; post: string; media: st
 
 /** Every stored row, in a stable order, so two runs compare directly. */
 async function storedRows(): Promise<RelationshipRow[]> {
-    const rows = await createRelationshipRepository().findAll();
+    const rows = await getRelationshipRepository().findMany();
     return rows.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
 }
 
@@ -192,7 +192,7 @@ async function storedRows(): Promise<RelationshipRow[]> {
 async function authorReferences(
     entryId: string
 ): Promise<{ targetId: string; sourceStaged: boolean }[]> {
-    const rows = await createRelationshipRepository().findBySource(entryId, 'entry');
+    const rows = await getRelationshipRepository().findBySource(entryId, 'entry');
     return rows
         .filter((row) => row.schemaPath === 'author')
         .map((row) => ({ targetId: row.targetId, sourceStaged: row.sourceStaged }))
@@ -236,10 +236,7 @@ describe('checkRelationshipIndex', () => {
         await api.createStaged({ type: 'article', id: article });
 
         // The staged copy starts identical, so nothing is staged-only yet.
-        const copied = await createRelationshipRepository().findBySource(
-            article,
-            'entry'
-        );
+        const copied = await getRelationshipRepository().findBySource(article, 'entry');
         expect(copied.length).toBeGreaterThan(0);
         expect(copied.some((row) => row.sourceStaged)).toBe(false);
         expect(driftCount(await checkRelationshipIndex())).toBe(0);
@@ -262,7 +259,7 @@ describe('checkRelationshipIndex', () => {
 
         // The point of the flag: a reverse lookup for display skips the staged
         // reference, a delete check counts it.
-        const repository = createRelationshipRepository();
+        const repository = getRelationshipRepository();
         expect(await repository.findByTarget(third.id, 'entry')).toEqual([]);
         expect(
             await repository.findByTarget(third.id, 'entry', { includeStaged: true })
@@ -309,7 +306,7 @@ describe('checkRelationshipIndex', () => {
 
     it('reports an empty index as entirely missing', async () => {
         await seedContent();
-        await createRelationshipRepository().clear();
+        await getRelationshipRepository().deleteMany();
 
         const report = await checkRelationshipIndex();
 
@@ -356,7 +353,7 @@ describe('rebuildRelationshipIndex', () => {
         await rebuildRelationshipIndex();
 
         expect(driftCount(await checkRelationshipIndex())).toBe(0);
-        const rows = await createRelationshipRepository().findAll();
+        const rows = await getRelationshipRepository().findMany();
         expect(rows.some((row) => row.targetId === 'ghost')).toBe(false);
     });
 
@@ -432,7 +429,7 @@ describe('rebuildRelationshipIndex({ type })', () => {
         expect(driftCount(await checkRelationshipIndex({ type: 'article' }))).toBe(0);
         expect(report.orphanRowsRemoved).toBe(0);
 
-        const rows = await createRelationshipRepository().findAll();
+        const rows = await getRelationshipRepository().findMany();
         expect(rows.filter((row) => row.targetId === 'ghost')).toHaveLength(2);
     });
 });

@@ -12,7 +12,7 @@ import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { createRelationshipRepository } from '@/database/repository/relationships';
+import { getRelationshipRepository } from '@/content/repository/relationships';
 import { getMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { rebuildRelationshipIndex } from '@/transport/cli/relationship-index';
@@ -54,13 +54,13 @@ beforeEach(async () => {
 
 /** The media item's index rows, ordered by target so two runs compare directly. */
 async function credits(): Promise<string[]> {
-    const rows = await createRelationshipRepository().findBySource(id, 'media');
+    const rows = await getRelationshipRepository().findBySource(id, 'media');
     return rows.map((row) => row.targetId).sort();
 }
 
 /** Every stored row, in a stable order, so the rebuild compares to the write path. */
 async function storedRows(): Promise<RelationshipRow[]> {
-    const rows = await createRelationshipRepository().findAll();
+    const rows = await getRelationshipRepository().findMany();
     return rows.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
 }
 

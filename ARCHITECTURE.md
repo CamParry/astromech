@@ -60,7 +60,7 @@ types · services · utilities · errors ·              pure leaves
 
 A handler reaches the user, config, hooks and sibling services through its `AppContext`, never the request scope, config registry, hook runner or the current request's bound services (lint enforces this). `defineService.bind()` has already checked the capability its `requires` names on the call's target, and parsed its input. One content module may call another's service, but reaches tables through `database/tables.ts`. A content module does not import the composition root; `media/serving/handler.ts` is the one exception.
 
-`content/` holds what entries, globals, media and users share: the repository over `{ table, contentTable, versionsTable }`, the translatable, versioning and visibility helpers, the relationship-index policy, and the prune of dead relation ids. It sits on the content modules' line because the prune reads the entry repository registry.
+`content/` holds what entries, globals, media and users share: the repository over `{ table, contentTable, versionsTable }`, the relationship index and resource existence repositories, the translatable, versioning and visibility helpers, the relationship-index policy, and the prune of dead relation ids. It sits on the content modules' line because the prune reads the entry repository registry.
 
 ## The admin package
 

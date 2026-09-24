@@ -6,7 +6,7 @@
 
 import type { RelationshipRow } from '@/database/tables';
 import type { ResolvedConfig, TargetKind, Usage } from '@/types/index';
-import { createRelationshipRepository } from '@/database/repository/relationships';
+import { getRelationshipRepository } from '@/content/repository/relationships';
 import { getEntryResource } from '@/entries/internal/read-entry';
 import { getEntryRepository } from '@/entries/repository/registry';
 import { resolveGlobal } from '@/globals/resolve-global';
@@ -22,11 +22,9 @@ export async function listUsage(
     config: ResolvedConfig,
     target: { id: string; kind: TargetKind }
 ): Promise<Usage[]> {
-    const rows = await createRelationshipRepository().findByTarget(
-        target.id,
-        target.kind,
-        { includeStaged: true }
-    );
+    const rows = await getRelationshipRepository().findByTarget(target.id, target.kind, {
+        includeStaged: true,
+    });
     const titles = await loadSourceTitles(config, rows);
     return rows
         .map(

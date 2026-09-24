@@ -6,8 +6,7 @@
 import type { FieldReference } from '@/fields/references';
 import { createTestDb } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { getDb } from '@/database/registry';
-import { createRelationshipRepository } from '@/database/repository/relationships';
+import { getRelationshipRepository } from '@/content/repository/relationships';
 
 const SOURCE = { id: 'src-1', kind: 'entry', type: 'post' } as const;
 
@@ -21,19 +20,15 @@ function references(n: number): FieldReference[] {
     }));
 }
 
-function repository(): ReturnType<typeof createRelationshipRepository> {
-    return createRelationshipRepository(getDb());
-}
-
 beforeEach(async () => {
     await createTestDb();
 });
 
 describe('replaceForSource', () => {
     it('writes one row per reference, stamped with the source columns', async () => {
-        await repository().replaceForSource(SOURCE, references(1));
+        await getRelationshipRepository().replaceForSource(SOURCE, references(1));
 
-        const rows = await repository().findBySource(SOURCE.id, 'entry');
+        const rows = await getRelationshipRepository().findBySource(SOURCE.id, 'entry');
         expect(rows).toHaveLength(1);
         expect(rows[0]).toMatchObject({
             sourceId: 'src-1',
@@ -48,70 +43,83 @@ describe('replaceForSource', () => {
     });
 
     it('narrows three references to one', async () => {
-        await repository().replaceForSource(SOURCE, references(3));
-        await repository().replaceForSource(SOURCE, references(1));
+        await getRelationshipRepository().replaceForSource(SOURCE, references(3));
+        await getRelationshipRepository().replaceForSource(SOURCE, references(1));
 
-        const rows = await repository().findBySource(SOURCE.id, 'entry');
+        const rows = await getRelationshipRepository().findBySource(SOURCE.id, 'entry');
         expect(rows.map((r) => r.targetId)).toEqual(['t0']);
     });
 
     // The old subsystem skipped a falsy field value, so clearing a single
     // relation left its row in place.
     it('leaves no rows when there are no references', async () => {
-        await repository().replaceForSource(SOURCE, references(3));
-        await repository().replaceForSource(SOURCE, []);
+        await getRelationshipRepository().replaceForSource(SOURCE, references(3));
+        await getRelationshipRepository().replaceForSource(SOURCE, []);
 
-        expect(await repository().findBySource(SOURCE.id, 'entry')).toEqual([]);
+        expect(
+            await getRelationshipRepository().findBySource(SOURCE.id, 'entry')
+        ).toEqual([]);
     });
 
     it('touches no other source', async () => {
-        await repository().replaceForSource(SOURCE, references(2));
-        await repository().replaceForSource(
+        await getRelationshipRepository().replaceForSource(SOURCE, references(2));
+        await getRelationshipRepository().replaceForSource(
             { id: 'src-2', kind: 'entry' },
             references(1)
         );
-        await repository().replaceForSource(SOURCE, []);
+        await getRelationshipRepository().replaceForSource(SOURCE, []);
 
-        expect(await repository().findBySource('src-2', 'entry')).toHaveLength(1);
+        expect(
+            await getRelationshipRepository().findBySource('src-2', 'entry')
+        ).toHaveLength(1);
     });
 
     // 12 rows per INSERT is the largest statement that fits D1's parameter cap.
     it('lands every row when the references span multiple INSERT chunks', async () => {
-        await repository().replaceForSource(SOURCE, references(29));
+        await getRelationshipRepository().replaceForSource(SOURCE, references(29));
 
-        const rows = await repository().findBySource(SOURCE.id, 'entry');
+        const rows = await getRelationshipRepository().findBySource(SOURCE.id, 'entry');
         expect(rows).toHaveLength(29);
         expect(new Set(rows.map((r) => r.targetId)).size).toBe(29);
     });
 
     it('records the staged flag so reverse lookup can exclude staged sources', async () => {
-        await repository().replaceForSource(
+        await getRelationshipRepository().replaceForSource(
             { id: 'staged-1', kind: 'entry', type: 'post', staged: true },
             references(1)
         );
 
-        expect(await repository().findByTarget('t0', 'entry')).toEqual([]);
+        expect(await getRelationshipRepository().findByTarget('t0', 'entry')).toEqual([]);
         expect(
-            await repository().findByTarget('t0', 'entry', { includeStaged: true })
+            await getRelationshipRepository().findByTarget('t0', 'entry', {
+                includeStaged: true,
+            })
         ).toHaveLength(1);
     });
 });
 
 describe('deleteByResource', () => {
     it('drops references in both directions', async () => {
-        await repository().replaceForSource(SOURCE, references(1));
-        await repository().replaceForSource({ id: 'other', kind: 'entry' }, [
-            {
-                schemaPath: 'related',
-                instancePath: 'related',
-                targetId: 'src-1',
-                targetKind: 'entry',
-            },
-        ]);
+        await getRelationshipRepository().replaceForSource(SOURCE, references(1));
+        await getRelationshipRepository().replaceForSource(
+            { id: 'other', kind: 'entry' },
+            [
+                {
+                    schemaPath: 'related',
+                    instancePath: 'related',
+                    targetId: 'src-1',
+                    targetKind: 'entry',
+                },
+            ]
+        );
 
-        await repository().deleteByResource('src-1', 'entry');
+        await getRelationshipRepository().deleteByResource('src-1', 'entry');
 
-        expect(await repository().findBySource('src-1', 'entry')).toEqual([]);
-        expect(await repository().findBySource('other', 'entry')).toEqual([]);
+        expect(await getRelationshipRepository().findBySource('src-1', 'entry')).toEqual(
+            []
+        );
+        expect(await getRelationshipRepository().findBySource('other', 'entry')).toEqual(
+            []
+        );
     });
 });

@@ -13,11 +13,11 @@ import { sql } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
+import { getRelationshipRepository } from '@/content/repository/relationships';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { chunks } from '@/database/chunks';
 import { encodeWith, kyselyTableKey } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
-import { createRelationshipRepository } from '@/database/repository/relationships';
 import {
     accountsTable,
     userContentTable,
@@ -258,7 +258,7 @@ function createUserRepository() {
      */
     async function del(id: string): Promise<void> {
         // Relationship rows first: deleting the user row is what orphans them.
-        await createRelationshipRepository().deleteByResource(id, 'user');
+        await getRelationshipRepository().deleteByResource(id, 'user');
         await content.delete(id);
     }
 
@@ -290,6 +290,7 @@ function createUserRepository() {
         versions: content.versions,
         translatable: content.translatable,
         locales: content.locales,
+        findStoredRows: content.findStoredRows,
     };
 }
 

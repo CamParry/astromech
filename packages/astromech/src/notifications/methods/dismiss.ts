@@ -1,7 +1,7 @@
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { subjectId } from '../internal/subject';
-import { createNotificationRepository } from '../repository';
+import { getNotificationRepository } from '../repository';
 
 /**
  * Dismiss one row. The delete filters on the subject as well as the id, so an
@@ -17,6 +17,9 @@ export const dismissNotification = defineServiceMethod({
     destructive: true,
     idempotent: true,
     async handler(params, ctx): Promise<void> {
-        await createNotificationRepository().dismiss(subjectId(ctx.user), params.id);
+        await getNotificationRepository().delete({
+            id: params.id,
+            userId: subjectId(ctx.user),
+        });
     },
 });

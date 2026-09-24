@@ -7,7 +7,7 @@ import type { CronRepository } from '@/cron/repository';
 import type { AppContext } from '@/types/index';
 import { Cron } from 'croner';
 import { getCronJobs } from '@/cron/registry';
-import { createCronRepository } from '@/cron/repository';
+import { getCronRepository } from '@/cron/repository';
 import { globals } from '@/registry';
 
 /** Claim lease: generous so a normal job never self-expires mid-run. A crashed
@@ -57,7 +57,7 @@ async function seed(
 export async function runDue(now: Date, ctx: AppContext): Promise<void> {
     const config = ctx.config;
     const timezone = config.timezone ?? 'UTC';
-    const repository = createCronRepository();
+    const repository = getCronRepository();
 
     await seed(repository, now, timezone);
 

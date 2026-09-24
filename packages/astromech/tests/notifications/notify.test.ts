@@ -17,6 +17,10 @@ import type { Kysely } from 'kysely';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
+import {
+    getNotificationRepository,
+    setNotificationRepository,
+} from '@/notifications/repository';
 import { notificationsDefinition, notify } from '@/notifications/service';
 
 let db: Kysely<DB>;
@@ -116,6 +120,25 @@ describe('the inbox methods', () => {
 
         await inbox(editor).dismiss({ id: editorRow });
         expect(await inbox(editor).count()).toBe(0);
+    });
+
+    it('deletes by the caller’s id as well as the row’s', async () => {
+        const registered = getNotificationRepository();
+        const deleted: { id: string; userId: string }[] = [];
+        setNotificationRepository({
+            ...registered,
+            delete: (where) => {
+                deleted.push(where);
+                return Promise.resolve();
+            },
+        });
+        try {
+            await inbox(admin).dismiss({ id: 'row-1' });
+        } finally {
+            setNotificationRepository(registered);
+        }
+
+        expect(deleted).toEqual([{ id: 'row-1', userId: admin }]);
     });
 
     it('dismisses all of one user’s notifications and no one else’s', async () => {

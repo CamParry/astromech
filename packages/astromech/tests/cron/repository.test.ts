@@ -11,16 +11,16 @@
 
 import { createTestDb } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createCronRepository } from '@/cron/repository';
+import { getCronRepository } from '@/cron/repository';
 
 const NOW = new Date('2024-06-01T12:00:00.000Z');
 const EXPIRY = new Date('2024-06-01T12:05:00.000Z');
 
-let repository: ReturnType<typeof createCronRepository>;
+let repository: ReturnType<typeof getCronRepository>;
 
 beforeEach(async () => {
     await createTestDb();
-    repository = createCronRepository();
+    repository = getCronRepository();
 });
 
 describe('seedJob', () => {

@@ -1,19 +1,18 @@
 /**
- * Notification repository — the only place Kysely touches the
+ * Notification repository: the only place Kysely touches the
  * `notifications` table. `createMany` fans one notification out to every
  * targeted user in a single INSERT.
  */
 
 import type { NewNotificationRow, NotificationRow } from './tables';
-import type { Db } from '@/database/types';
 import { createRepository } from '@/database/repository/create-repository';
 import { notificationsTable } from '@/database/tables';
+import { createLazyRegistry } from '@/registry';
 
 export type NotificationRepository = ReturnType<typeof createNotificationRepository>;
 
-/** Defaults to the registered db; pass a tx handle to scope it to a transaction. */
-export function createNotificationRepository(db?: Db) {
-    const repository = createRepository(notificationsTable, db);
+function createNotificationRepository() {
+    const repository = createRepository(notificationsTable);
 
     /** Insert one row per user in a single statement. */
     async function createMany(rows: NewNotificationRow[]): Promise<void> {
@@ -21,7 +20,7 @@ export function createNotificationRepository(db?: Db) {
     }
 
     /** A user's notifications, newest first. */
-    async function listByUser(userId: string): Promise<NotificationRow[]> {
+    async function findByUser(userId: string): Promise<NotificationRow[]> {
         return repository.findMany({
             where: { userId },
             orderBy: [['createdAt', 'desc']],
@@ -33,16 +32,34 @@ export function createNotificationRepository(db?: Db) {
     }
 
     /**
-     * Dismiss one notification. Filtering on `userId` as well as `id` is the
-     * authorization check — a user may only dismiss their own row.
+     * Delete one notification. Filtering on `userId` as well as `id` is the
+     * authorization check: a user may only delete their own row.
      */
-    async function dismiss(userId: string, id: string): Promise<void> {
-        await repository.deleteMany({ id, userId });
+    async function del(where: { id: string; userId: string }): Promise<void> {
+        await repository.deleteMany(where);
     }
 
-    async function dismissAll(userId: string): Promise<void> {
+    async function deleteByUser(userId: string): Promise<void> {
         await repository.deleteMany({ userId });
     }
 
-    return { createMany, listByUser, countByUser, dismiss, dismissAll };
+    return { createMany, findByUser, countByUser, delete: del, deleteByUser };
+}
+
+const notificationRepository = createLazyRegistry<NotificationRepository>(
+    'notificationRepository',
+    createNotificationRepository
+);
+
+/** The notification repository, built on first use. */
+export function getNotificationRepository(): NotificationRepository {
+    return notificationRepository.get();
+}
+
+/**
+ * Swap the notification repository, so a test can replace one method.
+ * @internal
+ */
+export function setNotificationRepository(repository: NotificationRepository): void {
+    notificationRepository.set(repository);
 }

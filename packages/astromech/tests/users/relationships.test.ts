@@ -12,8 +12,8 @@ import type { Kysely } from 'kysely';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
+import { getRelationshipRepository } from '@/content/repository/relationships';
 import { encodeWith } from '@/database/codec';
-import { createRelationshipRepository } from '@/database/repository/relationships';
 import { usersTable } from '@/database/tables';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { rebuildRelationshipIndex } from '@/transport/cli/relationship-index';
@@ -51,7 +51,7 @@ beforeEach(async () => {
 
 /** The user's index rows, ordered by target so two runs compare directly. */
 async function credits(): Promise<string[]> {
-    const rows = await createRelationshipRepository().findBySource(id, 'user');
+    const rows = await getRelationshipRepository().findBySource(id, 'user');
     return rows.map((row) => row.targetId).sort();
 }
 
@@ -107,13 +107,13 @@ describe('user relationships across locales', () => {
             locale: 'fr',
             data: { fields: { credit: postB } },
         });
-        const written = (await createRelationshipRepository().findAll()).sort((a, b) =>
+        const written = (await getRelationshipRepository().findMany()).sort((a, b) =>
             JSON.stringify(a).localeCompare(JSON.stringify(b))
         );
 
         await rebuildRelationshipIndex();
 
-        const rebuilt = (await createRelationshipRepository().findAll()).sort((a, b) =>
+        const rebuilt = (await getRelationshipRepository().findMany()).sort((a, b) =>
             JSON.stringify(a).localeCompare(JSON.stringify(b))
         );
         expect(rebuilt).toEqual(written);
@@ -124,10 +124,7 @@ describe('user relationships across locales', () => {
 
         await rebuildRelationshipIndex();
 
-        const rows = await createRelationshipRepository().findBySource(
-            noContentId,
-            'user'
-        );
+        const rows = await getRelationshipRepository().findBySource(noContentId, 'user');
         expect(rows).toEqual([]);
     });
 });

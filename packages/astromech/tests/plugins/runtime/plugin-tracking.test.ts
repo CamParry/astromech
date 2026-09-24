@@ -15,6 +15,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { decodeWith } from '@/database/codec';
 import { pluginsTable } from '@/database/tables';
 import { bootPlugins } from '@/plugins/runtime/plugin-runtime';
+import {
+    getPluginTrackingRepository,
+    setPluginTrackingRepository,
+} from '@/plugins/runtime/repository';
 
 type Db = Kysely<DB>;
 
@@ -135,5 +139,28 @@ describe('bootPlugins – removed-plugin warning', () => {
         }
 
         expect(calls).toBe(0);
+    });
+});
+
+describe('bootPlugins – tracking is best-effort', () => {
+    it('boots and warns when the tracking write fails', async () => {
+        const registered = getPluginTrackingRepository();
+        setPluginTrackingRepository({
+            ...registered,
+            upsert: () => Promise.reject(new Error('no table')),
+        });
+        const warn = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        let messages: string[];
+        try {
+            await bootPlugins([{ package: '@astromech/backups', version: '1.0.0' }]);
+            messages = warn.mock.calls.map((call) => String(call[0]));
+        } finally {
+            warn.mockRestore();
+            setPluginTrackingRepository(registered);
+        }
+
+        expect(messages).toHaveLength(1);
+        expect(messages[0]).toContain('Could not record plugin "@astromech/backups"');
+        expect(await trackedRows(db)).toEqual([]);
     });
 });

@@ -1,18 +1,17 @@
 /**
- * Cron repository — the only place Kysely touches the `_astromech_cron`
+ * Cron repository: the only place Kysely touches the `_astromech_cron`
  * table. Every method goes through `createRepository(cronTable)`: the
  * scheduler's due/claim predicates are ORs the `where` DSL now expresses.
  */
 import type { CronRow, NewCronRow } from '@/database/tables';
-import type { Db } from '@/database/types';
 import { createRepository } from '@/database/repository/create-repository';
 import { cronTable } from '@/database/tables';
+import { createLazyRegistry } from '@/registry';
 
 export type CronRepository = ReturnType<typeof createCronRepository>;
 
-/** Defaults to the registered db; pass a tx handle to scope it to a transaction. */
-export function createCronRepository(db?: Db) {
-    const repository = createRepository(cronTable, db);
+function createCronRepository() {
+    const repository = createRepository(cronTable);
 
     /**
      * Insert a job's seed row, or leave an existing one alone. ON CONFLICT DO
@@ -57,4 +56,22 @@ export function createCronRepository(db?: Db) {
     }
 
     return { seedJob, due, claim, recordRunAndRelease };
+}
+
+const cronRepository = createLazyRegistry<CronRepository>(
+    'cronRepository',
+    createCronRepository
+);
+
+/** The cron repository, built on first use. */
+export function getCronRepository(): CronRepository {
+    return cronRepository.get();
+}
+
+/**
+ * Swap the cron repository, so a test can replace one method.
+ * @internal
+ */
+export function setCronRepository(repository: CronRepository): void {
+    cronRepository.set(repository);
 }

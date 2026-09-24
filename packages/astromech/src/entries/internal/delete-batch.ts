@@ -1,7 +1,7 @@
 import type { EntryRepository } from '../repository/types';
 import type { EntryWithContentId } from './read-entry';
 import type { AppContext } from '@/types/index';
-import { createRelationshipRepository } from '@/database/repository/relationships';
+import { getRelationshipRepository } from '@/content/repository/relationships';
 import { CapabilityError } from '@/errors/capability';
 import { getEntryRepository } from '../repository/registry';
 import { getEntryResources, toEntry } from './read-entry';
@@ -20,7 +20,7 @@ export async function deleteEntryBatch(
     ctx: AppContext
 ): Promise<void> {
     const repository = getEntryRepository(params.type);
-    const relationships = createRelationshipRepository();
+    const relationships = getRelationshipRepository();
 
     await removeEntryBatch(params, ctx, {
         repository,

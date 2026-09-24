@@ -1,8 +1,8 @@
-import type { RelationshipIndexSource } from '@/database/repository/relationships';
+import type { RelationshipIndexSource } from '@/content/repository/relationships';
 import type { RelationshipRow } from '@/database/tables';
 import type { ResourceType } from '@/types/domain';
 import { getConfig } from '@/config/registry';
-import { createRelationshipRepository } from '@/database/repository/relationships';
+import { getRelationshipRepository } from '@/content/repository/relationships';
 import { allEntryRelationships } from '@/entries/internal/relationships';
 import { allGlobalRelationships } from '@/globals/internal/relationships';
 import { allMediaRelationships } from '@/media/internal/relationships';
@@ -41,7 +41,7 @@ export async function rebuildRelationshipIndex(
     opts?: RelationshipIndexScope
 ): Promise<RebuildReport> {
     const sources = await collectSources(opts);
-    const repository = createRelationshipRepository();
+    const repository = getRelationshipRepository();
 
     let rowsWritten = 0;
     for (const { source, references } of sources) {
@@ -53,7 +53,7 @@ export async function rebuildRelationshipIndex(
 
     // Read AFTER the replaces: what is left over then belongs to sources that no
     // longer exist, which no `replaceForSource` would ever reach.
-    const stored = await repository.findAll(storedScope(opts));
+    const stored = await repository.findMany(storedScope(opts));
     const live = new Set(sources.map(({ source }) => sourceKey(source.id, source.kind)));
     const orphanSources = new Map<string, { id: string; kind: ResourceType }>();
     let orphanRowsRemoved = 0;
@@ -92,7 +92,7 @@ export async function checkRelationshipIndex(
         }
     }
 
-    const stored = await createRelationshipRepository().findAll(storedScope(opts));
+    const stored = await getRelationshipRepository().findMany(storedScope(opts));
     const storedByKey = new Map(stored.map((row) => [rowKey(row), row]));
 
     const mismatched: DriftReport['mismatched'] = [];

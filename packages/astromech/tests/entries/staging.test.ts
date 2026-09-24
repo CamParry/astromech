@@ -20,8 +20,8 @@ import { join } from 'node:path';
 import { createFileTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
+import { getRelationshipRepository } from '@/content/repository/relationships';
 import { getDb } from '@/database/registry';
-import { createRelationshipRepository } from '@/database/repository/relationships';
 import { getEntryRepository } from '@/entries/repository/registry';
 import { CapabilityError } from '@/errors/capability';
 import { StagedChangeExistsError } from '@/errors/resource';
@@ -55,14 +55,14 @@ afterEach(() => {
 });
 
 function relationTargets(entryId: string): Promise<string[]> {
-    return createRelationshipRepository(getDb())
+    return getRelationshipRepository()
         .findBySource(entryId, 'entry')
         .then((rels) => rels.map((r) => r.targetId).sort());
 }
 
 /** `sourceStaged` on every index row for a source (a boolean per row). */
 function relationStagedFlags(entryId: string): Promise<boolean[]> {
-    return createRelationshipRepository(getDb())
+    return getRelationshipRepository()
         .findBySource(entryId, 'entry')
         .then((rels) => rels.map((r) => r.sourceStaged));
 }

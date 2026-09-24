@@ -1,7 +1,7 @@
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { subjectId } from '../internal/subject';
-import { createNotificationRepository } from '../repository';
+import { getNotificationRepository } from '../repository';
 
 /** Clear the caller's whole inbox, and nobody else's. */
 export const dismissAllNotifications = defineServiceMethod({
@@ -13,6 +13,6 @@ export const dismissAllNotifications = defineServiceMethod({
     destructive: true,
     idempotent: true,
     async handler(_params, ctx): Promise<void> {
-        await createNotificationRepository().dismissAll(subjectId(ctx.user));
+        await getNotificationRepository().deleteByUser(subjectId(ctx.user));
     },
 });

@@ -7,11 +7,11 @@
 import type {
     IndexedReference,
     RelationshipIndexSource,
-} from '@/database/repository/relationships';
+} from '@/content/repository/relationships';
 import type { FieldReference } from '@/fields/references';
 import type { JsonObject, ResolvedConfig } from '@/types/index';
 import { mergeContentReferences } from '@/content/relationships';
-import { createRelationshipRepository } from '@/database/repository/relationships';
+import { getRelationshipRepository } from '@/content/repository/relationships';
 import { resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
 import { findReferences } from '@/fields/references';
@@ -41,7 +41,7 @@ export async function syncEntryRelationships(
         ? written
         : await storedEntryReferences(config, entry.id, type);
 
-    await createRelationshipRepository().replaceForSource(
+    await getRelationshipRepository().replaceForSource(
         { id: entry.id, kind: 'entry', type, staged: false },
         references
     );

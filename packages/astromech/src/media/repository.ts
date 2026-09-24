@@ -18,11 +18,11 @@ import { sql } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
+import { getRelationshipRepository } from '@/content/repository/relationships';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { chunks } from '@/database/chunks';
 import { kyselyTableKey } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
-import { createRelationshipRepository } from '@/database/repository/relationships';
 import { mediaContentTable, mediaTable, mediaVersionsTable } from '@/database/tables';
 import { createLazyRegistry } from '@/registry';
 
@@ -225,7 +225,7 @@ function createMediaRepository() {
      * that is gone.
      */
     async function del(id: string): Promise<void> {
-        await createRelationshipRepository().deleteByResource(id, 'media');
+        await getRelationshipRepository().deleteByResource(id, 'media');
         await content.delete(id);
     }
 
@@ -248,6 +248,7 @@ function createMediaRepository() {
         versions: content.versions,
         translatable: content.translatable,
         locales: content.locales,
+        findStoredRows: content.findStoredRows,
     };
 }
 

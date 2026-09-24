@@ -5,11 +5,10 @@
 
 import { createContentRelationships } from '@/content/relationships';
 import { RESOURCE_SPECS } from '@/content/resources';
-import { userContentTable, usersTable } from '@/database/tables';
+import { getUserRepository } from '@/users/repository';
 
 const relationships = createContentRelationships({
-    table: usersTable,
-    contentTable: userContentTable,
+    repository: getUserRepository,
     ownerColumn: 'userId',
     kind: 'user',
     fields: (config) => RESOURCE_SPECS.user.fields(config),

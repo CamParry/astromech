@@ -99,6 +99,7 @@ function createGlobalRepository() {
         staging: content.staging,
         versions: content.versions,
         translatable: content.translatable,
+        findStoredRows: content.findStoredRows,
     };
 }
 

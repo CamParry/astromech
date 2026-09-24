@@ -6,14 +6,17 @@
  * index write must leave all three untouched.
  */
 
-import type * as RelationshipRepositoryModule from '@/database/repository/relationships';
 import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { noopStorage } from '@tests/fixtures';
 import { createFileTestDb, setupTestConfig } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
+import {
+    getRelationshipRepository,
+    setRelationshipRepository,
+} from '@/content/repository/relationships';
 import { getMediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { makeTranslatableMediaConfig } from './media-config';
@@ -22,26 +25,21 @@ const api = currentServices.media;
 
 // `replaceForSource` only rejects once `state.failing` is set, so the earlier
 // setup writes still succeed.
-const state = vi.hoisted(() => ({ failing: false }));
+const state = { failing: false };
 
-vi.mock('@/database/repository/relationships', async (importOriginal) => {
-    const actual = await importOriginal<typeof RelationshipRepositoryModule>();
-    return {
-        ...actual,
-        createRelationshipRepository: (
-            ...args: Parameters<typeof actual.createRelationshipRepository>
-        ) => {
-            const repository = actual.createRelationshipRepository(...args);
-            return {
-                ...repository,
-                replaceForSource: (
-                    ...replaceArgs: Parameters<typeof repository.replaceForSource>
-                ): Promise<void> =>
-                    state.failing
-                        ? Promise.reject(new Error('boom'))
-                        : repository.replaceForSource(...replaceArgs),
-            };
-        },
+beforeEach(() => {
+    const relationships = getRelationshipRepository();
+    setRelationshipRepository({
+        ...relationships,
+        replaceForSource: (
+            ...args: Parameters<typeof relationships.replaceForSource>
+        ): Promise<void> =>
+            state.failing
+                ? Promise.reject(new Error('boom'))
+                : relationships.replaceForSource(...args),
+    });
+    return (): void => {
+        setRelationshipRepository(relationships);
     };
 });
 
@@ -66,7 +64,6 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-    vi.restoreAllMocks();
     for (const suffix of ['', '-wal', '-shm']) {
         try {
             rmSync(`${dbPath}${suffix}`);

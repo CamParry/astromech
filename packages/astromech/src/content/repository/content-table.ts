@@ -15,6 +15,7 @@ import type {
     JoinedQuery,
     JoinedWhere,
     OwnerFilter,
+    StoredRows,
 } from './types';
 import type { SortClause } from '@/content/list';
 import type { Table } from '@/database/define-table';
@@ -191,6 +192,26 @@ export function createContentRepository<
         }
         for (const list of byId.values()) list.sort();
         return byId;
+    }
+
+    /** The resource rows and all their content rows; every resource without `ids`. */
+    async function findStoredRows(ids?: readonly string[]): Promise<StoredRows> {
+        if (ids === undefined) {
+            return {
+                owners: await owners.findMany(),
+                contents: await contents.findMany(),
+            };
+        }
+        const stored: StoredRows = { owners: [], contents: [] };
+        for (const chunk of chunks(ids)) {
+            const ownRows = await owners.findMany({ where: { id: { in: chunk } } });
+            const contentRows = await contents.findMany({
+                where: { [ownerColumn]: { in: chunk } } as never,
+            });
+            stored.owners.push(...(ownRows as Record<string, unknown>[]));
+            stored.contents.push(...(contentRows as Record<string, unknown>[]));
+        }
+        return stored;
     }
 
     /** Decode joined rows and attach each one's locale list. */
@@ -518,6 +539,7 @@ export function createContentRepository<
         update,
         delete: del,
         locales,
+        findStoredRows,
         decodeRows,
         overlayLocale,
         translatable,

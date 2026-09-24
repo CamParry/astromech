@@ -5,10 +5,10 @@
         "packages/plugins/*/src/index.ts": ["duplicates"],
         "packages/astromech/src/integrations/astro/middleware.ts": ["duplicates"],
         "packages/astromech/src/transport/http/client.ts": ["duplicates"],
-        "packages/astromech/src/database/repository/relationships.ts": ["types"],
+        "packages/astromech/src/content/repository/relationships.ts": ["types"],
         "packages/astromech/src/entries/repository/maintenance.ts": ["types"],
         "packages/astromech/src/notifications/repository.ts": ["types"],
-        "packages/astromech/src/plugins/runtime/plugin-tracking-repository.ts": ["types"],
+        "packages/astromech/src/plugins/runtime/repository.ts": ["types"],
         "packages/plugins/backups/src/repository.ts": ["types"]
     },
     "workspaces": {

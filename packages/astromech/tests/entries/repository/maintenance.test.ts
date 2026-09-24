@@ -1,5 +1,5 @@
 /**
- * Repository-level tests for `createEntryMaintenanceRepository` — the whole-table
+ * Repository-level tests for the entry maintenance repository: the whole-table
  * upkeep used by the scheduled-publish and trash-purge CRON jobs.
  */
 
@@ -8,22 +8,25 @@ import type { EntriesTableRepository } from '@/entries/repository/registry';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { systemAppContext } from '@/app-context/app-context';
+import { getRelationshipRepository } from '@/content/repository/relationships';
 import { createRepository } from '@/database/repository/create-repository';
-import { createRelationshipRepository } from '@/database/repository/relationships';
 import { entriesTable } from '@/database/tables';
 import { trashPurgeJob } from '@/entries/jobs/trash-purge';
-import { createEntryMaintenanceRepository } from '@/entries/repository/maintenance';
+import {
+    getEntryMaintenanceRepository,
+    setEntryMaintenanceRepository,
+} from '@/entries/repository/maintenance';
 import { getEntriesTableRepository } from '@/entries/repository/registry';
 
 let db: Db;
 let entryRepository: EntriesTableRepository;
-let maintenance: ReturnType<typeof createEntryMaintenanceRepository>;
+let maintenance: ReturnType<typeof getEntryMaintenanceRepository>;
 
 beforeEach(async () => {
     db = await createTestDb();
     setupTestConfig();
     entryRepository = getEntriesTableRepository();
-    maintenance = createEntryMaintenanceRepository(db);
+    maintenance = getEntryMaintenanceRepository();
 });
 
 describe('publishDueScheduled', () => {
@@ -213,7 +216,7 @@ describe('trashPurgeJob', () => {
             deletedAt: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000),
         });
 
-        const relationships = createRelationshipRepository(db);
+        const relationships = getRelationshipRepository();
         await relationships.replaceForSource(
             { id: doomed.id, kind: 'entry', type: 'post' },
             [
@@ -256,5 +259,29 @@ describe('trashPurgeJob', () => {
         // Only references touching the purged id go: the survivor keeps the rest.
         const kept = await relationships.findBySource(survivor.id, 'entry');
         expect(kept.map((row) => row.targetId)).toEqual([survivor.id]);
+    });
+
+    it('purges what was trashed before the retention window', async () => {
+        const registered = getEntryMaintenanceRepository();
+        const cutoffs: Date[] = [];
+        setEntryMaintenanceRepository({
+            ...registered,
+            purgeTrashedBefore: (cutoff) => {
+                cutoffs.push(cutoff);
+                return Promise.resolve([]);
+            },
+        });
+        const before = Date.now();
+        try {
+            await trashPurgeJob.handler(systemAppContext());
+        } finally {
+            setEntryMaintenanceRepository(registered);
+        }
+
+        const retention = systemAppContext().config.trash.retentionDays;
+        const expected = before - retention * 24 * 60 * 60 * 1000;
+        expect(cutoffs).toHaveLength(1);
+        // Within a minute: the job reads the clock itself.
+        expect(Math.abs((cutoffs[0]?.getTime() ?? 0) - expected)).toBeLessThan(60_000);
     });
 });
