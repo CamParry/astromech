@@ -18,7 +18,9 @@ not exist yet, and the frozen tree was accurate when written. So after a
 and should be left alone; one in a live document should be repointed.
 
 A file in `completed/` is a frozen record of what shipped. Don't accumulate new
-work in it: a defect found later gets its own file in `planned/`.
+work in it: a defect found later gets its own file in `planned/`. A roadmap item
+that fixes a defect names the class of defect (where else it can occur), not
+only the instance.
 
 `backlog.md` holds unscheduled work that belongs to no single feature. The `docs`
 skill has the full contract for all of this.

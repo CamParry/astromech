@@ -1,7 +1,7 @@
 import type { GlobalVersion, JsonObject } from '@/types/index';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
-import { requireCanonical } from '../../internal/global';
+import { getCanonicalGlobal } from '../../internal/global';
 import { localised } from '../../schema';
 
 /**
@@ -15,7 +15,7 @@ export const listGlobalVersions = defineServiceMethod({
     requires: 'versioning',
     mutates: false,
     async handler(params, ctx): Promise<GlobalVersion[]> {
-        const { repository, current } = await requireCanonical(ctx.config, params);
+        const { repository, current } = await getCanonicalGlobal(ctx.config, params);
 
         const rows = await repository.versions.list(current.contentId);
         return rows.map((row) => ({

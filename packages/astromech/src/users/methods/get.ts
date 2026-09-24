@@ -3,7 +3,7 @@ import { z } from '@hono/zod-openapi';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { readUser } from '../internal/read-user';
+import { findUser } from '../internal/find-user';
 import { toUser } from '../internal/to-user';
 import { createUserRepository } from '../repository';
 
@@ -24,7 +24,7 @@ export const getUser = defineServiceMethod({
             undefined,
             params.locale
         );
-        const row = await readUser(createUserRepository(ctx.config), params.id, locale);
+        const row = await findUser(createUserRepository(ctx.config), params.id, locale);
         return row ? toUser(row) : null;
     },
 });

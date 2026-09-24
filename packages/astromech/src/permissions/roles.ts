@@ -101,7 +101,7 @@ export function resolveRole(
  * use this so an unknown role is a 422 at the point it is sent, rather than a
  * stored value that something later has to decide what to do with.
  */
-export function requireRole(
+export function getRole(
     config: Pick<ResolvedConfig, 'resolvedRoles'>,
     slug: string
 ): Role {

@@ -7,7 +7,7 @@
 import type { MediaRepository, MediaRow } from '../repository';
 
 /** One media item, read through the locale fallback chain. */
-export async function readMedia(
+export async function findMedia(
     repository: MediaRepository,
     id: string,
     locale?: string

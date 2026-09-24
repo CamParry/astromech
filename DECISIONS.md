@@ -26,7 +26,7 @@ Live choices and what each one beat. An entry is here because the losing option 
 
 **`update` with a locale that has no content row creates it.** That is how a translation is made, as with Payload's `update` and `locale`: shared fields come from the default locale and `create` validation runs on the result. Rejected: a `createTranslation` method, a second write path for the same row.
 
-**A repository answers exact reads; fallback is the service's.** `get` on the users and media repositories returns the row asked for, or null; the fallback chain lives in `readUser` and `readMedia`. A one-off account question uses the table repository (`users.accounts.count({ role: 'admin' })`). Rejected: a named repository method per question, which hides read policy behind a name.
+**A repository answers exact reads; fallback is the service's.** `get` on the users and media repositories returns the row asked for, or null; the fallback chain lives in `findUser` and `findMedia`. A one-off account question uses the table repository (`users.accounts.count({ role: 'admin' })`). Rejected: a named repository method per question, which hides read policy behind a name.
 
 **`globals` is an array of self-contained `defineGlobal` objects, not a name-keyed record**, so host and plugin globals have one shape. Rejected: a `Record<string, GlobalConfig>` mirroring `entries`, and a fields mode on `admin.pages`, which puts a field tree behind a route rather than a resource.
 

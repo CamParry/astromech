@@ -5,7 +5,7 @@ import { snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
-import { asGlobal, requireCanonical } from '../../internal/global';
+import { asGlobal, getCanonicalGlobal } from '../../internal/global';
 import { syncGlobalRelationships } from '../../internal/relationships';
 import { toStoredFields } from '../../internal/stored-fields';
 import { localised } from '../../schema';
@@ -24,7 +24,7 @@ export const mergeStagedGlobal = defineServiceMethod({
     requires: 'staging',
     mutates: true,
     async handler(params, ctx): Promise<Global> {
-        const { global, repository, id, locale, current } = await requireCanonical(
+        const { global, repository, id, locale, current } = await getCanonicalGlobal(
             ctx.config,
             params
         );

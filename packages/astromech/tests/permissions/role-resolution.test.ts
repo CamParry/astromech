@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { ValidationError } from '@/errors/validation';
-import { requireRole, resolveRole, resolveRoles } from '@/permissions/roles';
+import { getRole, resolveRole, resolveRoles } from '@/permissions/roles';
 
 const config = { resolvedRoles: resolveRoles({}) };
 
@@ -39,15 +39,15 @@ describe('resolveRole', () => {
     });
 });
 
-describe('requireRole', () => {
+describe('getRole', () => {
     it('returns a configured role', () => {
-        expect(requireRole(config, 'admin').permissions).toEqual(['*']);
+        expect(getRole(config, 'admin').permissions).toEqual(['*']);
     });
 
     it('rejects an unknown slug as a field error naming the configured roles', () => {
         try {
-            requireRole(config, 'reviewer');
-            expect.unreachable('requireRole should have thrown');
+            getRole(config, 'reviewer');
+            expect.unreachable('getRole should have thrown');
         } catch (err) {
             expect(err).toBeInstanceOf(ValidationError);
             const message = (err as ValidationError).fields?.role?.[0] ?? '';

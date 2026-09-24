@@ -174,7 +174,7 @@ export function createMediaRepository(config?: ResolvedConfig) {
         return content.query.rows(raw);
     }
 
-    /** One locale of one item, with no fallback. `readMedia` holds the fallback policy. */
+    /** One locale of one item, with no fallback. `findMedia` holds the fallback policy. */
     async function get(id: string, locale?: string): Promise<MediaRow | null> {
         return content.get({ id, locale });
     }

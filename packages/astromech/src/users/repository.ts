@@ -165,7 +165,7 @@ export function createUserRepository(config?: ResolvedConfig) {
         };
     }
 
-    /** One locale of one user, with no fallback. `readUser` holds the fallback policy. */
+    /** One locale of one user, with no fallback. `findUser` holds the fallback policy. */
     async function get(id: string, locale?: string): Promise<UserRow | null> {
         return content.get({ id, locale });
     }

@@ -7,10 +7,10 @@ import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { patchedFieldNames, writeFields } from '@/content/write-fields';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
-import { requireRole } from '@/permissions/roles';
+import { getRole } from '@/permissions/roles';
 import { defineServiceMethod } from '@/services/define-service-method';
+import { findUser } from '../internal/find-user';
 import { assertKeepsAnAdmin } from '../internal/last-admin';
-import { readUser } from '../internal/read-user';
 import { syncUserRelationships } from '../internal/relationships';
 import { toUser } from '../internal/to-user';
 import { createUserRepository } from '../repository';
@@ -47,12 +47,12 @@ export const updateUser = defineServiceMethod({
         // The row this write edits, or — when the locale has none — the
         // default-locale row the new one is copied from.
         const current = await repository.get(id, locale);
-        const base = current ?? (await readUser(repository, id));
+        const base = current ?? (await findUser(repository, id));
         if (!base) throw new ResourceNotFoundError('user', { id });
 
         const config = ctx.config;
         if (data.role !== undefined) {
-            requireRole(config, data.role);
+            getRole(config, data.role);
             await assertKeepsAnAdmin(
                 repository,
                 base,
@@ -129,7 +129,7 @@ export const updateUser = defineServiceMethod({
             }
         });
 
-        const updated = await readUser(repository, id, locale);
+        const updated = await findUser(repository, id, locale);
         if (!updated) throw new ResourceNotFoundError('user', { id });
         return toUser(updated);
     },

@@ -8,7 +8,7 @@ import type { Role, User } from '@/types/index';
 import { getAuth } from '@/auth/better-auth';
 import { getConfig } from '@/config/registry';
 import { resolveRole } from '@/permissions/roles';
-import { readUser } from '@/users/internal/read-user';
+import { findUser } from '@/users/internal/find-user';
 import { toUser } from '@/users/internal/to-user';
 import { createUserRepository } from '@/users/repository';
 import { log } from '@/utilities/log';
@@ -32,7 +32,7 @@ export async function getSession(
     if (!session?.user) return null;
 
     // Load the full user row (Better Auth session may not include custom fields)
-    const userRow = await readUser(createUserRepository(), session.user.id);
+    const userRow = await findUser(createUserRepository(), session.user.id);
     if (!userRow) return null;
 
     const user = toUser(userRow);

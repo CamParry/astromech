@@ -11,9 +11,9 @@ import { filterArgs, toMethodFilter } from '../filter-args';
 import { bootedManifest } from '../methods';
 
 /**
- * Resolve a role slug, rejecting one that is not configured. `requireRole`
- * raises a 422, which is the wrong shape for a CLI flag, so the message is
- * built here instead.
+ * Resolve a role slug, rejecting one that is not configured. The `getRole` in
+ * `permissions/roles.ts` raises a 422, which is the wrong shape for a CLI
+ * flag, so the message is built here instead.
  */
 function getRole(config: ResolvedConfig, slug: string) {
     const role = resolveRole(config, slug);

@@ -9,7 +9,7 @@ import type { ContentWrite } from '@/content/repository/types';
 import type { Global, ResolvedConfig, User } from '@/types/index';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../internal/access';
-import { asGlobal, requireCanonical } from '../internal/global';
+import { asGlobal, getCanonicalGlobal } from '../internal/global';
 import { localised, scheduleGlobalSchema } from '../schema';
 
 /** Publishes one locale, stamping `publishedAt` when it has none yet. */
@@ -73,7 +73,7 @@ async function writeStatus(
     user: User | null,
     write: (current: GlobalRow) => ContentWrite
 ): Promise<Global> {
-    const { repository, id, locale, current } = await requireCanonical(config, params);
+    const { repository, id, locale, current } = await getCanonicalGlobal(config, params);
 
     const row = await repository.update(
         { id, locale },

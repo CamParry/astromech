@@ -2,7 +2,7 @@ import { requireStagedChange } from '@/content/staging';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
-import { requireCanonical } from '../../internal/global';
+import { getCanonicalGlobal } from '../../internal/global';
 import { syncGlobalRelationships } from '../../internal/relationships';
 import { localised } from '../../schema';
 
@@ -18,7 +18,7 @@ export const deleteStagedGlobal = defineServiceMethod({
     requires: 'staging',
     mutates: true,
     async handler(params, ctx): Promise<void> {
-        const { repository, id, locale } = await requireCanonical(ctx.config, params);
+        const { repository, id, locale } = await getCanonicalGlobal(ctx.config, params);
         await requireStagedChange(repository.staging, 'global', {
             rowId: id,
             id: params.key,

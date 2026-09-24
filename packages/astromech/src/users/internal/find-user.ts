@@ -9,7 +9,7 @@
 import type { UserRepository, UserRow } from '../repository';
 
 /** One user, read through the locale fallback chain. */
-export async function readUser(
+export async function findUser(
     repository: UserRepository,
     id: string,
     locale?: string

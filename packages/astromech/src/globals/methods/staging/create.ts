@@ -4,7 +4,7 @@ import { StagedChangeExistsError } from '@/errors/resource';
 import { mergePatch } from '@/fields/values';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
-import { asGlobal, requireCanonical } from '../../internal/global';
+import { asGlobal, getCanonicalGlobal } from '../../internal/global';
 import { syncGlobalRelationships } from '../../internal/relationships';
 import { createStagedGlobalSchema } from '../../schema';
 
@@ -21,7 +21,7 @@ export const createStagedGlobal = defineServiceMethod({
     requires: 'staging',
     mutates: true,
     async handler(params, ctx): Promise<Global> {
-        const { repository, id, locale, current } = await requireCanonical(ctx.config, {
+        const { repository, id, locale, current } = await getCanonicalGlobal(ctx.config, {
             key: params.key,
             locale: params.locale,
         });

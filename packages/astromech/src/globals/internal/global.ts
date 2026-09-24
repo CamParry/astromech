@@ -78,7 +78,7 @@ export type CanonicalGlobal = {
  * Every operation but `update` needs a row that already exists: only a write
  * may create one.
  */
-export async function requireCanonical(
+export async function getCanonicalGlobal(
     config: ResolvedConfig,
     params: { key: string; locale?: string | undefined }
 ): Promise<CanonicalGlobal> {

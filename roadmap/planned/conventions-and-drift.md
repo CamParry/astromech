@@ -49,8 +49,8 @@ visible where it happens and leaves the judgement to review.
       where it already repeats. Change every copy, record the rest in a
       roadmap file, or say why this one differs. A fix to a defect asks where
       else the defect can occur.
-- [ ] `docs` skill: a roadmap item that fixes a defect names the class of
-      defect, not only the instance.
+- [x] `docs` skill: a roadmap item that fixes a defect names the class of
+      defect, not only the instance. Landed in `roadmap/README.md` instead.
 
 ## Tooling
 
@@ -76,10 +76,11 @@ visible where it happens and leaves the judgement to review.
 
 - [ ] Retire `collection` for an entry type and `record` for an entry: rename
       the 120+ `collection` identifiers and `EntryRecord`.
-- [ ] Lookup verbs: `requireCanonical`
-      and `requireRole` become `get*` or `assert*` outside middleware;
-      `getSession` returns null; add the `find*` returns-null rule to the
-      `code` skill and apply it (`readUser`, `readMedia`).
+- [x] Lookup verbs: `requireCanonical` and `requireRole` become
+      `getCanonicalGlobal` and `getRole`; the `code` skill gains the `find*`
+      returns-null rule, applied as `findUser` and `findMedia`. `getSession`
+      keeps its name: it returns null and mirrors better-auth's
+      `api.getSession`.
 - [ ] `XTableRow`/`NewXTableRow` for table rows and `XRow` for joined rows;
       `toX` mappers (`asEntry`, `asGlobal`); singular repository factories;
       flatten `globals/repository/`; one name for a resource's plain

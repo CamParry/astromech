@@ -9,7 +9,7 @@ import { patchedFieldNames, writeFields } from '@/content/write-fields';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { readMedia } from '../internal/read-media';
+import { findMedia } from '../internal/find-media';
 import { syncMediaRelationships } from '../internal/relationships';
 import { toMedia } from '../internal/to-media';
 import { createMediaRepository } from '../repository';
@@ -45,7 +45,7 @@ export const updateMedia = defineServiceMethod({
         // The row this write edits, or — when the locale has none — the
         // default-locale row the new one is copied from.
         const current = await repository.get(id, locale);
-        const base = current ?? (await readMedia(repository, id));
+        const base = current ?? (await findMedia(repository, id));
         if (!base) throw new ResourceNotFoundError('media', { id });
 
         const config = ctx.config;
