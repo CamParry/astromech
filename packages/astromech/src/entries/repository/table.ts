@@ -15,7 +15,6 @@ import type { ContentRowId } from '@/content/repository/types';
 import type { Column, Table } from '@/database/define-table';
 import type { KyselyHandle, Repository } from '@/database/repository/create-repository';
 import type { Where } from '@/database/repository/where';
-import type { Db } from '@/database/types';
 import type { JsonObject, ReferencesFilter } from '@/types/index';
 import type { Expression, SqlBool } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
@@ -27,8 +26,11 @@ import { isReferencesFilter } from './references-filter';
 
 type OrderPair = [column: string, direction: 'asc' | 'desc'];
 
+/** The list predicate, as the table's `where` compiles it. */
+type ListPredicate = ReturnType<KyselyHandle<Table>['where']>;
+
 /** The expression builder the list predicate is compiled against. */
-type ListEb = Parameters<ReturnType<KyselyHandle<Table>['where']>>[0];
+type ListEb = Parameters<ListPredicate>[0];
 
 export type TableRepositoryOptions = {
     /** Primary key column name, declared with `col.id()`. Default 'id'. */
@@ -50,9 +52,9 @@ class TableRepository implements EntryRepository<EntryRow> {
     private readonly createdAtCol: string | false;
     private readonly updatedAtCol: string | false;
 
-    constructor(table: Table, options?: TableRepositoryOptions, db?: Db) {
+    constructor(table: Table, options?: TableRepositoryOptions) {
         this.table = table;
-        this.repository = createRepository(table, db);
+        this.repository = createRepository(table);
         this.idCol = options?.idColumn ?? 'id';
 
         // Both sides of the relationships index assume an id is unique across
@@ -223,7 +225,7 @@ class TableRepository implements EntryRepository<EntryRow> {
         return row;
     }
 
-    async get(ref: EntryRef & { type: string }): Promise<EntryRow | null> {
+    async findOne(ref: EntryRef & { type: string }): Promise<EntryRow | null> {
         // The table holds one type, so the registry has already routed by it.
         return this.findById(ref.id);
     }
@@ -258,9 +260,9 @@ class TableRepository implements EntryRepository<EntryRow> {
 
     /**
      * `params.where` split in two: the column filters, for the shared `where`
-     * DSL, and the `references` filter, which the DSL cannot express and `list`
-     * compiles to a subquery instead. `locale` is dropped because a custom-table
-     * entry type has no locale concept.
+     * DSL, and the `references` filter, which the DSL cannot express and the
+     * list predicate compiles to a subquery instead. `locale` is dropped because
+     * a custom-table entry type has no locale concept.
      */
     private whereFilters(params: ListParams): {
         filters: Where<Table>;
@@ -347,12 +349,12 @@ class TableRepository implements EntryRepository<EntryRow> {
     }
 
     /**
-     * One page of rows. The column filters, the search and the `references`
-     * subquery are ANDed into one predicate that both the count and the rows
-     * query use, so the total always counts the rows the page is drawn from.
+     * The list predicate: the column filters, the search and the `references`
+     * subquery ANDed together. `findMany` and `count` share it, so the total
+     * always counts the rows a page is drawn from.
      */
-    async list(params: ListParams): Promise<{ data: EntryRow[]; total: number }> {
-        const { db, table, where } = this.repository.kysely();
+    private listPredicate(params: ListParams): ListPredicate {
+        const { table, where } = this.repository.kysely();
 
         const { filters, references } = this.whereFilters(params);
         const searchColumns = this.searchColumns(params);
@@ -366,41 +368,35 @@ class TableRepository implements EntryRepository<EntryRow> {
                   }
         );
 
-        let predicate = columnPredicate;
-        if (references !== null) {
-            const sourceType = referencedSourceType(params.type);
-            predicate = (eb) =>
-                eb.and([
-                    columnPredicate(eb),
-                    this.referencesExists(eb, table, sourceType, references),
-                ]);
-        }
+        if (references === null) return columnPredicate;
+        const sourceType = referencedSourceType(params.type);
+        return (eb) =>
+            eb.and([
+                columnPredicate(eb),
+                this.referencesExists(eb, table, sourceType, references),
+            ]);
+    }
 
-        let rowsQuery = db.selectFrom(table).selectAll().where(predicate);
+    async findMany(params: ListParams): Promise<EntryRow[]> {
+        const { db, table } = this.repository.kysely();
+        let query = db.selectFrom(table).selectAll().where(this.listPredicate(params));
         for (const [column, direction] of this.buildOrderBy(params)) {
-            rowsQuery = rowsQuery.orderBy(column, direction);
+            query = query.orderBy(column, direction);
         }
+        if (params.limit !== undefined) query = query.limit(params.limit);
+        if (params.offset !== undefined) query = query.offset(params.offset);
+        const rows = await query.execute();
+        return rows.map((row) => this.toRecord(decodeWith(this.table, row)));
+    }
 
-        const toRecords = (rows: Record<string, unknown>[]): EntryRow[] =>
-            rows.map((row) => this.toRecord(decodeWith(this.table, row)));
-
-        const limit = params.limit;
-        if (limit === 'all') {
-            const data = toRecords(await rowsQuery.execute());
-            return { data, total: data.length };
-        }
-
-        const perPage = typeof limit === 'number' ? limit : 20;
-        const offset = ((params.page ?? 1) - 1) * perPage;
-
+    async count(params: ListParams): Promise<number> {
+        const { db, table } = this.repository.kysely();
         const counted = await db
             .selectFrom(table)
             .select((eb) => eb.fn.countAll<number>().as('total'))
-            .where(predicate)
+            .where(this.listPredicate(params))
             .executeTakeFirst();
-        const rows = await rowsQuery.limit(perPage).offset(offset).execute();
-
-        return { data: toRecords(rows), total: Number(counted?.total ?? 0) };
+        return Number(counted?.total ?? 0);
     }
 }
 

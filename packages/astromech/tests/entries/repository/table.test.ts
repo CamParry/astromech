@@ -150,7 +150,7 @@ describe('create', () => {
 
 describe('get', () => {
     it('returns null for missing id', async () => {
-        const result = await repository.get({ type: 'link', id: 'no-such-id' });
+        const result = await repository.findOne({ type: 'link', id: 'no-such-id' });
         expect(result).toBeNull();
     });
 
@@ -159,7 +159,7 @@ describe('get', () => {
             type: 'link',
             fields: { from: '/a', to: '/b' },
         });
-        const got = await repository.get({ type: 'link', id: created.id });
+        const got = await repository.findOne({ type: 'link', id: created.id });
         expect(got?.id).toBe(created.id);
         expect(got?.fields['from']).toBe('/a');
     });
@@ -204,7 +204,7 @@ describe('delete', () => {
             fields: { from: '/a', to: '/b' },
         });
         await repository.delete(created.id);
-        const gone = await repository.get({ type: 'link', id: created.id });
+        const gone = await repository.findOne({ type: 'link', id: created.id });
         expect(gone).toBeNull();
     });
 });
@@ -226,7 +226,7 @@ describe('existingIds', () => {
     });
 });
 
-describe('list – pagination', () => {
+describe('findMany – pagination', () => {
     async function seed(n: number) {
         for (let i = 0; i < n; i++) {
             await repository.create({
@@ -236,47 +236,44 @@ describe('list – pagination', () => {
         }
     }
 
-    it('returns total and paginated data', async () => {
+    it('returns a slice by limit and offset, and counts every match', async () => {
         await seed(5);
-        const res = await repository.list({ type: 'link', limit: 2, page: 1 });
-        expect(res.data).toHaveLength(2);
-        expect(res.total).toBe(5);
+        const sort = { from: 'asc' } as const;
+        const first = await repository.findMany({ type: 'link', sort, limit: 2 });
+        expect(first.map((r) => r.fields['from'])).toEqual(['/from0', '/from1']);
+        const next = await repository.findMany({
+            type: 'link',
+            sort,
+            limit: 2,
+            offset: 2,
+        });
+        expect(next.map((r) => r.fields['from'])).toEqual(['/from2', '/from3']);
+        expect(await repository.count({ type: 'link', limit: 2, offset: 2 })).toBe(5);
     });
 
-    it('page 2 returns correct slice', async () => {
-        await seed(5);
-        const res = await repository.list({ type: 'link', limit: 2, page: 2 });
-        expect(res.data).toHaveLength(2);
-        expect(res.total).toBe(5);
-    });
-
-    it('limit: "all" returns all rows with total === data.length', async () => {
+    it('returns every row when no limit is given', async () => {
         await seed(7);
-        const res = await repository.list({ type: 'link', limit: 'all' });
-        expect(res.data).toHaveLength(7);
-        expect(res.total).toBe(7);
+        expect(await repository.findMany({ type: 'link' })).toHaveLength(7);
     });
 });
 
-describe('list – sort', () => {
+describe('findMany – sort', () => {
     it('sorts asc/desc on a field column', async () => {
         await repository.create({ type: 'link', fields: { from: '/b', to: '/x' } });
         await repository.create({ type: 'link', fields: { from: '/a', to: '/y' } });
         await repository.create({ type: 'link', fields: { from: '/c', to: '/z' } });
 
-        const asc = await repository.list({
+        const asc = await repository.findMany({
             type: 'link',
-            limit: 'all',
             sort: { from: 'asc' },
         });
-        expect(asc.data.map((r) => r.fields['from'])).toEqual(['/a', '/b', '/c']);
+        expect(asc.map((r) => r.fields['from'])).toEqual(['/a', '/b', '/c']);
 
-        const desc = await repository.list({
+        const desc = await repository.findMany({
             type: 'link',
-            limit: 'all',
             sort: { from: 'desc' },
         });
-        expect(desc.data.map((r) => r.fields['from'])).toEqual(['/c', '/b', '/a']);
+        expect(desc.map((r) => r.fields['from'])).toEqual(['/c', '/b', '/a']);
     });
 
     it('sorts on createdAt', async () => {
@@ -292,13 +289,12 @@ describe('list – sort', () => {
             fields: { from: '/b', to: '/y' },
         });
 
-        const res = await repository.list({
+        const res = await repository.findMany({
             type: 'link',
-            limit: 'all',
             sort: { createdAt: 'asc' },
         });
-        expect(res.data[0]?.id).toBe(a.id);
-        expect(res.data[1]?.id).toBe(b.id);
+        expect(res[0]?.id).toBe(a.id);
+        expect(res[1]?.id).toBe(b.id);
     });
 
     it('throws on a sort key that is not a column', async () => {
@@ -307,12 +303,12 @@ describe('list – sort', () => {
         // Matches the entries-table repository: a typo must not quietly answer the default
         // order (`DECISIONS.md`, "An unknown entries-list `where` or sort key throws").
         await expect(
-            repository.list({ type: 'link', limit: 'all', sort: { nope: 'asc' } })
+            repository.findMany({ type: 'link', sort: { nope: 'asc' } })
         ).rejects.toThrow(UnknownSortKeyError);
     });
 });
 
-describe('list – where filters', () => {
+describe('findMany – where filters', () => {
     it('eq filter', async () => {
         await repository.create({
             type: 'link',
@@ -323,13 +319,12 @@ describe('list – where filters', () => {
             fields: { from: '/b', to: '/y', status: '302' },
         });
 
-        const res = await repository.list({
+        const res = await repository.findMany({
             type: 'link',
-            limit: 'all',
             where: { status: '302' },
         });
-        expect(res.data).toHaveLength(1);
-        expect(res.data[0]?.fields['status']).toBe('302');
+        expect(res).toHaveLength(1);
+        expect(res[0]?.fields['status']).toBe('302');
     });
 
     it('in filter', async () => {
@@ -346,13 +341,12 @@ describe('list – where filters', () => {
             fields: { from: '/c', to: '/z', status: '307' },
         });
 
-        const res = await repository.list({
+        const res = await repository.findMany({
             type: 'link',
-            limit: 'all',
             where: { status: { in: ['301', '307'] } },
         });
-        expect(res.data).toHaveLength(2);
-        const statuses = res.data.map((r) => r.fields['status']).sort();
+        expect(res).toHaveLength(2);
+        const statuses = res.map((r) => r.fields['status']).sort();
         expect(statuses).toEqual(['301', '307']);
     });
 
@@ -363,13 +357,12 @@ describe('list – where filters', () => {
         });
         await repository.create({ type: 'link', fields: { from: '/home', to: '/y' } });
 
-        const res = await repository.list({
+        const res = await repository.findMany({
             type: 'link',
-            limit: 'all',
             where: { from: { like: '/admin%' } },
         });
-        expect(res.data).toHaveLength(1);
-        expect(res.data[0]?.fields['from']).toBe('/admin/page');
+        expect(res).toHaveLength(1);
+        expect(res[0]?.fields['from']).toBe('/admin/page');
     });
 
     it('bare null filters to IS NULL rather than meaning "unfiltered"', async () => {
@@ -379,28 +372,26 @@ describe('list – where filters', () => {
         });
         await repository.create({ type: 'link', fields: { from: '/b', to: '/y' } });
 
-        const res = await repository.list({
+        const res = await repository.findMany({
             type: 'link',
-            limit: 'all',
             where: { note: null },
         });
-        expect(res.data).toHaveLength(1);
-        expect(res.data[0]?.fields['from']).toBe('/b');
+        expect(res).toHaveLength(1);
+        expect(res[0]?.fields['from']).toBe('/b');
     });
 
     it('ignores a `locale` where key instead of throwing (no locale concept)', async () => {
         await repository.create({ type: 'link', fields: { from: '/a', to: '/x' } });
 
-        const res = await repository.list({
+        const res = await repository.findMany({
             type: 'link',
-            limit: 'all',
             where: { locale: 'en' },
         });
-        expect(res.data).toHaveLength(1);
+        expect(res).toHaveLength(1);
     });
 });
 
-describe('list – references', () => {
+describe('findMany – references', () => {
     /** Record `sourceId` as referencing `targetId` at `to`, as the write path does. */
     async function indexReference(
         sourceId: string,
@@ -426,13 +417,18 @@ describe('list – references', () => {
         await indexReference(hit.id, 'link', 'T1');
         await indexReference(miss.id, 'link', 'T2');
 
-        const res = await repository.list({
+        const res = await repository.findMany({
             type: 'link',
             where: { references: { path: 'to', id: 'T1' } },
         });
 
-        expect(res.data.map((r) => r.id)).toEqual([hit.id]);
-        expect(res.total).toBe(1);
+        expect(res.map((r) => r.id)).toEqual([hit.id]);
+        expect(
+            await repository.count({
+                type: 'link',
+                where: { references: { path: 'to', id: 'T1' } },
+            })
+        ).toBe(1);
     });
 
     it('ignores an index row recorded for another entry type', async () => {
@@ -442,13 +438,18 @@ describe('list – references', () => {
         });
         await indexReference(row.id, 'other', 'T1');
 
-        const res = await repository.list({
+        const res = await repository.findMany({
             type: 'link',
             where: { references: { path: 'to', id: 'T1' } },
         });
 
-        expect(res.data).toEqual([]);
-        expect(res.total).toBe(0);
+        expect(res).toEqual([]);
+        expect(
+            await repository.count({
+                type: 'link',
+                where: { references: { path: 'to', id: 'T1' } },
+            })
+        ).toBe(0);
     });
 
     it('accepts a one-element list of types', async () => {
@@ -458,17 +459,17 @@ describe('list – references', () => {
         });
         await indexReference(hit.id, 'link', 'T1');
 
-        const res = await repository.list({
+        const res = await repository.findMany({
             type: ['link'],
             where: { references: { path: 'to', id: 'T1' } },
         });
 
-        expect(res.data.map((r) => r.id)).toEqual([hit.id]);
+        expect(res.map((r) => r.id)).toEqual([hit.id]);
     });
 
     it('throws when the filter comes with several entry types', async () => {
         await expect(
-            repository.list({
+            repository.findMany({
                 type: ['link', 'other'],
                 where: { references: { path: 'to', id: 'T1' } },
             })
@@ -476,7 +477,7 @@ describe('list – references', () => {
     });
 });
 
-describe('list – search and searchFields', () => {
+describe('findMany – search and searchFields', () => {
     it('matches either column when searching two searchFields', async () => {
         await repository.create({
             type: 'link',
@@ -488,14 +489,13 @@ describe('list – search and searchFields', () => {
             fields: { from: '/baz', to: '/hello-page' },
         });
 
-        const res = await repository.list({
+        const res = await repository.findMany({
             type: 'link',
-            limit: 'all',
             search: 'hello',
             searchFields: ['from', 'to'],
         });
-        expect(res.data).toHaveLength(2);
-        const froms = res.data.map((r) => r.fields['from']).sort();
+        expect(res).toHaveLength(2);
+        const froms = res.map((r) => r.fields['from']).sort();
         expect(froms).toEqual(['/baz', '/hello']);
     });
 
@@ -503,13 +503,12 @@ describe('list – search and searchFields', () => {
         await repository.create({ type: 'link', fields: { from: '/a', to: '/b' } });
         await repository.create({ type: 'link', fields: { from: '/c', to: '/d' } });
 
-        const res = await repository.list({
+        const res = await repository.findMany({
             type: 'link',
-            limit: 'all',
             search: 'zzz',
             // no searchFields
         });
-        expect(res.data).toHaveLength(2);
+        expect(res).toHaveLength(2);
     });
 
     it('combines search with a where filter on the id column', async () => {
@@ -522,22 +521,20 @@ describe('list – search and searchFields', () => {
             fields: { from: '/hello-two', to: '/y' },
         });
 
-        const res = await repository.list({
+        const res = await repository.findMany({
             type: 'link',
-            limit: 'all',
             search: 'hello',
             searchFields: ['from'],
             where: { id: a.id },
         });
-        expect(res.data).toHaveLength(1);
-        expect(res.data[0]?.id).toBe(a.id);
+        expect(res).toHaveLength(1);
+        expect(res[0]?.id).toBe(a.id);
     });
 
     it('searchFields naming a missing column throws', async () => {
         await expect(
-            repository.list({
+            repository.findMany({
                 type: 'link',
-                limit: 'all',
                 search: 'hello',
                 searchFields: ['nonExistentColumn'],
             })
@@ -568,7 +565,7 @@ describe('transaction', () => {
                     fields: { from: '/tx1', to: '/ok' },
                 });
                 // Write is visible inside the transaction callback.
-                const found = await repository.get({ type: 'link', id: rec.id });
+                const found = await repository.findOne({ type: 'link', id: rec.id });
                 expect(found?.id).toBe(rec.id);
                 createdInsideTx = true;
                 throw new Error('simulated failure');
@@ -593,8 +590,8 @@ describe('transaction', () => {
             });
             ids.push(a.id, b.id);
             // Both writes visible inside the callback.
-            const res = await repository.list({ type: 'link', limit: 'all' });
-            expect(res.data).toHaveLength(2);
+            const res = await repository.findMany({ type: 'link' });
+            expect(res).toHaveLength(2);
             return 'done';
         });
 

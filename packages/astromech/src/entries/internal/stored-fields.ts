@@ -75,7 +75,7 @@ export async function toStoredFields(input: StoredFieldsInput): Promise<JsonObje
                         // The shared read is by id and locale; an entry read names its type.
                         repository: {
                             findOne: (ref, opts) =>
-                                repository.get({ ...ref, type }, opts),
+                                repository.findOne({ ...ref, type }, opts),
                         },
                         values,
                         id: input.entryId,

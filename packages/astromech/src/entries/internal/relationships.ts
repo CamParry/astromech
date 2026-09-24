@@ -11,13 +11,15 @@ import type {
 import type { FieldReference } from '@/fields/references';
 import type { JsonObject, ResolvedConfig } from '@/types/index';
 import { mergeContentReferences } from '@/content/relationships';
-import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
-import { entriesTable, entryContentTable } from '@/database/tables';
 import { resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
 import { findReferences } from '@/fields/references';
-import { getEntryRepository, hasCustomTable } from '../repository/registry';
+import {
+    getEntriesTableRepository,
+    getEntryRepository,
+    hasCustomTable,
+} from '../repository/registry';
 
 /**
  * Re-index one entry. The index is keyed on the entry, so every locale it holds
@@ -84,9 +86,7 @@ async function storedEntryReferences(
     entryId: string,
     type: string
 ): Promise<IndexedReference[]> {
-    const rows = await createRepository(entryContentTable).findMany({
-        where: { entryId },
-    });
+    const rows = await getEntriesTableRepository().findContentRowsByEntry(entryId);
     return entryContentReferences(config, type, rows);
 }
 
@@ -106,20 +106,17 @@ function entryContentReferences(
 }
 
 /**
- * Sources from the `entries` table, read directly rather than through
- * `repository.list()`: the list where-clause excludes staged rows unconditionally
- * and trashed rows by default, and the rebuild needs both.
+ * Sources from the `entries` table, read as stored rows rather than through
+ * `findMany`: its predicate excludes staged rows unconditionally and trashed
+ * rows by default, and the rebuild needs both.
  */
 async function entriesTableEntrySources(
     config: ResolvedConfig,
     type?: string
 ): Promise<RelationshipIndexSource[]> {
-    const entries = await createRepository(entriesTable).findMany({
-        where: type !== undefined ? { type } : {},
-    });
-    const contents = await createRepository(entryContentTable).findMany({
-        where: type !== undefined ? { type } : {},
-    });
+    const repository = getEntriesTableRepository();
+    const entries = await repository.findEntryRowsByType(type);
+    const contents = await repository.findContentRowsByType(type);
 
     const rowsByEntry = new Map<string, typeof contents>();
     for (const row of contents) {
@@ -155,11 +152,7 @@ async function customTableEntrySources(
 
     const collected: RelationshipIndexSource[] = [];
     for (const type of types) {
-        const { data: rows } = await getEntryRepository(type).list({
-            type,
-            limit: 'all',
-            locale: 'all',
-        });
+        const rows = await getEntryRepository(type).findMany({ type, locale: 'all' });
         for (const row of rows) {
             collected.push({
                 source: { id: row.id, kind: 'entry', type, staged: row.staged },

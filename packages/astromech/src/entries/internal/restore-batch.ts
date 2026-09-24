@@ -20,7 +20,7 @@ export async function restoreEntryBatch(
     const repository = getEntryRepository(type);
     const { trash } = repository;
     if (!trash) throw new CapabilityError('entry', type, 'trash');
-    const entries = await getEntryResources(ctx.config, repository, type, ids);
+    const entries = await getEntryResources(repository, type, ids);
     const user = ctx.user;
 
     return writeBatch(entries, async (entry) =>

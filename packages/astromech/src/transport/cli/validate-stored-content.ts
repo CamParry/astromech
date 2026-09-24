@@ -10,11 +10,13 @@ import type { AppContext, EntryStatus, JsonObject, ResourceType } from '@/types/
 import { defaultContentLocale } from '@/config/content-locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { definitionsOf, fieldParseContext } from '@/content/write-fields';
-import { createRepository } from '@/database/repository/create-repository';
 import { resolveEntryType } from '@/entries/entry-types';
 import { listEntryRows } from '@/entries/internal/read-entry';
-import { getEntryRepository, hasCustomTable } from '@/entries/repository/registry';
-import { entriesTable, entryContentTable } from '@/entries/tables';
+import {
+    getEntriesTableRepository,
+    getEntryRepository,
+    hasCustomTable,
+} from '@/entries/repository/registry';
 import { safeParseFields } from '@/fields/parse-fields';
 import { getMediaRepository } from '@/media/repository';
 import { getUserRepository } from '@/users/repository';
@@ -89,14 +91,14 @@ async function checkEntries(
     report: ValidationReport,
     type: string | undefined
 ): Promise<void> {
-    const where = type !== undefined ? { type } : {};
-    const entries = await createRepository(entriesTable).findMany({ where });
+    const entriesTable = getEntriesTableRepository();
+    const entries = await entriesTable.findEntryRowsByType(type);
     const live = new Map(
         entries
             .filter((entry) => entry.deletedAt == null)
             .map((entry) => [entry.id, entry])
     );
-    const contents = await createRepository(entryContentTable).findMany({ where });
+    const contents = await entriesTable.findContentRowsByType(type);
 
     for (const row of contents) {
         const entry = live.get(row.entryId);
@@ -116,11 +118,7 @@ async function checkEntries(
 
     for (const typeName of customTableEntryTypes(ctx, type)) {
         const repository = getEntryRepository(typeName);
-        const { data } = await repository.list({
-            type: typeName,
-            limit: 'all',
-            locale: 'all',
-        });
+        const data = await repository.findMany({ type: typeName, locale: 'all' });
         for (const record of data) {
             if (record.deletedAt != null) continue;
             // A custom-table repository need not be locale-aware; the fallback

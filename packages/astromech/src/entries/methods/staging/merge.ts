@@ -30,10 +30,7 @@ export const mergeStagedEntry = defineServiceMethod({
     mutates: true,
     async handler(params, ctx): Promise<Entry> {
         const { type, id } = params;
-        const { repository, staging, canonical } = await resolveStagingTarget(
-            ctx.config,
-            params
-        );
+        const { repository, staging, canonical } = await resolveStagingTarget(params);
         const staged = toEntryWithContentId(
             await requireStagedChange(staging, 'entry', {
                 rowId: id,

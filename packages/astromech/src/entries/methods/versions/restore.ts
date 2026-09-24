@@ -33,13 +33,7 @@ export const restoreEntryVersion = defineServiceMethod({
         const repository = getEntryRepository(type);
         if (!repository.versions) throw new CapabilityError('entry', type, 'versioning');
 
-        const currentEntry = await getEntryOfType(
-            ctx.config,
-            repository,
-            type,
-            id,
-            params.locale
-        );
+        const currentEntry = await getEntryOfType(repository, type, id, params.locale);
 
         return restoreVersion({
             spec: RESOURCE_SPECS.entry,

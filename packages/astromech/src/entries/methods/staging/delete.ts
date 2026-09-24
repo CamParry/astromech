@@ -21,7 +21,7 @@ export const deleteStagedEntry = defineServiceMethod({
     mutates: true,
     async handler(params, ctx): Promise<void> {
         const { type, id } = params;
-        const { staging, canonical } = await resolveStagingTarget(ctx.config, params);
+        const { staging, canonical } = await resolveStagingTarget(params);
         await requireStagedChange(staging, 'entry', {
             rowId: id,
             id,

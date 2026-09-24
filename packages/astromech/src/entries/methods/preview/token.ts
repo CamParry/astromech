@@ -26,10 +26,10 @@ export const issuePreviewToken = defineServiceMethod({
     access: entryGate('update'),
     requires: 'staging',
     mutates: true,
-    async handler(params, ctx): Promise<{ token: string }> {
+    async handler(params): Promise<{ token: string }> {
         const { type, id } = params;
         const repository = getEntryRepository(type);
-        const canonical = await getEntryResource(ctx.config, repository, type, id);
+        const canonical = await getEntryResource(repository, type, id);
         if (canonical.staged) {
             throw new Error(
                 `Entry '${id}' read as a staged change; issue the preview token on its canonical row.`
@@ -62,10 +62,10 @@ export const revokePreviewToken = defineServiceMethod({
     access: entryGate('update'),
     requires: 'staging',
     mutates: true,
-    async handler(params, ctx): Promise<void> {
+    async handler(params): Promise<void> {
         const { type, id } = params;
         const repository = getEntryRepository(type);
-        await getEntryResource(ctx.config, repository, type, id);
+        await getEntryResource(repository, type, id);
         await repository.previewToken?.clear(id);
     },
 });

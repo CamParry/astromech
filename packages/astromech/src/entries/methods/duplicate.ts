@@ -1,6 +1,6 @@
 import type { EntryWithContentId } from '../internal/read-entry';
 import type { EntryRepository } from '../repository/types';
-import type { Entry, EntryDuplicateOverrides, ResolvedConfig } from '@/types/index';
+import type { Entry, EntryDuplicateOverrides } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
@@ -30,8 +30,8 @@ export const duplicateEntry = defineServiceMethod({
 
         const repository = getEntryRepository(type);
         const source = overrides?.locale
-            ? await getEntryOfType(ctx.config, repository, type, id, overrides.locale)
-            : await getEntryResource(ctx.config, repository, type, id);
+            ? await getEntryOfType(repository, type, id, overrides.locale)
+            : await getEntryResource(repository, type, id);
         // The copy is a new entry made by whoever duplicated it, not by the author
         // of the source.
         const user = ctx.user;
@@ -42,7 +42,6 @@ export const duplicateEntry = defineServiceMethod({
         // Write the entry and its relationship index atomically.
         const created = await transaction(async () => {
             const first = await copyLocale({
-                config: ctx.config,
                 repository,
                 type,
                 id,
@@ -54,7 +53,6 @@ export const duplicateEntry = defineServiceMethod({
 
             for (const locale of restLocales) {
                 await copyLocale({
-                    config: ctx.config,
                     repository,
                     type,
                     id,
@@ -69,9 +67,7 @@ export const duplicateEntry = defineServiceMethod({
             // Once, at the end: the index is per entry and reads every locale back.
             await syncEntryRelationships(ctx.config, first, first.fields, type);
             // Re-read so `locales` names every copied locale, not just the first.
-            return toEntry(
-                await getEntryOfType(ctx.config, repository, type, first.id, firstLocale)
-            );
+            return toEntry(await getEntryOfType(repository, type, first.id, firstLocale));
         });
 
         return created;
@@ -83,7 +79,6 @@ export const duplicateEntry = defineServiceMethod({
  * absent. The slug is re-uniqued within the locale it lands in.
  */
 async function copyLocale(params: {
-    config: ResolvedConfig;
     repository: EntryRepository;
     type: string;
     id: string;
@@ -93,13 +88,12 @@ async function copyLocale(params: {
     createdBy: string | null;
     into?: string;
 }): Promise<Entry> {
-    const { config, repository, type, id, source, locale, overrides, createdBy, into } =
-        params;
+    const { repository, type, id, source, locale, overrides, createdBy, into } = params;
 
     const row =
         locale === source.locale
             ? source
-            : await getEntryOfType(config, repository, type, id, locale);
+            : await getEntryOfType(repository, type, id, locale);
 
     const status = overrides?.status ?? 'unpublished';
     const baseSlug = overrides?.slug ?? row.slug;

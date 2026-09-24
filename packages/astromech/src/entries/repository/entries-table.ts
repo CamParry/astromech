@@ -1,7 +1,8 @@
 /**
  * The default entry repository — the shared content repository over
  * `entries`/`entry_content`/`entry_versions`, plus what only entries have: the
- * list query and its filters, slug uniquification, trash and preview tokens.
+ * list reads and their filters, the stored-row reads, slug uniquification,
+ * trash and preview tokens.
  * Policy (validation, hooks, relationships) stays in the service.
  */
 
@@ -15,7 +16,6 @@ import type {
 } from './types';
 import type { ContentRowId, JoinedWhere } from '@/content/repository/types';
 import type { Where } from '@/database/repository/where';
-import type { Db } from '@/database/types';
 import type { Capability } from '@/entries/capabilities';
 import type { EntryContentRow, EntryTableRow } from '@/entries/tables';
 import type { JsonObject, ReferencesFilter, SortOption } from '@/types/index';
@@ -205,20 +205,12 @@ function toEntryRow(
 }
 
 /**
- * Build the entries-table repository, optionally bound to a specific db handle
- * and default locale. Unbound it resolves the db per operation via `getDb()`.
+ * Build the entries-table repository. The db handle and the default locale
+ * resolve per call, so the one registered repository follows `setDb` and a config reload.
  */
-export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: string }) {
-    const dbOverride = opts?.db;
-    // Read per call: the shared repository is built once and outlives a config
-    // change, so it takes the configured default when it answers.
-    const defaultLocale = (): string => opts?.defaultLocale ?? getDefaultContentLocale();
-
-    const handle = (): Db => dbOverride ?? getDb();
-
-    // Unbound when there is no override, so it follows `setDb` per call exactly
-    // as `handle()` does.
-    const owners = createRepository(entriesTable, dbOverride);
+export function createEntriesTableRepository() {
+    const owners = createRepository(entriesTable);
+    const contents = createRepository(entryContentTable);
 
     const content = createContentRepository(
         {
@@ -232,8 +224,6 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
             insertDefaults: { title: '', slug: null },
         },
         {
-            ...(dbOverride ? { db: dbOverride } : {}),
-            defaultLocale,
             decode: toEntryRow,
             // Trash is resource-level, so it filters on the entry row.
             ownerFilter: (eb, options) =>
@@ -247,7 +237,7 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
 
     /** Ids with a row in `entries` — trashed entries included. */
     async function existingIds(ids: string[]): Promise<Set<string>> {
-        return existingResourceIds('entry', ids, handle());
+        return existingResourceIds('entry', ids, getDb());
     }
 
     async function uniqueSlug(
@@ -262,7 +252,7 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
         while (true) {
             // Raw: a join, because the slug of a trashed entry is free again and
             // `deletedAt` now lives on the entry row.
-            const existing = await handle()
+            const existing = await getDb()
                 .selectFrom('entryContent')
                 .innerJoin('entries', 'entries.id', 'entryContent.entryId')
                 .select('entryContent.id')
@@ -291,46 +281,42 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
         }
     }
 
-    async function list(
-        params: ListParams
-    ): Promise<{ data: EntryRow[]; total: number }> {
-        const typeParam = params.type;
-        const types = Array.isArray(typeParam)
-            ? Array.from(typeParam)
-            : [typeParam as string];
-        const limit = params.limit;
-        const page = params.page ?? 1;
+    /**
+     * The list predicate. Raw: search is `title LIKE ? OR slug LIKE ?` and the
+     * flat `where` DSL has no `or`. `findMany` and `count` share it so they cannot drift.
+     */
+    function listWhere(params: ListParams): JoinedWhere {
+        const types = typeof params.type === 'string' ? [params.type] : [...params.type];
+        return buildListWhere(params, getDefaultContentLocale(), types);
+    }
 
-        const order = orderPairs(params.sort);
-        // Raw: search is `title LIKE ? OR slug LIKE ?` and the flat `where` DSL has
-        // no `or`. Rows and count share this predicate so the two cannot drift.
-        const whereFn = buildListWhere(params, defaultLocale(), types);
-
-        if (limit === 'all') {
-            let q = content.kysely().joined().where(whereFn);
-            for (const [column, direction] of order) {
-                q = q.orderBy(column, direction);
-            }
-            const data = await content.decodeRows(await q.execute());
-            return { data, total: data.length };
+    async function findMany(params: ListParams): Promise<EntryRow[]> {
+        let query = content.kysely().joined().where(listWhere(params));
+        for (const [column, direction] of orderPairs(params.sort)) {
+            query = query.orderBy(column, direction);
         }
+        if (params.limit !== undefined) query = query.limit(params.limit);
+        if (params.offset !== undefined) query = query.offset(params.offset);
+        return content.decodeRows(await query.execute());
+    }
 
-        const perPage = typeof limit === 'number' ? limit : 20;
-        const offset = (page - 1) * perPage;
+    async function count(params: ListParams): Promise<number> {
+        return content.count(listWhere(params));
+    }
 
-        const total = await content.count(whereFn);
+    /** Every `entries` row, of `type` when given, trashed rows included. */
+    async function findEntryRowsByType(type?: string): Promise<EntryTableRow[]> {
+        return owners.findMany({ where: type === undefined ? {} : { type } });
+    }
 
-        let rowsQ = content
-            .kysely()
-            .joined()
-            .where(whereFn)
-            .limit(perPage)
-            .offset(offset);
-        for (const [column, direction] of order) {
-            rowsQ = rowsQ.orderBy(column, direction);
-        }
-        const data = await content.decodeRows(await rowsQ.execute());
-        return { data, total };
+    /** Every `entry_content` row, of `type` when given, staged rows included. */
+    async function findContentRowsByType(type?: string): Promise<EntryContentRow[]> {
+        return contents.findMany({ where: type === undefined ? {} : { type } });
+    }
+
+    /** Every content row of one entry, in any locale, staged rows included. */
+    async function findContentRowsByEntry(entryId: string): Promise<EntryContentRow[]> {
+        return contents.findMany({ where: { entryId } });
     }
 
     async function create(data: EntryWrite & { type: string }): Promise<EntryRow> {
@@ -362,7 +348,7 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
         restore: async (id: string, actor?: string | null): Promise<EntryRow> => {
             // Guarded *and* returning: not expressible through the wrapper's
             // primary-key `update` / count-returning `updateMany`.
-            await handle()
+            await getDb()
                 .updateTable('entries')
                 .set(
                     encodePatchWith(entriesTable, {
@@ -408,16 +394,17 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
         },
     };
 
-    return {
+    const repository = {
         supports,
         existingIds,
         uniqueSlug,
-        list,
-        get: async (
+        findMany,
+        count,
+        findOne: async (
             { type, ...ref }: EntryRef & { type: string },
             options?: { includeTrashed?: boolean }
         ) => ofType(await content.findOne(ref, options), type),
-        anyLocale: async (
+        findAnyLocale: async (
             ref: { type: string; id: string },
             options?: { includeTrashed?: boolean }
         ) => ofType(await content.findAnyLocale(ref.id, options), ref.type),
@@ -430,6 +417,13 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
         translatable: content.translatable,
         previewToken,
     } satisfies EntryRepository<EntryRow>;
+
+    return {
+        ...repository,
+        findEntryRowsByType,
+        findContentRowsByType,
+        findContentRowsByEntry,
+    };
 }
 
 /** The row when it is of the addressed type, else null. */

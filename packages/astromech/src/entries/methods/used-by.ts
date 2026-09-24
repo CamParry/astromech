@@ -17,12 +17,7 @@ export const listEntryUsage = defineServiceMethod({
     mutates: false,
     async handler(params, ctx): Promise<Usage[]> {
         // The entry must exist as this type, so an unknown id answers 404.
-        await getEntryResource(
-            ctx.config,
-            getEntryRepository(params.type),
-            params.type,
-            params.id
-        );
+        await getEntryResource(getEntryRepository(params.type), params.type, params.id);
         return listUsage(ctx.config, { id: params.id, kind: 'entry' });
     },
 });

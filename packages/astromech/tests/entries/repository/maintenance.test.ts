@@ -4,6 +4,7 @@
  */
 
 import type { Db } from '@/database/types';
+import type { EntriesTableRepository } from '@/entries/repository/registry';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { systemAppContext } from '@/app-context/app-context';
@@ -11,17 +12,17 @@ import { createRepository } from '@/database/repository/create-repository';
 import { createRelationshipRepository } from '@/database/repository/relationships';
 import { entriesTable } from '@/database/tables';
 import { trashPurgeJob } from '@/entries/jobs/trash-purge';
-import { createEntriesTableRepository } from '@/entries/repository/entries-table';
 import { createEntryMaintenanceRepository } from '@/entries/repository/maintenance';
+import { getEntriesTableRepository } from '@/entries/repository/registry';
 
 let db: Db;
-let entryRepository: ReturnType<typeof createEntriesTableRepository>;
+let entryRepository: EntriesTableRepository;
 let maintenance: ReturnType<typeof createEntryMaintenanceRepository>;
 
 beforeEach(async () => {
     db = await createTestDb();
     setupTestConfig();
-    entryRepository = createEntriesTableRepository();
+    entryRepository = getEntriesTableRepository();
     maintenance = createEntryMaintenanceRepository(db);
 });
 
@@ -62,17 +63,18 @@ describe('publishDueScheduled', () => {
         const count = await maintenance.publishDueScheduled(new Date());
         expect(count).toBe(2);
 
-        expect((await entryRepository.get({ type: 'post', id: due1.id }))?.status).toBe(
-            'published'
-        );
-        expect((await entryRepository.get({ type: 'post', id: due2.id }))?.status).toBe(
-            'published'
-        );
-        expect((await entryRepository.get({ type: 'post', id: notDue.id }))?.status).toBe(
-            'scheduled'
-        );
         expect(
-            (await entryRepository.get({ type: 'post', id: alreadyPublished.id }))?.status
+            (await entryRepository.findOne({ type: 'post', id: due1.id }))?.status
+        ).toBe('published');
+        expect(
+            (await entryRepository.findOne({ type: 'post', id: due2.id }))?.status
+        ).toBe('published');
+        expect(
+            (await entryRepository.findOne({ type: 'post', id: notDue.id }))?.status
+        ).toBe('scheduled');
+        expect(
+            (await entryRepository.findOne({ type: 'post', id: alreadyPublished.id }))
+                ?.status
         ).toBe('published');
     });
 
@@ -92,11 +94,11 @@ describe('publishDueScheduled', () => {
 
         expect(await maintenance.publishDueScheduled(new Date())).toBe(1);
 
-        expect((await entryRepository.get({ type: 'post', id: entry.id }))?.status).toBe(
-            'published'
-        );
         expect(
-            (await entryRepository.get({ type: 'post', id: entry.id, locale: 'de' }))
+            (await entryRepository.findOne({ type: 'post', id: entry.id }))?.status
+        ).toBe('published');
+        expect(
+            (await entryRepository.findOne({ type: 'post', id: entry.id, locale: 'de' }))
                 ?.status
         ).toBe('unpublished');
     });
@@ -118,9 +120,9 @@ describe('publishDueScheduled', () => {
 
         const staged = await entryRepository.staging.findOne({ id: entry.id });
         expect(staged?.status).toBe('scheduled');
-        expect((await entryRepository.get({ type: 'post', id: entry.id }))?.status).toBe(
-            'unpublished'
-        );
+        expect(
+            (await entryRepository.findOne({ type: 'post', id: entry.id }))?.status
+        ).toBe('unpublished');
     });
 
     it('excludes trashed entries even if their publish time has passed', async () => {
@@ -164,13 +166,13 @@ describe('purgeTrashedBefore', () => {
         expect(purged).toEqual([old.id]);
 
         expect(
-            await entryRepository.get(
+            await entryRepository.findOne(
                 { type: 'post', id: old.id },
                 { includeTrashed: true }
             )
         ).toBeNull();
         expect(
-            await entryRepository.get(
+            await entryRepository.findOne(
                 { type: 'post', id: recent.id },
                 { includeTrashed: true }
             )
@@ -185,7 +187,9 @@ describe('purgeTrashedBefore', () => {
         });
         const purged = await maintenance.purgeTrashedBefore(new Date());
         expect(purged).toEqual([]);
-        expect(await entryRepository.get({ type: 'post', id: live.id })).not.toBeNull();
+        expect(
+            await entryRepository.findOne({ type: 'post', id: live.id })
+        ).not.toBeNull();
     });
 });
 
@@ -242,7 +246,7 @@ describe('trashPurgeJob', () => {
         await trashPurgeJob.handler(systemAppContext());
 
         expect(
-            await entryRepository.get(
+            await entryRepository.findOne(
                 { type: 'post', id: doomed.id },
                 { includeTrashed: true }
             )

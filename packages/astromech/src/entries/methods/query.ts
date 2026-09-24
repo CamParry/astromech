@@ -1,3 +1,4 @@
+import type { ListParams } from '../repository/types';
 import type { VisibilityShape } from '@/content/visibility';
 import type {
     Entry,
@@ -7,8 +8,7 @@ import type {
     ResolvedConfig,
 } from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { defaultContentLocale } from '@/config/content-locale';
-import { sortSchema } from '@/content/list';
+import { queryPage, sortSchema } from '@/content/list';
 import { applyVisibility } from '@/content/visibility';
 import { resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
@@ -102,17 +102,19 @@ export const queryEntries = defineServiceMethod({
             assertReferencesFilter(references, types, config);
         }
 
-        const { data: rows, total } = await repository.list({
+        const filters: ListParams = {
             type: singleType ?? types,
-            locale: params.locale ?? defaultContentLocale(config),
+            locale: params.locale,
             trashed: params.trashed ?? false,
             search: params.search,
             ...(singleTypeCfg?.search ? { searchFields: singleTypeCfg.search } : {}),
             where: effectiveWhere,
             ...(filtersPublished ? { publishedAsOf: now } : {}),
-            sort: params.sort,
-            page: params.page ?? 1,
-            limit: params.limit,
+        };
+        const { data: rows, pagination } = await queryPage(params, {
+            list: (page) =>
+                repository.findMany({ ...filters, sort: params.sort, ...page }),
+            count: () => repository.count(filters),
         });
 
         const data = rows.map(toEntry);
@@ -152,18 +154,7 @@ export const queryEntries = defineServiceMethod({
             }
         }
 
-        if (params.limit === 'all') {
-            return { data: visibleData, pagination: null };
-        }
-
-        const perPage = typeof params.limit === 'number' ? params.limit : 20;
-        const page = params.page ?? 1;
-        const pages = Math.ceil(total / perPage);
-
-        return {
-            data: visibleData,
-            pagination: { page, limit: perPage, total, pages },
-        };
+        return { data: visibleData, pagination };
     },
 });
 

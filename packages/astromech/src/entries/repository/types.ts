@@ -44,6 +44,7 @@ export type EntryWrite = {
     updatedBy?: string | null | undefined;
 };
 
+/** What `findMany` and `count` filter by; `findMany` also orders and pages. */
 export type ListParams = {
     type: string | readonly string[];
     locale?: string | 'all' | undefined;
@@ -61,8 +62,10 @@ export type ListParams = {
      */
     publishedAsOf?: Date | undefined;
     sort?: SortOption | SortOption[] | undefined;
-    page?: number | undefined;
-    limit?: number | 'all' | undefined;
+    /** Rows to return; absent means every match. `count` ignores it. */
+    limit?: number | undefined;
+    /** Rows to skip before the first returned. `count` ignores it. */
+    offset?: number | undefined;
 };
 
 /**
@@ -85,20 +88,23 @@ export type PreviewTokenRecord = {
 };
 
 /**
- * What a persistence backend exposes to the entries service: five base methods
- * (list/get/create/update/delete) plus one group per capability it declares in
- * `supports`. `statuses` and `slug` carry no methods of their own.
+ * What a persistence backend exposes to the entries service: the base reads and
+ * writes plus one group per capability it declares in `supports`. `statuses` and
+ * `slug` carry no methods of their own.
  */
 export type EntryRepository<R extends EntryRow = EntryRow> = {
     readonly supports: readonly Capability[];
 
-    list(params: ListParams): Promise<{ data: R[]; total: number }>;
+    /** The matching rows, in `sort` order, sliced by `limit` and `offset`. */
+    findMany(params: ListParams): Promise<R[]>;
+    /** How many rows match, whatever `limit`, `offset` and `sort` say. */
+    count(params: ListParams): Promise<number>;
     /**
      * Fetch one locale of one entry of the given type; filters trashed entries
      * unless `includeTrashed`. Null when the entry, that locale's content row, or
      * an entry of that type is absent, so a row of another type answers null.
      */
-    get(
+    findOne(
         ref: EntryRef & { type: string },
         opts?: { includeTrashed?: boolean }
     ): Promise<R | null>;
@@ -109,7 +115,7 @@ export type EntryRepository<R extends EntryRow = EntryRow> = {
      * trashed entries under `includeTrashed`. Optional: a repository whose rows
      * are single-locale is never asked.
      */
-    anyLocale?(
+    findAnyLocale?(
         ref: { type: string; id: string },
         opts?: { includeTrashed?: boolean }
     ): Promise<R | null>;

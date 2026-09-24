@@ -8,19 +8,20 @@
  */
 
 import type { ContentRowId } from '@/content/repository/types';
+import type { EntriesTableRepository } from '@/entries/repository/registry';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { transaction } from '@/database/transaction';
 import { ALL_CAPABILITIES } from '@/entries/capabilities';
-import { createEntriesTableRepository } from '@/entries/repository/entries-table';
+import { getEntriesTableRepository } from '@/entries/repository/registry';
 
-let repository: ReturnType<typeof createEntriesTableRepository>;
+let repository: EntriesTableRepository;
 let db: Awaited<ReturnType<typeof createTestDb>>;
 
 beforeEach(async () => {
     db = await createTestDb();
     setupTestConfig();
-    repository = createEntriesTableRepository();
+    repository = getEntriesTableRepository();
 });
 
 describe('supports', () => {
@@ -45,14 +46,14 @@ describe('base CRUD', () => {
         expect(created.locales).toEqual(['en']);
         expect(created.staged).toBe(false);
 
-        const got = await repository.get({ type: 'post', id: created.id });
+        const got = await repository.findOne({ type: 'post', id: created.id });
         expect(got?.id).toBe(created.id);
 
         const updated = await repository.update({ id: created.id }, { title: 'Changed' });
         expect(updated.title).toBe('Changed');
 
         await repository.delete(created.id);
-        expect(await repository.get({ type: 'post', id: created.id })).toBeNull();
+        expect(await repository.findOne({ type: 'post', id: created.id })).toBeNull();
     });
 
     it('writes an entries row and a content row, with distinct ids', async () => {
@@ -85,7 +86,7 @@ describe('base CRUD', () => {
     it('returns null for a locale with no content row', async () => {
         const created = await repository.create({ type: 'post', title: 'EN only' });
         expect(
-            await repository.get({ type: 'post', id: created.id, locale: 'de' })
+            await repository.findOne({ type: 'post', id: created.id, locale: 'de' })
         ).toBeNull();
     });
 
@@ -100,25 +101,29 @@ describe('base CRUD', () => {
             { title: 'DE', slug: 'de' }
         );
 
-        const en = await repository.get({ type: 'post', id: created.id });
-        const de = await repository.get({ type: 'post', id: created.id, locale: 'de' });
+        const en = await repository.findOne({ type: 'post', id: created.id });
+        const de = await repository.findOne({
+            type: 'post',
+            id: created.id,
+            locale: 'de',
+        });
         expect(en?.locales).toEqual(['de', 'en']);
         expect(de?.locales).toEqual(['de', 'en']);
         // One entry, one id, whichever locale is read.
         expect(de?.id).toBe(created.id);
     });
 
-    it('get filters trashed rows unless includeTrashed is set', async () => {
+    it('findOne filters trashed rows unless includeTrashed is set', async () => {
         const e = await repository.create({ type: 'post', title: 'T', slug: 't' });
         await repository.trash.trash(e.id);
-        expect(await repository.get({ type: 'post', id: e.id })).toBeNull();
+        expect(await repository.findOne({ type: 'post', id: e.id })).toBeNull();
         expect(
-            await repository.get({ type: 'post', id: e.id }, { includeTrashed: true })
+            await repository.findOne({ type: 'post', id: e.id }, { includeTrashed: true })
         ).not.toBeNull();
     });
 });
 
-describe('get and anyLocale address by type', () => {
+describe('findOne and findAnyLocale address by type', () => {
     it('answer the row under its own type', async () => {
         const created = await repository.create({
             type: 'post',
@@ -127,11 +132,15 @@ describe('get and anyLocale address by type', () => {
             locale: 'de',
         });
 
-        const got = await repository.get({ type: 'post', id: created.id, locale: 'de' });
+        const got = await repository.findOne({
+            type: 'post',
+            id: created.id,
+            locale: 'de',
+        });
         expect(got?.id).toBe(created.id);
-        expect((await repository.anyLocale({ type: 'post', id: created.id }))?.id).toBe(
-            created.id
-        );
+        expect(
+            (await repository.findAnyLocale({ type: 'post', id: created.id }))?.id
+        ).toBe(created.id);
     });
 
     it('answer null for an existing id asked for under another type', async () => {
@@ -143,9 +152,39 @@ describe('get and anyLocale address by type', () => {
         });
 
         expect(
-            await repository.get({ type: 'note', id: created.id, locale: 'de' })
+            await repository.findOne({ type: 'note', id: created.id, locale: 'de' })
         ).toBeNull();
-        expect(await repository.anyLocale({ type: 'note', id: created.id })).toBeNull();
+        expect(
+            await repository.findAnyLocale({ type: 'note', id: created.id })
+        ).toBeNull();
+    });
+});
+
+describe('stored-row reads', () => {
+    it('read entry and content rows by type, trashed and staged rows included', async () => {
+        const post = await repository.create({ type: 'post', title: 'P', slug: 'p' });
+        await repository.create({ type: 'note', title: 'N', slug: 'n' });
+        await repository.staging.create({ id: post.id }, { title: 'Staged' });
+        await repository.trash.trash(post.id);
+
+        const posts = await repository.findEntryRowsByType('post');
+        expect(posts.map((row) => row.id)).toEqual([post.id]);
+        expect(await repository.findEntryRowsByType()).toHaveLength(2);
+
+        const titles = (await repository.findContentRowsByType('post')).map(
+            (row) => row.title
+        );
+        expect(titles.sort()).toEqual(['P', 'Staged']);
+        expect(await repository.findContentRowsByType()).toHaveLength(3);
+    });
+
+    it('reads every content row of one entry', async () => {
+        const e = await repository.create({ type: 'post', title: 'EN', slug: 'en' });
+        await repository.update({ id: e.id, locale: 'de' }, { title: 'DE', slug: 'de' });
+        await repository.create({ type: 'post', title: 'Other', slug: 'other' });
+
+        const rows = await repository.findContentRowsByEntry(e.id);
+        expect(rows.map((row) => row.locale).sort()).toEqual(['de', 'en']);
     });
 });
 
@@ -174,25 +213,37 @@ describe('existingIds', () => {
     });
 });
 
-describe('list', () => {
-    it('paginates with total', async () => {
+describe('findMany and count', () => {
+    it('pages by limit and offset, and counts every match', async () => {
         for (let i = 0; i < 5; i++) {
             await repository.create({ type: 'post', title: `P${i}`, slug: `p${i}` });
         }
-        const res = await repository.list({ type: 'post', limit: 2, page: 1 });
-        expect(res.data).toHaveLength(2);
-        expect(res.total).toBe(5);
+        const sort = { title: 'asc' } as const;
+        const first = await repository.findMany({ type: 'post', sort, limit: 2 });
+        expect(first.map((e) => e.title)).toEqual(['P0', 'P1']);
+        const next = await repository.findMany({
+            type: 'post',
+            sort,
+            limit: 2,
+            offset: 2,
+        });
+        expect(next.map((e) => e.title)).toEqual(['P2', 'P3']);
+        expect(await repository.findMany({ type: 'post' })).toHaveLength(5);
+        expect(await repository.count({ type: 'post', limit: 2, offset: 2 })).toBe(5);
     });
 
     it('searches by title and sorts', async () => {
         await repository.create({ type: 'post', title: 'Bravo', slug: 'bravo' });
         await repository.create({ type: 'post', title: 'Alpha', slug: 'alpha' });
 
-        const search = await repository.list({ type: 'post', search: 'Alpha' });
-        expect(search.data.map((e) => e.title)).toEqual(['Alpha']);
+        const search = await repository.findMany({ type: 'post', search: 'Alpha' });
+        expect(search.map((e) => e.title)).toEqual(['Alpha']);
 
-        const sorted = await repository.list({ type: 'post', sort: { title: 'asc' } });
-        expect(sorted.data.map((e) => e.title)).toEqual(['Alpha', 'Bravo']);
+        const sorted = await repository.findMany({
+            type: 'post',
+            sort: { title: 'asc' },
+        });
+        expect(sorted.map((e) => e.title)).toEqual(['Alpha', 'Bravo']);
     });
 
     it('searches by slug as well as title', async () => {
@@ -200,8 +251,8 @@ describe('list', () => {
         await repository.create({ type: 'post', title: 'Welcome', slug: 'home' });
         await repository.create({ type: 'post', title: 'Other', slug: 'other' });
 
-        const bySlug = await repository.list({ type: 'post', search: 'home' });
-        expect(bySlug.data.map((e) => e.title)).toEqual(['Welcome']);
+        const bySlug = await repository.findMany({ type: 'post', search: 'home' });
+        expect(bySlug.map((e) => e.title)).toEqual(['Welcome']);
     });
 
     it('reads a bare null in `where` as IS NULL, and undefined as unfiltered', async () => {
@@ -211,47 +262,43 @@ describe('list', () => {
         await repository.create({ type: 'card', title: '', slug: null });
         await repository.create({ type: 'card', title: 'Has slug', slug: 'has-slug' });
 
-        const nullSlug = await repository.list({
+        const nullSlug = await repository.findMany({
             type: 'card',
             where: { slug: null },
-            limit: 'all',
         });
-        expect(nullSlug.data.map((e) => e.slug)).toEqual([null]);
+        expect(nullSlug.map((e) => e.slug)).toEqual([null]);
 
-        const unfiltered = await repository.list({
+        const unfiltered = await repository.count({
             type: 'card',
             where: { slug: undefined },
-            limit: 'all',
         });
-        expect(unfiltered.total).toBe(2);
+        expect(unfiltered).toBe(2);
     });
 
     it('filters by entry id', async () => {
         const a = await repository.create({ type: 'post', title: 'A', slug: 'a' });
         await repository.create({ type: 'post', title: 'B', slug: 'b' });
 
-        const byId = await repository.list({
+        const byId = await repository.findMany({
             type: 'post',
             where: { id: { in: [a.id] } },
-            limit: 'all',
         });
-        expect(byId.data.map((e) => e.title)).toEqual(['A']);
+        expect(byId.map((e) => e.title)).toEqual(['A']);
     });
 
     it('keeps one locale per entry, or every locale under locale: all', async () => {
         const e = await repository.create({ type: 'post', title: 'EN', slug: 'en' });
         await repository.update({ id: e.id, locale: 'de' }, { title: 'DE', slug: 'de' });
 
-        const oneLocale = await repository.list({ type: 'post', limit: 'all' });
-        expect(oneLocale.data.map((row) => row.title)).toEqual(['EN']);
+        const oneLocale = await repository.findMany({ type: 'post' });
+        expect(oneLocale.map((row) => row.title)).toEqual(['EN']);
 
-        const everyLocale = await repository.list({
+        const everyLocale = await repository.findMany({
             type: 'post',
             locale: 'all',
-            limit: 'all',
             sort: { title: 'asc' },
         });
-        expect(everyLocale.data.map((row) => row.title)).toEqual(['DE', 'EN']);
+        expect(everyLocale.map((row) => row.title)).toEqual(['DE', 'EN']);
     });
 
     it('excludes trashed unless requested', async () => {
@@ -259,15 +306,14 @@ describe('list', () => {
         await repository.create({ type: 'post', title: 'B', slug: 'b' });
         await repository.trash.trash(a.id);
 
-        const live = await repository.list({ type: 'post', limit: 'all' });
-        expect(live.data.map((e) => e.title)).toEqual(['B']);
+        const live = await repository.findMany({ type: 'post' });
+        expect(live.map((e) => e.title)).toEqual(['B']);
 
-        const trashed = await repository.list({
+        const trashed = await repository.findMany({
             type: 'post',
             trashed: true,
-            limit: 'all',
         });
-        expect(trashed.data.map((e) => e.title)).toEqual(['A']);
+        expect(trashed.map((e) => e.title)).toEqual(['A']);
     });
 
     it('leaves rows published after publishedAsOf out of the rows and the count', async () => {
@@ -293,14 +339,10 @@ describe('list', () => {
             publishedAt: new Date(asOf.getTime() + 60_000),
         });
 
-        const res = await repository.list({
-            type: 'post',
-            publishedAsOf: asOf,
-            sort: { title: 'asc' },
-            limit: 10,
-        });
-        expect(res.data.map((e) => e.title)).toEqual(['At', 'Past', 'Unset']);
-        expect(res.total).toBe(3);
+        const params = { type: 'post', publishedAsOf: asOf } as const;
+        const rows = await repository.findMany({ ...params, sort: { title: 'asc' } });
+        expect(rows.map((e) => e.title)).toEqual(['At', 'Past', 'Unset']);
+        expect(await repository.count(params)).toBe(3);
     });
 });
 
@@ -348,8 +390,8 @@ describe('staging (forward versioning)', () => {
             { title: 'Staged change', slug: 'ghost' }
         );
 
-        const list = await repository.list({ type: 'post', limit: 'all' });
-        expect(list.data.map((e) => e.title)).toEqual(['Live']);
+        const list = await repository.findMany({ type: 'post' });
+        expect(list.map((e) => e.title)).toEqual(['Live']);
 
         // A slug used ONLY by a staged row is still considered free.
         expect(await repository.uniqueSlug('post', 'en', 'ghost')).toBe('ghost');
@@ -357,7 +399,7 @@ describe('staging (forward versioning)', () => {
         expect(await repository.uniqueSlug('post', 'en', 'live')).toBe('live-2');
 
         expect(
-            (await repository.get({ type: 'post', id: canonical.id }))?.locales
+            (await repository.findOne({ type: 'post', id: canonical.id }))?.locales
         ).toEqual(['en']);
     });
 
@@ -372,7 +414,9 @@ describe('staging (forward versioning)', () => {
         await repository.staging.delete({ id: canonical.id });
 
         expect(await repository.staging.findOne({ id: canonical.id })).toBeNull();
-        expect(await repository.get({ type: 'post', id: canonical.id })).not.toBeNull();
+        expect(
+            await repository.findOne({ type: 'post', id: canonical.id })
+        ).not.toBeNull();
     });
 });
 
@@ -381,8 +425,12 @@ describe('trash sub-surface', () => {
         const e = await repository.create({ type: 'post', title: 'T', slug: 't' });
         await repository.trash.trash(e.id);
         expect(
-            (await repository.get({ type: 'post', id: e.id }, { includeTrashed: true }))
-                ?.deletedAt
+            (
+                await repository.findOne(
+                    { type: 'post', id: e.id },
+                    { includeTrashed: true }
+                )
+            )?.deletedAt
         ).toBeInstanceOf(Date);
 
         const restored = await repository.trash.restore(e.id);
@@ -391,7 +439,7 @@ describe('trash sub-surface', () => {
         await repository.trash.trash(e.id);
         await repository.trash.emptyTrash('post');
         expect(
-            await repository.get({ type: 'post', id: e.id }, { includeTrashed: true })
+            await repository.findOne({ type: 'post', id: e.id }, { includeTrashed: true })
         ).toBeNull();
     });
 
@@ -401,15 +449,16 @@ describe('trash sub-surface', () => {
 
         await repository.trash.trash(e.id);
 
-        expect(await repository.get({ type: 'post', id: e.id })).toBeNull();
-        expect(await repository.get({ type: 'post', id: e.id, locale: 'de' })).toBeNull();
-        const trashedList = await repository.list({
+        expect(await repository.findOne({ type: 'post', id: e.id })).toBeNull();
+        expect(
+            await repository.findOne({ type: 'post', id: e.id, locale: 'de' })
+        ).toBeNull();
+        const trashedList = await repository.findMany({
             type: 'post',
             trashed: true,
             locale: 'all',
-            limit: 'all',
         });
-        expect(trashedList.data).toHaveLength(2);
+        expect(trashedList).toHaveLength(2);
     });
 });
 
@@ -492,10 +541,14 @@ describe('translatable sub-surface', () => {
         await repository.translatable.propagateFields(en.id, 'en', {
             category: 'updated',
         });
-        const deAfter = await repository.get({ type: 'post', id: en.id, locale: 'de' });
+        const deAfter = await repository.findOne({
+            type: 'post',
+            id: en.id,
+            locale: 'de',
+        });
         expect(deAfter?.fields).toEqual({ body: 'debody', category: 'updated' });
         // The excluded locale is untouched.
-        const enAfter = await repository.get({ type: 'post', id: en.id });
+        const enAfter = await repository.findOne({ type: 'post', id: en.id });
         expect(enAfter?.fields).toEqual({ body: 'enbody', category: 'news' });
     });
 });
@@ -533,7 +586,7 @@ describe('transaction', () => {
             })
         ).rejects.toThrow('boom');
 
-        const after = await repository.get({ type: 'post', id: e.id });
+        const after = await repository.findOne({ type: 'post', id: e.id });
         expect(after?.title).toBe('Keep');
     });
 
@@ -545,10 +598,7 @@ describe('transaction', () => {
             })
         ).rejects.toThrow('boom');
 
-        expect(await repository.list({ type: 'post', limit: 'all' })).toEqual({
-            data: [],
-            total: 0,
-        });
+        expect(await repository.findMany({ type: 'post' })).toEqual([]);
         expect(await db.selectFrom('entryContent').selectAll().execute()).toEqual([]);
     });
 
@@ -559,7 +609,7 @@ describe('transaction', () => {
         );
         expect(result.title).toBe('After');
 
-        const after = await repository.get({ type: 'post', id: e.id });
+        const after = await repository.findOne({ type: 'post', id: e.id });
         expect(after?.title).toBe('After');
     });
 
@@ -579,7 +629,7 @@ describe('transaction', () => {
             return outer;
         });
 
-        const after = await repository.get({ type: 'post', id: created.id });
+        const after = await repository.findOne({ type: 'post', id: created.id });
         expect(after?.title).toBe('Inner');
     });
 });

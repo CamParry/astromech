@@ -1,7 +1,6 @@
 import type { VisibilityShape } from '@/content/visibility';
 import type { Entry } from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { defaultContentLocale } from '@/config/content-locale';
 import { applyVisibility } from '@/content/visibility';
 import { resolveEntryType } from '@/entries/entry-types';
 import { ValidationError } from '@/errors/validation';
@@ -47,11 +46,7 @@ export const getEntry = defineServiceMethod({
         }
 
         const repository = getEntryRepository(type);
-        const record = await repository.get({
-            type,
-            id,
-            locale: params.locale ?? defaultContentLocale(ctx.config),
-        });
+        const record = await repository.findOne({ type, id, locale: params.locale });
 
         if (!record) return null;
 

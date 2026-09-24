@@ -50,8 +50,9 @@ function throwing(): never {
 
 const throwingRepository: EntryRepository = {
     supports: [],
-    list: throwing,
-    get: throwing,
+    findMany: throwing,
+    count: throwing,
+    findOne: throwing,
     create: throwing,
     update: throwing,
     delete: throwing,

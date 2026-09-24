@@ -10,13 +10,26 @@ import { declaredEntryTypes } from '@/config/entry-types';
 import { createKeyedRegistry, createLazyRegistry } from '@/registry';
 import { createEntriesTableRepository } from './entries-table';
 
-const entriesTable = createLazyRegistry<EntryRepository>('entriesTableRepository', () =>
-    createEntriesTableRepository()
+/** The shared `entries` table's repository, with the reads only that table has. */
+export type EntriesTableRepository = ReturnType<typeof createEntriesTableRepository>;
+
+const entriesTable = createLazyRegistry<EntriesTableRepository>(
+    'entriesTableRepository',
+    createEntriesTableRepository
 );
 const overrides = createKeyedRegistry<EntryRepository>('entryRepositoryOverrides');
 
+/** The repository `type`'s rows live in: its own when it names one, else the shared one. */
 export function getEntryRepository(type: string): EntryRepository {
     return overrides.get(type) ?? entriesTable.get();
+}
+
+/**
+ * The shared `entries` table's repository, whatever a type names. Code that
+ * reads that table as a whole (preview tokens, the index rebuild) reaches it here.
+ */
+export function getEntriesTableRepository(): EntriesTableRepository {
+    return entriesTable.get();
 }
 
 /**

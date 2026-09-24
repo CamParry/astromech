@@ -98,7 +98,7 @@ export async function updateEntryBatch(
     for (const id of params.ids) {
         const record = staging
             ? await getStagedRecord(staging, id, locale)
-            : await findEntryOfType(ctx.config, repository, entryType.id, id, locale);
+            : await findEntryOfType(repository, entryType.id, id, locale);
         if (!record && params.createMissingLocale === false) {
             throw new ResourceNotFoundError('entry', { id, locale });
         }
@@ -303,7 +303,7 @@ async function planTranslation(params: {
     user: User | null;
 }): Promise<TranslationWrite> {
     const { config, repository, entryType, id, locale, data, user } = params;
-    const source = await getEntryOfType(config, repository, entryType.id, id);
+    const source = await getEntryOfType(repository, entryType.id, id);
 
     const titled = entryType.titleField !== false;
     const validated = parseInput(createEntrySchema({ titled }), {

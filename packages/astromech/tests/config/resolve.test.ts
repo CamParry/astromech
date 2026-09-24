@@ -58,8 +58,9 @@ const baseConfig = (plugins: PluginDefinition[]): AstromechConfig => ({
  */
 const emptyRepository = (): EntryRepository => ({
     supports: [],
-    list: async () => ({ data: [], total: 0 }),
-    get: async () => null,
+    findMany: async () => [],
+    count: async () => 0,
+    findOne: async () => null,
     create: async () => {
         throw new Error('not called');
     },

@@ -24,7 +24,7 @@ export const createStagedEntry = defineServiceMethod({
     mutates: true,
     async handler(params, ctx): Promise<Entry> {
         const { type, id } = params;
-        const { staging, canonical } = await resolveStagingTarget(ctx.config, params);
+        const { staging, canonical } = await resolveStagingTarget(params);
         const user = ctx.user;
 
         const existing = await staging.findOne({ id, locale: canonical.locale });

@@ -21,10 +21,9 @@ export const listEntryVersions = defineServiceMethod({
     access: entryGate('read'),
     requires: 'versioning',
     mutates: false,
-    async handler(params, ctx): Promise<EntryVersion[]> {
+    async handler(params): Promise<EntryVersion[]> {
         const repository = getEntryRepository(params.type);
         const entry = await getEntryOfType(
-            ctx.config,
             repository,
             params.type,
             params.id,

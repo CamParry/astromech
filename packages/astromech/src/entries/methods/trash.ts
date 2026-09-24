@@ -54,12 +54,7 @@ export const emptyTrash = defineServiceMethod({
         const { trash } = repository;
         if (!trash) throw new CapabilityError('entry', type, 'trash');
 
-        const { data: trashed } = await repository.list({
-            type,
-            locale: 'all',
-            trashed: true,
-            limit: 'all',
-        });
+        const trashed = await repository.findMany({ type, locale: 'all', trashed: true });
         const relationships = createRelationshipRepository();
 
         await transaction(async () => {

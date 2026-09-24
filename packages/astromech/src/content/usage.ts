@@ -77,7 +77,7 @@ async function loadSourceTitles(
     }
 
     for (const [type, ids] of entryIdsByType) {
-        for (const [id, title] of await entryTitles(config, type, ids)) {
+        for (const [id, title] of await entryTitles(type, ids)) {
             titles.set(sourceKey({ sourceKind: 'entry', sourceId: id }), title);
         }
     }
@@ -100,11 +100,10 @@ async function loadSourceTitles(
 
 /**
  * Titles for one entry type's sources. Read one at a time through the type's own
- * repository, not batched through `list()`, which excludes trashed entries: the
+ * repository, not batched through `findMany`, which excludes trashed entries: the
  * sources a delete check has to surface.
  */
 async function entryTitles(
-    config: ResolvedConfig,
     type: string,
     ids: ReadonlySet<string>
 ): Promise<Map<string, string>> {
@@ -114,7 +113,7 @@ async function entryTitles(
     const records = await Promise.all(
         Array.from(ids, async (id) => {
             try {
-                return await getEntryResource(config, repository, type, id);
+                return await getEntryResource(repository, type, id);
             } catch {
                 return null;
             }

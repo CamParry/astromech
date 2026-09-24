@@ -1,20 +1,20 @@
 /**
  * Repository-level tests for the shared versions repository over
- * `entry_versions`. The CRUD/list/latestNumber
- * surface is already exercised through `createEntriesTableRepository.versions` in
- * `entries-table.test.ts`; this file covers what the wrapper cannot show — that a
+ * `entry_versions`. The CRUD/list/latestNumber surface is already exercised
+ * through the entries-table repository's `versions` in `entries-table.test.ts`; this file covers what the wrapper cannot show — that a
  * version belongs to a content row and dies with it.
  */
 
 import type { Db } from '@/database/types';
+import type { EntriesTableRepository } from '@/entries/repository/registry';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createVersionsRepository } from '@/content/repository/versions';
 import { entryVersionsTable } from '@/database/tables';
-import { createEntriesTableRepository } from '@/entries/repository/entries-table';
+import { getEntriesTableRepository } from '@/entries/repository/registry';
 
 let db: Db;
-let entryRepository: ReturnType<typeof createEntriesTableRepository>;
+let entryRepository: EntriesTableRepository;
 let versionRepository: ReturnType<
     typeof createVersionsRepository<typeof entryVersionsTable>
 >;
@@ -22,7 +22,7 @@ let versionRepository: ReturnType<
 beforeEach(async () => {
     db = await createTestDb();
     setupTestConfig();
-    entryRepository = createEntriesTableRepository();
+    entryRepository = getEntriesTableRepository();
     versionRepository = createVersionsRepository(entryVersionsTable, db);
 });
 

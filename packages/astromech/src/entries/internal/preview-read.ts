@@ -6,7 +6,6 @@
  */
 
 import type { Entry, EntryQueryParams, QueryResult, ResolvedConfig } from '@/types/index';
-import { defaultContentLocale } from '@/config/content-locale';
 import { resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
 import { getEntryRepository } from '../repository/registry';
@@ -40,13 +39,14 @@ export async function queryPreviewEntries(
     const entryTypeCfg = resolveEntryType(config, type);
     const fields = entryTypeCfg ? flattenEntryFields(entryTypeCfg.fields) : [];
 
-    const { data: rows } = await repository.list({
+    const page = params.page ?? 1;
+    const limit = params.limit ?? 1;
+    const rows = await repository.findMany({
         type,
-        locale: params.locale ?? defaultContentLocale(config),
+        locale: params.locale,
         where: params.where,
         sort: params.sort,
-        limit: params.limit ?? 1,
-        page: params.page ?? 1,
+        ...(limit === 'all' ? {} : { limit, offset: (page - 1) * limit }),
     });
 
     const out: Entry[] = [];
@@ -98,11 +98,7 @@ export async function getPreviewEntry(
     const repository = getEntryRepository(type);
     // Excludes trashed. The token authorizes every locale, so this reads the
     // one asked for and verifies against the entry.
-    const record = await repository.get({
-        type,
-        id,
-        locale: params.locale ?? defaultContentLocale(config),
-    });
+    const record = await repository.findOne({ type, id, locale: params.locale });
     if (!record) return null;
 
     const canonical = toEntry(record);

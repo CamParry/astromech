@@ -19,8 +19,8 @@ export const getStagedEntry = defineServiceMethod({
     access: entryGate('read'),
     requires: 'staging',
     mutates: false,
-    async handler(params, ctx): Promise<Entry | null> {
-        const { staging, canonical } = await resolveStagingTarget(ctx.config, params);
+    async handler(params): Promise<Entry | null> {
+        const { staging, canonical } = await resolveStagingTarget(params);
         const staged = await staging.findOne({ id: params.id, locale: canonical.locale });
         return staged ? toEntry(staged) : null;
     },

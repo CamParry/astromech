@@ -75,7 +75,7 @@ async function removeEntryBatch(
 ): Promise<void> {
     const { type, ids } = params;
     const { repository, permanent, write } = options;
-    const entries = await getEntryResources(ctx.config, repository, type, ids);
+    const entries = await getEntryResources(repository, type, ids);
     const user = ctx.user;
 
     for (const entry of entries) {
