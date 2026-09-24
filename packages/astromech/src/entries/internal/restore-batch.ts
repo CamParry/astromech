@@ -1,9 +1,8 @@
 import type { AppContext, Entry } from '@/types/index';
-import { transaction } from '@/database/transaction';
 import { CapabilityError } from '@/errors/capability';
-import { BulkOperationError } from '../errors';
 import { getEntryRepository } from '../repository/registry';
 import { getEntryResources, toEntry } from './read-entry';
+import { writeBatch } from './write-batch';
 
 /**
  * Restore a batch of trashed entries, atomically, returning each one's
@@ -24,22 +23,7 @@ export async function restoreEntryBatch(
     const entries = await getEntryResources(ctx.config, repository, type, ids);
     const user = ctx.user;
 
-    return transaction(async () => {
-        const rows: Entry[] = [];
-        const succeeded: string[] = [];
-        for (const entry of entries) {
-            try {
-                rows.push(toEntry(await trash.restore(entry.id, user?.id ?? null)));
-                succeeded.push(entry.id);
-            } catch (err) {
-                throw new BulkOperationError({
-                    failedId: entry.id,
-                    reason: err instanceof Error ? err.message : String(err),
-                    succeededBefore: succeeded,
-                    cause: err,
-                });
-            }
-        }
-        return rows;
-    });
+    return writeBatch(entries, async (entry) =>
+        toEntry(await trash.restore(entry.id, user?.id ?? null))
+    );
 }

@@ -8,10 +8,6 @@ so its status can move — `completed/admin-form-defects.md` is the worked examp
 Finished items are deleted rather than ticked; the record of what shipped is in
 `roadmap/completed/`.
 
-### Entries
-
-- [ ] `entries/internal/delete-batch.ts` and `trash-batch.ts` repeat the same 20-line hook sequence (before hooks, the write per entry, after hooks) and differ only in the write and `permanent`. Share it as one helper that takes the write, so a fix to hook ordering lands in both.
-
 ### Admin
 
 - [ ] Investigate admin-page composition — one page rendering **both** a managed form and custom widgets (Sanity-style view tabs, or a custom component mounting managed form regions via a `useSettingsForm` hook). `AdminPage` XOR-validates `fields`/`component` today and was deliberately left open so this is additive (from `completed/unified-admin-pages.md`)

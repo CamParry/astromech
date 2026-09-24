@@ -4,8 +4,8 @@ import { transaction } from '@/database/transaction';
 import { CapabilityError } from '@/errors/capability';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
+import { trashEntryBatch } from '../internal/delete-batch';
 import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
-import { trashEntryBatch } from '../internal/trash-batch';
 import { getEntryRepository } from '../repository/registry';
 
 /** One id is a batch of one, and its errors are unwrapped. */

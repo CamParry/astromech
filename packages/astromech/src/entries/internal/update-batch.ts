@@ -15,12 +15,11 @@ import { requireStagedChange } from '@/content/staging';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { patchedFieldNames } from '@/content/write-fields';
-import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types';
 import { CapabilityError } from '@/errors/capability';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { parseInput } from '@/errors/validation';
-import { BulkOperationError, UnknownEntryTypeError } from '../errors';
+import { UnknownEntryTypeError } from '../errors';
 import { getEntryRepository } from '../repository/registry';
 import { createEntrySchema, updateEntrySchema } from '../schema';
 import { assertWritableFields } from './entry-type';
@@ -33,6 +32,7 @@ import {
 import { syncEntryRelationships } from './relationships';
 import { deriveSlug, uniqueSlugIfChanged } from './slug';
 import { toStoredFields } from './stored-fields';
+import { writeBatch } from './write-batch';
 
 /**
  * Updates one locale of a batch of entries, atomically, firing the entry write
@@ -138,43 +138,26 @@ export async function updateEntryBatch(
         }
     }
 
-    const results = await transaction(async () => {
-        const out: Entry[] = [];
-        const succeeded: string[] = [];
-        for (const plan of plans) {
-            try {
-                out.push(
-                    plan.kind === 'update'
-                        ? await updateOne({
-                              config: ctx.config,
-                              repository,
-                              entryType,
-                              currentEntry: plan.record,
-                              data: params.data,
-                              user,
-                              staging,
-                          })
-                        : await writeTranslation({
-                              config: ctx.config,
-                              repository,
-                              type: entryType.id,
-                              id: plan.id,
-                              locale,
-                              write: plan.write,
-                          })
-                );
-                succeeded.push(plan.id);
-            } catch (err) {
-                throw new BulkOperationError({
-                    failedId: plan.id,
-                    reason: err instanceof Error ? err.message : String(err),
-                    succeededBefore: succeeded,
-                    cause: err,
-                });
-            }
-        }
-        return out;
-    });
+    const results = await writeBatch(plans, (plan) =>
+        plan.kind === 'update'
+            ? updateOne({
+                  config: ctx.config,
+                  repository,
+                  entryType,
+                  currentEntry: plan.record,
+                  data: params.data,
+                  user,
+                  staging,
+              })
+            : writeTranslation({
+                  config: ctx.config,
+                  repository,
+                  type: entryType.id,
+                  id: plan.id,
+                  locale,
+                  write: plan.write,
+              })
+    );
 
     for (const [index, plan] of plans.entries()) {
         // A throw here propagates; the write above stays (`DECISIONS.md`).
