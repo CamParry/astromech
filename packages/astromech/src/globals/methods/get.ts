@@ -1,3 +1,4 @@
+import type { GlobalRepository, GlobalRow } from '../repository';
 import type { VisibilityShape } from '@/content/visibility';
 import type { Global } from '@/types/index';
 import { z } from '@hono/zod-openapi';
@@ -9,7 +10,8 @@ import { ResourceValidationError } from '@/errors/resource';
 import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { readGate } from '../internal/access';
-import { getDeclaredGlobal, globalRepository, toGlobal } from '../internal/global';
+import { getDeclaredGlobal, toGlobal } from '../internal/global';
+import { getGlobalRepository } from '../repository';
 import { localised } from '../schema';
 
 /**
@@ -49,14 +51,11 @@ export const getGlobal = defineServiceMethod({
             ]);
         }
 
-        const repository = globalRepository(ctx.config);
-        const id = await repository.idByKey(params.key);
-        if (id === null) return null;
-
+        const repository = getGlobalRepository();
         const row =
             params.staged === true
-                ? await repository.staging.findOne({ id, locale })
-                : await repository.findOne({ id, locale });
+                ? await findStaged(repository, params.key, locale)
+                : await repository.findByKey(params.key, locale);
         if (!row) return null;
 
         const record = toGlobal(row);
@@ -85,3 +84,13 @@ export const getGlobal = defineServiceMethod({
         return result;
     },
 });
+
+/** The staged change for one locale of the global saved under `key`, or null. */
+async function findStaged(
+    repository: GlobalRepository,
+    key: string,
+    locale: string
+): Promise<GlobalRow | null> {
+    const id = await repository.findIdByKey(key);
+    return id === null ? null : repository.staging.findOne({ id, locale });
+}

@@ -1,25 +1,61 @@
 /**
- * Tests for the shared content repository, exercised through the globals
- * shape — the second consumer of `createContentRepository`, and the one that
+ * Tests for the shared content repository, built directly over the globals
+ * shape: the second consumer of `createContentRepository`, and the one that
  * declares no slug, no trash and no owner filter. What it proves is that the
  * generic half is genuinely generic: the entries suite covers the same
  * machinery with entries' own columns bolted on.
  */
 
-import type { ContentRowId } from '@/content/repository/types';
+import type { ContentRow, ContentRowId } from '@/content/repository/types';
 import type { Db } from '@/database/types';
+import type { GlobalContentRow, GlobalTableRow } from '@/globals/tables';
 import type { JsonObject } from '@/types/index';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createGlobalRepository } from '@/globals/repository';
+import { createContentRepository } from '@/content/repository/content-table';
+import { globalContentTable, globalsTable, globalVersionsTable } from '@/database/tables';
+
+type Row = ContentRow & { key: string };
+
+function decode(
+    global: GlobalTableRow,
+    content: GlobalContentRow,
+    locales: string[]
+): Row {
+    return {
+        id: content.globalId,
+        contentId: content.id as ContentRowId,
+        key: global.key,
+        locale: content.locale,
+        locales,
+        staged: content.stagedFor !== null,
+        fields: (content.fields ?? {}) as JsonObject,
+        status: content.status,
+        publishedAt: content.publishedAt,
+        createdAt: global.createdAt,
+        updatedAt: content.updatedAt,
+    };
+}
+
+function createRepository() {
+    return createContentRepository(
+        {
+            table: globalsTable,
+            contentTable: globalContentTable,
+            versionsTable: globalVersionsTable,
+            ownerColumn: 'globalId',
+        },
+        { decode }
+    );
+}
 
 let db: Db;
-let repository: ReturnType<typeof createGlobalRepository>;
+let repository: ReturnType<typeof createRepository>;
 
 beforeEach(async () => {
     db = await createTestDb();
     setupTestConfig();
-    repository = createGlobalRepository();
+    repository = createRepository();
 });
 
 async function createSite(fields: JsonObject = { title: 'Site' }) {
@@ -47,12 +83,6 @@ describe('create', () => {
         // The public id is the resource id; the content row carries its own.
         expect(rows[0]?.id).not.toBe(created.id);
         expect(created.contentId).toBe(rows[0]?.id);
-    });
-
-    it('resolves the row id from the key', async () => {
-        const created = await createSite();
-        expect(await repository.idByKey('site')).toBe(created.id);
-        expect(await repository.idByKey('missing')).toBeNull();
     });
 });
 

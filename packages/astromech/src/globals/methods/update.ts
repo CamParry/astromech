@@ -18,9 +18,10 @@ import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resourc
 import { parseInput } from '@/errors/validation';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../internal/access';
-import { getDeclaredGlobal, globalRepository, toGlobal } from '../internal/global';
+import { getDeclaredGlobal, toGlobal } from '../internal/global';
 import { syncGlobalRelationships } from '../internal/relationships';
 import { toStoredFields } from '../internal/stored-fields';
+import { getGlobalRepository } from '../repository';
 import { localised, updateGlobalSchema } from '../schema';
 
 /**
@@ -56,16 +57,17 @@ export const updateGlobal = defineServiceMethod({
             global.id,
             params.locale
         );
-        const repository = globalRepository(ctx.config);
+        const repository = getGlobalRepository();
         const user = ctx.user;
 
-        const id = await repository.idByKey(params.key);
-        const current =
-            id === null
+        const canonical = staged ? null : await repository.findByKey(params.key, locale);
+        // A locale with no row yet still needs the id when the global exists.
+        const id = canonical?.id ?? (await repository.findIdByKey(params.key));
+        const current = staged
+            ? id === null
                 ? null
-                : staged
-                  ? await repository.staging.findOne({ id, locale })
-                  : await repository.findOne({ id, locale });
+                : await repository.staging.findOne({ id, locale })
+            : canonical;
         // A staged write addresses a row `createStaged` made; there is nothing
         // here to create one from.
         if (staged && (id === null || !current)) {

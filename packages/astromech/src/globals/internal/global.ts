@@ -1,17 +1,16 @@
 /**
  * Config-derived helpers shared across the globals operations: resolving a key
- * to its declaration, the capability a method requires, the repository handle,
- * and the row → `Global` narrowing.
+ * to its declaration, the capability a method requires, the canonical row a
+ * call addresses, and the row → `Global` narrowing.
  */
 
 import type { GlobalRepository, GlobalRow } from '../repository';
 import type { Global, ResolvedConfig, ResolvedGlobal } from '@/types/index';
-import { defaultContentLocale } from '@/config/content-locale';
 import { assertCapability } from '@/content/capabilities';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { ResourceNotFoundError } from '@/errors/resource';
-import { createGlobalRepository } from '../repository';
+import { getGlobalRepository } from '../repository';
 import { resolveGlobal } from '../resolve-global';
 
 /** Every capability a global may declare, for narrowing a bare string to one. */
@@ -58,11 +57,6 @@ export function assertRequiredCapability(
     assertCapability('global', global, capability);
 }
 
-/** The globals repository, bound to the configured default content locale. */
-export function globalRepository(config: ResolvedConfig): GlobalRepository {
-    return createGlobalRepository({ defaultLocale: defaultContentLocale(config) });
-}
-
 /** What an operation on an already-saved locale of a global works from. */
 export type CanonicalGlobal = {
     global: ResolvedGlobal;
@@ -90,13 +84,10 @@ export async function getCanonicalGlobal(
         params.locale
     );
 
-    const repository = globalRepository(config);
-    const id = await repository.idByKey(params.key);
-    const current = id === null ? null : await repository.findOne({ id, locale });
-    if (id === null || !current) {
-        throw new ResourceNotFoundError('global', { id: params.key, locale });
-    }
-    return { global, locale, repository, id, current };
+    const repository = getGlobalRepository();
+    const current = await repository.findByKey(params.key, locale);
+    if (!current) throw new ResourceNotFoundError('global', { id: params.key, locale });
+    return { global, locale, repository, id: current.id, current };
 }
 
 /**

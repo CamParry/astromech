@@ -97,6 +97,10 @@ describe('getStaged', () => {
         expect(staged?.fields['title']).toBe('Draft');
     });
 
+    it('answers null through get for a global that has never been saved', async () => {
+        expect(await api.get({ key: 'site', staged: true, full: true })).toBeNull();
+    });
+
     it('refuses a staged read in the public shape', async () => {
         await saveSite();
         await expect(api.get({ key: 'site', staged: true })).rejects.toThrow(
@@ -176,6 +180,12 @@ describe('update with staged', () => {
 
         const de = await api.get({ key: 'site', locale: 'de', full: true });
         expect(de?.fields['brand']).toBe('Acme');
+    });
+
+    it('refuses a global that has never been saved', async () => {
+        await expect(
+            api.update({ key: 'site', staged: true, data: { fields: { title: 'X' } } })
+        ).rejects.toThrow(ResourceNotFoundError);
     });
 
     it('refuses a locale with no staged change', async () => {
