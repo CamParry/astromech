@@ -38,7 +38,7 @@ export async function verifyPreviewToken(
 
 /** The audience a preview is filtered for: anonymous, as of now. */
 function previewAudience(): AudienceContext {
-    return { role: null, now: new Date() };
+    return { now: new Date() };
 }
 
 /** Apply the preview projection (public shape, publish-gate bypassed). */

@@ -123,7 +123,7 @@ describe('a plugin container field type', () => {
         const visible = applyVisibility(record, {
             shape: 'public',
             fields: [cardsField],
-            audience: { role: null, now: new Date() },
+            audience: { now: new Date() },
         });
 
         expect(visible?.fields).toEqual({ cards: [{ _id: 'c1', heading: 'Hi' }] });

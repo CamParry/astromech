@@ -15,8 +15,6 @@ Finished items are deleted rather than ticked; the record of what shipped is in
 
 ### Fields
 
-- [ ] Drop the unused `role` from `AudienceContext` (`content/visibility.ts`) and its four call sites; left out of the `services` branch because `field-tree-traversal` is rewriting that file
-
 - [ ] `columns.field(name, { sortable: true })` sends a sort the entries repository refuses with a 400 (`UnknownSortKeyError`), and `entries-list-page.tsx` re-sorts each page in the browser by string comparison. Implement field sort in the repository or drop `sortable`; delete the client sort either way
 
 ### Search

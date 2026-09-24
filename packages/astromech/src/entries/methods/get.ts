@@ -61,7 +61,7 @@ export const getEntry = defineServiceMethod({
         if (result.type === undefined) result.type = type;
 
         const shape: VisibilityShape = params.full ? 'full' : 'public';
-        const audience = { role: ctx.user?.role ?? null, now: new Date() };
+        const audience = { now: new Date() };
         const entryType = resolveEntryType(ctx.config, type);
         const fields = entryType ? flattenEntryFields(entryType.fields) : [];
 

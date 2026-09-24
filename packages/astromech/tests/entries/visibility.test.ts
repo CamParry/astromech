@@ -12,7 +12,7 @@ import { applyVisibility } from '@/content/visibility';
 const NOW = new Date('2026-06-15T12:00:00Z');
 
 function audience(now = NOW): AudienceContext {
-    return { role: null, now };
+    return { now };
 }
 
 function publishedEntry(overrides: Partial<Entry> = {}): Entry {

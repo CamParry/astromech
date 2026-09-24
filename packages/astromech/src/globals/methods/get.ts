@@ -76,7 +76,7 @@ export const getGlobal = defineServiceMethod({
             {
                 shape,
                 fields: flattenEntryFields(global.fields),
-                audience: { role: ctx.user?.role ?? null, now: new Date() },
+                audience: { now: new Date() },
             }
         );
         if (filtered === null) return null;

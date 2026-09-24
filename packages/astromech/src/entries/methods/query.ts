@@ -117,7 +117,7 @@ export const queryEntries = defineServiceMethod({
 
         const data = rows.map(toEntry);
 
-        const audience = { role: ctx.user?.role ?? null, now };
+        const audience = { now };
 
         // Field definitions per type, flattened once: a cross-type page mixes
         // types, and a single-type page would otherwise flatten per row.
