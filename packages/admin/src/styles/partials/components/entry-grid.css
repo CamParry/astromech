@@ -1,10 +1,10 @@
-.am-collection-grid {
+.am-entry-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
     gap: 1rem;
 }
 
-.am-collection-card {
+.am-entry-card {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -19,45 +19,45 @@
         box-shadow var(--am-duration-base);
 }
 
-.am-collection-card:hover {
+.am-entry-card:hover {
     border-color: var(--am-color-border-strong);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.am-collection-card-title {
+.am-entry-card-title {
     font-size: 0.9375rem;
     font-weight: 600;
     color: var(--am-color-text-default);
     text-decoration: none;
 }
 
-.am-collection-card-meta {
+.am-entry-card-meta {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
     align-items: center;
 }
 
-.am-collection-card-field {
+.am-entry-card-field {
     display: flex;
     flex-direction: column;
     gap: 0.125rem;
     font-size: 0.8125rem;
 }
 
-.am-collection-card-field-label {
+.am-entry-card-field-label {
     font-size: 0.75rem;
     font-weight: 500;
     color: var(--am-color-text-muted);
 }
 
-.am-collection-card-actions {
+.am-entry-card-actions {
     position: absolute;
     top: 0.75rem;
     right: 0.75rem;
 }
 
-.am-collection-grid-loading {
+.am-entry-grid-loading {
     display: flex;
     justify-content: center;
     padding: 2rem;

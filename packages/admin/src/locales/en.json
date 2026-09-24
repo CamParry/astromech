@@ -82,7 +82,7 @@
     },
     "dashboard": {
         "title": "Dashboard",
-        "collections": "Content",
+        "entryTypes": "Content",
         "recentActivity": "Recent Activity",
         "noContentYet": "No content yet",
         "noContentDescription": "Create your first entry to see recent activity here.",

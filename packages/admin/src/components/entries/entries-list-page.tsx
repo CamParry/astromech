@@ -356,13 +356,13 @@ function EntriesListBody({
 
                     {viewMode === 'grid' &&
                         (list.isLoading ? (
-                            <div className="am-collection-grid-loading">
+                            <div className="am-entry-grid-loading">
                                 <Spinner />
                             </div>
                         ) : list.data.length === 0 ? (
                             empty
                         ) : (
-                            <div className="am-collection-grid">
+                            <div className="am-entry-grid">
                                 {list.data.map((entry) => (
                                     <EntryCard
                                         key={entry.id}

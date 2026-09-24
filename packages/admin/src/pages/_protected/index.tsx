@@ -120,7 +120,7 @@ function DashboardPage(): React.ReactElement {
                 {/* Stat cards */}
                 {typeEntries.length > 0 && (
                     <section>
-                        <SectionTitle>{t('dashboard.collections')}</SectionTitle>
+                        <SectionTitle>{t('dashboard.entryTypes')}</SectionTitle>
                         <div className="am-stat-grid">
                             {typeEntries.map(([key, entryType]) => (
                                 <Link

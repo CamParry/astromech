@@ -205,12 +205,12 @@ export function EntryCard(props: EntryCardProps): React.ReactElement {
     return (
         <>
             <div
-                className="am-collection-card"
+                className="am-entry-card"
                 onContextMenu={onContextMenu}
                 onClick={handleCardClick}
             >
                 <div
-                    className="am-collection-card-actions"
+                    className="am-entry-card-actions"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <Dropdown
@@ -224,8 +224,8 @@ export function EntryCard(props: EntryCardProps): React.ReactElement {
                     <span
                         className={
                             hasTitle
-                                ? 'am-collection-card-title am-text-muted'
-                                : 'am-collection-card-title am-text-muted am-text-mono am-text-sm'
+                                ? 'am-entry-card-title am-text-muted'
+                                : 'am-entry-card-title am-text-muted am-text-mono am-text-sm'
                         }
                     >
                         {hasTitle ? entry.title : entry.id}
@@ -235,8 +235,8 @@ export function EntryCard(props: EntryCardProps): React.ReactElement {
                         to={entryEditPath(basePath, entry.id, { locale: entry.locale })}
                         className={
                             hasTitle
-                                ? 'am-collection-card-title'
-                                : 'am-collection-card-title am-text-mono am-text-sm'
+                                ? 'am-entry-card-title'
+                                : 'am-entry-card-title am-text-mono am-text-sm'
                         }
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -244,13 +244,13 @@ export function EntryCard(props: EntryCardProps): React.ReactElement {
                     </Link>
                 )}
 
-                <div className="am-collection-card-meta">
+                <div className="am-entry-card-meta">
                     <Badge variant={statusVariant(entry.status)}>{entry.status}</Badge>
                 </div>
 
                 {columns.map((col) => (
-                    <div key={col.key} className="am-collection-card-field">
-                        <span className="am-collection-card-field-label">
+                    <div key={col.key} className="am-entry-card-field">
+                        <span className="am-entry-card-field-label">
                             {columnLabel(col)}
                         </span>
                         <span>

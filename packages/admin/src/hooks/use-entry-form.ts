@@ -1,5 +1,5 @@
 /**
- * Shared form logic for collection entry create and edit pages: useForm setup,
+ * Shared form logic for the entry create and edit pages: useForm setup,
  * save/publish mutations, Cmd+S shortcut, and beforeunload dirty-state guard.
  * The caller supplies `saveFn`/`publishFn` so create and edit share the rest.
  */
@@ -59,7 +59,7 @@ type UseEntryFormOptions<TSaved> = {
      * called ABOVE that provider and `useLabel()` would answer for the wrong one.
      */
     namespace: string;
-    /** Whether this collection has a slug field. */
+    /** Whether this entry type has a slug field. */
     hasSlug: boolean;
     /**
      * Whether the statuses capability is on. When off, the payload omits
