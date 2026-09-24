@@ -116,7 +116,7 @@ describe('publishDueScheduled', () => {
 
         expect(await maintenance.publishDueScheduled(new Date())).toBe(0);
 
-        const staged = await entryRepository.staging.getByCanonical(entry.id);
+        const staged = await entryRepository.staging.findOne({ id: entry.id });
         expect(staged?.status).toBe('scheduled');
         expect((await entryRepository.get({ type: 'post', id: entry.id }))?.status).toBe(
             'unpublished'

@@ -13,7 +13,7 @@ import { flattenFieldNodes } from '@/fields/flatten';
 
 /** The read `inheritSharedFields` needs: one locale of one item. */
 type ContentReader = {
-    get(
+    findOne(
         ref: ContentRef,
         opts?: { includeTrashed?: boolean }
     ): Promise<Pick<ContentRow, 'fields'> | null>;
@@ -49,7 +49,7 @@ export async function inheritSharedFields(
     const shared = sharedFieldNames(spec, config, params.target, undefined);
     if (shared.length === 0) return values;
 
-    const source = await repository.get(
+    const source = await repository.findOne(
         { id, locale: defaultLocale },
         { includeTrashed: true }
     );

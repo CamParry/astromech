@@ -85,7 +85,7 @@ export function createUserRepository(config?: ResolvedConfig) {
         { decode, defaultLocale }
     );
 
-    const { ownerKey, contentKey } = content.query;
+    const { ownerKey, contentKey } = content.kysely();
 
     /**
      * The list predicate. Rows and count share it so the two cannot drift; the
@@ -118,27 +118,28 @@ export function createUserRepository(config?: ResolvedConfig) {
         page?: ListPage,
         locale?: string
     ): Promise<UserRow[]> {
-        return content.query.list({
+        return content.findMany({
             where: filter(params),
             orderBy: buildOrderBy(RESOURCE_SPECS.user.sortable, params?.sort, [
                 { field: 'name', direction: 'asc' },
             ]),
-            page,
+            ...page,
             locale,
         });
     }
 
     async function count(params?: UserListParams): Promise<number> {
-        return content.query.count(filter(params));
+        return content.count(filter(params));
     }
 
     /** Every user's content row in `locale`, for the relationship and validity scans. */
     async function listContent(locale: string): Promise<UserRow[]> {
-        const raw = await content.query
+        const raw = await content
+            .kysely()
             .joined()
             .where((eb) => eb(`${contentKey}.locale`, '=', locale))
             .execute();
-        return content.query.rows(raw);
+        return content.decodeRows(raw);
     }
 
     /** The account row alone, read as a `UserRow` with no content. */
@@ -167,7 +168,7 @@ export function createUserRepository(config?: ResolvedConfig) {
 
     /** One locale of one user, with no fallback. `findUser` holds the fallback policy. */
     async function get(id: string, locale?: string): Promise<UserRow | null> {
-        return content.get({ id, locale });
+        return content.findOne({ id, locale });
     }
 
     async function create(own: NewUserTableRow, write: ContentWrite): Promise<UserRow> {
@@ -202,7 +203,7 @@ export function createUserRepository(config?: ResolvedConfig) {
         versions: content.versions,
         translatable: content.translatable,
         locales: content.locales,
-        anyLocale: content.anyLocale,
+        anyLocale: content.findAnyLocale,
     };
 }
 

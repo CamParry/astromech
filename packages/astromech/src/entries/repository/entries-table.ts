@@ -307,24 +307,29 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
         const whereFn = buildListWhere(params, defaultLocale(), types);
 
         if (limit === 'all') {
-            let q = content.query.joined().where(whereFn);
+            let q = content.kysely().joined().where(whereFn);
             for (const [column, direction] of order) {
                 q = q.orderBy(column, direction);
             }
-            const data = await content.query.rows(await q.execute());
+            const data = await content.decodeRows(await q.execute());
             return { data, total: data.length };
         }
 
         const perPage = typeof limit === 'number' ? limit : 20;
         const offset = (page - 1) * perPage;
 
-        const total = await content.query.count(whereFn);
+        const total = await content.count(whereFn);
 
-        let rowsQ = content.query.joined().where(whereFn).limit(perPage).offset(offset);
+        let rowsQ = content
+            .kysely()
+            .joined()
+            .where(whereFn)
+            .limit(perPage)
+            .offset(offset);
         for (const [column, direction] of order) {
             rowsQ = rowsQ.orderBy(column, direction);
         }
-        const data = await content.query.rows(await rowsQ.execute());
+        const data = await content.decodeRows(await rowsQ.execute());
         return { data, total };
     }
 
@@ -371,7 +376,7 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
                 )
                 .executeTakeFirstOrThrow();
 
-            const restored = await content.anyLocale(id);
+            const restored = await content.findAnyLocale(id);
             if (!restored) throw new ResourceNotFoundError('entry', { id: id });
             return restored;
         },
@@ -411,11 +416,11 @@ export function createEntriesTableRepository(opts?: { db?: Db; defaultLocale?: s
         get: async (
             { type, ...ref }: EntryRef & { type: string },
             options?: { includeTrashed?: boolean }
-        ) => ofType(await content.get(ref, options), type),
+        ) => ofType(await content.findOne(ref, options), type),
         anyLocale: async (
             ref: { type: string; id: string },
             options?: { includeTrashed?: boolean }
-        ) => ofType(await content.anyLocale(ref.id, options), ref.type),
+        ) => ofType(await content.findAnyLocale(ref.id, options), ref.type),
         create,
         update: content.update,
         delete: content.delete,

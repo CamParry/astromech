@@ -55,8 +55,8 @@ export const getGlobal = defineServiceMethod({
 
         const row =
             params.staged === true
-                ? await repository.staging.getByCanonical(id, locale)
-                : await repository.get({ id, locale });
+                ? await repository.staging.findOne({ id, locale })
+                : await repository.findOne({ id, locale });
         if (!row) return null;
 
         const record = toGlobal(row);

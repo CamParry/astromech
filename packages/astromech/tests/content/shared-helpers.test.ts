@@ -90,7 +90,7 @@ describe('inheritSharedFields and propagateSharedFields', () => {
         const values = { brand: 'Mine' };
         const inherited = await inheritSharedFields(RESOURCE_SPECS.global, config, {
             target: 'site',
-            repository: { get: () => Promise.resolve(null) },
+            repository: { findOne: () => Promise.resolve(null) },
             values,
             id: 'g1',
             locale: 'de',
@@ -186,8 +186,8 @@ describe('restoreVersion', () => {
     it('keeps the current fields when the version stored none', async () => {
         const contentId = 'c1' as ContentRowId;
         const versions = {
-            list: () => Promise.resolve([]),
-            get: () => Promise.resolve({ contentId, fields: null }),
+            findMany: () => Promise.resolve([]),
+            findOne: () => Promise.resolve({ contentId, fields: null }),
             create: () => Promise.resolve(),
             latestNumber: () => Promise.resolve(0),
         };

@@ -9,7 +9,7 @@
  * above them.
  */
 
-import type { ListPage, SortClause } from '@/content/list';
+import type { SortClause } from '@/content/list';
 import type { Table, TableSelect } from '@/database/define-table';
 import type { GenericDb } from '@/database/repository/create-repository';
 import type { Db } from '@/database/types';
@@ -127,12 +127,25 @@ export type ContentRepository<R extends ContentRow, V extends Table = Table> = {
      * One canonical (non-staged) content row of one item, or null. No fallback
      * to another locale.
      */
-    get(ref: ContentRef, opts?: { includeTrashed?: boolean }): Promise<R | null>;
+    findOne(ref: ContentRef, opts?: { includeTrashed?: boolean }): Promise<R | null>;
     /**
-     * The item in any one locale — the default content locale when it has a
+     * The item in any one locale: the default content locale when it has a
      * row, else whichever comes first alphabetically.
      */
-    anyLocale(id: string, opts?: { includeTrashed?: boolean }): Promise<R | null>;
+    findAnyLocale(id: string, opts?: { includeTrashed?: boolean }): Promise<R | null>;
+    /**
+     * A page of the join under `where`, ordered by resource-row columns and
+     * read in `locale` where each row has one; no `limit` reads every match.
+     */
+    findMany(params: {
+        where: JoinedWhere;
+        orderBy: readonly SortClause[];
+        limit?: number | undefined;
+        offset?: number | undefined;
+        locale?: string | undefined;
+    }): Promise<R[]>;
+    /** `COUNT(*)` over the join under `where`. */
+    count(where: JoinedWhere): Promise<number>;
     /** Insert the resource row (`own` columns) and its first content row. */
     create(own: Record<string, unknown>, content: ContentWrite): Promise<R>;
     /** Write one locale's content row, creating it when it does not exist. */
@@ -141,6 +154,10 @@ export type ContentRepository<R extends ContentRow, V extends Table = Table> = {
     delete(id: string): Promise<void>;
     /** The canonical locales of each id, sorted. */
     locales(ids: string[]): Promise<Map<string, string[]>>;
+    /** Decode joined rows from `kysely().joined()` and attach each one's locale list. */
+    decodeRows(raw: Record<string, unknown>[]): Promise<R[]>;
+    /** Each row replaced by its `locale` row where it has one. */
+    overlayLocale(rows: R[], locale: string): Promise<R[]>;
 
     translatable: {
         /** The item's other canonical locales, excluding `excludeLocale`. */
@@ -155,7 +172,7 @@ export type ContentRepository<R extends ContentRow, V extends Table = Table> = {
 
     staging: {
         /** The staged change for one locale, or null. */
-        getByCanonical(id: string, locale?: string): Promise<R | null>;
+        findOne(ref: ContentRef): Promise<R | null>;
         /** Add a second content row for that locale, staged for the canonical. */
         create(ref: ContentRef, data: ContentWrite): Promise<R>;
         /** Write that locale's staged content row; it must already exist. */
@@ -167,32 +184,17 @@ export type ContentRepository<R extends ContentRow, V extends Table = Table> = {
     versions: ContentVersions<TableSelect<V>>;
 
     /**
-     * The joined `resource ⋈ content` read, for a resource whose own queries
-     * need it (entries' `list`). Rows come back encoded; `rows` decodes them
-     * and attaches each row's locale list.
+     * The raw handle and the joined `resource ⋈ content` query, for a read the
+     * methods above do not cover. Rows come back encoded; `decodeRows` decodes
+     * them. No compatibility promise, like `Repository.kysely()`.
      */
-    query: {
-        db(): GenericDb;
+    kysely(): {
+        db: GenericDb;
         /** The Kysely `DB` keys of the two tables, for a hand-built query. */
         ownerKey: string;
         contentKey: string;
         /** A `SELECT` over the join, with every column of both tables. */
         joined(): JoinedQuery;
-        /** `COUNT(*)` over the same join under the same predicate. */
-        count(where: JoinedWhere): Promise<number>;
-        rows(raw: Record<string, unknown>[]): Promise<R[]>;
-        /** Each row replaced by its `locale` row where it has one. */
-        overlayLocale(rows: R[], locale: string): Promise<R[]>;
-        /**
-         * A page of the join under `where`, ordered by resource-row columns and
-         * read in `locale` where each row has one; no `page` reads every match.
-         */
-        list(params: {
-            where: JoinedWhere;
-            orderBy: readonly SortClause[];
-            page?: ListPage | undefined;
-            locale?: string | undefined;
-        }): Promise<R[]>;
     };
 };
 
@@ -218,8 +220,8 @@ export type JoinedQuery = {
 /** The versions group, keyed on the content row a version snapshots. */
 export type ContentVersions<Row = Record<string, unknown>> = {
     /** Every version of a content row, newest first. */
-    list(contentId: ContentRowId): Promise<Row[]>;
-    get(versionId: string): Promise<Row | null>;
+    findMany(contentId: ContentRowId): Promise<Row[]>;
+    findOne(versionId: string): Promise<Row | null>;
     create(snapshot: NewVersionSnapshot): Promise<void>;
     /** The highest version number for a content row; 0 when it has none. */
     latestNumber(contentId: ContentRowId): Promise<number>;

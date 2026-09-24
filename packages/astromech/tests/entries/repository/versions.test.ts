@@ -49,13 +49,12 @@ describe('content-row ownership', () => {
             });
         }
 
-        expect((await versionRepository.list(en.contentId)).map((v) => v.title)).toEqual([
-            'EN v1',
-        ]);
-        expect((await versionRepository.list(de.contentId)).map((v) => v.title)).toEqual([
-            'DE v2',
-            'DE v1',
-        ]);
+        expect(
+            (await versionRepository.findMany(en.contentId)).map((v) => v.title)
+        ).toEqual(['EN v1']);
+        expect(
+            (await versionRepository.findMany(de.contentId)).map((v) => v.title)
+        ).toEqual(['DE v2', 'DE v1']);
     });
 
     it('cascades away when the entry is deleted', async () => {

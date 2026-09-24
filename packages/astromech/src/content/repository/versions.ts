@@ -19,14 +19,14 @@ export function createVersionsRepository<V extends Table>(
     const repository = createRepository(table, db);
 
     /** Every version of a content row, newest first. */
-    async function list(contentId: ContentRowId): Promise<TableSelect<V>[]> {
+    async function findMany(contentId: ContentRowId): Promise<TableSelect<V>[]> {
         return repository.findMany({
             where: { contentId },
             orderBy: [['version', 'desc']] as never,
         });
     }
 
-    async function get(id: string): Promise<TableSelect<V> | null> {
+    async function findOne(id: string): Promise<TableSelect<V> | null> {
         return repository.findOne({ id });
     }
 
@@ -49,5 +49,5 @@ export function createVersionsRepository<V extends Table>(
         return Number(row?.m ?? 0);
     }
 
-    return { list, get, create, latestNumber };
+    return { findMany, findOne, create, latestNumber };
 }

@@ -92,7 +92,7 @@ export async function getCanonicalGlobal(
 
     const repository = globalRepository(config);
     const id = await repository.idByKey(params.key);
-    const current = id === null ? null : await repository.get({ id, locale });
+    const current = id === null ? null : await repository.findOne({ id, locale });
     if (id === null || !current) {
         throw new ResourceNotFoundError('global', { id: params.key, locale });
     }

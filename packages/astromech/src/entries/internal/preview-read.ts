@@ -56,10 +56,10 @@ export async function queryPreviewEntries(
 
         let target: Entry = canonical;
         if (params.staged) {
-            const staged = await repository.staging?.getByCanonical(
-                canonical.id,
-                canonical.locale
-            );
+            const staged = await repository.staging?.findOne({
+                id: canonical.id,
+                locale: canonical.locale,
+            });
             if (!staged) continue;
             target = toEntry(staged);
         }
@@ -110,10 +110,10 @@ export async function getPreviewEntry(
 
     let target: Entry = canonical;
     if (params.staged) {
-        const staged = await repository.staging?.getByCanonical(
-            canonical.id,
-            canonical.locale
-        );
+        const staged = await repository.staging?.findOne({
+            id: canonical.id,
+            locale: canonical.locale,
+        });
         if (!staged) return null;
         target = toEntry(staged);
     }

@@ -120,7 +120,7 @@ export function createMediaRepository(config?: ResolvedConfig) {
         { decode: toMediaRow, defaultLocale }
     );
 
-    const { ownerKey, contentKey } = content.query;
+    const { ownerKey, contentKey } = content.kysely();
 
     /**
      * The library list predicate. Rows and count share it so the two cannot
@@ -151,32 +151,33 @@ export function createMediaRepository(config?: ResolvedConfig) {
         page?: ListPage,
         locale?: string
     ): Promise<MediaRow[]> {
-        return content.query.list({
+        return content.findMany({
             where: filter(params),
             orderBy: buildOrderBy(RESOURCE_SPECS.media.sortable, params?.sort, [
                 { field: 'createdAt', direction: 'desc' },
             ]),
-            page,
+            ...page,
             locale,
         });
     }
 
     async function count(params?: MediaQueryParams): Promise<number> {
-        return content.query.count(filter(params));
+        return content.count(filter(params));
     }
 
     /** Every media item's content row in `locale`, for the uniqueness scan. */
     async function listContent(locale: string): Promise<MediaRow[]> {
-        const raw = await content.query
+        const raw = await content
+            .kysely()
             .joined()
             .where((eb) => eb(`${contentKey}.locale`, '=', locale))
             .execute();
-        return content.query.rows(raw);
+        return content.decodeRows(raw);
     }
 
     /** One locale of one item, with no fallback. `findMedia` holds the fallback policy. */
     async function get(id: string, locale?: string): Promise<MediaRow | null> {
-        return content.get({ id, locale });
+        return content.findOne({ id, locale });
     }
 
     async function create(own: NewMediaTableRow, write: ContentWrite): Promise<MediaRow> {
@@ -209,6 +210,6 @@ export function createMediaRepository(config?: ResolvedConfig) {
         versions: content.versions,
         translatable: content.translatable,
         locales: content.locales,
-        anyLocale: content.anyLocale,
+        anyLocale: content.findAnyLocale,
     };
 }

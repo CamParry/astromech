@@ -16,7 +16,7 @@ import type {
     JoinedWhere,
     OwnerFilter,
 } from './types';
-import type { ListPage, SortClause } from '@/content/list';
+import type { SortClause } from '@/content/list';
 import type { Table } from '@/database/define-table';
 import type { GenericDb } from '@/database/repository/create-repository';
 import type { JsonObject } from '@/types/index';
@@ -196,7 +196,7 @@ export function createContentRepository<
     }
 
     /** Decode joined rows and attach each one's locale list. */
-    async function rows(raw: Record<string, unknown>[]): Promise<R[]> {
+    async function decodeRows(raw: Record<string, unknown>[]): Promise<R[]> {
         if (raw.length === 0) return [];
         const split_ = raw.map(split);
         const ids = Array.from(
@@ -231,27 +231,29 @@ export function createContentRepository<
                     ])
                 )
                 .execute();
-            for (const row of await rows(raw)) byId.set(row.id, row);
+            for (const row of await decodeRows(raw)) byId.set(row.id, row);
         }
         return read.map((row) => byId.get(row.id) ?? row);
     }
 
     /**
      * A page of the joined read under `where`, ordered by resource-row columns,
-     * each row read in `locale` where it has one. Omit `page` for every match.
+     * each row read in `locale` where it has one. Omit `limit` for every match.
      */
-    async function list(params: {
+    async function findMany(params: {
         where: JoinedWhere;
         orderBy: readonly SortClause[];
-        page?: ListPage | undefined;
+        limit?: number | undefined;
+        offset?: number | undefined;
         locale?: string | undefined;
     }): Promise<R[]> {
         let q = joined().where(params.where);
         for (const { field, direction } of params.orderBy) {
             q = q.orderBy(`${ownerKey}.${field}`, direction);
         }
-        if (params.page) q = q.limit(params.page.limit).offset(params.page.offset);
-        const read = await rows(await q.execute());
+        if (params.limit !== undefined) q = q.limit(params.limit);
+        if (params.offset !== undefined) q = q.offset(params.offset);
+        const read = await decodeRows(await q.execute());
         const { locale } = params;
         if (locale === undefined || locale === defaultLocale()) return read;
         return overlayLocale(read, locale);
@@ -259,7 +261,7 @@ export function createContentRepository<
 
     async function one(raw: Record<string, unknown> | undefined): Promise<R | null> {
         if (!raw) return null;
-        const [row] = await rows([raw]);
+        const [row] = await decodeRows([raw]);
         return row ?? null;
     }
 
@@ -285,7 +287,7 @@ export function createContentRepository<
         return hasStagedFor ? [eb(`${contentKey}.stagedFor`, 'is', null)] : [];
     }
 
-    async function get(
+    async function findOne(
         ref: ContentRef,
         options?: { includeTrashed?: boolean }
     ): Promise<R | null> {
@@ -298,7 +300,7 @@ export function createContentRepository<
         );
     }
 
-    async function anyLocale(
+    async function findAnyLocale(
         id: string,
         options?: { includeTrashed?: boolean }
     ): Promise<R | null> {
@@ -337,7 +339,7 @@ export function createContentRepository<
                 }) as never
             );
             return required(
-                await get(
+                await findOne(
                     { id, locale: content.locale ?? defaultLocale() },
                     {
                         includeTrashed: true,
@@ -382,7 +384,7 @@ export function createContentRepository<
         }
 
         return required(
-            await get({ id: ref.id, locale }, { includeTrashed: true }),
+            await findOne({ id: ref.id, locale }, { includeTrashed: true }),
             ref.id
         );
     }
@@ -410,8 +412,8 @@ export function createContentRepository<
     }
 
     const staging = {
-        getByCanonical: async (id: string, locale?: string): Promise<R | null> => {
-            return one(await findStaged(id, locale ?? defaultLocale()));
+        findOne: async (ref: ContentRef): Promise<R | null> => {
+            return one(await findStaged(ref.id, ref.locale ?? defaultLocale()));
         },
 
         create: async (ref: ContentRef, data: ContentWrite): Promise<R> => {
@@ -429,7 +431,7 @@ export function createContentRepository<
                     data,
                 }) as never
             );
-            return required(await staging.getByCanonical(ref.id, locale), ref.id);
+            return required(await staging.findOne({ id: ref.id, locale }), ref.id);
         },
 
         update: async (ref: ContentRef, data: ContentWrite): Promise<R> => {
@@ -439,7 +441,7 @@ export function createContentRepository<
 
             const { content } = split(existing);
             await contents.update(String(content['id']), patchValues(data) as never);
-            const updated = await staging.getByCanonical(ref.id, locale);
+            const updated = await staging.findOne({ id: ref.id, locale });
             if (!updated) throw noStaged(ref.id);
             return updated;
         },
@@ -467,7 +469,7 @@ export function createContentRepository<
                     ])
                 )
                 .execute();
-            return rows(raw);
+            return decodeRows(raw);
         },
 
         propagateFields: async (
@@ -508,15 +510,19 @@ export function createContentRepository<
     }
 
     return {
-        get,
-        anyLocale,
+        findOne,
+        findAnyLocale,
+        findMany,
+        count,
         create,
         update,
         delete: del,
         locales,
+        decodeRows,
+        overlayLocale,
         translatable,
         staging,
         versions: versionsRepository,
-        query: { db, ownerKey, contentKey, joined, count, rows, overlayLocale, list },
+        kysely: () => ({ db: db(), ownerKey, contentKey, joined }),
     };
 }

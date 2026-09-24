@@ -60,19 +60,19 @@ describe('get', () => {
     it('reads one locale and does not fall back to another', async () => {
         const created = await createSite();
 
-        expect((await repository.get({ id: created.id }))?.fields).toEqual({
+        expect((await repository.findOne({ id: created.id }))?.fields).toEqual({
             title: 'Site',
         });
-        expect(await repository.get({ id: created.id, locale: 'de' })).toBeNull();
-        expect(await repository.get({ id: 'nope' })).toBeNull();
+        expect(await repository.findOne({ id: created.id, locale: 'de' })).toBeNull();
+        expect(await repository.findOne({ id: 'nope' })).toBeNull();
     });
 
-    it('anyLocale prefers the default locale, else the first alphabetically', async () => {
+    it('findAnyLocale prefers the default locale, else the first alphabetically', async () => {
         const created = await createSite();
-        expect((await repository.anyLocale(created.id))?.locale).toBe('en');
+        expect((await repository.findAnyLocale(created.id))?.locale).toBe('en');
 
         const other = await repository.create({ key: 'footer' }, { locale: 'de' });
-        expect((await repository.anyLocale(other.id))?.locale).toBe('de');
+        expect((await repository.findAnyLocale(other.id))?.locale).toBe('de');
     });
 });
 
@@ -143,12 +143,14 @@ describe('translatable', () => {
 
         await repository.translatable.propagateFields(site.id, 'en', { shared: 'new' });
 
-        expect((await repository.get({ id: site.id, locale: 'de' }))?.fields).toEqual({
-            title: 'Seite',
-            shared: 'new',
-        });
+        expect((await repository.findOne({ id: site.id, locale: 'de' }))?.fields).toEqual(
+            {
+                title: 'Seite',
+                shared: 'new',
+            }
+        );
         // The excluded locale is untouched.
-        expect((await repository.get({ id: site.id }))?.fields).toEqual({
+        expect((await repository.findOne({ id: site.id }))?.fields).toEqual({
             title: 'Site',
             shared: 'old',
         });
@@ -177,7 +179,7 @@ describe('staging', () => {
         expect(rows.filter((row) => row.stagedFor !== null)).toHaveLength(1);
 
         // And it stays out of the canonical read and the locale list.
-        expect((await repository.get({ id: site.id }))?.fields).toEqual({
+        expect((await repository.findOne({ id: site.id }))?.fields).toEqual({
             title: 'Site',
         });
         expect(staged.locales).toEqual(['en']);
@@ -187,7 +189,7 @@ describe('staging', () => {
         const site = await createSite();
         await repository.staging.create({ id: site.id }, { fields: { title: 'Draft' } });
 
-        expect((await repository.staging.getByCanonical(site.id))?.fields).toEqual({
+        expect((await repository.staging.findOne({ id: site.id }))?.fields).toEqual({
             title: 'Draft',
         });
 
@@ -198,8 +200,8 @@ describe('staging', () => {
         expect(updated.fields).toEqual({ title: 'Draft 2' });
 
         await repository.staging.delete({ id: site.id });
-        expect(await repository.staging.getByCanonical(site.id)).toBeNull();
-        expect(await repository.get({ id: site.id })).not.toBeNull();
+        expect(await repository.staging.findOne({ id: site.id })).toBeNull();
+        expect(await repository.findOne({ id: site.id })).not.toBeNull();
     });
 
     it('refuses to write a staged row that does not exist', async () => {
@@ -249,15 +251,15 @@ describe('versions', () => {
 
         expect(await repository.versions.latestNumber(de.contentId)).toBe(2);
         expect(
-            (await repository.versions.list(de.contentId)).map((row) => row.version)
+            (await repository.versions.findMany(de.contentId)).map((row) => row.version)
         ).toEqual([2, 1]);
-        expect(await repository.versions.list(site.contentId)).toHaveLength(1);
+        expect(await repository.versions.findMany(site.contentId)).toHaveLength(1);
 
-        const [first] = await repository.versions.list(site.contentId);
-        expect((await repository.versions.get(first!.id))?.fields).toEqual({
+        const [first] = await repository.versions.findMany(site.contentId);
+        expect((await repository.versions.findOne(first!.id))?.fields).toEqual({
             title: 'EN v1',
         });
-        expect(await repository.versions.get('nope')).toBeNull();
+        expect(await repository.versions.findOne('nope')).toBeNull();
 
         await repository.delete(site.id);
         expect(await db.selectFrom('globalVersions').selectAll().execute()).toEqual([]);

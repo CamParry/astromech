@@ -31,7 +31,7 @@ export const listEntryVersions = defineServiceMethod({
             params.locale
         );
         if (!repository.versions) return [];
-        const rows = await repository.versions.list(entry.contentId);
+        const rows = await repository.versions.findMany(entry.contentId);
         return rows.map((row) => toEntryVersion(row, entry));
     },
 });

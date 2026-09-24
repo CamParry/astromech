@@ -26,7 +26,7 @@ export const createStagedGlobal = defineServiceMethod({
             locale: params.locale,
         });
 
-        const existing = await repository.staging.getByCanonical(id, locale);
+        const existing = await repository.staging.findOne({ id, locale });
         if (existing)
             throw new StagedChangeExistsError('global', { id: params.key, locale });
 

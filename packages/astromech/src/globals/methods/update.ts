@@ -64,8 +64,8 @@ export const updateGlobal = defineServiceMethod({
             id === null
                 ? null
                 : staged
-                  ? await repository.staging.getByCanonical(id, locale)
-                  : await repository.get({ id, locale });
+                  ? await repository.staging.findOne({ id, locale })
+                  : await repository.findOne({ id, locale });
         // A staged write addresses a row `createStaged` made; there is nothing
         // here to create one from.
         if (staged && (id === null || !current)) {

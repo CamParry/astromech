@@ -333,7 +333,7 @@ describe('staging (forward versioning)', () => {
             canonical.contentId
         );
 
-        const found = await repository.staging.getByCanonical(canonical.id);
+        const found = await repository.staging.findOne({ id: canonical.id });
         expect(found?.contentId).toBe(staged.contentId);
     });
 
@@ -371,7 +371,7 @@ describe('staging (forward versioning)', () => {
 
         await repository.staging.delete({ id: canonical.id });
 
-        expect(await repository.staging.getByCanonical(canonical.id)).toBeNull();
+        expect(await repository.staging.findOne({ id: canonical.id })).toBeNull();
         expect(await repository.get({ type: 'post', id: canonical.id })).not.toBeNull();
     });
 });
@@ -437,12 +437,12 @@ describe('versions sub-surface', () => {
         });
 
         expect(await repository.versions.latestNumber(contentId)).toBe(2);
-        const list = await repository.versions.list(contentId);
+        const list = await repository.versions.findMany(contentId);
         expect(list.map((v) => v.version)).toEqual([2, 1]);
 
         const one = list.find((v) => v.version === 1);
         if (!one) throw new Error('expected version 1');
-        const got = await repository.versions.get(one.id);
+        const got = await repository.versions.findOne(one.id);
         expect(got?.title).toBe('V1');
     });
 
@@ -464,7 +464,7 @@ describe('versions sub-surface', () => {
 
         expect(await repository.versions.latestNumber(e.contentId)).toBe(1);
         expect(await repository.versions.latestNumber(de.contentId)).toBe(0);
-        expect(await repository.versions.list(de.contentId)).toEqual([]);
+        expect(await repository.versions.findMany(de.contentId)).toEqual([]);
     });
 });
 

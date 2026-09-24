@@ -10,11 +10,11 @@ import { ResourceNotFoundError } from '@/errors/resource';
  *   is what the 404 names, a global's key or an entry's id.
  */
 export async function requireStagedChange<R>(
-    staging: { getByCanonical(id: string, locale?: string): Promise<R | null> },
+    staging: { findOne(ref: { id: string; locale: string }): Promise<R | null> },
     kind: 'entry' | 'global',
     address: { rowId: string; id: string; locale: string }
 ): Promise<R> {
-    const staged = await staging.getByCanonical(address.rowId, address.locale);
+    const staged = await staging.findOne({ id: address.rowId, locale: address.locale });
     if (!staged) {
         throw new ResourceNotFoundError(kind, {
             id: address.id,

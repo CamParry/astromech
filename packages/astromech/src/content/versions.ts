@@ -78,7 +78,7 @@ export async function restoreVersion<R, V extends StoredVersion>(params: {
     }) => Promise<R>;
 }): Promise<R> {
     const { spec, versions, current } = params;
-    const version = await versions.get(params.versionId);
+    const version = await versions.findOne(params.versionId);
     if (!version || version.contentId !== current.contentId) {
         throw new ResourceNotFoundError(spec.kind, params.address);
     }

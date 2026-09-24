@@ -27,7 +27,7 @@ export const listMediaVersions = defineServiceMethod({
         const current = await repository.get(params.id, locale);
         if (!current) throw new ResourceNotFoundError('media', { id: params.id, locale });
 
-        const rows = await repository.versions.list(current.contentId);
+        const rows = await repository.versions.findMany(current.contentId);
         return rows.map((row) => ({
             id: row.id,
             // A version row names the content row it snapshots, so the item and

@@ -21,7 +21,7 @@ export const getStagedEntry = defineServiceMethod({
     mutates: false,
     async handler(params, ctx): Promise<Entry | null> {
         const { staging, canonical } = await resolveStagingTarget(ctx.config, params);
-        const staged = await staging.getByCanonical(params.id, canonical.locale);
+        const staged = await staging.findOne({ id: params.id, locale: canonical.locale });
         return staged ? toEntry(staged) : null;
     },
 });

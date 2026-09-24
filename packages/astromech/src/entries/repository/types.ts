@@ -151,8 +151,8 @@ export type EntryRepository<R extends EntryRow = EntryRow> = {
 
     /** Present iff `supports` includes 'versioning'. Keyed on the content row. */
     versions?: {
-        list(contentId: ContentRowId): Promise<EntryVersionRow[]>;
-        get(versionId: string): Promise<EntryVersionRow | null>;
+        findMany(contentId: ContentRowId): Promise<EntryVersionRow[]>;
+        findOne(versionId: string): Promise<EntryVersionRow | null>;
         create(snapshot: NewEntryVersionSnapshot): Promise<void>;
         latestNumber(contentId: ContentRowId): Promise<number>;
     };
@@ -160,7 +160,7 @@ export type EntryRepository<R extends EntryRow = EntryRow> = {
     /** Present iff `supports` includes 'staging'. */
     staging?: {
         /** The staged change for one locale of an entry, or null. */
-        getByCanonical(id: string, locale?: string): Promise<R | null>;
+        findOne(ref: EntryRef): Promise<R | null>;
         /** Add a second content row for that locale, staged for the canonical. */
         create(ref: EntryRef, data: EntryWrite): Promise<R>;
         /** Write that locale's staged content row; it must already exist. */

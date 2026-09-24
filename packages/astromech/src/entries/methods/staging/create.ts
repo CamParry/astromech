@@ -27,7 +27,7 @@ export const createStagedEntry = defineServiceMethod({
         const { staging, canonical } = await resolveStagingTarget(ctx.config, params);
         const user = ctx.user;
 
-        const existing = await staging.getByCanonical(id, canonical.locale);
+        const existing = await staging.findOne({ id, locale: canonical.locale });
         if (existing) {
             throw new StagedChangeExistsError('entry', { id, locale: canonical.locale });
         }

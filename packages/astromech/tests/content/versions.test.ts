@@ -25,8 +25,8 @@ function recordingVersions(latestNumber = 0): {
     return {
         written,
         versions: {
-            list: () => Promise.resolve([]),
-            get: () => Promise.resolve(null),
+            findMany: () => Promise.resolve([]),
+            findOne: () => Promise.resolve(null),
             create: (snapshot) => {
                 written.push(snapshot);
                 return Promise.resolve();
