@@ -21,7 +21,8 @@ const STRUCTURAL_TYPES = 'group|accordion|tabs|tab|repeater|blocks|tree';
 
 /**
  * Each entry: `name`, `pattern` (tested per line), `only` / `except` (path prefixes from the
- * repo root) and `why` (printed under the name). Add a pattern by adding a line.
+ * repo root, or regular expressions over that path) and `why` (printed under the name). Add a
+ * pattern by adding a line.
  */
 const PATTERNS = [
     {
@@ -56,6 +57,12 @@ const PATTERNS = [
         name: 'New NotFound or Validation error class',
         pattern: /\bclass\s+\w+(NotFoundError|ValidationError)\b/,
         why: 'Errors of these kinds already exist; check the shared ones first.',
+    },
+    {
+        name: 'Repository built outside a repository file',
+        pattern: /\bcreate\w*Repository\(/,
+        except: [/\/repository(\.ts$|\/)/],
+        why: 'A service reaches a repository through its getXRepository() registry accessor; only repository files build one.',
     },
     {
         name: '`collection` as an identifier',
@@ -216,13 +223,17 @@ function isSource(path) {
     return SOURCE_FILE.test(path) && !TEST_FILE.test(path);
 }
 
+function inPath(path, scope) {
+    return typeof scope === 'string' ? path.startsWith(scope) : scope.test(path);
+}
+
 function reportPatterns(changed) {
     const out = [];
     for (const { name, pattern, only, except, why } of PATTERNS) {
         const inScope = changed.filter(
             ({ path }) =>
-                (only === undefined || only.some((prefix) => path.startsWith(prefix))) &&
-                !(except ?? []).some((prefix) => path.startsWith(prefix))
+                (only === undefined || only.some((scope) => inPath(path, scope))) &&
+                !(except ?? []).some((scope) => inPath(path, scope))
         );
         let addedCount = 0;
         let removedCount = 0;
