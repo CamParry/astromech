@@ -74,18 +74,22 @@ visible where it happens and leaves the judgement to review.
 
 ## Names
 
-- [ ] Retire `collection` for an entry type and `record` for an entry: rename
-      the 120+ `collection` identifiers and `EntryRecord`.
+- [x] Retire `collection` for an entry type and `record` for an entry:
+      `EntryRecord` is `EntryWithContentId`, the admin's `am-collection-`
+      classes are `am-entry-`. Kept: "collection" meaning a gathering of
+      things, and Astro's content-collection names in the type generator.
 - [x] Lookup verbs: `requireCanonical` and `requireRole` become
       `getCanonicalGlobal` and `getRole`; the `code` skill gains the `find*`
       returns-null rule, applied as `findUser` and `findMedia`. `getSession`
       keeps its name: it returns null and mirrors better-auth's
       `api.getSession`.
-- [ ] `XTableRow`/`NewXTableRow` for table rows and `XRow` for joined rows;
+- [x] `XTableRow`/`NewXTableRow` for table rows and `XRow` for joined rows;
       `toX` mappers (`asEntry`, `asGlobal`); singular repository factories;
       flatten `globals/repository/`; one name for a resource's plain
       repository (users' `accounts`, media's `files`); `globalGate`,
       `globalReadGate`, `globalAddressSchema`, `toUserRow`;
-      `entries/unique.ts` into `internal/`; remove the banner headers.
-- [ ] `code` skill sync: the repository-directory rule, the `ids` example and
-      the `ServiceDefinition` note.
+      `entries/unique.ts` into `internal/`; remove the banner headers. The table repository is `owners`;
+      the gate, schema and `toUserRow` names, `entries/unique.ts` and the
+      banners had already gone.
+- [x] `code` skill sync: the repository-directory rule, the `ids` example and
+      the `ServiceDefinition` note. The `ids` example already matched.

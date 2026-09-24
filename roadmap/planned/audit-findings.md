@@ -8,7 +8,7 @@ them by root cause and orders the work. Tick a line when its file moves to
 
 The findings share one pattern: consistency has been restored by periodic
 sweeps (17 of them in `roadmap/completed/`) rather than kept, so each drift
-returned. `planned/conventions-and-drift.md` holds the answer: a drift report
+returned. `completed/conventions-and-drift.md` holds the answer: a drift report
 read at review, and studying where a pattern repeats before changing it.
 
 ## By root cause
@@ -35,9 +35,9 @@ read at review, and studying where a pattern repeats before changing it.
 - [x] **Admin pages share no composition.** Copied staging controls, 16
       mutation bodies, a duplicate key factory, a stale dashboard, the missing
       AI-context globals case: `completed/admin-resource-views.md`.
-- [ ] **Drift goes unnoticed until a sweep.** The drift report, test-only
+- [x] **Drift goes unnoticed until a sweep.** The drift report, test-only
       exports, typed lint, retired words, lookup verbs, names, stale comments:
-      `planned/conventions-and-drift.md`.
+      `completed/conventions-and-drift.md`.
 - [x] The unused `settings` module, removed:
       `roadmap/completed/remove-settings-module.md`.
 - [x] Plugin raw routes kept as closures, and the stale `virtual:` reasoning
