@@ -63,10 +63,13 @@ export type CellRenderContext = {
     /** Names by user id, for the author columns; empty when unreadable. */
     authorNames: Map<string, string>;
 };
-export type CellRendererProps = {
-    entry: Entry;
+/** What a cell renderer receives: the row, which is an entry unless a caller says otherwise. */
+export type CellRendererProps<Row = Entry> = {
+    row: Row;
     column: TableColumn;
     value: unknown;
     ctx: CellRenderContext;
 };
-export type CellRenderer = (props: CellRendererProps) => React.ReactNode;
+export type CellRenderer<Row = Entry> = (
+    props: CellRendererProps<Row>
+) => React.ReactNode;

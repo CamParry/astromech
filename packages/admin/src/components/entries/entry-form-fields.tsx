@@ -1,53 +1,15 @@
 /**
- * The form pieces the entry edit and create pages and the global edit page
- * share, each bound to the form `useEntryForm` builds: the two-column layout,
- * the title, slug and status controls, and a column of declared fields.
+ * The entry's own controls, which the entry edit and create pages and the
+ * global edit page place inside `<FieldsForm>`: the title, slug and status,
+ * each bound to the form `useEntryForm` builds.
  */
 
-import type { EntryForm, EntryFormState } from '../../hooks/use-entry-form';
-import type { Field } from 'astromech';
+import type { EntryForm } from '../../hooks/use-entry-form';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-    FieldErrorsProvider,
-    FieldWarningsProvider,
-} from '../fields/field-errors-context';
-import { FieldValidationProvider } from '../fields/field-validation-context';
 import { Input } from '../ui/input';
-import { FormLayout, FormLayoutContent, Stack } from '../ui/page';
 import { Panel } from '../ui/panel';
-import { EntryFieldColumn } from './entry-fields-renderer';
-import { EntryFormErrors } from './entry-form-errors';
 import { PublishPanel } from './publish-panel';
-
-/** Main column left, sidebar right, under the form's validation providers. */
-export function EntryFormLayout({
-    state,
-    main,
-    sidebar,
-}: {
-    state: EntryFormState;
-    main: React.ReactNode;
-    sidebar: React.ReactNode;
-}): React.ReactElement {
-    return (
-        <>
-            <EntryFormErrors messages={state.formErrors} />
-            <FieldValidationProvider value={state.fieldValidation}>
-                <FieldErrorsProvider value={state.fieldErrors}>
-                    <FieldWarningsProvider value={state.fieldWarnings}>
-                        <FormLayout>
-                            <FormLayoutContent>
-                                <Stack gap={8}>{main}</Stack>
-                                <Stack gap={8}>{sidebar}</Stack>
-                            </FormLayoutContent>
-                        </FormLayout>
-                    </FieldWarningsProvider>
-                </FieldErrorsProvider>
-            </FieldValidationProvider>
-        </>
-    );
-}
 
 /** The required title input, in its own panel. */
 export function TitleField({
@@ -155,32 +117,6 @@ export function StatusField({
                         />
                     )}
                 </form.Field>
-            )}
-        </form.Field>
-    );
-}
-
-/** A column of declared fields, reading and writing the form's `fields`. */
-export function FieldColumn({
-    form,
-    nodes,
-    disabled = false,
-}: {
-    form: EntryForm;
-    nodes: Field[];
-    disabled?: boolean;
-}): React.ReactElement {
-    return (
-        <form.Field name="fields">
-            {(field) => (
-                <EntryFieldColumn
-                    nodes={nodes}
-                    values={field.state.value}
-                    onChange={(name, value) =>
-                        field.handleChange({ ...field.state.value, [name]: value })
-                    }
-                    disabled={disabled}
-                />
             )}
         </form.Field>
     );

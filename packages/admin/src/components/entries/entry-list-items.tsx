@@ -1,6 +1,6 @@
 /**
- * One entry in the entries list, as a table row or a grid card, and the row
- * actions both offer in their menu and on right-click.
+ * One entry in the entries grid as a card, and the row actions the card and
+ * the table row both offer in their menu and on right-click.
  */
 
 import type { DropdownItem } from '../ui/dropdown';
@@ -13,10 +13,8 @@ import { Link } from '../../rendering/cells/link';
 import { statusVariant } from '../../rendering/cells/status-variant';
 import { entryEditPath } from '../../utilities/entry-admin-path';
 import { Badge } from '../ui/badge';
-import { Checkbox } from '../ui/checkbox';
 import { useContextMenu } from '../ui/context-menu';
 import { Dropdown } from '../ui/dropdown';
-import { Table } from '../ui/table';
 
 export type RowActionsProps = {
     entry: Entry;
@@ -37,7 +35,8 @@ export type RowActionsProps = {
     };
 };
 
-function buildRowItems(props: RowActionsProps): DropdownItem[] {
+/** The row actions an entry offers, in its menu and on right-click. */
+export function buildRowItems(props: RowActionsProps): DropdownItem[] {
     const {
         entry,
         isTrash,
@@ -89,83 +88,6 @@ function buildRowItems(props: RowActionsProps): DropdownItem[] {
         });
     }
     return items;
-}
-
-type EntryTableRowProps = RowActionsProps & {
-    selected: boolean;
-    onToggleSelect: (id: string) => void;
-    columns: TableColumn[];
-    navigate: (opts: { id: string; locale: string }) => void;
-    configuredLocales: string[];
-    authorNames: Map<string, string>;
-};
-
-export function EntryTableRow(props: EntryTableRowProps): React.ReactElement {
-    const {
-        entry,
-        isTrash,
-        basePath,
-        selected,
-        onToggleSelect,
-        columns,
-        navigate,
-        configuredLocales,
-        authorNames,
-    } = props;
-    const { t } = useTranslation();
-    const items = buildRowItems(props);
-    const { onContextMenu, contextMenuNode } = useContextMenu(items);
-    const ctx: CellRenderContext = { basePath, configuredLocales, isTrash, authorNames };
-
-    return (
-        <>
-            <Table.Row
-                key={entry.id}
-                onContextMenu={onContextMenu}
-                onClick={
-                    !isTrash
-                        ? () =>
-                              void navigate({
-                                  id: entry.id,
-                                  locale: entry.locale,
-                              })
-                        : undefined
-                }
-                style={!isTrash ? { cursor: 'pointer' } : undefined}
-            >
-                <Table.Td onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                        checked={selected}
-                        onChange={() => onToggleSelect(entry.id)}
-                    />
-                </Table.Td>
-                {columns.map((col) => {
-                    const value =
-                        col.source === 'field'
-                            ? (entry.fields as Record<string, unknown>)[col.key]
-                            : (entry as Record<string, unknown>)[col.key];
-                    return (
-                        <Table.Td key={col.key}>
-                            {getCellRenderer(col.kind)({
-                                entry,
-                                column: col,
-                                value,
-                                ctx,
-                            })}
-                        </Table.Td>
-                    );
-                })}
-                <Table.Td onClick={(e) => e.stopPropagation()}>
-                    <Dropdown
-                        icon={<MoreHorizontalIcon size={16} />}
-                        ariaLabel={t('common.actions')}
-                        items={items}
-                    />
-                </Table.Td>
-            </Table.Row>
-            {contextMenuNode}
-        </>
-    );
 }
 
 type EntryCardProps = RowActionsProps & {
@@ -255,7 +177,7 @@ export function EntryCard(props: EntryCardProps): React.ReactElement {
                         </span>
                         <span>
                             {getCellRenderer(col.kind)({
-                                entry,
+                                row: entry,
                                 column: col,
                                 value: (entry.fields as Record<string, unknown>)[col.key],
                                 ctx,

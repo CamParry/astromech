@@ -25,11 +25,11 @@ import {
 import { Pagination } from '../../../components/ui/pagination';
 import { Toolbar, ToolbarEnd, ToolbarStart } from '../../../components/ui/toolbar';
 import { UploadButton } from '../../../components/ui/upload-button';
+import { useSelection } from '../../../components/ui/use-selection';
 import { useAiContext } from '../../../context/ai-context';
 import { useBulkDeleteMedia } from '../../../hooks/media';
 import { useMediaBrowser } from '../../../hooks/use-media-browser';
 import { usePermissions } from '../../../hooks/use-permissions';
-import { useSelection } from '../../../hooks/use-selection';
 import { useUploadMedia } from '../../../hooks/use-upload-media';
 import { useViewMode } from '../../../hooks/use-view-mode';
 import { isSortKey, MEDIA_ACCEPT, TYPE_FILTER_VALUES } from '../../../types/media';

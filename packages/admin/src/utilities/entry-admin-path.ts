@@ -5,7 +5,9 @@
  * row, when one is being edited) rides in the search params.
  */
 
+import type { ListSearch } from '../components/ui/use-list-state';
 import adminConfig from 'virtual:astromech/admin-config';
+import { validateListSearch } from '../components/ui/use-list-state';
 
 /** Which row of an entry an edit link addresses. */
 export type EntryEditSearch = {
@@ -88,23 +90,18 @@ export function validateEntryEditSearch(
 
 /**
  * URL search-param shape for the entries list, shared by the site and plugin
- * list routes so both keep the same filter, sort and page state.
+ * list routes: the list's search, sort and page plus the status and locale filters.
  */
-export type EntriesListSearch = {
-    q?: string;
+export type EntriesListSearch = ListSearch & {
     status?: string;
     locale?: string;
-    /** `${columnKey}:${'asc' | 'desc'}` */
-    sort?: string;
-    page?: number;
 };
 
 /** Parse/validate raw URL search into the typed list-search shape. */
 export function validateEntriesListSearch(
     search: Record<string, unknown>
 ): EntriesListSearch {
-    const out: EntriesListSearch = {};
-    if (typeof search['q'] === 'string' && search['q']) out.q = search['q'];
+    const out: EntriesListSearch = validateListSearch(search);
     if (
         typeof search['status'] === 'string' &&
         search['status'] &&
@@ -115,16 +112,5 @@ export function validateEntriesListSearch(
     if (typeof search['locale'] === 'string' && search['locale']) {
         out.locale = search['locale'];
     }
-    if (typeof search['sort'] === 'string' && /^.+:(asc|desc)$/.test(search['sort'])) {
-        out.sort = search['sort'];
-    }
-    const pageRaw = search['page'];
-    const pageNum =
-        typeof pageRaw === 'number'
-            ? pageRaw
-            : typeof pageRaw === 'string'
-              ? Number(pageRaw)
-              : NaN;
-    if (Number.isFinite(pageNum) && pageNum > 1) out.page = pageNum;
     return out;
 }

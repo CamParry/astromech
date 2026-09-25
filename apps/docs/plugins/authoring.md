@@ -358,6 +358,130 @@ export default function OverviewPage() {
 }
 ```
 
+#### A list of your own records
+
+`useListState()` and `<DataList>`, from `astromech/ui`, give a page the list
+the entry and user screens use. They take rows and callbacks, so they work over
+whatever your service methods return.
+
+- `useListState({ pageSize })` reads the search text (`q`), the sort and the
+  page from the URL, and returns them with the `limit` and `offset` to fetch.
+  Its setters (`setQuery`, `setSort`, `setPage`, `setFilters`) write the URL,
+  and a change to the search, the sort or a filter returns to the first page.
+- `<DataList>` renders the toolbar, the table, pagination, and the loading,
+  error and empty states. A column is `{ key, label, sortable?, link?, render }`.
+  `rowHref` makes a click anywhere in the row open it, and `link` makes that
+  column's cell the link a keyboard reaches. `rowActions` returns a row's menu.
+  `bulkActions` adds row selection: each is `{ label, run(ids), tone? }`, and a
+  `tone: 'danger'` action asks before it runs.
+
+```tsx
+// admin/pages/redirects-page.tsx
+import { useQuery } from '@tanstack/react-query';
+import { DataList, useListState } from 'astromech/ui';
+import { useAstromechPlugin } from 'astromech/ui/app';
+
+type Redirect = { id: string; from: string; to: string; statusCode: number };
+type RedirectsService = {
+    list(params: { search: string; limit: number; offset: number }): Promise<{
+        rows: Redirect[];
+        pages: number;
+    }>;
+    delete(params: { ids: string[] }): Promise<void>;
+};
+
+export default function RedirectsPage() {
+    const { service } = useAstromechPlugin();
+    const redirects = service as RedirectsService;
+    const list = useListState({ pageSize: 20 });
+    const { data, isLoading, isError } = useQuery({
+        queryKey: ['redirects', list.q, list.page],
+        queryFn: () =>
+            redirects.list({ search: list.q, limit: list.limit, offset: list.offset }),
+    });
+
+    return (
+        <DataList<Redirect>
+            rows={data?.rows ?? []}
+            columns={[
+                { key: 'from', label: 'From', link: true, render: (row) => row.from },
+                { key: 'to', label: 'To', render: (row) => row.to },
+                { key: 'statusCode', label: 'Status', render: (row) => row.statusCode },
+            ]}
+            isLoading={isLoading}
+            isError={isError}
+            search={list.q}
+            onSearch={list.setQuery}
+            page={list.page}
+            pages={data?.pages ?? 1}
+            onPage={list.setPage}
+            rowHref={(row) => `/plugin/redirects/${row.id}`}
+            bulkActions={[
+                {
+                    label: 'Delete',
+                    tone: 'danger',
+                    run: (ids) => redirects.delete({ ids }),
+                },
+            ]}
+        />
+    );
+}
+```
+
+#### A form over your own records
+
+`useFieldsForm` and `<FieldsForm>`, also from `astromech/ui/app`, give a page
+the form the entry and user screens use, over field definitions you hold. The
+hook takes the definitions, the `operation` (`'create'` or `'update'`), the
+`defaultValues`, an `onSubmit` that writes and resolves to the saved record, and
+the `namespace` labels resolve against. It runs the field pipeline before a
+submit goes out. When `onSubmit` rejects with a 422, it puts each message in
+the error's `details.fields` on the field it names and shows `details.form` in a
+banner above the form. It also saves on Cmd+S, and asks before a tab with
+unsaved changes closes.
+
+```tsx
+// admin/pages/redirect-form.tsx
+import { Button } from 'astromech/ui';
+import { FieldsForm, useAstromechPlugin, useFieldsForm } from 'astromech/ui/app';
+import { redirectFields } from '../../fields/redirect';
+
+type Redirect = { id: string; from: string; to: string; statusCode: number };
+type RedirectsService = {
+    update(params: { id: string; data: Record<string, unknown> }): Promise<Redirect>;
+};
+
+export function RedirectForm({ redirect }: { redirect: Redirect }) {
+    const { plugin, service } = useAstromechPlugin();
+    const redirects = service as RedirectsService;
+    const { id, ...values } = redirect;
+
+    const form = useFieldsForm({
+        fieldDefinitions: redirectFields,
+        operation: 'update',
+        namespace: plugin,
+        defaultValues: { fields: values },
+        onSubmit: ({ fields }) => redirects.update({ id, data: fields }),
+    });
+
+    return (
+        <FieldsForm
+            form={form}
+            sidebar={<Button onClick={() => form.handleSubmit()}>Save</Button>}
+        />
+    );
+}
+```
+
+The field values sit under `fields`. A key the form edits outside the field
+definitions, such as a user's `email`, sits beside `fields` in `defaultValues`,
+and a control binds to it through `form.form.Field`, TanStack Form's own
+component. `<FieldsForm>` renders every field in its main column unless you
+pass `main`; to place a run of fields yourself, use
+`<FieldColumn form={form} fields={…} />`. Pass `readOnly: true` to render every
+field disabled and make `handleSubmit` do nothing, as for a record your service
+cannot update.
+
 ### Globals
 
 A plugin's editor-owned, exactly-one values are globals, declared in a

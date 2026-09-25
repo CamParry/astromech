@@ -7,7 +7,7 @@
 
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { useSelection } from '@/admin/hooks/use-selection';
+import { useSelection } from '@/admin/components/ui/use-selection';
 
 const PAGE_ONE = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
 const PAGE_TWO = [{ id: 'd' }, { id: 'e' }];

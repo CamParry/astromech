@@ -1,11 +1,11 @@
 import type { CellRenderer } from 'astromech';
 import { Link } from './link';
 
-export const TitleCell: CellRenderer = ({ entry, ctx }) =>
+export const TitleCell: CellRenderer = ({ row, ctx }) =>
     ctx.isTrash ? (
-        <span className="am-text-muted">{entry.title}</span>
+        <span className="am-text-muted">{row.title}</span>
     ) : (
-        <Link to={`${ctx.basePath}/${entry.id}`} className="am-link">
-            {entry.title}
+        <Link to={`${ctx.basePath}/${row.id}`} className="am-link">
+            {row.title}
         </Link>
     );

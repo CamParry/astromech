@@ -29,7 +29,7 @@ function renderCell(value: unknown, names: [string, string][]) {
     };
     return render(
         <AuthorCell
-            entry={{ id: 'e1' } as unknown as Entry}
+            row={{ id: 'e1' } as unknown as Entry}
             column={COLUMN}
             value={value}
             ctx={ctx}

@@ -16,8 +16,9 @@ import { EntryNamespaceProvider } from '../../i18n/entry-namespace';
 import { resolveLabel } from '../../i18n/labels';
 import { defaultContentLocale } from '../../utilities/content-locale';
 import { globalBasePath, globalEditPath } from '../../utilities/global-admin-path';
-import { EntryFormLayout, FieldColumn, StatusField } from '../entries/entry-form-fields';
+import { StatusField } from '../entries/entry-form-fields';
 import { EditActions, EditBanners, VersionsLink } from '../entries/staging-controls';
+import { FieldColumn, FieldsForm } from '../forms/fields-form';
 import { NotFoundPage } from '../layout/not-found-page';
 import { LocaleSwitcher } from '../translations/locale-switcher';
 import { Breadcrumb } from '../ui/breadcrumb';
@@ -131,14 +132,10 @@ function GlobalEditBody({
 
                 <PageContent>
                     <EditBanners controller={controller} title={label} />
-                    <EntryFormLayout
-                        state={controller}
+                    <FieldsForm
+                        form={controller}
                         main={
-                            <FieldColumn
-                                form={form}
-                                nodes={config.fields.main}
-                                disabled={isReadOnly}
-                            />
+                            <FieldColumn form={controller} fields={config.fields.main} />
                         }
                         sidebar={
                             <>
@@ -150,9 +147,8 @@ function GlobalEditBody({
                                     />
                                 )}
                                 <FieldColumn
-                                    form={form}
-                                    nodes={config.fields.sidebar}
-                                    disabled={isReadOnly}
+                                    form={controller}
+                                    fields={config.fields.sidebar}
                                 />
                                 {capabilities.versioning && !isStaged && (
                                     <VersionsLink controller={controller} />

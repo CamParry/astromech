@@ -1,6 +1,6 @@
 /**
  * Entry create page for one entry type id, the site's or a plugin's: the entry
- * form's pieces over `useEntryForm`, and a modal for a non-default locale.
+ * form over `useEntryForm`, and a modal for a non-default locale.
  */
 
 import type { UseAdminEntryTypeResult } from '../../hooks/use-admin-entry-type';
@@ -20,19 +20,14 @@ import { EntryNamespaceProvider } from '../../i18n/entry-namespace';
 import { resolveForm } from '../../rendering/resolve';
 import { defaultContentLocale } from '../../utilities/content-locale';
 import { entryEditPath, entryTypeBasePath } from '../../utilities/entry-admin-path';
+import { FieldColumn, FieldsForm } from '../forms/fields-form';
 import { NotFoundPage } from '../layout/not-found-page';
 import { Breadcrumb } from '../ui/breadcrumb';
 import { Button } from '../ui/button';
 import { ButtonGroup, Page, PageContent, PageHeader, PageTitle } from '../ui/page';
 import { useToast } from '../ui/toast';
 import { CreateLocaleModal } from './create-locale-modal';
-import {
-    EntryFormLayout,
-    FieldColumn,
-    SlugField,
-    StatusField,
-    TitleField,
-} from './entry-form-fields';
+import { SlugField, StatusField, TitleField } from './entry-form-fields';
 
 export function EntryNewPage({
     type,
@@ -108,7 +103,7 @@ function EntryNewBody({
             handleCreated(entry);
         },
     });
-    const { form, saveMutation, handleSave, handlePublish } = entryForm;
+    const { form, mutation, handleSave, handlePublish } = entryForm;
 
     function handleCreated(entry: Entry): void {
         toast({
@@ -182,7 +177,7 @@ function EntryNewBody({
                                     variant="secondary"
                                     size="sm"
                                     onClick={handleSave}
-                                    disabled={saveMutation.isPending}
+                                    disabled={mutation.isPending}
                                 >
                                     {t('entries.saveAsUnpublished')}
                                 </Button>
@@ -190,7 +185,7 @@ function EntryNewBody({
                                     variant="primary"
                                     size="sm"
                                     onClick={handlePublish}
-                                    loading={saveMutation.isPending}
+                                    loading={mutation.isPending}
                                 >
                                     {t('common.publish')}
                                 </Button>
@@ -200,7 +195,7 @@ function EntryNewBody({
                                 variant="primary"
                                 size="sm"
                                 onClick={handleSave}
-                                loading={saveMutation.isPending}
+                                loading={mutation.isPending}
                             >
                                 {t('common.save')}
                             </Button>
@@ -209,8 +204,8 @@ function EntryNewBody({
                 </PageHeader>
 
                 <PageContent>
-                    <EntryFormLayout
-                        state={entryForm}
+                    <FieldsForm
+                        form={entryForm}
                         main={
                             <>
                                 {hasTitle && (
@@ -219,14 +214,14 @@ function EntryNewBody({
                                         placeholder={`${config.single} title`}
                                     />
                                 )}
-                                <FieldColumn form={form} nodes={main} />
+                                <FieldColumn form={entryForm} fields={main} />
                             </>
                         }
                         sidebar={
                             <>
                                 {hasStatuses && <StatusField form={form} />}
                                 {hasSlug && <SlugField form={form} />}
-                                <FieldColumn form={form} nodes={sidebar} />
+                                <FieldColumn form={entryForm} fields={sidebar} />
                             </>
                         }
                     />

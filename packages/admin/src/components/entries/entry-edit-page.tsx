@@ -23,6 +23,7 @@ import { resolveForm } from '../../rendering/resolve';
 import { defaultContentLocale } from '../../utilities/content-locale';
 import { formatDatetime } from '../../utilities/dates';
 import { entryEditPath, entryTypeBasePath } from '../../utilities/entry-admin-path';
+import { FieldColumn, FieldsForm } from '../forms/fields-form';
 import { NotFoundPage } from '../layout/not-found-page';
 import { LocaleSwitcher } from '../translations/locale-switcher';
 import { Breadcrumb } from '../ui/breadcrumb';
@@ -38,13 +39,7 @@ import {
 import { StatusBadge } from '../ui/status-badge';
 import { Tooltip } from '../ui/tooltip';
 import { DeleteEntryModal } from './delete-entry-modal';
-import {
-    EntryFormLayout,
-    FieldColumn,
-    SlugField,
-    StatusField,
-    TitleField,
-} from './entry-form-fields';
+import { SlugField, StatusField, TitleField } from './entry-form-fields';
 import { entryLabel } from './entry-label';
 import { EditActions, EditBanners, VersionsLink } from './staging-controls';
 
@@ -291,18 +286,14 @@ function EntryEditBody({
                         controller={controller}
                         title={controller.canonical?.title ?? config.single}
                     />
-                    <EntryFormLayout
-                        state={controller}
+                    <FieldsForm
+                        form={controller}
                         main={
                             <>
                                 {hasTitle && (
                                     <TitleField form={form} disabled={isReadOnly} />
                                 )}
-                                <FieldColumn
-                                    form={form}
-                                    nodes={main}
-                                    disabled={isReadOnly}
-                                />
+                                <FieldColumn form={controller} fields={main} />
                             </>
                         }
                         sidebar={
@@ -317,11 +308,7 @@ function EntryEditBody({
                                 {hasSlug && (
                                     <SlugField form={form} disabled={isReadOnly} />
                                 )}
-                                <FieldColumn
-                                    form={form}
-                                    nodes={sidebar}
-                                    disabled={isReadOnly}
-                                />
+                                <FieldColumn form={controller} fields={sidebar} />
                                 {capabilities.versioning && !isStaged && (
                                     <VersionsLink controller={controller} />
                                 )}

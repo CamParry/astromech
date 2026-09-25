@@ -38,6 +38,8 @@ declare module '@tanstack/react-query' {
 export type AdminMutationCallbacks<TData, TVariables> = {
     onSuccess?: (data: TData, variables: TVariables) => void;
     onError?: (error: Error) => void;
+    /** False when the caller reports the error itself, as a `useFieldsForm` submit does. */
+    toastError?: boolean;
 };
 
 export function useAdminMutation<TData, TVariables>(
@@ -64,10 +66,12 @@ export function useAdminMutation<TData, TVariables>(
             callbacks?.onSuccess?.(data, variables);
         },
         onError: (error) => {
-            toast({
-                message: errorMessage(error, t(meta?.errorMessage ?? 'common.error')),
-                variant: 'error',
-            });
+            if (callbacks?.toastError !== false) {
+                toast({
+                    message: errorMessage(error, t(meta?.errorMessage ?? 'common.error')),
+                    variant: 'error',
+                });
+            }
             callbacks?.onError?.(error);
         },
     });

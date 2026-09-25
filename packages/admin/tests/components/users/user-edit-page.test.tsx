@@ -4,7 +4,8 @@
  * The user edit page's locale switcher: a translatable config with more than
  * one locale offers it, choosing a locale the user has no row for shows the
  * fallback hint and sends that locale on save, and a non-translatable config
- * renders no switcher at all.
+ * renders no switcher at all. A role picked for another user makes the form
+ * dirty and is saved.
  */
 
 import type { AuthUser } from '@/admin/context/auth';
@@ -35,7 +36,7 @@ const { updateMutate, adminConfig } = vi.hoisted(() => ({
     adminConfig: {
         defaultLocale: 'en',
         locales: ['en'],
-        roles: [],
+        roles: [] as { slug: string; name: string }[],
         users: { translatable: false, fields: [] },
     },
 }));
@@ -98,17 +99,16 @@ afterEach(() => {
     requestedLocale.current = undefined;
     adminConfig.locales = ['en'];
     adminConfig.users.translatable = false;
+    adminConfig.roles = [];
     user = makeUser();
 });
 
-function makeClient(): QueryClient {
+function makeClient(sessionId: string): QueryClient {
     const queryClient = new QueryClient({
         defaultOptions: { queries: { staleTime: 30_000, retry: false } },
     });
-    // The same id as the edited user: the role field is account-editor-only
-    // and would add a second combobox the locale-select tests don't want.
     queryClient.setQueryData<AuthUser>(sessionQueryOptions.queryKey, {
-        id: 'u1',
+        id: sessionId,
         name: 'Ada Lovelace',
         email: 'user@example.com',
         image: null,
@@ -118,7 +118,11 @@ function makeClient(): QueryClient {
     return queryClient;
 }
 
-function mountPage(): void {
+/**
+ * By default the signed-in user is the edited one: the role field is shown
+ * only to someone else, and would add a second combobox the locale tests don't want.
+ */
+function mountPage(sessionId = 'u1'): void {
     const rootRoute = createRootRoute({ component: () => <Outlet /> });
     const editRoute = createRoute({
         getParentRoute: () => rootRoute,
@@ -131,7 +135,7 @@ function mountPage(): void {
     });
 
     render(
-        <QueryClientProvider client={makeClient()}>
+        <QueryClientProvider client={makeClient(sessionId)}>
             <ToastProvider>
                 <AuthProvider>
                     <ConfirmProvider>
@@ -153,8 +157,8 @@ async function findPage(): Promise<void> {
     await screen.findByDisplayValue('user@example.com');
 }
 
-/** Open the locale listbox and pick the option with this label. */
-async function pickLocale(label: string): Promise<void> {
+/** Open the one listbox on the page and pick the option with this label. */
+async function pickOption(label: string): Promise<void> {
     const eventUser = userEvent.setup();
     const trigger = screen.getByRole('combobox');
     await eventUser.click(trigger);
@@ -197,7 +201,7 @@ describe('UserEditPage locales', () => {
         mountPage();
         await screen.findByRole('combobox');
 
-        await pickLocale('Add FR');
+        await pickOption('Add FR');
 
         expect(
             await screen.findByText('Showing the EN content until this locale is saved.')
@@ -210,6 +214,33 @@ describe('UserEditPage locales', () => {
         await waitFor(() =>
             expect(updateMutate).toHaveBeenCalledWith(
                 expect.objectContaining({ id: 'u1', locale: 'fr' })
+            )
+        );
+    });
+});
+
+describe('UserEditPage role', () => {
+    it('saves a role another user picks', async () => {
+        adminConfig.roles = [
+            { slug: 'editor', name: 'Editor' },
+            { slug: 'admin', name: 'Admin' },
+        ];
+        mountPage('someone-else');
+        await findPage();
+
+        const save = screen.getByRole('button', { name: 'Save' });
+        expect((save as HTMLButtonElement).disabled).toBe(true);
+
+        await pickOption('Admin');
+        await waitFor(() => expect((save as HTMLButtonElement).disabled).toBe(false));
+
+        await userEvent.setup().click(save);
+        await waitFor(() =>
+            expect(updateMutate).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    id: 'u1',
+                    data: expect.objectContaining({ role: 'admin' }),
+                })
             )
         );
     });

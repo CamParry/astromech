@@ -20,7 +20,7 @@ describe('cell-registry', () => {
         expect(typeof renderer).toBe('function');
         expect(() =>
             renderer({
-                entry: {} as never,
+                row: {} as never,
                 column: {} as never,
                 value: undefined,
                 ctx: {

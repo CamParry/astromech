@@ -9,6 +9,8 @@ type CheckboxProps = {
     label?: React.ReactNode;
     disabled?: boolean;
     id?: string;
+    /** The accessible name when there is no visible `label`. */
+    ariaLabel?: string;
 };
 
 export function Checkbox({
@@ -18,6 +20,7 @@ export function Checkbox({
     label,
     disabled,
     id,
+    ariaLabel,
 }: CheckboxProps): React.ReactElement {
     const { ariaProps } = useFieldControl();
     return (
@@ -29,6 +32,7 @@ export function Checkbox({
                 defaultChecked={defaultChecked}
                 onCheckedChange={onChange}
                 disabled={disabled}
+                aria-label={ariaLabel}
                 {...ariaProps}
             >
                 <BaseCheckbox.Indicator className="am-checkbox-indicator">

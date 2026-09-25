@@ -34,6 +34,14 @@
         "selected": "{{count}} selected",
         "actions": "Actions"
     },
+    "list": {
+        "bulkActions": "Bulk actions ({{count}})",
+        "confirmTitle_one": "{{action}} {{count}} item?",
+        "confirmTitle_other": "{{action}} {{count}} items?",
+        "confirmDescription": "This action cannot be undone.",
+        "loadFailed": "The list could not be loaded.",
+        "selectRow": "Select row"
+    },
     "nav": {
         "dashboard": "Dashboard",
         "media": "Media",
@@ -135,9 +143,7 @@
         "confirmForceDeleteMessage": "This action cannot be undone.",
         "confirmDeleteLabel": "Move to trash",
         "confirmForceDeleteLabel": "Delete permanently",
-        "bulkActions": "Bulk Actions",
         "bulkRestoreSelected": "Restore",
-        "bulkDeletePermanently": "Delete permanently",
         "bulkPublishSelected": "Publish",
         "bulkUnpublishSelected": "Unpublish",
         "bulkMoveToTrash": "Move to trash",

@@ -1,13 +1,13 @@
 /**
- * Entry list page for one entry type id, the site's or a plugin's: a searchable,
- * filterable, paginated table or grid over `useListController`, with bulk
- * actions and per-type column and view choices.
+ * Entry list page for one entry type id, the site's or a plugin's: a `DataList`
+ * over `useListController`, as a table or a grid, with bulk actions and
+ * per-type column and view choices.
  */
 
 import type { UseAdminEntryTypeResult } from '../../hooks/use-admin-entry-type';
-import type { DropdownItem } from '../ui/dropdown';
+import type { DataListBulkAction, DataListColumn } from '../ui/data-list';
 import type { RowActionsProps } from './entry-list-items';
-import type { Entry, TableColumn } from 'astromech';
+import type { CellRenderContext, Entry, TableColumn } from 'astromech';
 import { useNavigate } from '@tanstack/react-router';
 import { Check, PlusIcon, RotateCcw, Trash2 } from 'lucide-react';
 import React, { useCallback, useState } from 'react';
@@ -20,34 +20,27 @@ import { useAdminEntryType } from '../../hooks/use-admin-entry-type';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { useIsMobile } from '../../hooks/use-is-mobile';
 import { LOCALE_FILTER_ALL, useListController } from '../../hooks/use-list-controller';
-import { useSelection } from '../../hooks/use-selection';
 import { useViewMode } from '../../hooks/use-view-mode';
 import { useVisibleColumns } from '../../hooks/use-visible-columns';
 import { resolveLabel } from '../../i18n/labels';
 import { defaultCellKind } from '../../rendering/cell-kind-map';
+import { getCellRenderer } from '../../rendering/cell-registry';
 import { Link } from '../../rendering/cells/link';
 import { fieldTypeOf, resolveTable } from '../../rendering/resolve';
 import { entryEditPath, entryTypeBasePath } from '../../utilities/entry-admin-path';
 import { NotFoundPage } from '../layout/not-found-page';
 import { ViewModeToggle } from '../layout/view-mode-toggle';
 import { Button } from '../ui/button';
-import { Checkbox } from '../ui/checkbox';
-import { useConfirm } from '../ui/confirm';
-import { Dropdown } from '../ui/dropdown';
+import { DataList } from '../ui/data-list';
 import { EmptyState } from '../ui/empty-state';
 import { Page, PageContent, PageHeader, PageTitle } from '../ui/page';
-import { Pagination } from '../ui/pagination';
-import { SearchInput } from '../ui/search-input';
-import { Spinner } from '../ui/spinner';
-import { Table } from '../ui/table';
-import { Toolbar, ToolbarEnd, ToolbarStart } from '../ui/toolbar';
 import { DeleteEntryModal } from './delete-entry-modal';
 import {
     ColumnsMenu,
     LocaleFilterSelect,
     StatusFilterSelect,
 } from './entries-list-toolbar';
-import { EntryCard, EntryTableRow } from './entry-list-items';
+import { buildRowItems, EntryCard } from './entry-list-items';
 
 const PER_PAGE = 20;
 
@@ -65,7 +58,6 @@ function EntriesListBody({
     const { type, config, basePath, namespace, can } = entryType;
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const confirm = useConfirm();
     const authorNames = useAuthorNames();
     useAiContext({ kind: 'entries', type, label: config.plural }, { depth: 0 });
 
@@ -76,8 +68,6 @@ function EntriesListBody({
     const canDelete = can('delete');
 
     const list = useListController(entryType, { perPage: PER_PAGE });
-    const { checkedIds, toggle, toggleAll, allChecked, someChecked, reset } =
-        useSelection(list.data);
 
     const [visibleColumns, toggleColumn] = useVisibleColumns(
         type,
@@ -135,11 +125,11 @@ function EntriesListBody({
         onSuccess: (entry) => openEntry(entry),
     });
     const bulk = {
-        publish: useAdminMutation(mutations.bulkPublish, { onSuccess: reset }),
-        unpublish: useAdminMutation(mutations.bulkUnpublish, { onSuccess: reset }),
-        trash: useAdminMutation(mutations.bulkTrash, { onSuccess: reset }),
-        delete: useAdminMutation(mutations.bulkDelete, { onSuccess: reset }),
-        restore: useAdminMutation(mutations.bulkRestore, { onSuccess: reset }),
+        publish: useAdminMutation(mutations.bulkPublish),
+        unpublish: useAdminMutation(mutations.bulkUnpublish),
+        trash: useAdminMutation(mutations.bulkTrash),
+        delete: useAdminMutation(mutations.bulkDelete),
+        restore: useAdminMutation(mutations.bulkRestore),
     };
 
     // The trash or force-delete the modal is confirming.
@@ -154,11 +144,6 @@ function EntriesListBody({
         });
     }
 
-    function handleBulk(action: keyof typeof bulk): void {
-        const ids = [...checkedIds];
-        if (ids.length > 0) bulk[action].mutate(ids);
-    }
-
     function handleDeleteConfirm(): void {
         if (deleteTarget === null) return;
         const mutation = deleteTarget.force ? remove : trash;
@@ -167,53 +152,52 @@ function EntriesListBody({
         });
     }
 
-    const bulkItems: DropdownItem[] = [
-        ...(capabilities.statuses && !list.isTrash
-            ? [
-                  {
-                      label: t('entries.bulkPublishSelected'),
-                      icon: <Check size={14} />,
-                      onClick: () => handleBulk('publish'),
-                  },
-                  {
-                      label: t('entries.bulkUnpublishSelected'),
-                      icon: <RotateCcw size={14} />,
-                      onClick: () => handleBulk('unpublish'),
-                  },
-              ]
-            : []),
-        ...(capabilities.trash && !list.isTrash
-            ? [
-                  {
-                      label: t('entries.bulkMoveToTrash'),
-                      icon: <Trash2 size={14} />,
-                      variant: 'danger' as const,
-                      onClick: () => handleBulk('trash'),
-                  },
-              ]
-            : []),
-        ...(capabilities.trash && list.isTrash
-            ? [
-                  {
-                      label: t('entries.bulkRestoreSelected'),
-                      icon: <RotateCcw size={14} />,
-                      onClick: () => handleBulk('restore'),
-                  },
-              ]
-            : []),
-        {
-            label: t('media.bulkDeleteButton'),
-            icon: <Trash2 size={14} />,
-            variant: 'danger',
-            onClick: () =>
-                confirm({
-                    title: t('media.bulkDeleteTitle', { count: checkedIds.size }),
-                    description: t('media.bulkDeleteDescription'),
-                    confirmLabel: t('common.delete'),
-                    onConfirm: () => handleBulk('delete'),
-                }),
-        },
-    ];
+    // The bulk menu, and so row selection, needs the delete permission.
+    const bulkActions: DataListBulkAction[] = canDelete
+        ? [
+              ...(capabilities.statuses && !list.isTrash
+                  ? [
+                        {
+                            label: t('entries.bulkPublishSelected'),
+                            icon: <Check size={14} />,
+                            run: (ids: string[]) => bulk.publish.mutateAsync(ids),
+                        },
+                        {
+                            label: t('entries.bulkUnpublishSelected'),
+                            icon: <RotateCcw size={14} />,
+                            run: (ids: string[]) => bulk.unpublish.mutateAsync(ids),
+                        },
+                    ]
+                  : []),
+              ...(capabilities.trash && !list.isTrash
+                  ? [
+                        {
+                            label: t('entries.bulkMoveToTrash'),
+                            icon: <Trash2 size={14} />,
+                            tone: 'danger' as const,
+                            // A trashed entry can be restored, so this does not ask first.
+                            confirm: false,
+                            run: (ids: string[]) => bulk.trash.mutateAsync(ids),
+                        },
+                    ]
+                  : []),
+              ...(capabilities.trash && list.isTrash
+                  ? [
+                        {
+                            label: t('entries.bulkRestoreSelected'),
+                            icon: <RotateCcw size={14} />,
+                            run: (ids: string[]) => bulk.restore.mutateAsync(ids),
+                        },
+                    ]
+                  : []),
+              {
+                  label: t('common.delete'),
+                  icon: <Trash2 size={14} />,
+                  tone: 'danger',
+                  run: (ids: string[]) => bulk.delete.mutateAsync(ids),
+              },
+          ]
+        : [];
 
     const rowProps: Omit<RowActionsProps, 'entry'> & {
         navigate: (entry: { id: string; locale: string }) => void;
@@ -242,6 +226,27 @@ function EntriesListBody({
         configuredLocales: adminConfig.locales,
         authorNames,
     };
+    const cellContext: CellRenderContext = {
+        basePath,
+        configuredLocales: adminConfig.locales,
+        isTrash: list.isTrash,
+        authorNames,
+    };
+    const dataColumns: DataListColumn<Entry>[] = tableColumns.map((column) => ({
+        key: column.key,
+        label: columnLabel(column),
+        sortable: column.sortable,
+        render: (entry) =>
+            getCellRenderer(column.kind)({
+                row: entry,
+                column,
+                value:
+                    column.source === 'field'
+                        ? (entry.fields as Record<string, unknown>)[column.key]
+                        : (entry as Record<string, unknown>)[column.key],
+                ctx: cellContext,
+            }),
+    }));
 
     const empty = (
         <EmptyState
@@ -264,8 +269,6 @@ function EntriesListBody({
             }
         />
     );
-    // Checkbox, data columns, actions.
-    const colSpan = tableColumns.length + 2;
 
     return (
         <>
@@ -298,141 +301,92 @@ function EntriesListBody({
                 </PageHeader>
 
                 <PageContent>
-                    <Toolbar>
-                        <ToolbarStart>
-                            {someChecked && canDelete && (
-                                <Dropdown
-                                    label={`${t('media.bulkActions')} (${checkedIds.size})`}
-                                    variant="secondary"
-                                    align="start"
-                                    items={bulkItems}
-                                />
-                            )}
-                            {showSearch && (
-                                <SearchInput
-                                    placeholder={t('entries.searchPlaceholder', {
-                                        name: config.plural.toLowerCase(),
-                                    })}
-                                    value={list.q}
-                                    onChange={(e) => list.setQuery(e.target.value)}
-                                />
-                            )}
-                            {(capabilities.statuses || capabilities.trash) && (
-                                <StatusFilterSelect
-                                    value={list.status}
-                                    hasStatuses={capabilities.statuses}
-                                    hasTrash={capabilities.trash}
-                                    onChange={(value) => {
-                                        list.setStatus(value);
-                                        reset();
-                                    }}
-                                />
-                            )}
-                            {hasI18n && (
-                                <LocaleFilterSelect
-                                    value={list.locale}
-                                    locales={adminConfig.locales}
-                                    onChange={(value) => {
-                                        list.setLocale(value);
-                                        reset();
-                                    }}
-                                />
-                            )}
-                        </ToolbarStart>
-                        <ToolbarEnd>
-                            <ColumnsMenu
-                                columns={shownColumns.map((column) => ({
-                                    key: column.key,
-                                    label: columnLabel(column),
-                                }))}
-                                visible={visibleColumns}
-                                onToggle={toggleColumn}
-                            />
-                            {views.includes('list') && views.includes('grid') && (
-                                <ViewModeToggle value={viewMode} onChange={setViewMode} />
-                            )}
-                        </ToolbarEnd>
-                    </Toolbar>
-
-                    {viewMode === 'grid' &&
-                        (list.isLoading ? (
-                            <div className="am-entry-grid-loading">
-                                <Spinner />
-                            </div>
-                        ) : list.data.length === 0 ? (
-                            empty
-                        ) : (
-                            <div className="am-entry-grid">
-                                {list.data.map((entry) => (
-                                    <EntryCard
-                                        key={entry.id}
-                                        entry={entry}
-                                        {...rowProps}
-                                        columns={gridColumns}
-                                        columnLabel={columnLabel}
-                                        hasTitle={hasTitle}
-                                    />
-                                ))}
-                            </div>
-                        ))}
-
-                    {viewMode === 'list' && (
-                        <Table.Root>
-                            <Table.Head>
-                                <Table.Row>
-                                    <Table.Th className="am-table-select">
-                                        <Checkbox
-                                            checked={allChecked}
-                                            onChange={() => toggleAll()}
-                                        />
-                                    </Table.Th>
-                                    {tableColumns.map((column) =>
-                                        column.sortable ? (
-                                            <Table.SortTh
-                                                key={column.key}
-                                                sortKey={column.key}
-                                                currentSort={list.sort}
-                                                onSort={list.setSort}
-                                            >
-                                                {columnLabel(column)}
-                                            </Table.SortTh>
-                                        ) : (
-                                            <Table.Th key={column.key}>
-                                                {columnLabel(column)}
-                                            </Table.Th>
-                                        )
-                                    )}
-                                    <Table.Th className="am-table-icon" />
-                                </Table.Row>
-                            </Table.Head>
-                            <Table.Body>
-                                {list.isLoading ? (
-                                    <Table.Empty colSpan={colSpan}>
-                                        <Spinner />
-                                    </Table.Empty>
-                                ) : list.data.length === 0 ? (
-                                    <Table.Empty colSpan={colSpan}>{empty}</Table.Empty>
-                                ) : (
-                                    list.data.map((entry) => (
-                                        <EntryTableRow
-                                            key={entry.id}
-                                            entry={entry}
-                                            {...rowProps}
-                                            selected={checkedIds.has(entry.id)}
-                                            onToggleSelect={toggle}
-                                            columns={tableColumns}
-                                        />
-                                    ))
-                                )}
-                            </Table.Body>
-                        </Table.Root>
-                    )}
-
-                    <Pagination
-                        currentPage={list.page}
-                        totalPages={list.pages}
+                    <DataList
+                        rows={list.data}
+                        columns={dataColumns}
+                        isLoading={list.isLoading}
+                        isError={list.isError}
+                        {...(showSearch
+                            ? {
+                                  search: list.q,
+                                  onSearch: list.setQuery,
+                                  searchPlaceholder: t('entries.searchPlaceholder', {
+                                      name: config.plural.toLowerCase(),
+                                  }),
+                              }
+                            : {})}
+                        sort={list.sort}
+                        onSort={list.setSort}
+                        page={list.page}
+                        pages={list.pages}
+                        total={list.total}
                         onPage={list.setPage}
-                        totalItems={list.total}
+                        rowHref={(entry) =>
+                            list.isTrash
+                                ? undefined
+                                : entryEditPath(basePath, entry.id, {
+                                      locale: entry.locale,
+                                  })
+                        }
+                        rowActions={(entry) => buildRowItems({ entry, ...rowProps })}
+                        bulkActions={bulkActions}
+                        selectionKey={`${list.status}:${list.locale}`}
+                        empty={empty}
+                        filters={
+                            <>
+                                {(capabilities.statuses || capabilities.trash) && (
+                                    <StatusFilterSelect
+                                        value={list.status}
+                                        hasStatuses={capabilities.statuses}
+                                        hasTrash={capabilities.trash}
+                                        onChange={list.setStatus}
+                                    />
+                                )}
+                                {hasI18n && (
+                                    <LocaleFilterSelect
+                                        value={list.locale}
+                                        locales={adminConfig.locales}
+                                        onChange={list.setLocale}
+                                    />
+                                )}
+                            </>
+                        }
+                        toolbarEnd={
+                            <>
+                                <ColumnsMenu
+                                    columns={shownColumns.map((column) => ({
+                                        key: column.key,
+                                        label: columnLabel(column),
+                                    }))}
+                                    visible={visibleColumns}
+                                    onToggle={toggleColumn}
+                                />
+                                {views.includes('list') && views.includes('grid') && (
+                                    <ViewModeToggle
+                                        value={viewMode}
+                                        onChange={setViewMode}
+                                    />
+                                )}
+                            </>
+                        }
+                        {...(viewMode === 'grid'
+                            ? {
+                                  renderBody: (entries: Entry[]) => (
+                                      <div className="am-entry-grid">
+                                          {entries.map((entry) => (
+                                              <EntryCard
+                                                  key={entry.id}
+                                                  entry={entry}
+                                                  {...rowProps}
+                                                  columns={gridColumns}
+                                                  columnLabel={columnLabel}
+                                                  hasTitle={hasTitle}
+                                              />
+                                          ))}
+                                      </div>
+                                  ),
+                              }
+                            : {})}
                     />
                 </PageContent>
             </Page>

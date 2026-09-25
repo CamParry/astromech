@@ -1,34 +1,24 @@
 /**
- * Shared form logic for the entry create and edit pages: useForm setup,
- * save/publish mutations, Cmd+S shortcut, and beforeunload dirty-state guard.
- * The caller supplies `saveFn`/`publishFn` so create and edit share the rest.
+ * The entry and global form: `useFieldsForm` with an entry's own keys (title,
+ * slug, status, publish date), the payload the entries API takes, and a
+ * publish action beside save. The caller supplies both writes.
  */
 
-import type { UseMutationResult } from '@tanstack/react-query';
-import type { Entry, EntryStatus, Field, FieldErrors, JsonObject } from 'astromech';
-import { useForm, useStore } from '@tanstack/react-form';
-import { useMutation } from '@tanstack/react-query';
-import { AstromechApiError } from 'astromech/fetch';
+import type { UseFieldsFormResult } from './use-fields-form';
+import type { Entry, EntryStatus, Field, JsonObject } from 'astromech';
 // The function the server uses, so the browser picks the same stage it will.
 import { entryValidationMode } from 'astromech/shared';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import {
-    fieldErrorNames,
-    validationSummaryMessage,
-} from '../components/fields/field-error-summary';
-import { useToast } from '../components/ui/toast';
-import { resolveLabel } from '../i18n/labels';
-import { useFieldValidation } from './use-field-validation';
-import { useHotkeys } from './use-hotkeys';
+import { useFieldsForm } from './use-fields-form';
 
-export type EntryFormValues = {
+/** The entry's own keys, held beside the declared fields' `fields`. */
+type EntryExtras = {
     title: string;
     slug: string;
     status: EntryStatus;
     publishedAt: string;
-    fields: Record<string, unknown>;
 };
+
+export type EntryFormValues = EntryExtras & { fields: Record<string, unknown> };
 
 export type EntryPayload = {
     title: string;
@@ -39,11 +29,13 @@ export type EntryPayload = {
     publishedAt?: Date | null;
 };
 
+/** Which write a submit makes. */
+type EntrySubmitMeta = { publish: boolean };
+
 /**
- * `TSaved` is what the caller's write resolves to — an `Entry` for the entry
+ * `TSaved` is what the caller's write resolves to: an `Entry` for the entry
  * pages, a `Global` for the global one. The hook never reads it; it only hands
- * it back to `onSuccess`, so parameterizing beats forcing globals through a
- * cast.
+ * it back to `onSuccess`.
  */
 type UseEntryFormOptions<TSaved> = {
     /**
@@ -51,37 +43,26 @@ type UseEntryFormOptions<TSaved> = {
      * runs the server's own pipeline over before letting a submit through.
      */
     fieldDefinitions: Field[];
-    /** Which pipeline operation a submit performs — `'create'` seeds defaults. */
+    /** Which pipeline operation a submit performs: `'create'` seeds defaults. */
     operation: 'create' | 'update';
-    /**
-     * The i18n namespace field labels resolve against — `namespaceForScope(cacheScope)`.
-     * Passed rather than read from `EntryNamespaceProvider`, because this hook is
-     * called ABOVE that provider and `useLabel()` would answer for the wrong one.
-     */
+    /** The i18n namespace field labels resolve against: `namespaceForScope(cacheScope)`. */
     namespace: string;
     /** Whether this entry type has a slug field. */
     hasSlug: boolean;
     /**
      * Whether the statuses capability is on. When off, the payload omits
      * `status`/`publishedAt` so the API doesn't 409 on a statuses-off type.
-     * Defaults to true (titled/standard types are unaffected).
      */
     hasStatuses?: boolean;
-    /** Initial form values; defaults to empty/unpublished. */
+    /** Initial form values; defaults to empty and unpublished. */
     defaultValues?: Partial<EntryFormValues>;
-    /**
-     * The mutation function for the "save" action (save as unpublished / update).
-     * Receives the built payload; must return the saved record.
-     */
+    /** The "save" write (save as unpublished, or update); resolves to the saved record. */
     saveFn: (payload: EntryPayload) => Promise<TSaved>;
-    /**
-     * The mutation function for the "publish" action.
-     * Receives the built payload (status forced to 'published').
-     */
+    /** The "publish" write, handed the payload with its status forced to `published`. */
     publishFn: (payload: EntryPayload) => Promise<TSaved>;
-    /** Called after either mutation succeeds, with the saved record. */
+    /** Called after either write succeeds, with the saved record. */
     onSuccess?: (record: TSaved) => void;
-    /** When true, save and publish actions become no-ops. */
+    /** When true, save and publish do nothing. */
     readOnly?: boolean;
 };
 
@@ -97,72 +78,6 @@ export function useEntryForm<TSaved = Entry>({
     onSuccess,
     readOnly = false,
 }: UseEntryFormOptions<TSaved>) {
-    const { toast } = useToast();
-    const { t } = useTranslation();
-
-    /** Form-level messages from a 422; they belong to no field. */
-    const [formErrors, setFormErrors] = useState<string[]>([]);
-
-    /**
-     * Name the fields that failed rather than pointing at highlights the author
-     * has to hunt for — the fields that fail a publish are typically the empty
-     * ones they never scrolled to.
-     */
-    function validationMessage(errors: FieldErrors): string {
-        const names = fieldErrorNames(errors, fieldDefinitions, (label) =>
-            // The label is always present here (the resolver substitutes the
-            // field's own name), so the name fallback is unreachable.
-            resolveLabel(label, '', t, namespace)
-        );
-        return validationSummaryMessage(names, t);
-    }
-
-    /**
-     * Which action the in-flight submit is. Save and publish share one submit
-     * path so both run TanStack's own field validators (the title one the entry
-     * pages register lives there); `handleSubmit` takes no argument we can thread
-     * the intent through, so it rides in a ref that `handlePublish` clears again.
-     */
-    const publishIntentRef = useRef(false);
-
-    const form = useForm({
-        defaultValues: {
-            title: defaultValues?.title ?? '',
-            slug: defaultValues?.slug ?? '',
-            status: defaultValues?.status ?? 'unpublished',
-            publishedAt: defaultValues?.publishedAt ?? '',
-            fields: defaultValues?.fields ?? {},
-        },
-        onSubmit: async ({ value }) => {
-            const publishing = publishIntentRef.current;
-            const payload = buildPayload(value, publishing ? 'published' : undefined);
-            // The stage comes from the payload rather than a hardcoded 'publish'
-            // so the browser and the server agree in every case, including a
-            // statuses-off type whose payload carries no status at all.
-            const errors = await validation.validateAll(
-                entryValidationMode({ status: payload.status, hasStatuses })
-            );
-            if (Object.keys(errors).length > 0) {
-                toast({ message: validationMessage(errors), variant: 'error' });
-                return;
-            }
-            if (publishing) publishMutation.mutate(payload);
-            else saveMutation.mutate(payload);
-        },
-    });
-
-    // The entry's field tree sits under a single `form.Field name="fields"`, so
-    // TanStack's per-field validators/blur tracking never see the individual
-    // fields — only this subscription does. Subscribing here is what makes the
-    // re-validate-while-erroring effect fire on each keystroke.
-    const fieldValues = useStore(form.store, (state) => state.values.fields);
-
-    const validation = useFieldValidation({
-        definitions: fieldDefinitions,
-        values: fieldValues,
-        operation,
-    });
-
     function buildPayload(
         values: EntryFormValues,
         overrideStatus?: EntryStatus
@@ -184,135 +99,48 @@ export function useEntryForm<TSaved = Entry>({
         return payload;
     }
 
-    function handleFieldError(err: Error, fallback: string): void {
-        if (err instanceof AstromechApiError && err.status === 422) {
-            const fields = (err.details?.fields ?? {}) as FieldErrors;
-            const form = (err.details?.form ?? []) as string[];
-            if (form.length > 0) setFormErrors(form);
-            if (Object.keys(fields).length > 0 || form.length > 0) {
-                validation.setServerErrors(fields);
-                // A form-level message names no field, so it is its own sentence
-                // rather than an entry in the field-name summary.
-                const summary =
-                    Object.keys(fields).length > 0 ? [validationMessage(fields)] : [];
-                toast({
-                    message: [...form, ...summary].join(' '),
-                    variant: 'error',
-                });
-                return;
-            }
-        }
-        toast({
-            message: err instanceof Error ? err.message : fallback,
-            variant: 'error',
-        });
+    function payloadFor(
+        values: EntryFormValues,
+        meta: EntrySubmitMeta | undefined
+    ): EntryPayload {
+        return buildPayload(values, meta?.publish === true ? 'published' : undefined);
     }
 
-    const saveMutation: UseMutationResult<TSaved, Error, EntryPayload> = useMutation<
-        TSaved,
-        Error,
-        EntryPayload
-    >({
-        mutationFn: saveFn,
-        onSuccess: (record) => {
-            // Reset dirty state without changing values
-            form.reset(form.state.values);
-            onSuccess?.(record);
+    const fieldsForm = useFieldsForm<EntryExtras, TSaved, EntrySubmitMeta>({
+        fieldDefinitions,
+        operation,
+        namespace,
+        readOnly,
+        defaultValues: {
+            title: defaultValues?.title ?? '',
+            slug: defaultValues?.slug ?? '',
+            status: defaultValues?.status ?? 'unpublished',
+            publishedAt: defaultValues?.publishedAt ?? '',
+            fields: defaultValues?.fields ?? {},
         },
-        onError: (err) => {
-            handleFieldError(err, 'Save failed');
-        },
+        // The stage comes from the payload rather than a hardcoded 'publish'
+        // so the browser and the server agree in every case, including a
+        // statuses-off type whose payload carries no status at all.
+        validationMode: (values, meta) =>
+            entryValidationMode({ status: payloadFor(values, meta).status, hasStatuses }),
+        onSubmit: (values, meta) =>
+            meta?.publish === true
+                ? publishFn(payloadFor(values, meta))
+                : saveFn(payloadFor(values, meta)),
+        ...(onSuccess !== undefined ? { onSuccess } : {}),
     });
-
-    const publishMutation: UseMutationResult<TSaved, Error, EntryPayload> = useMutation<
-        TSaved,
-        Error,
-        EntryPayload
-    >({
-        mutationFn: publishFn,
-        onSuccess: (record) => {
-            form.reset(form.state.values);
-            onSuccess?.(record);
-        },
-        onError: (err) => {
-            handleFieldError(err, 'Publish failed');
-        },
-    });
-
-    /** Drop the last response's messages so a new submit starts clean. */
-    function resetServerErrors(): void {
-        validation.resetServerErrors();
-        setFormErrors([]);
-    }
-
-    function handleSave(): void {
-        if (readOnly) return;
-        resetServerErrors();
-        // Goes through handleSubmit so TanStack's own title validator runs first.
-        void form.handleSubmit();
-    }
-
-    function handlePublish(): void {
-        if (readOnly) return;
-        resetServerErrors();
-        publishIntentRef.current = true;
-        // Cleared once the submit settles so a later plain save isn't published.
-        void form.handleSubmit().finally(() => {
-            publishIntentRef.current = false;
-        });
-    }
-
-    // Cmd/Ctrl+S — save shortcut. Use a ref so the handler always sees the
-    // latest isPending value without requiring the hotkey to re-register.
-    const isPendingRef = useRef(saveMutation.isPending);
-    isPendingRef.current = saveMutation.isPending;
-
-    useHotkeys('mod+s', () => {
-        if (readOnly || isPendingRef.current) return;
-        resetServerErrors();
-        void form.handleSubmit();
-    });
-
-    // Warn on browser tab close when there are unsaved changes
-    useEffect(() => {
-        function handleBeforeUnload(e: BeforeUnloadEvent): void {
-            if (!form.state.isDirty) return;
-            e.preventDefault();
-        }
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-        // form is stable; isDirty is read via the ref on the stable form object
-    }, []);
-
-    // Stable identity: this object is handed straight to a context provider.
-    const fieldValidation = useMemo(
-        () => ({
-            onFieldChange: validation.markDirty,
-            onFieldBlur: validation.reportBlur,
-        }),
-        [validation.markDirty, validation.reportBlur]
-    );
 
     return {
-        form,
-        saveMutation,
-        publishMutation,
-        handleSave,
-        handlePublish,
+        ...fieldsForm,
+        handleSave: (): void => fieldsForm.handleSubmit({ publish: false }),
+        handlePublish: (): void => fieldsForm.handleSubmit({ publish: true }),
         buildPayload,
-        readOnly,
-        fieldErrors: validation.errors,
-        fieldWarnings: validation.warnings,
-        formErrors,
-        fieldValidation,
     };
 }
 
-/** The TanStack form `useEntryForm` builds, for the field components that bind to it. */
-export type EntryForm = ReturnType<typeof useEntryForm>['form'];
-
-/** The validation state `useEntryForm` returns, which the edit layout provides to its fields. */
-export type EntryFormState = Pick<
-    ReturnType<typeof useEntryForm>,
-    'formErrors' | 'fieldErrors' | 'fieldWarnings' | 'fieldValidation'
->;
+/** The TanStack form `useEntryForm` builds, for the entry-only controls that bind to it. */
+export type EntryForm = UseFieldsFormResult<
+    EntryExtras,
+    unknown,
+    EntrySubmitMeta
+>['form'];

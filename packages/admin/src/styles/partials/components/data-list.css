@@ -1,0 +1,6 @@
+/* The spinner a data list shows while its rows load outside a table. */
+.am-data-list-loading {
+    display: flex;
+    justify-content: center;
+    padding: 2rem;
+}

@@ -1,16 +1,12 @@
 /**
  * User edit page.
  *
- * Form with name field (editable) and email field (read-only). `users.fields`
- * is a declared field tree exactly like a global's, so it renders through the
- * same `useEntryForm`/`EntryFieldColumn` building blocks the global edit page
- * uses — a translatable config adds a locale switcher above it. A metadata
- * sidebar shows joined date and last updated.
+ * `useFieldsForm` over the declared `users.fields`, with the name and role
+ * beside them; the email is read-only. A translatable config adds a locale
+ * switcher above the fields, and the sidebar shows the account's dates.
  */
 
-import type { EntryPayload } from '../../hooks/use-entry-form';
-import type { User, UserUpdateData } from 'astromech';
-import { useStore } from '@tanstack/react-form';
+import type { JsonObject, User, UserUpdateData } from 'astromech';
 import { useNavigate } from '@tanstack/react-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,12 +14,12 @@ import adminConfig from 'virtual:astromech/admin-config';
 import { useAiContext } from '../../context/ai-context';
 import { useAuth } from '../../context/auth';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
-import { useEntryForm } from '../../hooks/use-entry-form';
+import { useFieldsForm } from '../../hooks/use-fields-form';
 import { usePermissions } from '../../hooks/use-permissions';
 import { userMutations, useUser } from '../../hooks/users';
 import { EntryNamespaceProvider, labelNamespace } from '../../i18n/entry-namespace';
 import { defaultContentLocale, localeOptions } from '../../utilities/content-locale';
-import { EntryFormLayout, FieldColumn } from '../entries/entry-form-fields';
+import { FieldColumn, FieldsForm } from '../forms/fields-form';
 import { Breadcrumb } from '../ui/breadcrumb';
 import { Button } from '../ui/button';
 import { useConfirm } from '../ui/confirm';
@@ -41,6 +37,9 @@ import { Panel } from '../ui/panel';
 import { Select } from '../ui/select';
 import { UserSummaryPanel } from './user-summary-panel';
 import { UserVersionsPanel } from './user-versions-panel';
+
+/** The account's own keys, held beside the declared fields' `fields`. */
+type UserFormExtras = { name: string; role: string };
 
 export type UserEditPageProps = {
     id: string;
@@ -119,52 +118,37 @@ function UserEditBody({
         { depth: 1 }
     );
 
-    // `role` sits outside the field tree `useEntryForm` manages (account-level,
-    // like `name`/`title`), so it keeps its own state and dirty check.
-    const [role, setRole] = useState(user.role);
-    const roleDirty = role !== user.role;
-
-    const updateMutation = useAdminMutation(userMutations().update);
+    // The form reports a failed save, a 422 onto its fields.
+    const updateMutation = useAdminMutation(userMutations().update, {
+        toastError: false,
+    });
 
     const deleteMutation = useAdminMutation(userMutations().delete, {
         onSuccess: () => void navigate({ to: '/users' }),
     });
 
-    /**
-     * `useEntryForm` builds one payload shaped for entries and globals
-     * (`title`, `fields`, ...); `name` rides in as its `title` and `role`
-     * merges in from its own state. Both write through `userMutations().update`,
-     * so cache invalidation and the saved toast stay the table's job.
-     */
-    async function writeUser(payload: EntryPayload): Promise<User> {
-        const data: UserUpdateData = { name: payload.title, fields: payload.fields };
-        if (canEditRole) data.role = role;
-        return updateMutation.mutateAsync({
-            id,
-            locale: isTranslatable ? locale : undefined,
-            data,
-        });
-    }
-
-    const entryForm = useEntryForm<User>({
+    const userForm = useFieldsForm<UserFormExtras, User>({
         fieldDefinitions,
         operation: 'update',
         namespace,
-        defaultValues: {
-            title: user.name,
-            fields: user.fields,
-        },
-        hasSlug: false,
-        hasStatuses: false,
+        defaultValues: { name: user.name, role: user.role, fields: user.fields },
         readOnly: !canSave,
-        saveFn: writeUser,
-        publishFn: writeUser,
+        // Through `userMutations().update`, so cache invalidation and the saved
+        // toast stay the table's job.
+        onSubmit: (values) => {
+            const data: UserUpdateData = {
+                name: values.name,
+                fields: values.fields as JsonObject,
+            };
+            if (canEditRole) data.role = values.role;
+            return updateMutation.mutateAsync({
+                id,
+                locale: isTranslatable ? locale : undefined,
+                data,
+            });
+        },
     });
-    const { form, saveMutation, handleSave } = entryForm;
-
-    // `form.state` is a plain getter — reading it in render never re-renders on
-    // change, which left Save permanently disabled. Subscribe to the store.
-    const isDirty = useStore(form.store, (state) => state.isDirty) || roleDirty;
+    const { form, mutation, handleSubmit, isDirty } = userForm;
 
     return (
         <EntryNamespaceProvider namespace={namespace}>
@@ -182,14 +166,14 @@ function UserEditBody({
                 </PageHeader>
 
                 <PageContent>
-                    <EntryFormLayout
-                        state={entryForm}
+                    <FieldsForm
+                        form={userForm}
                         main={
                             <>
                                 <Panel title={t('users.profilePanel')}>
                                     <Stack gap={5}>
                                         <form.Field
-                                            name="title"
+                                            name="name"
                                             validators={{
                                                 onChange: ({ value }) =>
                                                     value.trim() === ''
@@ -252,19 +236,25 @@ function UserEditBody({
                                                 >
                                                     {t('users.roleField')}
                                                 </label>
-                                                <Select
-                                                    id="user-role"
-                                                    value={role}
-                                                    onValueChange={(v) =>
-                                                        setRole(v ?? '')
-                                                    }
-                                                    options={adminConfig.roles.map(
-                                                        (r) => ({
-                                                            value: r.slug,
-                                                            label: r.name,
-                                                        })
+                                                <form.Field name="role">
+                                                    {(field) => (
+                                                        <Select
+                                                            id="user-role"
+                                                            value={field.state.value}
+                                                            onValueChange={(v) =>
+                                                                field.handleChange(
+                                                                    v ?? ''
+                                                                )
+                                                            }
+                                                            options={adminConfig.roles.map(
+                                                                (r) => ({
+                                                                    value: r.slug,
+                                                                    label: r.name,
+                                                                })
+                                                            )}
+                                                        />
                                                     )}
-                                                />
+                                                </form.Field>
                                             </div>
                                         )}
                                     </Stack>
@@ -302,11 +292,7 @@ function UserEditBody({
                                                 </div>
                                             )}
 
-                                            <FieldColumn
-                                                form={form}
-                                                nodes={fieldDefinitions}
-                                                disabled={!canSave}
-                                            />
+                                            <FieldColumn form={userForm} />
                                         </Stack>
                                     </Panel>
                                 )}
@@ -327,11 +313,9 @@ function UserEditBody({
                                     <ButtonGroup>
                                         {canSave && (
                                             <Button
-                                                onClick={handleSave}
-                                                loading={saveMutation.isPending}
-                                                disabled={
-                                                    !isDirty || saveMutation.isPending
-                                                }
+                                                onClick={() => handleSubmit()}
+                                                loading={mutation.isPending}
+                                                disabled={!isDirty || mutation.isPending}
                                             >
                                                 {t('common.save')}
                                             </Button>

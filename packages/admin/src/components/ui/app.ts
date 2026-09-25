@@ -23,3 +23,13 @@ export type { AiContextItem } from 'astromech';
 
 export { ApiErrorPanel, dispatchApiErrorEvent } from './api-error-panel';
 export type { ApiErrorEventDetail } from './api-error-panel';
+
+// A form over declared fields, for a plugin's own records as for entries and users.
+export { useFieldsForm } from '../../hooks/use-fields-form';
+export type {
+    FieldsFormValues,
+    UseFieldsFormOptions,
+    UseFieldsFormResult,
+} from '../../hooks/use-fields-form';
+export { FieldColumn, FieldsForm } from '../forms/fields-form';
+export type { FieldColumnProps, FieldsFormProps } from '../forms/fields-form';

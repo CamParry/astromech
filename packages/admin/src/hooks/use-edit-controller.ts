@@ -9,7 +9,6 @@ import type { UseAdminGlobalResult } from './use-admin-global';
 import type { EntryFormValues, EntryPayload } from './use-entry-form';
 import type { QueryKey, UseMutationOptions } from '@tanstack/react-query';
 import type { Entry, Field, Global } from 'astromech';
-import { useStore } from '@tanstack/react-form';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { astromechUntypedClient } from 'astromech/fetch';
@@ -228,8 +227,6 @@ export function useEditController<TRecord extends EditRecord, TAddress>(
             });
         },
     });
-    // `form.state` is a plain getter; reading it in render never re-renders.
-    const isDirty = useStore(form.form.store, (state) => state.isDirty);
 
     const createStaged = useAdminMutation(resource.createStaged, {
         onSuccess: () => void navigate({ to: paths.staged }),
@@ -275,7 +272,6 @@ export function useEditController<TRecord extends EditRecord, TAddress>(
         isLoading,
         isStaged,
         isReadOnly,
-        isDirty,
         canPublish: resource.can('publish'),
         versionCount: versions.data?.length ?? 0,
         paths,

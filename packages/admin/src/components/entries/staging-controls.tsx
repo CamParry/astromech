@@ -28,7 +28,7 @@ export function EditActions({
         <Button
             variant={isStaged ? 'secondary' : 'primary'}
             onClick={controller.handleSave}
-            loading={controller.saveMutation.isPending}
+            loading={controller.mutation.isPending}
         >
             {t('common.update')}
         </Button>
