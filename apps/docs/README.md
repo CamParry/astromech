@@ -74,7 +74,9 @@ This is a living reference; it grows as the project does.
   hand-authored-ops escape hatch for reshapes it can't derive.
 - [plugins/forms.md](plugins/forms.md) — the options `forms()` takes: spam
   provider, stored request metadata, and the submission rate limit — what it
-  keys on, who it does not limit, and what a refused submission returns.
+  keys on, who it does not limit, and what a refused submission returns; and
+  where submissions are stored, the permissions to grant, and their admin
+  screen.
 - [plugins/authoring.md](plugins/authoring.md) — write a plugin: the file-layout
   convention, identity, and every surface (custom fields, running the field
   pipeline, admin pages and the list component for them, admin resources, globals, admin
@@ -89,12 +91,13 @@ This is a living reference; it grows as the project does.
 Astromech ships six plugins you can read as worked examples — install them,
 then look at how they're put together:
 
-- `@astromech/redirects` — a plugin with its own database table, an entry
-  type, a public service lookup method, and an optional hook.
-- `@astromech/forms` — two entry types (one stored in the shared entries table,
-  one custom-table),
-  public service methods an anonymous caller reaches, gating hooks, and two
-  provider seams (notification kinds and spam services) a site can extend.
+- `@astromech/redirects` — a plugin with its own database table, repository
+  and permissions, an admin resource over its own service methods, a public
+  lookup method, and an optional hook.
+- `@astromech/forms` — an entry type an editor builds forms with, public
+  service methods an anonymous caller reaches, submissions kept in its own
+  table behind a read-only admin resource, gating hooks, and two provider
+  seams (notification kinds and spam services) a site can extend.
 - `@astromech/seo` — a custom field, a field-section helper you compose
   into your entry types, an admin dashboard, a settings global,
   localized strings, and footprint-derived behaviour.

@@ -16,7 +16,7 @@ client.
 | `@astromech/backups`       | `packages/plugins/backups`   | Scheduled and on-demand database backups for Astromech                                                            |
 | `@astromech/forms`         | `packages/plugins/forms`     | Forms with runtime-composed fields, a public submission API, and spam protection for Astromech                    |
 | `@astromech/menus`         | `packages/plugins/menus`     | Developer-declared navigation menus for Astromech                                                                 |
-| `@astromech/redirects`     | `packages/plugins/redirects` | URL redirects as a first-class entry type for Astromech                                                           |
+| `@astromech/redirects`     | `packages/plugins/redirects` | URL redirects for Astromech, with an admin screen and a redirect on slug change                                   |
 | `@astromech/seo`           | `packages/plugins/seo`       | Search metadata, sitemap and SEO health dashboard for Astromech                                                   |
 
 ## Getting started

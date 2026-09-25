@@ -2,7 +2,7 @@
     "name": "@astromech/redirects",
     "version": "0.1.0",
     "type": "module",
-    "description": "URL redirects as a first-class entry type for Astromech.",
+    "description": "URL redirects for Astromech, with an admin screen and a redirect on slug change.",
     "author": "Cam Parry",
     "license": "MIT",
     "repository": {

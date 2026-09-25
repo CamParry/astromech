@@ -1,16 +1,16 @@
 /**
- * @astromech/redirects — URL redirects as a first-class entry type, with a
- * public `lookup` service method and optional auto-redirect on slug change.
- * Frontend integration is a copy-paste middleware recipe (see README): the
- * plugin exposes data, the app owns the route.
+ * @astromech/redirects: redirect rules in the plugin's own table, a public
+ * `lookup` for a site's middleware, an admin resource, and an optional redirect
+ * on slug change. The site owns the middleware (see README).
  */
 
 import type { RedirectsOptions } from './types';
 import type { PluginDB, ServiceInterface } from 'astromech';
 import { definePlugin, withDefaults } from 'astromech';
 import { migrationProvider } from '../migrations/index';
-import { redirectEntryType } from './entries/redirect';
 import { slugChangeHook } from './hooks/slug-change';
+import { redirectsPermissions } from './permissions/redirects';
+import { redirectsResource } from './resources/redirects';
 import { redirectsService } from './service/redirects';
 import { redirectsTable } from './tables/redirects';
 import { REDIRECTS_PACKAGE } from './types';
@@ -30,6 +30,7 @@ declare module 'astromech' {
 }
 
 export type { RedirectMatch, RedirectStatus, RedirectsOptions } from './types';
+export type { RedirectRow } from './tables/redirects';
 
 const DEFAULT_OPTIONS: Required<RedirectsOptions> = {
     generateOnSlugChange: true,
@@ -43,12 +44,10 @@ export const redirects = definePlugin((options?: RedirectsOptions) => {
         version: '0.1.0',
         label: 'Redirects',
         icon: 'Signpost',
-        // No `permissions` declaration: the only service method is public, and
-        // the redirect entry type's permissions are derived by core. A site
-        // grants them with `entryPermissions('redirects/redirect', …)`.
         tables,
         migrations: migrationProvider,
-        entries: [redirectEntryType],
+        permissions: redirectsPermissions,
+        admin: { resources: [redirectsResource] },
         service: redirectsService,
         ...(generateOnSlugChange && { hooks: [slugChangeHook] }),
     };

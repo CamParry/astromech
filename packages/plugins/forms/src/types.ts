@@ -10,8 +10,6 @@ export const FORMS_PACKAGE = '@astromech/forms';
 
 export const FORM_TYPE = 'form';
 
-export const SUBMISSION_TYPE = 'submission';
-
 export type FormsOptions = {
     /** A spam provider such as `turnstile(...)`, or your own. */
     spam?: SpamProvider;

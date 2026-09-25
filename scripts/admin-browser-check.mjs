@@ -37,15 +37,16 @@ let browser = null;
  * Load `/cms` in headless chromium, assert the React app rendered and landed on
  * first-run setup, sign in through it, check the first account and closed
  * sign-up, then load the app shell, the `post` list and one post's edit page.
- * `pluginPage` adds the backups plugin's page. `failOnWarnings` fails on a
- * console warning as well as a console error.
+ * `pluginPage` adds the backups plugin's page, and `adminResource` the redirects
+ * plugin's admin resource. `failOnWarnings` fails on a console warning as well
+ * as a console error.
  *
  * Runs against a server the caller started on an empty database. The browser
  * outlives a failure, so the caller runs `closeAdminBrowser` on every exit path.
  */
 export async function expectAdminWorks(
     admin,
-    { pluginPage = false, failOnWarnings = false } = {}
+    { pluginPage = false, adminResource = false, failOnWarnings = false } = {}
 ) {
     step('loading /cms in headless chromium');
     const { chromium } = await import('playwright');
@@ -278,6 +279,52 @@ export async function expectAdminWorks(
             );
         }
         console.log(`  ok  404 GET ${downloadUrl} (the plugin raw route is mounted)`);
+    }
+
+    if (adminResource) {
+        step('opening a plugin admin resource');
+        // The database starts empty, so the rule is written through the
+        // plugin's own `create` method with the session first-run setup created.
+        const from = '/check-boot-old';
+        const createUrl = `${admin}/api/plugins/redirects/create`;
+        const created = await page.request.post(createUrl, {
+            data: { data: { from, to: '/check-boot-new' } },
+            timeout: REQUEST_TIMEOUT_MS,
+        });
+        if (created.status() !== 200) {
+            throw new Error(
+                `POST ${createUrl} returned ${created.status()}, expected 200: ${await created.text()}`
+            );
+        }
+        const rule = await created.json();
+        console.log(`  ok  200 POST ${createUrl} (the plugin create method answers)`);
+
+        // One resource under the plugin flattens to a single sidebar link.
+        const redirectsLink = page
+            .getByRole('navigation', { name: 'Plugins' })
+            .getByRole('link', { name: 'Redirects', exact: true });
+        await waitFor(redirectsLink, 'the Redirects link in the sidebar');
+        await redirectsLink.click();
+        await waitFor(
+            page.getByRole('link', { name: from, exact: true }),
+            'the new rule in the redirects list'
+        );
+        console.log('  ok  the redirects list renders the rule from its list method');
+
+        await page.goto(`${admin}/plugin/redirects/resources/redirects/${rule.id}`, {
+            waitUntil: 'commit',
+            timeout: REQUEST_TIMEOUT_MS,
+        });
+        // The field inputs carry the field name, not a label association.
+        const fromInput = page.locator('#am-app input[name="from"]');
+        await waitFor(fromInput, 'the redirect edit form');
+        const value = await fromInput.inputValue();
+        if (value !== from) {
+            throw new Error(
+                `the edit form's from input holds "${value}", expected "${from}"`
+            );
+        }
+        console.log('  ok  the redirect edit page renders the rule in its from input');
     }
 
     const reported = failOnWarnings ? 'warnings or errors' : 'errors';

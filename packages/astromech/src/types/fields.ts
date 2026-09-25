@@ -126,6 +126,12 @@ export type FieldErrors = Record<string, string[]>;
 export type ValidationMode = 'partial' | 'complete';
 
 /**
+ * The record a write validates: a core resource's, or a plugin's own row
+ * (`'plugin'`), which lives outside the four resources.
+ */
+export type ValidatedRecord = { kind: ResourceType | 'plugin'; record: unknown };
+
+/**
  * Context passed to a `FieldValidator`. Resource-generic — works for entries, media
  * and users, not just entries. Cross-field rules read siblings off
  * `values`; the current record is available raw on `resource.record`.
@@ -151,7 +157,7 @@ export type FieldValidationContext = {
      * may leave it out and take the `'complete'` default.
      */
     validation: ValidationMode;
-    resource: { kind: ResourceType; record: unknown };
+    resource: ValidatedRecord;
     user: User | null;
     /** True when no other record of the same resource holds `value` for `field`. */
     isUnique: (field: DataField, value: unknown) => Promise<boolean>;
@@ -194,7 +200,7 @@ export type ResourceValidationContext = {
     definitions: Field[];
     operation: 'create' | 'update';
     validation: ValidationMode;
-    resource: { kind: ResourceType; record: unknown };
+    resource: ValidatedRecord;
     user: User | null;
     /** True when no other record of the same resource holds `value` for `field`. */
     isUnique: (field: DataField, value: unknown) => Promise<boolean>;

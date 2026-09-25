@@ -1,7 +1,8 @@
 # Forms
 
-Reference for the options `forms()` takes and what `submit` returns. Writing a
-plugin of your own is [authoring.md](authoring.md).
+Reference for the options `forms()` takes, what `submit` returns, and where
+submissions are kept. Writing a plugin of your own is
+[authoring.md](authoring.md).
 
 ```ts
 import { forms, turnstile } from '@astromech/forms';
@@ -55,3 +56,33 @@ failure, so it renders where your other errors do:
     "errors": { "_form": ["Too many submissions — please try again shortly"] }
 }
 ```
+
+## Submissions
+
+Each accepted submission is a row in the plugin's own table,
+`plugin_forms_submissions`, holding the validated values, a one-line summary,
+the form's slug and the time it arrived. Submissions are not entries: they have
+no versions, locales or statuses.
+
+The admin lists them under **Forms → Submissions**
+(`/cms/plugin/forms/resources/submissions`), with search, sorting by form or
+date, and a read-only screen for each one. Nothing in the admin creates or edits
+a submission, since only `submit` writes one.
+
+Grant the two permissions to the roles that should see or delete them:
+
+```ts
+import { forms } from '@astromech/forms';
+
+roles: {
+    'content-editor': {
+        name: 'Content Editor',
+        permissions: [...forms.permissions('read', 'delete')],
+    },
+},
+```
+
+`read` covers the list and each submission; `delete` covers deleting one. The
+same permissions guard the service methods behind the screen, which your own
+code can call: `listSubmissions({ search?, formSlug?, sort?, page, limit })`,
+`getSubmission({ id })` and `deleteSubmission({ id })`.

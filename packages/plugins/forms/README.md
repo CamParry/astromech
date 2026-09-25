@@ -4,10 +4,10 @@ Forms whose fields an editor composes in the admin, a public submission API that
 validates against those fields through Astromech's own field pipeline, editor-
 configured notifications, and pluggable spam protection.
 
-Two entry types are registered: `form` (what an editor builds) and `submission`
-(what gets posted). Submissions are stored in the plugin's **own table**
-(`plugin_forms_submissions`) via `tableRepository`, not in the shared `entries`
-table, and are still managed through the standard entry admin UI.
+One entry type is registered: `form`, what an editor builds. What gets posted
+is stored in the plugin's own table, `plugin_forms_submissions`, and is read
+and deleted through the plugin's service methods and a read-only admin screen
+at `/cms/plugin/forms/resources/submissions`.
 
 ## Install
 
@@ -48,11 +48,15 @@ forms/
   src/index.ts                       definePlugin() — identity + composing the surfaces below
   src/types.ts                       FormsOptions, FORM_FIELD_KINDS, FORMS_PACKAGE
   src/entries/form.ts                the `form` entry type — fields, notifications and spam tabs
-  src/entries/submission.ts          the `submission` entry type — custom-table, API-written
   src/tables/submissions.ts          definePluginTable — the `submissions` table
+  src/repository.ts                  the submissions repository, built per call from ctx.db
+  src/fields.ts                      the fields a stored submission is displayed through
+  src/resources/submissions.ts       the Submissions admin resource
+  src/permissions/forms.ts           the read and delete permissions over submissions
   migrations/                        generated — never hand-edited
   src/fields/compile.ts              stored blocks -> core Field[]
   src/service/forms.ts               the public `get` and `submit` methods
+  src/service/submissions.ts         listSubmissions, getSubmission, deleteSubmission
   src/hooks/events.ts                forms:beforeSubmit / forms:afterSubmit payloads
   src/notifications/                 one provider per notification kind (see below)
   src/spam/                          one provider per spam service (see below)
@@ -168,8 +172,8 @@ through the same extension point a third party would use.
 
 ## Service methods
 
-Both methods are `public`, so neither assumes a session and both report failure
-as a result shape rather than a throw.
+`get` and `submit` are `public`, so neither assumes a session and both report
+failure as a result shape rather than a throw.
 
 ```ts
 const form = await Astromech.plugins.forms.get({ slug: 'contact' });
@@ -197,6 +201,28 @@ field name. Errors that belong to the form rather than a field are keyed under
 Field validation runs **before** the spam check, so a visitor whose token has
 expired still sees their field errors rather than losing them.
 
+### Stored submissions
+
+Three methods read and delete what `submit` stored. Each needs a permission
+(see below), and they back the admin screen.
+
+```ts
+const { data, pagination } = await Astromech.plugins.forms.listSubmissions({
+    search: 'ada', // matches the summary or the form slug
+    formSlug: 'contact',
+    sort: { submittedAt: 'desc' }, // or formSlug; newest first by default
+    page: 1,
+    limit: 20,
+});
+const submission = await Astromech.plugins.forms.getSubmission({ id });
+await Astromech.plugins.forms.deleteSubmission({ id });
+```
+
+A row is `{ id, formId, formSlug, data, summary, meta, submittedAt, createdAt,
+updatedAt }`. `getSubmission` returns `null` for an unknown id, and
+`deleteSubmission` returns `{ ok: true, id }` or `{ ok: false, reason:
+'not-found' }`.
+
 ## Hooks
 
 | event                | when                                | behaviour                                                   |
@@ -214,12 +240,20 @@ The thrown message is what the visitor sees, so keep it presentable.
 
 ## Permissions
 
-The plugin declares no permissions of its own. Its two entry types use the
-standard plugin-mounted entry permissions:
+The plugin declares two permissions over stored submissions:
 
-- `plugin:forms:entry:form:{action}`
-- `plugin:forms:entry:submission:{action}`
+| permission            | allows                                               |
+| --------------------- | ---------------------------------------------------- |
+| `plugin:forms:read`   | `listSubmissions`, `getSubmission`, the admin screen |
+| `plugin:forms:delete` | `deleteSubmission`, and delete in the admin          |
 
-Submission rows are written only by the `submit` method, which is `public` and
-so does not consult them. Withhold `create` and `update` on
-`plugin:forms:entry:submission` to keep the table API-written.
+```ts
+roles: {
+    editor: { permissions: [...forms.permissions('read', 'delete')] },
+},
+```
+
+Submitting needs none: `submit` is `public`. No method creates or edits a
+submission by hand, so the admin screen is read-only. The `form` entry type
+uses the standard plugin-mounted entry permissions,
+`plugin:forms:entry:form:{action}`.

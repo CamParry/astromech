@@ -276,12 +276,16 @@ import { safeParseFields } from 'astromech/fields';
 
 const { values, errors } = await safeParseFields(input, definitions, {
     operation: 'create',
-    resource: { kind: 'entry', record: null },
+    resource: { kind: 'plugin', record: null },
     user: ctx.user,
     isUnique: async () => true,
 });
 if (Object.keys(errors).length > 0) return { ok: false, errors };
 ```
+
+`resource` names the record being written: `kind: 'plugin'` for a row of your
+plugin's own table, with `record` the stored row on an update and `null` on a
+create.
 
 Two shapes, named on Zod's convention. **`parseFields`** returns the coerced
 values and throws a 422 when anything reported: use it when a failure should
@@ -383,13 +387,19 @@ import { useQuery } from '@tanstack/react-query';
 import { DataList, useListState } from 'astromech/ui';
 import { useAstromechPlugin } from 'astromech/ui/app';
 
-type Redirect = { id: string; from: string; to: string; statusCode: number };
+type Redirect = {
+    id: string;
+    from: string;
+    to: string;
+    status: string;
+    enabled: boolean;
+};
 type RedirectsService = {
-    list(params: { search: string; limit: number; offset: number }): Promise<{
-        rows: Redirect[];
-        pages: number;
+    list(params: { search?: string; page: number; limit: number }): Promise<{
+        data: Redirect[];
+        pagination: { pages: number } | null;
     }>;
-    delete(params: { ids: string[] }): Promise<void>;
+    delete(params: { id: string }): Promise<{ deleted: boolean }>;
 };
 
 export default function RedirectsPage() {
@@ -399,30 +409,32 @@ export default function RedirectsPage() {
     const { data, isLoading, isError } = useQuery({
         queryKey: ['redirects', list.q, list.page],
         queryFn: () =>
-            redirects.list({ search: list.q, limit: list.limit, offset: list.offset }),
+            redirects.list({ search: list.q, page: list.page, limit: list.limit }),
     });
 
     return (
         <DataList<Redirect>
-            rows={data?.rows ?? []}
+            rows={data?.data ?? []}
             columns={[
                 { key: 'from', label: 'From', link: true, render: (row) => row.from },
                 { key: 'to', label: 'To', render: (row) => row.to },
-                { key: 'statusCode', label: 'Status', render: (row) => row.statusCode },
+                { key: 'status', label: 'Type', render: (row) => row.status },
             ]}
             isLoading={isLoading}
             isError={isError}
             search={list.q}
             onSearch={list.setQuery}
             page={list.page}
-            pages={data?.pages ?? 1}
+            pages={data?.pagination?.pages ?? 1}
             onPage={list.setPage}
             rowHref={(row) => `/plugin/redirects/${row.id}`}
             bulkActions={[
                 {
                     label: 'Delete',
                     tone: 'danger',
-                    run: (ids) => redirects.delete({ ids }),
+                    run: async (ids) => {
+                        for (const id of ids) await redirects.delete({ id });
+                    },
                 },
             ]}
         />
@@ -448,11 +460,20 @@ unsaved changes closes.
 // admin/pages/redirect-form.tsx
 import { Button } from 'astromech/ui';
 import { FieldsForm, useAstromechPlugin, useFieldsForm } from 'astromech/ui/app';
-import { redirectFields } from '../../fields/redirect';
+import { redirectFields } from '../../fields';
 
-type Redirect = { id: string; from: string; to: string; statusCode: number };
+type Redirect = {
+    id: string;
+    from: string;
+    to: string;
+    status: string;
+    enabled: boolean;
+};
 type RedirectsService = {
-    update(params: { id: string; data: Record<string, unknown> }): Promise<Redirect>;
+    update(params: {
+        id: string;
+        data: Record<string, unknown>;
+    }): Promise<Redirect | null>;
 };
 
 export function RedirectForm({ redirect }: { redirect: Redirect }) {
@@ -494,9 +515,9 @@ screens without a page of your own. Declare it with `defineAdminResource` under
 renders the screens with the list and form the entry and user screens use.
 
 ```ts
-// admin/redirects.ts
+// resources/redirects.ts
 import { defineAdminResource } from 'astromech';
-import { redirectFields } from '../fields/redirect';
+import { redirectFields } from '../fields';
 
 export const redirectsResource = defineAdminResource({
     name: 'redirects',
@@ -504,7 +525,7 @@ export const redirectsResource = defineAdminResource({
     labelSingular: 'Redirect',
     icon: 'Signpost',
     fields: redirectFields,
-    columns: [{ field: 'from', sortable: true }, 'to', 'statusCode'],
+    columns: [{ field: 'from', sortable: true }, 'to', 'status', 'enabled'],
     search: true,
     methods: {
         list: 'list',
@@ -559,30 +580,43 @@ failure answers a 422 and the form shows each message on its field.
 
 ```ts
 // service/redirects.ts
-import type { AdminResourceRow } from 'astromech';
+import type { RedirectRow } from '../tables/redirects';
 import { defineServiceMethod, z } from 'astromech';
 import { parseFields } from 'astromech/fields';
-import { redirectFields } from '../fields/redirect';
-import { createRedirectRepository } from '../repository';
+import { redirectFields } from '../fields';
+import { createRedirectsRepository } from '../repository';
 
 export const redirectsService = {
     create: defineServiceMethod({
-        access: { permission: 'write' },
+        access: { permission: 'create' },
         input: z.object({ data: z.record(z.string(), z.unknown()) }),
         mutates: true,
-        handler: async ({ data }, ctx): Promise<AdminResourceRow> => {
+        handler: async ({ data }, ctx): Promise<RedirectRow> => {
+            const redirects = createRedirectsRepository(ctx.db);
             const values = await parseFields(data, redirectFields, {
                 operation: 'create',
-                resource: { kind: 'entry', record: null },
+                resource: { kind: 'plugin', record: null },
                 user: ctx.user,
-                isUnique: async () => true,
+                // `from` declares `validation: [{ unique: true }]`, which asks this.
+                isUnique: async (_field, value) =>
+                    (await redirects.findByFrom(String(value))) === null,
             });
-            return createRedirectRepository(ctx.db).create(values);
+            return redirects.create({
+                from: String(values['from']),
+                to: String(values['to']),
+                status: values['status'] === '302' ? '302' : '301',
+                enabled: values['enabled'] !== false,
+            });
         },
     }),
     // list, get, update and delete follow the same pattern.
 };
 ```
+
+`resource.kind` is `'plugin'` for a plugin's own row. A duplicate `from` fails
+the `unique` rule and answers a 422 on that field, before the table's unique
+index is reached. `@astromech/redirects` is the full worked example: its
+`service/redirects.ts` has all five methods beside the public `lookup`.
 
 ### Globals
 
@@ -724,7 +758,7 @@ them from the qualified type id:
 ```ts
 import { entryPermissions } from 'astromech';
 
-...entryPermissions('redirects/redirect', 'read', 'create', 'update', 'delete');
+...entryPermissions('forms/form', 'read', 'create', 'update', 'delete');
 ```
 
 **Nothing is auto-granted.** The `admin` role holds `*` and therefore already
@@ -1096,7 +1130,7 @@ id, built from context rather than from an identity import:
 
 ```ts
 const { data } = await ctx.entries.query({
-    type: `${ctx.plugin.namespace}/redirect`,
+    type: `${ctx.plugin.namespace}/form`,
     limit: 'all',
 });
 ```
@@ -1299,8 +1333,8 @@ an error message can name the method without repeating a string literal.
 
 Plugins can also contribute **service methods**
 ([above](#service-methods)), **hooks** (`defineHook`, e.g. `entry:afterUpdate`),
-**entry types**, **globals**, **cron jobs**, and **i18n** locale bundles. See the
-bundled `redirects` and `seo` plugins for each.
+**entry types**, **globals**, **cron jobs**, and **i18n** locale bundles. The
+bundled plugins in `packages/plugins/` use each of them.
 
 > Plugins can't register routes outside `${basePath}/api`. To integrate with the front end,
 > expose data through a service method and document a small middleware recipe —
@@ -1347,8 +1381,9 @@ options, pass `definePlugin` a factory instead of a plain object:
 import type { RedirectsOptions } from './types.js';
 import { definePlugin, withDefaults } from 'astromech';
 import { migrationProvider } from '../migrations/index.js';
-import { redirectEntryType } from './entries/redirect.js';
 import { slugChangeHook } from './hooks/slug-change.js';
+import { redirectsPermissions } from './permissions/redirects.js';
+import { redirectsResource } from './resources/redirects.js';
 import { redirectsService } from './service/redirects.js';
 import { redirectsTable } from './tables/redirects.js';
 import { REDIRECTS_PACKAGE } from './types.js';
@@ -1367,7 +1402,8 @@ export const redirects = definePlugin((options?: RedirectsOptions) => {
         icon: 'Signpost',
         tables: [redirectsTable],
         migrations: migrationProvider,
-        entries: [redirectEntryType],
+        permissions: redirectsPermissions,
+        admin: { resources: [redirectsResource] },
         service: redirectsService,
         ...(generateOnSlugChange && { hooks: [slugChangeHook] }),
     };
@@ -1376,8 +1412,8 @@ export const redirects = definePlugin((options?: RedirectsOptions) => {
 export default redirects;
 ```
 
-Redirects declares no `permissions`: its only service method is public, and its
-entry type's permissions are derived by core.
+Redirects declares `read`, `create`, `update` and `delete`, one for each admin
+resource method; `lookup` is public and needs none.
 
 A factory **must be a pure data builder**: Astromech calls it once with no
 options to read identity and permission declarations, and again for each site

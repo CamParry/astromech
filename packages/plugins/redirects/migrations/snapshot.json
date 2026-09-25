@@ -65,7 +65,13 @@
                 }
             ],
             "fks": [],
-            "indexes": []
+            "indexes": [
+                {
+                    "name": "plugin_redirects_redirects_from_unique",
+                    "columns": ["from"],
+                    "unique": true
+                }
+            ]
         }
     }
 }

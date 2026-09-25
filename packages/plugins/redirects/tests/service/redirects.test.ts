@@ -6,8 +6,6 @@
 
 import type { RedirectMatch } from '../../src/index';
 import type { DB } from '@/database/types';
-import type { JsonValue } from '@/types/domain';
-import type { EntriesService } from '@/types/index';
 import type { Kysely } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { sql } from 'kysely';
@@ -15,26 +13,15 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { redirects } from '../../src/index';
 
-const localEntries = currentServices.entries;
-const pluginServices = currentServices.plugins;
-
-type RedirectsService = Record<string, (input?: unknown) => Promise<unknown>>;
+const service = () => currentServices.plugins.redirects;
 
 /** Public `lookup`, called the way a frontend middleware calls it. */
 function lookup(input: unknown): Promise<RedirectMatch | null> {
-    const service = pluginServices['redirects'] as unknown as
-        | RedirectsService
-        | undefined;
-    const fn = service?.['lookup'];
-    if (!fn) throw new Error('redirects.lookup not registered');
-    return fn(input) as Promise<RedirectMatch | null>;
+    return service().lookup(input as { from: string });
 }
 
-/** The one entries service, typed to the wide API for these round-trips. */
-const entries = (): EntriesService => localEntries as unknown as EntriesService;
-
-async function addRule(fields: Record<string, JsonValue>): Promise<void> {
-    await entries().create({ type: 'redirects/redirect', data: { fields } });
+async function addRule(data: Record<string, unknown>): Promise<void> {
+    await service().create({ data });
 }
 
 let db: Kysely<DB>;
@@ -78,14 +65,16 @@ describe('redirects lookup', () => {
         });
     });
 
-    it('answers with the enabled rule when a disabled rule names the same path', async () => {
-        await addRule({ from: '/a', to: '/stale', enabled: false });
-        await addRule({ from: '/a', to: '/live', enabled: true });
-        await addRule({ from: '/b', to: '/live', enabled: true });
-        await addRule({ from: '/b', to: '/stale', enabled: false });
+    it('answers null for a disabled rule, and the rule once it is enabled again', async () => {
+        await addRule({ from: '/a', to: '/b', enabled: false });
 
-        expect(await lookup({ from: '/a' })).toEqual({ to: '/live', status: '301' });
-        expect(await lookup({ from: '/b' })).toEqual({ to: '/live', status: '301' });
+        expect(await lookup({ from: '/a' })).toBeNull();
+
+        const [rule] = (await service().list({ page: 1, limit: 20 })).data;
+        if (!rule) throw new Error('the rule was not stored');
+        await service().update({ id: rule.id, data: { enabled: true } });
+
+        expect(await lookup({ from: '/a' })).toEqual({ to: '/b', status: '301' });
     });
 
     it('answers null for an empty path', async () => {

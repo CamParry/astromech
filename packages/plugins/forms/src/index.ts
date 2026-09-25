@@ -1,7 +1,7 @@
 /**
  * @astromech/forms — forms with runtime-composed fields, a public submission
  * API, and spam protection. An editor composes a `form` entry's fields in the
- * blocks editor; a `submission` entry stores what gets posted.
+ * blocks editor; what gets posted is stored in the plugin's own table.
  */
 
 import type { FormsOptions } from './types';
@@ -9,7 +9,8 @@ import type { PluginDB, ServiceInterface } from 'astromech';
 import { definePlugin, withDefaults } from 'astromech';
 import { migrationProvider } from '../migrations/index';
 import { formEntryType } from './entries/form';
-import { submissionEntryType } from './entries/submission';
+import { formsPermissions } from './permissions/forms';
+import { submissionsResource } from './resources/submissions';
 import { createFormsService } from './service/forms';
 import { spamHook } from './spam/hook';
 import { submissionsTable } from './tables/submissions';
@@ -34,6 +35,7 @@ export { FORM_FIELD_KINDS } from './types';
 export type { FormsAfterSubmitPayload, FormsBeforeSubmitPayload } from './hooks/events';
 export { FORM_ERROR_KEY } from './service/forms';
 export type { PublicForm, SubmitInput, SubmitResult } from './service/forms';
+export type { DeleteSubmissionResult } from './service/submissions';
 export type { SpamContext, SpamProvider, SpamVerdict } from './spam/types';
 export { turnstile } from './spam/providers/turnstile';
 export type { TurnstileOptions } from './spam/providers/turnstile';
@@ -61,7 +63,9 @@ export const forms = definePlugin((options?: FormsOptions) => {
         icon: 'ClipboardList',
         tables,
         migrations: migrationProvider,
-        entries: [formEntryType, submissionEntryType],
+        permissions: formsPermissions,
+        entries: [formEntryType],
+        admin: { resources: [submissionsResource] },
         service: createFormsService({ storeMeta, rateLimit, spam }),
         hookEvents: ['forms:beforeSubmit', 'forms:afterSubmit'],
         // Registered through the same public extension point a third party

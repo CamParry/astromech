@@ -6,8 +6,7 @@
 
 import type { Field, JsonObject } from 'astromech';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { redirectsTable } from '@astromech/redirects/tables';
-import { createAstromech, encodeWith, findReferences } from 'astromech';
+import { createAstromech, findReferences } from 'astromech';
 import { libsql } from 'astromech/database/libsql';
 import * as schema from 'astromech/database/schema';
 import { contentVersion, readImageDimensions, sharp } from 'astromech/media/image/sharp';
@@ -268,10 +267,11 @@ async function seed(): Promise<void> {
     await db.deleteFrom('entryContent').where('type', 'in', CLEARED_TYPES).execute();
     await db.deleteFrom('entries').where('type', 'in', CLEARED_TYPES).execute();
 
-    // Clear globals and redirects. Deleting the `globals` row
+    // Clear globals, redirects and form submissions. Deleting the `globals` row
     // cascades to its content and versions.
     await db.deleteFrom('globals').execute();
     await db.deleteFrom('pluginRedirectsRedirects').execute();
+    await db.deleteFrom('pluginFormsSubmissions').execute();
 
     // Clear leftover media rows (no files on disk referenced). Content rows go
     // first: SQLite only cascades when `foreign_keys` is on.
@@ -279,7 +279,7 @@ async function seed(): Promise<void> {
     await db.deleteFrom('media').execute();
 
     console.log(
-        '  Cleared content entries, relationships, globals, settings, redirects, media\n'
+        '  Cleared content entries, relationships, globals, settings, redirects, form submissions, media\n'
     );
 
     const adminId = await upsertAdmin();
@@ -1864,30 +1864,20 @@ async function seed(): Promise<void> {
     }
     console.log('  Wrote the menus globals (main + footer, en + fr, published)\n');
 
-    // The redirects table is the plugin's own, so its rows go through the
-    // plugin's own table codec rather than being hand-built: `encodeWith` mints
-    // the ULID id and the ISO-TEXT createdAt/updatedAt from the table's
-    // defaults, exactly as `tableRepository` does at runtime.
-    await db
-        .insertInto('pluginRedirectsRedirects')
-        .values(
-            [
-                { from: '/old-home', to: '/', status: '301', enabled: true },
-                {
-                    from: '/blog/old-post',
-                    to: '/blog/getting-started-with-astromech',
-                    status: '301',
-                    enabled: true,
-                },
-                {
-                    from: '/customers/index',
-                    to: '/customers',
-                    status: '302',
-                    enabled: true,
-                },
-            ].map((row) => encodeWith(redirectsTable, row))
-        )
-        .execute();
+    // Through the plugin's own service, which checks each rule against its
+    // fields (a unique `from`, a 301 or 302 status) as the admin form does.
+    for (const data of [
+        { from: '/old-home', to: '/', status: '301', enabled: true },
+        {
+            from: '/blog/old-post',
+            to: '/blog/getting-started-with-astromech',
+            status: '301',
+            enabled: true,
+        },
+        { from: '/customers/index', to: '/customers', status: '302', enabled: true },
+    ]) {
+        await app.plugins.redirects.create({ data });
+    }
     console.log('  Created 3 redirects\n');
 
     /**
@@ -1979,6 +1969,31 @@ async function seed(): Promise<void> {
     ] as Record<string, unknown>[]);
     console.log('  Created 1 form (contact)\n');
 
+    // Through the public `submit` method, as a visitor's post would arrive, so
+    // the values are validated and the summary built. Its notification emails
+    // print to the console email driver.
+    for (const data of [
+        {
+            name: 'Ada Lovelace',
+            email: 'ada@example.com',
+            topic: 'sales',
+            message: 'Could we see a demo of the admin for a team of five?',
+            consent: true,
+        },
+        {
+            name: 'Grace Hopper',
+            email: 'grace@example.com',
+            topic: 'support',
+            message: 'The preview link stopped working after I changed a slug.',
+        },
+    ]) {
+        const result = await app.plugins.forms.submit({ slug: 'contact', data });
+        if (!result.ok) {
+            throw new Error(`Seed submission refused: ${JSON.stringify(result.errors)}`);
+        }
+    }
+    console.log('  Created 2 form submissions (contact)\n');
+
     // Runs last so every entry it reads has been seeded.
     await indexRelationships();
 
@@ -2001,7 +2016,7 @@ async function seed(): Promise<void> {
     console.log('  Globals        1  (site, en + fr)');
     console.log('  Menus          2  globals (main + footer, en + fr each)');
     console.log('  Redirects      3');
-    console.log('  Forms          1  (contact)');
+    console.log('  Forms          1  (contact) + 2 submissions');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('  Admin login: admin@astromech.dev / password');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');

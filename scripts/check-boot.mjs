@@ -120,7 +120,7 @@ async function main() {
 
     // Runs against the server already started above. A second one would double
     // the slowest part of the check and prove nothing extra.
-    await expectAdminWorks(`${base}/cms`, { pluginPage: true });
+    await expectAdminWorks(`${base}/cms`, { pluginPage: true, adminResource: true });
 }
 
 /**

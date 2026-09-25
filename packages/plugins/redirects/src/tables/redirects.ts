@@ -1,7 +1,6 @@
 /**
- * The redirects plugin's table. `definePluginTable` owns the
- * `plugin_<namespace>_` prefix, so the table is declared with its bare name and
- * comes out as `plugin_redirects_redirects`.
+ * The redirects plugin's table, `plugin_redirects_redirects`: one rule per
+ * `from` path, which the unique index enforces and `lookup` reads by.
  */
 
 import type { TableInsert, TableSelect } from 'astromech';
@@ -19,7 +18,8 @@ export const redirectsTable = definePluginTable(
         enabled: col.boolean({ notNull: true, default: true }),
         createdAt: col.timestamp({ notNull: true, defaultNow: true }),
         updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
-    })
+    }),
+    ({ index }) => [index('redirects_from_unique', ['from'], { unique: true })]
 );
 
 export type RedirectRow = TableSelect<typeof redirectsTable>;

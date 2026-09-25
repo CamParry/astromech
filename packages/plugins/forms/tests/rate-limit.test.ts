@@ -9,7 +9,6 @@ import type { DB } from '@/database/types';
 import type { EntriesService, PluginContext } from '@/types/index';
 import type { Kysely } from 'kysely';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { sql } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
 import { currentServices } from '@/app-context/services';
@@ -20,6 +19,7 @@ import {
     getPluginServiceMethods,
 } from '@/plugins/runtime/plugin-runtime';
 import { forms } from '../src/index';
+import { createSubmissionsRepository } from '../src/repository';
 import { consumeRateLimit, resetRateLimit } from '../src/service/rate-limit';
 
 const localEntries = currentServices.entries;
@@ -67,8 +67,7 @@ async function setup(options?: FormsOptions): Promise<void> {
 }
 
 async function submissionCount(): Promise<number> {
-    const { rows } = await sql`SELECT * FROM plugin_forms_submissions`.execute(db);
-    return rows.length;
+    return createSubmissionsRepository(db).count();
 }
 
 const TOO_MANY = 'Too many submissions — please try again shortly';

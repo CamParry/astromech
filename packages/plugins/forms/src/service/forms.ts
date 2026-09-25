@@ -1,7 +1,6 @@
 /**
- * The plugin's public service: `get` returns a render-ready form definition,
- * `submit` validates and stores a set of submitted values. Both are `public`,
- * so neither may assume a session, and both report failure as a result shape.
+ * The plugin's service. The public `get` and `submit` serve a site's visitors
+ * and report failure as a result shape; the submission methods serve the admin.
  */
 import type { FormsAfterSubmitPayload, FormsBeforeSubmitPayload } from '../hooks/events';
 import type { SpamProvider } from '../spam/types';
@@ -12,10 +11,11 @@ import { safeParseFields } from 'astromech/fields';
 import { compileFormFields } from '../fields/compile';
 import { AFTER_SUBMIT, BEFORE_SUBMIT } from '../hooks/events';
 import { sendNotifications } from '../notifications/dispatch';
-import { SUBMISSION_TYPE } from '../types';
+import { createSubmissionsRepository } from '../repository';
 import { entryFields, loadForm, usesSpam } from '../utilities/form-entry';
 import { buildSummary } from '../utilities/summary';
 import { consumeRateLimit } from './rate-limit';
+import { deleteSubmission, getSubmission, listSubmissions } from './submissions';
 
 /** The public projection of a form, built by explicit allow-list. */
 export type PublicForm = {
@@ -99,7 +99,7 @@ export function createFormsService(
                     definitions,
                     {
                         operation: 'create',
-                        resource: { kind: 'entry', record: null },
+                        resource: { kind: 'plugin', record: null },
                         user: ctx.user,
                         isUnique: refuseUniqueCheck,
                     }
@@ -130,21 +130,16 @@ export function createFormsService(
                     );
                 }
 
-                const submission = await ctx.entries.create({
-                    type: `${ctx.plugin.namespace}/${SUBMISSION_TYPE}`,
-                    data: {
-                        fields: {
-                            formId: form.id,
-                            formSlug: payload.form.slug,
-                            // The COERCED values, not the raw input.
-                            data: values,
-                            summary: buildSummary(definitions, values),
-                            ...(storeMeta && payload.meta !== undefined
-                                ? { meta: payload.meta }
-                                : {}),
-                            submittedAt: new Date(),
-                        },
-                    },
+                const submission = await createSubmissionsRepository(ctx.db).create({
+                    formId: form.id,
+                    formSlug: payload.form.slug,
+                    // The COERCED values, not the raw input.
+                    data: values,
+                    summary: buildSummary(definitions, values),
+                    ...(storeMeta && payload.meta !== undefined
+                        ? { meta: payload.meta }
+                        : {}),
+                    submittedAt: new Date(),
                 });
 
                 const after: FormsAfterSubmitPayload = {
@@ -167,6 +162,10 @@ export function createFormsService(
                 return { ok: true, id: submission.id };
             },
         }),
+
+        listSubmissions,
+        getSubmission,
+        deleteSubmission,
     };
 }
 

@@ -28,7 +28,7 @@ type AiContextReference = {
   is one vocabulary for the domains and not a second one here. They stay plural
   even though a reference usually names a single item.
 - **`type`** is the entry type id, and applies to `kind: 'entries'` only. It is
-  the **qualified** id — `redirects/redirect` for a plugin's type, `post` for a
+  the **qualified** id — `forms/form` for a plugin's type, `post` for a
   root-config one — carried verbatim, so it is the same string the entries
   service, the HTTP API and the manifest all use.
 - **`id`** identifies the single item in view. Absent on list and index

@@ -174,20 +174,9 @@ export default defineConfig({
             permissions: [
                 ...permissionsForBuiltInRole('editor'),
                 ...seo.permissions('read'),
-                // Redirects declares no permissions — its entry type's are
-                // derived by core, so a site enumerates the actions it grants.
-                ...entryPermissions(
-                    'redirects/redirect',
-                    'read',
-                    'create',
-                    'update',
-                    'delete'
-                ),
+                ...redirects.permissions('read', 'create', 'update', 'delete'),
                 ...entryPermissions('forms/form', 'read', 'create', 'update', 'delete'),
-                // `read` + `delete` only — submissions are written by the public
-                // API and must not be hand-authored or edited. This is v1's
-                // stand-in for a read-only entry flag, which core does not have.
-                ...entryPermissions('forms/submission', 'read', 'delete'),
+                ...forms.permissions('read', 'delete'),
                 // `read` alone — a content editor has no business downloading,
                 // restoring or deleting the database.
                 ...backups.permissions('read'),

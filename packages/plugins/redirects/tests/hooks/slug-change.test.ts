@@ -16,21 +16,18 @@ import { currentServices } from '@/app-context/services';
 import { redirects } from '../../src/index';
 
 const localEntries = currentServices.entries;
-const pluginServices = currentServices.plugins;
-
-type RedirectsService = Record<string, (input?: unknown) => Promise<unknown>>;
 
 function lookup(from: string): Promise<RedirectMatch | null> {
-    const service = pluginServices['redirects'] as unknown as
-        | RedirectsService
-        | undefined;
-    const fn = service?.['lookup'];
-    if (!fn) throw new Error('redirects.lookup not registered');
-    return fn({ from }) as Promise<RedirectMatch | null>;
+    return currentServices.plugins.redirects.lookup({ from });
 }
 
 /** The one entries service, typed to the wide API for these round-trips. */
 const entries = (): EntriesService => localEntries as unknown as EntriesService;
+
+/** Store a rule through the plugin's own service. */
+async function addRule(data: Record<string, unknown>): Promise<void> {
+    await currentServices.plugins.redirects.create({ data });
+}
 
 /** The harness config with `post` given `url`, and the redirects plugin. */
 function configWith(url: string, options?: RedirectsOptions): AstromechConfig {
@@ -112,10 +109,7 @@ describe('slug-change hook on a slug url template', () => {
 
     it('records no second copy of an enabled rule that already exists', async () => {
         const post = await entries().create({ type: 'post', data: { title: 'A' } });
-        await entries().create({
-            type: 'redirects/redirect',
-            data: { fields: { from: '/blog/a', to: '/blog/b', enabled: true } },
-        });
+        await addRule({ from: '/blog/a', to: '/blog/b', enabled: true });
 
         await entries().update({ type: 'post', id: post.id, data: { slug: 'b' } });
 
@@ -124,10 +118,7 @@ describe('slug-change hook on a slug url template', () => {
 
     it('keeps an enabled rule that already redirects the old path elsewhere', async () => {
         const post = await entries().create({ type: 'post', data: { title: 'A' } });
-        await entries().create({
-            type: 'redirects/redirect',
-            data: { fields: { from: '/blog/a', to: '/elsewhere', enabled: true } },
-        });
+        await addRule({ from: '/blog/a', to: '/elsewhere', enabled: true });
 
         await entries().update({ type: 'post', id: post.id, data: { slug: 'b' } });
 
@@ -137,14 +128,8 @@ describe('slug-change hook on a slug url template', () => {
 
     it('leaves a disabled rule alone', async () => {
         const post = await entries().create({ type: 'post', data: { title: 'A' } });
-        await entries().create({
-            type: 'redirects/redirect',
-            data: { fields: { from: '/blog/b', to: '/elsewhere', enabled: false } },
-        });
-        await entries().create({
-            type: 'redirects/redirect',
-            data: { fields: { from: '/older', to: '/blog/a', enabled: false } },
-        });
+        await addRule({ from: '/blog/b', to: '/elsewhere', enabled: false });
+        await addRule({ from: '/older', to: '/blog/a', enabled: false });
 
         await entries().update({ type: 'post', id: post.id, data: { slug: 'b' } });
 
@@ -167,19 +152,20 @@ describe('slug-change hook on a slug url template', () => {
         expect(await rules()).toEqual([]);
     });
 
-    it('records nothing when a redirect rule itself is updated', async () => {
-        const rule = await entries().create({
-            type: 'redirects/redirect',
-            data: { fields: { from: '/a', to: '/b' } },
+    it('re-points and enables a disabled rule at the old path, since a path holds one rule', async () => {
+        const post = await entries().create({ type: 'post', data: { title: 'A' } });
+        await addRule({
+            from: '/blog/a',
+            to: '/elsewhere',
+            status: '302',
+            enabled: false,
         });
 
-        await entries().update({
-            type: 'redirects/redirect',
-            id: rule.id,
-            data: { fields: { from: '/c', to: '/b' } },
-        });
+        await entries().update({ type: 'post', id: post.id, data: { slug: 'b' } });
 
-        expect(await rules()).toEqual([['/c', '/b']]);
+        expect(await rules()).toEqual([['/blog/a', '/blog/b']]);
+        expect(await disabledRules()).toEqual([]);
+        expect(await lookup('/blog/a')).toEqual({ to: '/blog/b', status: '301' });
     });
 });
 

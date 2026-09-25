@@ -12,7 +12,7 @@ fields.relationship('owner', { target: 'users' });
 ```
 
 `target` names the entry type being pointed at (a plugin's by its qualified id,
-such as `redirects/redirect`), or the literal `'users'` to point at a user. A
+such as `forms/form`), or the literal `'users'` to point at a user. A
 target that names no entry type fails when the config loads. `multiple: true` stores a list instead of a single id. A
 `media` field is a relation too, and is indexed like one — you do not declare
 it differently.
