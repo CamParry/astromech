@@ -1,6 +1,5 @@
 import type { AppContext, Entry } from '@/types/index';
-import { CapabilityError } from '@/errors/capability';
-import { getEntryRepository } from '../repository/registry';
+import { entryRepository } from '../repository/entries-table';
 import { getEntryResources, toEntry } from './read-entry';
 import { writeBatch } from './write-batch';
 
@@ -17,13 +16,10 @@ export async function restoreEntryBatch(
     ctx: AppContext
 ): Promise<Entry[]> {
     const { type, ids } = params;
-    const repository = getEntryRepository(type);
-    const { trash } = repository;
-    if (!trash) throw new CapabilityError('entry', type, 'trash');
-    const entries = await getEntryResources(repository, type, ids);
+    const entries = await getEntryResources(type, ids);
     const user = ctx.user;
 
     return writeBatch(entries, async (entry) =>
-        toEntry(await trash.restore(entry.id, user?.id ?? null))
+        toEntry(await entryRepository.trash.restore(entry.id, user?.id ?? null))
     );
 }

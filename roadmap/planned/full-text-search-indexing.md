@@ -54,8 +54,8 @@ does. Rich text contributes its text leaves, one space per block; nested
 `group`, `repeater` and `blocks` fields are walked. The walk has to descend into
 named groups rather than read only the top-level keys: a named `tab` or
 `accordion` stores its fields in one, so a site's top-level text can sit at
-`seo.title`. `searchable` itself is refused below a nested field, so a default
-that widens it must decide what it means for those fields.
+`seo.title`. The flag must also decide what it means for a field below a nested
+field, where `translatable` is refused.
 
 Trash is filtered through the existing join to `entries` in the query, not by
 gating the triggers (`deletedAt` lives on `entries`, and trash never touches
@@ -76,7 +76,7 @@ filtered out by the existing `stagedFor IS NULL`.
 4. [ ] The query: `search` (and `_search` as its alias) becomes a `MATCH` in
        the shared rows and count predicate, with each token quoted and a prefix
        `*` on the last; ranked by `bm25`, title weighted highest, when no sort
-       is given. Custom-table types, users and media keep `LIKE`.
+       is given. Users and media keep `LIKE`.
 5. [ ] `astromech entries:reindex [--check]`: recompute `searchText`, run
        `'rebuild'`; `--check` runs `integrity-check` and compares `searchText`.
 6. [ ] Docs: a `DECISIONS.md` entry for the design as built, `ARCHITECTURE.md`, `apps/docs`.
@@ -87,8 +87,7 @@ finding "blogroll".
 ## Open questions, with the planning pass's recommendation
 
 - **`searchable` default:** true for `text`, `textarea` and `richtext`, with
-  `searchable: false` excluding a field. The flag already exists as an opt-in
-  for custom tables and for showing the admin's search box, so this widens it.
+  `searchable: false` excluding a field. This step adds the flag.
 - **Tokenizer:** `unicode61 remove_diacritics 2` with prefix indexes, no
   porter, since porter stems only English and one table holds every locale.
 - **The public contract** stays "entries are searchable". The SQLite-specific

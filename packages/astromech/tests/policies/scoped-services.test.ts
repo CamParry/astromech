@@ -301,11 +301,11 @@ describe('scopeMethods over the entries catalogue', () => {
         const scoped = scopeStub(makeEntriesStub(), role('entry:*'));
 
         try {
-            call(scoped, 'update', { type: 'redirects/redirect', id: '1', data: {} });
+            call(scoped, 'update', { type: 'forms/form', id: '1', data: {} });
             expect.unreachable('a root entry grant must not reach a plugin entry type');
         } catch (e) {
             expect((e as PermissionDeniedError).permission).toBe(
-                'plugin:redirects:entry:redirect:update'
+                'plugin:forms:entry:form:update'
             );
         }
     });

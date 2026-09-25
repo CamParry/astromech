@@ -28,8 +28,8 @@ describe('rootEntryPermission', () => {
 
 describe('pluginEntryPermission', () => {
     it('should return plugin:<ns>:entry:<type>:<action>', () => {
-        expect(pluginEntryPermission('redirects', 'redirect', 'read')).toBe(
-            'plugin:redirects:entry:redirect:read'
+        expect(pluginEntryPermission('forms', 'form', 'read')).toBe(
+            'plugin:forms:entry:form:read'
         );
     });
 
@@ -56,8 +56,8 @@ describe('entryPermission — derivation from the type id', () => {
     });
 
     it('derives the plugin form from a qualified type id', () => {
-        expect(entryPermission('redirects/redirect', 'read')).toBe(
-            'plugin:redirects:entry:redirect:read'
+        expect(entryPermission('forms/form', 'read')).toBe(
+            'plugin:forms:entry:form:read'
         );
         expect(entryPermission('widgets/widget', 'delete')).toBe(
             'plugin:widgets:entry:widget:delete'

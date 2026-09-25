@@ -145,7 +145,7 @@ function routeFor(id: string, args: Args): MountedRoute {
  * The route's path filled from `args`, and the arguments the path did not take.
  *
  * A path param is percent-encoded: a plugin entry type is addressed by its
- * QUALIFIED id (`redirects/redirect`), whose separator would otherwise grow a
+ * QUALIFIED id (`forms/form`), whose separator would otherwise grow a
  * segment and miss the route, and a plugin global's key (`seo/settings`) has
  * the same separator. Hono decodes it back on the server, and a bare id encodes
  * to itself.

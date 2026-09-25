@@ -379,12 +379,6 @@ export type DataField = {
     // Translation support
     translatable?: boolean;
 
-    /**
-     * The multi-type repository indexes this field for free-text search; collected
-     * into the entry type's `search` list at resolve time.
-     */
-    searchable?: boolean;
-
     /** When true, this field is omitted from `public`-shape reads. Default: false (public). */
     private?: boolean;
 

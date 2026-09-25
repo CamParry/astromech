@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { getEntriesTableRepository } from '@/entries/repository/registry';
+import { entryRepository } from '@/entries/repository/entries-table';
 import { globalRepository } from '@/globals/repository';
 import { mediaRepository } from '@/media/repository';
 import { userRepository } from '@/users/repository';
@@ -13,7 +13,7 @@ import { userRepository } from '@/users/repository';
 const lists = {
     user: () => userRepository,
     media: () => mediaRepository,
-    entries: getEntriesTableRepository,
+    entries: () => entryRepository,
 };
 const repositories = { ...lists, global: () => globalRepository };
 

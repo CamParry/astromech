@@ -4,7 +4,6 @@
  */
 
 import type { Db } from '@/database/types';
-import type { EntriesTableRepository } from '@/entries/repository/registry';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { systemAppContext } from '@/app-context/app-context';
@@ -12,16 +11,14 @@ import { relationshipRepository } from '@/content/repository/relationships';
 import { createRepository } from '@/database/repository/create-repository';
 import { entriesTable } from '@/database/tables';
 import { trashPurgeJob } from '@/entries/jobs/trash-purge';
+import { entryRepository } from '@/entries/repository/entries-table';
 import { entryMaintenanceRepository } from '@/entries/repository/maintenance';
-import { getEntriesTableRepository } from '@/entries/repository/registry';
 
 let db: Db;
-let entryRepository: EntriesTableRepository;
 
 beforeEach(async () => {
     db = await createTestDb();
     setupTestConfig();
-    entryRepository = getEntriesTableRepository();
 });
 
 describe('publishDueScheduled', () => {

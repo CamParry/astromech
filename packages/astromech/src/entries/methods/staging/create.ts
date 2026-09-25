@@ -4,9 +4,9 @@ import { transaction } from '@/database/transaction';
 import { StagedChangeExistsError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
-import { toEntry } from '../../internal/read-entry';
+import { getEntryOfType, toEntry } from '../../internal/read-entry';
 import { syncEntryRelationships } from '../../internal/relationships';
-import { resolveStagingTarget } from '../../internal/staging';
+import { entryRepository } from '../../repository/entries-table';
 
 /**
  * Creates a staged copy of one locale of an entry so edits can be drafted off
@@ -24,7 +24,8 @@ export const createStagedEntry = defineServiceMethod({
     mutates: true,
     async handler(params, ctx): Promise<Entry> {
         const { type, id } = params;
-        const { staging, canonical } = await resolveStagingTarget(params);
+        const canonical = await getEntryOfType(type, id, params.locale);
+        const { staging } = entryRepository;
         const user = ctx.user;
 
         const existing = await staging.findOne({ id, locale: canonical.locale });
@@ -48,7 +49,7 @@ export const createStagedEntry = defineServiceMethod({
                     updatedBy: user?.id ?? null,
                 }
             );
-            await syncEntryRelationships(ctx.config, row, canonical.fields, type);
+            await syncEntryRelationships(ctx.config, row, type);
             return row;
         });
 

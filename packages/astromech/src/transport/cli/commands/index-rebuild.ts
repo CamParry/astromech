@@ -23,9 +23,6 @@ export default defineCommand({
     },
     run: ({ args }) =>
         withApplication(args, async () => {
-            // Booted, so the plugin runtime is registered: without it a custom-table
-            // plugin entry type resolves to the entries-table repository, its rows go
-            // unread, and a rebuild deletes every reference it has.
             const scope = args.type ? { type: args.type } : {};
 
             if (args.check) {

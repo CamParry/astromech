@@ -52,7 +52,7 @@ type WhereColumns<D> = {
  * null/undefined split exists to express.
  *
  * The runtime additionally reads a bare array as `in`, for loosely-typed callers
- * migrating off `tableRepository`. Typed callers use `{ in: [...] }`.
+ * such as a public `where` filter. Typed callers use `{ in: [...] }`.
  */
 export type Where<D> = WhereColumns<D> & {
     /**

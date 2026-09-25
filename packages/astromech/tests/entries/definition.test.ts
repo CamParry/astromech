@@ -115,11 +115,11 @@ describe('entryCatalogue', () => {
     });
 
     it('fixes a plugin type’s access to the plugin permission form', () => {
-        const catalogue = entryCatalogue({ typeId: 'redirects/redirect', titled: true });
+        const catalogue = entryCatalogue({ typeId: 'forms/form', titled: true });
 
-        expect(catalogue.update.access).toBe('plugin:redirects:entry:redirect:update');
+        expect(catalogue.update.access).toBe('plugin:forms:entry:form:update');
         expect(catalogue.update.summary).toBe(
-            'Update a "redirects/redirect" entry. Fields merge: omitted fields keep their ' +
+            'Update a "forms/form" entry. Fields merge: omitted fields keep their ' +
                 'current value, and arrays are replaced whole.'
         );
     });

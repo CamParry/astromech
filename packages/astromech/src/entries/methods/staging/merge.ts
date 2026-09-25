@@ -4,13 +4,13 @@ import { RESOURCE_SPECS } from '@/content/resources';
 import { requireStagedChange } from '@/content/staging';
 import { snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
+import { resolveEntryType } from '@/entries/entry-types';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
-import { isVersioningEnabled } from '../../internal/entry-type';
-import { toEntry, toEntryWithContentId } from '../../internal/read-entry';
+import { getEntryOfType, toEntry, toEntryWithContentId } from '../../internal/read-entry';
 import { syncEntryRelationships } from '../../internal/relationships';
-import { resolveStagingTarget } from '../../internal/staging';
 import { toStoredFields } from '../../internal/stored-fields';
+import { entryRepository } from '../../repository/entries-table';
 
 /**
  * Merges a staged change into the canonical content row it was made from:
@@ -30,7 +30,8 @@ export const mergeStagedEntry = defineServiceMethod({
     mutates: true,
     async handler(params, ctx): Promise<Entry> {
         const { type, id } = params;
-        const { repository, staging, canonical } = await resolveStagingTarget(params);
+        const canonical = await getEntryOfType(type, id, params.locale);
+        const { staging } = entryRepository;
         const staged = toEntryWithContentId(
             await requireStagedChange(staging, 'entry', {
                 rowId: id,
@@ -46,14 +47,14 @@ export const mergeStagedEntry = defineServiceMethod({
         const mergedFields = await toStoredFields({
             kind: 'merge',
             config: ctx.config,
-            repository,
             type,
             canonical,
             staged,
             user: ctx.user,
         });
 
-        const versioningOn = isVersioningEnabled(ctx.config, type);
+        const versioningOn =
+            resolveEntryType(ctx.config, type)?.capabilities.versioning === true;
 
         // Backs up the canonical, overwrites it with the staged content, and
         // hard-deletes the staged row — all in one transaction so a partial
@@ -61,10 +62,10 @@ export const mergeStagedEntry = defineServiceMethod({
         return transaction(async (): Promise<Entry> => {
             // 1. Backup (conditional on versioning): snapshot the canonical first so
             //    a partial failure leaves a recoverable version.
-            if (versioningOn && repository.versions) {
+            if (versioningOn) {
                 await snapshotVersion(
                     RESOURCE_SPECS.entry,
-                    repository.versions,
+                    entryRepository.versions,
                     canonical,
                     ctx.user
                 );
@@ -74,7 +75,7 @@ export const mergeStagedEntry = defineServiceMethod({
             //    refs stable) with the staged content. Status is intentionally
             //    left untouched: merging is content-only — publishing (or not) is
             //    a separate action, so an unpublished canonical stays unpublished.
-            const updated = await repository.update(
+            const updated = await entryRepository.update(
                 { id, locale: canonical.locale },
                 { title: staged.title, fields: mergedFields }
             );
@@ -82,7 +83,7 @@ export const mergeStagedEntry = defineServiceMethod({
             // 3. Cleanup: discard the staged row before re-indexing, so the
             //    references it held on its own do not survive the merge.
             await staging.delete({ id, locale: canonical.locale });
-            await syncEntryRelationships(ctx.config, updated, mergedFields, type);
+            await syncEntryRelationships(ctx.config, updated, type);
 
             return toEntry(updated);
         });

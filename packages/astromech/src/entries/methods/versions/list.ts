@@ -4,11 +4,10 @@ import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
 import { getEntryOfType } from '../../internal/read-entry';
 import { toEntryVersion } from '../../internal/versions';
-import { getEntryRepository } from '../../repository/registry';
+import { entryRepository } from '../../repository/entries-table';
 
 /**
- * Lists the saved versions of one locale of an entry. Returns an empty array
- * when the type's repository keeps no version store. Throws if the entry does
+ * Lists the saved versions of one locale of an entry. Throws if the entry does
  * not exist, has no row in that locale, or is the wrong type.
  */
 export const listEntryVersions = defineServiceMethod({
@@ -22,15 +21,8 @@ export const listEntryVersions = defineServiceMethod({
     requires: 'versioning',
     mutates: false,
     async handler(params): Promise<EntryVersion[]> {
-        const repository = getEntryRepository(params.type);
-        const entry = await getEntryOfType(
-            repository,
-            params.type,
-            params.id,
-            params.locale
-        );
-        if (!repository.versions) return [];
-        const rows = await repository.versions.findMany(entry.contentId);
+        const entry = await getEntryOfType(params.type, params.id, params.locale);
+        const rows = await entryRepository.versions.findMany(entry.contentId);
         return rows.map((row) => toEntryVersion(row, entry));
     },
 });

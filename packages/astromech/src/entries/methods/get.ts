@@ -9,7 +9,7 @@ import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
 import { getPreviewEntry } from '../internal/preview-read';
 import { toEntry } from '../internal/read-entry';
-import { getEntryRepository } from '../repository/registry';
+import { entryRepository } from '../repository/entries-table';
 
 /**
  * Gets one locale of one entry, filtered to the caller's visibility shape.
@@ -45,15 +45,15 @@ export const getEntry = defineServiceMethod({
             ]);
         }
 
-        const repository = getEntryRepository(type);
-        const record = await repository.findOne({ type, id, locale: params.locale });
+        const record = await entryRepository.findOne({
+            type,
+            id,
+            locale: params.locale,
+        });
 
         if (!record) return null;
 
         const result = toEntry(record);
-        // tableRepository-backed records carry no `type` column — stamp it so the
-        // returned entry is complete.
-        if (result.type === undefined) result.type = type;
 
         const shape: VisibilityShape = params.full ? 'full' : 'public';
         const audience = { now: new Date() };

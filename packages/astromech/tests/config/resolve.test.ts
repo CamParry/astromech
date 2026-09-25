@@ -1,5 +1,3 @@
-import type { CustomTableRepository } from '@/entries/repository/table';
-import type { EntryRepository } from '@/entries/repository/types';
 import type {
     AstromechConfig,
     DatabaseDriver,
@@ -51,26 +49,6 @@ const baseConfig = (plugins: PluginDefinition[]): AstromechConfig => ({
     plugins,
 });
 
-/**
- * A repository that supports nothing (minimal single-table style). Structural,
- * so the `repository` assignments cast past the `CustomTableRepository` guard —
- * this suite exercises `resolveConfig`, not the public config surface.
- */
-const emptyRepository = (): EntryRepository => ({
-    supports: [],
-    findMany: async () => [],
-    count: async () => 0,
-    findOne: async () => null,
-    create: async () => {
-        throw new Error('not called');
-    },
-    update: async () => {
-        throw new Error('not called');
-    },
-    delete: async () => undefined,
-    uniqueSlug: async () => '',
-});
-
 describe('resolveConfig migrationsDir', () => {
     it('defaults to ./migrations', () => {
         expect(resolveConfig(baseConfig([])).migrationsDir).toBe('./migrations');
@@ -91,31 +69,31 @@ describe('resolveConfig plugin entry types', () => {
         const resolved = resolveConfig(
             baseConfig([
                 {
-                    package: '@astromech/redirects',
-                    entries: [{ ...entryType('Redirect'), type: 'redirect' }],
+                    package: '@astromech/forms',
+                    entries: [{ ...entryType('Form'), type: 'form' }],
                 },
             ])
         );
 
-        expect(resolved.entryTypes['redirect']).toBeUndefined();
-        const redirect = resolved.entryTypes['redirects/redirect'];
-        expect(redirect).toMatchObject({ id: 'redirects/redirect', plugin: 'redirects' });
-        expect(redirect?.capabilities).toBeDefined();
-        expect(redirect?.titleField).toBe('title');
+        expect(resolved.entryTypes['form']).toBeUndefined();
+        const form = resolved.entryTypes['forms/form'];
+        expect(form).toMatchObject({ id: 'forms/form', plugin: 'forms' });
+        expect(form?.capabilities).toBeDefined();
+        expect(form?.titleField).toBe('title');
     });
 
     it('qualifies plugin entry types by the derived namespace, scope and all', () => {
         const resolved = resolveConfig(
             baseConfig([
                 {
-                    package: '@acme/redirects',
-                    entries: [{ ...entryType('Redirect'), type: 'redirect' }],
+                    package: '@acme/forms',
+                    entries: [{ ...entryType('Form'), type: 'form' }],
                 },
             ])
         );
 
-        expect(resolved.entryTypes['acme_redirects/redirect']).toBeDefined();
-        expect(resolved.entryTypes['redirects/redirect']).toBeUndefined();
+        expect(resolved.entryTypes['acme_forms/form']).toBeDefined();
+        expect(resolved.entryTypes['forms/form']).toBeUndefined();
     });
 
     it('leaves the site types unowned', () => {
@@ -129,57 +107,14 @@ describe('resolveConfig plugin entry types', () => {
         expect(() =>
             resolveConfig({
                 ...baseConfig([]),
-                entries: { 'redirects/redirect': entryType('Redirect') },
+                entries: { 'forms/form': entryType('Form') },
             })
         ).toThrow(/must not contain "\/"/);
-    });
-
-    it('strips the live repository instance so the whole config is JSON-serialisable', () => {
-        const resolved = resolveConfig(
-            baseConfig([
-                {
-                    package: '@astromech/store',
-                    entries: [
-                        {
-                            ...entryType('Item'),
-                            type: 'item',
-                            repository:
-                                emptyRepository() as unknown as CustomTableRepository,
-                        },
-                    ],
-                },
-            ])
-        );
-
-        const item = resolved.entryTypes['store/item'] as Record<string, unknown>;
-        expect('repository' in item).toBe(false);
-        expect(() => JSON.stringify(resolved)).not.toThrow();
-    });
-
-    it('crashes with the qualified key when capabilities exceed repository support', () => {
-        expect(() =>
-            resolveConfig(
-                baseConfig([
-                    {
-                        package: '@astromech/store',
-                        entries: [
-                            {
-                                ...entryType('Item'),
-                                type: 'item',
-                                versioning: true,
-                                repository:
-                                    emptyRepository() as unknown as CustomTableRepository,
-                            },
-                        ],
-                    },
-                ])
-            )
-        ).toThrow(/store\/item/);
     });
 });
 
 describe('resolveConfig flat fields', () => {
-    const flatConfig = (extra: Partial<EntryType> = {}): AstromechConfig => ({
+    const flatConfig = (): AstromechConfig => ({
         db: driver,
         storage: storageDriver,
         entries: {
@@ -188,9 +123,8 @@ describe('resolveConfig flat fields', () => {
                 plural: 'Posts',
                 fields: [
                     { name: 'from', type: 'text', required: true },
-                    { name: 'to', type: 'text', searchable: true },
+                    { name: 'to', type: 'text' },
                 ],
-                ...extra,
             },
         },
         plugins: [],
@@ -209,16 +143,6 @@ describe('resolveConfig flat fields', () => {
             | Record<string, unknown>
             | undefined;
         expect(typeof field?.['build']).toBe('undefined');
-    });
-
-    it('derives search from searchable fields', () => {
-        const resolved = resolveConfig(flatConfig());
-        expect(resolved.entryTypes.post?.search).toEqual(['to']);
-    });
-
-    it('explicit search wins over derived', () => {
-        const resolved = resolveConfig(flatConfig({ search: ['from'] }));
-        expect(resolved.entryTypes.post?.search).toEqual(['from']);
     });
 });
 
@@ -493,7 +417,7 @@ describe('resolveConfig structural validation', () => {
         expect(() => resolvePost([group('meta', { fields: [inner] })])).not.toThrow();
     });
 
-    it('throws when a field below a nested field sets translatable or searchable', () => {
+    it('throws when a field below a nested field sets translatable', () => {
         expect(() =>
             resolvePost([
                 group('meta', {
@@ -505,25 +429,25 @@ describe('resolveConfig structural validation', () => {
         );
         expect(() =>
             resolvePost([
-                repeater('items', { fields: [text('title', { searchable: true })] }),
+                repeater('items', { fields: [text('title', { translatable: false })] }),
             ])
-        ).toThrow(/"title" sets `searchable`/);
+        ).toThrow(/"title" sets `translatable`/);
         expect(() =>
             resolvePost([
                 tabs({
                     fields: [
-                        tab('seo', { fields: [text('title', { searchable: true })] }),
+                        tab('seo', { fields: [text('title', { translatable: false })] }),
                     ],
                 }),
             ])
-        ).toThrow(/"title" sets `searchable`/);
+        ).toThrow(/"title" sets `translatable`/);
     });
 
-    it('allows translatable and searchable under a layout field at the top level', () => {
+    it('allows translatable under a layout field at the top level', () => {
         expect(() =>
             resolvePost([
                 group({
-                    fields: [text('title', { translatable: false, searchable: true })],
+                    fields: [text('title', { translatable: false })],
                 }),
             ])
         ).not.toThrow();

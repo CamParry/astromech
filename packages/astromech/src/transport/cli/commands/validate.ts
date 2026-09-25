@@ -19,9 +19,6 @@ export default defineCommand({
     },
     run: ({ args }) =>
         withApplication(args, async () => {
-            // Booted, so the plugin runtime is registered: without it a custom-table
-            // plugin entry type resolves to the entries-table repository and its rows
-            // go unread.
             reportFindings(
                 await validateStoredContent(
                     systemAppContext(),

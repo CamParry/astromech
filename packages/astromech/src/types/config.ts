@@ -15,7 +15,6 @@ import type { PluginDefinition, PluginNavItem } from './plugins';
 import type { SortOption } from './query';
 import type { CellKind } from './resolved';
 import type { DB } from '@/database/types';
-import type { CustomTableRepository } from '@/entries/repository/table';
 import type { ImageFormat } from '@/media/serving/image/url';
 import type { Kysely } from 'kysely';
 
@@ -189,28 +188,18 @@ export type EntryType = {
     /**
      * Whether this entry type supports forward versioning (preparing, previewing
      * and merging a future "staged" version of a live entry). Default off, and
-     * independent of `versioning`. Requires the entries-table repository.
+     * independent of `versioning`.
      */
     staging?: boolean;
     translatable?: boolean;
-    /**
-     * Disable slug generation for this entry type by setting `false`.
-     * Defaults are repository-dependent; the entries-table repository defaults slug ON.
-     */
+    /** Disable slug generation for this entry type by setting `false`. Default on. */
     slug?: SlugConfig | false;
-    /**
-     * Whether entries have status (unpublished/published/scheduled).
-     * Defaults are repository-dependent; the entries-table repository defaults statuses ON.
-     */
+    /** Whether entries have status (unpublished/published/scheduled). Default true. */
     statuses?: boolean;
-    /**
-     * Whether entries can be soft-deleted (trashed).
-     * Defaults are repository-dependent; the entries-table repository defaults trash ON.
-     */
+    /** Whether entries can be soft-deleted (trashed). Default true. */
     trash?: boolean;
     /**
-     * Which field to use as the entry title. Defaults are repository-dependent;
-     * the entries-table repository defaults titleField 'title'. Set `false` to make
+     * Which field to use as the entry title. Default `'title'`; `false` makes
      * the entry titleless.
      */
     titleField?: 'title' | false;
@@ -231,16 +220,6 @@ export type EntryType = {
      */
     url?: string;
     /**
-     * Custom repository backend for this entry type; absent means the
-     * entries-table repository. Stripped from the resolved config (a live
-     * instance cannot be serialised into the virtual module) and registered into
-     * the repository registry at boot, under the bare type name for a host type
-     * and the qualified `{plugin}/{type}` id for a plugin's.
-     */
-    repository?: CustomTableRepository;
-    /** Field names a multi-type repository should index for free-text search. */
-    search?: string[];
-    /**
      * Cross-field validator for the whole entry, run after every field has been
      * processed. Server-side only — it is a function, so it cannot cross into
      * the admin's JSON config.
@@ -257,7 +236,7 @@ export type ResolvedEntryCapabilities = {
     trash: boolean;
 };
 
-export type ResolvedEntryType = Omit<EntryType, 'repository' | 'fields' | 'type'> & {
+export type ResolvedEntryType = Omit<EntryType, 'fields' | 'type'> & {
     /** The addressable id: the site's `entries` key, or `{plugin}/{type}` for a plugin's. */
     id: string;
     /** The namespace of the plugin that declares the type; absent for the site's own. */
@@ -265,8 +244,6 @@ export type ResolvedEntryType = Omit<EntryType, 'repository' | 'fields' | 'type'
     capabilities: ResolvedEntryCapabilities;
     titleField: 'title' | false;
     fields: ResolvedEntryFields;
-    /** Present when the type is stored in its own table (`tableRepository`). */
-    customTable?: true;
 };
 
 /**
@@ -725,11 +702,4 @@ export type AdminEntryType = {
     url: string | null;
     capabilities: ResolvedEntryCapabilities;
     titleField: 'title' | false;
-    /** Field names a multi-type repository indexes for free-text search. */
-    search?: string[];
-    /**
-     * Present when the type is stored in its own table. `entries.query` refuses
-     * such a type alongside other types, so it is queried on its own.
-     */
-    customTable?: true;
 };

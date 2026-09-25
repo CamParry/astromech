@@ -14,7 +14,7 @@ export function rootEntryPermission(type: string, action: EntryAction): string {
     return `entry:${type}:${action}`;
 }
 
-/** Permission for a plugin-mounted entry type, e.g. `plugin:redirects:entry:redirect:create`. */
+/** Permission for a plugin-mounted entry type, e.g. `plugin:forms:entry:form:create`. */
 export function pluginEntryPermission(
     permissionNamespace: string,
     type: string,

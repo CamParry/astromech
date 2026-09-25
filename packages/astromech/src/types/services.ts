@@ -214,8 +214,7 @@ export type EntriesService = {
     usedBy(params: { type: string; id: string }): Promise<Usage[]>;
 
     // Forward versioning (staged entries) — all act on one locale of the entry.
-    // Require the `staging` capability (entries-table repository) on the type; the
-    // service throws otherwise.
+    // Require the `staging` capability on the type; the service throws otherwise.
 
     /** Stage a change: copy this locale's content into a second, linked row.
      * Throws `StagedChangeExistsError` if one already exists. */

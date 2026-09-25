@@ -155,7 +155,7 @@ describe('generateClientTypes — plugin entry types', () => {
         trash: { enabled: true, retentionDays: 30 },
     } as unknown as ResolvedConfig;
 
-    const redirectFields = {
+    const formFields = {
         main: [
             {
                 name: 'from',
@@ -184,36 +184,34 @@ describe('generateClientTypes — plugin entry types', () => {
         ...baseConfig,
         entryTypes: {
             ...baseConfig.entryTypes,
-            'redirects/redirect': {
-                single: 'Redirect',
-                plural: 'Redirects',
-                fields: redirectFields,
+            'forms/form': {
+                single: 'Form',
+                plural: 'Forms',
+                fields: formFields,
             },
         },
     } as unknown as ResolvedConfig;
 
-    it('generates the RedirectsRedirectFields type from the qualified id', () => {
+    it('generates the FormsFormFields type from the qualified id', () => {
         const output = generateClientTypes(configWithPluginEntries);
-        expect(output).toContain('export type RedirectsRedirectFields = {');
+        expect(output).toContain('export type FormsFormFields = {');
         expect(output).toContain('from: string;');
         expect(output).toContain('to: string;');
         expect(output).toContain('status?: string;');
         expect(output).toContain('enabled?: boolean;');
     });
 
-    it('generates RedirectsRedirectRelations type', () => {
+    it('generates FormsFormRelations type', () => {
         const output = generateClientTypes(configWithPluginEntries);
-        expect(output).toContain('export type RedirectsRedirectRelations =');
+        expect(output).toContain('export type FormsFormRelations =');
     });
 
     it('augments AstromechEntryTypes under the qualified id, as a site type is', () => {
         const output = generateClientTypes(configWithPluginEntries);
         expect(output).toContain(
-            '    "redirects/redirect": { fields: RedirectsRedirectFields; fieldsPublic: RedirectsRedirectFieldsPublic; relations: RedirectsRedirectRelations };'
+            '    "forms/form": { fields: FormsFormFields; fieldsPublic: FormsFormFieldsPublic; relations: FormsFormRelations };'
         );
-        expect(output).toContain(
-            '// --- Entry type: redirects/redirect (RedirectsRedirect) ---'
-        );
+        expect(output).toContain('// --- Entry type: forms/form (FormsForm) ---');
     });
 
     it('resolves a qualified relation target to the plugin Fields type, public shape included', () => {
@@ -227,10 +225,10 @@ describe('generateClientTypes — plugin entry types', () => {
                     fields: {
                         main: [
                             {
-                                name: 'related_redirect',
+                                name: 'related_form',
                                 type: 'relationship',
-                                target: 'redirects/redirect',
-                                label: 'Related Redirect',
+                                target: 'forms/form',
+                                label: 'Related Form',
                             },
                         ],
                         sidebar: [],
@@ -240,9 +238,7 @@ describe('generateClientTypes — plugin entry types', () => {
         } as unknown as ResolvedConfig;
 
         const output = generateClientTypes(configWithRelation);
-        expect(output).toContain(
-            "import('astromech').TypedEntry<RedirectsRedirectFields>"
-        );
+        expect(output).toContain("import('astromech').TypedEntry<FormsFormFields>");
     });
 
     it('PascalCases hyphenated plugin/type names into the Fields type name', () => {
@@ -268,13 +264,13 @@ describe('generateClientTypes — plugin entry types', () => {
         const colliding = {
             ...baseConfig,
             entryTypes: {
-                redirects_redirect: { fields: { main: [], sidebar: [] } },
-                'redirects/redirect': { fields: { main: [], sidebar: [] } },
+                forms_form: { fields: { main: [], sidebar: [] } },
+                'forms/form': { fields: { main: [], sidebar: [] } },
             },
         } as unknown as ResolvedConfig;
 
         expect(() => generateClientTypes(colliding)).toThrow(
-            /"redirects_redirect" and "redirects\/redirect" both generate/
+            /"forms_form" and "forms\/form" both generate/
         );
     });
 });

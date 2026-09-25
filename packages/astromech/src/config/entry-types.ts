@@ -1,9 +1,8 @@
 /**
  * Resolving authored entry types, the site's and every plugin's, into one map
- * keyed by id: each type's capabilities, field tree and derived search list.
+ * keyed by id: each type's capabilities and field tree.
  */
 
-import type { Capability } from '@/entries/capabilities';
 import type { EntryFields, ResolvedEntryFields } from '@/types/fields';
 import type {
     AstromechConfig,
@@ -11,10 +10,8 @@ import type {
     ResolvedEntryCapabilities,
     ResolvedEntryType,
 } from '@/types/index';
-import { ALL_CAPABILITIES } from '@/entries/capabilities';
 import { QUALIFIED_SEPARATOR, qualifyEntryType } from '@/entries/entry-types';
 import { assertUniqueDataNames, validateFieldTree } from '@/fields/field-tree';
-import { flattenFieldNodes } from '@/fields/flatten';
 import {
     pluginEntryTypes,
     resolvePluginIdentity,
@@ -33,12 +30,7 @@ export function resolveEntryTypes(
 ): Record<string, ResolvedEntryType> {
     const resolved: Record<string, ResolvedEntryType> = {};
     for (const { id, entryType, plugin } of declaredEntryTypes(config)) {
-        resolved[id] = toResolvedEntryType(
-            id,
-            entryType,
-            entryType.repository?.supports ?? ALL_CAPABILITIES,
-            plugin
-        );
+        resolved[id] = toResolvedEntryType(id, entryType, plugin);
     }
     return resolved;
 }
@@ -75,61 +67,22 @@ export function declaredEntryTypes(
     return declared;
 }
 
-/**
- * Resolve the capability set for an entry type. When the repository supports a
- * capability, the config default applies; when it doesn't and the user
- * hasn't requested it, the capability defaults to false.
- */
+/** Resolve the capability set for an entry type: each option or its default. */
 export function toResolvedEntryCapabilities(
-    entryType: EntryType,
-    repositorySupports: readonly Capability[]
+    entryType: EntryType
 ): ResolvedEntryCapabilities {
-    const supports = (capability: Capability): boolean =>
-        repositorySupports.includes(capability);
-
     return {
-        statuses: supports('statuses') ? (entryType.statuses ?? true) : false,
-        slug: supports('slug') ? entryType.slug !== false : false,
-        trash: supports('trash') ? (entryType.trash ?? true) : false,
-        versioning: supports('versioning') ? Boolean(entryType.versioning) : false,
-        staging: supports('staging') ? Boolean(entryType.staging) : false,
-        translatable: supports('translatable')
-            ? (entryType.translatable ?? false)
-            : false,
+        statuses: entryType.statuses ?? true,
+        slug: entryType.slug !== false,
+        trash: entryType.trash ?? true,
+        versioning: Boolean(entryType.versioning),
+        staging: Boolean(entryType.staging),
+        translatable: entryType.translatable ?? false,
     };
 }
 
-/**
- * Crash-loud validation for an entry type's capabilities and titleField.
- * Rejects any capability requested but unsupported by the repository, and any
- * titleField value other than `'title'` or `false`.
- */
-export function assertEntryTypeValid(
-    typeKey: string,
-    entryType: EntryType,
-    repositorySupports: readonly Capability[]
-): void {
-    const requested: Capability[] = [];
-    if (entryType.statuses === true) requested.push('statuses');
-    if (entryType.slug !== undefined && entryType.slug !== false) requested.push('slug');
-    if (entryType.trash === true) requested.push('trash');
-    if (entryType.versioning) requested.push('versioning');
-    if (entryType.staging) requested.push('staging');
-    if (entryType.translatable === true) requested.push('translatable');
-
-    const unsupported = requested.filter(
-        (capability) => !repositorySupports.includes(capability)
-    );
-
-    if (unsupported.length > 0) {
-        const supportedList =
-            repositorySupports.length > 0 ? repositorySupports.join(', ') : '(none)';
-        throw new Error(
-            `Astromech entry type "${typeKey}" declares capabilities its repository does not support: ` +
-                `${unsupported.join(', ')}. Repository supports: ${supportedList}.`
-        );
-    }
-
+/** Crash-loud validation for `titleField`: `'title'` or `false`, nothing else. */
+export function assertEntryTypeValid(typeKey: string, entryType: EntryType): void {
     if (
         entryType.titleField !== undefined &&
         entryType.titleField !== false &&
@@ -151,18 +104,17 @@ export function toResolvedFields(fields: EntryFields | undefined): ResolvedEntry
 }
 
 /**
- * Resolve a single entry type: validate capabilities and titleField
- * (crash-loud on mismatch) and strip the live `repository` instance. `typeKey`
- * is stamped onto the result as `id`, used in error messages.
+ * Resolve a single entry type: validate its titleField and field tree
+ * (crash-loud on mismatch). `typeKey` is stamped onto the result as `id`, used
+ * in error messages.
  */
 export function toResolvedEntryType(
     typeKey: string,
     entryType: EntryType,
-    repositorySupports: readonly Capability[],
     plugin?: string
 ): ResolvedEntryType {
-    const capabilities = toResolvedEntryCapabilities(entryType, repositorySupports);
-    assertEntryTypeValid(typeKey, entryType, repositorySupports);
+    const capabilities = toResolvedEntryCapabilities(entryType);
+    assertEntryTypeValid(typeKey, entryType);
 
     const resolvedFields = toResolvedFields(entryType.fields);
     const owner = `entry type "${typeKey}"`;
@@ -170,28 +122,13 @@ export function toResolvedEntryType(
     validateFieldTree(owner, resolvedFields.sidebar);
     assertUniqueDataNames(owner, resolvedFields);
 
-    // Derive search from searchable fields if not explicitly set.
-    let resolvedSearch = entryType.search;
-    if (resolvedSearch === undefined) {
-        // Top-level fields only: a nested field's children are not top-level keys.
-        const searchableNames = [
-            ...flattenFieldNodes(resolvedFields.main),
-            ...flattenFieldNodes(resolvedFields.sidebar),
-        ]
-            .filter((field) => field.searchable === true)
-            .map((field) => field.name);
-        if (searchableNames.length > 0) resolvedSearch = searchableNames;
-    }
-
-    const { repository: _repository, fields: _fields, type: _type, ...rest } = entryType;
+    const { fields: _fields, type: _type, ...rest } = entryType;
     return {
         ...rest,
         id: typeKey,
         ...(plugin !== undefined ? { plugin } : {}),
         fields: resolvedFields,
-        ...(resolvedSearch !== undefined ? { search: resolvedSearch } : {}),
         capabilities,
         titleField: entryType.titleField ?? 'title',
-        ...(entryType.repository !== undefined ? { customTable: true as const } : {}),
     };
 }

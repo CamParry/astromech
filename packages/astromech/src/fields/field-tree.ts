@@ -69,14 +69,12 @@ function assertNodeValid(prefix: string, node: Field, ancestors: readonly Field[
         );
     }
     if (!fieldAffectsData(node) || !ancestors.some(fieldAffectsData)) return;
-    for (const flag of ['translatable', 'searchable'] as const) {
-        if (node[flag] !== undefined) {
-            throw new Error(
-                `${prefix} field "${node.name}" sets \`${flag}\`, which is only ` +
-                    'supported on a top-level field, not one inside a group, ' +
-                    'repeater, blocks or tree.'
-            );
-        }
+    if (node.translatable !== undefined) {
+        throw new Error(
+            `${prefix} field "${node.name}" sets \`translatable\`, which is only ` +
+                'supported on a top-level field, not one inside a group, ' +
+                'repeater, blocks or tree.'
+        );
     }
 }
 

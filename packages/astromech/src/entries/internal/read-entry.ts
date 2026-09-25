@@ -4,11 +4,12 @@
  * of the read, so an entry of another type is not found.
  */
 
-import type { EntryRepository, EntryRow } from '../repository/types';
+import type { EntryRow } from '../repository/types';
 import type { ContentRowId } from '@/content/repository/types';
 import type { Entry } from '@/types/index';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { ResourceNotFoundError } from '@/errors/resource';
+import { entryRepository } from '../repository/entries-table';
 
 /**
  * One locale of one entry as the operations read it: the public shape plus the
@@ -17,9 +18,8 @@ import { ResourceNotFoundError } from '@/errors/resource';
 export type EntryWithContentId = Entry & { contentId: ContentRowId };
 
 /**
- * Narrow a repository `EntryRow` to the public `Entry`. The contract is
- * intentionally wider than `Entry` so a repository need not carry every
- * capability column; `contentId` is dropped, as it never leaves the service.
+ * Narrow a repository `EntryRow` to the public `Entry`. `contentId` is dropped,
+ * as it never leaves the service.
  */
 export function toEntry(row: EntryRow): Entry {
     const { contentId: _contentId, ...entry } = toEntryWithContentId(row);
@@ -28,7 +28,7 @@ export function toEntry(row: EntryRow): Entry {
 
 /** The same narrowing, keeping the content row an operation still needs. */
 export function toEntryWithContentId(row: EntryRow): EntryWithContentId {
-    return row as EntryWithContentId;
+    return row;
 }
 
 /**
@@ -37,23 +37,24 @@ export function toEntryWithContentId(row: EntryRow): EntryWithContentId {
  * null when the entry, that locale's content row, or an entry of that type is absent.
  */
 export async function findEntryOfType(
-    repository: EntryRepository,
     type: string,
     id: string,
     locale?: string
 ): Promise<EntryWithContentId | null> {
-    const row = await repository.findOne({ type, id, locale }, { includeTrashed: true });
+    const row = await entryRepository.findOne(
+        { type, id, locale },
+        { includeTrashed: true }
+    );
     return row ? toEntryWithContentId(row) : null;
 }
 
 /** `findEntryOfType`, throwing when the entry or that locale's row is missing. */
 export async function getEntryOfType(
-    repository: EntryRepository,
     type: string,
     id: string,
     locale?: string
 ): Promise<EntryWithContentId> {
-    const entry = await findEntryOfType(repository, type, id, locale);
+    const entry = await findEntryOfType(type, id, locale);
     if (!entry) {
         throw new ResourceNotFoundError('entry', {
             id,
@@ -69,16 +70,13 @@ export async function getEntryOfType(
  * there is one, else any other locale's. Trashed entries included.
  */
 export async function getEntryResource(
-    repository: EntryRepository,
     type: string,
     id: string
 ): Promise<EntryWithContentId> {
-    const ref = { type, id };
-    const options = { includeTrashed: true };
-    // A repository without `findAnyLocale` keeps one locale per row.
-    const row = repository.findAnyLocale
-        ? await repository.findAnyLocale(ref, options)
-        : await repository.findOne(ref, options);
+    const row = await entryRepository.findAnyLocale(
+        { type, id },
+        { includeTrashed: true }
+    );
     if (!row) throw new ResourceNotFoundError('entry', { id });
     return toEntryWithContentId(row);
 }
@@ -87,12 +85,8 @@ export async function getEntryResource(
  * Every live row of one type in one locale, staged rows excluded: what a
  * uniqueness check scans.
  */
-export async function listEntryRows(
-    repository: EntryRepository,
-    type: string,
-    locale: string
-): Promise<EntryRow[]> {
-    return repository.findMany({ type, locale, trashed: false });
+export async function listEntryRows(type: string, locale: string): Promise<EntryRow[]> {
+    return entryRepository.findMany({ type, locale, trashed: false });
 }
 
 /**
@@ -100,9 +94,8 @@ export async function listEntryRows(
  * order. Shared by the delete, trash and restore operations.
  */
 export async function getEntryResources(
-    repository: EntryRepository,
     type: string,
     ids: readonly string[]
 ): Promise<EntryWithContentId[]> {
-    return Promise.all(ids.map((id) => getEntryResource(repository, type, id)));
+    return Promise.all(ids.map((id) => getEntryResource(type, id)));
 }

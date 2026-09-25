@@ -64,7 +64,6 @@ function EntriesListBody({
     const { capabilities } = config;
     const hasTitle = config.titleField !== false;
     const hasI18n = capabilities.translatable;
-    const showSearch = hasTitle || (config.search?.length ?? 0) > 0;
     const canDelete = can('delete');
 
     const list = useListController(entryType, { perPage: PER_PAGE });
@@ -306,7 +305,7 @@ function EntriesListBody({
                         columns={dataColumns}
                         isLoading={list.isLoading}
                         isError={list.isError}
-                        {...(showSearch
+                        {...(hasTitle
                             ? {
                                   search: list.q,
                                   onSearch: list.setQuery,

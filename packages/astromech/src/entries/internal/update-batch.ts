@@ -1,4 +1,3 @@
-import type { EntryRepository } from '../repository/types';
 import type { EntryWithContentId } from './read-entry';
 import type {
     AppContext,
@@ -16,11 +15,10 @@ import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { patchedFieldNames } from '@/content/write-fields';
 import { resolveEntryType } from '@/entries/entry-types';
-import { CapabilityError } from '@/errors/capability';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { parseInput } from '@/errors/validation';
 import { UnknownEntryTypeError } from '../errors';
-import { getEntryRepository } from '../repository/registry';
+import { entryRepository } from '../repository/entries-table';
 import { createEntrySchema, updateEntrySchema } from '../schema';
 import { assertWritableFields } from './entry-type';
 import {
@@ -83,22 +81,17 @@ export async function updateEntryBatch(
         params.locale
     );
 
-    const repository = getEntryRepository(entryType.id);
     const user = ctx.user;
+    const staged = params.staged === true;
 
     // Each id is read once, at the top: the record feeds both the before-hook
     // context and the write, so nothing loads twice. An id with no row in this
     // locale becomes a translation, planned here for the same reason.
-    const staging = params.staged === true ? repository.staging : undefined;
-    if (params.staged === true && !staging) {
-        throw new CapabilityError('entry', entryType.id, 'staging');
-    }
-
     const plans: UpdatePlan[] = [];
     for (const id of params.ids) {
-        const record = staging
-            ? await getStagedRecord(staging, id, locale)
-            : await findEntryOfType(repository, entryType.id, id, locale);
+        const record = staged
+            ? await getStagedRecord(id, locale)
+            : await findEntryOfType(entryType.id, id, locale);
         if (!record && params.createMissingLocale === false) {
             throw new ResourceNotFoundError('entry', { id, locale });
         }
@@ -110,7 +103,6 @@ export async function updateEntryBatch(
                       id,
                       write: await planTranslation({
                           config: ctx.config,
-                          repository,
                           entryType,
                           id,
                           locale,
@@ -142,16 +134,14 @@ export async function updateEntryBatch(
         plan.kind === 'update'
             ? updateOne({
                   config: ctx.config,
-                  repository,
                   entryType,
                   currentEntry: plan.record,
                   data: params.data,
                   user,
-                  staging,
+                  staged,
               })
             : writeTranslation({
                   config: ctx.config,
-                  repository,
                   type: entryType.id,
                   id: plan.id,
                   locale,
@@ -198,15 +188,14 @@ type UpdatePlan =
  */
 async function updateOne(params: {
     config: ResolvedConfig;
-    repository: EntryRepository;
     entryType: ResolvedEntryType;
     currentEntry: EntryWithContentId;
     data: ParsedEntryUpdateData;
     user: User | null;
-    /** Present when the write targets the staged change rather than the canonical. */
-    staging: NonNullable<EntryRepository['staging']> | undefined;
+    /** True when the write targets the staged change rather than the canonical. */
+    staged: boolean;
 }): Promise<Entry> {
-    const { config, repository, entryType, currentEntry, data, user, staging } = params;
+    const { config, entryType, currentEntry, data, user, staged } = params;
 
     const titled = entryType.titleField !== false;
     const validated = parseInput(updateEntrySchema({ titled }), data);
@@ -217,7 +206,6 @@ async function updateOne(params: {
         ? await toStoredFields({
               kind: 'update',
               config,
-              repository,
               entryType,
               currentEntry,
               patch,
@@ -229,7 +217,6 @@ async function updateOne(params: {
     // Snapshot before the slug is uniquified, so the version compares what the caller sent.
     if (
         entryType.capabilities.versioning &&
-        repository.versions &&
         changesVersionedContent(RESOURCE_SPECS.entry, currentEntry, {
             title: validated.title,
             slug: validated.slug,
@@ -238,7 +225,7 @@ async function updateOne(params: {
     ) {
         await snapshotVersion(
             RESOURCE_SPECS.entry,
-            repository.versions,
+            entryRepository.versions,
             currentEntry,
             user
         );
@@ -249,7 +236,6 @@ async function updateOne(params: {
             ? new Date()
             : validated.publishedAt;
     const slug = await uniqueSlugIfChanged({
-        repository,
         type: entryType.id,
         entry: currentEntry,
         slug: validated.slug,
@@ -269,16 +255,18 @@ async function updateOne(params: {
     };
 
     const entry = toEntry(
-        staging ? await staging.update(ref, write) : await repository.update(ref, write)
+        staged
+            ? await entryRepository.staging.update(ref, write)
+            : await entryRepository.update(ref, write)
     );
     if (fields) {
-        await syncEntryRelationships(config, entry, fields, entryType.id);
+        await syncEntryRelationships(config, entry, entryType.id);
         // A staged row is not one of the entry's locales, so its shared fields
         // stay with it until the merge.
-        if (!staging) {
+        if (!staged) {
             await propagateSharedFields(RESOURCE_SPECS.entry, config, {
                 target: entryType.id,
-                translatable: repository.translatable,
+                translatable: entryRepository.translatable,
                 record: currentEntry,
                 fields,
                 patchedFieldNames: patched,
@@ -295,15 +283,14 @@ async function updateOne(params: {
  */
 async function planTranslation(params: {
     config: ResolvedConfig;
-    repository: EntryRepository;
     entryType: ResolvedEntryType;
     id: string;
     locale: string;
     data: ParsedEntryUpdateData;
     user: User | null;
 }): Promise<TranslationWrite> {
-    const { config, repository, entryType, id, locale, data, user } = params;
-    const source = await getEntryOfType(repository, entryType.id, id);
+    const { config, entryType, id, locale, data, user } = params;
+    const source = await getEntryOfType(entryType.id, id);
 
     const titled = entryType.titleField !== false;
     const validated = parseInput(createEntrySchema({ titled }), {
@@ -317,7 +304,6 @@ async function planTranslation(params: {
     const title = validated.title ?? '';
     const status = validated.status ?? 'unpublished';
     const slug = await deriveSlug({
-        repository,
         entryType,
         locale,
         title,
@@ -327,7 +313,6 @@ async function planTranslation(params: {
     const fields = await toStoredFields({
         kind: 'create',
         config,
-        repository,
         entryType,
         values: validated.fields ?? {},
         locale,
@@ -352,25 +337,24 @@ async function planTranslation(params: {
 /** Write the planned translation and fold its references into the entry's index. */
 async function writeTranslation(params: {
     config: ResolvedConfig;
-    repository: EntryRepository;
     type: string;
     id: string;
     locale: string;
     write: TranslationWrite;
 }): Promise<Entry> {
-    const { config, repository, type, id, locale, write } = params;
-    const entry = toEntry(await repository.update({ id, locale }, write));
-    await syncEntryRelationships(config, entry, write.fields, type);
+    const { config, type, id, locale, write } = params;
+    const entry = toEntry(await entryRepository.update({ id, locale }, write));
+    await syncEntryRelationships(config, entry, type);
     return entry;
 }
 
 /** The staged change for one locale, which a staged write requires to exist. */
-async function getStagedRecord(
-    staging: NonNullable<EntryRepository['staging']>,
-    id: string,
-    locale: string
-): Promise<EntryWithContentId> {
+async function getStagedRecord(id: string, locale: string): Promise<EntryWithContentId> {
     return toEntryWithContentId(
-        await requireStagedChange(staging, 'entry', { rowId: id, id, locale })
+        await requireStagedChange(entryRepository.staging, 'entry', {
+            rowId: id,
+            id,
+            locale,
+        })
     );
 }

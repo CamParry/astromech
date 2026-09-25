@@ -55,7 +55,7 @@ export type VisibilityOptions = {
 /**
  * True when the row passes the public audience filter: status is 'published' or
  * absent, publishedAt is null/absent or past, and deletedAt is null/absent. An
- * absent column counts as null — tableRepository-backed entries omit all three.
+ * absent column counts as null.
  */
 function passesPublicRowFilter(e: VisibleRecord, now: Date): boolean {
     // A resource with `statuses: false` reports no status — always visible.

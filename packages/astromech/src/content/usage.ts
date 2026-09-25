@@ -8,7 +8,6 @@ import type { RelationshipRow } from '@/database/tables';
 import type { ResolvedConfig, TargetKind, Usage } from '@/types/index';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { getEntryResource } from '@/entries/internal/read-entry';
-import { getEntryRepository } from '@/entries/repository/registry';
 import { resolveGlobal } from '@/globals/resolve-global';
 import { mediaRepository } from '@/media/repository';
 import { userRepository } from '@/users/repository';
@@ -97,21 +96,19 @@ async function loadSourceTitles(
 }
 
 /**
- * Titles for one entry type's sources. Read one at a time through the type's own
- * repository, not batched through `findMany`, which excludes trashed entries: the
- * sources a delete check has to surface.
+ * Titles for one entry type's sources. Read one at a time, not batched through
+ * `findMany`, which excludes trashed entries: the sources a delete check has to
+ * surface.
  */
 async function entryTitles(
     type: string,
     ids: ReadonlySet<string>
 ): Promise<Map<string, string>> {
     const titles = new Map<string, string>();
-    // A type dropped from config reads through the entries-table repository.
-    const repository = getEntryRepository(type);
     const records = await Promise.all(
         Array.from(ids, async (id) => {
             try {
-                return await getEntryResource(repository, type, id);
+                return await getEntryResource(type, id);
             } catch {
                 return null;
             }

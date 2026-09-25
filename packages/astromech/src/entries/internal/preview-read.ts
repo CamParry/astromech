@@ -8,7 +8,7 @@
 import type { Entry, EntryQueryParams, QueryResult, ResolvedConfig } from '@/types/index';
 import { resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
-import { getEntryRepository } from '../repository/registry';
+import { entryRepository } from '../repository/entries-table';
 import { projectPreview, verifyPreviewToken } from './preview';
 import { toEntry } from './read-entry';
 
@@ -35,13 +35,12 @@ export async function queryPreviewEntries(
     const type = Array.isArray(typeParam) ? typeParam[0] : (typeParam as string);
     if (!token || !type) return empty;
 
-    const repository = getEntryRepository(type);
     const entryTypeCfg = resolveEntryType(config, type);
     const fields = entryTypeCfg ? flattenEntryFields(entryTypeCfg.fields) : [];
 
     const page = params.page ?? 1;
     const limit = params.limit ?? 1;
-    const rows = await repository.findMany({
+    const rows = await entryRepository.findMany({
         type,
         locale: params.locale,
         where: params.where,
@@ -56,7 +55,7 @@ export async function queryPreviewEntries(
 
         let target: Entry = canonical;
         if (params.staged) {
-            const staged = await repository.staging?.findOne({
+            const staged = await entryRepository.staging.findOne({
                 id: canonical.id,
                 locale: canonical.locale,
             });
@@ -95,10 +94,9 @@ export async function getPreviewEntry(
     const token = params.previewToken;
     if (!token) return null;
 
-    const repository = getEntryRepository(type);
     // Excludes trashed. The token authorizes every locale, so this reads the
     // one asked for and verifies against the entry.
-    const record = await repository.findOne({ type, id, locale: params.locale });
+    const record = await entryRepository.findOne({ type, id, locale: params.locale });
     if (!record) return null;
 
     const canonical = toEntry(record);
@@ -106,7 +104,7 @@ export async function getPreviewEntry(
 
     let target: Entry = canonical;
     if (params.staged) {
-        const staged = await repository.staging?.findOne({
+        const staged = await entryRepository.staging.findOne({
             id: canonical.id,
             locale: canonical.locale,
         });

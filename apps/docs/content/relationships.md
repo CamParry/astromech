@@ -82,8 +82,7 @@ await Astromech.entries.query({
 The `path` is a **schema path**: `sections[].gallery`, with empty brackets for
 "any item". It is validated against the schemas of the types you are querying
 and throws when it names nothing, so a typo fails loudly instead of returning
-an empty page. The filter also works on a type stored in its own table rather
-than in `entries`, as long as the query names that type alone.
+an empty page.
 
 For the delete-confirmation case there is a direct call, on entries and on
 media alike. It lists every reference, whichever resource holds it:
@@ -129,8 +128,7 @@ An id whose target no longer exists is dropped from the field data the next
 time the entry, global, user or media item holding it is written, and the index row goes with it. The check is
 deliberately timid, because a false positive deletes an author's data: an id
 is **kept** when the field names no target, or when the target names no
-configured entry type. A target stored in its own table rather than in
-`entries` is checked against that table.
+configured entry type.
 
 ## Further reading
 

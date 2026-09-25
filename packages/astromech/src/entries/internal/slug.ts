@@ -3,9 +3,9 @@
  * into the value an entry stores, made unique per (type, locale).
  */
 
-import type { EntryRepository } from '../repository/types';
 import type { Entry, ResolvedEntryType } from '@/types/index';
 import { slugify } from '@/utilities/strings';
+import { entryRepository } from '../repository/entries-table';
 
 /**
  * Derives the slug a new entry stores: the caller's, else one slugified from
@@ -13,17 +13,16 @@ import { slugify } from '@/utilities/strings';
  * type has no slug capability or there is nothing to slugify.
  */
 export async function deriveSlug(params: {
-    repository: EntryRepository;
     entryType: ResolvedEntryType;
     locale: string;
     title: string;
     slug: string | undefined;
 }): Promise<string | null> {
-    const { repository, entryType, locale, title, slug } = params;
+    const { entryType, locale, title, slug } = params;
     if (!entryType.capabilities.slug) return null;
     const source = slug ?? (entryType.titleField !== false ? slugify(title) : null);
     if (!source) return null;
-    return repository.uniqueSlug(entryType.id, locale, source);
+    return entryRepository.uniqueSlug(entryType.id, locale, source);
 }
 
 /**
@@ -32,12 +31,11 @@ export async function deriveSlug(params: {
  * a no-op update never collides a slug with itself.
  */
 export async function uniqueSlugIfChanged(params: {
-    repository: EntryRepository;
     type: string;
     entry: Entry;
     slug: string | null | undefined;
 }): Promise<string | null | undefined> {
-    const { repository, type, entry, slug } = params;
+    const { type, entry, slug } = params;
     if (!slug || slug === entry.slug) return slug;
-    return repository.uniqueSlug(type, entry.locale, slug, entry.id);
+    return entryRepository.uniqueSlug(type, entry.locale, slug, entry.id);
 }

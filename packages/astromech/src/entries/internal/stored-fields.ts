@@ -4,7 +4,6 @@
  * current row, and a merge takes the staged change's fields as they are.
  */
 
-import type { EntryRepository } from '../repository/types';
 import type { EntryWithContentId } from './read-entry';
 import type { FieldSource } from '@/content/write-fields';
 import type {
@@ -17,6 +16,7 @@ import type {
 import { RESOURCE_SPECS } from '@/content/resources';
 import { inheritSharedFields } from '@/content/translatable';
 import { writeFields } from '@/content/write-fields';
+import { entryRepository } from '../repository/entries-table';
 import { listEntryRows } from './read-entry';
 
 /**
@@ -28,7 +28,6 @@ export type StoredFieldsInput = {
     /** Who the write is attributed to; the field validators read it. */
     user: User | null;
     config: ResolvedConfig;
-    repository: EntryRepository;
 } & (
     | {
           kind: 'create';
@@ -59,7 +58,7 @@ export type StoredFieldsInput = {
  * when a field or the type's own validator reports.
  */
 export async function toStoredFields(input: StoredFieldsInput): Promise<JsonObject> {
-    const { config, repository, user } = input;
+    const { config, user } = input;
     const spec = RESOURCE_SPECS.entry;
 
     if (input.kind === 'create') {
@@ -75,7 +74,7 @@ export async function toStoredFields(input: StoredFieldsInput): Promise<JsonObje
                         // The shared read is by id and locale; an entry read names its type.
                         repository: {
                             findOne: (ref, opts) =>
-                                repository.findOne({ ...ref, type }, opts),
+                                entryRepository.findOne({ ...ref, type }, opts),
                         },
                         values,
                         id: input.entryId,
@@ -88,7 +87,7 @@ export async function toStoredFields(input: StoredFieldsInput): Promise<JsonObje
                 record: null,
                 user,
                 status: input.status,
-                scan: () => listEntryRows(repository, type, input.locale),
+                scan: () => listEntryRows(type, input.locale),
             }
         );
     }
@@ -116,7 +115,7 @@ export async function toStoredFields(input: StoredFieldsInput): Promise<JsonObje
         record: current,
         user,
         status,
-        scan: () => listEntryRows(repository, type, current.locale),
+        scan: () => listEntryRows(type, current.locale),
         // The entry's own row is the only one the scan must ignore: its staged
         // copy shares its id and `list` excludes staged rows anyway.
         excludeId: current.id,

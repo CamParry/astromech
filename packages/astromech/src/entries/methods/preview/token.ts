@@ -3,7 +3,7 @@ import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
 import { generatePreviewSecret, hashPreviewToken } from '../../internal/preview';
 import { getEntryResource } from '../../internal/read-entry';
-import { getEntryRepository } from '../../repository/registry';
+import { entryRepository } from '../../repository/entries-table';
 import { previewTokenSchema } from '../../schema';
 
 /**
@@ -28,8 +28,7 @@ export const issuePreviewToken = defineServiceMethod({
     mutates: true,
     async handler(params): Promise<{ token: string }> {
         const { type, id } = params;
-        const repository = getEntryRepository(type);
-        const canonical = await getEntryResource(repository, type, id);
+        const canonical = await getEntryResource(type, id);
         if (canonical.staged) {
             throw new Error(
                 `Entry '${id}' read as a staged change; issue the preview token on its canonical row.`
@@ -47,7 +46,7 @@ export const issuePreviewToken = defineServiceMethod({
             expiresAt === undefined
                 ? new Date(Date.now() + DEFAULT_PREVIEW_TOKEN_TTL_MS)
                 : expiresAt;
-        await repository.previewToken?.set(id, hash, expiry);
+        await entryRepository.previewToken.set(id, hash, expiry);
         return { token };
     },
 });
@@ -64,8 +63,7 @@ export const revokePreviewToken = defineServiceMethod({
     mutates: true,
     async handler(params): Promise<void> {
         const { type, id } = params;
-        const repository = getEntryRepository(type);
-        await getEntryResource(repository, type, id);
-        await repository.previewToken?.clear(id);
+        await getEntryResource(type, id);
+        await entryRepository.previewToken.clear(id);
     },
 });

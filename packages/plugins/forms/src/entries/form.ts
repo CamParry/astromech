@@ -30,7 +30,7 @@ export const formEntryType: EntryType = {
     type: FORM_TYPE,
     single: 'Form',
     plural: 'Forms',
-    // The entries-table repository defaults slug on, which is how a form is addressed.
+    // Slug is on by default, which is how a form is addressed.
     adminColumns: [
         columns.text('title', { label: 'Title' }),
         columns.slug('slug', { label: 'Slug' }),

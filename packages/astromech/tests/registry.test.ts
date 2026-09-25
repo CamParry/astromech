@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createKeyedRegistry, createLazyRegistry, createRegistry } from '@/registry';
+import { createKeyedRegistry, createRegistry } from '@/registry';
 
 type Driver = { name: string };
 
@@ -53,38 +53,6 @@ describe('createRegistry', () => {
         const getOrThrow = reg.getOrThrow;
         set({ name: 'c' });
         expect(getOrThrow().name).toBe('c');
-    });
-});
-
-describe('createLazyRegistry', () => {
-    it('builds the default once, on the first get()', () => {
-        let builds = 0;
-        const reg = createLazyRegistry<Driver>('test.lazy.build', () => {
-            builds += 1;
-            return { name: 'built' };
-        });
-        expect(builds).toBe(0);
-        expect(reg.get()).toBe(reg.get());
-        expect(builds).toBe(1);
-    });
-
-    it('answers a set value without building, and builds again after clear()', () => {
-        const reg = createLazyRegistry<Driver>('test.lazy.set', () => ({
-            name: 'built',
-        }));
-        reg.set({ name: 'swapped' });
-        expect(reg.get().name).toBe('swapped');
-        reg.clear();
-        expect(reg.get().name).toBe('built');
-    });
-
-    it('builds again after a wholesale reset of the namespace', () => {
-        const reg = createLazyRegistry<Driver>('test.lazy.reset', () => ({
-            name: 'built',
-        }));
-        const first = reg.get();
-        globalThis.__astromech = undefined;
-        expect(reg.get()).not.toBe(first);
     });
 });
 

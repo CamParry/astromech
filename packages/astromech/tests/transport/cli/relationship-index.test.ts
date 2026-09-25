@@ -7,17 +7,14 @@
  * row, a bogus row, staying idempotent, and staying inside a `--type` scope.
  */
 import type { RelationshipRow } from '@/database/tables';
-import type { AstromechConfig, PluginDefinition } from '@/types/index';
+import type { AstromechConfig } from '@/types/index';
 import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { relationshipRepository } from '@/content/repository/relationships';
-import { defineTable } from '@/database/define-table';
 import { createRepository } from '@/database/repository/create-repository';
 import { relationshipsTable } from '@/database/tables';
-import { tableRepository } from '@/entries/repository/table';
 import { mediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import {
@@ -28,37 +25,6 @@ import {
 const api = currentServices.entries;
 const mediaService = currentServices.media;
 const usersService = currentServices.users;
-
-const linksTable = defineTable('test_links', ({ col }) => ({
-    id: col.id(),
-    label: col.text({ notNull: true }),
-    post: col.text(),
-    createdAt: col.timestamp({ notNull: true, defaultNow: true }),
-    updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
-}));
-
-/** A custom-table entry type: its rows live outside the `entries` table. */
-function linksPlugin(): PluginDefinition {
-    return {
-        package: '@astromech/links',
-        entries: [
-            {
-                type: 'link',
-                single: 'Link',
-                plural: 'Links',
-                titleField: false,
-                statuses: false,
-                slug: false,
-                trash: false,
-                repository: tableRepository(linksTable),
-                fields: [
-                    { name: 'label', type: 'text', label: 'Label' },
-                    { name: 'post', type: 'relationship', label: 'Post', target: 'post' },
-                ],
-            },
-        ],
-    };
-}
 
 /**
  * `article` holds a relation flat and two more inside a repeater (one of them a
@@ -113,21 +79,13 @@ function makeIndexConfig(): AstromechConfig {
                 { name: 'credit', type: 'relationship', label: 'Credit', target: 'post' },
             ],
         },
-        plugins: [linksPlugin()],
     };
 }
 
 beforeEach(async () => {
-    const db = await createTestDb();
+    await createTestDb();
     setupTestConfig(makeIndexConfig());
     setStorageDriver(noopStorage);
-    await sql`CREATE TABLE test_links (
-            id text PRIMARY KEY,
-            label text NOT NULL,
-            post text,
-            created_at text NOT NULL,
-            updated_at text NOT NULL
-        )`.execute(db);
 });
 
 /** A media row, inserted through the repository so no driver or real bytes are needed. */
@@ -146,7 +104,7 @@ async function createMedia(filename = 'a.png'): Promise<string> {
 /**
  * One of every source kind, written through the service write paths: an entry
  * with a flat relation plus a nested multi-relation and a nested media
- * relation, a custom-table entry, a user, and a media record.
+ * relation, a user, and a media record.
  */
 async function seedContent(): Promise<{ article: string; post: string; media: string }> {
     const post = await api.create({ type: 'post', data: { title: 'Post' } });
@@ -165,10 +123,6 @@ async function seedContent(): Promise<{ article: string; post: string; media: st
                 ],
             },
         },
-    });
-    await api.create({
-        type: 'links/link',
-        data: { fields: { label: 'One', post: post.id } },
     });
     await usersService.create({
         data: {
@@ -214,13 +168,12 @@ describe('checkRelationshipIndex', () => {
         const report = await checkRelationshipIndex();
 
         expect(driftCount(report)).toBe(0);
-        // Guard against a vacuous pass: every source kind, the custom-table type
-        // included, must actually have contributed rows for the parity to mean
-        // anything.
+        // Guard against a vacuous pass: every source kind must actually have
+        // contributed rows for the parity to mean anything.
         const rows = await storedRows();
         expect(
             [...new Set(rows.map((row) => row.sourceType ?? row.sourceKind))].sort()
-        ).toEqual(['article', 'links/link', 'media', 'user']);
+        ).toEqual(['article', 'media', 'user']);
         expect(
             rows.filter((row) => row.schemaPath === 'sections[].related')
         ).toHaveLength(3);

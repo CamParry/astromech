@@ -65,11 +65,11 @@ describe('formatAiContextMessage', () => {
             expect(
                 lineFor({
                     kind: 'entries',
-                    type: 'redirects/redirect',
+                    type: 'forms/form',
                     id: 'r1',
-                    label: 'Old URL',
+                    label: 'Contact',
                 })
-            ).toBe('Entry `Old URL` (type `redirects/redirect`, id `r1`)');
+            ).toBe('Entry `Contact` (type `forms/form`, id `r1`)');
         });
     });
 

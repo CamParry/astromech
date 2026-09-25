@@ -21,21 +21,21 @@ const entryType = (id: string, single: string): ResolvedEntryType => ({
 const config: Pick<ResolvedConfig, 'entryTypes'> = {
     entryTypes: {
         post: entryType('post', 'Post'),
-        'redirects/redirect': entryType('redirects/redirect', 'Redirect'),
+        'forms/form': entryType('forms/form', 'Form'),
     },
 };
 
 describe('qualifyEntryType', () => {
     it('joins plugin and type with the separator', () => {
-        expect(qualifyEntryType('redirects', 'redirect')).toBe('redirects/redirect');
+        expect(qualifyEntryType('forms', 'form')).toBe('forms/form');
     });
 });
 
 describe('resolveEntryType', () => {
     it('resolves a site id and a plugin id from the one map', () => {
         expect(resolveEntryType(config, 'post')).toBe(config.entryTypes['post']);
-        expect(resolveEntryType(config, 'redirects/redirect')).toBe(
-            config.entryTypes['redirects/redirect']
+        expect(resolveEntryType(config, 'forms/form')).toBe(
+            config.entryTypes['forms/form']
         );
     });
 
@@ -49,10 +49,10 @@ describe('resolveEntryType', () => {
     });
 
     it('returns undefined for unknown plugin', () => {
-        expect(resolveEntryType(config, 'unknown/redirect')).toBeUndefined();
+        expect(resolveEntryType(config, 'unknown/form')).toBeUndefined();
     });
 
     it('returns undefined for unknown type in known plugin', () => {
-        expect(resolveEntryType(config, 'redirects/nope')).toBeUndefined();
+        expect(resolveEntryType(config, 'forms/nope')).toBeUndefined();
     });
 });

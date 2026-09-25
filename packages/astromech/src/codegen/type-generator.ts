@@ -213,7 +213,7 @@ function generateCollectionTypes(
 
 /**
  * The type-name prefix for an entry type or global id: the pascal-cased id,
- * a plugin's namespace included, e.g. `redirects/redirect` → `RedirectsRedirect`.
+ * a plugin's namespace included, e.g. `forms/form` → `FormsForm`.
  */
 function typeNamePrefix(id: string): string {
     return toPascalCase(id.replaceAll('/', '_'));

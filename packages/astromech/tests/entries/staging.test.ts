@@ -22,7 +22,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { getDb } from '@/database/registry';
-import { getEntryRepository } from '@/entries/repository/registry';
+import { entryRepository } from '@/entries/repository/entries-table';
 import { CapabilityError } from '@/errors/capability';
 import { StagedChangeExistsError } from '@/errors/resource';
 
@@ -298,9 +298,7 @@ describe('mergeStaged — field validation', () => {
 
     /** Write to the staged row without going through the field pipeline. */
     async function plantFields(id: string, fields: JsonObject): Promise<void> {
-        const staging = getEntryRepository('post').staging;
-        if (!staging) throw new Error('post has no staging capability');
-        await staging.update({ id }, { fields });
+        await entryRepository.staging.update({ id }, { fields });
     }
 
     it('rejects staged content missing a required field when the canonical is published', async () => {

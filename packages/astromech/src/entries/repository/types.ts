@@ -1,12 +1,9 @@
 /**
- * Internal EntryRepository contract: the seam between the entries service
- * (`src/entries/service.ts`) and a persistence backend. Not exported from the
- * package root.
+ * The shapes the entry repository reads and writes: the row it returns, a write
+ * to a content row, the list filters and a preview token.
  */
 
-import type { ContentRef, ContentRow, ContentRowId } from '@/content/repository/types';
-import type { Capability } from '@/entries/capabilities';
-import type { EntryVersionRow } from '@/entries/tables';
+import type { ContentRef, ContentRow } from '@/content/repository/types';
 import type { EntryStatus, JsonObject, SortOption, WhereFilters } from '@/types/index';
 
 /**
@@ -17,15 +14,16 @@ import type { EntryStatus, JsonObject, SortOption, WhereFilters } from '@/types/
 export type EntryRef = ContentRef;
 
 /**
- * Universal entry shape a repository returns: the shared content shape plus the
- * entry's own columns. Capability extras are present only when the repository
- * supports them; `type` is present on multi-type repositories.
+ * One locale of one entry as the repository returns it: the shared content
+ * shape plus the entry's own columns.
  */
 export type EntryRow = ContentRow & {
-    type?: string;
-    title?: string;
-    slug?: string | null;
-    deletedAt?: Date | null;
+    type: string;
+    title: string;
+    slug: string | null;
+    status: EntryStatus;
+    publishedAt: Date | null;
+    deletedAt: Date | null;
 };
 
 /**
@@ -49,12 +47,8 @@ export type ListParams = {
     type: string | readonly string[];
     locale?: string | 'all' | undefined;
     trashed?: boolean | undefined;
+    /** Matches the title or the slug. */
     search?: string | undefined;
-    /**
-     * Fields to apply `search` over; honored by repositories that map fields to
-     * columns (tableRepository); the entries-table repository ignores it (title search).
-     */
-    searchFields?: readonly string[] | undefined;
     where?: WhereFilters | undefined;
     /**
      * Only rows whose `publishedAt` is null or not after this time. `entries.query`
@@ -68,132 +62,8 @@ export type ListParams = {
     offset?: number | undefined;
 };
 
-/**
- * Snapshot the entries service hands to the versions capability group. A
- * version snapshots one content row, so the sequence is per content row.
- */
-export type NewEntryVersionSnapshot = {
-    contentId: ContentRowId;
-    version: number;
-    title: string;
-    slug: string | null;
-    fields: JsonObject;
-    createdBy: string | null;
-};
-
 /** The entry a stored preview-token hash belongs to, and when it lapses. */
 export type PreviewTokenRecord = {
     id: string;
     expiresAt: Date | null;
-};
-
-/**
- * What a persistence backend exposes to the entries service: the base reads and
- * writes plus one group per capability it declares in `supports`. `statuses` and
- * `slug` carry no methods of their own.
- */
-export type EntryRepository<R extends EntryRow = EntryRow> = {
-    readonly supports: readonly Capability[];
-
-    /** The matching rows, in `sort` order, sliced by `limit` and `offset`. */
-    findMany(params: ListParams): Promise<R[]>;
-    /** How many rows match, whatever `limit`, `offset` and `sort` say. */
-    count(params: ListParams): Promise<number>;
-    /**
-     * Fetch one locale of one entry of the given type; filters trashed entries
-     * unless `includeTrashed`. Null when the entry, that locale's content row, or
-     * an entry of that type is absent, so a row of another type answers null.
-     */
-    findOne(
-        ref: EntryRef & { type: string },
-        opts?: { includeTrashed?: boolean }
-    ): Promise<R | null>;
-    /**
-     * Fetch an entry of the given type in any one locale: the default content
-     * locale when it has a row, else whichever comes first. A row of another type
-     * answers null. Resource-level operations read through it, so it must admit
-     * trashed entries under `includeTrashed`. Optional: a repository whose rows
-     * are single-locale is never asked.
-     */
-    findAnyLocale?(
-        ref: { type: string; id: string },
-        opts?: { includeTrashed?: boolean }
-    ): Promise<R | null>;
-    /** Create an entry and its first content row. */
-    create(data: EntryWrite & { type: string }): Promise<R>;
-    /** Write one locale's content row, creating it when it does not exist. */
-    update(ref: EntryRef, data: EntryWrite): Promise<R>;
-    /** Hard-delete the entry; its content rows and versions cascade. */
-    delete(id: string): Promise<void>;
-
-    /**
-     * Which of these ids this repository holds. Trashed and staged rows MUST
-     * count as existing: the caller drops a reference on a miss, so a false
-     * negative deletes author data. Optional — one that omits it is never asked.
-     */
-    existingIds?(ids: string[]): Promise<Set<string>>;
-
-    /**
-     * Compute the unique slug for a base slug under (type, locale), excluding an
-     * entry. Lives on the repository because uniqueness is a persistence
-     * concern; the entries service computes the *base* slug.
-     */
-    uniqueSlug(
-        type: string,
-        locale: string,
-        baseSlug: string,
-        excludeId?: string
-    ): Promise<string>;
-
-    /**
-     * Present iff `supports` includes 'trash'. Resource-level: every locale.
-     * `actor` is recorded as the entry's `updatedBy`; absent leaves it alone.
-     */
-    trash?: {
-        trash(id: string, actor?: string | null): Promise<void>;
-        restore(id: string, actor?: string | null): Promise<R>;
-        emptyTrash(type: string): Promise<void>;
-    };
-
-    /** Present iff `supports` includes 'versioning'. Keyed on the content row. */
-    versions?: {
-        findMany(contentId: ContentRowId): Promise<EntryVersionRow[]>;
-        findOne(versionId: string): Promise<EntryVersionRow | null>;
-        create(snapshot: NewEntryVersionSnapshot): Promise<void>;
-        latestNumber(contentId: ContentRowId): Promise<number>;
-    };
-
-    /** Present iff `supports` includes 'staging'. */
-    staging?: {
-        /** The staged change for one locale of an entry, or null. */
-        findOne(ref: EntryRef): Promise<R | null>;
-        /** Add a second content row for that locale, staged for the canonical. */
-        create(ref: EntryRef, data: EntryWrite): Promise<R>;
-        /** Write that locale's staged content row; it must already exist. */
-        update(ref: EntryRef, data: EntryWrite): Promise<R>;
-        /** Discard the staged content row for that locale. */
-        delete(ref: EntryRef): Promise<void>;
-    };
-
-    /** Present iff `supports` includes 'translatable'. */
-    translatable?: {
-        /** The entry's other canonical locales, excluding `excludeLocale`. */
-        siblings(id: string, excludeLocale?: string): Promise<R[]>;
-        /** Merge `values` into each sibling's fields (non-translatable propagation). */
-        propagateFields(
-            id: string,
-            excludeLocale: string,
-            values: JsonObject
-        ): Promise<void>;
-    };
-
-    /**
-     * The entry's single cross-locale preview token, stored as a hash. Absent on
-     * a repository whose rows live outside the `entries` table.
-     */
-    previewToken?: {
-        set(id: string, hash: string, expiresAt: Date | null): Promise<void>;
-        clear(id: string): Promise<void>;
-        findByHash(hash: string): Promise<PreviewTokenRecord | null>;
-    };
 };

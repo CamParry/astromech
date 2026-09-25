@@ -5,58 +5,17 @@
  * The `article` type declares a relation at the top level (`author`) and two
  * inside a repeater (`sections[].related`, `sections[].gallery`) so a nested
  * schema path is exercised end to end.
- *
- * `links/link` is stored in its own table, so it covers the custom-table
- * repository's version of the filter and the cross-type refusal.
  */
 
-import type { AstromechConfig, PluginDefinition } from '@/types/index';
+import type { AstromechConfig } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { defineTable } from '@/database/define-table';
-import {
-    CustomTableCrossTypeQueryError,
-    InvalidReferencesFilterError,
-    UnknownWhereKeyError,
-} from '@/entries/errors';
-import { tableRepository } from '@/entries/repository/table';
+import { InvalidReferencesFilterError, UnknownWhereKeyError } from '@/entries/errors';
 import { UnknownSortKeyError } from '@/errors/query';
 import { mediaRepository } from '@/media/repository';
 
 const api = currentServices.entries;
-
-const linksTable = defineTable('test_links', ({ col }) => ({
-    id: col.id(),
-    label: col.text({ notNull: true }),
-    post: col.text(),
-    createdAt: col.timestamp({ notNull: true, defaultNow: true }),
-    updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
-}));
-
-/** `links/link` is stored in its own table. */
-function linksPlugin(): PluginDefinition {
-    return {
-        package: '@astromech/links',
-        entries: [
-            {
-                type: 'link',
-                single: 'Link',
-                plural: 'Links',
-                titleField: false,
-                statuses: false,
-                slug: false,
-                trash: false,
-                repository: tableRepository(linksTable),
-                fields: [
-                    { name: 'label', type: 'text', label: 'Label' },
-                    { name: 'post', type: 'relationship', label: 'Post', target: 'post' },
-                ],
-            },
-        ],
-    };
-}
 
 function makeReferencesConfig(): AstromechConfig {
     const base = makeTestConfig();
@@ -97,20 +56,12 @@ function makeReferencesConfig(): AstromechConfig {
                 ],
             },
         },
-        plugins: [linksPlugin()],
     };
 }
 
 beforeEach(async () => {
-    const db = await createTestDb();
+    await createTestDb();
     setupTestConfig(makeReferencesConfig());
-    await sql`CREATE TABLE test_links (
-            id text PRIMARY KEY,
-            label text NOT NULL,
-            post text,
-            created_at text NOT NULL,
-            updated_at text NOT NULL
-        )`.execute(db);
 });
 
 /** A media row, inserted through the repository so no driver or real bytes are needed. */
@@ -318,113 +269,6 @@ describe('where.references validation', () => {
                 where: { references: { path: '', id: '' } },
             })
         ).rejects.toThrow(InvalidReferencesFilterError);
-    });
-});
-
-describe('where.references on a custom-table type', () => {
-    /** Create one `links/link` row and return its id. */
-    async function createLink(label: string, post?: string): Promise<string> {
-        const fields = post === undefined ? { label } : { label, post };
-        return (await api.create({ type: 'links/link', data: { fields } })).id;
-    }
-
-    async function createPost(title: string): Promise<string> {
-        return (await api.create({ type: 'post', data: { title } })).id;
-    }
-
-    it('returns only the rows referencing the target, and counts only those', async () => {
-        const target = await createPost('Target');
-        const hit = await createLink('Hit', target);
-        await createLink('No relation');
-
-        const result = await api.query({
-            type: 'links/link',
-            full: true,
-            where: { references: { path: 'post', id: target } },
-        });
-
-        expect(result.data.map((e) => e.id)).toEqual([hit]);
-        expect(result.pagination?.total).toBe(1);
-    });
-
-    it('excludes a row whose relation points at another target', async () => {
-        const target = await createPost('Target');
-        const other = await createPost('Other');
-        await createLink('Other', other);
-
-        const result = await api.query({
-            type: 'links/link',
-            full: true,
-            where: { references: { path: 'post', id: target } },
-        });
-
-        expect(result.data).toEqual([]);
-        expect(result.pagination?.total).toBe(0);
-    });
-
-    it('keeps the total at the filtered count when paging', async () => {
-        const target = await createPost('Target');
-        const other = await createPost('Other');
-        for (const label of ['a', 'b', 'c']) await createLink(label, target);
-        for (const label of ['d', 'e']) await createLink(label, other);
-
-        const result = await api.query({
-            type: 'links/link',
-            full: true,
-            limit: 2,
-            page: 2,
-            where: { references: { path: 'post', id: target } },
-        });
-
-        expect(result.data).toHaveLength(1);
-        expect(result.data[0]?.fields.post).toBe(target);
-        expect(result.pagination?.total).toBe(3);
-        expect(result.pagination?.pages).toBe(2);
-    });
-
-    it('combines with a column filter', async () => {
-        const target = await createPost('Target');
-        const other = await createPost('Other');
-        const hit = await createLink('Keep', target);
-        await createLink('Drop', target);
-        await createLink('Keep', other);
-
-        const result = await api.query({
-            type: 'links/link',
-            full: true,
-            where: { label: 'Keep', references: { path: 'post', id: target } },
-        });
-
-        expect(result.data.map((e) => e.id)).toEqual([hit]);
-        expect(result.pagination?.total).toBe(1);
-    });
-});
-
-// The query goes to one repository, so either order would drop one side's
-// rows without an error, whatever the filter.
-describe('a cross-type query naming a custom-table type', () => {
-    it('is refused in either order, with or without a filter', async () => {
-        const target = await api.create({ type: 'post', data: { title: 'Target' } });
-
-        for (const type of [
-            ['links/link', 'post'],
-            ['post', 'links/link'],
-        ]) {
-            for (const where of [
-                undefined,
-                { references: { path: 'post', id: target.id } },
-            ]) {
-                await expect(
-                    api.query({ type, full: true, ...(where ? { where } : {}) })
-                ).rejects.toThrow(CustomTableCrossTypeQueryError);
-            }
-        }
-    });
-
-    it('tells the caller to query the custom-table type on its own', async () => {
-        await expect(
-            api.query({ type: ['post', 'links/link'], full: true })
-        ).rejects.toThrow(/Query links\/link on its own/);
     });
 });
 

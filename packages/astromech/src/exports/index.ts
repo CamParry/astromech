@@ -93,7 +93,6 @@ export type {
     UpsertOptions,
 } from '@/database/repository/create-repository';
 export type { Where } from '@/database/repository/where';
-export { tableRepository } from '@/entries/repository/table';
 export { t } from '@/utilities/labels';
 /**
  * Rich text is stored as ProseMirror JSON, rendered to sanitized HTML on

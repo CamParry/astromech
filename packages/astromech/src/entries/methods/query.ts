@@ -14,15 +14,11 @@ import { resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
 import { collectRelationshipSchemaPaths } from '@/fields/references';
 import { defineServiceMethod } from '@/services/define-service-method';
-import {
-    CustomTableCrossTypeQueryError,
-    InvalidReferencesFilterError,
-    PublicTrashedReadError,
-} from '../errors';
+import { InvalidReferencesFilterError, PublicTrashedReadError } from '../errors';
 import { entryGate } from '../internal/access';
 import { queryPreviewEntries } from '../internal/preview-read';
 import { toEntry } from '../internal/read-entry';
-import { getEntryRepository, hasCustomTable } from '../repository/registry';
+import { entryRepository } from '../repository/entries-table';
 
 /**
  * Lists entries of one or more types, paginated and filtered to the caller's
@@ -57,14 +53,6 @@ export const queryEntries = defineServiceMethod({
         const typeParam = params.type;
         const types = Array.isArray(typeParam) ? Array.from(typeParam) : [typeParam];
 
-        // The query goes to the first type's repository, and a custom table
-        // holds its own type alone, so a list mixing one with other types would
-        // drop the rows of one side without an error.
-        const customTableTypes = types.filter((type) => hasCustomTable(type));
-        if (types.length > 1 && customTableTypes.length > 0) {
-            throw new CustomTableCrossTypeQueryError(types, customTableTypes);
-        }
-
         // Absent `full` ⇒ public.
         const shape: VisibilityShape = params.full ? 'full' : 'public';
 
@@ -78,8 +66,6 @@ export const queryEntries = defineServiceMethod({
 
         // A single type resolves one config; a cross-type query resolves per row.
         const singleType = types.length === 1 ? (types[0] ?? null) : null;
-        const firstType = types[0] ?? '';
-        const repository = getEntryRepository(firstType);
 
         const singleTypeCfg = singleType
             ? resolveEntryType(config, singleType)
@@ -107,14 +93,13 @@ export const queryEntries = defineServiceMethod({
             locale: params.locale,
             trashed: params.trashed ?? false,
             search: params.search,
-            ...(singleTypeCfg?.search ? { searchFields: singleTypeCfg.search } : {}),
             where: effectiveWhere,
             ...(filtersPublished ? { publishedAsOf: now } : {}),
         };
         const { data: rows, pagination } = await queryPage(params, {
             list: (page) =>
-                repository.findMany({ ...filters, sort: params.sort, ...page }),
-            count: () => repository.count(filters),
+                entryRepository.findMany({ ...filters, sort: params.sort, ...page }),
+            count: () => entryRepository.count(filters),
         });
 
         const data = rows.map(toEntry);
@@ -136,12 +121,7 @@ export const queryEntries = defineServiceMethod({
 
         const visibleData: Entry[] = [];
         for (const entry of data) {
-            const rowType = entry.type ?? singleType ?? firstType;
-            // tableRepository-backed rows have no `type` column, so they come back
-            // without a type. Stamp it from the query so every returned entry is
-            // complete (consumers build links / resolve icons from `entry.type`).
-            if (entry.type === undefined) entry.type = rowType;
-            const rowFields = fieldsOf(rowType);
+            const rowFields = fieldsOf(entry.type);
 
             const filtered = applyVisibility(entry, {
                 shape,

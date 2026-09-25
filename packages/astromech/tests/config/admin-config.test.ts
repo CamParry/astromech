@@ -10,8 +10,6 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { buildAdminConfig, toAdminEntryType } from '@/config/admin-config';
 import { resolveConfig } from '@/config/resolve';
-import { defineTable } from '@/database/define-table';
-import { tableRepository } from '@/entries/repository/table';
 
 const driver: DatabaseDriver = {
     type: 'test',
@@ -101,7 +99,7 @@ describe('toAdminEntryType', () => {
         expect(admin.icon).toBe('FileText');
     });
 
-    it('omits views, defaultView, gridFields, search when absent', () => {
+    it('omits views, defaultView and gridFields when absent', () => {
         const resolved = resolveConfig(baseConfig());
         const postEntry = resolved.entryTypes['post'];
         if (!postEntry) throw new Error('post entry not resolved');
@@ -111,35 +109,6 @@ describe('toAdminEntryType', () => {
         expect('views' in admin).toBe(false);
         expect('defaultView' in admin).toBe(false);
         expect('gridFields' in admin).toBe(false);
-        expect('search' in admin).toBe(false);
-    });
-
-    it('marks a type stored in its own table, and only that type', () => {
-        const linksTable = defineTable('test_links', ({ col }) => ({
-            id: col.id(),
-            body: col.text(),
-        }));
-        const resolved = resolveConfig(
-            baseConfig([], {
-                entries: {
-                    post: entryType('Post'),
-                    link: {
-                        ...entryType('Link'),
-                        titleField: false,
-                        statuses: false,
-                        slug: false,
-                        trash: false,
-                        repository: tableRepository(linksTable),
-                    },
-                },
-            })
-        );
-        const link = resolved.entryTypes['link'];
-        const post = resolved.entryTypes['post'];
-        if (!link || !post) throw new Error('entries not resolved');
-
-        expect(toAdminEntryType(link).customTable).toBe(true);
-        expect('customTable' in toAdminEntryType(post)).toBe(false);
     });
 });
 
@@ -155,7 +124,6 @@ describe('toAdminEntryType — optional members', () => {
                     views: ['list', 'grid'],
                     defaultView: 'grid',
                     gridFields: [{ field: 'body' }],
-                    search: ['body'],
                     fields: [{ name: 'body', type: 'text' }],
                 },
             },
@@ -168,7 +136,6 @@ describe('toAdminEntryType — optional members', () => {
             views: ['list', 'grid'],
             defaultView: 'grid',
             gridFields: [{ field: 'body' }],
-            search: ['body'],
         });
     });
 });

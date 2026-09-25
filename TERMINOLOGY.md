@@ -50,10 +50,6 @@ content-level identifiers that go with them (an entry's title and slug, a media
 item's title, alt text and caption). A content row's own id is never public; a
 caller addresses content by the resource's id plus a locale.
 
-**Custom table.** A plugin's own table backing an entry type, presented through
-the entries admin with every entry capability switched off. It shares the
-entries interface and none of the internals. The term is WordPress's.
-
 **Driver.** A pluggable backend the site config names and core calls through a
 fixed interface: database, storage, email, image transform, scheduler. Each is a
 factory function, never a class or a shared singleton. Not "adapter".

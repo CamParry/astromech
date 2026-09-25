@@ -6,7 +6,7 @@
 import type { AudienceContext } from '@/content/visibility';
 import type { Entry, Field } from '@/types/index';
 import { applyVisibility } from '@/content/visibility';
-import { getEntriesTableRepository } from '../repository/registry';
+import { entryRepository } from '../repository/entries-table';
 
 /** SHA-256 hex of a token (crypto.subtle — Workers-safe). */
 export async function hashPreviewToken(plaintext: string): Promise<string> {
@@ -30,8 +30,9 @@ export async function verifyPreviewToken(
     entryId: string,
     token: string
 ): Promise<boolean> {
-    const previewToken = getEntriesTableRepository().previewToken;
-    const record = await previewToken.findByHash(await hashPreviewToken(token));
+    const record = await entryRepository.previewToken.findByHash(
+        await hashPreviewToken(token)
+    );
     if (!record || record.id !== entryId) return false;
     return record.expiresAt === null || record.expiresAt.getTime() > Date.now();
 }

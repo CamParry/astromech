@@ -19,7 +19,7 @@ import {
 
 // Compile-proof: factory output assignable to EntryType['fields'].
 const _flat: EntryType['fields'] = [
-    text('from', { required: true, searchable: true }),
+    text('from', { required: true }),
     select('status', { options: ['301', '302'], defaultValue: '301' }),
     boolean('enabled', { defaultValue: true }),
 ];

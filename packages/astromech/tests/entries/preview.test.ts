@@ -13,7 +13,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { hashPreviewToken } from '@/entries/internal/preview';
 import { DEFAULT_PREVIEW_TOKEN_TTL_MS } from '@/entries/methods/preview/token';
-import { getEntriesTableRepository } from '@/entries/repository/registry';
+import { entryRepository } from '@/entries/repository/entries-table';
 import { CapabilityError } from '@/errors/capability';
 
 const api = currentServices.entries;
@@ -28,7 +28,7 @@ beforeEach(async () => {
 /** Whether the stored token authorizes `entryId` at `at` — `verifyPreviewToken`
  *  with the clock passed in, so expiry can be asserted without moving it. */
 async function isValid(entryId: string, token: string, at: Date): Promise<boolean> {
-    const previewToken = getEntriesTableRepository().previewToken;
+    const previewToken = entryRepository.previewToken;
     const record = await previewToken.findByHash(await hashPreviewToken(token));
     if (!record || record.id !== entryId) return false;
     return record.expiresAt === null || record.expiresAt.getTime() > at.getTime();

@@ -13,7 +13,7 @@ import { toEntry } from '../internal/read-entry';
 import { syncEntryRelationships } from '../internal/relationships';
 import { deriveSlug } from '../internal/slug';
 import { toStoredFields } from '../internal/stored-fields';
-import { getEntryRepository } from '../repository/registry';
+import { entryRepository } from '../repository/entries-table';
 import { createEntryPayloadSchema, createEntrySchema } from '../schema';
 
 /**
@@ -36,7 +36,6 @@ export const createEntry = defineServiceMethod({
         }
 
         assertWritableFields(entryType, data);
-        const repository = getEntryRepository(type);
         const user = ctx.user;
 
         const titled = entryType.titleField !== false;
@@ -60,7 +59,6 @@ export const createEntry = defineServiceMethod({
             status === 'published' ? new Date() : (validated.publishedAt ?? null);
 
         const slug = await deriveSlug({
-            repository,
             entryType,
             locale,
             title,
@@ -70,7 +68,6 @@ export const createEntry = defineServiceMethod({
         const fields = await toStoredFields({
             kind: 'create',
             config: ctx.config,
-            repository,
             entryType,
             values: validated.fields ?? {},
             locale,
@@ -96,8 +93,8 @@ export const createEntry = defineServiceMethod({
 
         // Write the row and its relationship index atomically.
         const entry = await transaction(async () => {
-            const created = toEntry(await repository.create({ type, ...row }));
-            await syncEntryRelationships(ctx.config, created, row.fields, type);
+            const created = toEntry(await entryRepository.create({ type, ...row }));
+            await syncEntryRelationships(ctx.config, created, type);
             return created;
         });
 

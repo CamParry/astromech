@@ -1,7 +1,7 @@
 /**
  * Relationship indexing for a resource whose content is one row per locale, plus
  * a staged row per locale where it has staging: globals, users and media.
- * Entries share the merge rule here and keep their own policy for custom tables.
+ * Entries share the merge rule here and read their own stored rows.
  */
 
 import type {

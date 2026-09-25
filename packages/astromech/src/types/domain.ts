@@ -60,9 +60,7 @@ export type Entry = {
     updatedAt: Date;
     /**
      * Who made this locale and who last wrote to it. Null for a write with no
-     * request identity (a seed script, the CLI, the scheduler), and absent
-     * altogether on a `tableRepository`-backed type, whose table has no such
-     * columns.
+     * request identity: a seed script, the CLI, the scheduler.
      */
     createdBy?: string | null;
     updatedBy?: string | null;

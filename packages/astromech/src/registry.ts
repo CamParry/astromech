@@ -80,32 +80,6 @@ export function createRegistry<T>(
     };
 }
 
-export type LazyRegistry<T> = {
-    /** The stored value, or the default built and stored on first call. */
-    get(): T;
-    set(value: T): void;
-    clear(): void;
-};
-
-/**
- * One value under `name` that `build` makes on the first `get()`, so boot
- * registers nothing. `set` swaps it, which is how a test replaces one.
- */
-export function createLazyRegistry<T>(name: string, build: () => T): LazyRegistry<T> {
-    const slot = createRegistry<T>(name, { required: false });
-    return {
-        get: (): T => {
-            const existing = slot.get();
-            if (existing !== null) return existing;
-            const created = build();
-            slot.set(created);
-            return created;
-        },
-        set: slot.set,
-        clear: slot.clear,
-    };
-}
-
 export type KeyedRegistry<T> = {
     set(key: string, value: T): void;
     /** The entry. Throws when the key is unset. */

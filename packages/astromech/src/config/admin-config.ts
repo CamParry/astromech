@@ -42,8 +42,6 @@ export function toAdminEntryType(entryType: ResolvedEntryType): AdminEntryType {
         ...(entryType.gridFields !== undefined
             ? { gridFields: entryType.gridFields }
             : {}),
-        ...(entryType.search !== undefined ? { search: entryType.search } : {}),
-        ...(entryType.customTable ? { customTable: true as const } : {}),
     };
 }
 

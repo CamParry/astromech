@@ -1,12 +1,11 @@
 import { z } from '@hono/zod-openapi';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { transaction } from '@/database/transaction';
-import { CapabilityError } from '@/errors/capability';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
 import { trashEntryBatch } from '../internal/delete-batch';
 import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
-import { getEntryRepository } from '../repository/registry';
+import { entryRepository } from '../repository/entries-table';
 
 /** One id is a batch of one, and its errors are unwrapped. */
 const trashOne = fromBatch(trashEntryBatch);
@@ -50,17 +49,17 @@ export const emptyTrash = defineServiceMethod({
     idempotent: true,
     async handler(params): Promise<void> {
         const { type } = params;
-        const repository = getEntryRepository(type);
-        const { trash } = repository;
-        if (!trash) throw new CapabilityError('entry', type, 'trash');
-
-        const trashed = await repository.findMany({ type, locale: 'all', trashed: true });
+        const trashed = await entryRepository.findMany({
+            type,
+            locale: 'all',
+            trashed: true,
+        });
 
         await transaction(async () => {
             for (const entryId of new Set(trashed.map((entry) => entry.id))) {
                 await relationshipRepository.deleteByResource(entryId, 'entry');
             }
-            await trash.emptyTrash(type);
+            await entryRepository.trash.emptyTrash(type);
         });
     },
 });

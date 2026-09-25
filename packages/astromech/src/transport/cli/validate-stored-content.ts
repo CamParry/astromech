@@ -12,11 +12,7 @@ import { RESOURCE_SPECS } from '@/content/resources';
 import { definitionsOf, fieldParseContext } from '@/content/write-fields';
 import { resolveEntryType } from '@/entries/entry-types';
 import { listEntryRows } from '@/entries/internal/read-entry';
-import {
-    getEntriesTableRepository,
-    getEntryRepository,
-    hasCustomTable,
-} from '@/entries/repository/registry';
+import { entryRepository } from '@/entries/repository/entries-table';
 import { safeParseFields } from '@/fields/parse-fields';
 import { mediaRepository } from '@/media/repository';
 import { userRepository } from '@/users/repository';
@@ -78,10 +74,10 @@ export async function validateStoredContent(
 }
 
 /**
- * Every live entry row: one per locale of every entry, plus the types backed by
- * their own repository. Trashed entries are skipped — an entry in the trash is
- * on its way out and no write is pending against it. Drafts are reported at the
- * stage their own status implies, so an incomplete draft is not a failure.
+ * Every live entry row: one per locale of every entry. Trashed entries are
+ * skipped — an entry in the trash is on its way out and no write is pending
+ * against it. Drafts are reported at the stage their own status implies, so an
+ * incomplete draft is not a failure.
  *
  * A content row is reported under its entry's id, which is the id every other
  * surface addresses it by; `locale` is what tells two findings apart.
@@ -91,14 +87,13 @@ async function checkEntries(
     report: ValidationReport,
     type: string | undefined
 ): Promise<void> {
-    const entriesTable = getEntriesTableRepository();
-    const entries = await entriesTable.findEntryRowsByType(type);
+    const entries = await entryRepository.findEntryRowsByType(type);
     const live = new Map(
         entries
             .filter((entry) => entry.deletedAt == null)
             .map((entry) => [entry.id, entry])
     );
-    const contents = await entriesTable.findContentRowsByType(type);
+    const contents = await entryRepository.findContentRowsByType(type);
 
     for (const row of contents) {
         const entry = live.get(row.entryId);
@@ -111,38 +106,9 @@ async function checkEntries(
             status: row.status,
             fields: (row.fields ?? {}) as JsonObject,
             record: row,
-            scan: () =>
-                listEntryRows(getEntryRepository(entry.type), entry.type, row.locale),
+            scan: () => listEntryRows(entry.type, row.locale),
         });
     }
-
-    for (const typeName of customTableEntryTypes(ctx, type)) {
-        const repository = getEntryRepository(typeName);
-        const data = await repository.findMany({ type: typeName, locale: 'all' });
-        for (const record of data) {
-            if (record.deletedAt != null) continue;
-            // A custom-table repository need not be locale-aware; the fallback
-            // matches the entries-table repository's own.
-            const locale = record.locale ?? defaultContentLocale(ctx.config);
-            await checkRow(ctx, report, {
-                kind: 'entry',
-                target: typeName,
-                id: record.id,
-                locale,
-                status: record.status,
-                fields: record.fields,
-                record,
-                scan: () => listEntryRows(repository, typeName, locale),
-            });
-        }
-    }
-}
-
-/** Entry types whose rows live outside the `entries` table, the site's and each plugin's. */
-function customTableEntryTypes(ctx: AppContext, type: string | undefined): string[] {
-    return Object.keys(ctx.config.entryTypes)
-        .filter(hasCustomTable)
-        .filter((candidate) => type === undefined || candidate === type);
 }
 
 /**

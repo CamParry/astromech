@@ -1,25 +1,14 @@
 /**
- * `createAstromech`: the application registry's semantics, and the HOST
- * entry-type repository the create sequence mounts.
- *
- * Runs the real create sequence rather than the harness's `setupTestConfig`,
- * which mirrors the sequence instead of running it — a mirror cannot fail when
- * the host-repository loop is deleted or moved above `registerPlugins`, which opens
- * by clearing every repository override.
+ * `createAstromech`: the application registry's semantics, through the real
+ * create sequence rather than the harness's `setupTestConfig`.
  */
 
 import type { DB } from '@/database/types';
-import type { CustomTableRepository } from '@/entries/repository/table';
-import type { EntryRepository } from '@/entries/repository/types';
 import type { AstromechConfig, StorageDriver } from '@/types/index';
 import type { Kysely } from 'kysely';
 import { createTestDb } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { currentServices } from '@/app-context/services';
 import { createAstromech, getAstromech } from '@/astromech';
-import { getEntryRepository } from '@/entries/repository/registry';
-
-const entriesService = currentServices.entries;
 
 const storageDriver: StorageDriver = {
     name: 'noop',
@@ -40,26 +29,7 @@ const storageDriver: StorageDriver = {
     },
 };
 
-/**
- * Declares no capabilities and throws from every method, so any read reaching it
- * is unmistakable in the failure message.
- */
-function throwing(): never {
-    throw new Error('custom widget repository reached');
-}
-
-const throwingRepository: EntryRepository = {
-    supports: [],
-    findMany: throwing,
-    count: throwing,
-    findOne: throwing,
-    create: throwing,
-    update: throwing,
-    delete: throwing,
-    uniqueSlug: throwing,
-};
-
-/** A config whose `widget` type declares its own repository. */
+/** A minimal config with one entry type. */
 function makeConfig(getInstance: () => Kysely<DB>): AstromechConfig {
     return {
         db: {
@@ -71,13 +41,6 @@ function makeConfig(getInstance: () => Kysely<DB>): AstromechConfig {
         defaultLocale: 'en',
         locales: ['en'],
         entries: {
-            widget: {
-                single: 'Widget',
-                plural: 'Widgets',
-                // A structural stub, cast past the `CustomTableRepository` guard:
-                // this suite exercises the registry, not the public config surface.
-                repository: throwingRepository as unknown as CustomTableRepository,
-            },
             note: {
                 single: 'Note',
                 plural: 'Notes',
@@ -86,34 +49,6 @@ function makeConfig(getInstance: () => Kysely<DB>): AstromechConfig {
         },
     };
 }
-
-describe('createAstromech — host entry repository', () => {
-    beforeEach(async () => {
-        const db = await createTestDb();
-        const config = makeConfig(() => db);
-        // One application per process, and each case builds its own config.
-        delete globalThis.__astromech?.astromech;
-        await createAstromech({ config });
-    });
-
-    it('registers the declared repository under the bare type name', () => {
-        expect(getEntryRepository('widget')).toBe(throwingRepository);
-    });
-
-    it('leaves a type without declared repository on the entries-table repository', () => {
-        expect(getEntryRepository('note')).not.toBe(throwingRepository);
-    });
-
-    it('routes a read for the type through its declared repository', async () => {
-        await expect(entriesService.query({ type: 'widget' })).rejects.toThrow(
-            /custom widget repository reached/
-        );
-    });
-
-    it('routes a read for the control type through the entries-table repository', async () => {
-        await expect(entriesService.query({ type: 'note' })).resolves.toBeDefined();
-    });
-});
 
 describe('createAstromech — the application registry', () => {
     let db: Kysely<DB>;

@@ -1,7 +1,6 @@
 /**
- * Config-derived helpers shared across entry operations: the versioning lookup
- * and the capability assertions. Each reads the resolved config or type, which
- * the caller hands it.
+ * Config-derived helpers shared across entry operations: the capability
+ * assertions. Each reads the resolved config or type, which the caller hands it.
  */
 
 import type { Capability } from '@/entries/capabilities';
@@ -9,15 +8,6 @@ import type { ResolvedConfig, ResolvedEntryType } from '@/types/index';
 import { assertCapability } from '@/content/capabilities';
 import { resolveEntryType } from '@/entries/entry-types';
 import { CapabilityError } from '@/errors/capability';
-import { getEntryRepository } from '../repository/registry';
-
-/** Whether the type keeps versions and its repository can store them. */
-export function isVersioningEnabled(config: ResolvedConfig, type: string): boolean {
-    return (
-        getEntryRepository(type).versions !== undefined &&
-        !!resolveEntryType(config, type)?.versioning
-    );
-}
 
 /** The type one call's input names, or the empty type when it names none. */
 export function typeOf(input: unknown): string {

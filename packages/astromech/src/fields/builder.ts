@@ -26,7 +26,6 @@ type BaseOptions = {
     description?: Label;
     validation?: ValidationRule[];
     translatable?: boolean;
-    searchable?: boolean;
     /** When true, this field is omitted from `public`-shape reads. Default: false (public). */
     private?: boolean;
 };

@@ -15,35 +15,24 @@ import { relationshipRepository } from '@/content/repository/relationships';
 import { resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
 import { findReferences } from '@/fields/references';
-import {
-    getEntriesTableRepository,
-    getEntryRepository,
-    hasCustomTable,
-} from '../repository/registry';
+import { entryRepository } from '../repository/entries-table';
 
 /**
- * Re-index one entry. The index is keyed on the entry, so every locale it holds
- * contributes: a write to one locale re-reads the rest rather than replacing
- * their references with its own.
+ * Re-index one entry from its stored rows. The index is keyed on the entry, so
+ * every locale it holds contributes: a write to one locale re-reads the rest
+ * rather than replacing their references with its own.
  */
 export async function syncEntryRelationships(
     config: ResolvedConfig,
     entry: { id: string },
-    fields: JsonObject,
     type: string
 ): Promise<void> {
-    const written = entryReferences(config, type, fields);
-    if (written === null) return;
-
-    // A custom-table type has no `entry_content` rows: its single row is the
-    // whole entry, so the fields just written are all there is to index.
-    const references = hasCustomTable(type)
-        ? written
-        : await storedEntryReferences(config, entry.id, type);
+    // An unconfigured type has no schema to read references from.
+    if (!resolveEntryType(config, type)) return;
 
     await relationshipRepository.replaceForSource(
         { id: entry.id, kind: 'entry', type, staged: false },
-        references
+        await storedEntryReferences(config, entry.id, type)
     );
 }
 
@@ -56,10 +45,27 @@ export async function allEntryRelationships(
     config: ResolvedConfig,
     options?: { type?: string }
 ): Promise<RelationshipIndexSource[]> {
-    return [
-        ...(await entriesTableEntrySources(config, options?.type)),
-        ...(await customTableEntrySources(config, options?.type)),
-    ];
+    const type = options?.type;
+    const entries = await entryRepository.findEntryRowsByType(type);
+    const contents = await entryRepository.findContentRowsByType(type);
+
+    const rowsByEntry = new Map<string, typeof contents>();
+    for (const row of contents) {
+        const held = rowsByEntry.get(row.entryId);
+        if (held) held.push(row);
+        else rowsByEntry.set(row.entryId, [row]);
+    }
+
+    return entries.map((entry) => ({
+        // An entry with a staged content row is still a live entry, so an entry
+        // source is never itself staged; the per-reference flag carries staging.
+        source: { id: entry.id, kind: 'entry' as const, type: entry.type, staged: false },
+        references: entryContentReferences(
+            config,
+            entry.type,
+            rowsByEntry.get(entry.id) ?? []
+        ),
+    }));
 }
 
 /**
@@ -86,7 +92,7 @@ async function storedEntryReferences(
     entryId: string,
     type: string
 ): Promise<IndexedReference[]> {
-    const rows = await getEntriesTableRepository().findContentRowsByEntry(entryId);
+    const rows = await entryRepository.findContentRowsByEntry(entryId);
     return entryContentReferences(config, type, rows);
 }
 
@@ -103,67 +109,4 @@ function entryContentReferences(
         rows,
         (fields) => entryReferences(config, type, fields) ?? []
     );
-}
-
-/**
- * Sources from the `entries` table, read as stored rows rather than through
- * `findMany`: its predicate excludes staged rows unconditionally and trashed
- * rows by default, and the rebuild needs both.
- */
-async function entriesTableEntrySources(
-    config: ResolvedConfig,
-    type?: string
-): Promise<RelationshipIndexSource[]> {
-    const repository = getEntriesTableRepository();
-    const entries = await repository.findEntryRowsByType(type);
-    const contents = await repository.findContentRowsByType(type);
-
-    const rowsByEntry = new Map<string, typeof contents>();
-    for (const row of contents) {
-        const held = rowsByEntry.get(row.entryId);
-        if (held) held.push(row);
-        else rowsByEntry.set(row.entryId, [row]);
-    }
-
-    return entries.map((entry) => ({
-        // An entry with a staged content row is still a live entry, so an entry
-        // source is never itself staged; the per-reference flag carries staging.
-        source: { id: entry.id, kind: 'entry' as const, type: entry.type, staged: false },
-        references: entryContentReferences(
-            config,
-            entry.type,
-            rowsByEntry.get(entry.id) ?? []
-        ),
-    }));
-}
-
-/**
- * Sources for entry types backed by their own repository (`tableRepository`).
- * Their rows are not in the `entries` table but they are indexed on write, so
- * leaving them out would report every one of their references as drift.
- */
-async function customTableEntrySources(
-    config: ResolvedConfig,
-    onlyType?: string
-): Promise<RelationshipIndexSource[]> {
-    const types = configuredEntryTypes(config)
-        .filter(hasCustomTable)
-        .filter((type) => onlyType === undefined || type === onlyType);
-
-    const collected: RelationshipIndexSource[] = [];
-    for (const type of types) {
-        const rows = await getEntryRepository(type).findMany({ type, locale: 'all' });
-        for (const row of rows) {
-            collected.push({
-                source: { id: row.id, kind: 'entry', type, staged: row.staged },
-                references: entryReferences(config, type, row.fields) ?? [],
-            });
-        }
-    }
-    return collected;
-}
-
-/** Every entry type id in the resolved config, the site's and each plugin's. */
-function configuredEntryTypes(config: ResolvedConfig): string[] {
-    return Object.keys(config.entryTypes);
 }

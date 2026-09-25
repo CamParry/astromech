@@ -202,4 +202,4 @@ These words are taken; what each term means is in `TERMINOLOGY.md`. This section
 
 - **admin resource**: a plugin's declaration of admin screens over its service methods (`defineAdminResource`, under `admin.resources`). Bare "resource" stays reserved for entries, globals, media and users. Rejected: "resource" (taken), "collection" (Payload's word for stored content), "admin view" or "screen" (one admin resource has several views), and "model" (Django's word, which implies storage).
 - **tables.ts / schema.ts**: `defineTable` tables live in `<module>/tables.ts` (plural even for one table), and `schema.ts` holds Zod request validation. Rejected: `schema/` for table descriptors, ambiguous with Zod.
-- **type**: an entry type's identifier. Rejected: `typeName` (wrong for a qualified id like `redirects/redirect`) and `typeId` (redundant).
+- **type**: an entry type's identifier. Rejected: `typeName` (wrong for a qualified id like `forms/form`) and `typeId` (redundant).

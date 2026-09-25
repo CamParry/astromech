@@ -60,7 +60,7 @@ types · services · utilities · errors ·              pure leaves
 
 A handler reaches the user, config, hooks and sibling services through its `AppContext`, never the request scope, config registry, hook runner or the current request's bound services (lint enforces this). `defineService.bind()` has already checked the capability its `requires` names on the call's target, and parsed its input. One content module may call another's service, but reaches tables through `database/tables.ts`. A content module does not import the composition root; `media/serving/handler.ts` is the one exception.
 
-`content/` holds what entries, globals, media and users share: the repository over `{ table, contentTable, versionsTable }`, the relationship index and resource existence repositories, the translatable, versioning and visibility helpers, the relationship-index policy, and the prune of dead relation ids. It sits on the content modules' line because the prune reads the entry repository registry.
+`content/` holds what entries, globals, media and users share: the repository over `{ table, contentTable, versionsTable }`, the relationship index and resource existence repositories, the translatable, versioning and visibility helpers, the relationship-index policy, and the prune of dead relation ids. It sits on the content modules' line because `usedBy` reads each resource's own rows through its repository.
 
 ## The admin package
 
@@ -94,7 +94,7 @@ An **entry type** is declared with `defineEntryType`. Entry features (versions, 
 
 Entries, globals, media items and users each live in three tables: a resource row (what is shared across locales), a content row per locale (what editors author, including `fields` as JSON), and a versions table that snapshots content rows. `content/repository/versions.ts` owns versions for all four, and `RESOURCE_SPECS` in `content/resources.ts` is what the shared helpers read about each. The differences:
 
-- **Entries** (`entries/tables.ts`): the resource row holds `type`, the preview token and `deletedAt`; the content row holds title, slug and status. `entries/repository/entries-table.ts` reads the two joined.
+- **Entries** (`entries/tables.ts`): every entry type, the site's and each plugin's, is stored here. The resource row holds `type`, the preview token and `deletedAt`; the content row holds title, slug and status. `entryRepository` in `entries/repository/entries-table.ts` reads the two joined.
 - **Media** (`media/tables.ts`): the resource row holds the file and its metadata; the bytes are in the storage driver under a key derived from the media id. `media/repository.ts` adds the library list queries. No statuses, staging or trash.
 - **Users** (`users/tables.ts`): better-auth owns the `users` row. First-run setup writes the first one with a conditional insert (`createIfEmpty` on the user repository) and the users service writes the rest. `name`, `email` and `role` ignore locale. Sessions, accounts and verifications are better-auth's rows, in `auth/tables.ts`.
 

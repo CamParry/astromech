@@ -126,7 +126,7 @@ export type PluginContext = Omit<AppContext, 'config' | 'entries' | 'globals'> &
     /**
      * The GLOBAL entries service — not scoped, not qualified. A plugin addresses
      * its own types explicitly, built from context rather than an import:
-     * `` ctx.entries.query({ type: `${ctx.plugin.namespace}/redirect` }) ``.
+     * `` ctx.entries.query({ type: `${ctx.plugin.namespace}/form` }) ``.
      * Reads answer the public shape unless the call passes `full: true`, as they
      * do for every caller. No permission checks — HTTP is the enforcement
      * boundary.
@@ -196,7 +196,7 @@ export interface AstromechPluginServices {}
 /**
  * Plugin service methods only. A plugin's ENTRY types are NOT reachable here —
  * they live on the one entries service, addressed by their qualified id
- * (`Astromech.entries.query({ type: 'redirects/redirect' })`). Two entry points
+ * (`Astromech.entries.query({ type: 'forms/form' })`). Two entry points
  * to the same content was the problem, not a feature.
  */
 export type PluginServiceNamespace = AstromechPluginServices &

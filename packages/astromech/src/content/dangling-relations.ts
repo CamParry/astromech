@@ -10,14 +10,10 @@ import type { Field } from '@/types/fields';
 import type { JsonObject, ResolvedConfig } from '@/types/index';
 import { resourceExistenceRepository } from '@/content/repository/resource-existence';
 import { resolveEntryType } from '@/entries/entry-types';
-import { getEntryRepository, hasCustomTable } from '@/entries/repository/registry';
 import { parseInstancePath } from '@/fields/field-path';
 import { collectRelationshipDeclarations, findReferences } from '@/fields/references';
 import { RESERVED_KEY } from '@/fields/reserved-keys';
 import { TARGET_KINDS } from '@/types/domain';
-
-/** One repository's answer to "which of these ids do you hold". */
-type ExistingIds = (ids: string[]) => Promise<Set<string>>;
 
 /**
  * Field values with dead relation ids removed, plus the drop count. `values` MUST
@@ -51,40 +47,10 @@ export async function pruneDanglingRelations(
         );
     }
 
-    // Targets stored in their own table keep no rows in `entries`, so each
-    // answers for its own ids through its repository's `existingIds`. That read
-    // resolves the open `transaction()` through `getDb()`, as every repository's
-    // does, so a row written earlier in the same transaction counts as existing.
-    const readsByPath = repositoryReadsByPath(definitions);
-
-    const readByTarget = new Map<string, ExistingIds>();
-    for (const reads of readsByPath.values()) {
-        for (const [target, read] of reads) readByTarget.set(target, read);
-    }
-
-    const aliveByTarget = new Map<string, Set<string>>();
-    for (const [target, read] of readByTarget) {
-        const ids = candidates
-            .filter(
-                (reference) => readsByPath.get(reference.schemaPath)?.has(target) === true
-            )
-            .map((reference) => reference.targetId);
-        if (ids.length === 0) continue;
-        aliveByTarget.set(target, await read(ids));
-    }
-
-    // An id survives if ANY check that applies to its path reports it existing:
-    // one schema path can declare several targets, and only all of them missing
-    // it makes the reference really dead.
-    const dead = candidates.filter((reference) => {
-        if (aliveByKind.get(reference.targetKind)?.has(reference.targetId) === true) {
-            return false;
-        }
-        for (const target of readsByPath.get(reference.schemaPath)?.keys() ?? []) {
-            if (aliveByTarget.get(target)?.has(reference.targetId) === true) return false;
-        }
-        return true;
-    });
+    const dead = candidates.filter(
+        (reference) =>
+            aliveByKind.get(reference.targetKind)?.has(reference.targetId) !== true
+    );
     if (dead.length === 0) return { values, dropped: 0 };
 
     const next = structuredClone(values);
@@ -124,29 +90,7 @@ function isPrunable(
     if (declaration.targetKind !== 'entry') return true;
     const target = declaration.target;
     if (target === undefined || target === '') return false;
-    if (!resolveEntryType(config, target)) return false;
-    if (!hasCustomTable(target)) return true;
-    return getEntryRepository(target).existingIds !== undefined;
-}
-
-/** The `existingIds` read of every target with a repository override, per schema path. */
-function repositoryReadsByPath(
-    definitions: Field[]
-): Map<string, Map<string, ExistingIds>> {
-    const byPath = new Map<string, Map<string, ExistingIds>>();
-    for (const declaration of collectRelationshipDeclarations(definitions)) {
-        const target = declaration.target;
-        if (declaration.targetKind !== 'entry') continue;
-        if (target === undefined || target === '') continue;
-        if (!hasCustomTable(target)) continue;
-        const repository = getEntryRepository(target);
-        if (repository.existingIds === undefined) continue;
-        const reads =
-            byPath.get(declaration.schemaPath) ?? new Map<string, ExistingIds>();
-        reads.set(target, repository.existingIds.bind(repository));
-        byPath.set(declaration.schemaPath, reads);
-    }
-    return byPath;
+    return resolveEntryType(config, target) !== undefined;
 }
 
 /**

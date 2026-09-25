@@ -4,7 +4,6 @@ import { listUsage } from '@/content/usage';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
 import { getEntryResource } from '../internal/read-entry';
-import { getEntryRepository } from '../repository/registry';
 
 /**
  * Every reference to an entry, from any resource: what the delete check lists.
@@ -17,7 +16,7 @@ export const listEntryUsage = defineServiceMethod({
     mutates: false,
     async handler(params, ctx): Promise<Usage[]> {
         // The entry must exist as this type, so an unknown id answers 404.
-        await getEntryResource(getEntryRepository(params.type), params.type, params.id);
+        await getEntryResource(params.type, params.id);
         return listUsage(ctx.config, { id: params.id, kind: 'entry' });
     },
 });

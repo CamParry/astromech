@@ -2,8 +2,9 @@ import { z } from '@hono/zod-openapi';
 import { requireStagedChange } from '@/content/staging';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
+import { getEntryOfType } from '../../internal/read-entry';
 import { syncEntryRelationships } from '../../internal/relationships';
-import { resolveStagingTarget } from '../../internal/staging';
+import { entryRepository } from '../../repository/entries-table';
 
 /**
  * Discards the staged copy of one locale of an entry, dropping the index rows
@@ -21,7 +22,8 @@ export const deleteStagedEntry = defineServiceMethod({
     mutates: true,
     async handler(params, ctx): Promise<void> {
         const { type, id } = params;
-        const { staging, canonical } = await resolveStagingTarget(params);
+        const canonical = await getEntryOfType(type, id, params.locale);
+        const { staging } = entryRepository;
         await requireStagedChange(staging, 'entry', {
             rowId: id,
             id,
@@ -29,6 +31,6 @@ export const deleteStagedEntry = defineServiceMethod({
         });
         await staging.delete({ id, locale: canonical.locale });
         // The entry keeps its other content, so this re-derives rather than deletes.
-        await syncEntryRelationships(ctx.config, canonical, canonical.fields, type);
+        await syncEntryRelationships(ctx.config, canonical, type);
     },
 });

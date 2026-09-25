@@ -261,15 +261,15 @@ describe('buildTools', () => {
             version: 2,
             methods: [
                 entry('get', {
-                    summary: 'Get a "redirect" entry.',
-                    typeId: 'redirects/redirect',
+                    summary: 'Get a "form" entry.',
+                    typeId: 'forms/form',
                     mutates: false,
                     input: idSchema(),
                 }),
             ],
         };
         const { tools } = buildTools(manifestWithNamespace);
-        expect(tools[0]?.name).toBe('entries_redirects_redirect_get');
+        expect(tools[0]?.name).toBe('entries_forms_form_get');
     });
 
     it('a method with no input schema is skipped, not given a synthesised one', () => {

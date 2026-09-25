@@ -1,96 +1,29 @@
 /**
- * Opportunistic dangling-relation cleanup (spec §6): a reference to a target
- * that no longer exists is dropped the next time its holder is written.
- *
- * The two "kept" cases matter more than the drops. Pruning deletes author data,
- * so a target that merely looks absent — a trashed entry, or a row that lives in
- * its own table rather than in `entries` — must survive.
+ * Opportunistic dangling-relation cleanup: a reference to a target that no
+ * longer exists is dropped the next time its holder is written. The "kept" cases
+ * matter more than the drops: a target that merely looks absent must survive.
  */
 
-import type { CustomTableRepository } from '@/entries/repository/table';
 import type {
     AstromechConfig,
     Entry,
     Field,
     JsonObject,
-    PluginDefinition,
     ResolvedConfig,
 } from '@/types/index';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { sql } from 'kysely';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { pruneDanglingRelations } from '@/content/dangling-relations';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { resourceExistenceRepository } from '@/content/repository/resource-existence';
-import { defineTable } from '@/database/define-table';
 import { setDb } from '@/database/registry';
 import { transaction } from '@/database/transaction';
-import { tableRepository } from '@/entries/repository/table';
 import { mediaRepository } from '@/media/repository';
 import { userRepository } from '@/users/repository';
 
 const api = currentServices.entries;
 const usersService = currentServices.users;
-
-const linksTable = defineTable('test_links', ({ col }) => ({
-    id: col.id(),
-    label: col.text({ notNull: true }),
-    createdAt: col.timestamp({ notNull: true, defaultNow: true }),
-    updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
-}));
-
-const notesTable = defineTable('test_notes', ({ col }) => ({
-    id: col.id(),
-    label: col.text({ notNull: true }),
-    createdAt: col.timestamp({ notNull: true, defaultNow: true }),
-    updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
-}));
-
-/**
- * The same repository with `existingIds` hidden — a third-party repository predating
- * the hook. A proxy rather than a spread: `tableRepository` is a class instance and
- * its methods live on the prototype.
- */
-function withoutExistingIds(repository: CustomTableRepository): CustomTableRepository {
-    return new Proxy(repository, {
-        get: (target, prop, receiver) =>
-            prop === 'existingIds'
-                ? undefined
-                : (Reflect.get(target, prop, receiver) as unknown),
-        has: (target, prop) => prop !== 'existingIds' && Reflect.has(target, prop),
-    });
-}
-
-/** Custom-table entry types: their rows never appear in the `entries` table. */
-function linksPlugin(): PluginDefinition {
-    const customTable = {
-        titleField: false as const,
-        statuses: false as const,
-        slug: false as const,
-        trash: false as const,
-        fields: [{ name: 'label', type: 'text', label: 'Label' }] satisfies Field[],
-    };
-    return {
-        package: '@astromech/links',
-        entries: [
-            {
-                type: 'link',
-                single: 'Link',
-                plural: 'Links',
-                repository: tableRepository(linksTable),
-                ...customTable,
-            },
-            {
-                type: 'note',
-                single: 'Note',
-                plural: 'Notes',
-                repository: withoutExistingIds(tableRepository(notesTable)),
-                ...customTable,
-            },
-        ],
-    };
-}
 
 /** One relation per target kind, plus one nested inside a repeater. */
 const docFields: Field[] = [
@@ -105,8 +38,6 @@ const docFields: Field[] = [
     },
     { name: 'avatar', type: 'media', label: 'Avatar' },
     { name: 'owner', type: 'relationship', label: 'Owner', target: 'users' },
-    { name: 'link', type: 'relationship', label: 'Link', target: 'links/link' },
-    { name: 'note', type: 'relationship', label: 'Note', target: 'links/note' },
     {
         name: 'sections',
         type: 'repeater',
@@ -129,27 +60,14 @@ function makeDanglingConfig(): AstromechConfig {
                 fields: docFields,
             },
         },
-        plugins: [linksPlugin()],
     };
 }
 
 let config: ResolvedConfig;
 
 beforeEach(async () => {
-    const db = await createTestDb();
+    await createTestDb();
     config = setupTestConfig(makeDanglingConfig());
-    await sql`CREATE TABLE test_links (
-            id text PRIMARY KEY,
-            label text NOT NULL,
-            created_at text NOT NULL,
-            updated_at text NOT NULL
-        )`.execute(db);
-    await sql`CREATE TABLE test_notes (
-            id text PRIMARY KEY,
-            label text NOT NULL,
-            created_at text NOT NULL,
-            updated_at text NOT NULL
-        )`.execute(db);
 });
 
 /** Re-save `doc` touching only a scalar, so the prune runs over stored data. */
@@ -218,55 +136,6 @@ describe('pruneDanglingRelations (through the entry write path)', () => {
         const updated = await touch(doc.id);
 
         expect(updated.fields.author).toBe(target.id);
-    });
-
-    // `links/link` rows live in `test_links`, so a check against `entries`
-    // reports every one of them absent. Its repository answers for them instead.
-    it('keeps a reference to a live tableRepository-backed row', async () => {
-        const link = await api.create({
-            type: 'links/link',
-            data: { fields: { label: 'One' } },
-        });
-        const doc = await api.create({
-            type: 'doc',
-            data: { title: 'Doc', fields: { link: link.id } },
-        });
-
-        const updated = await touch(doc.id);
-
-        expect(updated.fields.link).toBe(link.id);
-        expect(await api.get({ type: 'links/link', id: link.id })).not.toBeNull();
-    });
-
-    // An update prunes inside its transaction, and the repository's read joins
-    // that transaction, so a deleted row's id is dropped like any other.
-    it('drops a reference to a deleted tableRepository-backed row on update', async () => {
-        const link = await api.create({
-            type: 'links/link',
-            data: { fields: { label: 'One' } },
-        });
-        const doc = await api.create({
-            type: 'doc',
-            data: { title: 'Doc', fields: { link: link.id } },
-        });
-
-        await api.delete({ type: 'links/link', id: link.id });
-        const updated = await touch(doc.id);
-
-        expect(updated.fields.link).toBeNull();
-    });
-
-    // The false-negative guard lives on the hook, not the repository override: a
-    // repository that cannot answer is never asked, and its ids stand.
-    it('keeps a reference whose repository implements no existence check', async () => {
-        const doc = await api.create({
-            type: 'doc',
-            data: { title: 'Doc', fields: { note: '01JQZZZZZZZZZZZZZZZZZZZZZZ' } },
-        });
-
-        const updated = await touch(doc.id);
-
-        expect(updated.fields.note).toBe('01JQZZZZZZZZZZZZZZZZZZZZZZ');
     });
 
     it('drops a dead media id and a dead user id', async () => {
@@ -346,26 +215,23 @@ describe('pruneDanglingRelations (directly)', () => {
         expect(result.values).toBe(values);
     });
 
-    // The repository's read joins the open transaction, so a row written earlier
-    // in it exists and only the missing id is dropped.
-    it('keeps a custom-table row created earlier in the same transaction', async () => {
+    // The existence read joins the open transaction, so a row written earlier in
+    // it exists and only the missing id is dropped.
+    it('keeps an entry created earlier in the same transaction', async () => {
         const missing = '01JQZZZZZZZZZZZZZZZZZZZZZZ';
 
         await transaction(async () => {
-            const link = await api.create({
-                type: 'links/link',
-                data: { fields: { label: 'New' } },
-            });
+            const post = await api.create({ type: 'post', data: { title: 'New' } });
 
             const kept = await pruneDanglingRelations(config, docFields, {
-                link: link.id,
+                author: post.id,
             });
             const dropped = await pruneDanglingRelations(config, docFields, {
-                link: missing,
+                author: missing,
             });
 
-            expect(kept).toEqual({ values: { link: link.id }, dropped: 0 });
-            expect(dropped).toEqual({ values: { link: null }, dropped: 1 });
+            expect(kept).toEqual({ values: { author: post.id }, dropped: 0 });
+            expect(dropped).toEqual({ values: { author: null }, dropped: 1 });
         });
     });
 

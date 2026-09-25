@@ -1,20 +1,13 @@
 /**
- * `entries.usedBy` — reverse lookup for the delete modal.
- *
- * The interesting case is a source whose entry type is NOT the target's: it
- * lives in that type's own repository, so loading it through the target's
- * repository finds nothing. `links/link` is a custom table, which makes the two
- * repositories genuinely different rather than the same entries-table singleton.
+ * `entries.usedBy` — reverse lookup for the delete modal. The interesting case
+ * is a source whose entry type is not the target's, named through its own type.
  */
 
-import type { AstromechConfig, PluginDefinition } from '@/types/index';
+import type { AstromechConfig } from '@/types/index';
 import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { defineTable } from '@/database/define-table';
-import { tableRepository } from '@/entries/repository/table';
 import { mediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 
@@ -22,36 +15,6 @@ const api = currentServices.entries;
 const globalsService = currentServices.globals;
 const mediaService = currentServices.media;
 const usersService = currentServices.users;
-
-const linksTable = defineTable('test_links', ({ col }) => ({
-    id: col.id(),
-    label: col.text({ notNull: true }),
-    post: col.text(),
-    createdAt: col.timestamp({ notNull: true, defaultNow: true }),
-    updatedAt: col.timestamp({ notNull: true, defaultNow: true, onUpdate: true }),
-}));
-
-function linksPlugin(): PluginDefinition {
-    return {
-        package: '@astromech/links',
-        entries: [
-            {
-                type: 'link',
-                single: 'Link',
-                plural: 'Links',
-                titleField: false,
-                statuses: false,
-                slug: false,
-                trash: false,
-                repository: tableRepository(linksTable),
-                fields: [
-                    { name: 'label', type: 'text', label: 'Label' },
-                    { name: 'post', type: 'relationship', label: 'Post', target: 'post' },
-                ],
-            },
-        ],
-    };
-}
 
 /** `article` references `post` twice — once flat, once inside a repeater. */
 function makeRelationsConfig(): AstromechConfig {
@@ -112,20 +75,12 @@ function makeRelationsConfig(): AstromechConfig {
                 ],
             },
         ],
-        plugins: [linksPlugin()],
     };
 }
 
 beforeEach(async () => {
-    const db = await createTestDb();
+    await createTestDb();
     setupTestConfig(makeRelationsConfig());
-    await sql`CREATE TABLE test_links (
-            id text PRIMARY KEY,
-            label text NOT NULL,
-            post text,
-            created_at text NOT NULL,
-            updated_at text NOT NULL
-        )`.execute(db);
 });
 
 describe('usedBy', () => {
@@ -146,29 +101,6 @@ describe('usedBy', () => {
                 sourceType: 'article',
                 schemaPath: 'author',
                 instancePath: 'author',
-                sourceStaged: false,
-            },
-        ]);
-    });
-
-    // The source lives in its own table, so the target's repository cannot see it.
-    it('returns a source held in a different repository', async () => {
-        const target = await api.create({ type: 'post', data: { title: 'Target' } });
-        const link = await api.create({
-            type: 'links/link',
-            data: { fields: { label: 'A link', post: target.id } },
-        });
-
-        const incoming = await api.usedBy({ type: 'post', id: target.id });
-
-        expect(incoming).toEqual([
-            {
-                sourceId: link.id,
-                sourceKind: 'entry',
-                sourceTitle: '',
-                sourceType: 'links/link',
-                schemaPath: 'post',
-                instancePath: 'post',
                 sourceStaged: false,
             },
         ]);

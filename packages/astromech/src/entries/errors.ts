@@ -11,7 +11,7 @@ export class UnknownEntryTypeError extends ApiError {
     constructor(type: string) {
         super(
             `Entry type '${type}' is not registered. Plugin entry types are addressed ` +
-                `by their qualified id, e.g. \`\${ctx.plugin.namespace}/redirect\`.`,
+                `by their qualified id, e.g. \`\${ctx.plugin.namespace}/form\`.`,
             { status: 404, code: 'NOT_FOUND' }
         );
         this.name = 'UnknownEntryTypeError';
@@ -86,29 +86,6 @@ export class InvalidReferencesFilterError extends ApiError {
         this.name = 'InvalidReferencesFilterError';
         this.entryTypes = args.entryTypes;
         this.knownPaths = args.knownPaths;
-    }
-}
-
-/**
- * Thrown when `entries.query` names several types and at least one of them is
- * stored in its own table. The whole query goes to one repository, and a custom
- * table holds its own type alone, so the rows of one side would go missing
- * without an error.
- */
-export class CustomTableCrossTypeQueryError extends ApiError {
-    public readonly entryTypes: string[];
-    public readonly customTableTypes: string[];
-
-    constructor(entryTypes: string[], customTableTypes: string[]) {
-        super(
-            `entries.query: a type stored in its own table cannot be queried ` +
-                `together with other types. Query ${customTableTypes.join(', ')} on ` +
-                `its own. Queried types: ${entryTypes.join(', ')}.`,
-            { status: 400, code: 'BAD_REQUEST' }
-        );
-        this.name = 'CustomTableCrossTypeQueryError';
-        this.entryTypes = entryTypes;
-        this.customTableTypes = customTableTypes;
     }
 }
 

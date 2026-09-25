@@ -268,7 +268,7 @@ export type EntriesManifestMethod = ManifestMethodBase & {
     method: string;
     /**
      * The type id the service is called with: bare for a site type (`posts`),
-     * qualified for a plugin's (`redirects/redirect`).
+     * qualified for a plugin's (`forms/form`).
      */
     typeId: string;
     /** Plugin namespace this entry type belongs to; absent for the site's types. */

@@ -4,7 +4,6 @@
  * comment. Each test gets a fresh file-backed database with the real migrations.
  */
 
-import type { EntryRepository } from '@/entries/repository/types';
 import type { Entry, PluginDefinition } from '@/types/index';
 import {
     createTestDb,
@@ -17,11 +16,7 @@ import { currentServices } from '@/app-context/services';
 import { decodeWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { entriesTable } from '@/database/tables';
-import {
-    getEntryRepository,
-    registerEntryRepositories,
-    setEntryRepository,
-} from '@/entries/repository/registry';
+import { entryRepository } from '@/entries/repository/entries-table';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { ValidationError } from '@/errors/validation';
 import { defineHook } from '@/plugins/define-hook';
@@ -1074,31 +1069,16 @@ describe('bulk', () => {
 
 // A single id is a batch of one, and the `BulkOperationError` envelope the
 // write loop adds names nothing the caller does not know, so each single-id
-// verb hands back the underlying error. The failure is forced by mounting a
-// repository whose one relevant method throws inside that loop.
+// verb hands back the underlying error. The failure is forced by spying on the
+// one repository method that runs inside that loop.
 describe('a single id rethrows the underlying error, unwrapped', () => {
-    function failing(patch: (base: EntryRepository) => Partial<EntryRepository>): void {
-        const base = getEntryRepository('post');
-        setEntryRepository('post', { ...base, ...patch(base) });
-    }
-
     function rejects(): Promise<never> {
         return Promise.reject(new ValidationError([]));
     }
 
-    function trashGroup(base: EntryRepository): NonNullable<EntryRepository['trash']> {
-        const { trash } = base;
-        if (!trash) throw new Error('expected the post repository to support trash');
-        return trash;
-    }
-
-    afterEach(() => {
-        registerEntryRepositories({ entries: {} });
-    });
-
     it('update', async () => {
         const entry = await api.create({ type: 'post', data: { title: 'A' } });
-        failing(() => ({ update: rejects }));
+        vi.spyOn(entryRepository, 'update').mockImplementation(rejects);
         await expect(
             api.update({ type: 'post', id: entry.id, data: { title: 'B' } })
         ).rejects.toBeInstanceOf(ValidationError);
@@ -1106,7 +1086,7 @@ describe('a single id rethrows the underlying error, unwrapped', () => {
 
     it('publish', async () => {
         const entry = await api.create({ type: 'post', data: { title: 'A' } });
-        failing(() => ({ update: rejects }));
+        vi.spyOn(entryRepository, 'update').mockImplementation(rejects);
         await expect(api.publish({ type: 'post', id: entry.id })).rejects.toBeInstanceOf(
             ValidationError
         );
@@ -1117,7 +1097,7 @@ describe('a single id rethrows the underlying error, unwrapped', () => {
             type: 'post',
             data: { title: 'A', status: 'published' },
         });
-        failing(() => ({ update: rejects }));
+        vi.spyOn(entryRepository, 'update').mockImplementation(rejects);
         await expect(
             api.unpublish({ type: 'post', id: entry.id })
         ).rejects.toBeInstanceOf(ValidationError);
@@ -1125,7 +1105,7 @@ describe('a single id rethrows the underlying error, unwrapped', () => {
 
     it('schedule', async () => {
         const entry = await api.create({ type: 'post', data: { title: 'A' } });
-        failing(() => ({ update: rejects }));
+        vi.spyOn(entryRepository, 'update').mockImplementation(rejects);
         await expect(
             api.schedule({
                 type: 'post',
@@ -1137,7 +1117,7 @@ describe('a single id rethrows the underlying error, unwrapped', () => {
 
     it('trash', async () => {
         const entry = await api.create({ type: 'post', data: { title: 'A' } });
-        failing((base) => ({ trash: { ...trashGroup(base), trash: rejects } }));
+        vi.spyOn(entryRepository.trash, 'trash').mockImplementation(rejects);
         await expect(api.trash({ type: 'post', id: entry.id })).rejects.toBeInstanceOf(
             ValidationError
         );
@@ -1146,7 +1126,7 @@ describe('a single id rethrows the underlying error, unwrapped', () => {
     it('restore', async () => {
         const entry = await api.create({ type: 'post', data: { title: 'A' } });
         await api.trash({ type: 'post', id: entry.id });
-        failing((base) => ({ trash: { ...trashGroup(base), restore: rejects } }));
+        vi.spyOn(entryRepository.trash, 'restore').mockImplementation(rejects);
         await expect(api.restore({ type: 'post', id: entry.id })).rejects.toBeInstanceOf(
             ValidationError
         );
@@ -1154,7 +1134,7 @@ describe('a single id rethrows the underlying error, unwrapped', () => {
 
     it('delete', async () => {
         const entry = await api.create({ type: 'post', data: { title: 'A' } });
-        failing(() => ({ delete: rejects }));
+        vi.spyOn(entryRepository, 'delete').mockImplementation(rejects);
         await expect(api.delete({ type: 'post', id: entry.id })).rejects.toBeInstanceOf(
             ValidationError
         );

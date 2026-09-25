@@ -26,7 +26,6 @@ given a name stores its fields under that name too.
 | `validation`   | Rules checked on every write. See [field-validation.md](field-validation.md).                                                              |
 | `private`      | Leave the field out of public reads and the public type.                                                                                   |
 | `translatable` | `false` shares one value across every locale. Top-level fields only: a field inside a named group, repeater, blocks or tree cannot set it. |
-| `searchable`   | Add the field to the entry type's free-text search. Top-level fields only, as for `translatable`.                                          |
 
 ## Data fields
 

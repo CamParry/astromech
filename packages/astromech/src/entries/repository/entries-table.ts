@@ -1,14 +1,11 @@
 /**
- * The default entry repository — the shared content repository over
- * `entries`/`entry_content`/`entry_versions`, plus what only entries have: the
- * list reads and their filters, the stored-row reads, slug uniquification,
- * trash and preview tokens.
- * Policy (validation, hooks, relationships) stays in the service.
+ * The entry repository: the shared content repository over
+ * `entries`/`entry_content`/`entry_versions`, plus the list reads and their
+ * filters, the stored-row reads, slug uniquification, trash and preview tokens.
  */
 
 import type {
     EntryRef,
-    EntryRepository,
     EntryRow,
     EntryWrite,
     ListParams,
@@ -16,21 +13,18 @@ import type {
 } from './types';
 import type { ContentRowId, JoinedWhere } from '@/content/repository/types';
 import type { Where } from '@/database/repository/where';
-import type { Capability } from '@/entries/capabilities';
 import type { EntryContentRow, EntryTableRow } from '@/entries/tables';
 import type { JsonObject, ReferencesFilter, SortOption } from '@/types/index';
 import type { Expression, SqlBool } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
-import { resourceExistenceRepository } from '@/content/repository/resource-existence';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { encodePatchWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { compileWhere } from '@/database/repository/where';
 import { entriesTable, entryContentTable, entryVersionsTable } from '@/database/tables';
-import { ALL_CAPABILITIES } from '@/entries/capabilities';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { UnknownWhereKeyError } from '../errors';
 import { isReferencesFilter } from './references-filter';
@@ -205,10 +199,10 @@ function toEntryRow(
 }
 
 /**
- * Build the entries-table repository. The db handle and the default locale
- * resolve per call, so the one registered repository follows `setDb` and a config reload.
+ * Build the entry repository. The db handle and the default locale resolve per
+ * call, so the one object follows `setDb`, a transaction and a config reload.
  */
-export function createEntriesTableRepository() {
+function createEntryRepository() {
     const owners = createRepository(entriesTable);
     const contents = createRepository(entryContentTable);
 
@@ -232,13 +226,6 @@ export function createEntriesTableRepository() {
                     : [eb('entries.deletedAt', 'is', null)],
         }
     );
-
-    const supports: readonly Capability[] = ALL_CAPABILITIES;
-
-    /** Ids with a row in `entries` — trashed entries included. */
-    async function existingIds(ids: string[]): Promise<Set<string>> {
-        return resourceExistenceRepository.findIds('entry', ids);
-    }
 
     async function uniqueSlug(
         type: string,
@@ -394,9 +381,7 @@ export function createEntriesTableRepository() {
         },
     };
 
-    const repository = {
-        supports,
-        existingIds,
+    return {
         uniqueSlug,
         findMany,
         count,
@@ -409,22 +394,22 @@ export function createEntriesTableRepository() {
             options?: { includeTrashed?: boolean }
         ) => ofType(await content.findAnyLocale(ref.id, options), ref.type),
         create,
-        update: content.update,
+        update: (ref: EntryRef, data: EntryWrite): Promise<EntryRow> =>
+            content.update(ref, data),
         delete: content.delete,
         trash,
         versions: content.versions,
         staging: content.staging,
         translatable: content.translatable,
         previewToken,
-    } satisfies EntryRepository<EntryRow>;
-
-    return {
-        ...repository,
         findEntryRowsByType,
         findContentRowsByType,
         findContentRowsByEntry,
     };
 }
+
+/** The one entry repository every entry type reads and writes through. */
+export const entryRepository = createEntryRepository();
 
 /** The row when it is of the addressed type, else null. */
 function ofType<R extends { type?: string }>(row: R | null, type: string): R | null {

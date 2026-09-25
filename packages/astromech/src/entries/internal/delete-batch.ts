@@ -1,9 +1,7 @@
-import type { EntryRepository } from '../repository/types';
 import type { EntryWithContentId } from './read-entry';
 import type { AppContext } from '@/types/index';
 import { relationshipRepository } from '@/content/repository/relationships';
-import { CapabilityError } from '@/errors/capability';
-import { getEntryRepository } from '../repository/registry';
+import { entryRepository } from '../repository/entries-table';
 import { getEntryResources, toEntry } from './read-entry';
 import { writeBatch } from './write-batch';
 
@@ -19,15 +17,12 @@ export async function deleteEntryBatch(
     params: { type: string; ids: readonly string[] },
     ctx: AppContext
 ): Promise<void> {
-    const repository = getEntryRepository(params.type);
-
     await removeEntryBatch(params, ctx, {
-        repository,
         permanent: true,
         async write(entry) {
             await relationshipRepository.deleteByResource(entry.id, 'entry');
             // Content rows and versions cascade from the `entries` row.
-            await repository.delete(entry.id);
+            await entryRepository.delete(entry.id);
         },
     });
 }
@@ -43,17 +38,12 @@ export async function trashEntryBatch(
     params: { type: string; ids: readonly string[] },
     ctx: AppContext
 ): Promise<void> {
-    const repository = getEntryRepository(params.type);
-    const { trash } = repository;
-    if (!trash) throw new CapabilityError('entry', params.type, 'trash');
-
     await removeEntryBatch(params, ctx, {
-        repository,
         permanent: false,
         async write(entry) {
             // Soft delete keeps relationship rows — unlike a permanent
             // delete, a trashed entry can still be restored.
-            await trash.trash(entry.id, ctx.user?.id ?? null);
+            await entryRepository.trash.trash(entry.id, ctx.user?.id ?? null);
         },
     });
 }
@@ -67,14 +57,13 @@ async function removeEntryBatch(
     params: { type: string; ids: readonly string[] },
     ctx: AppContext,
     options: {
-        repository: EntryRepository;
         permanent: boolean;
         write: (entry: EntryWithContentId) => Promise<void>;
     }
 ): Promise<void> {
     const { type, ids } = params;
-    const { repository, permanent, write } = options;
-    const entries = await getEntryResources(repository, type, ids);
+    const { permanent, write } = options;
+    const entries = await getEntryResources(type, ids);
     const user = ctx.user;
 
     for (const entry of entries) {

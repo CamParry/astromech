@@ -73,20 +73,6 @@ type CommandPaletteContextValue = {
 
 const CommandPaletteContext = createContext<CommandPaletteContextValue | null>(null);
 
-/**
- * The types to search, grouped into one request per batch: the types in the
- * shared entries tables together, and each type stored in its own table alone,
- * because `entries.query` refuses a cross-type query that includes one.
- */
-function queryBatches(
-    types: string[],
-    entryTypes: Record<string, AdminEntryType>
-): (string | string[])[] {
-    const customTable = (type: string): boolean => entryTypes[type]?.customTable === true;
-    const shared = types.filter((type) => !customTable(type));
-    return [...(shared.length > 0 ? [shared] : []), ...types.filter(customTable)];
-}
-
 /** Reads open state from `CommandPaletteProvider`. */
 export function useCommandPalette(): CommandPaletteContextValue {
     const ctx = useContext(CommandPaletteContext);
@@ -265,24 +251,13 @@ export function CommandPalette(): React.ReactElement {
         queryFn: async (): Promise<LiveResults> => {
             const q2 = debouncedQuery;
 
-            /** Run each batch as its own request and merge the rows. */
-            const searchEntries = (
-                entries: typeof astromechUntypedClient.entries,
-                batches: (string | string[])[]
-            ): Promise<Entry[]> =>
-                Promise.all(
-                    batches.map((type) =>
-                        entries
-                            .query({ type, search: q2, limit: 5 })
-                            .then((r) => r.data)
-                            .catch(() => [])
-                    )
-                ).then((chunks) => chunks.flat());
-
-            const entriesPromise = searchEntries(
-                astromechUntypedClient.entries,
-                queryBatches(readableTypes, adminConfig.entryTypes)
-            );
+            const entriesPromise: Promise<Entry[]> =
+                readableTypes.length > 0
+                    ? astromechUntypedClient.entries
+                          .query({ type: readableTypes, search: q2, limit: 5 })
+                          .then((r) => r.data)
+                          .catch(() => [])
+                    : Promise.resolve([]);
 
             const usersPromise: Promise<User[]> = canReadUsers()
                 ? astromechUntypedClient.users

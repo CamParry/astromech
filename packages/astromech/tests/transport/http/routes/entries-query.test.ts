@@ -1,25 +1,20 @@
 /**
  * Read-shape wiring on the entries router: `trashed` is only meaningful in the
  * full shape, so a public trashed read must answer 400 rather than the catch-all
- * 500 (or, as it did before, a silently empty list — public visibility drops
- * every trashed row after the repository call).
+ * 500 or a silently empty list (public visibility drops every trashed row after
+ * the repository call).
  *
  * Covers all three routes that funnel into `entries.query`: `GET /:type`,
  * `POST /:type/query` and the cross-type `POST /query`.
- *
- * A cross-type query naming a type stored in its own table is a caller bug
- * too, so `POST /query` answers it with 400.
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import type { Entry, PluginDefinition, Role, User } from '@/types/index';
+import type { Entry, Role, User } from '@/types/index';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
 import { currentServices } from '@/app-context/services';
-import { defineTable } from '@/database/define-table';
-import { tableRepository } from '@/entries/repository/table';
 import { onError } from '@/transport/http/middleware/errors';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
 
@@ -110,47 +105,5 @@ describe('trashed reads require the full shape', () => {
             body: JSON.stringify({ type: ['post'], trashed: true }),
         });
         expect(res.status).toBe(400);
-    });
-});
-
-/** `links/link` is stored in its own table. */
-function linksPlugin(): PluginDefinition {
-    const linksTable = defineTable('test_links', ({ col }) => ({
-        id: col.id(),
-        label: col.text({ notNull: true }),
-    }));
-    return {
-        package: '@astromech/links',
-        entries: [
-            {
-                type: 'link',
-                single: 'Link',
-                plural: 'Links',
-                titleField: false,
-                statuses: false,
-                slug: false,
-                trash: false,
-                repository: tableRepository(linksTable),
-                fields: [{ name: 'label', type: 'text', label: 'Label' }],
-            },
-        ],
-    };
-}
-
-describe('a cross-type query naming a custom-table type', () => {
-    beforeEach(() => {
-        setupTestConfig({ ...makeTestConfig(), plugins: [linksPlugin()] });
-    });
-
-    it('POST /query answers 400 and says to query that type on its own', async () => {
-        const res = await app().request('/entries/query', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ type: ['post', 'links/link'] }),
-        });
-        expect(res.status).toBe(400);
-        const body = (await res.json()) as { error: { code: string; message: string } };
-        expect(body.error.code).toBe('BAD_REQUEST');
-        expect(body.error.message).toMatch(/Query links\/link on its own/);
     });
 });

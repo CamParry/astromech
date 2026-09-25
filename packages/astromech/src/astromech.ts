@@ -31,7 +31,6 @@ import { checkMigrationDrift } from '@/database/migrations';
 import { setDb } from '@/database/registry';
 import { setEmailDriver } from '@/email/registry';
 import { entryJobs } from '@/entries/jobs/entry-jobs';
-import { registerEntryRepositories } from '@/entries/repository/registry';
 import { AstromechError } from '@/errors/astromech-error';
 import { defaultImageWidths, normaliseWidths } from '@/media/image-widths';
 import { setImageConfig } from '@/media/serving/image/registry';
@@ -147,7 +146,6 @@ async function build(config: AstromechConfig): Promise<Astromech> {
 
     // Plugin runtime
     registerPlugins(plugins, resolved);
-    registerEntryRepositories(config);
     // The method manifest those plugins dispatch from, generated here because
     // this is the only site holding both the resolved config and the raw
     // `PluginDefinition[]`, which `ResolvedConfig` strips.
