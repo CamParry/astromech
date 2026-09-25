@@ -89,8 +89,8 @@ Checked against the code on 2026-09-25.
   `admin.resources`. Boot checks that every named method exists in the
   plugin's service, and resolves each method's permission into
   `AdminConfig.plugins[]`, where the admin checks it with `hasPermission`.
-  Generic pages live under `pages/_protected/plugin/$name/…`, next to the
-  existing plugin entry routes, which go.
+  Generic pages live under `pages/_protected/plugin/$name/resources/…`, next
+  to the plugin entry routes, which stay: forms' `form` entry type uses them.
 - **Redirects.** A unique index on `from`, shipped as the plugin's first
   non-baseline migration (`astromech plugin:generate`). Nothing is deployed,
   so no existing duplicates need merging first. `findByFrom(path)` backs the
@@ -111,11 +111,13 @@ Checked against the code on 2026-09-25.
 ## The work
 
 One branch, `plugin-owned-data`, one commit per step, full gate per step.
+Steps 3 and 4, and steps 6 and 7, ran in parallel and share files, so each
+pair landed as one commit.
 Steps 2, 3 and 4 can run in parallel. Step 5 needs 3 and 4. Steps 6 and 7 need
 5 and can run in parallel. Step 8 needs 2, 6 and 7. Run `check:boot` after 5,
 6, 7 and 8.
 
-- [ ] **1. Rules.**
+- [x] **1. Rules.**
     - `DECISIONS.md`:
         - Rewrite "Every repository is reached through a registry" as the
           module-object rule.
@@ -125,7 +127,7 @@ Steps 2, 3 and 4 can run in parallel. Step 5 needs 3 and 4. Steps 6 and 7 need
         - Add "admin resource" to "Reserved words".
     - `.claude/skills/code/SKILL.md`, "Data access": the module-object rule and
       the plugin rule.
-- [ ] **2. Core repositories as module objects.**
+- [x] **2. Core repositories as module objects.**
     - Covers users, media, globals, notifications, cron, plugin tracking,
       relationships, resource existence and entry maintenance.
     - Their tests swap methods with `vi.spyOn`. Add `restoreMocks: true` to
@@ -133,19 +135,19 @@ Steps 2, 3 and 4 can run in parallel. Step 5 needs 3 and 4. Steps 6 and 7 need
       and the isolation check does not see a spy.
     - `ARCHITECTURE.md` ("no module-scope singletons") says why a stateless
       object is the exception.
-- [ ] **3. Admin list.** `useListState` and `<DataList>`. The entries list and
+- [x] **3. Admin list.** `useListState` and `<DataList>`. The entries list and
       the users list move onto them. `CellRendererProps.entry` becomes `row`.
-- [ ] **4. Admin form.** `useFieldsForm` and `<FieldsForm>` with a read-only
+- [x] **4. Admin form.** `useFieldsForm` and `<FieldsForm>` with a read-only
       mode. `useEntryForm` and the users edit and new pages move onto them.
-- [ ] **5. Admin resources.** The core type and `defineAdminResource`, the admin
+- [x] **5. Admin resources.** The core type and `defineAdminResource`, the admin
       config with method permissions, the nav, the routes and the generic
       pages. If knip rejects an export only tests use, land it with step 6.
-- [ ] **6. Redirects.** The table and its migration, the repository,
+- [x] **6. Redirects.** The table and its migration, the repository,
       permissions, service methods, `lookup`, the slug-change hook, the admin
       resource, tests, README and docs, and the demo config and seed.
-- [ ] **7. Form submissions.** The service methods, the read-only admin
+- [x] **7. Form submissions.** The service methods, the read-only admin
       resource, tests, README and docs, and the demo config.
-- [ ] **8. One entry storage.**
+- [x] **8. One entry storage.**
     - `entryRepository` becomes a module object.
     - Delete `entries/repository/registry.ts`, `entries/repository/table.ts`,
       the `EntryRepository` interface and `createLazyRegistry`.
