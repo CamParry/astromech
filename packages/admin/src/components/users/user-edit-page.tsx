@@ -23,7 +23,6 @@ import { FieldColumn, FieldsForm } from '../forms/fields-form';
 import { Breadcrumb } from '../ui/breadcrumb';
 import { Button } from '../ui/button';
 import { useConfirm } from '../ui/confirm';
-import { Input } from '../ui/input';
 import {
     ButtonGroup,
     Page,
@@ -35,6 +34,7 @@ import {
 } from '../ui/page';
 import { Panel } from '../ui/panel';
 import { Select } from '../ui/select';
+import { requiredValidator, UserRoleField, UserTextField } from './user-profile-fields';
 import { UserSummaryPanel } from './user-summary-panel';
 import { UserVersionsPanel } from './user-versions-panel';
 
@@ -175,87 +175,41 @@ function UserEditBody({
                                         <form.Field
                                             name="name"
                                             validators={{
-                                                onChange: ({ value }) =>
-                                                    value.trim() === ''
-                                                        ? t('users.nameRequired')
-                                                        : undefined,
+                                                onChange: requiredValidator(
+                                                    t('users.nameRequired')
+                                                ),
                                             }}
                                         >
                                             {(field) => (
-                                                <div className="am-field">
-                                                    <label
-                                                        className="am-field-label"
-                                                        htmlFor="user-name"
-                                                    >
-                                                        {t('users.nameField')}
-                                                    </label>
-                                                    <Input
-                                                        id="user-name"
-                                                        type="text"
-                                                        value={field.state.value}
-                                                        onChange={(e) =>
-                                                            field.handleChange(
-                                                                e.target.value
-                                                            )
-                                                        }
-                                                        onBlur={field.handleBlur}
-                                                        required
-                                                    />
-                                                    {field.state.meta.errors.length >
-                                                        0 && (
-                                                        <p className="am-field-error">
-                                                            {field.state.meta.errors[0]}
-                                                        </p>
-                                                    )}
-                                                </div>
+                                                <UserTextField
+                                                    id="user-name"
+                                                    label={t('users.nameField')}
+                                                    type="text"
+                                                    field={field}
+                                                    required
+                                                />
                                             )}
                                         </form.Field>
 
-                                        <div className="am-field">
-                                            <label
-                                                className="am-field-label"
-                                                htmlFor="user-email"
-                                            >
-                                                {t('users.emailField')}
-                                            </label>
-                                            <Input
-                                                id="user-email"
-                                                type="email"
-                                                value={user.email}
-                                                readOnly
-                                                disabled
-                                                hint={t('users.emailReadonly')}
-                                            />
-                                        </div>
+                                        <UserTextField
+                                            id="user-email"
+                                            label={t('users.emailField')}
+                                            type="email"
+                                            value={user.email}
+                                            readOnly
+                                            disabled
+                                            hint={t('users.emailReadonly')}
+                                        />
 
                                         {canEditRole && (
-                                            <div className="am-field">
-                                                <label
-                                                    className="am-field-label"
-                                                    htmlFor="user-role"
-                                                >
-                                                    {t('users.roleField')}
-                                                </label>
-                                                <form.Field name="role">
-                                                    {(field) => (
-                                                        <Select
-                                                            id="user-role"
-                                                            value={field.state.value}
-                                                            onValueChange={(v) =>
-                                                                field.handleChange(
-                                                                    v ?? ''
-                                                                )
-                                                            }
-                                                            options={adminConfig.roles.map(
-                                                                (r) => ({
-                                                                    value: r.slug,
-                                                                    label: r.name,
-                                                                })
-                                                            )}
-                                                        />
-                                                    )}
-                                                </form.Field>
-                                            </div>
+                                            <form.Field name="role">
+                                                {(field) => (
+                                                    <UserRoleField
+                                                        label={t('users.roleField')}
+                                                        field={field}
+                                                    />
+                                                )}
+                                            </form.Field>
                                         )}
                                     </Stack>
                                 </Panel>

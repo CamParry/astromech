@@ -187,30 +187,19 @@ export type FieldValidator = (ctx: FieldValidationContext) => Promise<true | str
 export type ResourceValidationResult = string | Record<string, string> | null | undefined;
 
 /**
- * Context handed to a resource validator. The same shape as
- * `FieldValidationContext` minus the per-field members, plus the definitions
- * the values were validated against.
+ * Context handed to a resource validator: `FieldValidationContext` without the
+ * per-field members, plus the definitions the values were validated against.
  *
  * `values` are the COERCED values the field pipeline produced, and they may
  * still hold field errors — a resource validator runs regardless, so the author
  * sees cross-field and per-field problems in one pass. Guard accordingly.
  */
-export type ResourceValidationContext = {
+export type ResourceValidationContext = Omit<
+    FieldValidationContext,
+    'value' | 'values' | 'field' | 'path'
+> & {
     values: Record<string, unknown>;
     definitions: Field[];
-    operation: 'create' | 'update';
-    validation: ValidationMode;
-    resource: ValidatedRecord;
-    user: User | null;
-    /** True when no other record of the same resource holds `value` for `field`. */
-    isUnique: (field: DataField, value: unknown) => Promise<boolean>;
-    /**
-     * The entry type each id resolves to, for the relationship target-type
-     * check. Ids with no entry row are simply absent. Optional: a caller with no
-     * entry access (the admin, a plugin's own reads) omits it and the check is
-     * skipped rather than guessed.
-     */
-    entryTypes?: (ids: string[]) => Promise<Map<string, string>>;
 };
 
 /**
