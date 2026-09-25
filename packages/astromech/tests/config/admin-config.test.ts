@@ -2,10 +2,12 @@ import type {
     AstromechConfig,
     DatabaseDriver,
     EntryType,
+    Field,
     PluginDefinition,
     StorageDriver,
 } from '@/types/index';
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import { buildAdminConfig, toAdminEntryType } from '@/config/admin-config';
 import { resolveConfig } from '@/config/resolve';
 import { defineTable } from '@/database/define-table';
@@ -256,6 +258,61 @@ describe('buildAdminConfig', () => {
         expect(Array.isArray(plugin?.nav)).toBe(true);
         expect(plugin?.pages).toHaveLength(1);
         expect(adminConfig.entryTypes['seo/redirect']?.plugin).toBe('seo');
+        expect(plugin?.resources).toEqual([]);
+    });
+
+    it("carries each admin resource's fields and resolved method permissions", () => {
+        const method = (permission: string) => ({
+            access: { permission },
+            input: z.looseObject({}),
+            mutates: false,
+            handler: () => null,
+        });
+        const fields: Field[] = [
+            { name: 'from', type: 'text', label: 'From' },
+            { name: 'to', type: 'text' },
+        ];
+        const config = baseConfig([
+            {
+                package: '@astromech/redirects',
+                service: { list: method('read'), update: method('users:update') },
+                admin: {
+                    resources: [
+                        {
+                            name: 'rules',
+                            label: 'Rules',
+                            labelSingular: 'Rule',
+                            fields,
+                            columns: ['from', 'to'],
+                            methods: { list: 'list', update: 'update' },
+                        },
+                    ],
+                },
+            },
+        ]);
+        const adminConfig = buildAdminConfig(config, resolveConfig(config));
+
+        expect(adminConfig.plugins[0]?.resources).toEqual([
+            {
+                name: 'rules',
+                label: 'Rules',
+                labelSingular: 'Rule',
+                fields,
+                columns: [
+                    { field: 'from', sortable: false },
+                    { field: 'to', sortable: false },
+                ],
+                search: false,
+                methods: {
+                    list: { name: 'list', permission: 'plugin:redirects:read' },
+                    update: { name: 'update', permission: 'users:update' },
+                },
+            },
+        ]);
+        // The admin config is served as JSON, so the resource must survive it.
+        expect(JSON.parse(JSON.stringify(adminConfig.plugins[0]?.resources))).toEqual(
+            adminConfig.plugins[0]?.resources
+        );
     });
 });
 

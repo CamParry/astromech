@@ -68,6 +68,15 @@ export const queryKeys = {
             ['users', 'detail', id, 'versions', locale] as const,
     },
 
+    /** A plugin's admin resource, keyed by the plugin namespace and the resource name. */
+    adminResources: {
+        all: (plugin: string, name: string) => ['admin-resources', plugin, name] as const,
+        list: (plugin: string, name: string, params: object) =>
+            ['admin-resources', plugin, name, 'list', params] as const,
+        get: (plugin: string, name: string, id: string) =>
+            ['admin-resources', plugin, name, 'detail', id] as const,
+    },
+
     notifications: {
         all: () => ['notifications'] as const,
         list: (params?: Record<string, unknown>) =>

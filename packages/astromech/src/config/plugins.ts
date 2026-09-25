@@ -6,15 +6,17 @@ import {
     assertNoPluginCollisions,
     checkPluginDependencies,
 } from '@/plugins/runtime/plugin-identity';
+import { assertAdminResourcesValid } from '@/plugins/runtime/plugin-resources';
 import { assertPluginTablePrefixes } from '@/plugins/runtime/plugin-tables';
 
 /**
  * Access-key collisions, dependencies (existence + basic semver range), table
- * prefixes and field-type collisions. All crash loud.
+ * prefixes, field-type collisions and admin resources. All crash loud.
  */
 export function assertPluginsValid(plugins: PluginDefinition[]): void {
     assertNoPluginCollisions(plugins);
     checkPluginDependencies(plugins);
     assertPluginTablePrefixes(plugins);
     assertNoFieldTypeCollisions(plugins);
+    assertAdminResourcesValid(plugins);
 }

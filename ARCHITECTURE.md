@@ -110,7 +110,9 @@ Fields are shared by entry types, globals, media, users and plugin tables. `fiel
 
 ## Plugins
 
-A plugin is a separate npm package that registers tables, field types, routes, service methods, hooks, cron jobs and admin pages through its `PluginContext` (`ctx`). `ctx` is the `AppContext` every method receives (the content services, `ctx.db`, `ctx.email`, `ctx.database`, `ctx.methods`, `ctx.runHook`, `ctx.env`), plus the plugin layer: `ctx.plugin` (its identity), `ctx.storage` (keys prefixed `plugin/<alias>/`), `ctx.plugins` (other plugins' services, when any are registered) and `ctx.config`, an allow-listed view of the resolved config. The types are in `types/app-context.ts` and `types/plugins.ts`.
+A plugin is a separate npm package that registers tables, field types, routes, service methods, hooks, cron jobs, admin pages and admin resources through its `PluginContext` (`ctx`). `ctx` is the `AppContext` every method receives (the content services, `ctx.db`, `ctx.email`, `ctx.database`, `ctx.methods`, `ctx.runHook`, `ctx.env`), plus the plugin layer: `ctx.plugin` (its identity), `ctx.storage` (keys prefixed `plugin/<alias>/`), `ctx.plugins` (other plugins' services, when any are registered) and `ctx.config`, an allow-listed view of the resolved config. The types are in `types/app-context.ts` and `types/plugins.ts`.
+
+A plugin's admin resources (`admin.resources`) give its own records list, create and edit screens over its service methods. `plugins/runtime/plugin-resources.ts` checks them when the config resolves and resolves each method's permission into `AdminConfig.plugins[]`, and the admin renders them with the generic pages in `packages/admin/src/components/admin-resources/`.
 
 `plugins/define-plugin.ts` turns a definition into the factory a site calls. It resolves the plugin's identity once, from the no-options definition, and hangs off the factory what a site uses in its config before any runtime exists: `permissions(...)` and the plugin helpers the definition declares under `helpers`, each bound to that identity.
 

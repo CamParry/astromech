@@ -362,7 +362,9 @@ export default function OverviewPage() {
 
 `useListState()` and `<DataList>`, from `astromech/ui`, give a page the list
 the entry and user screens use. They take rows and callbacks, so they work over
-whatever your service methods return.
+whatever your service methods return. For plain list, create and edit screens
+over your records, an [admin resource](#admin-resources) needs no page at all;
+use these components when a page of your own needs a list.
 
 - `useListState({ pageSize })` reads the search text (`q`), the sort and the
   page from the URL, and returns them with the `limit` and `offset` to fetch.
@@ -431,7 +433,9 @@ export default function RedirectsPage() {
 #### A form over your own records
 
 `useFieldsForm` and `<FieldsForm>`, also from `astromech/ui/app`, give a page
-the form the entry and user screens use, over field definitions you hold. The
+the form the entry and user screens use, over field definitions you hold. An
+[admin resource](#admin-resources) renders this form for you; use it directly
+when a page of your own needs a form. The
 hook takes the definitions, the `operation` (`'create'` or `'update'`), the
 `defaultValues`, an `onSubmit` that writes and resolves to the saved record, and
 the `namespace` labels resolve against. It runs the field pipeline before a
@@ -481,6 +485,104 @@ pass `main`; to place a run of fields yourself, use
 `<FieldColumn form={form} fields={…} />`. Pass `readOnly: true` to render every
 field disabled and make `handleSubmit` do nothing, as for a record your service
 cannot update.
+
+### Admin resources
+
+An admin resource gives your plugin's own records list, create and edit
+screens without a page of your own. Declare it with `defineAdminResource` under
+`admin.resources`, naming the service methods behind each view. The admin
+renders the screens with the list and form the entry and user screens use.
+
+```ts
+// admin/redirects.ts
+import { defineAdminResource } from 'astromech';
+import { redirectFields } from '../fields/redirect';
+
+export const redirectsResource = defineAdminResource({
+    name: 'redirects',
+    label: 'Redirects',
+    labelSingular: 'Redirect',
+    icon: 'Signpost',
+    fields: redirectFields,
+    columns: [{ field: 'from', sortable: true }, 'to', 'statusCode'],
+    search: true,
+    methods: {
+        list: 'list',
+        get: 'get',
+        create: 'create',
+        update: 'update',
+        delete: 'delete',
+    },
+});
+```
+
+```ts
+// index.ts
+admin: { resources: [redirectsResource] },
+```
+
+The list lives at `/cms/plugin/<namespace>/resources/<name>`, and a sidebar item
+leads to it unless the resource sets `nav: false`. `name` is that URL segment:
+lowercase letters and digits joined by `-`. `fields` is what the create and
+edit forms render. `columns` names top-level fields of `fields`, in list order;
+write a column as `{ field, sortable: true }` when the list method accepts a
+sort on it. `search: true` adds a search box.
+
+**Only the list method is required.** Without `get`, rows do not open. Without
+`create`, there is no create button. Without `update`, the edit screen renders
+read-only, which suits records your plugin only collects. Without `delete`,
+there is no delete action, single or bulk.
+
+**Every named method declares `access: { permission }`.** The admin hides a
+view from a user who lacks the permission of the method behind it, and hides
+the sidebar item from a user who lacks the list method's. The server still
+checks every call. The config fails to load when a named method is missing
+from `service` or declares another access form, when a column names no field,
+or when two resources share a name.
+
+The methods take and answer these shapes, exported from `astromech` as types:
+
+| Method   | Input                                                       | Answers                                                 |
+| -------- | ----------------------------------------------------------- | ------------------------------------------------------- |
+| `list`   | `AdminResourceListInput`: `{ search?, sort?, page, limit }` | `QueryResult<AdminResourceRow>`: `{ data, pagination }` |
+| `get`    | `AdminResourceGetInput`: `{ id }`                           | the row, or `null`, which shows not found               |
+| `create` | `AdminResourceCreateInput`: `{ data }`                      | the new row                                             |
+| `update` | `AdminResourceUpdateInput`: `{ id, data }`                  | the saved row                                           |
+| `delete` | `AdminResourceDeleteInput`: `{ id }`                        | nothing                                                 |
+
+A row, `AdminResourceRow`, is an `id` string beside the field values. `page`
+counts from 1, and `sort` is one `{ [field]: 'asc' | 'desc' }`. A bulk delete
+calls `delete` once per selected id. `data` holds the form's field values:
+check it with `parseFields` against the same field definitions
+([running the field pipeline](#running-the-field-pipeline-yourself)), so a
+failure answers a 422 and the form shows each message on its field.
+
+```ts
+// service/redirects.ts
+import type { AdminResourceRow } from 'astromech';
+import { defineServiceMethod, z } from 'astromech';
+import { parseFields } from 'astromech/fields';
+import { redirectFields } from '../fields/redirect';
+import { createRedirectRepository } from '../repository';
+
+export const redirectsService = {
+    create: defineServiceMethod({
+        access: { permission: 'write' },
+        input: z.object({ data: z.record(z.string(), z.unknown()) }),
+        mutates: true,
+        handler: async ({ data }, ctx): Promise<AdminResourceRow> => {
+            const values = await parseFields(data, redirectFields, {
+                operation: 'create',
+                resource: { kind: 'entry', record: null },
+                user: ctx.user,
+                isUnique: async () => true,
+            });
+            return createRedirectRepository(ctx.db).create(values);
+        },
+    }),
+    // list, get, update and delete follow the same pattern.
+};
+```
 
 ### Globals
 

@@ -118,6 +118,7 @@ export { formatAiContextMessage } from '@/utilities/ai-context';
 
 export { defineConfig } from '@/config/define-config';
 export { defineAdminPage } from '@/config/define-admin-page';
+export { defineAdminResource } from '@/plugins/define-admin-resource';
 export { defineEntryType } from '@/entries/define-entry-type';
 export { defineGlobal } from '@/config/define-global';
 export { definePlugin } from '@/plugins/define-plugin';

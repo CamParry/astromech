@@ -18,6 +18,7 @@ import {
     resolvePluginLabel,
 } from '@/plugins/runtime/plugin-admin';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
+import { resolveAdminResources } from '@/plugins/runtime/plugin-resources';
 
 /** Project a resolved entry type, the site's or a plugin's, into the serializable admin shape. */
 export function toAdminEntryType(entryType: ResolvedEntryType): AdminEntryType {
@@ -75,6 +76,7 @@ export function buildAdminConfig(
                 permissionNamespace: identity.permissionNamespace,
                 nav: derivePluginNav(identity, p, resolvedConfig),
                 pages: derivePluginPages(identity, p),
+                resources: resolveAdminResources(identity, p),
             };
         }),
         basePath: resolvedConfig.basePath,

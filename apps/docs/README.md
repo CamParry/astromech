@@ -77,7 +77,7 @@ This is a living reference; it grows as the project does.
   keys on, who it does not limit, and what a refused submission returns.
 - [plugins/authoring.md](plugins/authoring.md) — write a plugin: the file-layout
   convention, identity, and every surface (custom fields, running the field
-  pipeline, admin pages and the list component for them, globals, admin
+  pipeline, admin pages and the list component for them, admin resources, globals, admin
   slots, permissions, service methods, hooks, entry types, database tables, and
   i18n).
 - [cli.md](cli.md) — the `astromech` CLI: entry CRUD + publish, JSON output,

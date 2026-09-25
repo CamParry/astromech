@@ -9,6 +9,7 @@
 import type { AppContext } from './app-context';
 import type {
     AdminPage,
+    AdminResource,
     AdminSlotContribution,
     DbDump,
     EntryType,
@@ -226,8 +227,8 @@ export type PluginCronJob = {
 
 /**
  * Derived sidebar tree node. Plugin authors don't write these — core derives
- * the tree from `admin.pages` (nav-visible pages group under the plugin's
- * `admin.nav` identity).
+ * the tree from `admin.resources` and `admin.pages` (nav-visible ones group
+ * under the plugin's `admin.nav` identity).
  */
 export type PluginNavItem = {
     label: string;
@@ -246,6 +247,8 @@ export type PluginNavItem = {
  */
 export type PluginAdmin = {
     pages?: AdminPage[];
+    /** List, create and edit screens over the plugin's own service methods. */
+    resources?: AdminResource[];
     slots?: AdminSlotContribution[];
     /**
      * Bare specifiers the plugin's admin components import in the browser, for

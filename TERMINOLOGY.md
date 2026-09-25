@@ -10,6 +10,10 @@ from a driver, which reaches an external system.
 **Admin page.** A routed admin destination rendering a React component, built
 in or from a plugin. A field-bearing destination is a global instead.
 
+**Admin resource.** A plugin's declaration of list, create and edit screens
+over its own service methods, each view optional. Bare "resource" means an
+entry, a global, a media item or a user, never this.
+
 **Admin slot.** A named mount point for admin UI that is always present, outside
 any one page.
 

@@ -237,6 +237,19 @@
         "translationFallbackHint": "Showing the {{locale}} content until this locale is saved.",
         "fieldsPanel": "Fields"
     },
+    "adminResources": {
+        "create": "New {{name}}",
+        "empty": "No {{name}} found",
+        "loadFailed": "This record could not be loaded.",
+        "actionsPanel": "Actions",
+        "created": "Created.",
+        "saved": "Saved.",
+        "deleted": "Deleted.",
+        "saveFailed": "Save failed",
+        "deleteFailed": "Delete failed",
+        "confirmDeleteTitle": "Delete {{name}}?",
+        "confirmDeleteMessage": "This action cannot be undone."
+    },
     "permissions": {
         "readOnly": "You have read-only access to this entry type.",
         "forbidden": "You don't have permission to access this page."

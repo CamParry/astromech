@@ -1,11 +1,12 @@
 /**
- * Derives a plugin's admin-shell metadata from `admin.pages`: the sidebar
- * tree grouped under the plugin's label/icon, and the flattened page list,
- * with permission strings resolved so the browser never needs the namespacing rule.
+ * Derives a plugin's admin-shell metadata: the sidebar tree grouped under the
+ * plugin's label/icon, and the flattened page list, with permission strings
+ * resolved so the browser never needs the namespacing rule.
  */
 
 import type {
     AdminPage,
+    Label,
     PluginDefinition,
     PluginNavItem,
     ResolvedAdminPage,
@@ -15,6 +16,7 @@ import type {
 import { entryPermission } from '@/permissions/entry-permission';
 import { globalPermission } from '@/permissions/global-permission';
 import { resolvePluginPermission, titleCaseNamespace } from './plugin-identity';
+import { resolveResourceMethod } from './plugin-resources';
 
 /**
  * Admin display name: plugin `label` if set, otherwise the namespace
@@ -55,8 +57,8 @@ export function derivePluginPages(
 
 /**
  * Sidebar tree for one plugin: its entry types and globals from the resolved
- * config, then its pages, as children of a single group carrying the plugin's
- * `label`/`icon`. The sidebar auto-flattens single-child groups.
+ * config, then its admin resources and pages, as children of a single group
+ * carrying the plugin's `label`/`icon`. The sidebar auto-flattens single-child groups.
  */
 export function derivePluginNav(
     identity: ResolvedPluginIdentity,
@@ -78,7 +80,7 @@ export function derivePluginNav(
         .filter((global) => global.nav !== false)
         .map((global) => {
             const item: PluginNavItem = {
-                label: typeof global.label === 'string' ? global.label : global.label.$t,
+                label: labelText(global.label),
                 to: `/plugin/${identity.namespace}/globals/${name(global.id)}`,
                 permission: globalPermission(global.id, 'read'),
             };
@@ -86,17 +88,30 @@ export function derivePluginNav(
             return item;
         });
 
+    // Each gates on its list method's permission, which the list page calls.
+    const resourceChildren = (def.admin?.resources ?? [])
+        .filter((resource) => resource.nav !== false)
+        .map((resource) => {
+            const item: PluginNavItem = {
+                label: labelText(resource.label),
+                to: `/plugin/${identity.namespace}/resources/${resource.name}`,
+                permission: resolveResourceMethod(
+                    identity,
+                    def,
+                    resource,
+                    'list',
+                    resource.methods.list
+                ).permission,
+            };
+            if (resource.icon !== undefined) item.icon = resource.icon;
+            return item;
+        });
+
     const pageChildren = (def.admin?.pages ?? [])
         .filter((page) => page.nav !== false)
         .map((page) => {
-            // page.label is Label (string | i18n descriptor); resolve to string
-            // for the nav item. i18n descriptors fall back to the $t key here
-            // until the browser resolves them via resolveLabel.
-            const labelStr: string =
-                typeof page.label === 'string' ? page.label : page.label.$t;
-
             const item: PluginNavItem = {
-                label: labelStr,
+                label: labelText(page.label),
                 to: `/plugin/${identity.namespace}${page.path}`,
             };
             if (page.icon !== undefined) item.icon = page.icon;
@@ -105,7 +120,12 @@ export function derivePluginNav(
             return item;
         });
 
-    const children = [...entryChildren, ...globalChildren, ...pageChildren];
+    const children = [
+        ...entryChildren,
+        ...globalChildren,
+        ...resourceChildren,
+        ...pageChildren,
+    ];
     if (children.length === 0) return [];
 
     const group: PluginNavItem = {
@@ -114,4 +134,12 @@ export function derivePluginNav(
     };
     if (def.icon !== undefined) group.icon = def.icon;
     return [group];
+}
+
+/**
+ * A nav item's label is a string: an i18n descriptor falls back to its `$t` key
+ * here until the browser resolves it.
+ */
+function labelText(label: Label): string {
+    return typeof label === 'string' ? label : label.$t;
 }

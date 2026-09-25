@@ -5,6 +5,7 @@ import type {
     PluginNavItem,
 } from '@/types/index';
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import { resolveEntryTypes } from '@/config/entry-types';
 import { resolveGlobals } from '@/config/globals';
 import { derivePluginNav, derivePluginPages } from '@/plugins/runtime/plugin-admin';
@@ -87,6 +88,60 @@ describe('derivePluginNav — entry types', () => {
         });
         expect(result).toHaveLength(1);
         expect(result[0]?.children).toHaveLength(1);
+    });
+});
+
+describe('derivePluginNav — admin resources', () => {
+    const listMethod = {
+        access: { permission: 'read' },
+        input: z.looseObject({}),
+        mutates: false,
+        handler: () => null,
+    };
+    const withResource = (nav?: boolean): PluginDefinition => ({
+        package: '@astromech/redirects',
+        entries: [entryType('redirect', 'Redirect', 'Redirects')],
+        globals: [{ key: 'settings', label: 'Settings', fields: [] }],
+        service: { list: listMethod },
+        admin: {
+            resources: [
+                {
+                    name: 'rules',
+                    label: 'Rules',
+                    labelSingular: 'Rule',
+                    icon: 'Signpost',
+                    fields: [{ name: 'from', type: 'text' }],
+                    columns: ['from'],
+                    methods: { list: 'list' },
+                    ...(nav !== undefined ? { nav } : {}),
+                },
+            ],
+            pages: [{ path: '/overview', label: 'Overview', component: './overview.js' }],
+        },
+    });
+
+    it('adds a child per resource after the globals and before the pages', () => {
+        expect(children(withResource()).map((c) => c.to)).toEqual([
+            '/plugin/redirects/entries/redirect',
+            '/plugin/redirects/globals/settings',
+            '/plugin/redirects/resources/rules',
+            '/plugin/redirects/overview',
+        ]);
+    });
+
+    it("gates the child on its list method's resolved permission", () => {
+        expect(children(withResource())[2]).toEqual({
+            label: 'Rules',
+            to: '/plugin/redirects/resources/rules',
+            icon: 'Signpost',
+            permission: 'plugin:redirects:read',
+        });
+    });
+
+    it('leaves out a resource with nav: false', () => {
+        expect(children(withResource(false)).map((c) => c.to)).not.toContain(
+            '/plugin/redirects/resources/rules'
+        );
     });
 });
 
