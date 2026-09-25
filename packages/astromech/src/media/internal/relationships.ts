@@ -5,10 +5,10 @@
 
 import { createContentRelationships } from '@/content/relationships';
 import { RESOURCE_SPECS } from '@/content/resources';
-import { getMediaRepository } from '@/media/repository';
+import { mediaRepository } from '@/media/repository';
 
 const relationships = createContentRelationships({
-    repository: getMediaRepository,
+    repository: mediaRepository,
     ownerColumn: 'mediaId',
     kind: 'media',
     fields: (config) => RESOURCE_SPECS.media.fields(config),

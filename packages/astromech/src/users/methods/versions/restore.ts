@@ -7,7 +7,7 @@ import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { syncUserRelationships } from '../../internal/relationships';
 import { toUser } from '../../internal/to-user';
-import { getUserRepository } from '../../repository';
+import { userRepository } from '../../repository';
 
 /**
  * Restores one locale of a user's fields to one of its saved versions,
@@ -32,19 +32,18 @@ export const restoreUserVersion = defineServiceMethod({
             undefined,
             params.locale
         );
-        const repository = getUserRepository();
-        const current = await repository.findOne(id, { locale });
+        const current = await userRepository.findOne(id, { locale });
         if (!current) throw new ResourceNotFoundError('user', { id, locale });
 
         return restoreVersion({
             spec: RESOURCE_SPECS.user,
-            versions: repository.versions,
+            versions: userRepository.versions,
             current,
             versionId: params.versionId,
             address: { id, locale },
             user: ctx.user,
             write: async ({ fields }) => {
-                const row = await repository.update({ id, locale }, { fields });
+                const row = await userRepository.update({ id, locale }, { fields });
                 await syncUserRelationships(ctx.config, id);
                 return toUser(row);
             },

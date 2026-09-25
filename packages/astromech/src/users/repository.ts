@@ -13,7 +13,7 @@ import { sql } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
-import { getRelationshipRepository } from '@/content/repository/relationships';
+import { relationshipRepository } from '@/content/repository/relationships';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { chunks } from '@/database/chunks';
 import { encodeWith, kyselyTableKey } from '@/database/codec';
@@ -24,7 +24,6 @@ import {
     usersTable,
     userVersionsTable,
 } from '@/database/tables';
-import { createLazyRegistry } from '@/registry';
 
 /** One locale of one user, as the users service reads it. */
 export type UserRow = ContentRow & {
@@ -258,7 +257,7 @@ function createUserRepository() {
      */
     async function del(id: string): Promise<void> {
         // Relationship rows first: deleting the user row is what orphans them.
-        await getRelationshipRepository().deleteByResource(id, 'user');
+        await relationshipRepository.deleteByResource(id, 'user');
         await content.delete(id);
     }
 
@@ -294,20 +293,5 @@ function createUserRepository() {
     };
 }
 
-const userRepository = createLazyRegistry<UserRepository>(
-    'userRepository',
-    createUserRepository
-);
-
-/** The user repository, built on first use. */
-export function getUserRepository(): UserRepository {
-    return userRepository.get();
-}
-
-/**
- * Swap the user repository, so a test can replace one method.
- * @internal
- */
-export function setUserRepository(repository: UserRepository): void {
-    userRepository.set(repository);
-}
+/** The user repository. Stateless: every handle and the default locale resolve per call. */
+export const userRepository = createUserRepository();

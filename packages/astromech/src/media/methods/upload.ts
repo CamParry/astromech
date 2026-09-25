@@ -6,7 +6,7 @@ import { getStorageDriver } from '@/storage/registry';
 import { originalKey } from '../internal/keys';
 import { storeFile } from '../internal/store-file';
 import { toMedia } from '../internal/to-media';
-import { getMediaRepository } from '../repository';
+import { mediaRepository } from '../repository';
 
 /** Store a new file and insert the row describing it. */
 export const uploadMedia = defineServiceMethod({
@@ -40,7 +40,7 @@ export const uploadMedia = defineServiceMethod({
         // pair: the repository wraps both in a transaction.
         return toMedia(
             ctx.config,
-            await getMediaRepository().create(
+            await mediaRepository.create(
                 {
                     id,
                     filename: file.name,

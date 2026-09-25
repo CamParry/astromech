@@ -8,7 +8,6 @@ import { encodePatchWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { entriesTable, entryContentTable } from '@/database/tables';
-import { createLazyRegistry } from '@/registry';
 
 export type EntryMaintenanceRepository = ReturnType<
     typeof createEntryMaintenanceRepository
@@ -64,22 +63,5 @@ function createEntryMaintenanceRepository() {
     return { publishDueScheduled, purgeTrashedBefore };
 }
 
-const entryMaintenanceRepository = createLazyRegistry<EntryMaintenanceRepository>(
-    'entryMaintenanceRepository',
-    createEntryMaintenanceRepository
-);
-
-/** The entry maintenance repository, built on first use. */
-export function getEntryMaintenanceRepository(): EntryMaintenanceRepository {
-    return entryMaintenanceRepository.get();
-}
-
-/**
- * Swap the entry maintenance repository, so a test can replace one method.
- * @internal
- */
-export function setEntryMaintenanceRepository(
-    repository: EntryMaintenanceRepository
-): void {
-    entryMaintenanceRepository.set(repository);
-}
+/** The entry maintenance repository. Stateless: the db handle resolves per call. */
+export const entryMaintenanceRepository = createEntryMaintenanceRepository();

@@ -6,7 +6,6 @@
 import type { CronRow, NewCronRow } from '@/database/tables';
 import { createRepository } from '@/database/repository/create-repository';
 import { cronTable } from '@/database/tables';
-import { createLazyRegistry } from '@/registry';
 
 export type CronRepository = ReturnType<typeof createCronRepository>;
 
@@ -58,20 +57,5 @@ function createCronRepository() {
     return { seedJob, due, claim, recordRunAndRelease };
 }
 
-const cronRepository = createLazyRegistry<CronRepository>(
-    'cronRepository',
-    createCronRepository
-);
-
-/** The cron repository, built on first use. */
-export function getCronRepository(): CronRepository {
-    return cronRepository.get();
-}
-
-/**
- * Swap the cron repository, so a test can replace one method.
- * @internal
- */
-export function setCronRepository(repository: CronRepository): void {
-    cronRepository.set(repository);
-}
+/** The cron repository. Stateless: the db handle resolves per call. */
+export const cronRepository = createCronRepository();

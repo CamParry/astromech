@@ -3,7 +3,7 @@ import { z } from '@hono/zod-openapi';
 import { listUsage } from '@/content/usage';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { getMediaRepository } from '../repository';
+import { mediaRepository } from '../repository';
 
 /**
  * Every reference to a media item, from any resource: the "used by" panel. One
@@ -17,7 +17,7 @@ export const listMediaUsage = defineServiceMethod({
     mutates: false,
     async handler(params, ctx): Promise<Usage[]> {
         const { id } = params;
-        const row = await getMediaRepository().findFile(id);
+        const row = await mediaRepository.findFile(id);
         if (!row) throw new ResourceNotFoundError('media', { id });
         return listUsage(ctx.config, { id, kind: 'media' });
     },

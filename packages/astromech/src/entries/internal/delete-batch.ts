@@ -1,7 +1,7 @@
 import type { EntryRepository } from '../repository/types';
 import type { EntryWithContentId } from './read-entry';
 import type { AppContext } from '@/types/index';
-import { getRelationshipRepository } from '@/content/repository/relationships';
+import { relationshipRepository } from '@/content/repository/relationships';
 import { CapabilityError } from '@/errors/capability';
 import { getEntryRepository } from '../repository/registry';
 import { getEntryResources, toEntry } from './read-entry';
@@ -20,13 +20,12 @@ export async function deleteEntryBatch(
     ctx: AppContext
 ): Promise<void> {
     const repository = getEntryRepository(params.type);
-    const relationships = getRelationshipRepository();
 
     await removeEntryBatch(params, ctx, {
         repository,
         permanent: true,
         async write(entry) {
-            await relationships.deleteByResource(entry.id, 'entry');
+            await relationshipRepository.deleteByResource(entry.id, 'entry');
             // Content rows and versions cascade from the `entries` row.
             await repository.delete(entry.id);
         },

@@ -11,7 +11,7 @@ import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { readGate } from '../internal/access';
 import { getDeclaredGlobal, toGlobal } from '../internal/global';
-import { getGlobalRepository } from '../repository';
+import { globalRepository } from '../repository';
 import { localised } from '../schema';
 
 /**
@@ -51,11 +51,10 @@ export const getGlobal = defineServiceMethod({
             ]);
         }
 
-        const repository = getGlobalRepository();
         const row =
             params.staged === true
-                ? await findStaged(repository, params.key, locale)
-                : await repository.findByKey(params.key, locale);
+                ? await findStaged(globalRepository, params.key, locale)
+                : await globalRepository.findByKey(params.key, locale);
         if (!row) return null;
 
         const record = toGlobal(row);

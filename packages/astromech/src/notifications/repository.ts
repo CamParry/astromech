@@ -7,7 +7,6 @@
 import type { NewNotificationRow, NotificationRow } from './tables';
 import { createRepository } from '@/database/repository/create-repository';
 import { notificationsTable } from '@/database/tables';
-import { createLazyRegistry } from '@/registry';
 
 export type NotificationRepository = ReturnType<typeof createNotificationRepository>;
 
@@ -46,20 +45,5 @@ function createNotificationRepository() {
     return { createMany, findByUser, countByUser, delete: del, deleteByUser };
 }
 
-const notificationRepository = createLazyRegistry<NotificationRepository>(
-    'notificationRepository',
-    createNotificationRepository
-);
-
-/** The notification repository, built on first use. */
-export function getNotificationRepository(): NotificationRepository {
-    return notificationRepository.get();
-}
-
-/**
- * Swap the notification repository, so a test can replace one method.
- * @internal
- */
-export function setNotificationRepository(repository: NotificationRepository): void {
-    notificationRepository.set(repository);
-}
+/** The notification repository. Stateless: the db handle resolves per call. */
+export const notificationRepository = createNotificationRepository();

@@ -11,7 +11,7 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { RESOURCE_SPECS } from '@/content/resources';
-import { getMediaRepository } from '@/media/repository';
+import { mediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { RESOURCE_TYPES } from '@/types/domain';
 
@@ -101,7 +101,7 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
     },
     media: {
         async save(fields) {
-            const row = await getMediaRepository().create(
+            const row = await mediaRepository.create(
                 { filename: 'file.png', mimeType: 'image/png', size: 1 },
                 {}
             );
@@ -141,7 +141,7 @@ beforeEach(async () => {
 
 /** A media item for the others to reference. */
 async function mediaTarget(): Promise<string> {
-    const row = await getMediaRepository().create(
+    const row = await mediaRepository.create(
         { filename: 'target.png', mimeType: 'image/png', size: 1 },
         {}
     );

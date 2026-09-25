@@ -6,10 +6,10 @@
 import type { Db } from '@/database/types';
 import { adminRole } from '@tests/fixtures';
 import { contextAs, createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createServices, currentServices } from '@/app-context/services';
 import { LastAdminError } from '@/users/errors';
-import { getUserRepository, setUserRepository } from '@/users/repository';
+import { userRepository } from '@/users/repository';
 
 const usersService = currentServices.users;
 
@@ -71,16 +71,10 @@ describe('an admin with another beside it', () => {
 });
 
 describe('the admin count', () => {
-    const registered = getUserRepository();
-
-    afterEach(() => {
-        setUserRepository(registered);
-    });
-
-    it('comes from the registered user repository', async () => {
+    it('comes from the user repository', async () => {
         const first = await createTestUser(db, { role: 'admin' });
         await createTestUser(db, { role: 'admin' });
-        setUserRepository({ ...registered, countByRole: () => Promise.resolve(1) });
+        vi.spyOn(userRepository, 'countByRole').mockResolvedValue(1);
 
         await expect(usersService.delete({ id: first.id })).rejects.toBeInstanceOf(
             LastAdminError

@@ -31,7 +31,7 @@ import { addHook, clearHooks } from '@/hooks/hooks';
 import { notify } from '@/notifications/service';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import { isTable } from '@/plugins/runtime/plugin-tables';
-import { getPluginTrackingRepository } from '@/plugins/runtime/repository';
+import { pluginTrackingRepository } from '@/plugins/runtime/repository';
 import { createRegistry } from '@/registry';
 import { typedServices } from '@/services/typed-services';
 import { listAll } from '@/storage/prefix';
@@ -173,7 +173,7 @@ async function trackPlugin(
     version: string
 ): Promise<void> {
     try {
-        await getPluginTrackingRepository().upsert(pkg, namespace, version);
+        await pluginTrackingRepository.upsert(pkg, namespace, version);
     } catch (error) {
         log.warn(
             `Could not record plugin "${pkg}" in _astromech_plugins: ` +
@@ -189,7 +189,7 @@ async function trackPlugin(
  */
 async function warnOnUntrackedRemovals(configured: string[]): Promise<void> {
     try {
-        const tracked = await getPluginTrackingRepository().findPackages();
+        const tracked = await pluginTrackingRepository.findPackages();
         for (const pkg of tracked) {
             if (configured.includes(pkg)) continue;
             log.warn(

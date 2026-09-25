@@ -21,7 +21,7 @@ import { gate } from '../internal/access';
 import { getDeclaredGlobal, toGlobal } from '../internal/global';
 import { syncGlobalRelationships } from '../internal/relationships';
 import { toStoredFields } from '../internal/stored-fields';
-import { getGlobalRepository } from '../repository';
+import { globalRepository } from '../repository';
 import { localised, updateGlobalSchema } from '../schema';
 
 /**
@@ -57,16 +57,17 @@ export const updateGlobal = defineServiceMethod({
             global.id,
             params.locale
         );
-        const repository = getGlobalRepository();
         const user = ctx.user;
 
-        const canonical = staged ? null : await repository.findByKey(params.key, locale);
+        const canonical = staged
+            ? null
+            : await globalRepository.findByKey(params.key, locale);
         // A locale with no row yet still needs the id when the global exists.
-        const id = canonical?.id ?? (await repository.findIdByKey(params.key));
+        const id = canonical?.id ?? (await globalRepository.findIdByKey(params.key));
         const current = staged
             ? id === null
                 ? null
-                : await repository.staging.findOne({ id, locale })
+                : await globalRepository.staging.findOne({ id, locale })
             : canonical;
         // A staged write addresses a row `createStaged` made; there is nothing
         // here to create one from.
@@ -94,7 +95,7 @@ export const updateGlobal = defineServiceMethod({
         assertWritableStatus(global, data, staged, ctx.method.name);
 
         const fields = await toStoredFields({
-            repository,
+            repository: globalRepository,
             global,
             id,
             locale,
@@ -115,7 +116,7 @@ export const updateGlobal = defineServiceMethod({
                 // No version and no propagation: the history and the shared
                 // fields belong to the canonical row, which the merge is what
                 // writes to.
-                const row = await repository.staging.update(stagedRef, {
+                const row = await globalRepository.staging.update(stagedRef, {
                     fields,
                     updatedBy: user?.id ?? null,
                 });
@@ -126,7 +127,7 @@ export const updateGlobal = defineServiceMethod({
                 if (changesVersionedContent(RESOURCE_SPECS.global, current, { fields })) {
                     await snapshotVersion(
                         RESOURCE_SPECS.global,
-                        repository.versions,
+                        globalRepository.versions,
                         current,
                         user
                     );
@@ -134,7 +135,7 @@ export const updateGlobal = defineServiceMethod({
             }
             const written = await writeRow({
                 config: ctx.config,
-                repository,
+                repository: globalRepository,
                 global,
                 key: params.key,
                 id,

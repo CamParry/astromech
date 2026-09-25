@@ -1,7 +1,7 @@
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { subjectId } from '../internal/subject';
-import { getNotificationRepository } from '../repository';
+import { notificationRepository } from '../repository';
 
 /** How many undismissed notifications the caller has. */
 export const countNotifications = defineServiceMethod({
@@ -11,6 +11,6 @@ export const countNotifications = defineServiceMethod({
     sessionScoped: true,
     mutates: false,
     async handler(_params, ctx): Promise<number> {
-        return getNotificationRepository().countByUser(subjectId(ctx.user));
+        return notificationRepository.countByUser(subjectId(ctx.user));
     },
 });

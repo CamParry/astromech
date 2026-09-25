@@ -7,7 +7,7 @@ import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { syncMediaRelationships } from '../../internal/relationships';
 import { toMedia } from '../../internal/to-media';
-import { getMediaRepository } from '../../repository';
+import { mediaRepository } from '../../repository';
 
 /**
  * Restores one locale of a media item to one of its saved versions, snapshotting
@@ -31,19 +31,18 @@ export const restoreMediaVersion = defineServiceMethod({
             undefined,
             params.locale
         );
-        const repository = getMediaRepository();
-        const current = await repository.findOne(id, { locale });
+        const current = await mediaRepository.findOne(id, { locale });
         if (!current) throw new ResourceNotFoundError('media', { id, locale });
 
         return restoreVersion({
             spec: RESOURCE_SPECS.media,
-            versions: repository.versions,
+            versions: mediaRepository.versions,
             current,
             versionId: params.versionId,
             address: { id, locale },
             user: ctx.user,
             write: async ({ fields, columns }) => {
-                const row = await repository.update(
+                const row = await mediaRepository.update(
                     { id, locale },
                     { ...columns, fields }
                 );

@@ -15,7 +15,7 @@ import { createRepository } from '@/database/repository/create-repository';
 import { entryContentTable } from '@/entries/tables';
 import { globalContentTable } from '@/globals/tables';
 import { validateStoredContent } from '@/transport/cli/validate-stored-content';
-import { getUserRepository } from '@/users/repository';
+import { userRepository } from '@/users/repository';
 
 const api = currentServices.entries;
 const globalsService = currentServices.globals;
@@ -124,7 +124,7 @@ async function storeGlobalFields(fields: JsonObject): Promise<void> {
 /** Every field blob a run could touch, serialized for a straight comparison. */
 async function snapshot(): Promise<string> {
     const entries = await createRepository(entryContentTable).findMany({ where: {} });
-    const users = await getUserRepository().findMany();
+    const users = await userRepository.findMany();
     const globals = await createRepository(globalContentTable).findMany({ where: {} });
     return JSON.stringify([
         entries.map((row) => [row.id, row.fields]),
@@ -284,7 +284,7 @@ describe('validateStoredContent', () => {
                 fields: { nickname: 'ok' },
             },
         });
-        await getUserRepository().update(
+        await userRepository.update(
             { id: user.id },
             { fields: { nickname: 'far too long' } }
         );

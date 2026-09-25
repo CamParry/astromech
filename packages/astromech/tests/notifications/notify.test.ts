@@ -15,12 +15,9 @@ import type { DB } from '@/database/types';
 import type { Notification, NotificationsService, User } from '@/types/index';
 import type { Kysely } from 'kysely';
 import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
-import {
-    getNotificationRepository,
-    setNotificationRepository,
-} from '@/notifications/repository';
+import { notificationRepository } from '@/notifications/repository';
 import { notificationsDefinition, notify } from '@/notifications/service';
 
 let db: Kysely<DB>;
@@ -123,20 +120,12 @@ describe('the inbox methods', () => {
     });
 
     it('deletes by the caller’s id as well as the row’s', async () => {
-        const registered = getNotificationRepository();
         const deleted: { id: string; userId: string }[] = [];
-        setNotificationRepository({
-            ...registered,
-            delete: (where) => {
-                deleted.push(where);
-                return Promise.resolve();
-            },
+        vi.spyOn(notificationRepository, 'delete').mockImplementation((where) => {
+            deleted.push(where);
+            return Promise.resolve();
         });
-        try {
-            await inbox(admin).dismiss({ id: 'row-1' });
-        } finally {
-            setNotificationRepository(registered);
-        }
+        await inbox(admin).dismiss({ id: 'row-1' });
 
         expect(deleted).toEqual([{ id: 'row-1', userId: admin }]);
     });

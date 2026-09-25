@@ -6,12 +6,12 @@
 
 import type { RelationshipRow } from '@/database/tables';
 import type { ResolvedConfig, TargetKind, Usage } from '@/types/index';
-import { getRelationshipRepository } from '@/content/repository/relationships';
+import { relationshipRepository } from '@/content/repository/relationships';
 import { getEntryResource } from '@/entries/internal/read-entry';
 import { getEntryRepository } from '@/entries/repository/registry';
 import { resolveGlobal } from '@/globals/resolve-global';
-import { getMediaRepository } from '@/media/repository';
-import { getUserRepository } from '@/users/repository';
+import { mediaRepository } from '@/media/repository';
+import { userRepository } from '@/users/repository';
 
 /**
  * Every reference pointing at one target, one row per reference: a source using
@@ -22,7 +22,7 @@ export async function listUsage(
     config: ResolvedConfig,
     target: { id: string; kind: TargetKind }
 ): Promise<Usage[]> {
-    const rows = await getRelationshipRepository().findByTarget(target.id, target.kind, {
+    const rows = await relationshipRepository.findByTarget(target.id, target.kind, {
         includeStaged: true,
     });
     const titles = await loadSourceTitles(config, rows);
@@ -81,7 +81,7 @@ async function loadSourceTitles(
     }
 
     // A name or an email is all a title needs, so the account row is enough.
-    for (const user of await getUserRepository().findAccounts(userIds)) {
+    for (const user of await userRepository.findAccounts(userIds)) {
         titles.set(
             sourceKey({ sourceKind: 'user', sourceId: user.id }),
             user.name || user.email
@@ -89,7 +89,7 @@ async function loadSourceTitles(
     }
 
     // The filename lives on the file row, so the content join is not needed.
-    for (const item of await getMediaRepository().findFiles(mediaIds)) {
+    for (const item of await mediaRepository.findFiles(mediaIds)) {
         titles.set(sourceKey({ sourceKind: 'media', sourceId: item.id }), item.filename);
     }
 

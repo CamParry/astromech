@@ -5,7 +5,7 @@ import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { toUser } from '../internal/to-user';
-import { getUserRepository } from '../repository';
+import { userRepository } from '../repository';
 
 /**
  * Read one user by id, or null when there is no such row. A locale with no
@@ -24,7 +24,7 @@ export const getUser = defineServiceMethod({
             undefined,
             params.locale
         );
-        const row = await getUserRepository().findOne(params.id, {
+        const row = await userRepository.findOne(params.id, {
             locale,
             fallbackLocale: defaultContentLocale(ctx.config),
         });

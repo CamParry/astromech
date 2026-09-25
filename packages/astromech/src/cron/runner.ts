@@ -7,7 +7,7 @@ import type { CronRepository } from '@/cron/repository';
 import type { AppContext } from '@/types/index';
 import { Cron } from 'croner';
 import { getCronJobs } from '@/cron/registry';
-import { getCronRepository } from '@/cron/repository';
+import { cronRepository } from '@/cron/repository';
 import { globals } from '@/registry';
 
 /** Claim lease: generous so a normal job never self-expires mid-run. A crashed
@@ -57,19 +57,18 @@ async function seed(
 export async function runDue(now: Date, ctx: AppContext): Promise<void> {
     const config = ctx.config;
     const timezone = config.timezone ?? 'UTC';
-    const repository = getCronRepository();
 
-    await seed(repository, now, timezone);
+    await seed(cronRepository, now, timezone);
 
     const handlers = new Map(getCronJobs().map((j) => [j.name, j]));
 
-    for (const row of await repository.due(now)) {
+    for (const row of await cronRepository.due(now)) {
         const job = handlers.get(row.name);
         if (!job) continue; // orphan table row (handler not registered) — skip
 
         // CAS-claim: succeeds only if unlocked or the prior claim expired.
         const expiry = new Date(now.getTime() + LOCK_TTL_MS);
-        if (!(await repository.claim(row.name, now, expiry))) continue; // another tick owns it
+        if (!(await cronRepository.claim(row.name, now, expiry))) continue; // another tick owns it
 
         try {
             await job.handler(ctx);
@@ -80,7 +79,7 @@ export async function runDue(now: Date, ctx: AppContext): Promise<void> {
         // Record + release, gated on our exact claim token (see `claim`'s ABA
         // note). next_run recomputes from `now` — missed runs fire once, no
         // backfill — using the row's CURRENT (possibly admin-edited) schedule.
-        await repository.recordRunAndRelease(row.name, expiry, {
+        await cronRepository.recordRunAndRelease(row.name, expiry, {
             lastRun: now,
             nextRun: nextRunFrom(row.schedule, now, timezone),
         });

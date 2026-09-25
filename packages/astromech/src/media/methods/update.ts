@@ -11,7 +11,7 @@ import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { syncMediaRelationships } from '../internal/relationships';
 import { toMedia } from '../internal/to-media';
-import { getMediaRepository } from '../repository';
+import { mediaRepository } from '../repository';
 import { updateMediaSchema } from '../schema';
 
 /**
@@ -39,12 +39,11 @@ export const updateMedia = defineServiceMethod({
             undefined,
             params.locale
         );
-        const repository = getMediaRepository();
 
         // The row this write edits or, when the locale has none, the
         // default-locale row the new one is copied from.
-        const current = await repository.findOne(id, { locale });
-        const base = current ?? (await repository.findOne(id));
+        const current = await mediaRepository.findOne(id, { locale });
+        const base = current ?? (await mediaRepository.findOne(id));
         if (!base) throw new ResourceNotFoundError('media', { id });
 
         const config = ctx.config;
@@ -63,7 +62,7 @@ export const updateMedia = defineServiceMethod({
                     operation: 'update',
                     record: toMedia(config, base),
                     user: ctx.user,
-                    scan: () => repository.findByLocale(locale),
+                    scan: () => mediaRepository.findByLocale(locale),
                     excludeId: id,
                 }
             );
@@ -88,7 +87,7 @@ export const updateMedia = defineServiceMethod({
             if (current && changesVersionedContent(RESOURCE_SPECS.media, current, next)) {
                 await snapshotVersion(
                     RESOURCE_SPECS.media,
-                    repository.versions,
+                    mediaRepository.versions,
                     current,
                     ctx.user
                 );
@@ -96,7 +95,7 @@ export const updateMedia = defineServiceMethod({
             // `updatedAt` is stamped by the repository (the column declares
             // `onUpdate`); an explicitly-`undefined` key means "leave this
             // column alone".
-            const row = await repository.update(
+            const row = await mediaRepository.update(
                 { id, locale },
                 {
                     ...next,
@@ -110,7 +109,7 @@ export const updateMedia = defineServiceMethod({
             // item's other locales alone.
             if (fields !== undefined && patch !== undefined) {
                 await propagateSharedFields(RESOURCE_SPECS.media, config, {
-                    translatable: repository.translatable,
+                    translatable: mediaRepository.translatable,
                     record: { id, locale },
                     fields,
                     patchedFieldNames: patchedNames,

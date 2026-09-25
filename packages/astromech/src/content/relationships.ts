@@ -12,14 +12,14 @@ import type { StoredRows } from '@/content/repository/types';
 import type { FieldReference } from '@/fields/references';
 import type { Field } from '@/types/fields';
 import type { JsonObject, ResolvedConfig, ResourceType } from '@/types/index';
-import { getRelationshipRepository } from '@/content/repository/relationships';
+import { relationshipRepository } from '@/content/repository/relationships';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { findReferences } from '@/fields/references';
 
 /** The resource: where its stored rows come from, how they join, and its fields. */
 type ContentRelationshipsShape = {
-    /** Read per call, so a swapped repository is the one read. */
-    repository: () => { findStoredRows(ids?: readonly string[]): Promise<StoredRows> };
+    /** The resource's repository; only its stored-row read is used. */
+    repository: { findStoredRows(ids?: readonly string[]): Promise<StoredRows> };
     /** The content rows' column holding the resource id: `userId`, `globalId`. */
     ownerColumn: string;
     kind: ResourceType;
@@ -53,10 +53,7 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
     async function sync(config: ResolvedConfig, id: string): Promise<void> {
         const [indexed] = await sources(config, [id]);
         if (!indexed) return;
-        await getRelationshipRepository().replaceForSource(
-            indexed.source,
-            indexed.references
-        );
+        await relationshipRepository.replaceForSource(indexed.source, indexed.references);
     }
 
     /**
@@ -75,7 +72,7 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
         config: ResolvedConfig,
         ids?: readonly string[]
     ): Promise<RelationshipIndexSource[]> {
-        const { owners, contents } = await shape.repository().findStoredRows(ids);
+        const { owners, contents } = await shape.repository.findStoredRows(ids);
 
         const rowsByOwner = new Map<string, ContentFields[]>();
         for (const row of contents) {

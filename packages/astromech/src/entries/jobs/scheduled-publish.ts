@@ -6,12 +6,12 @@
  */
 
 import type { CronJob } from '@/cron/registry';
-import { getEntryMaintenanceRepository } from '../repository/maintenance';
+import { entryMaintenanceRepository } from '../repository/maintenance';
 
 export const scheduledPublishJob: CronJob = {
     name: 'scheduled-publish',
     schedule: '* * * * *',
     async handler() {
-        await getEntryMaintenanceRepository().publishDueScheduled(new Date());
+        await entryMaintenanceRepository.publishDueScheduled(new Date());
     },
 };

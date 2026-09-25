@@ -8,11 +8,6 @@ import type { Db } from '@/database/types';
 import type { TargetKind } from '@/types/domain';
 import { chunks } from '@/database/chunks';
 import { getDb } from '@/database/registry';
-import { createLazyRegistry } from '@/registry';
-
-export type ResourceExistenceRepository = ReturnType<
-    typeof createResourceExistenceRepository
->;
 
 function createResourceExistenceRepository() {
     /**
@@ -84,22 +79,5 @@ async function selectIds(db: Db, kind: TargetKind, ids: string[]): Promise<strin
     }
 }
 
-const resourceExistenceRepository = createLazyRegistry<ResourceExistenceRepository>(
-    'resourceExistenceRepository',
-    createResourceExistenceRepository
-);
-
-/** The resource existence repository, built on first use. */
-export function getResourceExistenceRepository(): ResourceExistenceRepository {
-    return resourceExistenceRepository.get();
-}
-
-/**
- * Swap the resource existence repository, so a test can replace one method.
- * @internal
- */
-export function setResourceExistenceRepository(
-    repository: ResourceExistenceRepository
-): void {
-    resourceExistenceRepository.set(repository);
-}
+/** The resource existence repository. Stateless: the db handle resolves per call. */
+export const resourceExistenceRepository = createResourceExistenceRepository();

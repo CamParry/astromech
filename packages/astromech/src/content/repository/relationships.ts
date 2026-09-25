@@ -8,7 +8,6 @@ import type { FieldReference } from '@/fields/references';
 import type { ResourceType, TargetKind } from '@/types/domain';
 import { createRepository } from '@/database/repository/create-repository';
 import { relationshipsTable } from '@/database/tables';
-import { createLazyRegistry } from '@/registry';
 
 export type RelationshipRepository = ReturnType<typeof createRelationshipRepository>;
 
@@ -155,20 +154,5 @@ function createRelationshipRepository() {
     };
 }
 
-const relationshipRepository = createLazyRegistry<RelationshipRepository>(
-    'relationshipRepository',
-    createRelationshipRepository
-);
-
-/** The relationship index repository, built on first use. */
-export function getRelationshipRepository(): RelationshipRepository {
-    return relationshipRepository.get();
-}
-
-/**
- * Swap the relationship index repository, so a test can replace one method.
- * @internal
- */
-export function setRelationshipRepository(repository: RelationshipRepository): void {
-    relationshipRepository.set(repository);
-}
+/** The relationship index repository. Stateless: the db handle resolves per call. */
+export const relationshipRepository = createRelationshipRepository();

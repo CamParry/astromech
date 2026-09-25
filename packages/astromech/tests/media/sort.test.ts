@@ -9,7 +9,7 @@ import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { getMediaRepository } from '@/media/repository';
+import { mediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 
 const mediaService = currentServices.media;
@@ -26,9 +26,8 @@ beforeEach(async () => {
     setupTestConfig(makeTestConfig());
     setStorageDriver(noopStorage);
 
-    const repository = getMediaRepository();
     for (const row of FIXTURES) {
-        await repository.create({ ...row }, {});
+        await mediaRepository.create({ ...row }, {});
     }
 });
 

@@ -11,13 +11,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { noopStorage } from '@tests/fixtures';
 import { createFileTestDb, setupTestConfig } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import {
-    getRelationshipRepository,
-    setRelationshipRepository,
-} from '@/content/repository/relationships';
-import { getMediaRepository } from '@/media/repository';
+import { relationshipRepository } from '@/content/repository/relationships';
+import { mediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { makeTranslatableMediaConfig } from './media-config';
 
@@ -28,19 +25,10 @@ const api = currentServices.media;
 const state = { failing: false };
 
 beforeEach(() => {
-    const relationships = getRelationshipRepository();
-    setRelationshipRepository({
-        ...relationships,
-        replaceForSource: (
-            ...args: Parameters<typeof relationships.replaceForSource>
-        ): Promise<void> =>
-            state.failing
-                ? Promise.reject(new Error('boom'))
-                : relationships.replaceForSource(...args),
-    });
-    return (): void => {
-        setRelationshipRepository(relationships);
-    };
+    const { replaceForSource } = relationshipRepository;
+    vi.spyOn(relationshipRepository, 'replaceForSource').mockImplementation((...args) =>
+        state.failing ? Promise.reject(new Error('boom')) : replaceForSource(...args)
+    );
 });
 
 let dbCounter = 0;
@@ -56,7 +44,7 @@ beforeEach(async () => {
     setStorageDriver(noopStorage);
     state.failing = false;
 
-    const row = await getMediaRepository().create(
+    const row = await mediaRepository.create(
         { filename: 'photo.png', mimeType: 'image/png', size: 1 },
         { alt: 'first alt', fields: { credit: 'first credit' } }
     );

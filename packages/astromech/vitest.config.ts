@@ -21,6 +21,9 @@ const projects = [
             environment: 'node',
             pool,
             globalSetup,
+            // Undoes every `vi.spyOn` before the next test. Needed here most:
+            // with `isolate: false` a spy would otherwise outlive its file.
+            restoreMocks: true,
             // One module graph per worker instead of one per file, which
             // is where the speed-up comes from. `isolatedTests` names the
             // files that cannot live with it.
@@ -36,6 +39,7 @@ const projects = [
             environment: 'node',
             pool,
             globalSetup,
+            restoreMocks: true,
             include: isolatedTests,
         },
     },

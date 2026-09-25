@@ -8,7 +8,7 @@ import type { ResourceSpec } from './resources';
 import type { ScannedRow } from './unique';
 import type { DataField } from '@/types/fields';
 import type { EntryStatus, JsonObject, ResolvedConfig, User } from '@/types/index';
-import { getResourceExistenceRepository } from '@/content/repository/resource-existence';
+import { resourceExistenceRepository } from '@/content/repository/resource-existence';
 import { entryValidationMode } from '@/entries/validation-mode';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
@@ -73,7 +73,7 @@ export function fieldParseContext(
         resource: { kind: spec.kind, record: write.record },
         user: write.user,
         isUnique: isUniqueAmong(write.scan, write.excludeId),
-        entryTypes: (ids) => getResourceExistenceRepository().findEntryTypes(ids),
+        entryTypes: (ids) => resourceExistenceRepository.findEntryTypes(ids),
         ...(write.coerceOnly !== undefined ? { coerceOnly: write.coerceOnly } : {}),
         ...(validate !== undefined ? { validate } : {}),
     };

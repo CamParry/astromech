@@ -18,13 +18,12 @@ import { sql } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
-import { getRelationshipRepository } from '@/content/repository/relationships';
+import { relationshipRepository } from '@/content/repository/relationships';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { chunks } from '@/database/chunks';
 import { kyselyTableKey } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 import { mediaContentTable, mediaTable, mediaVersionsTable } from '@/database/tables';
-import { createLazyRegistry } from '@/registry';
 
 /** One locale of one media item, as the media service reads it. */
 export type MediaRow = ContentRow & {
@@ -61,8 +60,6 @@ type MediaFilePatch = Pick<
 
 /** The expression builder the joined list query is compiled against. */
 type JoinedEb = Parameters<JoinedWhere>[0];
-
-export type MediaRepository = ReturnType<typeof createMediaRepository>;
 
 /** The two joined rows plus the locale list, in the shape the service reads. */
 function toMediaRow(
@@ -225,7 +222,7 @@ function createMediaRepository() {
      * that is gone.
      */
     async function del(id: string): Promise<void> {
-        await getRelationshipRepository().deleteByResource(id, 'media');
+        await relationshipRepository.deleteByResource(id, 'media');
         await content.delete(id);
     }
 
@@ -252,20 +249,5 @@ function createMediaRepository() {
     };
 }
 
-const mediaRepository = createLazyRegistry<MediaRepository>(
-    'mediaRepository',
-    createMediaRepository
-);
-
-/** The media repository, built on first use. */
-export function getMediaRepository(): MediaRepository {
-    return mediaRepository.get();
-}
-
-/**
- * Swap the media repository, so a test can replace one method.
- * @internal
- */
-export function setMediaRepository(repository: MediaRepository): void {
-    mediaRepository.set(repository);
-}
+/** The media repository. Stateless: every handle and the default locale resolve per call. */
+export const mediaRepository = createMediaRepository();

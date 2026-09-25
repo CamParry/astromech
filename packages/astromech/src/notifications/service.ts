@@ -10,12 +10,12 @@
 
 import type { NotificationsService, NotifyInput } from '@/types/index';
 import { defineService } from '@/services/define-service';
-import { getUserRepository } from '@/users/repository';
+import { userRepository } from '@/users/repository';
 import { countNotifications } from './methods/count';
 import { dismissNotification } from './methods/dismiss';
 import { dismissAllNotifications } from './methods/dismiss-all';
 import { listNotifications } from './methods/list';
-import { getNotificationRepository } from './repository';
+import { notificationRepository } from './repository';
 
 export const notificationsDefinition = defineService<NotificationsService>(
     'notifications',
@@ -33,21 +33,19 @@ export const notificationsDefinition = defineService<NotificationsService>(
  * session.
  */
 export async function notify(input: NotifyInput): Promise<void> {
-    const users = getUserRepository();
-
     let userIds: string[];
 
     if ('user' in input.target) {
         userIds = [input.target.user];
     } else if ('role' in input.target) {
-        userIds = await users.findIdsByRole(input.target.role);
+        userIds = await userRepository.findIdsByRole(input.target.role);
     } else {
-        userIds = await users.findIds();
+        userIds = await userRepository.findIds();
     }
 
     if (userIds.length === 0) return;
 
-    await getNotificationRepository().createMany(
+    await notificationRepository.createMany(
         userIds.map((userId) => ({
             userId,
             type: input.type,

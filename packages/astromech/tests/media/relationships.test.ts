@@ -12,8 +12,8 @@ import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { getRelationshipRepository } from '@/content/repository/relationships';
-import { getMediaRepository } from '@/media/repository';
+import { relationshipRepository } from '@/content/repository/relationships';
+import { mediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { rebuildRelationshipIndex } from '@/transport/cli/relationship-index';
 
@@ -45,7 +45,7 @@ beforeEach(async () => {
     setStorageDriver(noopStorage);
     postA = (await entriesService.create({ type: 'post', data: { title: 'A' } })).id;
     postB = (await entriesService.create({ type: 'post', data: { title: 'B' } })).id;
-    const row = await getMediaRepository().create(
+    const row = await mediaRepository.create(
         { filename: 'photo.png', mimeType: 'image/png', size: 1 },
         {}
     );
@@ -54,13 +54,13 @@ beforeEach(async () => {
 
 /** The media item's index rows, ordered by target so two runs compare directly. */
 async function credits(): Promise<string[]> {
-    const rows = await getRelationshipRepository().findBySource(id, 'media');
+    const rows = await relationshipRepository.findBySource(id, 'media');
     return rows.map((row) => row.targetId).sort();
 }
 
 /** Every stored row, in a stable order, so the rebuild compares to the write path. */
 async function storedRows(): Promise<RelationshipRow[]> {
-    const rows = await getRelationshipRepository().findMany();
+    const rows = await relationshipRepository.findMany();
     return rows.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
 }
 

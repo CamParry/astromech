@@ -6,10 +6,10 @@
 import type { AstromechConfig } from '@/types/index';
 import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { getRelationshipRepository } from '@/content/repository/relationships';
-import { getMediaRepository, setMediaRepository } from '@/media/repository';
+import { relationshipRepository } from '@/content/repository/relationships';
+import { mediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 
 const entriesService = currentServices.entries;
@@ -49,7 +49,7 @@ function makeUsageConfig(): AstromechConfig {
 
 /** A media row, inserted through the repository so no driver or real bytes are needed. */
 async function createMedia(filename = 'a.png'): Promise<string> {
-    const row = await getMediaRepository().create(
+    const row = await mediaRepository.create(
         {
             filename,
             mimeType: 'image/png',
@@ -190,16 +190,18 @@ describe('mediaService.usedBy', () => {
             await createMedia('second.png'),
             'missing-media',
         ];
-        const relationships = getRelationshipRepository();
         for (const sourceId of mediaSources) {
-            await relationships.replaceForSource({ id: sourceId, kind: 'media' }, [
-                {
-                    schemaPath: 'credit',
-                    instancePath: 'credit',
-                    targetId: mediaId,
-                    targetKind: 'media',
-                },
-            ]);
+            await relationshipRepository.replaceForSource(
+                { id: sourceId, kind: 'media' },
+                [
+                    {
+                        schemaPath: 'credit',
+                        instancePath: 'credit',
+                        targetId: mediaId,
+                        targetKind: 'media',
+                    },
+                ]
+            );
         }
 
         const usage = await mediaService.usedBy({ id: mediaId });
@@ -231,15 +233,9 @@ describe('mediaService.usedBy', () => {
 });
 
 describe('the file-row read', () => {
-    const registered = getMediaRepository();
-
-    afterEach(() => {
-        setMediaRepository(registered);
-    });
-
-    it('comes from the registered media repository', async () => {
+    it('comes from the media repository', async () => {
         const mediaId = await createMedia();
-        setMediaRepository({ ...registered, findFile: () => Promise.resolve(null) });
+        vi.spyOn(mediaRepository, 'findFile').mockResolvedValue(null);
 
         await expect(mediaService.usedBy({ id: mediaId })).rejects.toThrow(/not found/);
     });

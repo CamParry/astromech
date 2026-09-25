@@ -20,7 +20,7 @@ import { join } from 'node:path';
 import { createFileTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { getRelationshipRepository } from '@/content/repository/relationships';
+import { relationshipRepository } from '@/content/repository/relationships';
 import { getDb } from '@/database/registry';
 import { getEntryRepository } from '@/entries/repository/registry';
 import { CapabilityError } from '@/errors/capability';
@@ -55,14 +55,14 @@ afterEach(() => {
 });
 
 function relationTargets(entryId: string): Promise<string[]> {
-    return getRelationshipRepository()
+    return relationshipRepository
         .findBySource(entryId, 'entry')
         .then((rels) => rels.map((r) => r.targetId).sort());
 }
 
 /** `sourceStaged` on every index row for a source (a boolean per row). */
 function relationStagedFlags(entryId: string): Promise<boolean[]> {
-    return getRelationshipRepository()
+    return relationshipRepository
         .findBySource(entryId, 'entry')
         .then((rels) => rels.map((r) => r.sourceStaged));
 }

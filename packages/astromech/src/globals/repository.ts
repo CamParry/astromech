@@ -12,7 +12,6 @@ import { createContentRepository } from '@/content/repository/content-table';
 import { kyselyTableKey } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 import { globalContentTable, globalsTable, globalVersionsTable } from '@/database/tables';
-import { createLazyRegistry } from '@/registry';
 
 /** One locale of one global, as the globals service reads it. */
 export type GlobalRow = ContentRow & { key: string };
@@ -103,20 +102,5 @@ function createGlobalRepository() {
     };
 }
 
-const globalRepository = createLazyRegistry<GlobalRepository>(
-    'globalRepository',
-    createGlobalRepository
-);
-
-/** The globals repository, built on first use. */
-export function getGlobalRepository(): GlobalRepository {
-    return globalRepository.get();
-}
-
-/**
- * Swap the globals repository, so a test can replace one method.
- * @internal
- */
-export function setGlobalRepository(repository: GlobalRepository): void {
-    globalRepository.set(repository);
-}
+/** The globals repository. Stateless: every handle and the default locale resolve per call. */
+export const globalRepository = createGlobalRepository();

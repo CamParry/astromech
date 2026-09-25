@@ -6,16 +6,16 @@
 
 import { describe, expect, it } from 'vitest';
 import { getEntriesTableRepository } from '@/entries/repository/registry';
-import { getGlobalRepository } from '@/globals/repository';
-import { getMediaRepository } from '@/media/repository';
-import { getUserRepository } from '@/users/repository';
+import { globalRepository } from '@/globals/repository';
+import { mediaRepository } from '@/media/repository';
+import { userRepository } from '@/users/repository';
 
 const lists = {
-    user: getUserRepository,
-    media: getMediaRepository,
+    user: () => userRepository,
+    media: () => mediaRepository,
     entries: getEntriesTableRepository,
 };
-const repositories = { ...lists, global: getGlobalRepository };
+const repositories = { ...lists, global: () => globalRepository };
 
 describe('resource repository surface', () => {
     it.each(Object.entries(repositories))('%s exposes findOne', (_, get) => {

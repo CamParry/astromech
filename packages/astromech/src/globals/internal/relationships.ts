@@ -6,10 +6,10 @@
 
 import { createContentRelationships } from '@/content/relationships';
 import { RESOURCE_SPECS } from '@/content/resources';
-import { getGlobalRepository } from '@/globals/repository';
+import { globalRepository } from '@/globals/repository';
 
 const relationships = createContentRelationships({
-    repository: getGlobalRepository,
+    repository: globalRepository,
     ownerColumn: 'globalId',
     kind: 'global',
     // A global no longer declared has no fields, so it holds no references.

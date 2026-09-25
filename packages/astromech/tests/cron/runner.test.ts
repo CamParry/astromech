@@ -13,7 +13,7 @@ import { Cron } from 'croner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { systemAppContext } from '@/app-context/app-context';
 import { registerCronJob } from '@/cron/registry';
-import { getCronRepository, setCronRepository } from '@/cron/repository';
+import { cronRepository } from '@/cron/repository';
 import { onTick, runDue } from '@/cron/runner';
 import { decodeWith, encodePatchWith } from '@/database/codec';
 import { cronTable } from '@/database/tables';
@@ -483,22 +483,17 @@ describe('onTick / runDue', () => {
         await runDue(new Date('2024-06-01T11:00:00.000Z'), systemAppContext());
         callCount = 0;
 
-        const registered = getCronRepository();
+        const { due } = cronRepository;
         const recorded: string[] = [];
-        setCronRepository({
-            ...registered,
-            due: () => registered.due(new Date('2100-01-01T00:00:00.000Z')),
-            claim: () => Promise.resolve(false),
-            recordRunAndRelease: (name) => {
-                recorded.push(name);
-                return Promise.resolve();
-            },
+        vi.spyOn(cronRepository, 'due').mockImplementation(() =>
+            due(new Date('2100-01-01T00:00:00.000Z'))
+        );
+        vi.spyOn(cronRepository, 'claim').mockResolvedValue(false);
+        vi.spyOn(cronRepository, 'recordRunAndRelease').mockImplementation((name) => {
+            recorded.push(name);
+            return Promise.resolve();
         });
-        try {
-            await runDue(new Date('2024-06-01T12:00:00.000Z'), systemAppContext());
-        } finally {
-            setCronRepository(registered);
-        }
+        await runDue(new Date('2024-06-01T12:00:00.000Z'), systemAppContext());
 
         expect(callCount).toBe(0);
         expect(recorded).toEqual([]);

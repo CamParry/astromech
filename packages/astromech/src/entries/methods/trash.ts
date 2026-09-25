@@ -1,5 +1,5 @@
 import { z } from '@hono/zod-openapi';
-import { getRelationshipRepository } from '@/content/repository/relationships';
+import { relationshipRepository } from '@/content/repository/relationships';
 import { transaction } from '@/database/transaction';
 import { CapabilityError } from '@/errors/capability';
 import { defineServiceMethod } from '@/services/define-service-method';
@@ -55,11 +55,10 @@ export const emptyTrash = defineServiceMethod({
         if (!trash) throw new CapabilityError('entry', type, 'trash');
 
         const trashed = await repository.findMany({ type, locale: 'all', trashed: true });
-        const relationships = getRelationshipRepository();
 
         await transaction(async () => {
             for (const entryId of new Set(trashed.map((entry) => entry.id))) {
-                await relationships.deleteByResource(entryId, 'entry');
+                await relationshipRepository.deleteByResource(entryId, 'entry');
             }
             await trash.emptyTrash(type);
         });

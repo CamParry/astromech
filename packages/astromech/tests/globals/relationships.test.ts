@@ -10,9 +10,9 @@ import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { getRelationshipRepository } from '@/content/repository/relationships';
+import { relationshipRepository } from '@/content/repository/relationships';
 import { assertRequiredCapability } from '@/globals/internal/global';
-import { getMediaRepository } from '@/media/repository';
+import { mediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { rebuildRelationshipIndex } from '@/transport/cli/relationship-index';
 
@@ -46,7 +46,7 @@ beforeEach(async () => {
     setupTestConfig(makeConfig());
     setStorageDriver(noopStorage);
     mediaId = (
-        await getMediaRepository().create(
+        await mediaRepository.create(
             { filename: 'logo.png', mimeType: 'image/png', size: 1 },
             {}
         )
@@ -56,7 +56,7 @@ beforeEach(async () => {
 
 /** Every stored row, in a stable order, so the rebuild compares to the write path. */
 async function storedRows(): Promise<RelationshipRow[]> {
-    const rows = await getRelationshipRepository().findMany();
+    const rows = await relationshipRepository.findMany();
     return rows.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
 }
 
@@ -67,7 +67,7 @@ describe('global relationships', () => {
             data: { fields: { logo: mediaId, home: postId } },
         });
 
-        const rows = await getRelationshipRepository().findBySource(saved.id, 'global');
+        const rows = await relationshipRepository.findBySource(saved.id, 'global');
         expect(
             rows.map((row) => [row.sourceType, row.schemaPath, row.targetId]).sort()
         ).toEqual([
@@ -95,14 +95,14 @@ describe('global relationships', () => {
             data: { fields: { logo: mediaId } },
         });
 
-        const rows = await getRelationshipRepository().findByTarget(mediaId, 'media', {
+        const rows = await relationshipRepository.findByTarget(mediaId, 'media', {
             includeStaged: true,
         });
         expect(rows.map((row) => row.sourceStaged)).toEqual([true]);
 
         await globalsService.deleteStaged({ key: 'site' });
         expect(
-            await getRelationshipRepository().findByTarget(mediaId, 'media', {
+            await relationshipRepository.findByTarget(mediaId, 'media', {
                 includeStaged: true,
             })
         ).toEqual([]);
@@ -127,9 +127,7 @@ describe('global relationships', () => {
     it('stays out of an entry-type-scoped read of the index', async () => {
         await globalsService.update({ key: 'site', data: { fields: { logo: mediaId } } });
 
-        expect(await getRelationshipRepository().findMany({ entryType: 'site' })).toEqual(
-            []
-        );
+        expect(await relationshipRepository.findMany({ entryType: 'site' })).toEqual([]);
     });
 
     it('rebuilds exactly what the writes stored', async () => {
@@ -139,7 +137,7 @@ describe('global relationships', () => {
         });
         const written = await storedRows();
 
-        await getRelationshipRepository().deleteMany();
+        await relationshipRepository.deleteMany();
         await rebuildRelationshipIndex();
 
         expect(await storedRows()).toEqual(written);

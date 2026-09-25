@@ -11,7 +11,7 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { mountRouter, seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { getMediaRepository } from '@/media/repository';
+import { mediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { mediaRouter } from '@/transport/http/routes/media';
 
@@ -29,7 +29,7 @@ beforeEach(async () => {
     await seedTestUser(await createTestDb());
     setupTestConfig(makeTestConfig());
     setStorageDriver(noopStorage);
-    const row = await getMediaRepository().create(
+    const row = await mediaRepository.create(
         {
             filename: 'photo.png',
             mimeType: 'image/png',
@@ -54,7 +54,7 @@ describe('GET /media', () => {
     });
 
     it('filters on the mimeType bucket', async () => {
-        await getMediaRepository().create(
+        await mediaRepository.create(
             {
                 filename: 'notes.pdf',
                 mimeType: 'application/pdf',
@@ -79,7 +79,7 @@ describe('GET /media', () => {
     });
 
     it('honours search, limit=all and an allowed sort field', async () => {
-        await getMediaRepository().create(
+        await mediaRepository.create(
             {
                 filename: 'apple.png',
                 mimeType: 'image/png',

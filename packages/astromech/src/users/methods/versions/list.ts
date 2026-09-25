@@ -4,7 +4,7 @@ import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { getUserRepository } from '../../repository';
+import { userRepository } from '../../repository';
 
 /**
  * Lists the saved versions of one locale of a user's fields, newest first.
@@ -23,11 +23,10 @@ export const listUserVersions = defineServiceMethod({
             undefined,
             params.locale
         );
-        const repository = getUserRepository();
-        const current = await repository.findOne(params.id, { locale });
+        const current = await userRepository.findOne(params.id, { locale });
         if (!current) throw new ResourceNotFoundError('user', { id: params.id, locale });
 
-        const rows = await repository.versions.findMany(current.contentId);
+        const rows = await userRepository.versions.findMany(current.contentId);
         return rows.map((row) => ({
             id: row.id,
             // A version row names the content row it snapshots, so the user and

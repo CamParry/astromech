@@ -6,27 +6,22 @@
 import type { Db } from '@/database/types';
 import type { EntriesTableRepository } from '@/entries/repository/registry';
 import { createTestDb, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { systemAppContext } from '@/app-context/app-context';
-import { getRelationshipRepository } from '@/content/repository/relationships';
+import { relationshipRepository } from '@/content/repository/relationships';
 import { createRepository } from '@/database/repository/create-repository';
 import { entriesTable } from '@/database/tables';
 import { trashPurgeJob } from '@/entries/jobs/trash-purge';
-import {
-    getEntryMaintenanceRepository,
-    setEntryMaintenanceRepository,
-} from '@/entries/repository/maintenance';
+import { entryMaintenanceRepository } from '@/entries/repository/maintenance';
 import { getEntriesTableRepository } from '@/entries/repository/registry';
 
 let db: Db;
 let entryRepository: EntriesTableRepository;
-let maintenance: ReturnType<typeof getEntryMaintenanceRepository>;
 
 beforeEach(async () => {
     db = await createTestDb();
     setupTestConfig();
     entryRepository = getEntriesTableRepository();
-    maintenance = getEntryMaintenanceRepository();
 });
 
 describe('publishDueScheduled', () => {
@@ -63,7 +58,7 @@ describe('publishDueScheduled', () => {
             publishedAt: past,
         });
 
-        const count = await maintenance.publishDueScheduled(new Date());
+        const count = await entryMaintenanceRepository.publishDueScheduled(new Date());
         expect(count).toBe(2);
 
         expect(
@@ -95,7 +90,7 @@ describe('publishDueScheduled', () => {
             { title: 'DE', slug: 'de-not-due', status: 'unpublished' }
         );
 
-        expect(await maintenance.publishDueScheduled(new Date())).toBe(1);
+        expect(await entryMaintenanceRepository.publishDueScheduled(new Date())).toBe(1);
 
         expect(
             (await entryRepository.findOne({ type: 'post', id: entry.id }))?.status
@@ -119,7 +114,7 @@ describe('publishDueScheduled', () => {
             { title: 'Staged', slug: 'live', status: 'scheduled', publishedAt: past }
         );
 
-        expect(await maintenance.publishDueScheduled(new Date())).toBe(0);
+        expect(await entryMaintenanceRepository.publishDueScheduled(new Date())).toBe(0);
 
         const staged = await entryRepository.staging.findOne({ id: entry.id });
         expect(staged?.status).toBe('scheduled');
@@ -139,7 +134,7 @@ describe('publishDueScheduled', () => {
         });
         await entryRepository.trash.trash(trashed.id);
 
-        const count = await maintenance.publishDueScheduled(new Date());
+        const count = await entryMaintenanceRepository.publishDueScheduled(new Date());
         expect(count).toBe(0);
     });
 });
@@ -165,7 +160,7 @@ describe('purgeTrashedBefore', () => {
         await entryRepository.trash.trash(recent.id);
 
         const cutoff = new Date(Date.now() - 1000);
-        const purged = await maintenance.purgeTrashedBefore(cutoff);
+        const purged = await entryMaintenanceRepository.purgeTrashedBefore(cutoff);
         expect(purged).toEqual([old.id]);
 
         expect(
@@ -188,7 +183,7 @@ describe('purgeTrashedBefore', () => {
             title: 'Live',
             slug: 'live',
         });
-        const purged = await maintenance.purgeTrashedBefore(new Date());
+        const purged = await entryMaintenanceRepository.purgeTrashedBefore(new Date());
         expect(purged).toEqual([]);
         expect(
             await entryRepository.findOne({ type: 'post', id: live.id })
@@ -216,8 +211,7 @@ describe('trashPurgeJob', () => {
             deletedAt: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000),
         });
 
-        const relationships = getRelationshipRepository();
-        await relationships.replaceForSource(
+        await relationshipRepository.replaceForSource(
             { id: doomed.id, kind: 'entry', type: 'post' },
             [
                 {
@@ -228,7 +222,7 @@ describe('trashPurgeJob', () => {
                 },
             ]
         );
-        await relationships.replaceForSource(
+        await relationshipRepository.replaceForSource(
             { id: survivor.id, kind: 'entry', type: 'post' },
             [
                 {
@@ -254,29 +248,23 @@ describe('trashPurgeJob', () => {
                 { includeTrashed: true }
             )
         ).toBeNull();
-        expect(await relationships.findBySource(doomed.id, 'entry')).toEqual([]);
-        expect(await relationships.findByTarget(doomed.id, 'entry')).toEqual([]);
+        expect(await relationshipRepository.findBySource(doomed.id, 'entry')).toEqual([]);
+        expect(await relationshipRepository.findByTarget(doomed.id, 'entry')).toEqual([]);
         // Only references touching the purged id go: the survivor keeps the rest.
-        const kept = await relationships.findBySource(survivor.id, 'entry');
+        const kept = await relationshipRepository.findBySource(survivor.id, 'entry');
         expect(kept.map((row) => row.targetId)).toEqual([survivor.id]);
     });
 
     it('purges what was trashed before the retention window', async () => {
-        const registered = getEntryMaintenanceRepository();
         const cutoffs: Date[] = [];
-        setEntryMaintenanceRepository({
-            ...registered,
-            purgeTrashedBefore: (cutoff) => {
+        vi.spyOn(entryMaintenanceRepository, 'purgeTrashedBefore').mockImplementation(
+            (cutoff) => {
                 cutoffs.push(cutoff);
                 return Promise.resolve([]);
-            },
-        });
+            }
+        );
         const before = Date.now();
-        try {
-            await trashPurgeJob.handler(systemAppContext());
-        } finally {
-            setEntryMaintenanceRepository(registered);
-        }
+        await trashPurgeJob.handler(systemAppContext());
 
         const retention = systemAppContext().config.trash.retentionDays;
         const expected = before - retention * 24 * 60 * 60 * 1000;

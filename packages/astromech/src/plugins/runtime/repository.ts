@@ -6,7 +6,6 @@
 
 import { createRepository } from '@/database/repository/create-repository';
 import { pluginsTable } from '@/database/tables';
-import { createLazyRegistry } from '@/registry';
 
 export type PluginTrackingRepository = ReturnType<typeof createPluginTrackingRepository>;
 
@@ -38,20 +37,5 @@ function createPluginTrackingRepository() {
     return { upsert, findPackages };
 }
 
-const pluginTrackingRepository = createLazyRegistry<PluginTrackingRepository>(
-    'pluginTrackingRepository',
-    createPluginTrackingRepository
-);
-
-/** The plugin-tracking repository, built on first use. */
-export function getPluginTrackingRepository(): PluginTrackingRepository {
-    return pluginTrackingRepository.get();
-}
-
-/**
- * Swap the plugin-tracking repository, so a test can replace one method.
- * @internal
- */
-export function setPluginTrackingRepository(repository: PluginTrackingRepository): void {
-    pluginTrackingRepository.set(repository);
-}
+/** The plugin-tracking repository. Stateless: the db handle resolves per call. */
+export const pluginTrackingRepository = createPluginTrackingRepository();

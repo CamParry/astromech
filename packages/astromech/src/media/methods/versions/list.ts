@@ -4,7 +4,7 @@ import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { getMediaRepository } from '../../repository';
+import { mediaRepository } from '../../repository';
 
 /**
  * Lists the saved versions of one locale of a media item, newest first. Unlike a
@@ -23,11 +23,10 @@ export const listMediaVersions = defineServiceMethod({
             undefined,
             params.locale
         );
-        const repository = getMediaRepository();
-        const current = await repository.findOne(params.id, { locale });
+        const current = await mediaRepository.findOne(params.id, { locale });
         if (!current) throw new ResourceNotFoundError('media', { id: params.id, locale });
 
-        const rows = await repository.versions.findMany(current.contentId);
+        const rows = await mediaRepository.versions.findMany(current.contentId);
         return rows.map((row) => ({
             id: row.id,
             // A version row names the content row it snapshots, so the item and

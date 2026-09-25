@@ -84,7 +84,7 @@ Every swappable backend is a **driver**: a plain object the site's config names 
 
 AI models follow the same pattern. Optional capabilities (`dump`, `restore` on `DatabaseDriver`) are feature-detected, not switched on dialect.
 
-Each module keeps its driver in its own **registry**, built on `registry.ts` over the single `globalThis.__astromech` namespace. There are no module-scope singletons: the package can load more than once in a process (two builds, source and dist, Vite aliases), and the global is the only namespace every copy shares. Config follows the same rule: `createAstromech` stores it once, and readers call `getConfig()` at call time.
+Each module keeps its driver in its own **registry**, built on `registry.ts` over the single `globalThis.__astromech` namespace. There are no module-scope singletons: the package can load more than once in a process (two builds, source and dist, Vite aliases), and the global is the only namespace every copy shares. A repository is the exception: it is a module-level object (`userRepository`), which is safe because it holds no state. It captures table descriptors and reads the db handle from its registry on every call, so two copies of the module behave the same. Config follows the same rule: `createAstromech` stores it once, and readers call `getConfig()` at call time.
 
 ## Entries and fields
 

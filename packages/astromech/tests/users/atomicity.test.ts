@@ -11,12 +11,9 @@ import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createFileTestDb, setupTestConfig } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import {
-    getRelationshipRepository,
-    setRelationshipRepository,
-} from '@/content/repository/relationships';
+import { relationshipRepository } from '@/content/repository/relationships';
 import { createRepository } from '@/database/repository/create-repository';
 import { entriesTable } from '@/database/tables';
 import { makeTranslatableUsersConfig } from './users-config';
@@ -28,25 +25,15 @@ const api = currentServices.users;
 const state = { failing: false, failingDelete: false };
 
 beforeEach(() => {
-    const relationships = getRelationshipRepository();
-    setRelationshipRepository({
-        ...relationships,
-        replaceForSource: (
-            ...args: Parameters<typeof relationships.replaceForSource>
-        ): Promise<void> =>
-            state.failing
-                ? Promise.reject(new Error('boom'))
-                : relationships.replaceForSource(...args),
-        deleteByResource: (
-            ...args: Parameters<typeof relationships.deleteByResource>
-        ): Promise<void> =>
-            state.failingDelete
-                ? Promise.reject(new Error('boom'))
-                : relationships.deleteByResource(...args),
-    });
-    return (): void => {
-        setRelationshipRepository(relationships);
-    };
+    const { replaceForSource, deleteByResource } = relationshipRepository;
+    vi.spyOn(relationshipRepository, 'replaceForSource').mockImplementation((...args) =>
+        state.failing ? Promise.reject(new Error('boom')) : replaceForSource(...args)
+    );
+    vi.spyOn(relationshipRepository, 'deleteByResource').mockImplementation((...args) =>
+        state.failingDelete
+            ? Promise.reject(new Error('boom'))
+            : deleteByResource(...args)
+    );
 });
 
 let dbCounter = 0;

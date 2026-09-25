@@ -7,8 +7,8 @@
  */
 
 import type { CronJob } from '@/cron/registry';
-import { getRelationshipRepository } from '@/content/repository/relationships';
-import { getEntryMaintenanceRepository } from '../repository/maintenance';
+import { relationshipRepository } from '@/content/repository/relationships';
+import { entryMaintenanceRepository } from '../repository/maintenance';
 
 export const trashPurgeJob: CronJob = {
     name: 'trash-purge',
@@ -19,12 +19,11 @@ export const trashPurgeJob: CronJob = {
         const cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - config.trash.retentionDays);
 
-        const purged = await getEntryMaintenanceRepository().purgeTrashedBefore(cutoff);
+        const purged = await entryMaintenanceRepository.purgeTrashedBefore(cutoff);
         // Both directions: the references a purged entry held, and the ones other
         // entries still record as pointing at it.
-        const relationships = getRelationshipRepository();
         for (const id of purged) {
-            await relationships.deleteByResource(id, 'entry');
+            await relationshipRepository.deleteByResource(id, 'entry');
         }
     },
 };

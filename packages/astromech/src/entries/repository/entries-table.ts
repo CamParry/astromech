@@ -23,7 +23,7 @@ import type { Expression, SqlBool } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
-import { getResourceExistenceRepository } from '@/content/repository/resource-existence';
+import { resourceExistenceRepository } from '@/content/repository/resource-existence';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { encodePatchWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
@@ -237,7 +237,7 @@ export function createEntriesTableRepository() {
 
     /** Ids with a row in `entries` — trashed entries included. */
     async function existingIds(ids: string[]): Promise<Set<string>> {
-        return getResourceExistenceRepository().findIds('entry', ids);
+        return resourceExistenceRepository.findIds('entry', ids);
     }
 
     async function uniqueSlug(

@@ -16,7 +16,7 @@ import { createFirstAdmin } from '@/auth/setup';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { decodeWith } from '@/database/codec';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
-import { getUserRepository } from '@/users/repository';
+import { userRepository } from '@/users/repository';
 import { usersTable } from '@/users/tables';
 
 const usersService = currentServices.users;
@@ -210,7 +210,7 @@ describe('first-run setup', () => {
      */
     it('writes ISO-8601 TEXT timestamps, the same format our own writes store', async () => {
         await createFirstAdmin({ ...ADMIN, email: 'stamp@test.dev' });
-        await getUserRepository().create(
+        await userRepository.create(
             {
                 email: 'ours@test.dev',
                 name: 'Ours',

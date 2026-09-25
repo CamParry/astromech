@@ -5,7 +5,7 @@ import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { toMedia } from '../internal/to-media';
-import { getMediaRepository } from '../repository';
+import { mediaRepository } from '../repository';
 
 /**
  * Read one media item by id, or null when there is no such row. A locale with no
@@ -24,7 +24,7 @@ export const getMedia = defineServiceMethod({
             undefined,
             params.locale
         );
-        const row = await getMediaRepository().findOne(params.id, {
+        const row = await mediaRepository.findOne(params.id, {
             locale,
             fallbackLocale: defaultContentLocale(ctx.config),
         });

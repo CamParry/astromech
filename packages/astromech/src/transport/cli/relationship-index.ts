@@ -2,7 +2,7 @@ import type { RelationshipIndexSource } from '@/content/repository/relationships
 import type { RelationshipRow } from '@/database/tables';
 import type { ResourceType } from '@/types/domain';
 import { getConfig } from '@/config/registry';
-import { getRelationshipRepository } from '@/content/repository/relationships';
+import { relationshipRepository } from '@/content/repository/relationships';
 import { allEntryRelationships } from '@/entries/internal/relationships';
 import { allGlobalRelationships } from '@/globals/internal/relationships';
 import { allMediaRelationships } from '@/media/internal/relationships';
@@ -41,19 +41,18 @@ export async function rebuildRelationshipIndex(
     opts?: RelationshipIndexScope
 ): Promise<RebuildReport> {
     const sources = await collectSources(opts);
-    const repository = getRelationshipRepository();
 
     let rowsWritten = 0;
     for (const { source, references } of sources) {
         // Per source rather than one bulk write, so the chunking that keeps an
         // INSERT under D1's 100-bound-parameter cap keeps applying.
-        await repository.replaceForSource(source, references);
+        await relationshipRepository.replaceForSource(source, references);
         rowsWritten += references.length;
     }
 
     // Read AFTER the replaces: what is left over then belongs to sources that no
     // longer exist, which no `replaceForSource` would ever reach.
-    const stored = await repository.findMany(storedScope(opts));
+    const stored = await relationshipRepository.findMany(storedScope(opts));
     const live = new Set(sources.map(({ source }) => sourceKey(source.id, source.kind)));
     const orphanSources = new Map<string, { id: string; kind: ResourceType }>();
     let orphanRowsRemoved = 0;
@@ -64,7 +63,7 @@ export async function rebuildRelationshipIndex(
         orphanSources.set(key, { id: row.sourceId, kind: row.sourceKind });
     }
     for (const { id, kind } of orphanSources.values()) {
-        await repository.deleteBySource(id, kind);
+        await relationshipRepository.deleteBySource(id, kind);
     }
 
     return { sourcesScanned: sources.length, rowsWritten, orphanRowsRemoved };
@@ -92,7 +91,7 @@ export async function checkRelationshipIndex(
         }
     }
 
-    const stored = await getRelationshipRepository().findMany(storedScope(opts));
+    const stored = await relationshipRepository.findMany(storedScope(opts));
     const storedByKey = new Map(stored.map((row) => [rowKey(row), row]));
 
     const mismatched: DriftReport['mismatched'] = [];

@@ -30,7 +30,7 @@ import {
     resetBindings,
     resolveBinding,
 } from '@/integrations/cloudflare/bindings';
-import { getUserRepository } from '@/users/repository';
+import { userRepository } from '@/users/repository';
 
 /** Test-only schema; deliberately unrelated to the app's `DB` type. */
 type TestSchema = {
@@ -162,14 +162,13 @@ describe('d1() against local emulation', () => {
             updated_at TEXT NOT NULL
         )`.execute(db);
         setDb(db as unknown as Db);
-        const users = getUserRepository();
 
-        const first = await users.createIfEmpty({
+        const first = await userRepository.createIfEmpty({
             email: 'first@test.dev',
             name: 'First',
             role: 'admin',
         });
-        const second = await users.createIfEmpty({
+        const second = await userRepository.createIfEmpty({
             email: 'second@test.dev',
             name: 'Second',
             role: 'admin',

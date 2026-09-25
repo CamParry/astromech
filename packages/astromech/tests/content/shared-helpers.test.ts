@@ -11,7 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { pruneDanglingRelations } from '@/content/dangling-relations';
 import { mergeContentReferences } from '@/content/relationships';
-import { getRelationshipRepository } from '@/content/repository/relationships';
+import { relationshipRepository } from '@/content/repository/relationships';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { inheritSharedFields, propagateSharedFields } from '@/content/translatable';
 import { isUniqueAmong } from '@/content/unique';
@@ -126,7 +126,7 @@ describe('inheritSharedFields and propagateSharedFields', () => {
 describe('the relationship helpers', () => {
     it('indexes nothing for a global row that does not exist', async () => {
         await syncGlobalRelationships(config, 'no-such-global');
-        expect(await getRelationshipRepository().findMany()).toEqual([]);
+        expect(await relationshipRepository.findMany()).toEqual([]);
     });
 
     it('marks a reference staged only when no canonical row holds it', () => {
@@ -210,7 +210,7 @@ describe('listUsage', () => {
             type: 'post',
             data: { title: 'T' },
         });
-        await getRelationshipRepository().replaceForSource(
+        await relationshipRepository.replaceForSource(
             { id: 'gone', kind: 'entry', type: 'post' },
             [
                 {

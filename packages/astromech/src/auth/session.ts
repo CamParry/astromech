@@ -10,7 +10,7 @@ import { getDefaultContentLocale } from '@/config/content-locale';
 import { getConfig } from '@/config/registry';
 import { resolveRole } from '@/permissions/roles';
 import { toUser } from '@/users/internal/to-user';
-import { getUserRepository } from '@/users/repository';
+import { userRepository } from '@/users/repository';
 import { log } from '@/utilities/log';
 
 /** What Better Auth's `getSession` resolves to — null when there is no session. */
@@ -32,7 +32,7 @@ export async function getSession(
     if (!session?.user) return null;
 
     // Load the full user row (Better Auth session may not include custom fields)
-    const userRow = await getUserRepository().findOne(session.user.id, {
+    const userRow = await userRepository.findOne(session.user.id, {
         fallbackLocale: getDefaultContentLocale(),
     });
     if (!userRow) return null;

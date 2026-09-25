@@ -13,7 +13,7 @@ import { defineServiceMethod } from '@/services/define-service-method';
 import { assertKeepsAnAdmin } from '../internal/last-admin';
 import { syncUserRelationships } from '../internal/relationships';
 import { toUser } from '../internal/to-user';
-import { getUserRepository } from '../repository';
+import { userRepository } from '../repository';
 import { updateUserSchema } from '../schema';
 
 /**
@@ -42,20 +42,19 @@ export const updateUser = defineServiceMethod({
             undefined,
             params.locale
         );
-        const repository = getUserRepository();
         const fallbackLocale = defaultContentLocale(ctx.config);
 
         // The row this write edits, or — when the locale has none — the
         // default-locale row the new one is copied from.
-        const current = await repository.findOne(id, { locale });
-        const base = current ?? (await repository.findOne(id, { fallbackLocale }));
+        const current = await userRepository.findOne(id, { locale });
+        const base = current ?? (await userRepository.findOne(id, { fallbackLocale }));
         if (!base) throw new ResourceNotFoundError('user', { id });
 
         const config = ctx.config;
         if (data.role !== undefined) {
             getRole(config, data.role);
             await assertKeepsAnAdmin(
-                repository,
+                userRepository,
                 base,
                 data.role,
                 'Cannot remove the last administrator'
@@ -79,7 +78,7 @@ export const updateUser = defineServiceMethod({
                           operation: 'update',
                           record: toUser(base),
                           user: ctx.user,
-                          scan: () => repository.findByLocale(locale),
+                          scan: () => userRepository.findByLocale(locale),
                           excludeId: id,
                       }
                   );
@@ -97,16 +96,16 @@ export const updateUser = defineServiceMethod({
             ) {
                 await snapshotVersion(
                     RESOURCE_SPECS.user,
-                    repository.versions,
+                    userRepository.versions,
                     current,
                     ctx.user
                 );
             }
             if (name !== undefined || email !== undefined || role !== undefined) {
-                await repository.updateAccount(id, { name, email, role });
+                await userRepository.updateAccount(id, { name, email, role });
             }
             if (fields !== undefined) {
-                await repository.update(
+                await userRepository.update(
                     { id, locale },
                     {
                         fields,
@@ -121,7 +120,7 @@ export const updateUser = defineServiceMethod({
             // user's other locales alone.
             if (fields !== undefined && patch !== undefined) {
                 await propagateSharedFields(RESOURCE_SPECS.user, config, {
-                    translatable: repository.translatable,
+                    translatable: userRepository.translatable,
                     record: { id, locale },
                     fields,
                     patchedFieldNames: patchedNames,
@@ -130,7 +129,7 @@ export const updateUser = defineServiceMethod({
             }
         });
 
-        const updated = await repository.findOne(id, { locale, fallbackLocale });
+        const updated = await userRepository.findOne(id, { locale, fallbackLocale });
         if (!updated) throw new ResourceNotFoundError('user', { id });
         return toUser(updated);
     },

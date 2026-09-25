@@ -9,12 +9,9 @@ import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createFileTestDb, setupTestConfig } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import {
-    getRelationshipRepository,
-    setRelationshipRepository,
-} from '@/content/repository/relationships';
+import { relationshipRepository } from '@/content/repository/relationships';
 import { getDb } from '@/database/registry';
 
 const entriesService = currentServices.entries;
@@ -23,14 +20,9 @@ const entriesService = currentServices.entries;
 // Fail `replaceForSource` so the transaction rolls back; everything else
 // delegates to the real repository.
 beforeEach(() => {
-    const relationships = getRelationshipRepository();
-    setRelationshipRepository({
-        ...relationships,
-        replaceForSource: (): Promise<void> => Promise.reject(new Error('boom')),
-    });
-    return (): void => {
-        setRelationshipRepository(relationships);
-    };
+    vi.spyOn(relationshipRepository, 'replaceForSource').mockRejectedValue(
+        new Error('boom')
+    );
 });
 
 const api = entriesService;

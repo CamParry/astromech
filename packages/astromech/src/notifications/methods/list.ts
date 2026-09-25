@@ -3,7 +3,7 @@ import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { subjectId } from '../internal/subject';
 import { toNotification } from '../internal/to-notification';
-import { getNotificationRepository } from '../repository';
+import { notificationRepository } from '../repository';
 
 /** The caller's own undismissed notifications, newest first. */
 export const listNotifications = defineServiceMethod({
@@ -13,7 +13,7 @@ export const listNotifications = defineServiceMethod({
     sessionScoped: true,
     mutates: false,
     async handler(_params, ctx): Promise<Notification[]> {
-        const rows = await getNotificationRepository().findByUser(subjectId(ctx.user));
+        const rows = await notificationRepository.findByUser(subjectId(ctx.user));
         return rows.map(toNotification);
     },
 });

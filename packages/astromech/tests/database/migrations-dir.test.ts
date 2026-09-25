@@ -14,7 +14,7 @@ import { createClient } from '@libsql/client';
 import { LibsqlDialect } from '@libsql/kysely-libsql';
 import { makeTestConfig } from '@tests/harness';
 import { CamelCasePlugin, Kysely, sql } from 'kysely';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolveConfig } from '@/config/resolve';
 import { resolveMigrationsDir } from '@/database/app-migrations';
 import { generateMigrations } from '@/database/generate';
@@ -34,7 +34,6 @@ beforeAll(async () => {
         join(siteDir, 'node_modules'),
         'dir'
     );
-    vi.spyOn(process, 'cwd').mockReturnValue(siteDir);
 
     client = createClient({ url: `file:${join(siteDir, 'database.db')}` });
     db = new Kysely<DB>({
@@ -45,7 +44,13 @@ beforeAll(async () => {
     });
 });
 
+// Per test, since `restoreMocks` undoes every spy before each test runs.
+beforeEach(() => {
+    vi.spyOn(process, 'cwd').mockReturnValue(siteDir);
+});
+
 afterAll(async () => {
+    // Before the next file's hooks, which `restoreMocks` does not reach.
     vi.restoreAllMocks();
     await db.destroy();
     client.close();

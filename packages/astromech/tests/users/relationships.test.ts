@@ -12,7 +12,7 @@ import type { Kysely } from 'kysely';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
-import { getRelationshipRepository } from '@/content/repository/relationships';
+import { relationshipRepository } from '@/content/repository/relationships';
 import { encodeWith } from '@/database/codec';
 import { usersTable } from '@/database/tables';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
@@ -51,7 +51,7 @@ beforeEach(async () => {
 
 /** The user's index rows, ordered by target so two runs compare directly. */
 async function credits(): Promise<string[]> {
-    const rows = await getRelationshipRepository().findBySource(id, 'user');
+    const rows = await relationshipRepository.findBySource(id, 'user');
     return rows.map((row) => row.targetId).sort();
 }
 
@@ -107,13 +107,13 @@ describe('user relationships across locales', () => {
             locale: 'fr',
             data: { fields: { credit: postB } },
         });
-        const written = (await getRelationshipRepository().findMany()).sort((a, b) =>
+        const written = (await relationshipRepository.findMany()).sort((a, b) =>
             JSON.stringify(a).localeCompare(JSON.stringify(b))
         );
 
         await rebuildRelationshipIndex();
 
-        const rebuilt = (await getRelationshipRepository().findMany()).sort((a, b) =>
+        const rebuilt = (await relationshipRepository.findMany()).sort((a, b) =>
             JSON.stringify(a).localeCompare(JSON.stringify(b))
         );
         expect(rebuilt).toEqual(written);
@@ -124,7 +124,7 @@ describe('user relationships across locales', () => {
 
         await rebuildRelationshipIndex();
 
-        const rows = await getRelationshipRepository().findBySource(noContentId, 'user');
+        const rows = await relationshipRepository.findBySource(noContentId, 'user');
         expect(rows).toEqual([]);
     });
 });

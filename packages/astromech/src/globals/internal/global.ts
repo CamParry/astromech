@@ -10,7 +10,7 @@ import { assertCapability } from '@/content/capabilities';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { ResourceNotFoundError } from '@/errors/resource';
-import { getGlobalRepository } from '../repository';
+import { globalRepository } from '../repository';
 import { resolveGlobal } from '../resolve-global';
 
 /** Every capability a global may declare, for narrowing a bare string to one. */
@@ -84,10 +84,9 @@ export async function getCanonicalGlobal(
         params.locale
     );
 
-    const repository = getGlobalRepository();
-    const current = await repository.findByKey(params.key, locale);
+    const current = await globalRepository.findByKey(params.key, locale);
     if (!current) throw new ResourceNotFoundError('global', { id: params.key, locale });
-    return { global, locale, repository, id: current.id, current };
+    return { global, locale, repository: globalRepository, id: current.id, current };
 }
 
 /**

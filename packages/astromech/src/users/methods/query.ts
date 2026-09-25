@@ -4,7 +4,7 @@ import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { toUser } from '../internal/to-user';
-import { getUserRepository } from '../repository';
+import { userRepository } from '../repository';
 import { userQuerySchema } from '../schema';
 
 /**
@@ -24,11 +24,10 @@ export const queryUsers = defineServiceMethod({
             undefined,
             params.locale
         );
-        const repository = getUserRepository();
         const { search, sort } = params;
         const result = await queryPage(params, {
-            list: (page) => repository.findMany({ search, sort, locale, ...page }),
-            count: () => repository.count({ search }),
+            list: (page) => userRepository.findMany({ search, sort, locale, ...page }),
+            count: () => userRepository.count({ search }),
         });
         return { ...result, data: result.data.map(toUser) };
     },

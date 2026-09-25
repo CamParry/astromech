@@ -8,7 +8,7 @@ import type { RelationshipDeclaration } from '@/fields/references';
 import type { TargetKind } from '@/types/domain';
 import type { Field } from '@/types/fields';
 import type { JsonObject, ResolvedConfig } from '@/types/index';
-import { getResourceExistenceRepository } from '@/content/repository/resource-existence';
+import { resourceExistenceRepository } from '@/content/repository/resource-existence';
 import { resolveEntryType } from '@/entries/entry-types';
 import { getEntryRepository, hasCustomTable } from '@/entries/repository/registry';
 import { parseInstancePath } from '@/fields/field-path';
@@ -44,7 +44,7 @@ export async function pruneDanglingRelations(
         if (ofKind.length === 0) continue;
         aliveByKind.set(
             kind,
-            await getResourceExistenceRepository().findIds(
+            await resourceExistenceRepository.findIds(
                 kind,
                 ofKind.map((reference) => reference.targetId)
             )
