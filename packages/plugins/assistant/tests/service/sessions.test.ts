@@ -8,12 +8,15 @@ import type { ChatMessage, ResolvedAssistantOptions } from '../../src/types';
 import type { FakeApprovals } from '../loop/fake-approvals';
 import type { FakeSessions } from '../sessions/fake-sessions';
 import type { ToolDefinition } from 'astromech';
+import type * as Astromech from 'astromech';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSessionsService } from '../../src/service/sessions';
 import { approvalRow, fakeApprovals } from '../loop/fake-approvals';
 import { fakeSessions } from '../sessions/fake-sessions';
 
-vi.mock('astromech', () => ({
+vi.mock('astromech', async (importOriginal) => ({
+    // The real Zod, so each method's output schema can be parsed here.
+    z: (await importOriginal<typeof Astromech>()).z,
     defineServiceMethod: (method: unknown) => method,
     noInput: () => undefined,
 }));
@@ -125,6 +128,29 @@ describe('getSession', () => {
 
     it('refuses a caller with no identity', async () => {
         await expect(call('getSession', null)).rejects.toThrow('Sign in');
+    });
+
+    it('drops keys a held call does not name, and passes each message through whole', () => {
+        const message = {
+            role: 'assistant',
+            content: [{ type: 'reasoning', text: 'thinking', providerOptions: { a: 1 } }],
+        };
+        const request = {
+            approvalId: 'ap_1',
+            toolCallId: 'toolu_1',
+            method: 'entries.page.update',
+            toolName: 'entries_page_update',
+            message: 'Update the page "Home"?',
+            destructive: false,
+            arguments: { id: 'page_1' },
+        };
+
+        expect(
+            createSessionsService(OPTIONS).getSession.output.parse({
+                messages: [message],
+                pending: [{ ...request, userId: 'user_1' }],
+            })
+        ).toEqual({ messages: [message], pending: [request] });
     });
 });
 

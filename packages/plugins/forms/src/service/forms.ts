@@ -5,7 +5,7 @@
 import type { FormsAfterSubmitPayload, FormsBeforeSubmitPayload } from '../hooks/events';
 import type { SpamProvider } from '../spam/types';
 import type { FormsOptions, SubmissionMeta } from '../types';
-import type { DataField, FieldErrors } from 'astromech';
+import type { DataField } from 'astromech';
 import { defineServiceMethod, z } from 'astromech';
 import { safeParseFields } from 'astromech/fields';
 import { compileFormFields } from '../fields/compile';
@@ -15,18 +15,32 @@ import { createSubmissionsRepository } from '../repository';
 import { entryFields, loadForm, usesSpam } from '../utilities/form-entry';
 import { buildSummary } from '../utilities/summary';
 import { consumeRateLimit } from './rate-limit';
-import { deleteSubmission, getSubmission, listSubmissions } from './submissions';
+import {
+    deleteSubmission,
+    getSubmission,
+    listSubmissions,
+    submissionMetaSchema,
+} from './submissions';
 
 /** The public projection of a form, built by explicit allow-list. */
-export type PublicForm = {
-    id: string;
-    slug: string;
-    title: string;
-    /** Exactly the fields `submit` will validate against. */
-    fields: DataField[];
+const publicFormSchema = z.object({
+    id: z.string(),
+    slug: z.string(),
+    title: z.string(),
+    /**
+     * Exactly the fields `submit` will validate against. Each is checked to be
+     * an object and not walked: `compileFormFields` built it moments before.
+     */
+    fields: z.array(
+        z.custom<DataField>(isRecord, {
+            message: 'Expected a field definition',
+        })
+    ),
     /** Present only when the site configured a provider AND the form uses it. Never carries the secret key. */
-    spam?: { provider: string; siteKey: string };
-};
+    spam: z.object({ provider: z.string(), siteKey: z.string() }).optional(),
+});
+
+export type PublicForm = z.output<typeof publicFormSchema>;
 
 export type SubmitInput = {
     slug: string;
@@ -37,7 +51,16 @@ export type SubmitInput = {
     meta?: SubmissionMeta | undefined;
 };
 
-export type SubmitResult = { ok: true; id: string } | { ok: false; errors: FieldErrors };
+const submitResultSchema = z.union([
+    z.object({ ok: z.literal(true), id: z.string() }),
+    z.object({
+        ok: z.literal(false),
+        /** Messages by field name, and under `_form` for the form as a whole. */
+        errors: z.record(z.string(), z.array(z.string())),
+    }),
+]);
+
+export type SubmitResult = z.output<typeof submitResultSchema>;
 
 /** Reserved `FieldErrors` key for errors that belong to the form, not a field. */
 export const FORM_ERROR_KEY = '_form';
@@ -55,6 +78,7 @@ export function createFormsService(
             access: 'public',
             summary: 'Fetch a published form’s public definition by slug.',
             input: z.object({ slug: z.string() }),
+            output: publicFormSchema.nullable(),
             mutates: false,
             handler: async (input, ctx): Promise<PublicForm | null> => {
                 const form = await loadForm(ctx, input?.slug);
@@ -79,6 +103,7 @@ export function createFormsService(
             access: 'public',
             summary: 'Validate and store a submission against a published form.',
             input: submitInputSchema,
+            output: submitResultSchema,
             mutates: true,
             handler: async (input, ctx): Promise<SubmitResult> => {
                 // A caller with no connecting address is a trusted local one
@@ -178,13 +203,7 @@ const submitInputSchema = z.object({
     slug: z.string(),
     data: z.record(z.string(), z.unknown()),
     token: z.string().optional(),
-    meta: z
-        .object({
-            ip: z.string().optional(),
-            userAgent: z.string().optional(),
-            referer: z.string().optional(),
-        })
-        .optional(),
+    meta: submissionMetaSchema.optional(),
 });
 
 const NOT_ACCEPTING = 'This form is not accepting submissions';

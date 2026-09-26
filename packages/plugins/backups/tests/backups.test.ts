@@ -37,6 +37,7 @@ import { filesystem } from '@/storage/drivers/filesystem';
 import { listAll } from '@/storage/prefix';
 import { isBackupRunning, performBackup, resolveKeep, rotate } from '../src/backup';
 import { backups } from '../src/index';
+import { createBackupsService } from '../src/service/backups';
 import { backupRunsTable } from '../src/tables/index';
 
 declare global {
@@ -156,6 +157,30 @@ beforeEach(async () => {
 afterEach(async () => {
     globalThis.__astromechBackupRunning = false;
     await rm(tmpBase, { recursive: true, force: true });
+});
+
+describe('backups.list — output', () => {
+    it('drops keys the schema does not name', () => {
+        const run = {
+            id: 'run_1',
+            key: 'backups/run_1.sqlite',
+            status: 'success' as const,
+            trigger: 'manual' as const,
+            sizeBytes: 1024,
+            error: null,
+            startedAt: new Date('2026-01-01'),
+            finishedAt: new Date('2026-01-01'),
+            artifactDeletedAt: null,
+        };
+        const capabilities = { canDump: true, canRestore: false };
+
+        expect(
+            createBackupsService(7).list.output.parse({
+                runs: [{ ...run, internal: 'x' }],
+                capabilities: { ...capabilities, internal: 'x' },
+            })
+        ).toEqual({ runs: [run], capabilities });
+    });
 });
 
 describe('libsql.dump / restore', () => {

@@ -4,27 +4,16 @@
  * public service method that resolves entry refs to front-end URLs.
  */
 
-import type { MenuItem, MenusOptions } from './types';
+import type { MenusOptions } from './types';
 import type { ServiceInterface } from 'astromech';
-import { definePlugin, defineServiceMethod, z } from 'astromech';
+import { definePlugin } from 'astromech';
 import { buildMenuGlobals } from './globals/menus';
 import { createMenusService } from './service/menus';
-
-/** Typed service shape — used only for the module augmentation. */
-const _menusServiceTyped = {
-    get: defineServiceMethod({
-        access: 'public',
-        summary: 'Resolve a configured menu into a nested tree of menu items.',
-        input: z.object({ key: z.string(), locale: z.string().optional() }),
-        mutates: false,
-        handler: async (): Promise<MenuItem[] | null> => null,
-    }),
-};
 
 declare module 'astromech' {
     // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
     interface AstromechPluginServices {
-        menus: ServiceInterface<typeof _menusServiceTyped>;
+        menus: ServiceInterface<ReturnType<typeof createMenusService>>;
     }
 }
 

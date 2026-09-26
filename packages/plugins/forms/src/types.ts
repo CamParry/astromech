@@ -4,7 +4,9 @@
  * `index.ts`; keep this the only other place naming it.
  */
 
+import type { submissionMetaSchema } from './service/submissions';
 import type { SpamProvider } from './spam/types';
+import type { z } from 'astromech';
 
 export const FORMS_PACKAGE = '@astromech/forms';
 
@@ -65,12 +67,5 @@ export type StoredFormField = {
     [key: string]: unknown;
 };
 
-/**
- * Request metadata stored alongside a submission. Explicit `| undefined` to
- * match what the published Zod schema's `.optional()` widens to.
- */
-export type SubmissionMeta = {
-    ip?: string | undefined;
-    userAgent?: string | undefined;
-    referer?: string | undefined;
-};
+/** Request metadata stored alongside a submission. */
+export type SubmissionMeta = z.output<typeof submissionMetaSchema>;

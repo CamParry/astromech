@@ -15,11 +15,52 @@ import type { Entry, PluginContext } from 'astromech';
 import { defineServiceMethod, noInput, resolveEntryPath, z } from 'astromech';
 import { SEO_FIELD_NAME } from '../types';
 import {
+    LENGTH_STATUSES,
     lengthStatus,
     SEO_DESCRIPTION_RANGE,
     SEO_TITLE_RANGE,
 } from '../utilities/length';
 import { parseSeoMetaValue } from '../utilities/meta-value';
+
+export const seoSitemapUrlSchema = z.object({
+    loc: z.string(),
+    /** ISO timestamp of the entry's last update. */
+    lastmod: z.string(),
+});
+
+export const seoSitemapSchema = z.object({ urls: z.array(seoSitemapUrlSchema) });
+
+export const seoResolvedMetaSchema = z.object({
+    title: z.string(),
+    description: z.string().nullable(),
+    /** Resolved URL of the default Open Graph image setting, if any. */
+    ogImage: z.string().nullable(),
+    path: z.string().nullable(),
+});
+
+export const seoFieldHealthSchema = z.object({
+    length: z.number(),
+    status: z.enum(LENGTH_STATUSES),
+});
+
+export const seoOverviewItemSchema = z.object({
+    id: z.string(),
+    type: z.string(),
+    title: z.string(),
+    slug: z.string().nullable(),
+    entryStatus: z.string(),
+    metaTitle: seoFieldHealthSchema,
+    metaDescription: seoFieldHealthSchema,
+});
+
+export const seoOverviewSchema = z.object({
+    totals: z.object({
+        entries: z.number(),
+        complete: z.number(),
+        needsAttention: z.number(),
+    }),
+    items: z.array(seoOverviewItemSchema),
+});
 
 async function footprintEntries(
     ctx: PluginContext,
@@ -66,6 +107,7 @@ export const seoService = {
         access: 'public',
         summary: 'List sitemap URLs for all SEO-tracked entries.',
         input: noInput(),
+        output: seoSitemapSchema,
         mutates: false,
         handler: async (_input, ctx): Promise<SeoSitemap> => {
             const urls: SeoSitemapUrl[] = [];
@@ -90,6 +132,7 @@ export const seoService = {
         access: 'public',
         summary: 'Resolve the SEO meta tags for one entry by type + slug.',
         input: z.object({ type: z.string(), slug: z.string() }),
+        output: seoResolvedMetaSchema.nullable(),
         mutates: false,
         handler: async (input, ctx): Promise<SeoResolvedMeta | null> => {
             const type = typeof input?.type === 'string' ? input.type : null;
@@ -120,6 +163,7 @@ export const seoService = {
         access: { permission: 'read' },
         summary: 'Report SEO coverage across all tracked entries.',
         input: noInput(),
+        output: seoOverviewSchema,
         mutates: false,
         handler: async (_input, ctx): Promise<SeoOverview> => {
             const items: SeoOverviewItem[] = [];

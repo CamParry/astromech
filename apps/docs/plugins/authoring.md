@@ -586,10 +586,21 @@ import { parseFields } from 'astromech/fields';
 import { redirectFields } from '../fields';
 import { createRedirectsRepository } from '../repository';
 
+const redirectSchema = z.object({
+    id: z.string(),
+    from: z.string(),
+    to: z.string(),
+    status: z.string(),
+    enabled: z.boolean(),
+    createdAt: z.date(),
+    updatedAt: z.date(),
+});
+
 export const redirectsService = {
     create: defineServiceMethod({
         access: { permission: 'create' },
         input: z.object({ data: z.record(z.string(), z.unknown()) }),
+        output: redirectSchema,
         mutates: true,
         handler: async ({ data }, ctx): Promise<RedirectRow> => {
             const redirects = createRedirectsRepository(ctx.db);
@@ -1307,6 +1318,15 @@ refuses fails the call, and over HTTP answers a generic `500` with the detail
 in the server log. Keep it to plain `z.object`s that strip, with no
 `.transform()` or `.pipe()`. Without `output` the result passes through
 unparsed, typed by the handler's return type.
+
+`astromech` exports the two helpers core's own output schemas use.
+`withFallback(schema, null)` wraps a nullable stored value, such as an
+optional column: a value the schema refuses becomes `null` and the call logs a
+warning naming the key, rather than failing. `queryResultSchema(item)` is the
+`{ data, pagination }` shape a paged list answers. Export the public type from
+the schema (`export type Redirect = z.output<typeof redirectSchema>`) rather than
+writing it by hand. The first-party plugins all declare `output`;
+`@astromech/redirects` and `@astromech/forms` show the pattern.
 
 `access` says what a caller must hold, in one of four forms:
 

@@ -1,3 +1,6 @@
+import type { redirectMatchSchema, redirectSchema } from './service/redirects';
+import type { z } from 'astromech';
+
 /**
  * The package name, as a literal. Exists only because `definePluginTable`
  * needs it as a *type* to derive `plugin_redirects_*` table names for
@@ -10,9 +13,10 @@ export type RedirectsOptions = {
     generateOnSlugChange?: boolean;
 };
 
-export type RedirectStatus = '301' | '302';
+/** What `lookup` answers for a path with an enabled rule. */
+export type RedirectMatch = z.output<typeof redirectMatchSchema>;
 
-export type RedirectMatch = {
-    to: string;
-    status: RedirectStatus;
-};
+export type RedirectStatus = RedirectMatch['status'];
+
+/** A stored rule, as the admin methods answer it. */
+export type Redirect = z.output<typeof redirectSchema>;

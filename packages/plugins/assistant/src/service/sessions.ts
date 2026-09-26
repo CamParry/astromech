@@ -6,21 +6,40 @@
  * manifest.
  */
 
-import type { ApprovalRequest, ChatMessage, ResolvedAssistantOptions } from '../types';
-import { defineServiceMethod, noInput } from 'astromech';
+import type { ChatMessage, ResolvedAssistantOptions } from '../types';
+import { defineServiceMethod, noInput, z } from 'astromech';
 import { createApprovalsRepository } from '../approvals/repository';
 import { toApprovalRequest } from '../approvals/request';
 import { createSessionsRepository } from '../sessions/repository';
+
+/** One call held back for a human decision (`ApprovalRequest`). */
+export const approvalRequestSchema = z.object({
+    approvalId: z.string(),
+    toolCallId: z.string(),
+    method: z.string(),
+    toolName: z.string(),
+    message: z.string(),
+    destructive: z.boolean(),
+    arguments: z.record(z.string(), z.unknown()),
+});
 
 /**
  * A user's conversation. `pending` is read off the approvals table rather than
  * stored with the transcript — the rows are what a click resolves, so a reload
  * mid-pause restores the buttons instead of dropping the calls behind them.
  */
-export type ChatSession = {
-    messages: ChatMessage[];
-    pending: ApprovalRequest[];
-};
+const chatSessionSchema = z.object({
+    // Checked to be an object and not walked: every part goes back to the
+    // provider verbatim, keys this plugin does not know included.
+    messages: z.array(
+        z.custom<ChatMessage>((value) => typeof value === 'object' && value !== null, {
+            message: 'Expected a chat message',
+        })
+    ),
+    pending: z.array(approvalRequestSchema),
+});
+
+export type ChatSession = z.output<typeof chatSessionSchema>;
 
 /** The `getSession` / `clearSession` service methods for the signed-in user's chat. */
 export function createSessionsService(options: ResolvedAssistantOptions) {
@@ -29,6 +48,7 @@ export function createSessionsService(options: ResolvedAssistantOptions) {
             access: { permission: 'use' },
             summary: 'Read back the signed-in user’s conversation with the assistant.',
             input: noInput(),
+            output: chatSessionSchema,
             mutates: false,
             handler: async (_input, ctx): Promise<ChatSession> => {
                 const userId = actingUserId(ctx.user);
@@ -54,6 +74,7 @@ export function createSessionsService(options: ResolvedAssistantOptions) {
             access: { permission: 'use' },
             summary: 'Discard the conversation and start a new one.',
             input: noInput(),
+            output: z.null(),
             mutates: true,
             destructive: false,
             handler: async (_input, ctx): Promise<null> => {

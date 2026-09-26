@@ -1,7 +1,8 @@
 /** Public options for the assistant plugin, and the chat wire types. */
 
+import type { approvalRequestSchema } from './service/sessions';
 import type { AssistantModelMessage, ToolModelMessage, UserModelMessage } from 'ai';
-import type { AiContextItem } from 'astromech';
+import type { AiContextItem, z } from 'astromech';
 
 /**
  * The package name, as a literal. `definePluginTable` needs the package as a
@@ -46,15 +47,7 @@ export type ChatRequest = {
  * `ConfirmRequest`: this one names a server-held row the arguments are read
  * back from, rather than carrying arguments a caller may re-post.
  */
-export type ApprovalRequest = {
-    approvalId: string;
-    toolCallId: string;
-    method: string;
-    toolName: string;
-    message: string;
-    destructive: boolean;
-    arguments: Record<string, unknown>;
-};
+export type ApprovalRequest = z.output<typeof approvalRequestSchema>;
 
 /** One answer to an `ApprovalRequest`, posted on the next turn. */
 export type ApprovalDecision = { approvalId: string; action: 'approve' | 'reject' };

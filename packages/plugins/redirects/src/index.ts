@@ -29,7 +29,7 @@ declare module 'astromech' {
     interface AstromechPluginTables extends PluginDB<typeof tables> {}
 }
 
-export type { RedirectMatch, RedirectStatus, RedirectsOptions } from './types';
+export type { Redirect, RedirectMatch, RedirectStatus, RedirectsOptions } from './types';
 export type { RedirectRow } from './tables/redirects';
 
 const DEFAULT_OPTIONS: Required<RedirectsOptions> = {

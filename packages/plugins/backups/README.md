@@ -22,7 +22,7 @@ backups/
   migrations/                   generated — never hand-edited
   src/repository.ts             createRepository over the table — the only DB access
   src/backup.ts                 performBackup / rotate / resolveKeep — the core work
-  src/service/backups.ts        list, run, delete (JSON, over RPC)
+  src/service/backups.ts        list, run, delete (JSON, over RPC), and their output schemas
   src/routes/backups.ts         download + restore (raw routes — they stream)
   src/permissions/backups.ts    definePermissions — the grantable permission keys
   src/pages/backups.ts          defineAdminPage — the run history page

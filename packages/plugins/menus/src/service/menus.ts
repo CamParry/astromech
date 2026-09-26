@@ -5,8 +5,18 @@
  */
 
 import type { MenuConfig, MenuItem } from '../types';
-import type { AnyServiceMethod, PluginContext } from 'astromech';
+import type { PluginContext } from 'astromech';
 import { defineServiceMethod, resolveEntryUrl, z } from 'astromech';
+
+/** One resolved menu item. `children` is left out when the item has none. */
+export const menuItemSchema = z.object({
+    label: z.string(),
+    url: z.string().optional(),
+    newTab: z.boolean().optional(),
+    get children() {
+        return z.array(menuItemSchema).optional();
+    },
+});
 
 /** Raw stored node shape (with reserved underscore keys). */
 type RawNode = {
@@ -89,9 +99,7 @@ async function walkNodes(
 }
 
 /** The `get` service method, scoped to the plugin's configured menus. */
-export function createMenusService(
-    configs: MenuConfig[]
-): Record<string, AnyServiceMethod> {
+export function createMenusService(configs: MenuConfig[]) {
     const configuredKeys = new Set(configs.map((c) => c.key));
 
     return {
@@ -99,6 +107,7 @@ export function createMenusService(
             access: 'public',
             summary: 'Resolve a configured menu into a nested tree of menu items.',
             input: z.object({ key: z.string(), locale: z.string().optional() }),
+            output: z.array(menuItemSchema).nullable(),
             mutates: false,
             handler: async (input, ctx): Promise<MenuItem[] | null> => {
                 const key = typeof input?.key === 'string' ? input.key : null;

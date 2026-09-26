@@ -55,8 +55,8 @@ forms/
   src/permissions/forms.ts           the read and delete permissions over submissions
   migrations/                        generated — never hand-edited
   src/fields/compile.ts              stored blocks -> core Field[]
-  src/service/forms.ts               the public `get` and `submit` methods
-  src/service/submissions.ts         listSubmissions, getSubmission, deleteSubmission
+  src/service/forms.ts               the public `get` and `submit` methods, and their output schemas
+  src/service/submissions.ts         listSubmissions, getSubmission, deleteSubmission, and their output schemas
   src/hooks/events.ts                forms:beforeSubmit / forms:afterSubmit payloads
   src/notifications/                 one provider per notification kind (see below)
   src/spam/                          one provider per spam service (see below)

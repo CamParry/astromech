@@ -17,6 +17,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { setStorageDriver } from '@/storage/registry';
 import { seo } from '../../src/index';
+import { seoService } from '../../src/service/seo';
 
 const globalsService = currentServices.globals;
 const localEntries = currentServices.entries;
@@ -235,6 +236,16 @@ describe('seo meta', () => {
         expect(await meta('post', 'missing')).toBeNull();
         expect(await meta('bookmark', 'bookmark')).toBeNull();
         expect(await meta('unknown', 'anything')).toBeNull();
+    });
+});
+
+describe('seo meta output', () => {
+    it('drops keys the schema does not name', () => {
+        const resolved = { title: 'Home', description: null, ogImage: null, path: '/' };
+
+        expect(seoService.getMeta.output.parse({ ...resolved, internal: 'x' })).toEqual(
+            resolved
+        );
     });
 });
 

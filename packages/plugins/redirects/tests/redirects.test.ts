@@ -13,6 +13,7 @@ import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createServices, currentServices } from '@/app-context/services';
 import { redirects } from '../src/index';
+import { redirectsService } from '../src/service/redirects';
 
 /** The plugin's service on the trusted handle, the way site code calls it. */
 const service = () => currentServices.plugins.redirects;
@@ -101,6 +102,22 @@ describe('redirects service — create, get, update, delete', () => {
         expect(await service().delete({ id: created.id })).toEqual({ deleted: true });
         expect(await service().delete({ id: created.id })).toEqual({ deleted: false });
         expect(await storedRules()).toEqual([]);
+    });
+
+    it('answers a rule in its public shape, without keys the schema does not name', () => {
+        const rule = {
+            id: 'rule_1',
+            from: '/a',
+            to: '/b',
+            status: '301',
+            enabled: true,
+            createdAt: new Date('2026-01-01'),
+            updatedAt: new Date('2026-01-02'),
+        };
+
+        expect(redirectsService.get.output.parse({ ...rule, internal: 'x' })).toEqual(
+            rule
+        );
     });
 });
 

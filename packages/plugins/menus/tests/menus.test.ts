@@ -18,6 +18,7 @@ import { resolveConfig } from '@/config/resolve';
 import { derivePluginNav } from '@/plugins/runtime/plugin-admin';
 import { resolvePluginIdentity } from '@/plugins/runtime/plugin-identity';
 import { menus } from '../src/index';
+import { createMenusService } from '../src/service/menus';
 
 const entriesService = currentServices.entries;
 const globalsService = currentServices.globals;
@@ -118,6 +119,23 @@ describe('menus — plugin structure', () => {
             menus: [{ key: 'main', label: 'Main Nav' }],
         });
         expect(plugin.admin?.pages ?? []).toEqual([]);
+    });
+});
+
+describe('menus.get — output', () => {
+    it('drops keys the schema does not name, at every depth', () => {
+        const parsed = createMenusService([]).get.output.parse([
+            {
+                _id: 'a1',
+                label: 'Blog',
+                url: '/blog',
+                children: [{ _id: 'a2', label: 'News' }],
+            },
+        ]);
+
+        expect(parsed).toEqual([
+            { label: 'Blog', url: '/blog', children: [{ label: 'News' }] },
+        ]);
     });
 });
 

@@ -13,14 +13,14 @@ resource over those methods.
 ```
 redirects/
   src/index.ts                  definePlugin(): identity, composing the surfaces below
-  src/types.ts                  RedirectsOptions, RedirectMatch, REDIRECTS_PACKAGE
+  src/types.ts                  RedirectsOptions, REDIRECTS_PACKAGE, and the result types Redirect and RedirectMatch
   src/tables/redirects.ts       definePluginTable: the `redirects` table, unique on `from`
   src/tables/index.ts           the ./tables subpath entry (tables only)
   migrations/                   generated, never hand-edited
   src/repository.ts             createRedirectsRepository: the only database access
   src/fields.ts                 the rule's field definitions, for the form and for validation
   src/permissions/redirects.ts  definePermissions: read, create, update, delete
-  src/service/redirects.ts      lookup (public), list, get, create, update, delete
+  src/service/redirects.ts      lookup (public), list, get, create, update, delete, and their output schemas
   src/resources/redirects.ts    defineAdminResource: the admin's list and edit screens
   src/hooks/slug-change.ts      defineHook: record a redirect on URL change
 ```
@@ -113,7 +113,9 @@ grantable string your config produces.
 ## Service methods
 
 Every method works the same in process (the application instance) and over HTTP
-(`POST /api/plugins/redirects/<method>`, or `astromech/fetch`).
+(`POST /api/plugins/redirects/<method>`, or `astromech/fetch`). Each declares an
+`output` schema, so a result carries exactly the keys below and a rule carries
+its table's columns.
 
 | method   | access   | input                             | answers                                     |
 | -------- | -------- | --------------------------------- | ------------------------------------------- |

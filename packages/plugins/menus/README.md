@@ -15,7 +15,7 @@ menus/
   types.ts                MenuConfig / MenusOptions / MenuItem
   fields/menu-item.ts     menuItemFields — the node schema used at every depth of the tree
   globals/menus.ts        buildMenuGlobals() — one defineGlobal per configured menu, keyed `menu-<key>`
-  service/menus.ts        createMenusService() — the public `get` service method
+  service/menus.ts        createMenusService() — the public `get` service method, and the MenuItem schema
 ```
 
 ## Install

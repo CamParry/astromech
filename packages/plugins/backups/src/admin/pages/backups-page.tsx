@@ -5,11 +5,11 @@
 
 import './backups-page.css';
 import type {
+    BackupRun,
     DeleteRunResult,
     ListRunsResult,
     TriggerRunResult,
 } from '../../service/backups';
-import type { BackupRunRow } from '../../tables/runs';
 import type { BadgeVariant } from 'astromech/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -36,8 +36,8 @@ type BackupsService = {
 };
 
 type ConfirmState =
-    | { kind: 'restore'; run: BackupRunRow }
-    | { kind: 'delete'; run: BackupRunRow }
+    | { kind: 'restore'; run: BackupRun }
+    | { kind: 'delete'; run: BackupRun }
     | null;
 
 declare const __ASTROMECH_BASE_PATH__: string;
@@ -56,7 +56,7 @@ function rawFetch(plugin: string, path: string, init?: RequestInit): Promise<Res
     });
 }
 
-const STATUS_VARIANTS: Record<BackupRunRow['status'], BadgeVariant> = {
+const STATUS_VARIANTS: Record<BackupRun['status'], BadgeVariant> = {
     running: 'neutral',
     success: 'success',
     failed: 'danger',
@@ -69,7 +69,7 @@ function formatBytes(bytes: number | null | undefined): string {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function hasLiveArtifact(run: BackupRunRow): boolean {
+function hasLiveArtifact(run: BackupRun): boolean {
     return (
         run.status === 'success' &&
         run.key !== null &&
@@ -173,11 +173,11 @@ export default function BackupsPage(): React.ReactElement {
 
     const runs = data.runs;
 
-    function handleRestoreClick(run: BackupRunRow): void {
+    function handleRestoreClick(run: BackupRun): void {
         setConfirmState({ kind: 'restore', run });
     }
 
-    function handleDeleteClick(run: BackupRunRow): void {
+    function handleDeleteClick(run: BackupRun): void {
         setConfirmState({ kind: 'delete', run });
     }
 
@@ -221,7 +221,7 @@ export default function BackupsPage(): React.ReactElement {
               : t('backups.delete.confirmLabel');
 
     // Streams a gzipped artifact, so it stays a raw route and is linked directly.
-    function downloadUrl(run: BackupRunRow): string {
+    function downloadUrl(run: BackupRun): string {
         return `${apiBase()}/plugins/${serviceKey}/runs/${run.id}/download`;
     }
 

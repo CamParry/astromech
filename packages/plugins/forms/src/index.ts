@@ -35,7 +35,7 @@ export { FORM_FIELD_KINDS } from './types';
 export type { FormsAfterSubmitPayload, FormsBeforeSubmitPayload } from './hooks/events';
 export { FORM_ERROR_KEY } from './service/forms';
 export type { PublicForm, SubmitInput, SubmitResult } from './service/forms';
-export type { DeleteSubmissionResult } from './service/submissions';
+export type { DeleteSubmissionResult, Submission } from './service/submissions';
 export type { SpamContext, SpamProvider, SpamVerdict } from './spam/types';
 export { turnstile } from './spam/providers/turnstile';
 export type { TurnstileOptions } from './spam/providers/turnstile';

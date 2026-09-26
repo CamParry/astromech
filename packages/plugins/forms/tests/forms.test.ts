@@ -56,6 +56,7 @@ import { resolveAdminResources } from '@/plugins/runtime/plugin-resources';
 import { forms, turnstile } from '../src/index';
 import { createSubmissionsRepository } from '../src/repository';
 import { resetRateLimit } from '../src/service/rate-limit';
+import { getSubmission as getSubmissionMethod } from '../src/service/submissions';
 
 const localEntries = currentServices.entries;
 const pluginServices = currentServices.plugins;
@@ -638,6 +639,28 @@ describe('forms.getSubmission and forms.deleteSubmission', () => {
             ok: false,
             reason: 'not-found',
         });
+    });
+
+    it('answers a submission without keys its output schema does not name', () => {
+        const submission = {
+            id: 'sub_1',
+            formId: 'form_1',
+            formSlug: 'contact',
+            data: { email: 'a@example.com' },
+            summary: 'a@example.com',
+            meta: { ip: '127.0.0.1' },
+            submittedAt: new Date('2026-01-01'),
+            createdAt: new Date('2026-01-01'),
+            updatedAt: new Date('2026-01-01'),
+        };
+
+        expect(
+            getSubmissionMethod.output.parse({
+                ...submission,
+                internal: 'x',
+                meta: { ip: '127.0.0.1', internal: 'x' },
+            })
+        ).toEqual(submission);
     });
 });
 

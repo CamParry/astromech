@@ -34,6 +34,7 @@ declare module 'astromech' {
 export type { BackupsOptions } from './types';
 export type {
     BackupCapabilities,
+    BackupRun,
     DeleteRunResult,
     ListRunsResult,
     TriggerRunResult,

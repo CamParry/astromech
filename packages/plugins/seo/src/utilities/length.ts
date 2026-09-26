@@ -8,7 +8,10 @@ export type LengthRange = {
     max: number;
 };
 
-export type LengthStatus = 'empty' | 'short' | 'good' | 'long';
+/** Every status `lengthStatus` answers, shortest first. */
+export const LENGTH_STATUSES = ['empty', 'short', 'good', 'long'] as const;
+
+export type LengthStatus = (typeof LENGTH_STATUSES)[number];
 
 /** Search engines typically truncate titles past ~60 characters. */
 export const SEO_TITLE_RANGE: LengthRange = { min: 30, max: 60 };

@@ -1,10 +1,19 @@
 /**
  * Domain types and constants for @astromech/seo. Dependency-free leaf — shared
  * by the server plugin definition and the browser renderers, so it must never
- * pull in core server code.
+ * pull in core server code. The result types are inferred from the service's
+ * output schemas through type-only imports, which leave nothing at runtime.
  */
 
-import type { LengthStatus } from './utilities/length';
+import type {
+    seoFieldHealthSchema,
+    seoOverviewItemSchema,
+    seoOverviewSchema,
+    seoResolvedMetaSchema,
+    seoSitemapSchema,
+    seoSitemapUrlSchema,
+} from './service/seo';
+import type { z } from 'astromech';
 
 /**
  * The field name `seo.section()` attaches — also the footprint anchor:
@@ -12,44 +21,14 @@ import type { LengthStatus } from './utilities/length';
  */
 export const SEO_FIELD_NAME = 'seo';
 
-export type SeoSitemapUrl = {
-    loc: string;
-    /** ISO timestamp of the entry's last update. */
-    lastmod: string;
-};
+export type SeoSitemapUrl = z.output<typeof seoSitemapUrlSchema>;
 
-export type SeoSitemap = {
-    urls: SeoSitemapUrl[];
-};
+export type SeoSitemap = z.output<typeof seoSitemapSchema>;
 
-export type SeoResolvedMeta = {
-    title: string;
-    description: string | null;
-    /** Resolved URL of the default Open Graph image setting, if any. */
-    ogImage: string | null;
-    path: string | null;
-};
+export type SeoResolvedMeta = z.output<typeof seoResolvedMetaSchema>;
 
-export type SeoFieldHealth = {
-    length: number;
-    status: LengthStatus;
-};
+export type SeoFieldHealth = z.output<typeof seoFieldHealthSchema>;
 
-export type SeoOverviewItem = {
-    id: string;
-    type: string;
-    title: string;
-    slug: string | null;
-    entryStatus: string;
-    metaTitle: SeoFieldHealth;
-    metaDescription: SeoFieldHealth;
-};
+export type SeoOverviewItem = z.output<typeof seoOverviewItemSchema>;
 
-export type SeoOverview = {
-    totals: {
-        entries: number;
-        complete: number;
-        needsAttention: number;
-    };
-    items: SeoOverviewItem[];
-};
+export type SeoOverview = z.output<typeof seoOverviewSchema>;

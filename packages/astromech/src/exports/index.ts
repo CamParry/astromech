@@ -123,11 +123,18 @@ export { defineGlobal } from '@/config/define-global';
 export { definePlugin } from '@/plugins/define-plugin';
 export { defineServiceMethod } from '@/plugins/define-service-method';
 export { noInput } from '@/services/define-service-method';
+/**
+ * Output schema helpers, the ones core's own methods use: a nullable stored
+ * value that falls back instead of failing the call, and the `QueryResult` of
+ * an item schema.
+ */
+export { withFallback } from '@/services/fallback';
+export { queryResultSchema } from '@/content/list';
 export { defineHook } from '@/plugins/define-hook';
 
 /**
- * Zod, re-exported so a plugin can declare a service method's `input` schema
- * without a `zod` dependency of its own — and without risking a second copy,
+ * Zod, re-exported so a plugin can declare a service method's `input` and `output`
+ * schemas without a `zod` dependency of its own — and without risking a second copy,
  * since the manifest generator's `instanceof` checks run against this instance.
  */
 export { z } from 'zod';

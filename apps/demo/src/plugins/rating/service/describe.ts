@@ -4,21 +4,24 @@
  * the service key `demoRating`, which both transports address it by.
  */
 
-import { defineServiceMethod, noInput } from 'astromech';
+import { defineServiceMethod, noInput, z } from 'astromech';
 import { MAX_RATING, RATING_FIELD_TYPE } from '../fields/rating';
 
-export type RatingDescription = {
-    fieldType: string;
+const ratingDescriptionSchema = z.object({
+    fieldType: z.string(),
     /** Entry types declaring at least one `rating` field. */
-    usedBy: string[];
-    max: number;
-};
+    usedBy: z.array(z.string()),
+    max: z.number(),
+});
+
+export type RatingDescription = z.output<typeof ratingDescriptionSchema>;
 
 export const ratingService = {
     describe: defineServiceMethod({
         access: 'authenticated',
         summary: 'Describe the rating field type and where it is used.',
         input: noInput(),
+        output: ratingDescriptionSchema,
         mutates: false,
         handler: (_input, ctx): RatingDescription => ({
             fieldType: RATING_FIELD_TYPE,

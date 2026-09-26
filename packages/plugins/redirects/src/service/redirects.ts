@@ -8,7 +8,7 @@ import type { RedirectsRepository } from '../repository';
 import type { NewRedirectRow, RedirectRow } from '../tables/redirects';
 import type { RedirectMatch } from '../types';
 import type { PluginContext, QueryResult } from 'astromech';
-import { defineServiceMethod, z } from 'astromech';
+import { defineServiceMethod, queryResultSchema, z } from 'astromech';
 import { parseFields } from 'astromech/fields';
 import { redirectFields } from '../fields';
 import { createRedirectsRepository, REDIRECT_SORTABLE } from '../repository';
@@ -19,6 +19,26 @@ const MAX_PAGE_SIZE = 100;
 const idInput = z.object({ id: z.string() });
 const dataInput = z.record(z.string(), z.unknown());
 
+/** What `lookup` answers for a path with an enabled rule. */
+export const redirectMatchSchema = z.object({
+    to: z.string(),
+    status: z.enum(['301', '302']),
+});
+
+/**
+ * A stored rule, as the admin methods answer it. `status` is the stored text,
+ * which `lookup` reads as a 301 unless it is `'302'`.
+ */
+export const redirectSchema = z.object({
+    id: z.string(),
+    from: z.string(),
+    to: z.string(),
+    status: z.string(),
+    enabled: z.boolean(),
+    createdAt: z.date(),
+    updatedAt: z.date(),
+});
+
 export const redirectsService = {
     /**
      * Resolve a request path to its redirect target. Public so a frontend
@@ -28,6 +48,7 @@ export const redirectsService = {
         access: 'public',
         summary: 'Look up the redirect target for an incoming path.',
         input: z.object({ from: z.string() }),
+        output: redirectMatchSchema.nullable(),
         mutates: false,
         handler: async ({ from }, ctx): Promise<RedirectMatch | null> => {
             if (from === '') return null;
@@ -55,6 +76,7 @@ export const redirectsService = {
             page: z.number().int().min(1).default(1),
             limit: z.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
         }),
+        output: queryResultSchema(redirectSchema),
         mutates: false,
         handler: async (
             { search, sort, page, limit },
@@ -76,6 +98,7 @@ export const redirectsService = {
         access: { permission: 'read' },
         summary: 'Get one redirect rule by id.',
         input: idInput,
+        output: redirectSchema.nullable(),
         mutates: false,
         handler: async ({ id }, ctx): Promise<RedirectRow | null> =>
             createRedirectsRepository(ctx.db).findOne(id),
@@ -85,6 +108,7 @@ export const redirectsService = {
         access: { permission: 'create' },
         summary: 'Create a redirect rule.',
         input: z.object({ data: dataInput }),
+        output: redirectSchema,
         mutates: true,
         handler: async ({ data }, ctx): Promise<RedirectRow> => {
             const redirects = createRedirectsRepository(ctx.db);
@@ -98,6 +122,7 @@ export const redirectsService = {
         access: { permission: 'update' },
         summary: 'Update a redirect rule. Fields left out keep their values.',
         input: z.object({ id: z.string(), data: dataInput }),
+        output: redirectSchema.nullable(),
         mutates: true,
         handler: async ({ id, data }, ctx): Promise<RedirectRow | null> => {
             const redirects = createRedirectsRepository(ctx.db);
@@ -117,6 +142,7 @@ export const redirectsService = {
         access: { permission: 'delete' },
         summary: 'Delete a redirect rule.',
         input: idInput,
+        output: z.object({ deleted: z.boolean() }),
         mutates: true,
         destructive: true,
         handler: async ({ id }, ctx): Promise<{ deleted: boolean }> => ({
