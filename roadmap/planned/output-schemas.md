@@ -107,11 +107,16 @@ z.output<typeof userSchema>`, with the schema in the resource's `schema.ts`.
 
 - **Do staging writes stamp the resource row?** A staged change isn't the
   resource yet, so the plan is: staging create and update don't, merge does.
-- **The admin's staging divergence check.** `use-edit-controller.ts` in
-  `packages/admin/src/hooks/` compares the canonical row's public `updatedAt`
-  with the staged row's `createdAt`. Once `updatedAt` covers every locale, an
-  edit to another locale would flag a staged change as diverged. The check may
-  belong on the server, in the merge method.
+- **The admin's staging divergence check is already wrong.**
+  `use-edit-controller.ts` in `packages/admin/src/hooks/` compares the
+  canonical's public `updatedAt` with the staged read's `createdAt`. But a
+  staged read's `createdAt` is the resource's creation date, not the staged
+  change's, so the check is true for almost any resource edited since it was
+  created, and the merge dialog nearly always says "diverged". Globals share
+  it. Once `updatedAt` covers every locale it would be wrong a second way. The
+  plan: a staged read carries `diverged`, computed on the server from the
+  canonical content row's `updatedAt` and the staged content row's
+  `createdAt`, both per-locale and internal. The admin reads that flag.
 - **Per-locale consumers of `updatedAt`.** The SEO plugin's sitemap `lastmod`
   (`packages/plugins/seo/src/service/seo.ts`) will move when any locale is
   edited, and the admin's media cache-busting URL
@@ -153,11 +158,11 @@ z.output<typeof userSchema>`, with the schema in the resource's `schema.ts`.
 - [ ] **7. Plugins.** Redirects and forms declare outputs on their methods; the
       plugin docs describe `output`.
 - [ ] **8. Versions in the public shape.** `versions.get({ id, locale, version })`,
-      addressed by resource id and version number, returns `{ version,
-  createdAt, createdBy, snapshot }`. `snapshot` is the public type narrowed
-      to the versioned keys (for entries `Pick<Entry, 'title' | 'slug' |
-  'fields' | 'status'>`), because resource-row columns are never versioned
-      and a full `Entry` would mix two points in time. `versions.list` returns
+      addressed by resource id and version number, returns the version's
+      metadata (`version`, `createdAt`, `createdBy`) and a `snapshot`. The
+      snapshot is the public type narrowed to the versioned keys (for entries,
+      `title`, `slug`, `fields` and `status`), because resource-row columns are
+      never versioned and a full `Entry` would mix two points in time. `versions.list` returns
       the metadata only. The four hand-written version types become one shape
       per resource, derived from its output schema. Payload nests the document
       under `version` in the same way; check its source before building. Fix
