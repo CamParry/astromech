@@ -148,7 +148,7 @@ z.output<typeof userSchema>`, with the schema in the resource's `schema.ts`.
       `services/define-service.ts` parses the result with the three tiers and
       the error format above. The `to*` mappers and the hand-written types in
       `types/domain.ts` go.
-- [ ] **6. OpenAPI.** `documentRoute()` registers each method's output schema as
+- [x] **6. OpenAPI.** `documentRoute()` registers each method's output schema as
       the response body, taken from the schema object directly.
 - [ ] **7. Plugins.** Redirects and forms declare outputs on their methods; the
       plugin docs describe `output`.
@@ -173,3 +173,13 @@ z.output<typeof userSchema>`, with the schema in the resource's `schema.ts`.
   `users/repository.ts` repeat four blocks: the list filter, `findByLocale`, the
   chunked id lookup and the update and delete members. The copies predate this
   work; they carried over from the rename in step 2.
+- **Document the other error statuses.** Routes document their success body
+  and, where a row has `notFound`, a 404 with the shared `Error` component.
+  401, 403, 422 and 500 are not documented yet.
+- **Document `/me`.** It is served in `transport/http/app.ts`, outside the
+  route tables, so it has no response schema.
+- **Entry methods in the method manifest emit no `output`.**
+  `projectEntryMethod` in `codegen/method-manifest.ts` projects the input only.
+- **Plugin routes are not in the OpenAPI document.** `/api/plugins/*` is a plain
+  Hono router; declaring `output` on a plugin method types and parses its
+  result but does not document it over HTTP.
