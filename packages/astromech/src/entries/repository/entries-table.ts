@@ -18,7 +18,7 @@ import type { JsonObject, ReferencesFilter, SortOption } from '@/types/index';
 import type { Expression, SqlBool } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
-import { createContentRepository } from '@/content/repository/content-table';
+import { createContentRepository, lastUpdate } from '@/content/repository/content-table';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { encodePatchWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
@@ -195,11 +195,10 @@ function toEntryResource(
         publishedAt: contentRow.publishedAt,
         deletedAt: resourceRow.deletedAt,
         createdAt: resourceRow.createdAt,
-        updatedAt: resourceRow.updatedAt,
+        ...lastUpdate(resourceRow, contentRow),
         contentCreatedAt: contentRow.createdAt,
         contentUpdatedAt: contentRow.updatedAt,
         createdBy: contentRow.createdBy,
-        updatedBy: resourceRow.updatedBy,
     };
 }
 

@@ -598,3 +598,16 @@ export function createContentRepository<
         kysely: () => ({ db: db(), resourceKey, contentKey, joined }),
     };
 }
+
+/**
+ * The `updatedAt` and `updatedBy` a resource read reports: the resource row's,
+ * or for a staged read its own content row's, since staging never stamps the
+ * resource row. Each resource's `decode` spreads it.
+ */
+export function lastUpdate(
+    resourceRow: { updatedAt: Date; updatedBy: string | null },
+    contentRow: { stagedFor: string | null; updatedAt: Date; updatedBy: string | null }
+): Pick<Resource, 'updatedAt' | 'updatedBy'> {
+    const source = contentRow.stagedFor === null ? resourceRow : contentRow;
+    return { updatedAt: source.updatedAt, updatedBy: source.updatedBy };
+}

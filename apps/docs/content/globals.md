@@ -223,7 +223,8 @@ await app.globals.mergeStaged({ key: 'site', locale: 'en' });
 published, so reading one needs `full: true` and the read permission.
 `getStaged` also answers `diverged: true` when the live version in that locale
 was saved after the staged change was made, so a merge would overwrite that
-save.
+save. Its `updatedAt` and `updatedBy` are the staged change's own last edit; a
+staged edit does not move the global's until the merge.
 
 ## Permissions
 

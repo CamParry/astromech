@@ -322,9 +322,9 @@ function EntryEditBody({
 }
 
 /**
- * The edit page's one metadata line: when this locale was last written and by
- * whom, then when the entry was made and by whom. An author the current user
- * cannot resolve is left out rather than shown as a raw id.
+ * The edit page's one metadata line: the entry's last change and who made it
+ * (on the staged view, the staged change's), then when the entry was made and
+ * by whom. An author the current user cannot resolve is left out.
  */
 function entryMetaLine(
     entry: Entry,

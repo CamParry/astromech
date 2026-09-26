@@ -4,7 +4,7 @@
  * capability gate is exercised against `contact`.
  */
 
-import { createTestDb, setupTestConfig } from '@tests/harness';
+import { createTestDb, createTestUser, runAsUser, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { getDb } from '@/database/registry';
@@ -160,6 +160,19 @@ describe('the global row stamp and divergence', () => {
         await api.update({ key: 'site', staged: true, data: { fields: { title: 'D' } } });
 
         expect(await globalUpdatedAt()).toEqual(t0);
+    });
+
+    it("reports the staged change's own last edit on a staged read", async () => {
+        const editor = await createTestUser(getDb());
+        await runAsUser({ id: editor.id } as never, () =>
+            api.update({ key: 'site', staged: true, data: { fields: { title: 'D' } } })
+        );
+
+        const staged = await api.getStaged({ key: 'site' });
+        const canonical = await api.get({ key: 'site', full: true });
+
+        expect(staged).toMatchObject({ updatedAt: t2, updatedBy: editor.id });
+        expect(canonical).toMatchObject({ updatedAt: t0, updatedBy: null });
     });
 
     it('stamps the global row on a merge', async () => {

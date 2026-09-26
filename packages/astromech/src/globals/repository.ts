@@ -8,7 +8,7 @@ import type { Resource } from '@/content/repository/types';
 import type { GlobalContentRow, GlobalTableRow } from '@/globals/tables';
 import type { EntryStatus, JsonObject } from '@/types/index';
 import { getDefaultContentLocale } from '@/config/content-locale';
-import { createContentRepository } from '@/content/repository/content-table';
+import { createContentRepository, lastUpdate } from '@/content/repository/content-table';
 import { kyselyTableKey } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 import { globalContentTable, globalsTable, globalVersionsTable } from '@/database/tables';
@@ -39,11 +39,10 @@ function toGlobalResource(
         status: contentRow.status,
         publishedAt: contentRow.publishedAt,
         createdAt: resourceRow.createdAt,
-        updatedAt: resourceRow.updatedAt,
+        ...lastUpdate(resourceRow, contentRow),
         contentCreatedAt: contentRow.createdAt,
         contentUpdatedAt: contentRow.updatedAt,
         createdBy: contentRow.createdBy,
-        updatedBy: resourceRow.updatedBy,
     };
 }
 

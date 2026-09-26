@@ -84,7 +84,10 @@ export type Resource = {
     fields: JsonObject;
     /** The resource row's `createdAt` — when the item itself was created. */
     createdAt: Date;
-    /** The resource row's `updatedAt`: the last canonical write in any locale. */
+    /**
+     * The resource row's `updatedAt`, the last canonical write in any locale; on
+     * a staged read, the staged content row's own.
+     */
     updatedAt: Date;
     /** This content row's `createdAt`. Internal: the staged read's divergence check. */
     contentCreatedAt: Date;

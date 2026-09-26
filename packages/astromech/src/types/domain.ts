@@ -58,12 +58,14 @@ export type Entry = {
     createdAt: Date;
     /**
      * The entry's last change, in any locale; every locale reports the same
-     * value. A staged change does not move it until it is merged.
+     * value. A staged read reports the staged change's own last edit instead,
+     * and a staged edit never moves the entry's.
      */
     updatedAt: Date;
     /**
-     * Who made this locale, and who made the entry's last change. Null for a
-     * write with no request identity: a seed script, the CLI, the scheduler.
+     * Who made this locale, and who made the entry's last change (on a staged
+     * read, the staged change's). Null for a write with no request identity: a
+     * seed script, the CLI, the scheduler.
      */
     createdBy?: string | null;
     updatedBy?: string | null;
@@ -91,12 +93,14 @@ export type Global = {
     createdAt: Date;
     /**
      * The global's last change, in any locale; every locale reports the same
-     * value. A staged change does not move it until it is merged.
+     * value. A staged read reports the staged change's own last edit instead,
+     * and a staged edit never moves the global's.
      */
     updatedAt: Date;
     /**
-     * Who made this locale, and who made the global's last change. Null for a
-     * write with no request identity: a seed script, the CLI, the scheduler.
+     * Who made this locale, and who made the global's last change (on a staged
+     * read, the staged change's). Null for a write with no request identity: a
+     * seed script, the CLI, the scheduler.
      */
     createdBy?: string | null;
     updatedBy?: string | null;

@@ -17,7 +17,13 @@ import type { JsonObject } from '@/types/index';
 import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createFileTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import {
+    createFileTestDb,
+    createTestUser,
+    makeTestConfig,
+    runAsUser,
+    setupTestConfig,
+} from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { relationshipRepository } from '@/content/repository/relationships';
@@ -205,6 +211,21 @@ describe('the entry row stamp and divergence', () => {
         await api.update({ type: 'post', id, staged: true, data: { title: 'Draft' } });
 
         expect(await entryUpdatedAt(id)).toEqual(t0);
+    });
+
+    it("reports the staged change's own last edit on a staged read", async () => {
+        const editor = await createTestUser(getDb());
+        const id = await stagedPost();
+        vi.setSystemTime(t2);
+        await runAsUser({ id: editor.id } as never, () =>
+            api.update({ type: 'post', id, staged: true, data: { title: 'Draft' } })
+        );
+
+        const staged = await api.getStaged({ type: 'post', id });
+        const canonical = await api.get({ type: 'post', id, full: true });
+
+        expect(staged).toMatchObject({ updatedAt: t2, updatedBy: editor.id });
+        expect(canonical).toMatchObject({ updatedAt: t0, updatedBy: null });
     });
 
     it('stamps the entry row on a merge', async () => {
