@@ -152,7 +152,7 @@ z.output<typeof userSchema>`, with the schema in the resource's `schema.ts`.
       the response body, taken from the schema object directly.
 - [x] **7. Plugins.** Redirects and forms declare outputs on their methods; the
       plugin docs describe `output`.
-- [ ] **8. Versions in the public shape.** `versions.get({ id, locale, version })`,
+- [x] **8. Versions in the public shape.** `versions.get({ id, locale, version })`,
       addressed by resource id and version number, returns the version's
       metadata (`version`, `createdAt`, `createdBy`) and a `snapshot`. The
       snapshot is the public type narrowed to the versioned keys (for entries,
@@ -163,23 +163,7 @@ z.output<typeof userSchema>`, with the schema in the resource's `schema.ts`.
       under `version` in the same way; check its source before building. Fix
       the doc comment on `UserVersion`, which says "media item".
 
-## Later
+## Follow-ups
 
-- **Share the resource output keys.** `entrySchema`, `globalSchema` and
-  `mediaSchema` repeat the same timestamp and audit keys (`createdAt` to
-  `updatedBy`), and the entry and global version schemas repeat each other.
-  Fold them into shared pieces with step 8, when the version shapes change.
-- **Share the media and users repository code.** `media/repository.ts` and
-  `users/repository.ts` repeat four blocks: the list filter, `findByLocale`, the
-  chunked id lookup and the update and delete members. The copies predate this
-  work; they carried over from the rename in step 2.
-- **Document the other error statuses.** Routes document their success body
-  and, where a row has `notFound`, a 404 with the shared `Error` component.
-  401, 403, 422 and 500 are not documented yet.
-- **Document `/me`.** It is served in `transport/http/app.ts`, outside the
-  route tables, so it has no response schema.
-- **Entry methods in the method manifest emit no `output`.**
-  `projectEntryMethod` in `codegen/method-manifest.ts` projects the input only.
-- **Plugin routes are not in the OpenAPI document.** `/api/plugins/*` is a plain
-  Hono router; declaring `output` on a plugin method types and parses its
-  result but does not document it over HTTP.
+The shared audit keys landed with step 8. The rest moved to
+`planned/api-contract-gaps.md` and `planned/media-users-repository-copies.md`.
