@@ -22,8 +22,7 @@ Checked against the code on 2026-09-25.
   row. `createCredentialAccount` and `accountsTable` mean better-auth's
   `accounts` table.
 - **Each public type is mapped by hand.** `toEntry`, `toGlobal`, `toMedia` and
-  `toUser` copy fields one by one so internal ones (`contentId`, `staged`) never
-  leave. `types/domain.ts` declares each public type separately, so nothing
+  `toUser` copy fields one by one so internal ones (`contentId`) never leave. `types/domain.ts` declares each public type separately, so nothing
   checks that a mapper and its type agree.
 - **The OpenAPI spec has no response bodies.** `documentRoute()` in
   `packages/astromech/src/transport/http/routes/rest-route.ts` registers a status
@@ -103,33 +102,29 @@ z.output<typeof userSchema>`, with the schema in the resource's `schema.ts`.
   default and falls back to interpreting them where `new Function` is blocked,
   as on Workers.
 
-## Open questions
+## Settled while building
 
-- **Do staging writes stamp the resource row?** A staged change isn't the
-  resource yet, so the plan is: staging create and update don't, merge does.
-- **The admin's staging divergence check is already wrong.**
-  `use-edit-controller.ts` in `packages/admin/src/hooks/` compares the
-  canonical's public `updatedAt` with the staged read's `createdAt`. But a
-  staged read's `createdAt` is the resource's creation date, not the staged
-  change's, so the check is true for almost any resource edited since it was
-  created, and the merge dialog nearly always says "diverged". Globals share
-  it. Once `updatedAt` covers every locale it would be wrong a second way. The
-  plan: a staged read carries `diverged`, computed on the server from the
-  canonical content row's `updatedAt` and the staged content row's
-  `createdAt`, both per-locale and internal. The admin reads that flag.
-- **Per-locale consumers of `updatedAt`.** The SEO plugin's sitemap `lastmod`
-  (`packages/plugins/seo/src/service/seo.ts`) will move when any locale is
-  edited, and the admin's media cache-busting URL
-  (`packages/admin/src/utilities/media.tsx`) will change on a metadata edit.
-  Both look acceptable; confirm while building.
+- **Staging writes don't stamp the resource row.** A staged change isn't the
+  resource yet: staging create and update leave it alone, merge stamps it. A
+  staged read reports its own staged row's `updatedAt` and `updatedBy`, as
+  Payload, Craft, Strapi, Sanity and WordPress do (`DECISIONS.md`).
+- **The staging divergence check moved to the server.** A staged read carries
+  `diverged`, computed from the canonical content row's `updatedAt` and the
+  staged row's `createdAt`. The admin's merge dialog reads that flag.
+- **Per-locale consumers of `updatedAt`.** The SEO sitemap's `lastmod` now moves
+  when any locale is edited, which is acceptable. The admin versions media URLs
+  by the file's content hash (`metadata.version`), falling back to `updatedAt`,
+  so a metadata edit no longer busts the cache.
+- **`staged` stays public** on `Entry` and `Global`; the old mappers already
+  copied it.
 
 ## The work
 
-- [ ] **1. Rules.** `TERMINOLOGY.md`: extend "Resource" to name the internal
+- [x] **1. Rules.** `TERMINOLOGY.md`: extend "Resource" to name the internal
       model and `toXResource`, and "Schema" to cover output schemas.
       `DECISIONS.md`: output parsed at `bind()`, strip-only output schemas, the
       three tiers, one `updatedAt`. The `code` and `api` skills get the rules.
-- [ ] **2. The resource model.** For all four resources: `XRow` becomes
+- [x] **2. The resource model.** For all four resources: `XRow` becomes
       `XResource` and `ContentRow` becomes `Resource`; `toXRow` becomes
       `toXResource`; the decoder's `own` becomes `resource`, and the content
       repository's `owners` and `ownerColumn` follow. `toMediaResource` resolves
@@ -137,17 +132,17 @@ z.output<typeof userSchema>`, with the schema in the resource's `schema.ts`.
       only: `findAccount`, `findAccounts` and `updateAccount` become
       `findResourceRow`, `findResourceRows` and `updateResourceRow` (or
       another plain name), and `UserAccountPatch` follows.
-- [ ] **3. Remove `findAccountRow`.** `userRepository.findOne` with a fallback
+- [x] **3. Remove `findAccountRow`.** `userRepository.findOne` with a fallback
       reads the requested locale, then the fallback locale, then
       `findAnyLocale`, then answers null. Callers: `auth/session.ts`,
       `users/methods/get.ts`, `users/methods/update.ts`.
-- [ ] **4. One `updatedAt`.** The content repository's canonical writes stamp the
+- [x] **4. One `updatedAt`.** The content repository's canonical writes stamp the
       resource row in the same transaction. That covers content updates,
       status batches, merge, version restore, field propagation and the
       duplicate path. Media and user resources carry the resource row's
       `updatedAt` only. Entries sort `updatedAt` by the resource column.
       Settle the open questions above.
-- [ ] **5. Output schemas.** An output schema in each resource's `schema.ts`, the
+- [x] **5. Output schemas.** An output schema in each resource's `schema.ts`, the
       public types inferred from them, and `output` on every core method
       (single reads, `QueryResult` lists, versions, notifications). `bind()` in
       `services/define-service.ts` parses the result with the three tiers and
@@ -167,3 +162,14 @@ z.output<typeof userSchema>`, with the schema in the resource's `schema.ts`.
       per resource, derived from its output schema. Payload nests the document
       under `version` in the same way; check its source before building. Fix
       the doc comment on `UserVersion`, which says "media item".
+
+## Later
+
+- **Share the resource output keys.** `entrySchema`, `globalSchema` and
+  `mediaSchema` repeat the same timestamp and audit keys (`createdAt` to
+  `updatedBy`), and the entry and global version schemas repeat each other.
+  Fold them into shared pieces with step 8, when the version shapes change.
+- **Share the media and users repository code.** `media/repository.ts` and
+  `users/repository.ts` repeat four blocks: the list filter, `findByLocale`, the
+  chunked id lookup and the update and delete members. The copies predate this
+  work; they carried over from the rename in step 2.
