@@ -8,6 +8,7 @@ import type { ApiErrorCode } from '@/errors/api-error';
 import type { Context, ErrorHandler, NotFoundHandler } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { ZodIssue } from 'zod';
+import { z } from '@hono/zod-openapi';
 import { HTTPException } from 'hono/http-exception';
 import { BulkOperationError } from '@/entries/errors';
 import { resolveNodeEnv } from '@/env';
@@ -22,6 +23,19 @@ export type ApiErrorDetails = {
     [key: string]: unknown;
 };
 
+/** The `{ error }` body every error response answers with, as the OpenAPI document shows it. */
+export const errorBodySchema = z
+    .object({
+        error: z.object({
+            id: z.string(),
+            code: z.string(),
+            message: z.string(),
+            status: z.number(),
+            details: z.record(z.string(), z.unknown()).optional(),
+        }),
+    })
+    .openapi('Error');
+
 function generateErrorId(): string {
     return `err_${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -34,18 +48,16 @@ function apiError(
     message: string,
     details?: ApiErrorDetails
 ): Response {
-    return c.json(
-        {
-            error: {
-                id: generateErrorId(),
-                code,
-                message,
-                status,
-                ...(details ? { details } : {}),
-            },
+    const body: z.input<typeof errorBodySchema> = {
+        error: {
+            id: generateErrorId(),
+            code,
+            message,
+            status,
+            ...(details ? { details } : {}),
         },
-        status as ContentfulStatusCode
-    );
+    };
+    return c.json(body, status as ContentfulStatusCode);
 }
 
 /** The response an `ApiError` answers with: its own status, code and details. */

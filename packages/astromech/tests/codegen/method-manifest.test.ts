@@ -552,3 +552,26 @@ describe('generateMethodManifest — plugin method output', () => {
         expect(output?.properties?.['count']).toEqual({ type: 'number' });
     });
 });
+
+describe('generateMethodManifest — core method output', () => {
+    /** The properties a core method's output documents, through a nullable read. */
+    function outputProperties(name: string): Record<string, unknown> {
+        const output = findMethod(parseManifest().methods, name)?.['output'] as {
+            anyOf?: { properties?: Record<string, unknown> }[];
+            properties?: Record<string, unknown>;
+        };
+        return output.properties ?? output.anyOf?.[0]?.properties ?? {};
+    }
+
+    it('documents a date as the ISO string it crosses JSON as', () => {
+        const dateTime = { type: 'string', format: 'date-time' };
+        expect(outputProperties('users.update')['createdAt']).toEqual(dateTime);
+        expect(outputProperties('media.get')['updatedAt']).toEqual(dateTime);
+    });
+
+    it('documents a fallback key as its nullable inner type', () => {
+        expect(outputProperties('media.get')['width']).toMatchObject({
+            anyOf: [{ type: 'number' }, { type: 'null' }],
+        });
+    });
+});

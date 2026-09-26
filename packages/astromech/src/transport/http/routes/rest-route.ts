@@ -9,7 +9,12 @@ import { z } from '@hono/zod-openapi';
 import { createServices } from '@/app-context/services';
 import { ValidationError } from '@/errors/validation';
 import { contentService } from '@/policies/call-method';
-import { badRequest, fromZodError, notFound } from '@/transport/http/middleware/errors';
+import {
+    badRequest,
+    errorBodySchema,
+    fromZodError,
+    notFound,
+} from '@/transport/http/middleware/errors';
 import { fromQueryParams } from './query-string';
 import { routeAccess } from './route-access';
 
@@ -32,8 +37,8 @@ export type RestMount = {
     /** The catalogue the service binds: each method's access and input schema. */
     catalogue: ContractCatalogue;
     /**
-     * The catalogue the OpenAPI document is written from, when it differs. The
-     * entries router documents `{type}` rather than any one type.
+     * The catalogue the OpenAPI document is written from, when it differs: the
+     * entries router documents `{type}`, and a bespoke route its own response.
      */
     documented?: ContractCatalogue;
     /** The domain's rows. A bespoke row is documented here and served by hand. */
@@ -244,6 +249,8 @@ function documentRoute(
     const body = requestBody(route, contract);
     const query = documentedQuery(route, contract);
     const status = route.status ?? (route.envelope === 'empty' ? 204 : 200);
+    const description = contract.summary ?? 'Success';
+    const response = responseBody(route, contract.output);
 
     router.openAPIRegistry.registerPath({
         method: route.verb,
@@ -256,8 +263,56 @@ function documentRoute(
                 ? { body: { content: { 'application/json': { schema: body } } } }
                 : {}),
         },
-        responses: { [status]: { description: contract.summary ?? 'Success' } },
+        responses: {
+            [status]: {
+                description,
+                ...(response !== undefined
+                    ? { content: { 'application/json': { schema: response } } }
+                    : {}),
+            },
+            ...(route.notFound !== undefined
+                ? {
+                      404: {
+                          description: `${route.notFound} not found`,
+                          content: { 'application/json': { schema: errorBodySchema } },
+                      },
+                  }
+                : {}),
+        },
     });
+}
+
+/**
+ * The body a route answers with: the method's `output` in the row's envelope
+ * (see `respond`). None for a bodiless 204, or a method that declares no output.
+ */
+function responseBody(
+    route: HttpRouteSpec,
+    output: z.ZodType | undefined
+): z.ZodType | undefined {
+    switch (route.envelope ?? 'data') {
+        case 'data':
+            return output === undefined
+                ? undefined
+                : z.object({ data: dataSchema(output, route.notFound !== undefined) });
+        case 'raw':
+            return output;
+        case 'success':
+            return z.object({ success: z.literal(true) });
+        case 'empty':
+            return undefined;
+    }
+}
+
+/**
+ * The `data` of a `{ data }` body. A route that answers null with a 404 never
+ * sends null. Otherwise null is a union option: `.nullable()` on a named schema
+ * would make the generator write `nullable` into the shared component.
+ */
+function dataSchema(output: z.ZodType, notFound: boolean): z.ZodType {
+    if (!(output instanceof z.ZodNullable)) return output;
+    const present = output.unwrap() as z.ZodType;
+    return notFound ? present : z.union([present, z.null()]);
 }
 
 /**

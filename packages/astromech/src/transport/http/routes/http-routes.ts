@@ -303,6 +303,7 @@ export const USERS_ROUTE_SPECS = [
         verb: 'get',
         path: '/:id',
         id: 'users.get',
+        notFound: 'User',
         handler: 'bespoke',
     },
     {

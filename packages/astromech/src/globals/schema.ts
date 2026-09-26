@@ -1,7 +1,11 @@
 import { z } from '@hono/zod-openapi';
 import { optionalDate, scheduleEntrySchema, statusSchema } from '@/entries/schema';
-import { fallback } from '@/services/fallback';
-import { jsonObject, unparsedJsonObject } from '@/services/json';
+import { withFallback } from '@/services/fallback';
+import {
+    jsonObject,
+    nullableUnparsedJsonObject,
+    unparsedJsonObject,
+} from '@/services/json';
 
 /**
  * The payload a `globals.update` call carries: a fields patch and, on a global
@@ -56,7 +60,7 @@ export const globalSchema = z
         /** True when this read is the staged change rather than the canonical row. */
         staged: z.boolean(),
         /** The publication gate, read exactly as `Entry.publishedAt` is. */
-        publishedAt: z.date().nullable().catch(fallback(null)),
+        publishedAt: withFallback(z.date().nullable(), null),
         /** When the global was first saved; every locale reports the same value. */
         createdAt: z.date(),
         /**
@@ -69,9 +73,9 @@ export const globalSchema = z
          * Who made this locale. Null for a write with no request identity: a seed
          * script, the CLI, the scheduler.
          */
-        createdBy: z.string().nullable().catch(fallback(null)),
+        createdBy: withFallback(z.string().nullable(), null),
         /** Who made the global's last change (on a staged read, the staged change's). */
-        updatedBy: z.string().nullable().catch(fallback(null)),
+        updatedBy: withFallback(z.string().nullable(), null),
     })
     .openapi('Global');
 
@@ -79,7 +83,9 @@ export const globalSchema = z
  * A staged read: the staged change as a `Global`, and whether the canonical was
  * written after the staged change was made from it.
  */
-export const stagedGlobalSchema = globalSchema.extend({ diverged: z.boolean() });
+export const stagedGlobalSchema = globalSchema
+    .extend({ diverged: z.boolean() })
+    .openapi('StagedGlobal');
 
 /** A saved snapshot of one locale of one global. */
 export const globalVersionSchema = z
@@ -89,9 +95,9 @@ export const globalVersionSchema = z
         locale: z.string(),
         /** Position in the sequence, which runs per global and locale from 1. */
         version: z.number(),
-        fields: unparsedJsonObject.nullable(),
-        status: statusSchema.nullable().catch(fallback(null)),
+        fields: nullableUnparsedJsonObject,
+        status: withFallback(statusSchema.nullable(), null),
         createdAt: z.date(),
-        createdBy: z.string().nullable().catch(fallback(null)),
+        createdBy: withFallback(z.string().nullable(), null),
     })
     .openapi('GlobalVersion');

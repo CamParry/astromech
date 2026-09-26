@@ -19,7 +19,7 @@ import type {
     ServiceMethodAccess,
     ServiceMethodContract,
 } from '@/types/index';
-import { z } from '@hono/zod-openapi';
+import type { z } from '@hono/zod-openapi';
 import { entryCatalogue } from '@/entries/catalogue';
 import { globalsDefinition } from '@/globals/service';
 import { mediaDefinition } from '@/media/service';
@@ -28,6 +28,7 @@ import {
     resolvePluginIdentity,
     resolvePluginPermission,
 } from '@/plugins/runtime/plugin-identity';
+import { toJsonSchema } from '@/services/json-schema';
 import { usersDefinition } from '@/users/service';
 
 /**
@@ -47,7 +48,7 @@ function toJSONSchema(
     io: 'input' | 'output'
 ): JsonSchemaObject | null {
     try {
-        return z.toJSONSchema(schema, { unrepresentable: 'any', io });
+        return toJsonSchema(schema, { io });
     } catch {
         return null;
     }

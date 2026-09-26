@@ -18,7 +18,18 @@ import { mediaRouter } from '@/transport/http/routes/media';
 import { notificationsRouter } from '@/transport/http/routes/notifications';
 import { usersRouter } from '@/transport/http/routes/users';
 
-type Schema = { properties?: Record<string, unknown>; $ref?: string };
+type Schema = {
+    type?: string;
+    format?: string;
+    nullable?: boolean;
+    properties?: Record<string, Schema>;
+    required?: string[];
+    items?: Schema;
+    anyOf?: Schema[];
+    allOf?: Schema[];
+    additionalProperties?: boolean | Schema;
+    $ref?: string;
+};
 
 type Operation = {
     summary?: string;
@@ -26,6 +37,7 @@ type Operation = {
     requestBody?: {
         content: { 'application/json': { schema: Schema } };
     };
+    responses: Record<string, { content?: { 'application/json': { schema: Schema } } }>;
 };
 
 type Document = {
@@ -44,6 +56,21 @@ function bodyProperties(operation: Operation | undefined, doc: Document): string
             ? schema
             : doc.components?.schemas?.[schema.$ref.replace('#/components/schemas/', '')];
     return Object.keys(resolved?.properties ?? {});
+}
+
+/** The JSON body an operation documents for `status`, if any. */
+function responseSchema(
+    operation: Operation | undefined,
+    status: number
+): Schema | undefined {
+    return operation?.responses[String(status)]?.content?.['application/json'].schema;
+}
+
+/** A named component of the document. */
+function component(doc: Document, name: string): Schema {
+    const schema = doc.components?.schemas?.[name];
+    if (schema === undefined) throw new Error(`No component '${name}'`);
+    return schema;
 }
 
 /** The query parameters an operation documents, by name. */
@@ -157,5 +184,137 @@ describe('the emitted document', () => {
             expect(properties, path).toContain('ids');
             expect(properties, path).not.toContain('id');
         }
+    });
+});
+
+describe('the documented responses', () => {
+    // Every core method declares an output, so every route but a 204 has a body.
+    it('gives every route a response body from its method’s output', () => {
+        const doc = document();
+        for (const route of HTTP_ROUTES) {
+            const key = documentPath(route.base, route.path);
+            const operation = doc.paths[key]?.[route.verb];
+            if (route.envelope === 'empty') {
+                expect(operation?.responses['204'], key).toBeDefined();
+                expect(responseSchema(operation, 204), key).toBeUndefined();
+                continue;
+            }
+            expect(responseSchema(operation, route.status ?? 200), key).toBeDefined();
+        }
+    });
+
+    it('wraps the output in the route’s envelope', () => {
+        const doc = document();
+        const get = doc.paths['/entries/{type}/{id}']?.['get'];
+        expect(responseSchema(get, 200)?.properties?.['data']).toEqual({
+            $ref: '#/components/schemas/Entry',
+        });
+        const list = responseSchema(doc.paths['/entries/{type}']?.['get'], 200);
+        expect(list?.properties?.['data']?.items).toEqual({
+            $ref: '#/components/schemas/Entry',
+        });
+        expect(list?.properties?.['pagination']?.nullable).toBe(true);
+        const trash = doc.paths['/entries/{type}/{id}/trash']?.['post'];
+        expect(Object.keys(responseSchema(trash, 200)?.properties ?? {})).toEqual([
+            'success',
+        ]);
+    });
+
+    it('documents a 404 with the error body on a route that answers one', () => {
+        const doc = document();
+        for (const path of ['/entries/{type}/{id}', '/globals/{key}', '/users/{id}']) {
+            expect(responseSchema(doc.paths[path]?.['get'], 404), path).toEqual({
+                $ref: '#/components/schemas/Error',
+            });
+        }
+        expect(Object.keys(component(doc, 'Error').properties ?? {})).toEqual(['error']);
+    });
+
+    it('documents a read that answers null without making the component nullable', () => {
+        const doc = document();
+        const staged = doc.paths['/entries/{type}/{id}/staged']?.['get'];
+        expect(responseSchema(staged, 200)?.properties?.['data']?.anyOf?.[0]).toEqual({
+            $ref: '#/components/schemas/StagedEntry',
+        });
+        for (const [name, schema] of Object.entries(doc.components?.schemas ?? {})) {
+            expect(schema.nullable, name).toBeUndefined();
+        }
+    });
+
+    it('documents what the count route answers, not the method’s scalar', () => {
+        const count = responseSchema(
+            document().paths['/notifications/count']?.['get'],
+            200
+        );
+        expect(count?.properties?.['data']?.properties?.['count']).toEqual({
+            type: 'number',
+        });
+    });
+
+    it('keeps the internal keys out of the public components', () => {
+        const doc = document();
+        const internal = [
+            'contentId',
+            'contentCreatedAt',
+            'contentUpdatedAt',
+            'accountUpdatedAt',
+            'fileUpdatedAt',
+            'resourceId',
+        ];
+        for (const name of ['Entry', 'Global', 'Media', 'User']) {
+            const keys = Object.keys(component(doc, name).properties ?? {});
+            expect(keys, name).toContain('id');
+            for (const key of internal) expect(keys, name).not.toContain(key);
+        }
+    });
+
+    it('documents a date as an ISO string', () => {
+        const doc = document();
+        const dateTime = { type: 'string', format: 'date-time' };
+        const entry = component(doc, 'Entry').properties ?? {};
+        expect(entry['createdAt']).toEqual(dateTime);
+        expect(entry['updatedAt']).toEqual(dateTime);
+        expect(entry['publishedAt']).toEqual({ ...dateTime, nullable: true });
+        expect(component(doc, 'User').properties?.['createdAt']).toEqual(dateTime);
+        expect(component(doc, 'Notification').properties?.['createdAt']).toEqual(
+            dateTime
+        );
+    });
+
+    it('documents `fields` as an open object', () => {
+        const doc = document();
+        const object = { type: 'object', additionalProperties: true };
+        expect(component(doc, 'Entry').properties?.['fields']).toEqual(object);
+        expect(component(doc, 'EntryVersion').properties?.['fields']).toEqual({
+            ...object,
+            nullable: true,
+        });
+    });
+
+    it('lists a key with a fallback as required, and an optional one as optional', () => {
+        const doc = document();
+        expect(component(doc, 'Entry').required).toEqual(
+            expect.arrayContaining(['slug', 'createdBy', 'publishedAt'])
+        );
+        const media = component(doc, 'Media');
+        expect(media.required).toEqual(expect.arrayContaining(['width', 'metadata']));
+        const metadata = media.properties?.['metadata'];
+        expect(Object.keys(metadata?.properties ?? {})).toContain('version');
+        expect(metadata?.required ?? []).toEqual([]);
+    });
+
+    it('documents a key with a fallback as its nullable inner type', () => {
+        const doc = document();
+        const entry = component(doc, 'Entry').properties ?? {};
+        expect(entry['slug']).toEqual({ type: 'string', nullable: true });
+        expect(component(doc, 'Media').properties?.['width']).toEqual({
+            type: 'number',
+            nullable: true,
+        });
+        expect(component(doc, 'EntryVersion').properties?.['status']).toEqual({
+            type: 'string',
+            enum: ['unpublished', 'published', 'scheduled'],
+            nullable: true,
+        });
     });
 });

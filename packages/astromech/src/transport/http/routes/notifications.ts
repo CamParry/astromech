@@ -6,7 +6,7 @@
  * instead of a permission contract, and the scoped handle fills `userId`.
  */
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import { OpenAPIHono } from '@hono/zod-openapi';
+import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { notificationsDefinition } from '@/notifications/service';
 import { NOTIFICATIONS_ROUTE_SPECS } from './http-routes';
 import { mountRestRoutes } from './rest-route';
@@ -15,8 +15,15 @@ type Env = { Variables: AuthVariables };
 
 const router = new OpenAPIHono<Env>();
 
+const { catalogue } = notificationsDefinition;
+
 mountRestRoutes(router, {
-    catalogue: notificationsDefinition.catalogue,
+    catalogue,
+    // `count` answers `{ data: { count } }`, below, not the scalar the method returns.
+    documented: {
+        ...catalogue,
+        count: { ...catalogue.count, output: z.object({ count: z.number() }) },
+    },
     specs: NOTIFICATIONS_ROUTE_SPECS,
 });
 

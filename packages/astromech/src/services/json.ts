@@ -37,3 +37,16 @@ export const unparsedJsonObject = z
         { message: 'Expected a JSON object' }
     )
     .openapi({ type: 'object', additionalProperties: true });
+
+/**
+ * {@link unparsedJsonObject} or null. The OpenAPI generator drops a `.nullable()`
+ * around a schema whose type is stated by hand, so `nullable` is stated as well.
+ */
+export const nullableUnparsedJsonObject = unparsedJsonObject
+    .nullable()
+    .openapi(openApi30Nullable());
+
+/** OpenAPI 3.0's `nullable`, which the generator's metadata type leaves out. */
+function openApi30Nullable(): Record<string, unknown> {
+    return { nullable: true };
+}

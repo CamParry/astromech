@@ -63,7 +63,8 @@ is guessable from any other.
 
 - **An output schema has three tiers.** `fields`, and any other stored JSON, is
   `unparsedJsonObject`, typed without being walked. A nullable or optional value
-  is `.catch(fallback(null))` (or `undefined`), which substitutes and logs.
+  is `withFallback(schema, null)` (or `undefined`), which substitutes and logs,
+  and which the OpenAPI document shows as `schema`. Never a bare `.catch`.
   Everything else is plain, so a bad value fails the call.
 
 A REST route keeps a flat body under this: the route spec declares

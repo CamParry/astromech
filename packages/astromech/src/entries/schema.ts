@@ -1,6 +1,10 @@
 import { z } from '@hono/zod-openapi';
-import { fallback } from '@/services/fallback';
-import { jsonObject, unparsedJsonObject } from '@/services/json';
+import { withFallback } from '@/services/fallback';
+import {
+    jsonObject,
+    nullableUnparsedJsonObject,
+    unparsedJsonObject,
+} from '@/services/json';
 
 /** The three publication states an entry or global row may carry. */
 export const statusSchema = z.enum(['unpublished', 'published', 'scheduled']);
@@ -123,7 +127,7 @@ export const entrySchema = z
         locale: z.string(),
         /** Every locale this entry has a content row for, this one included. Sorted. */
         locales: z.array(z.string()),
-        slug: z.string().nullable().catch(fallback(null)),
+        slug: withFallback(z.string().nullable(), null),
         title: z.string(),
         fields: unparsedJsonObject,
         status: statusSchema,
@@ -136,8 +140,8 @@ export const entrySchema = z
          * `publishedAt` is in the future is not publicly visible. Null means no gate
          * is set. `status` is what tells you which side of now the value is on.
          */
-        publishedAt: z.date().nullable().catch(fallback(null)),
-        deletedAt: z.date().nullable().catch(fallback(null)),
+        publishedAt: withFallback(z.date().nullable(), null),
+        deletedAt: withFallback(z.date().nullable(), null),
         /** When the entry was created; every locale of it reports the same value. */
         createdAt: z.date(),
         /**
@@ -150,9 +154,9 @@ export const entrySchema = z
          * Who made this locale. Null for a write with no request identity: a seed
          * script, the CLI, the scheduler.
          */
-        createdBy: z.string().nullable().catch(fallback(null)),
+        createdBy: withFallback(z.string().nullable(), null),
         /** Who made the entry's last change (on a staged read, the staged change's). */
-        updatedBy: z.string().nullable().catch(fallback(null)),
+        updatedBy: withFallback(z.string().nullable(), null),
     })
     .openapi('Entry');
 
@@ -160,7 +164,9 @@ export const entrySchema = z
  * A staged read: the staged change as an `Entry`, and whether the canonical was
  * written after the staged change was made from it.
  */
-export const stagedEntrySchema = entrySchema.extend({ diverged: z.boolean() });
+export const stagedEntrySchema = entrySchema
+    .extend({ diverged: z.boolean() })
+    .openapi('StagedEntry');
 
 /** A saved snapshot of one locale of one entry. */
 export const entryVersionSchema = z
@@ -171,10 +177,10 @@ export const entryVersionSchema = z
         /** Position in the sequence, which runs per entry and locale from 1. */
         version: z.number(),
         title: z.string(),
-        slug: z.string().nullable().catch(fallback(null)),
-        fields: unparsedJsonObject.nullable(),
-        status: statusSchema.nullable().catch(fallback(null)),
+        slug: withFallback(z.string().nullable(), null),
+        fields: nullableUnparsedJsonObject,
+        status: withFallback(statusSchema.nullable(), null),
         createdAt: z.date(),
-        createdBy: z.string().nullable().catch(fallback(null)),
+        createdBy: withFallback(z.string().nullable(), null),
     })
     .openapi('EntryVersion');

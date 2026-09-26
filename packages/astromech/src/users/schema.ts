@@ -1,8 +1,12 @@
 import { z } from '@hono/zod-openapi';
 import { sortSchema } from '@/content/list';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
-import { fallback } from '@/services/fallback';
-import { jsonObject, unparsedJsonObject } from '@/services/json';
+import { withFallback } from '@/services/fallback';
+import {
+    jsonObject,
+    nullableUnparsedJsonObject,
+    unparsedJsonObject,
+} from '@/services/json';
 
 export const createUserSchema = z
     .object({
@@ -47,7 +51,7 @@ export const userSchema = z
         email: z.string(),
         name: z.string(),
         emailVerified: z.boolean(),
-        image: z.string().nullable().catch(fallback(null)),
+        image: withFallback(z.string().nullable(), null),
         /** The locale the content came from. */
         locale: z.string(),
         /** Locales that have a content row, this one included. Sorted. */
@@ -69,8 +73,8 @@ export const userVersionSchema = z
         locale: z.string(),
         /** Position in the sequence, which runs per user and locale from 1. */
         version: z.number(),
-        fields: unparsedJsonObject.nullable(),
+        fields: nullableUnparsedJsonObject,
         createdAt: z.date(),
-        createdBy: z.string().nullable().catch(fallback(null)),
+        createdBy: withFallback(z.string().nullable(), null),
     })
     .openapi('UserVersion');

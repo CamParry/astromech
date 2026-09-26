@@ -8,7 +8,7 @@ import type { MockInstance } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { OutputValidationError } from '@/errors/output-validation';
-import { fallback } from '@/services/fallback';
+import { withFallback } from '@/services/fallback';
 import { unparsedJsonObject } from '@/services/json';
 import { parseMethodOutput } from '@/services/parse-method-output';
 
@@ -16,12 +16,12 @@ const thing = z.object({
     id: z.string(),
     locale: z.string(),
     role: z.string(),
-    image: z.string().nullable().catch(fallback(null)),
+    image: withFallback(z.string().nullable(), null),
     fields: unparsedJsonObject,
-    meta: z
-        .object({ width: z.number().optional().catch(fallback(undefined)) })
-        .nullable()
-        .catch(fallback(null)),
+    meta: withFallback(
+        z.object({ width: withFallback(z.number().optional(), undefined) }).nullable(),
+        null
+    ),
 });
 
 const method = { name: 'things.get', output: thing };
@@ -131,6 +131,19 @@ describe('parseMethodOutput', () => {
         expect(run).toThrow(
             /^The result of things\.get doesn't match its output schema \(id 8f2c, locale en\):\n✖ .*expected string, received null\n {2}→ at role$/
         );
+    });
+
+    it('fails on a missing key with a fallback, which is a code bug rather than stored drift', () => {
+        const { image: _image, ...missing } = resource();
+        expect(() => parseMethodOutput(method, missing)).toThrow(OutputValidationError);
+        expect(() => parseMethodOutput(method, missing)).toThrow(/→ at image/);
+        expect(logged).not.toHaveBeenCalled();
+    });
+
+    it('leaves out a missing key whose schema is optional, without a fallback', () => {
+        const result = parseMethodOutput(method, resource({ meta: {} }));
+        expect(result).toMatchObject({ meta: {} });
+        expect(logged).not.toHaveBeenCalled();
     });
 
     it('names no resource when the result is not one', () => {

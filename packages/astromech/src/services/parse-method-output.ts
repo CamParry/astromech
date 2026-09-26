@@ -59,6 +59,7 @@ type WalkedDef =
     | { type: 'catch' | 'optional' | 'nullable'; innerType: z.core.$ZodType }
     | { type: 'object'; shape: Record<string, z.core.$ZodType> }
     | { type: 'array'; element: z.core.$ZodType }
+    | { type: 'pipe'; out: z.core.$ZodType }
     | { type: 'union'; options: readonly z.core.$ZodType[] }
     | { type: 'leaf' };
 
@@ -89,6 +90,9 @@ function fallbackPaths(schema: z.core.$ZodType, value: unknown): string[] {
             for (const [key, child] of Object.entries(def.shape)) {
                 walk(child, record[key], [...path, key], ownId);
             }
+        } else if (def.type === 'pipe') {
+            // `withFallback`'s presence check, which the parse already passed.
+            walk(def.out, part, path, id);
         } else if (def.type === 'array') {
             for (const [index, item] of (part as unknown[]).entries()) {
                 walk(def.element, item, [...path, index], id);
