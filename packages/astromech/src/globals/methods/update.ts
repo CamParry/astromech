@@ -1,7 +1,6 @@
 import type { GlobalRepository, GlobalResource } from '../repository';
 import type {
     EntryStatus,
-    Global,
     JsonObject,
     ResolvedConfig,
     ResolvedGlobal,
@@ -17,12 +16,13 @@ import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resource';
 import { parseInput } from '@/errors/validation';
 import { defineServiceMethod } from '@/services/define-service-method';
+import { parseOutput } from '@/services/parse-method-output';
 import { gate } from '../internal/access';
-import { getDeclaredGlobal, toGlobal } from '../internal/global';
+import { getDeclaredGlobal } from '../internal/global';
 import { syncGlobalRelationships } from '../internal/relationships';
 import { toStoredFields } from '../internal/stored-fields';
 import { globalRepository } from '../repository';
-import { localised, updateGlobalSchema } from '../schema';
+import { globalSchema, localised, updateGlobalSchema } from '../schema';
 
 /**
  * Writes one locale of one global, firing the global write hooks around it.
@@ -44,10 +44,11 @@ export const updateGlobal = defineServiceMethod({
         staged: z.boolean().optional(),
         data: updateGlobalSchema,
     }),
+    output: globalSchema,
     access: gate('update'),
     mutates: true,
     idempotent: true,
-    async handler(params, ctx): Promise<Global> {
+    async handler(params, ctx): Promise<GlobalResource> {
         const global = getDeclaredGlobal(ctx.config, params.key);
         const staged = params.staged === true;
         if (staged) assertCapability('global', global, 'staging');
@@ -83,7 +84,14 @@ export const updateGlobal = defineServiceMethod({
         const context = await ctx.runHook('global:beforeUpdate', {
             key: params.key,
             locale,
-            global: current ? toGlobal(current) : null,
+            global:
+                current === null
+                    ? null
+                    : parseOutput(
+                          globalSchema,
+                          current,
+                          'The global in global:beforeUpdate'
+                      ),
             data: params.data,
             user,
         });
@@ -121,7 +129,7 @@ export const updateGlobal = defineServiceMethod({
                     updatedBy: user?.id ?? null,
                 });
                 await syncGlobalRelationships(ctx.config, row.id);
-                return toGlobal(row);
+                return row;
             }
             if (current && global.capabilities.versioning) {
                 if (changesVersionedContent(RESOURCE_SPECS.global, current, { fields })) {
@@ -154,7 +162,7 @@ export const updateGlobal = defineServiceMethod({
         await ctx.runHook('global:afterUpdate', {
             key: params.key,
             locale,
-            global: saved,
+            global: parseOutput(globalSchema, saved, 'The global in global:afterUpdate'),
             data,
             user,
         });
@@ -181,7 +189,7 @@ async function writeRow(params: {
     publishedAt: Date | null | undefined;
     userId: string | null;
     patchedNames: string[];
-}): Promise<Global> {
+}): Promise<GlobalResource> {
     const { config, repository, global, id, locale, current, fields, userId, status } =
         params;
     // Publishing stamps the gate when the row has none yet, as `publish` does.
@@ -225,7 +233,7 @@ async function writeRow(params: {
         patchedFieldNames: params.patchedNames,
     });
 
-    return toGlobal(row);
+    return row;
 }
 
 /**

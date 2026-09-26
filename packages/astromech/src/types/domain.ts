@@ -1,7 +1,18 @@
 /**
- * Core domain types — entries, globals, users, media, roles,
- * relationships
+ * Core domain types: entries, globals, users, media, roles, relationships. A
+ * resource's public type is inferred from its output schema in its `schema.ts`.
  */
+
+import type { entrySchema, entryVersionSchema } from '@/entries/schema';
+import type { globalSchema, globalVersionSchema } from '@/globals/schema';
+import type {
+    mediaMetadataSchema,
+    mediaSchema,
+    mediaVersionSchema,
+} from '@/media/schema';
+import type { notificationSchema } from '@/notifications/schema';
+import type { userSchema, userVersionSchema } from '@/users/schema';
+import type { z } from 'zod';
 
 export type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
 export type JsonObject = { [key: string]: JsonValue };
@@ -32,171 +43,33 @@ export type TargetKind = (typeof TARGET_KINDS)[number];
 
 export type EntryStatus = 'unpublished' | 'published' | 'scheduled';
 
-/** A content record — one locale of an entry type's primary object. */
-export type Entry = {
-    id: string;
-    type: string;
-    locale: string;
-    /** Every locale this entry has a content row for, this one included. Sorted. */
-    locales: string[];
-    slug: string | null;
-    title: string;
-    fields: JsonObject;
-    status: EntryStatus;
-    /** True when this read is the staged change rather than the canonical row. */
-    staged: boolean;
-    /**
-     * The publication gate, not a record of when publication happened. While
-     * `status` is `'scheduled'` this holds a time ahead of now, and
-     * `content/visibility.ts` compares it against the clock: an entry whose
-     * `publishedAt` is in the future is not publicly visible. Null means no gate
-     * is set. `status` is what tells you which side of now the value is on.
-     */
-    publishedAt: Date | null;
-    deletedAt: Date | null;
-    /** When the entry was created; every locale of it reports the same value. */
-    createdAt: Date;
-    /**
-     * The entry's last change, in any locale; every locale reports the same
-     * value. A staged read reports the staged change's own last edit instead,
-     * and a staged edit never moves the entry's.
-     */
-    updatedAt: Date;
-    /**
-     * Who made this locale, and who made the entry's last change (on a staged
-     * read, the staged change's). Null for a write with no request identity: a
-     * seed script, the CLI, the scheduler.
-     */
-    createdBy?: string | null;
-    updatedBy?: string | null;
-};
+/** One locale of an entry of any type. Documented key by key on `entrySchema`. */
+export type Entry = z.output<typeof entrySchema>;
 
-/**
- * One editor-owned, exactly-one, site-wide piece of content, in one locale. A
- * global is addressed by its config `key` everywhere public; `id` is the row it
- * was saved as, present so a future relation has the same target shape every
- * other resource offers.
- */
-export type Global = {
-    id: string;
-    key: string;
-    locale: string;
-    /** Locales that have a content row, this one included. Sorted. */
-    locales: string[];
-    fields: JsonObject;
-    status: EntryStatus;
-    /** True when this read is the staged change rather than the canonical row. */
-    staged: boolean;
-    /** The publication gate, read exactly as `Entry.publishedAt` is. */
-    publishedAt: Date | null;
-    /** When the global was first saved; every locale reports the same value. */
-    createdAt: Date;
-    /**
-     * The global's last change, in any locale; every locale reports the same
-     * value. A staged read reports the staged change's own last edit instead,
-     * and a staged edit never moves the global's.
-     */
-    updatedAt: Date;
-    /**
-     * Who made this locale, and who made the global's last change (on a staged
-     * read, the staged change's). Null for a write with no request identity: a
-     * seed script, the CLI, the scheduler.
-     */
-    createdBy?: string | null;
-    updatedBy?: string | null;
-};
+/** One locale of a global. Documented key by key on `globalSchema`. */
+export type Global = z.output<typeof globalSchema>;
 
 /** A saved snapshot of one locale of one global. */
-export type GlobalVersion = {
-    id: string;
-    key: string;
-    locale: string;
-    /** Position in the sequence, which runs per global and locale from 1. */
-    version: number;
-    fields: JsonObject | null;
-    status: EntryStatus | null;
-    createdAt: Date;
-    createdBy: string | null;
-};
+export type GlobalVersion = z.output<typeof globalVersionSchema>;
+
+/** A saved snapshot of one locale of one user's fields. */
+export type UserVersion = z.output<typeof userVersionSchema>;
 
 /** A saved snapshot of one locale of one media item. */
-export type UserVersion = {
-    id: string;
-    userId: string;
-    locale: string;
-    /** Position in the sequence, which runs per user and locale from 1. */
-    version: number;
-    fields: JsonObject | null;
-    createdAt: Date;
-    createdBy: string | null;
-};
-
-export type MediaVersion = {
-    id: string;
-    mediaId: string;
-    locale: string;
-    /** Position in the sequence, which runs per media item and locale from 1. */
-    version: number;
-    title: string | null;
-    alt: string | null;
-    caption: string | null;
-    fields: JsonObject | null;
-    createdAt: Date;
-    createdBy: string | null;
-};
+export type MediaVersion = z.output<typeof mediaVersionSchema>;
 
 /** A saved snapshot of one locale of one entry. */
-export type EntryVersion = {
-    id: string;
-    entryId: string;
-    locale: string;
-    /** Position in the sequence, which runs per entry and locale from 1. */
-    version: number;
-    title: string;
-    slug: string | null;
-    fields: JsonObject | null;
-    status: EntryStatus | null;
-    createdAt: Date;
-    createdBy: string | null;
-};
+export type EntryVersion = z.output<typeof entryVersionSchema>;
 
 // A relationship row has no hand-written type: it is a derived index whose
 // shape comes from its `Table`, so `RelationshipRow` in `database/schema.ts`
 // is the one definition. A second copy here could only drift out of date.
 
-export type MediaMetadata = {
-    blurhash?: string | null;
-    version?: string;
-    orientation?: number;
-    duration?: number;
-    pageCount?: number;
-};
+/** What a file's upload records about it. */
+export type MediaMetadata = z.output<typeof mediaMetadataSchema>;
 
-/** An uploaded file — an image, video, document or other stored asset. */
-export type Media = {
-    id: string;
-    filename: string;
-    mimeType: string;
-    size: number;
-    url: string;
-    width?: number | null;
-    height?: number | null;
-    metadata?: MediaMetadata | null;
-    /** The locale the content came from. */
-    locale: string;
-    /** Locales that have a content row, this one included. Sorted. */
-    locales: string[];
-    title: string | null;
-    alt: string | null;
-    caption: string | null;
-    fields: JsonObject;
-    createdAt: Date;
-    /** The item's last change: a file replace, or a content edit in any locale. */
-    updatedAt: Date;
-    createdBy: string | null;
-    /** Who made the item's last change. */
-    updatedBy: string | null;
-};
+/** An uploaded file: an image, video, document or other stored asset. */
+export type Media = z.output<typeof mediaSchema>;
 
 /**
  * Permission strings follow `resource[:identifier]:action` — action always last.
@@ -232,34 +105,11 @@ export type Role = {
     isBuiltIn: boolean;
 };
 
-/** An admin user account. */
-export type User = {
-    id: string;
-    email: string;
-    name: string;
-    emailVerified: boolean;
-    image: string | null;
-    /** The locale the content came from. */
-    locale: string;
-    /** Locales that have a content row, this one included. Sorted. */
-    locales: string[];
-    fields: JsonObject;
-    /** The slug of the user's role, resolved against the config. */
-    role: string;
-    createdAt: Date;
-    /** The user's last change: name, email or role, or content in any locale. */
-    updatedAt: Date;
-};
+/** An admin user account. Documented key by key on `userSchema`. */
+export type User = z.output<typeof userSchema>;
 
-export type Notification = {
-    id: string;
-    userId: string;
-    type: string;
-    title: string;
-    message: string;
-    href: string | null;
-    createdAt: string;
-};
+/** One notification in a user's inbox. */
+export type Notification = z.output<typeof notificationSchema>;
 
 export type NotifyTarget = { user: string } | { role: string } | { all: true };
 

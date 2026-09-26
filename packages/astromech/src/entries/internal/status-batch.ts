@@ -6,7 +6,8 @@
  * Batch-only: `methods/status.ts` reaches each through `fromBatch`.
  */
 
-import type { AppContext, Entry } from '@/types/index';
+import type { EntryResource } from '../repository/types';
+import type { AppContext } from '@/types/index';
 import { parseInput } from '@/errors/validation';
 import { scheduleEntrySchema } from '../schema';
 import { updateEntryBatch } from './update-batch';
@@ -15,7 +16,7 @@ import { updateEntryBatch } from './update-batch';
 export async function publishEntryBatch(
     params: { type: string; ids: readonly string[]; locale?: string | undefined },
     ctx: AppContext
-): Promise<Entry[]> {
+): Promise<EntryResource[]> {
     return updateEntryBatch(
         {
             type: params.type,
@@ -32,7 +33,7 @@ export async function publishEntryBatch(
 export async function unpublishEntryBatch(
     params: { type: string; ids: readonly string[]; locale?: string | undefined },
     ctx: AppContext
-): Promise<Entry[]> {
+): Promise<EntryResource[]> {
     return updateEntryBatch(
         {
             type: params.type,
@@ -57,7 +58,7 @@ export async function scheduleEntryBatch(
         locale?: string | undefined;
     },
     ctx: AppContext
-): Promise<Entry[]> {
+): Promise<EntryResource[]> {
     const validated = parseInput(scheduleEntrySchema, {
         publishedAt: params.publishedAt,
     });

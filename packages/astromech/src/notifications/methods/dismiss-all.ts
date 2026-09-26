@@ -7,6 +7,7 @@ import { notificationRepository } from '../repository';
 export const dismissAllNotifications = defineServiceMethod({
     summary: 'Dismiss every one of your own notifications.',
     input: z.object({}),
+    output: z.void(),
     access: 'public',
     sessionScoped: true,
     mutates: true,

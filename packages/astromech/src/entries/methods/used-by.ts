@@ -1,5 +1,6 @@
 import type { Usage } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { usageSchema } from '@/content/schema';
 import { listUsage } from '@/content/usage';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
@@ -12,6 +13,7 @@ import { getEntryResource } from '../internal/read-entry';
 export const listEntryUsage = defineServiceMethod({
     summary: 'List the entries, globals, users and media items that reference an entry.',
     input: z.object({ type: z.string(), id: z.string() }),
+    output: z.array(usageSchema),
     access: entryGate('read'),
     mutates: false,
     async handler(params, ctx): Promise<Usage[]> {

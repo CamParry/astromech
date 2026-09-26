@@ -1,4 +1,4 @@
-import type { Entry } from '@/types/index';
+import type { EntryResource } from '../repository/types';
 import { z } from '@hono/zod-openapi';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
@@ -6,15 +6,15 @@ import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types';
 import { parseInput } from '@/errors/validation';
 import { defineServiceMethod } from '@/services/define-service-method';
+import { parseOutput } from '@/services/parse-method-output';
 import { UnknownEntryTypeError } from '../errors';
 import { entryGate } from '../internal/access';
 import { assertWritableFields } from '../internal/entry-type';
-import { toEntry } from '../internal/read-entry';
 import { syncEntryRelationships } from '../internal/relationships';
 import { deriveSlug } from '../internal/slug';
 import { toStoredFields } from '../internal/stored-fields';
 import { entryRepository } from '../repository/entries-table';
-import { createEntryPayloadSchema, createEntrySchema } from '../schema';
+import { createEntryPayloadSchema, createEntrySchema, entrySchema } from '../schema';
 
 /**
  * Creates an entry of the given type: validates input, fills defaults, runs
@@ -25,9 +25,10 @@ export const createEntry = defineServiceMethod({
     // The titleless payload, since one schema covers every type here; the
     // handler re-parses under the type's own, which is the stricter one.
     input: z.object({ type: z.string(), data: createEntryPayloadSchema }),
+    output: entrySchema,
     access: entryGate('create'),
     mutates: true,
-    async handler(params, ctx): Promise<Entry> {
+    async handler(params, ctx): Promise<EntryResource> {
         const { type, data } = params;
 
         const entryType = resolveEntryType(ctx.config, type);
@@ -93,12 +94,17 @@ export const createEntry = defineServiceMethod({
 
         // Write the row and its relationship index atomically.
         const entry = await transaction(async () => {
-            const created = toEntry(await entryRepository.create({ type, ...row }));
+            const created = await entryRepository.create({ type, ...row });
             await syncEntryRelationships(ctx.config, created, type);
             return created;
         });
 
-        await ctx.runHook('entry:afterCreate', { type, data: row, user, entry });
+        await ctx.runHook('entry:afterCreate', {
+            type,
+            data: row,
+            user,
+            entry: parseOutput(entrySchema, entry, 'The entry in entry:afterCreate'),
+        });
 
         return entry;
     },

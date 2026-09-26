@@ -1,4 +1,4 @@
-import type { Media } from '@/types/index';
+import type { MediaResource } from '../../repository';
 import { z } from '@hono/zod-openapi';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
@@ -6,8 +6,8 @@ import { restoreVersion } from '@/content/versions';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { syncMediaRelationships } from '../../internal/relationships';
-import { toMedia } from '../../internal/to-media';
 import { mediaRepository } from '../../repository';
+import { mediaSchema } from '../../schema';
 
 /**
  * Restores one locale of a media item to one of its saved versions, snapshotting
@@ -21,9 +21,10 @@ export const restoreMediaVersion = defineServiceMethod({
         locale: z.string().optional(),
         versionId: z.string(),
     }),
+    output: mediaSchema,
     access: 'media:update',
     mutates: true,
-    async handler(params, ctx): Promise<Media> {
+    async handler(params, ctx): Promise<MediaResource> {
         const { id } = params;
         const locale = resolveResourceLocale(
             RESOURCE_SPECS.media,
@@ -47,7 +48,7 @@ export const restoreMediaVersion = defineServiceMethod({
                     { ...columns, fields, updatedBy: ctx.user?.id ?? null }
                 );
                 await syncMediaRelationships(ctx.config, id);
-                return toMedia(row);
+                return row;
             },
         });
     },

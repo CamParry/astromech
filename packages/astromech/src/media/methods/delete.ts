@@ -11,6 +11,7 @@ import { variantPrefix } from '../serving/image/url';
 export const deleteMedia = defineServiceMethod({
     summary: 'Delete a media item.',
     input: z.object({ id: z.string() }),
+    output: z.void(),
     access: 'media:delete',
     mutates: true,
     destructive: true,

@@ -1,5 +1,5 @@
+import type { EntryResource } from '../repository/types';
 import type { VisibilityShape } from '@/content/visibility';
-import type { Entry } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { applyVisibility } from '@/content/visibility';
 import { resolveEntryType } from '@/entries/entry-types';
@@ -8,8 +8,8 @@ import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
 import { getPreviewEntry } from '../internal/preview-read';
-import { toEntry } from '../internal/read-entry';
 import { entryRepository } from '../repository/entries-table';
+import { entrySchema } from '../schema';
 
 /**
  * Gets one locale of one entry, filtered to the caller's visibility shape.
@@ -28,9 +28,10 @@ export const getEntry = defineServiceMethod({
         previewToken: z.string().optional(),
         staged: z.boolean().optional(),
     }),
+    output: entrySchema.nullable(),
     access: entryGate('read'),
     mutates: false,
-    async handler(params, ctx): Promise<Entry | null> {
+    async handler(params, ctx): Promise<EntryResource | null> {
         const { type, id } = params;
 
         // Preview (forward versioning): token-authorized, publish-gate-bypassed.
@@ -53,13 +54,11 @@ export const getEntry = defineServiceMethod({
 
         if (!record) return null;
 
-        const result = toEntry(record);
-
         const shape: VisibilityShape = params.full ? 'full' : 'public';
         const audience = { now: new Date() };
         const entryType = resolveEntryType(ctx.config, type);
         const fields = entryType ? flattenEntryFields(entryType.fields) : [];
 
-        return applyVisibility(result, { shape, fields, audience });
+        return applyVisibility(record, { shape, fields, audience });
     },
 });

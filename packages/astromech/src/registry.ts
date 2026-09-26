@@ -8,7 +8,7 @@ import { AstromechError } from '@/errors/astromech-error';
 
 /**
  * The shared namespace. Registries take arbitrary string keys; the named keys
- * are process guards, read directly rather than through a registry.
+ * are process state, read directly rather than through a registry.
  * Their types are all built-ins, so naming them here imports nothing.
  */
 type AstromechGlobals = Record<string, unknown> & {
@@ -18,6 +18,8 @@ type AstromechGlobals = Record<string, unknown> & {
     cronTickRunning?: boolean | undefined;
     /** Cron job names already warned about as unscheduled. */
     cronUnscheduledWarned?: Set<string> | undefined;
+    /** Fallbacks taken by the output parse in progress; undefined outside one. */
+    outputFallbacks?: number | undefined;
 };
 
 declare global {

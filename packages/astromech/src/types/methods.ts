@@ -71,16 +71,21 @@ type CallInput<Input> = Input extends object
  * coercing key is optional to the caller and set by the time the handler reads
  * it. They are the same type for a schema that neither defaults nor transforms,
  * which is why `Parsed` defaults to `Input`.
+ *
+ * `Result` and `Output` are the two sides of the `output` schema: the handler
+ * returns the internal model (`UserResource`), and the caller gets the public
+ * shape (`User`). Without an `output` the two are one type.
  */
 export type ServiceMethod<
     Input = unknown,
     Output = unknown,
     Ctx = AppContext,
     Parsed = Input,
+    Result = Output,
 > = {
     /** What the caller must hold to call this method. */
     access: ServiceMethodAccess<Input>;
-    handler: (input: Parsed, ctx: Ctx & MethodContext) => Promise<Output> | Output;
+    handler: (input: Parsed, ctx: Ctx & MethodContext) => Promise<Result> | Result;
     /** One-line summary for humans / the AI tool-loop. */
     summary?: string;
     /**
@@ -91,8 +96,12 @@ export type ServiceMethod<
      * (`z.input`), `Parsed` what the handler receives (`z.output`).
      */
     input: z.ZodType<Parsed, Input>;
-    /** Zod schema for the result, where worth declaring. */
-    output?: z.ZodType<Output>;
+    /**
+     * Zod schema for the result, parsed after the handler resolves: the handler
+     * returns its `z.input`, a caller gets its `z.output`. Every core method
+     * declares one; without it a plugin method's result passes through unparsed.
+     */
+    output?: z.ZodType<Output, Result>;
     /** The capability the target must declare; absent ⇒ none. */
     requires?: string;
     /**
@@ -125,12 +134,17 @@ export type ServiceMethod<
  * not inference sites, so the schema alone decides them, where a bare
  * `ServiceMethod` would let `access` decide `Input` instead.
  */
-export type ServiceMethodDefinition<S extends z.ZodType, Output, Ctx = AppContext> = Omit<
-    ServiceMethod<z.input<S>, Output, Ctx, z.output<S>>,
+export type ServiceMethodDefinition<
+    S extends z.ZodType,
+    Output,
+    Ctx = AppContext,
+    Result = Output,
+> = Omit<
+    ServiceMethod<z.input<S>, Output, Ctx, z.output<S>, Result>,
     'handler' | 'input'
 > & {
     input: S;
-    handler: (input: z.output<S>, ctx: Ctx & MethodContext) => Promise<Output> | Output;
+    handler: (input: z.output<S>, ctx: Ctx & MethodContext) => Promise<Result> | Result;
 };
 
 /**
@@ -151,21 +165,23 @@ export type ServiceMethodContract = Omit<
 
 /**
  * One method as the interface it is assembled under checks it. The comparison
- * is the CALL side alone: the schema must accept what the interface declares,
- * and answer what it promises.
+ * is the CALL side alone: the `input` schema must accept what the interface
+ * declares, and the `output` schema, which every core method declares, must
+ * answer what it promises.
  *
- * The handler's parameter and the schema's parsed type are the method's own
- * business (a schema that defaults a key hands the handler a shape no interface
- * states), so both are widened out of the comparison the way `AnyServiceMethod`
- * widens them: `never` where the position is contravariant, `unknown` where it
- * is covariant. `access` is not part of an interface's contract at all.
+ * The handler's parameter and return, and the two schemas' inner sides, are the
+ * method's own business (a handler returns the internal model an interface
+ * never names), so they are widened out of the comparison the way
+ * `AnyServiceMethod` widens them: `never` where the position is contravariant,
+ * `unknown` where it is covariant. `access` is not part of the contract at all.
  */
 type ServiceMethodFor<Input, Output, Ctx> = Omit<
     ServiceMethod<never, Output, Ctx>,
-    'handler' | 'input'
+    'handler' | 'input' | 'output'
 > & {
-    handler: (input: never, ctx: Ctx & MethodContext) => Promise<Output> | Output;
+    handler: (input: never, ctx: Ctx & MethodContext) => unknown;
     input: z.ZodType<unknown, CallInput<Input>>;
+    output: z.ZodType<Output, unknown>;
 };
 
 /**

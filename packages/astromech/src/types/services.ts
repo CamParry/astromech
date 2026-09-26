@@ -17,7 +17,6 @@ import type {
     Media,
     MediaVersion,
     Notification,
-    ResourceType,
     User,
     UserVersion,
 } from './domain';
@@ -30,6 +29,7 @@ import type {
 } from './query';
 import type { TypedEntriesService } from './typed-entries';
 import type { TypedGlobalsService } from './typed-globals';
+import type { usageSchema } from '@/content/schema';
 import type {
     createEntryPayloadSchema,
     duplicateOverridesSchema,
@@ -42,26 +42,9 @@ import type { z } from 'zod';
 
 /**
  * One reference in the relationships index pointing at a resource: a row of a
- * `usedBy` answer, which the delete check and the media "used by" panel read.
+ * `usedBy` answer. Documented key by key on `usageSchema`.
  */
-export type Usage = {
-    sourceId: string;
-    /** Display name of the source; empty when it could not be loaded. */
-    sourceTitle: string;
-    /** What holds the reference. */
-    sourceKind: ResourceType;
-    /**
-     * An entry source's type (qualified for a plugin type) or a global source's
-     * key. Null for user and media sources.
-     */
-    sourceType: string | null;
-    /** Schema path of the field holding the reference (`sections[].gallery`). */
-    schemaPath: string;
-    /** Instance path — deep-links to the exact item. Never pattern-matched. */
-    instancePath: string;
-    /** True when only the source's staged (pending-merge) change holds it. */
-    sourceStaged: boolean;
-};
+export type Usage = z.output<typeof usageSchema>;
 
 /**
  * The row `create` writes: the update patch plus the locale the first content

@@ -1,7 +1,8 @@
 import { z } from '@hono/zod-openapi';
 import { sortSchema } from '@/content/list';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
-import { jsonObject } from '@/services/json';
+import { fallback } from '@/services/fallback';
+import { jsonObject, unparsedJsonObject } from '@/services/json';
 
 export const createUserSchema = z
     .object({
@@ -38,3 +39,38 @@ export const userQuerySchema = z.object({
     limit: z.union([z.number(), z.literal('all')]).optional(),
     sort: sortSchema,
 });
+
+/** An admin user account: the public `User`. */
+export const userSchema = z
+    .object({
+        id: z.string(),
+        email: z.string(),
+        name: z.string(),
+        emailVerified: z.boolean(),
+        image: z.string().nullable().catch(fallback(null)),
+        /** The locale the content came from. */
+        locale: z.string(),
+        /** Locales that have a content row, this one included. Sorted. */
+        locales: z.array(z.string()),
+        fields: unparsedJsonObject,
+        /** The slug of the user's role, resolved against the config. */
+        role: z.string(),
+        createdAt: z.date(),
+        /** The user's last change: name, email or role, or content in any locale. */
+        updatedAt: z.date(),
+    })
+    .openapi('User');
+
+/** A saved snapshot of one locale of one user's fields. */
+export const userVersionSchema = z
+    .object({
+        id: z.string(),
+        userId: z.string(),
+        locale: z.string(),
+        /** Position in the sequence, which runs per user and locale from 1. */
+        version: z.number(),
+        fields: unparsedJsonObject.nullable(),
+        createdAt: z.date(),
+        createdBy: z.string().nullable().catch(fallback(null)),
+    })
+    .openapi('UserVersion');

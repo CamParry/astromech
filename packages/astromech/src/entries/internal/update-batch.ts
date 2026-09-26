@@ -1,7 +1,6 @@
-import type { EntryWithContentId } from './read-entry';
+import type { EntryResource } from '../repository/types';
 import type {
     AppContext,
-    Entry,
     EntryCreateContext,
     ParsedEntryUpdateData,
     ResolvedConfig,
@@ -17,16 +16,12 @@ import { patchedFieldNames } from '@/content/write-fields';
 import { resolveEntryType } from '@/entries/entry-types';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { parseInput } from '@/errors/validation';
+import { parseOutput } from '@/services/parse-method-output';
 import { UnknownEntryTypeError } from '../errors';
 import { entryRepository } from '../repository/entries-table';
-import { createEntrySchema, updateEntrySchema } from '../schema';
+import { createEntrySchema, entrySchema, updateEntrySchema } from '../schema';
 import { assertWritableFields } from './entry-type';
-import {
-    findEntryOfType,
-    getEntryOfType,
-    toEntry,
-    toEntryWithContentId,
-} from './read-entry';
+import { findEntryOfType, getEntryOfType } from './read-entry';
 import { syncEntryRelationships } from './relationships';
 import { deriveSlug, uniqueSlugIfChanged } from './slug';
 import { toStoredFields } from './stored-fields';
@@ -58,7 +53,7 @@ export async function updateEntryBatch(
         data: ParsedEntryUpdateData;
     },
     ctx: AppContext
-): Promise<Entry[]> {
+): Promise<EntryResource[]> {
     const entryType = resolveEntryType(ctx.config, params.type);
     if (!entryType) {
         throw new UnknownEntryTypeError(params.type);
@@ -117,7 +112,11 @@ export async function updateEntryBatch(
         if (plan.kind === 'update') {
             await ctx.runHook('entry:beforeUpdate', {
                 type: entryType.id,
-                entry: toEntry(plan.record),
+                entry: parseOutput(
+                    entrySchema,
+                    plan.record,
+                    'The entry in entry:beforeUpdate'
+                ),
                 data: params.data,
                 user,
             });
@@ -154,7 +153,11 @@ export async function updateEntryBatch(
         if (plan.kind === 'update') {
             await ctx.runHook('entry:afterUpdate', {
                 type: entryType.id,
-                entry: toEntry(plan.record),
+                entry: parseOutput(
+                    entrySchema,
+                    plan.record,
+                    'The entry in entry:afterUpdate'
+                ),
                 data: params.data,
                 user,
             });
@@ -163,7 +166,11 @@ export async function updateEntryBatch(
                 type: entryType.id,
                 data: plan.write,
                 user,
-                entry: results[index] as Entry,
+                entry: parseOutput(
+                    entrySchema,
+                    results[index],
+                    'The entry in entry:afterCreate'
+                ),
             });
         }
     }
@@ -179,7 +186,7 @@ type TranslationWrite = EntryCreateContext['data'] & {
 
 /** What one id in the batch turns out to be: an edit, or a new translation. */
 type UpdatePlan =
-    | { kind: 'update'; id: string; record: EntryWithContentId }
+    | { kind: 'update'; id: string; record: EntryResource }
     | { kind: 'translate'; id: string; write: TranslationWrite };
 
 /**
@@ -189,12 +196,12 @@ type UpdatePlan =
 async function updateOne(params: {
     config: ResolvedConfig;
     entryType: ResolvedEntryType;
-    currentEntry: EntryWithContentId;
+    currentEntry: EntryResource;
     data: ParsedEntryUpdateData;
     user: User | null;
     /** True when the write targets the staged change rather than the canonical. */
     staged: boolean;
-}): Promise<Entry> {
+}): Promise<EntryResource> {
     const { config, entryType, currentEntry, data, user, staged } = params;
 
     const titled = entryType.titleField !== false;
@@ -254,11 +261,9 @@ async function updateOne(params: {
         updatedBy: user?.id ?? null,
     };
 
-    const entry = toEntry(
-        staged
-            ? await entryRepository.staging.update(ref, write)
-            : await entryRepository.update(ref, write)
-    );
+    const entry = staged
+        ? await entryRepository.staging.update(ref, write)
+        : await entryRepository.update(ref, write);
     if (fields) {
         await syncEntryRelationships(config, entry, entryType.id);
         // A staged row is not one of the entry's locales, so its shared fields
@@ -341,20 +346,18 @@ async function writeTranslation(params: {
     id: string;
     locale: string;
     write: TranslationWrite;
-}): Promise<Entry> {
+}): Promise<EntryResource> {
     const { config, type, id, locale, write } = params;
-    const entry = toEntry(await entryRepository.update({ id, locale }, write));
+    const entry = await entryRepository.update({ id, locale }, write);
     await syncEntryRelationships(config, entry, type);
     return entry;
 }
 
 /** The staged change for one locale, which a staged write requires to exist. */
-async function getStagedRecord(id: string, locale: string): Promise<EntryWithContentId> {
-    return toEntryWithContentId(
-        await requireStagedChange(entryRepository.staging, 'entry', {
-            rowId: id,
-            id,
-            locale,
-        })
-    );
+async function getStagedRecord(id: string, locale: string): Promise<EntryResource> {
+    return requireStagedChange(entryRepository.staging, 'entry', {
+        rowId: id,
+        id,
+        locale,
+    });
 }

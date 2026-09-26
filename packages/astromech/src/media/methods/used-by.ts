@@ -1,5 +1,6 @@
 import type { Usage } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { usageSchema } from '@/content/schema';
 import { listUsage } from '@/content/usage';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
@@ -13,6 +14,7 @@ export const listMediaUsage = defineServiceMethod({
     summary:
         'List the entries, globals, users and media items that reference a media item.',
     input: z.object({ id: z.string() }),
+    output: z.array(usageSchema),
     access: 'media:read',
     mutates: false,
     async handler(params, ctx): Promise<Usage[]> {

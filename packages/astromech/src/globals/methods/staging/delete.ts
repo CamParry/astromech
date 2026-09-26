@@ -1,3 +1,4 @@
+import { z } from '@hono/zod-openapi';
 import { requireStagedChange } from '@/content/staging';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
@@ -14,6 +15,7 @@ import { localised } from '../../schema';
 export const deleteStagedGlobal = defineServiceMethod({
     summary: 'Discard the staged change of a global.',
     input: localised,
+    output: z.void(),
     access: gate('update'),
     requires: 'staging',
     mutates: true,

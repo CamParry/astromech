@@ -1,12 +1,13 @@
-import type { Global, JsonObject } from '@/types/index';
+import type { GlobalResource } from '../../repository';
+import type { JsonObject } from '@/types/index';
 import { transaction } from '@/database/transaction';
 import { StagedChangeExistsError } from '@/errors/resource';
 import { mergePatch } from '@/fields/values';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
-import { getCanonicalGlobal, toGlobal } from '../../internal/global';
+import { getCanonicalGlobal } from '../../internal/global';
 import { syncGlobalRelationships } from '../../internal/relationships';
-import { createStagedGlobalSchema } from '../../schema';
+import { createStagedGlobalSchema, globalSchema } from '../../schema';
 
 /**
  * Creates a staged copy of one locale of a global so edits can be drafted off
@@ -17,10 +18,11 @@ import { createStagedGlobalSchema } from '../../schema';
 export const createStagedGlobal = defineServiceMethod({
     summary: 'Stage a change to a global.',
     input: createStagedGlobalSchema,
+    output: globalSchema,
     access: gate('update'),
     requires: 'staging',
     mutates: true,
-    async handler(params, ctx): Promise<Global> {
+    async handler(params, ctx): Promise<GlobalResource> {
         const { repository, id, locale, current } = await getCanonicalGlobal(ctx.config, {
             key: params.key,
             locale: params.locale,
@@ -35,7 +37,7 @@ export const createStagedGlobal = defineServiceMethod({
         // unpublished: it becomes live by being merged, not by carrying a status
         // of its own.
         // The row and its index write are one transaction.
-        const row = await transaction(async () => {
+        return transaction(async () => {
             const staged = await repository.staging.create(
                 { id, locale },
                 {
@@ -51,6 +53,5 @@ export const createStagedGlobal = defineServiceMethod({
             await syncGlobalRelationships(ctx.config, id);
             return staged;
         });
-        return toGlobal(row);
     },
 });

@@ -1,4 +1,4 @@
-import type { User } from '@/types/index';
+import type { UserResource } from '../../repository';
 import { z } from '@hono/zod-openapi';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
@@ -6,8 +6,8 @@ import { restoreVersion } from '@/content/versions';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { syncUserRelationships } from '../../internal/relationships';
-import { toUser } from '../../internal/to-user';
 import { userRepository } from '../../repository';
+import { userSchema } from '../../schema';
 
 /**
  * Restores one locale of a user's fields to one of its saved versions,
@@ -22,9 +22,10 @@ export const restoreUserVersion = defineServiceMethod({
         locale: z.string().optional(),
         versionId: z.string(),
     }),
+    output: userSchema,
     access: 'users:update',
     mutates: true,
-    async handler(params, ctx): Promise<User> {
+    async handler(params, ctx): Promise<UserResource> {
         const { id } = params;
         const locale = resolveResourceLocale(
             RESOURCE_SPECS.user,
@@ -48,7 +49,7 @@ export const restoreUserVersion = defineServiceMethod({
                     { fields, updatedBy: ctx.user?.id ?? null }
                 );
                 await syncUserRelationships(ctx.config, id);
-                return toUser(row);
+                return row;
             },
         });
     },

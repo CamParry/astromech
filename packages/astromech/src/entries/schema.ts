@@ -1,5 +1,6 @@
 import { z } from '@hono/zod-openapi';
-import { jsonObject } from '@/services/json';
+import { fallback } from '@/services/fallback';
+import { jsonObject, unparsedJsonObject } from '@/services/json';
 
 /** The three publication states an entry or global row may carry. */
 export const statusSchema = z.enum(['unpublished', 'published', 'scheduled']);
@@ -109,3 +110,71 @@ export const duplicateOverridesSchema = z
  * string into a date column.
  */
 export const previewTokenSchema = z.object({ expiresAt: optionalDate });
+
+/**
+ * One locale of an entry of any type, as every read answers it: the public
+ * `Entry`. `fields` is not walked, and a nullable value that fails falls back
+ * to null; see `DECISIONS.md` for the three tiers.
+ */
+export const entrySchema = z
+    .object({
+        id: z.string(),
+        type: z.string(),
+        locale: z.string(),
+        /** Every locale this entry has a content row for, this one included. Sorted. */
+        locales: z.array(z.string()),
+        slug: z.string().nullable().catch(fallback(null)),
+        title: z.string(),
+        fields: unparsedJsonObject,
+        status: statusSchema,
+        /** True when this read is the staged change rather than the canonical row. */
+        staged: z.boolean(),
+        /**
+         * The publication gate, not a record of when publication happened. While
+         * `status` is `'scheduled'` this holds a time ahead of now, and
+         * `content/visibility.ts` compares it against the clock: an entry whose
+         * `publishedAt` is in the future is not publicly visible. Null means no gate
+         * is set. `status` is what tells you which side of now the value is on.
+         */
+        publishedAt: z.date().nullable().catch(fallback(null)),
+        deletedAt: z.date().nullable().catch(fallback(null)),
+        /** When the entry was created; every locale of it reports the same value. */
+        createdAt: z.date(),
+        /**
+         * The entry's last change, in any locale; every locale reports the same
+         * value. A staged read reports the staged change's own last edit instead,
+         * and a staged edit never moves the entry's.
+         */
+        updatedAt: z.date(),
+        /**
+         * Who made this locale. Null for a write with no request identity: a seed
+         * script, the CLI, the scheduler.
+         */
+        createdBy: z.string().nullable().catch(fallback(null)),
+        /** Who made the entry's last change (on a staged read, the staged change's). */
+        updatedBy: z.string().nullable().catch(fallback(null)),
+    })
+    .openapi('Entry');
+
+/**
+ * A staged read: the staged change as an `Entry`, and whether the canonical was
+ * written after the staged change was made from it.
+ */
+export const stagedEntrySchema = entrySchema.extend({ diverged: z.boolean() });
+
+/** A saved snapshot of one locale of one entry. */
+export const entryVersionSchema = z
+    .object({
+        id: z.string(),
+        entryId: z.string(),
+        locale: z.string(),
+        /** Position in the sequence, which runs per entry and locale from 1. */
+        version: z.number(),
+        title: z.string(),
+        slug: z.string().nullable().catch(fallback(null)),
+        fields: unparsedJsonObject.nullable(),
+        status: statusSchema.nullable().catch(fallback(null)),
+        createdAt: z.date(),
+        createdBy: z.string().nullable().catch(fallback(null)),
+    })
+    .openapi('EntryVersion');

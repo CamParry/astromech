@@ -1,6 +1,6 @@
 /**
  * What the resource lists share: reading a `sort` against the resource's
- * sortable columns, and slicing a `query` call into a page.
+ * sortable columns, slicing a `query` call into a page, and the page's schema.
  */
 
 import type { QueryResult, SortOption } from '@/types/index';
@@ -77,4 +77,17 @@ export async function queryPage<R>(
         read.count(),
     ]);
     return { data, pagination: { page, limit, total, pages: Math.ceil(total / limit) } };
+}
+
+/** A page's position in the whole list; null in a result when `limit` is `'all'`. */
+const paginationSchema = z.object({
+    page: z.number(),
+    limit: z.number(),
+    total: z.number(),
+    pages: z.number(),
+});
+
+/** The output schema of a `query` method: a `QueryResult` of `item`. */
+export function queryResultSchema<T extends z.ZodType>(item: T) {
+    return z.object({ data: z.array(item), pagination: paginationSchema.nullable() });
 }

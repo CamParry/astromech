@@ -1,12 +1,12 @@
-import type { Global } from '@/types/index';
+import type { GlobalResource } from '../../repository';
 import { z } from '@hono/zod-openapi';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { restoreVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
-import { getCanonicalGlobal, toGlobal } from '../../internal/global';
+import { getCanonicalGlobal } from '../../internal/global';
 import { syncGlobalRelationships } from '../../internal/relationships';
-import { localised } from '../../schema';
+import { globalSchema, localised } from '../../schema';
 
 /**
  * Restores one locale of a global to one of its saved versions, snapshotting the
@@ -16,11 +16,12 @@ import { localised } from '../../schema';
 export const restoreGlobalVersion = defineServiceMethod({
     summary: 'Roll a global back to an earlier version.',
     input: localised.extend({ versionId: z.string() }),
+    output: globalSchema,
     access: gate('update'),
     requires: 'versioning',
     mutates: true,
     idempotent: true,
-    async handler(params, ctx): Promise<Global> {
+    async handler(params, ctx): Promise<GlobalResource> {
         const { repository, id, locale, current } = await getCanonicalGlobal(ctx.config, {
             key: params.key,
             locale: params.locale,
@@ -38,7 +39,7 @@ export const restoreGlobalVersion = defineServiceMethod({
                     { fields, updatedBy: ctx.user?.id ?? null }
                 );
                 await syncGlobalRelationships(ctx.config, id);
-                return toGlobal(row);
+                return row;
             },
         });
     },

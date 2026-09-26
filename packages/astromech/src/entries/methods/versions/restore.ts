@@ -1,13 +1,14 @@
-import type { Entry } from '@/types/index';
+import type { EntryResource } from '../../repository/types';
 import { z } from '@hono/zod-openapi';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { restoreVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
-import { getEntryOfType, toEntry } from '../../internal/read-entry';
+import { getEntryOfType } from '../../internal/read-entry';
 import { syncEntryRelationships } from '../../internal/relationships';
 import { uniqueSlugIfChanged } from '../../internal/slug';
 import { entryRepository } from '../../repository/entries-table';
+import { entrySchema } from '../../schema';
 
 /**
  * Restores one locale of an entry to one of its saved versions: overwrites the
@@ -22,11 +23,12 @@ export const restoreEntryVersion = defineServiceMethod({
         locale: z.string().optional(),
         versionId: z.string(),
     }),
+    output: entrySchema,
     access: entryGate('update'),
     requires: 'versioning',
     mutates: true,
     idempotent: true,
-    async handler(params, ctx): Promise<Entry> {
+    async handler(params, ctx): Promise<EntryResource> {
         const { type, id } = params;
 
         const currentEntry = await getEntryOfType(type, id, params.locale);
@@ -54,7 +56,7 @@ export const restoreEntryVersion = defineServiceMethod({
                     }
                 );
                 await syncEntryRelationships(ctx.config, row, type);
-                return toEntry(row);
+                return row;
             },
         });
     },

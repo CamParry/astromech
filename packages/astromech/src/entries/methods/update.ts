@@ -1,10 +1,10 @@
-import type { Entry } from '@/types/index';
+import type { EntryResource } from '../repository/types';
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
 import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
 import { updateEntryBatch } from '../internal/update-batch';
-import { updateEntryPayloadSchema } from '../schema';
+import { entrySchema, updateEntryPayloadSchema } from '../schema';
 
 /** One id is a batch of one, and its result and errors are unwrapped. */
 const updateOne = fromBatch(updateEntryBatch);
@@ -30,12 +30,13 @@ export const updateEntries = defineServiceMethod({
             data: updateEntryPayloadSchema,
         })
     ),
+    output: z.union([entrySchema, z.array(entrySchema)]),
     access: entryGate('update'),
     mutates: true,
     // Re-applying the same update lands the same end-state — matches the core
     // `users.update` idempotent hint.
     idempotent: true,
-    handler(params, ctx): Promise<Entry | Entry[]> {
+    handler(params, ctx): Promise<EntryResource | EntryResource[]> {
         return updateOne(params, ctx);
     },
 });

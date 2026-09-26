@@ -1,6 +1,7 @@
-import type { AppContext, Entry } from '@/types/index';
+import type { EntryResource } from '../repository/types';
+import type { AppContext } from '@/types/index';
 import { entryRepository } from '../repository/entries-table';
-import { getEntryResources, toEntry } from './read-entry';
+import { getEntryResources } from './read-entry';
 import { writeBatch } from './write-batch';
 
 /**
@@ -14,12 +15,12 @@ import { writeBatch } from './write-batch';
 export async function restoreEntryBatch(
     params: { type: string; ids: readonly string[] },
     ctx: AppContext
-): Promise<Entry[]> {
+): Promise<EntryResource[]> {
     const { type, ids } = params;
     const entries = await getEntryResources(type, ids);
     const user = ctx.user;
 
-    return writeBatch(entries, async (entry) =>
-        toEntry(await entryRepository.trash.restore(entry.id, user?.id ?? null))
+    return writeBatch(entries, (entry) =>
+        entryRepository.trash.restore(entry.id, user?.id ?? null)
     );
 }

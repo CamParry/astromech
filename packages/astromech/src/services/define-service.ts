@@ -1,7 +1,7 @@
 /**
  * `defineService` — assemble a catalogue of methods into one service. The
  * record's type is derived from the hand-written interface, so a missing key, a
- * wrong input type and a wrong output type are all errors at the call.
+ * wrong input type and a wrong output schema are all errors at the call.
  */
 
 import type {
@@ -12,11 +12,13 @@ import type {
     ServiceMethodContract,
 } from '@/types/index';
 import { parseMethodInput } from '@/services/parse-method-input';
+import { parseMethodOutput } from '@/services/parse-method-output';
 
 /** A catalogue entry as this file walks it: any method, under any key. */
 type AssembledMethod = {
     name: string;
     input: ServiceMethodContract['input'];
+    output?: ServiceMethodContract['output'];
     requires?: string;
     handler: (input: unknown, ctx: AppContext & MethodContext) => unknown;
 };
@@ -61,7 +63,13 @@ export function defineService<S extends object>(
                     if (method.requires !== undefined) {
                         options.assertRequires?.(method.requires, input, ctx);
                     }
-                    return method.handler(parseMethodInput(method, input), withMethod);
+                    const result = method.handler(
+                        parseMethodInput(method, input),
+                        withMethod
+                    );
+                    return Promise.resolve(result).then((value) =>
+                        parseMethodOutput(method, value)
+                    );
                 };
             }
             return bound as S;

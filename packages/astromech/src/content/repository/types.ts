@@ -93,8 +93,8 @@ export type Resource = {
     contentCreatedAt: Date;
     /** This content row's `updatedAt`. Internal: the staged read's divergence check. */
     contentUpdatedAt: Date;
-    createdBy?: string | null;
-    updatedBy?: string | null;
+    createdBy: string | null;
+    updatedBy: string | null;
     status?: EntryStatus;
     publishedAt?: Date | null;
 };

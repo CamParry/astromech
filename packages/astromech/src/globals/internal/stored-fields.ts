@@ -15,7 +15,6 @@ import type {
 import { RESOURCE_SPECS } from '@/content/resources';
 import { inheritSharedFields } from '@/content/translatable';
 import { writeFields } from '@/content/write-fields';
-import { toGlobal } from './global';
 
 /**
  * Turns what a caller sent into the values that go in the row. Throws a 422 when
@@ -60,7 +59,7 @@ export async function toStoredFields(input: {
         {
             target: global.id,
             operation: current ? 'update' : 'create',
-            record: current ? toGlobal(current) : null,
+            record: current,
             user: input.user,
             status: input.status,
             // One row per locale, so there is nothing else to be unique among.

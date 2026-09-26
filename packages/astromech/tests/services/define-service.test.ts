@@ -1,12 +1,13 @@
 /**
  * `defineService` assembly: a method's id comes from its position in the
  * catalogue, the catalogue holds the objects that were passed in, and binding
- * parses the call against the method's own schema before the handler runs.
+ * parses the call before the handler runs and the result after it.
  */
 
 import type { AppContext, MethodsFor } from '@/types/index';
 import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 import { z } from 'zod';
+import { OutputValidationError } from '@/errors/output-validation';
 import { ValidationError } from '@/errors/validation';
 import { defineService } from '@/services/define-service';
 import { defineServiceMethod, noInput } from '@/services/define-service-method';
@@ -19,6 +20,7 @@ type FakeService = {
 const get = defineServiceMethod({
     access: 'public',
     input: z.object({ id: z.string() }),
+    output: z.string(),
     mutates: false,
     handler: async (input, ctx): Promise<string> =>
         `${ctx.method.name}:${input.id}:${ctx.role?.slug}`,
@@ -27,6 +29,7 @@ const get = defineServiceMethod({
 const list = defineServiceMethod({
     access: 'users:read',
     input: z.object({ limit: z.number() }),
+    output: z.array(z.string()),
     mutates: false,
     handler: async (input): Promise<string[]> =>
         Array.from({ length: input.limit }, (_, i) => String(i)),
@@ -85,14 +88,27 @@ describe('defineService', () => {
             list: {
                 access: 'public',
                 input: z.object({ limit: z.number() }),
-                mutates: false,
                 // @ts-expect-error the interface answers `string[]`, not `number`.
+                output: z.number(),
+                mutates: false,
                 handler: async () => 42,
+            },
+        });
+
+        const noOutput = defineService<FakeService>('fake', {
+            get,
+            // @ts-expect-error a core method declares its `output`.
+            list: {
+                access: 'public',
+                input: z.object({ limit: z.number() }),
+                mutates: false,
+                handler: async (): Promise<string[]> => [],
             },
         });
 
         expect(Object.keys(missing.catalogue)).toEqual(['get']);
         expect(Object.keys(wrongOutput.catalogue)).toEqual(['get', 'list']);
+        expect(Object.keys(noOutput.catalogue)).toEqual(['get', 'list']);
     });
 });
 
@@ -112,6 +128,7 @@ describe('defineService input validation', () => {
             defineServiceMethod({
                 access: 'public',
                 input: z.object({ id: z.string() }),
+                output: z.string(),
                 mutates: false,
                 handler,
             })
@@ -134,6 +151,7 @@ describe('defineService input validation', () => {
             defineServiceMethod({
                 access: 'public',
                 input: noInput(),
+                output: z.string(),
                 mutates: false,
                 handler: async (input): Promise<string> => String(input),
             })
@@ -147,6 +165,7 @@ describe('defineService input validation', () => {
             defineServiceMethod({
                 access: 'public',
                 input: z.object({ id: z.string() }),
+                output: z.record(z.string(), z.unknown()),
                 mutates: false,
                 handler: async (input): Promise<Record<string, unknown>> => input,
             })
@@ -158,10 +177,37 @@ describe('defineService input validation', () => {
     });
 });
 
+describe('defineService output parsing', () => {
+    const read = (stored: Record<string, unknown>) =>
+        bindOne<{ id: string }, { id: string; title: string }>(
+            defineServiceMethod({
+                access: 'public',
+                input: z.object({ id: z.string() }),
+                output: z.object({ id: z.string(), title: z.string() }),
+                mutates: false,
+                handler: async (input) => ({ id: input.id, title: 'T', ...stored }),
+            })
+        );
+
+    it('answers the handler’s result through `output`, stripped', async () => {
+        expect(await read({ contentId: 'c1' }).run({ id: 'a' })).toEqual({
+            id: 'a',
+            title: 'T',
+        });
+    });
+
+    it('rejects with OutputValidationError when the result fails `output`', async () => {
+        await expect(read({ title: null }).run({ id: 'a' })).rejects.toThrow(
+            OutputValidationError
+        );
+    });
+});
+
 /** A method whose schema defaults `limit`, so its two input types differ. */
 const defaulted = defineServiceMethod({
     access: 'public',
     input: z.object({ limit: z.number().default(10) }),
+    output: z.number(),
     mutates: false,
     handler: async (input): Promise<number> => input.limit,
 });

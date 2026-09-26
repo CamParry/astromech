@@ -1,10 +1,11 @@
-import type { Entry } from '@/types/index';
+import type { EntryResource } from '../../repository/types';
 import { z } from '@hono/zod-openapi';
 import { hasDiverged } from '@/content/staging';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
-import { getEntryOfType, toEntry } from '../../internal/read-entry';
+import { getEntryOfType } from '../../internal/read-entry';
 import { entryRepository } from '../../repository/entries-table';
+import { stagedEntrySchema } from '../../schema';
 
 /**
  * Returns the staged copy of one locale of an entry, or null if none exists,
@@ -18,14 +19,15 @@ export const getStagedEntry = defineServiceMethod({
         id: z.string(),
         locale: z.string().optional(),
     }),
+    output: stagedEntrySchema.nullable(),
     access: entryGate('read'),
     requires: 'staging',
     mutates: false,
-    async handler(params): Promise<(Entry & { diverged: boolean }) | null> {
+    async handler(params): Promise<(EntryResource & { diverged: boolean }) | null> {
         const canonical = await getEntryOfType(params.type, params.id, params.locale);
         const { staging } = entryRepository;
         const staged = await staging.findOne({ id: params.id, locale: canonical.locale });
         if (!staged) return null;
-        return { ...toEntry(staged), diverged: hasDiverged(canonical, staged) };
+        return { ...staged, diverged: hasDiverged(canonical, staged) };
     },
 });

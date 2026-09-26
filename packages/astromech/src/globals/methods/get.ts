@@ -1,6 +1,5 @@
 import type { GlobalRepository, GlobalResource } from '../repository';
 import type { VisibilityShape } from '@/content/visibility';
-import type { Global } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { assertCapability } from '@/content/capabilities';
 import { resolveResourceLocale } from '@/content/locale';
@@ -10,9 +9,9 @@ import { ResourceValidationError } from '@/errors/resource';
 import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { readGate } from '../internal/access';
-import { getDeclaredGlobal, toGlobal } from '../internal/global';
+import { getDeclaredGlobal } from '../internal/global';
 import { globalRepository } from '../repository';
-import { localised } from '../schema';
+import { globalSchema, localised } from '../schema';
 
 /**
  * Gets one locale of one global, filtered to the caller's visibility shape.
@@ -26,9 +25,10 @@ export const getGlobal = defineServiceMethod({
         full: z.boolean().optional(),
         staged: z.boolean().optional(),
     }),
+    output: globalSchema.nullable(),
     access: readGate,
     mutates: false,
-    async handler(params, ctx): Promise<Global | null> {
+    async handler(params, ctx): Promise<GlobalResource | null> {
         const global = getDeclaredGlobal(ctx.config, params.key);
         const locale = resolveResourceLocale(
             RESOURCE_SPECS.global,
@@ -57,18 +57,17 @@ export const getGlobal = defineServiceMethod({
                 : await globalRepository.findByKey(params.key, locale);
         if (!row) return null;
 
-        const record = toGlobal(row);
         const shape: VisibilityShape = params.full ? 'full' : 'public';
 
         const filtered = applyVisibility(
             {
-                fields: record.fields,
+                fields: row.fields,
                 // A global with `statuses: false` has no draft state — every row
                 // is live — so the publish gate does not apply to it. Its column
                 // still reads `unpublished`, which would otherwise hide it from
                 // every public read.
                 ...(global.capabilities.statuses
-                    ? { status: record.status, publishedAt: record.publishedAt }
+                    ? { status: row.status, publishedAt: row.publishedAt }
                     : {}),
             },
             {
@@ -79,8 +78,7 @@ export const getGlobal = defineServiceMethod({
         );
         if (filtered === null) return null;
 
-        const result: Global = { ...record, fields: filtered.fields };
-        return result;
+        return { ...row, fields: filtered.fields };
     },
 });
 

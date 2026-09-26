@@ -1,11 +1,11 @@
 /**
  * Config-derived helpers shared across the globals operations: resolving a key
- * to its declaration, the capability a method requires, the canonical row a
- * call addresses, and the resource → `Global` narrowing.
+ * to its declaration, the capability a method requires, and the canonical row
+ * a call addresses.
  */
 
 import type { GlobalRepository, GlobalResource } from '../repository';
-import type { Global, ResolvedConfig, ResolvedGlobal } from '@/types/index';
+import type { ResolvedConfig, ResolvedGlobal } from '@/types/index';
 import { assertCapability } from '@/content/capabilities';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
@@ -87,25 +87,4 @@ export async function getCanonicalGlobal(
     const current = await globalRepository.findByKey(params.key, locale);
     if (!current) throw new ResourceNotFoundError('global', { id: params.key, locale });
     return { global, locale, repository: globalRepository, id: current.id, current };
-}
-
-/**
- * Narrow a `GlobalResource` to the public `Global`, key by key, so the content
- * row's id and timestamps never leave the service.
- */
-export function toGlobal(resource: GlobalResource): Global {
-    return {
-        id: resource.id,
-        key: resource.key,
-        locale: resource.locale,
-        locales: resource.locales,
-        fields: resource.fields,
-        status: resource.status,
-        staged: resource.staged,
-        publishedAt: resource.publishedAt,
-        createdAt: resource.createdAt,
-        updatedAt: resource.updatedAt,
-        createdBy: resource.createdBy ?? null,
-        updatedBy: resource.updatedBy ?? null,
-    };
 }

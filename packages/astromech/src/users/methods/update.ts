@@ -1,4 +1,4 @@
-import type { User } from '@/types/index';
+import type { UserResource } from '../repository';
 import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
 import { resolveResourceLocale } from '@/content/locale';
@@ -12,9 +12,8 @@ import { getRole } from '@/permissions/roles';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { assertKeepsAnAdmin } from '../internal/last-admin';
 import { syncUserRelationships } from '../internal/relationships';
-import { toUser } from '../internal/to-user';
 import { userRepository } from '../repository';
-import { updateUserSchema } from '../schema';
+import { updateUserSchema, userSchema } from '../schema';
 
 /**
  * Update a user's profile, role and custom fields. `name`, `email` and `role`
@@ -31,10 +30,11 @@ export const updateUser = defineServiceMethod({
         locale: z.string().optional(),
         data: updateUserSchema,
     }),
+    output: userSchema,
     access: 'users:update',
     mutates: true,
     idempotent: true,
-    async handler(params, ctx): Promise<User> {
+    async handler(params, ctx): Promise<UserResource> {
         const { id, data } = params;
         const locale = resolveResourceLocale(
             RESOURCE_SPECS.user,
@@ -77,7 +77,7 @@ export const updateUser = defineServiceMethod({
                       { base: base.fields, patch },
                       {
                           operation: 'update',
-                          record: toUser(base),
+                          record: base,
                           user: ctx.user,
                           scan: () => userRepository.findByLocale(locale),
                           excludeId: id,
@@ -132,6 +132,6 @@ export const updateUser = defineServiceMethod({
 
         const updated = await userRepository.findOne(id, { locale, fallbackLocale });
         if (!updated) throw new ResourceNotFoundError('user', { id });
-        return toUser(updated);
+        return updated;
     },
 });

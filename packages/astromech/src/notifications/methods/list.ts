@@ -4,11 +4,13 @@ import { defineServiceMethod } from '@/services/define-service-method';
 import { subjectId } from '../internal/subject';
 import { toNotification } from '../internal/to-notification';
 import { notificationRepository } from '../repository';
+import { notificationSchema } from '../schema';
 
 /** The caller's own undismissed notifications, newest first. */
 export const listNotifications = defineServiceMethod({
     summary: 'List your own notifications, newest first.',
     input: z.object({}),
+    output: z.array(notificationSchema),
     access: 'public',
     sessionScoped: true,
     mutates: false,

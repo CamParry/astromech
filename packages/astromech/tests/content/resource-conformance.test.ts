@@ -1,12 +1,13 @@
 /**
- * Every resource answers the shared behaviour the same way: a missing one is a
- * 404, a locale it cannot hold is refused, a version round-trips, a canonical
- * write stamps the resource row's `updatedAt`, its references reach `usedBy`,
- * and an unknown sort answers 400. How each resource is called differs, and
- * that difference is the adapter table below.
+ * Every resource answers the shared behaviour the same way: a read is its public
+ * shape, a missing one is a 404, a locale it cannot hold is refused, a version
+ * round-trips, a canonical write stamps the resource row's `updatedAt`, its
+ * references reach `usedBy`, and an unknown sort answers 400. How each resource
+ * is called differs, and that difference is the adapter table below.
  */
 
 import type { JsonObject, ResourceType } from '@/types/index';
+import type { z } from 'zod';
 import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -26,6 +27,8 @@ const usersService = currentServices.users;
 type Adapter = {
     /** Save one resource holding `fields`; answers its address. */
     save(fields: JsonObject): Promise<string>;
+    /** Read it back through its service's `get`. */
+    read(id: string): Promise<object | null>;
     /** Write `fields` to one locale of it. */
     update(
         id: string,
@@ -64,6 +67,7 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
                 })
             ).id;
         },
+        read: (id) => entriesService.get({ type: 'page', id, full: true }),
         update: (id, fields, locale) =>
             entriesService.update({
                 type: 'page',
@@ -83,6 +87,7 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
             await globalsService.update({ key: 'site', data: { fields } });
             return 'site';
         },
+        read: (key) => globalsService.get({ key, full: true }),
         update: (key, fields, locale) =>
             globalsService.update({
                 key,
@@ -105,6 +110,7 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
             });
             return user.id;
         },
+        read: (id) => usersService.get({ id }),
         update: (id, fields, locale) =>
             usersService.update({ id, ...(locale ? { locale } : {}), data: { fields } }),
         versions: (id) => usersService.versions({ id }),
@@ -122,6 +128,7 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
             await mediaService.update({ id: row.id, data: { fields } });
             return row.id;
         },
+        read: (id) => mediaService.get({ id }),
         update: (id, fields, locale) =>
             mediaService.update({ id, ...(locale ? { locale } : {}), data: { fields } }),
         versions: (id) => mediaService.versions({ id }),
@@ -179,6 +186,21 @@ async function mediaTarget(): Promise<string> {
 
 describe.each(RESOURCE_TYPES)('%s', (kind) => {
     const adapter = ADAPTERS[kind];
+
+    it('reads and writes in its public shape, with no internal keys', async () => {
+        const id = await adapter.save({ title: 'One' });
+        const publicKeys = Object.keys(
+            (RESOURCE_SPECS[kind].outputSchema as z.ZodObject).shape
+        ).sort();
+
+        for (const result of [await adapter.read(id), await adapter.update(id, {})]) {
+            expect(result).not.toBeNull();
+            expect(Object.keys(result ?? {}).sort()).toEqual(publicKeys);
+            expect(result).not.toHaveProperty('contentId');
+            expect(result).not.toHaveProperty('contentCreatedAt');
+            expect(result).not.toHaveProperty('contentUpdatedAt');
+        }
+    });
 
     it('answers a missing one with 404 NOT_FOUND', async () => {
         await expect(adapter.missing()).rejects.toMatchObject({

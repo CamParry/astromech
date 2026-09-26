@@ -1,12 +1,12 @@
-import type { Media } from '@/types/index';
+import type { MediaResource } from '../repository';
 import { z } from '@hono/zod-openapi';
 import { ulid } from 'ulidx';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { getStorageDriver } from '@/storage/registry';
 import { originalKey } from '../internal/keys';
 import { storeFile } from '../internal/store-file';
-import { toMedia } from '../internal/to-media';
 import { mediaRepository } from '../repository';
+import { mediaSchema } from '../schema';
 
 /** Store a new file and insert the row describing it. */
 export const uploadMedia = defineServiceMethod({
@@ -18,9 +18,10 @@ export const uploadMedia = defineServiceMethod({
     // rather than by keeping its own list of exceptions.
     input: z.object({ file: z.instanceof(File) }),
     binaryInput: true,
+    output: mediaSchema,
     access: 'media:upload',
     mutates: true,
-    async handler(params, ctx): Promise<Media> {
+    async handler(params, ctx): Promise<MediaResource> {
         const { file } = params;
         const driver = getStorageDriver();
 
@@ -38,21 +39,19 @@ export const uploadMedia = defineServiceMethod({
 
         // The resource row and its default-locale content row are one insert
         // pair: the repository wraps both in a transaction.
-        return toMedia(
-            await mediaRepository.create(
-                {
-                    id,
-                    filename: file.name,
-                    mimeType: file.type,
-                    size: file.size,
-                    width,
-                    height,
-                    metadata,
-                    createdBy: actor,
-                    updatedBy: actor,
-                },
-                { fields: {}, createdBy: actor, updatedBy: actor }
-            )
+        return mediaRepository.create(
+            {
+                id,
+                filename: file.name,
+                mimeType: file.type,
+                size: file.size,
+                width,
+                height,
+                metadata,
+                createdBy: actor,
+                updatedBy: actor,
+            },
+            { fields: {}, createdBy: actor, updatedBy: actor }
         );
     },
 });

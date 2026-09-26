@@ -4,7 +4,7 @@
  * current row, and a merge takes the staged change's fields as they are.
  */
 
-import type { EntryWithContentId } from './read-entry';
+import type { EntryResource } from '../repository/types';
 import type { FieldSource } from '@/content/write-fields';
 import type {
     EntryStatus,
@@ -41,15 +41,15 @@ export type StoredFieldsInput = {
     | {
           kind: 'update';
           entryType: ResolvedEntryType;
-          currentEntry: EntryWithContentId;
+          currentEntry: EntryResource;
           patch: Record<string, unknown>;
           status: EntryStatus | undefined;
       }
     | {
           kind: 'merge';
           type: string;
-          canonical: EntryWithContentId;
-          staged: EntryWithContentId;
+          canonical: EntryResource;
+          staged: EntryResource;
       }
 );
 

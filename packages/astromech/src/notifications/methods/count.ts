@@ -7,6 +7,7 @@ import { notificationRepository } from '../repository';
 export const countNotifications = defineServiceMethod({
     summary: 'Count your own undismissed notifications.',
     input: z.object({}),
+    output: z.number(),
     access: 'public',
     sessionScoped: true,
     mutates: false,

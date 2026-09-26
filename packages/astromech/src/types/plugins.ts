@@ -175,7 +175,13 @@ export type AnyServiceMethod = Omit<
  * a legal bare call.
  */
 export type ServiceInterface<T> = {
-    [K in keyof T]: T[K] extends ServiceMethod<infer I, infer O, PluginContext, infer _P>
+    [K in keyof T]: T[K] extends ServiceMethod<
+        infer I,
+        infer O,
+        PluginContext,
+        infer _P,
+        infer _R
+    >
         ? undefined extends I
             ? (input?: I) => Promise<O>
             : // eslint-disable-next-line @typescript-eslint/no-empty-object-type

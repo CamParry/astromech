@@ -49,6 +49,23 @@ is guessable from any other.
   and `z.input` is what a caller passes and what the domain input types in
   `types/services.ts` are declared as. Annotate the return type only.
 
+- **Every core method declares `output`.** `bind()` parses the handler's result
+  through it, so a handler returns the resource (`UserResource`) and a caller
+  gets the public type (`User`), which `types/domain.ts` infers from the
+  resource's output schema in its `schema.ts`. There is no `toX` mapper. A
+  resource that leaves core another way (a hook payload, the session's user, a
+  field validator's record) goes through `parseOutput` with the same schema.
+
+- **An output schema strips; it never transforms.** Plain `z.object`s, with no
+  `.transform()` or `.pipe()`: the resource already carries the public names,
+  and a value the public shape computes (media's `url`) is computed in the
+  repository decoder or the handler.
+
+- **An output schema has three tiers.** `fields`, and any other stored JSON, is
+  `unparsedJsonObject`, typed without being walked. A nullable or optional value
+  is `.catch(fallback(null))` (or `undefined`), which substitutes and logs.
+  Everything else is plain, so a bad value fails the call.
+
 A REST route keeps a flat body under this: the route spec declares
 `bodyKey: 'data'` and the generated client sends that key alone.
 
@@ -109,7 +126,7 @@ off `RESOURCE_SPECS` in `content/resources.ts`.
 - **A single-table repository wraps `createRepository` privately** and exposes named methods only, so an owner filter or a claim cannot be bypassed.
 - A core repository module keeps its **factory private** and exports the one object. A plugin exports its factory, because each call builds it from `ctx.db`. No classes.
 - Business logic is split **method-per-file** (`methods/create.ts`, …) wrapping the repository; shared per-module helpers live in `<module>/internal/`.
-- **Row, resource and mapper names.** A row is a table row and nothing else: `XTableRow` / `NewXTableRow`, and `XContentRow` for a content table. The decoded join a repository returns is `XResource` (base `Resource`), built by `toXResource` in the repository from `(resourceRow, contentRow, locales)`. A mapper from a resource to the public type is `toX` (`toEntry`, `toGlobal`). Inside a repository, the resource table's own handle is `resourceRows`.
+- **Row and resource names.** A row is a table row and nothing else: `XTableRow` / `NewXTableRow`, and `XContentRow` for a content table. The decoded join a repository returns is `XResource` (base `Resource`), built by `toXResource` in the repository from `(resourceRow, contentRow, locales)`. Inside a repository, the resource table's own handle is `resourceRows`. No mapper turns a resource into the public type; the method's output schema does.
 - A module's repository is `<module>/repository.ts`, or a `<module>/repository/` directory once it needs more than one file. Repositories spanning the resources (relationships, resource existence) live in `content/repository/`. `database/repository/` holds only `createRepository` and its `where` DSL.
 - `<module>/repository/` (DB access) is a different concept from top-level `storage/` (media binary/blob drivers), and the two words are kept apart deliberately.
 

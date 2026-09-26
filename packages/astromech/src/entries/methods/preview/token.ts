@@ -23,6 +23,7 @@ export const issuePreviewToken = defineServiceMethod({
     input: z
         .object({ type: z.string(), id: z.string() })
         .extend(previewTokenSchema.shape),
+    output: z.object({ token: z.string() }),
     access: entryGate('update'),
     requires: 'staging',
     mutates: true,
@@ -58,6 +59,7 @@ export const issuePreviewToken = defineServiceMethod({
 export const revokePreviewToken = defineServiceMethod({
     summary: 'Revoke the preview token of an entry.',
     input: z.object({ type: z.string(), id: z.string() }),
+    output: z.void(),
     access: entryGate('update'),
     requires: 'staging',
     mutates: true,

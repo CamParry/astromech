@@ -5,6 +5,7 @@ import { RESOURCE_SPECS } from '@/content/resources';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { userRepository } from '../../repository';
+import { userVersionSchema } from '../../schema';
 
 /**
  * Lists the saved versions of one locale of a user's fields, newest first.
@@ -14,6 +15,7 @@ import { userRepository } from '../../repository';
 export const listUserVersions = defineServiceMethod({
     summary: 'List the saved versions of one locale of a user’s fields.',
     input: z.object({ id: z.string(), locale: z.string().optional() }),
+    output: z.array(userVersionSchema),
     access: 'users:read',
     mutates: false,
     async handler(params, ctx): Promise<UserVersion[]> {

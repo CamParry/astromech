@@ -1290,15 +1290,23 @@ export const ratingService = {
 Zod schema for the whole argument object (`noInput()` for a method that takes
 none). It is parsed before your handler runs, wherever the call came from, so
 the handler receives a validated value and must not re-parse it; a bad call
-throws a validation error in process and answers `422` over HTTP. `output` is
-the same for the result where it is worth declaring, and `mutates` says whether
-the call changes stored state, with the optional `destructive` and `idempotent`
-refining it.
+throws a validation error in process and answers `422` over HTTP. `mutates`
+says whether the call changes stored state, with the optional `destructive` and
+`idempotent` refining it.
 
 Both input types come from that schema, so the handler's parameter needs no
 annotation: it is the schema's parsed shape, with defaults applied and strings
 coerced, while a caller passes the schema's own input type. Annotate the
-handler's RETURN type instead, since that is what the method's callers see.
+handler's RETURN type instead.
+
+`output` is optional: a Zod schema for the result, parsed after your handler
+resolves, wherever the call came from. Keys it does not declare are stripped,
+so a handler can return a stored row with internal columns while callers see
+only the public shape, typed as the schema's output. A result the schema
+refuses fails the call, and over HTTP answers a generic `500` with the detail
+in the server log. Keep it to plain `z.object`s that strip, with no
+`.transform()` or `.pipe()`. Without `output` the result passes through
+unparsed, typed by the handler's return type.
 
 `access` says what a caller must hold, in one of four forms:
 

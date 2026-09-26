@@ -5,6 +5,7 @@ import { entryGate } from '../../internal/access';
 import { getEntryOfType } from '../../internal/read-entry';
 import { toEntryVersion } from '../../internal/versions';
 import { entryRepository } from '../../repository/entries-table';
+import { entryVersionSchema } from '../../schema';
 
 /**
  * Lists the saved versions of one locale of an entry. Throws if the entry does
@@ -17,6 +18,7 @@ export const listEntryVersions = defineServiceMethod({
         id: z.string(),
         locale: z.string().optional(),
     }),
+    output: z.array(entryVersionSchema),
     access: entryGate('read'),
     requires: 'versioning',
     mutates: false,

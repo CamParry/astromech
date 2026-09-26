@@ -6,21 +6,22 @@
 
 import type { GlobalResource } from '../repository';
 import type { ContentWrite } from '@/content/repository/types';
-import type { Global, ResolvedConfig, User } from '@/types/index';
+import type { ResolvedConfig, User } from '@/types/index';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../internal/access';
-import { getCanonicalGlobal, toGlobal } from '../internal/global';
-import { localised, scheduleGlobalSchema } from '../schema';
+import { getCanonicalGlobal } from '../internal/global';
+import { globalSchema, localised, scheduleGlobalSchema } from '../schema';
 
 /** Publishes one locale, stamping `publishedAt` when it has none yet. */
 export const publishGlobal = defineServiceMethod({
     summary: 'Publish a global.',
     input: localised,
+    output: globalSchema,
     access: gate('publish'),
     requires: 'statuses',
     mutates: true,
     idempotent: true,
-    handler(params, ctx): Promise<Global> {
+    handler(params, ctx): Promise<GlobalResource> {
         return writeStatus(ctx.config, params, ctx.user, (current) => ({
             status: 'published',
             publishedAt: current.publishedAt ?? new Date(),
@@ -32,6 +33,7 @@ export const publishGlobal = defineServiceMethod({
 export const unpublishGlobal = defineServiceMethod({
     summary: 'Unpublish a global.',
     input: localised,
+    output: globalSchema,
     access: gate('publish'),
     requires: 'statuses',
     mutates: true,
@@ -39,7 +41,7 @@ export const unpublishGlobal = defineServiceMethod({
     // served. `ServiceMethodEffect` names unpublish explicitly.
     destructive: true,
     idempotent: true,
-    handler(params, ctx): Promise<Global> {
+    handler(params, ctx): Promise<GlobalResource> {
         return writeStatus(ctx.config, params, ctx.user, () => ({
             status: 'unpublished',
             publishedAt: null,
@@ -51,11 +53,12 @@ export const unpublishGlobal = defineServiceMethod({
 export const scheduleGlobal = defineServiceMethod({
     summary: 'Schedule a global to publish at a future time.',
     input: localised.extend(scheduleGlobalSchema.shape),
+    output: globalSchema,
     access: gate('publish'),
     requires: 'statuses',
     mutates: true,
     idempotent: true,
-    handler(params, ctx): Promise<Global> {
+    handler(params, ctx): Promise<GlobalResource> {
         return writeStatus(ctx.config, params, ctx.user, () => ({
             status: 'scheduled',
             publishedAt: params.publishedAt,
@@ -72,12 +75,11 @@ async function writeStatus(
     params: { key: string; locale?: string | undefined },
     user: User | null,
     write: (current: GlobalResource) => ContentWrite
-): Promise<Global> {
+): Promise<GlobalResource> {
     const { repository, id, locale, current } = await getCanonicalGlobal(config, params);
 
-    const row = await repository.update(
+    return repository.update(
         { id, locale },
         { ...write(current), updatedBy: user?.id ?? null }
     );
-    return toGlobal(row);
 }

@@ -5,6 +5,7 @@ import { RESOURCE_SPECS } from '@/content/resources';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { mediaRepository } from '../../repository';
+import { mediaVersionSchema } from '../../schema';
 
 /**
  * Lists the saved versions of one locale of a media item, newest first. Unlike a
@@ -14,6 +15,7 @@ import { mediaRepository } from '../../repository';
 export const listMediaVersions = defineServiceMethod({
     summary: 'List the saved versions of one locale of a media item.',
     input: z.object({ id: z.string(), locale: z.string().optional() }),
+    output: z.array(mediaVersionSchema),
     access: 'media:read',
     mutates: false,
     async handler(params, ctx): Promise<MediaVersion[]> {

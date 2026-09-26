@@ -11,6 +11,7 @@ import { notificationRepository } from '../repository';
 export const dismissNotification = defineServiceMethod({
     summary: 'Dismiss one of your own notifications.',
     input: z.object({ id: z.string() }),
+    output: z.void(),
     access: 'public',
     sessionScoped: true,
     mutates: true,

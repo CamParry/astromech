@@ -1,12 +1,13 @@
-import type { Entry } from '@/types/index';
+import type { EntryResource } from '../../repository/types';
 import { z } from '@hono/zod-openapi';
 import { transaction } from '@/database/transaction';
 import { StagedChangeExistsError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
-import { getEntryOfType, toEntry } from '../../internal/read-entry';
+import { getEntryOfType } from '../../internal/read-entry';
 import { syncEntryRelationships } from '../../internal/relationships';
 import { entryRepository } from '../../repository/entries-table';
+import { entrySchema } from '../../schema';
 
 /**
  * Creates a staged copy of one locale of an entry so edits can be drafted off
@@ -19,10 +20,11 @@ export const createStagedEntry = defineServiceMethod({
         id: z.string(),
         locale: z.string().optional(),
     }),
+    output: entrySchema,
     access: entryGate('update'),
     requires: 'staging',
     mutates: true,
-    async handler(params, ctx): Promise<Entry> {
+    async handler(params, ctx): Promise<EntryResource> {
         const { type, id } = params;
         const canonical = await getEntryOfType(type, id, params.locale);
         const { staging } = entryRepository;
@@ -36,7 +38,7 @@ export const createStagedEntry = defineServiceMethod({
         // The staged row copies the canonical's content — slug included, which the
         // partial unique index allows — and is always unpublished. Write it and its
         // relationship index atomically.
-        const created = await transaction(async () => {
+        return transaction(async () => {
             const row = await staging.create(
                 { id, locale: canonical.locale },
                 {
@@ -52,7 +54,5 @@ export const createStagedEntry = defineServiceMethod({
             await syncEntryRelationships(ctx.config, row, type);
             return row;
         });
-
-        return toEntry(created);
     },
 });

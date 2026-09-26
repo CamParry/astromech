@@ -10,9 +10,14 @@ import type {
     ResourceType,
     ResourceValidator,
 } from '@/types/index';
+import type { z } from 'zod';
 import { resolveEntryType } from '@/entries/entry-types';
+import { entrySchema } from '@/entries/schema';
 import { resolveGlobal } from '@/globals/resolve-global';
+import { globalSchema } from '@/globals/schema';
+import { mediaSchema } from '@/media/schema';
 import { MEDIA_SORT_FIELDS } from '@/types/query';
+import { userSchema } from '@/users/schema';
 
 /**
  * A resource as the shared helpers see it. `target` names the entry type or the
@@ -34,6 +39,8 @@ export type ResourceSpec = {
     sortable: readonly string[];
     /** The content columns a version snapshots beside `fields`. */
     versionedColumns: readonly string[];
+    /** The public shape one resource is read in: the output schema of its `get`. */
+    outputSchema: z.ZodType;
 };
 
 /** Every resource's spec, keyed by kind, so a missing resource is a type error. */
@@ -58,6 +65,7 @@ export const RESOURCE_SPECS: {
         validate: (config, type) => resolveEntryType(config, type ?? '')?.validate,
         sortable: ['title', 'status', 'createdAt', 'updatedAt', 'publishedAt', 'slug'],
         versionedColumns: ['title', 'slug'],
+        outputSchema: entrySchema,
     },
     global: {
         kind: 'global',
@@ -73,6 +81,7 @@ export const RESOURCE_SPECS: {
         validate: (config, key) => resolveGlobal(config, key ?? '')?.validate,
         sortable: [],
         versionedColumns: [],
+        outputSchema: globalSchema,
     },
     user: {
         kind: 'user',
@@ -83,6 +92,7 @@ export const RESOURCE_SPECS: {
         validate: (config) => config.users.validate,
         sortable: ['name', 'email', 'createdAt', 'updatedAt', 'role'],
         versionedColumns: [],
+        outputSchema: userSchema,
     },
     media: {
         kind: 'media',
@@ -93,5 +103,6 @@ export const RESOURCE_SPECS: {
         validate: (config) => config.media.validate,
         sortable: MEDIA_SORT_FIELDS,
         versionedColumns: ['title', 'alt', 'caption'],
+        outputSchema: mediaSchema,
     },
 };

@@ -1,4 +1,4 @@
-import type { Entry } from '@/types/index';
+import type { EntryResource } from '../../repository/types';
 import { z } from '@hono/zod-openapi';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { requireStagedChange } from '@/content/staging';
@@ -7,10 +7,11 @@ import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
-import { getEntryOfType, toEntry, toEntryWithContentId } from '../../internal/read-entry';
+import { getEntryOfType } from '../../internal/read-entry';
 import { syncEntryRelationships } from '../../internal/relationships';
 import { toStoredFields } from '../../internal/stored-fields';
 import { entryRepository } from '../../repository/entries-table';
+import { entrySchema } from '../../schema';
 
 /**
  * Merges a staged change into the canonical content row it was made from:
@@ -25,20 +26,19 @@ export const mergeStagedEntry = defineServiceMethod({
         id: z.string(),
         locale: z.string().optional(),
     }),
+    output: entrySchema,
     access: entryGate('publish'),
     requires: 'staging',
     mutates: true,
-    async handler(params, ctx): Promise<Entry> {
+    async handler(params, ctx): Promise<EntryResource> {
         const { type, id } = params;
         const canonical = await getEntryOfType(type, id, params.locale);
         const { staging } = entryRepository;
-        const staged = toEntryWithContentId(
-            await requireStagedChange(staging, 'entry', {
-                rowId: id,
-                id,
-                locale: canonical.locale,
-            })
-        );
+        const staged = await requireStagedChange(staging, 'entry', {
+            rowId: id,
+            id,
+            locale: canonical.locale,
+        });
 
         // Merging is the promotion moment: editing the staged row validates at the
         // draft stage (it is unpublished), so this is the first write where the
@@ -59,7 +59,7 @@ export const mergeStagedEntry = defineServiceMethod({
         // Backs up the canonical, overwrites it with the staged content, and
         // hard-deletes the staged row — all in one transaction so a partial
         // failure rolls back.
-        return transaction(async (): Promise<Entry> => {
+        return transaction(async (): Promise<EntryResource> => {
             // 1. Backup (conditional on versioning): snapshot the canonical first so
             //    a partial failure leaves a recoverable version.
             if (versioningOn) {
@@ -89,7 +89,7 @@ export const mergeStagedEntry = defineServiceMethod({
             await staging.delete({ id, locale: canonical.locale });
             await syncEntryRelationships(ctx.config, updated, type);
 
-            return toEntry(updated);
+            return updated;
         });
     },
 });

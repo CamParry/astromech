@@ -1,4 +1,4 @@
-import type { User } from '@/types/index';
+import type { UserResource } from '../repository';
 import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
 import { RESOURCE_SPECS } from '@/content/resources';
@@ -8,9 +8,8 @@ import { getRole } from '@/permissions/roles';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { hashCredential } from '../internal/credential-account';
 import { syncUserRelationships } from '../internal/relationships';
-import { toUser } from '../internal/to-user';
 import { userRepository } from '../repository';
-import { createUserSchema } from '../schema';
+import { createUserSchema, userSchema } from '../schema';
 
 /**
  * Create a CMS user, running its custom fields through the field pipeline. A
@@ -19,9 +18,10 @@ import { createUserSchema } from '../schema';
 export const createUser = defineServiceMethod({
     summary: 'Create a new CMS user.',
     input: z.object({ data: createUserSchema }),
+    output: userSchema,
     access: 'users:create',
     mutates: true,
-    async handler(params, ctx): Promise<User> {
+    async handler(params, ctx): Promise<UserResource> {
         const { data } = params;
 
         const config = ctx.config;
@@ -47,7 +47,7 @@ export const createUser = defineServiceMethod({
         // are one transaction: an index that outlived a failed create would name
         // a user that is not there.
         const userId = ctx.user?.id ?? null;
-        const created = await transaction(async () => {
+        return transaction(async () => {
             const row = await userRepository.create(
                 {
                     email: data.email,
@@ -62,6 +62,5 @@ export const createUser = defineServiceMethod({
             await syncUserRelationships(ctx.config, row.id);
             return row;
         });
-        return toUser(created);
     },
 });

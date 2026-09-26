@@ -151,7 +151,10 @@ version rows are not part of it. The repository's decoder builds it
 not `UserOutput` or `PublicUser` for the public type.
 
 **Schema.** Request validation, or a whole-shape aggregate. Never the table
-declarations, which are tables.
+declarations, which are tables. A method's output schema is the public shape of
+what it returns (`userSchema`, in the resource's `schema.ts`): parsing the
+handler's result through it strips the resource's internal keys, and the public
+type is inferred from it (`User`).
 
 **Service, method, client, API.** One noun per role. A service is a module's or
 plugin's callable operations. A method (service method) is one of them: its

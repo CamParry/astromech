@@ -1,13 +1,13 @@
-import type { EntryWithContentId } from '../internal/read-entry';
-import type { Entry, EntryDuplicateOverrides } from '@/types/index';
+import type { EntryResource } from '../repository/types';
+import type { EntryDuplicateOverrides } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
-import { getEntryOfType, getEntryResource, toEntry } from '../internal/read-entry';
+import { getEntryOfType, getEntryResource } from '../internal/read-entry';
 import { syncEntryRelationships } from '../internal/relationships';
 import { entryRepository } from '../repository/entries-table';
-import { duplicateOverridesSchema } from '../schema';
+import { duplicateOverridesSchema, entrySchema } from '../schema';
 
 /**
  * Duplicates an entry: copies every locale of it into a new entry of the same
@@ -22,9 +22,10 @@ export const duplicateEntry = defineServiceMethod({
         id: z.string(),
         overrides: duplicateOverridesSchema.optional(),
     }),
+    output: entrySchema,
     access: entryGate('create'),
     mutates: true,
-    async handler(params, ctx): Promise<Entry> {
+    async handler(params, ctx): Promise<EntryResource> {
         const { type, id, overrides } = params;
 
         const source = overrides?.locale
@@ -63,7 +64,7 @@ export const duplicateEntry = defineServiceMethod({
             // Once, at the end: the index is per entry and reads every locale back.
             await syncEntryRelationships(ctx.config, first, type);
             // Re-read so `locales` names every copied locale, not just the first.
-            return toEntry(await getEntryOfType(type, first.id, firstLocale));
+            return getEntryOfType(type, first.id, firstLocale);
         });
 
         return created;
@@ -77,12 +78,12 @@ export const duplicateEntry = defineServiceMethod({
 async function copyLocale(params: {
     type: string;
     id: string;
-    source: EntryWithContentId;
+    source: EntryResource;
     locale: string;
     overrides: EntryDuplicateOverrides | undefined;
     createdBy: string | null;
     into?: string;
-}): Promise<Entry> {
+}): Promise<EntryResource> {
     const { type, id, source, locale, overrides, createdBy, into } = params;
 
     const row =
@@ -101,9 +102,7 @@ async function copyLocale(params: {
         updatedBy: createdBy,
     };
 
-    return toEntry(
-        into === undefined
-            ? await entryRepository.create({ type, ...write })
-            : await entryRepository.update({ id: into, locale }, write)
-    );
+    return into === undefined
+        ? entryRepository.create({ type, ...write })
+        : entryRepository.update({ id: into, locale }, write);
 }

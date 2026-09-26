@@ -3,8 +3,9 @@
  * and the preview projection (public shape with the publish gate bypassed).
  */
 
+import type { EntryResource } from '../repository/types';
 import type { AudienceContext } from '@/content/visibility';
-import type { Entry, Field } from '@/types/index';
+import type { Field } from '@/types/index';
 import { applyVisibility } from '@/content/visibility';
 import { entryRepository } from '../repository/entries-table';
 
@@ -43,7 +44,10 @@ function previewAudience(): AudienceContext {
 }
 
 /** Apply the preview projection (public shape, publish-gate bypassed). */
-export function projectPreview(entry: Entry, fields: Field[]): Entry | null {
+export function projectPreview(
+    entry: EntryResource,
+    fields: Field[]
+): EntryResource | null {
     return applyVisibility(entry, {
         shape: 'public',
         preview: true,

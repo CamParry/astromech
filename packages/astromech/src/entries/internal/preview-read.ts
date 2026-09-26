@@ -5,12 +5,12 @@
  * empty result.
  */
 
-import type { Entry, EntryQueryParams, QueryResult, ResolvedConfig } from '@/types/index';
+import type { EntryResource } from '../repository/types';
+import type { EntryQueryParams, QueryResult, ResolvedConfig } from '@/types/index';
 import { resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
 import { entryRepository } from '../repository/entries-table';
 import { projectPreview, verifyPreviewToken } from './preview';
-import { toEntry } from './read-entry';
 
 /**
  * Preview list read by filters (see the file header). Returns an empty result
@@ -20,9 +20,9 @@ import { toEntry } from './read-entry';
 export async function queryPreviewEntries(
     config: ResolvedConfig,
     params: EntryQueryParams & { type: string | readonly string[] }
-): Promise<QueryResult<Entry>> {
+): Promise<QueryResult<EntryResource>> {
     const perPage = typeof params.limit === 'number' ? params.limit : 20;
-    const empty: QueryResult<Entry> = {
+    const empty: QueryResult<EntryResource> = {
         data: [],
         pagination:
             params.limit === 'all'
@@ -48,19 +48,18 @@ export async function queryPreviewEntries(
         ...(limit === 'all' ? {} : { limit, offset: (page - 1) * limit }),
     });
 
-    const out: Entry[] = [];
-    for (const row of rows) {
-        const canonical = toEntry(row);
+    const out: EntryResource[] = [];
+    for (const canonical of rows) {
         if (!(await verifyPreviewToken(canonical.id, token))) continue;
 
-        let target: Entry = canonical;
+        let target = canonical;
         if (params.staged) {
             const staged = await entryRepository.staging.findOne({
                 id: canonical.id,
                 locale: canonical.locale,
             });
             if (!staged) continue;
-            target = toEntry(staged);
+            target = staged;
         }
 
         const projected = projectPreview(target, fields);
@@ -89,27 +88,25 @@ export async function getPreviewEntry(
         previewToken?: string | undefined;
         staged?: boolean | undefined;
     }
-): Promise<Entry | null> {
+): Promise<EntryResource | null> {
     const { type, id } = params;
     const token = params.previewToken;
     if (!token) return null;
 
     // Excludes trashed. The token authorizes every locale, so this reads the
     // one asked for and verifies against the entry.
-    const record = await entryRepository.findOne({ type, id, locale: params.locale });
-    if (!record) return null;
-
-    const canonical = toEntry(record);
+    const canonical = await entryRepository.findOne({ type, id, locale: params.locale });
+    if (!canonical) return null;
     if (!(await verifyPreviewToken(canonical.id, token))) return null;
 
-    let target: Entry = canonical;
+    let target = canonical;
     if (params.staged) {
         const staged = await entryRepository.staging.findOne({
             id: canonical.id,
             locale: canonical.locale,
         });
         if (!staged) return null;
-        target = toEntry(staged);
+        target = staged;
     }
 
     const entryTypeCfg = resolveEntryType(config, type);

@@ -13,10 +13,12 @@ import type { Kysely } from 'kysely';
 import { adminRole, roleWith } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { mountRouter, seedTestUser, testUser } from '@tests/mount-router';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
+import { OutputValidationError } from '@/errors/output-validation';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { usersRouter } from '@/transport/http/routes/users';
+import { userRepository } from '@/users/repository';
 
 const usersService = currentServices.users;
 
@@ -142,6 +144,30 @@ describe('GET /users/:id', () => {
         const res = await app(roleWith([]), self).request(`/users/${self.id}`);
         expect(res.status).toBe(200);
         expect(((await res.json()) as { data: User }).data.id).toBe(self.id);
+    });
+
+    it('answers a stored user its output schema refuses with a generic 500, and logs why', async () => {
+        const user = await makeUser('a@test.dev', 'Ann');
+        const read = userRepository.findOne.bind(userRepository);
+        vi.spyOn(userRepository, 'findOne').mockImplementation(async (...args) => {
+            const found = await read(...args);
+            return found && { ...found, role: null as unknown as string };
+        });
+        const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+        const res = await app().request(`/users/${user.id}`);
+
+        expect(res.status).toBe(500);
+        const body = (await res.json()) as { error: { code: string; message: string } };
+        expect(body.error.code).toBe('INTERNAL_ERROR');
+        expect(body.error.message).toBe('An unexpected error occurred');
+        const [error] = logged.mock.calls.map((call) => call[1]);
+        expect(error).toBeInstanceOf(OutputValidationError);
+        expect((error as Error).message).toContain(
+            `The result of users.get doesn't match its output schema (id ${user.id}, locale en)`
+        );
+        expect((error as Error).message).toContain('→ at role');
+        logged.mockRestore();
     });
 });
 

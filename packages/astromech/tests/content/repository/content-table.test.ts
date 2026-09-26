@@ -36,6 +36,7 @@ function decode(
         updatedAt: resourceRow.updatedAt,
         contentCreatedAt: contentRow.createdAt,
         contentUpdatedAt: contentRow.updatedAt,
+        createdBy: contentRow.createdBy,
         updatedBy: resourceRow.updatedBy,
     };
 }

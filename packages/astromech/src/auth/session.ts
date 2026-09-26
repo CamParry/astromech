@@ -9,8 +9,9 @@ import { getAuth } from '@/auth/better-auth';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { getConfig } from '@/config/registry';
 import { resolveRole } from '@/permissions/roles';
-import { toUser } from '@/users/internal/to-user';
+import { parseOutput } from '@/services/parse-method-output';
 import { userRepository } from '@/users/repository';
+import { userSchema } from '@/users/schema';
 import { log } from '@/utilities/log';
 
 /** What Better Auth's `getSession` resolves to — null when there is no session. */
@@ -37,7 +38,9 @@ export async function getSession(
     });
     if (!resource) return null;
 
-    const user = toUser(resource);
+    // The request scope hands this user to `Astro.locals`, hooks and plugins,
+    // so it leaves core in the public shape.
+    const user = parseOutput(userSchema, resource, 'The session user');
 
     // A role the config no longer defines refuses the session rather than
     // resolving to something. Removing a role from `astromech.config.ts` logs

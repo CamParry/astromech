@@ -17,6 +17,7 @@ export const deleteStagedEntry = defineServiceMethod({
         id: z.string(),
         locale: z.string().optional(),
     }),
+    output: z.void(),
     access: entryGate('update'),
     requires: 'staging',
     mutates: true,

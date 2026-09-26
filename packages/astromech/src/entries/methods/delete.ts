@@ -20,6 +20,7 @@ export const deleteEntries = defineServiceMethod({
             ...batchAddress,
         })
     ),
+    output: z.void(),
     access: entryGate('delete'),
     mutates: true,
     destructive: true,

@@ -1,8 +1,10 @@
-import type { EntryWithContentId } from './read-entry';
+import type { EntryResource } from '../repository/types';
 import type { AppContext } from '@/types/index';
 import { relationshipRepository } from '@/content/repository/relationships';
+import { parseOutput } from '@/services/parse-method-output';
 import { entryRepository } from '../repository/entries-table';
-import { getEntryResources, toEntry } from './read-entry';
+import { entrySchema } from '../schema';
+import { getEntryResources } from './read-entry';
 import { writeBatch } from './write-batch';
 
 /**
@@ -58,7 +60,7 @@ async function removeEntryBatch(
     ctx: AppContext,
     options: {
         permanent: boolean;
-        write: (entry: EntryWithContentId) => Promise<void>;
+        write: (entry: EntryResource) => Promise<void>;
     }
 ): Promise<void> {
     const { type, ids } = params;
@@ -69,7 +71,7 @@ async function removeEntryBatch(
     for (const entry of entries) {
         await ctx.runHook('entry:beforeDelete', {
             type,
-            entry: toEntry(entry),
+            entry: parseOutput(entrySchema, entry, 'The entry in entry:beforeDelete'),
             user,
             permanent,
         });
@@ -81,7 +83,7 @@ async function removeEntryBatch(
         // A throw here propagates; the write above stays (`DECISIONS.md`).
         await ctx.runHook('entry:afterDelete', {
             type,
-            entry: toEntry(entry),
+            entry: parseOutput(entrySchema, entry, 'The entry in entry:afterDelete'),
             user,
             permanent,
         });

@@ -4,7 +4,7 @@
  * `statuses` capability.
  */
 
-import type { Entry } from '@/types/index';
+import type { EntryResource } from '../repository/types';
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
@@ -14,12 +14,15 @@ import {
     scheduleEntryBatch,
     unpublishEntryBatch,
 } from '../internal/status-batch';
-import { scheduleEntrySchema } from '../schema';
+import { entrySchema, scheduleEntrySchema } from '../schema';
 
 /** One id is a batch of one, and its result and errors are unwrapped. */
 const publishOne = fromBatch(publishEntryBatch);
 const unpublishOne = fromBatch(unpublishEntryBatch);
 const scheduleOne = fromBatch(scheduleEntryBatch);
+
+/** What every status method answers: the entry it moved, or the list of them. */
+const entryOrEntries = z.union([entrySchema, z.array(entrySchema)]);
 
 /** The `{ type, id | ids, locale }` every status method is addressed by. */
 const localisedBatch = z.object({
@@ -32,11 +35,12 @@ const localisedBatch = z.object({
 export const publishEntries = defineServiceMethod({
     summary: 'Publish an entry.',
     input: oneOrMany(localisedBatch),
+    output: entryOrEntries,
     access: entryGate('publish'),
     requires: 'statuses',
     mutates: true,
     idempotent: true,
-    handler(params, ctx): Promise<Entry | Entry[]> {
+    handler(params, ctx): Promise<EntryResource | EntryResource[]> {
         return publishOne(params, ctx);
     },
 });
@@ -45,6 +49,7 @@ export const publishEntries = defineServiceMethod({
 export const unpublishEntries = defineServiceMethod({
     summary: 'Unpublish an entry.',
     input: oneOrMany(localisedBatch),
+    output: entryOrEntries,
     access: entryGate('publish'),
     requires: 'statuses',
     mutates: true,
@@ -52,7 +57,7 @@ export const unpublishEntries = defineServiceMethod({
     // served. `ServiceMethodEffect` names unpublish explicitly.
     destructive: true,
     idempotent: true,
-    handler(params, ctx): Promise<Entry | Entry[]> {
+    handler(params, ctx): Promise<EntryResource | EntryResource[]> {
         return unpublishOne(params, ctx);
     },
 });
@@ -61,11 +66,12 @@ export const unpublishEntries = defineServiceMethod({
 export const scheduleEntries = defineServiceMethod({
     summary: 'Schedule an entry to publish at a future time.',
     input: oneOrMany(localisedBatch.extend(scheduleEntrySchema.shape)),
+    output: entryOrEntries,
     access: entryGate('publish'),
     requires: 'statuses',
     mutates: true,
     idempotent: true,
-    handler(params, ctx): Promise<Entry | Entry[]> {
+    handler(params, ctx): Promise<EntryResource | EntryResource[]> {
         return scheduleOne(params, ctx);
     },
 });

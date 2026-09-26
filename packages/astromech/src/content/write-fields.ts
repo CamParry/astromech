@@ -13,6 +13,7 @@ import { entryValidationMode } from '@/entries/validation-mode';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
+import { parseOutput } from '@/services/parse-method-output';
 import { pruneDanglingRelations } from './dangling-relations';
 import { isUniqueAmong } from './unique';
 
@@ -103,6 +104,15 @@ export async function writeFields(
         definitions,
         fieldParseContext(spec, config, {
             ...write,
+            // Validators are site and plugin code, so they read the public shape.
+            record:
+                write.record === null
+                    ? null
+                    : parseOutput(
+                          spec.outputSchema,
+                          write.record,
+                          `The ${spec.kind} a field validator reads`
+                      ),
             ...(merging ? { coerceOnly: new Set(patchedFieldNames(source.patch)) } : {}),
         })
     );

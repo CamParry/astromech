@@ -23,6 +23,7 @@ export const trashEntries = defineServiceMethod({
             ...batchAddress,
         })
     ),
+    output: z.void(),
     access: entryGate('delete'),
     requires: 'trash',
     mutates: true,
@@ -42,6 +43,7 @@ export const trashEntries = defineServiceMethod({
 export const emptyTrash = defineServiceMethod({
     summary: 'Permanently delete every trashed entry of one type.',
     input: z.object({ type: z.string() }),
+    output: z.void(),
     access: entryGate('delete'),
     requires: 'trash',
     mutates: true,

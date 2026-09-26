@@ -18,21 +18,25 @@ import {
     getPluginServiceMethods,
 } from '@/plugins/runtime/plugin-runtime';
 import { parseMethodInput } from '@/services/parse-method-input';
+import { parseMethodOutput } from '@/services/parse-method-output';
 
 type MethodMap = Record<string, (input?: unknown) => Promise<unknown>>;
 
 /**
  * The namespace bound to `ctx`: each method runs with its own plugin's context
- * layered over `ctx`, so it acts as the caller did.
+ * layered over `ctx`, so it acts as the caller did, and its `output`, when it
+ * declares one, parses the result.
  */
 export function pluginServicesFor(ctx: AppContext): PluginServiceNamespace {
-    return pluginNamespace(
-        (resolved, method) => async (input) =>
-            (method.handler as (i: unknown, c: PluginContext) => unknown)(
-                parseMethodInput(method, input),
-                createPluginContext(resolved, ctx)
-            )
-    );
+    return pluginNamespace((resolved, method, name) => async (input) => {
+        const result: unknown = await (
+            method.handler as (i: unknown, c: PluginContext) => unknown
+        )(parseMethodInput(method, input), createPluginContext(resolved, ctx));
+        return parseMethodOutput(
+            { name: `plugins.${resolved.serviceKey}.${name}`, output: method.output },
+            result
+        );
+    });
 }
 
 /**

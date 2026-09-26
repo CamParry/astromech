@@ -1,11 +1,11 @@
-import type { QueryResult, User } from '@/types/index';
-import { queryPage } from '@/content/list';
+import type { UserResource } from '../repository';
+import type { QueryResult } from '@/types/index';
+import { queryPage, queryResultSchema } from '@/content/list';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { toUser } from '../internal/to-user';
 import { userRepository } from '../repository';
-import { userQuerySchema } from '../schema';
+import { userQuerySchema, userSchema } from '../schema';
 
 /**
  * List CMS users, paginated unless `limit: 'all'` asks for the lot. The page is
@@ -15,9 +15,10 @@ import { userQuerySchema } from '../schema';
 export const queryUsers = defineServiceMethod({
     summary: 'List CMS users.',
     input: userQuerySchema,
+    output: queryResultSchema(userSchema),
     access: 'users:read',
     mutates: false,
-    async handler(params, ctx): Promise<QueryResult<User>> {
+    async handler(params, ctx): Promise<QueryResult<UserResource>> {
         const locale = resolveResourceLocale(
             RESOURCE_SPECS.user,
             ctx.config,
@@ -25,10 +26,9 @@ export const queryUsers = defineServiceMethod({
             params.locale
         );
         const { search, sort } = params;
-        const result = await queryPage(params, {
+        return queryPage(params, {
             list: (page) => userRepository.findMany({ search, sort, locale, ...page }),
             count: () => userRepository.count({ search }),
         });
-        return { ...result, data: result.data.map(toUser) };
     },
 });

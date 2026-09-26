@@ -1,5 +1,5 @@
 import type { MediaResource } from '../repository';
-import type { JsonObject, Media } from '@/types/index';
+import type { JsonObject } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
@@ -10,9 +10,8 @@ import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { syncMediaRelationships } from '../internal/relationships';
-import { toMedia } from '../internal/to-media';
 import { mediaRepository } from '../repository';
-import { updateMediaSchema } from '../schema';
+import { mediaSchema, updateMediaSchema } from '../schema';
 
 /**
  * Update one locale of a media item's authored content. A locale with no row yet
@@ -28,10 +27,11 @@ export const updateMedia = defineServiceMethod({
         locale: z.string().optional(),
         data: updateMediaSchema,
     }),
+    output: mediaSchema,
     access: 'media:update',
     mutates: true,
     idempotent: true,
-    async handler(params, ctx): Promise<Media> {
+    async handler(params, ctx): Promise<MediaResource> {
         const { id, data } = params;
         const locale = resolveResourceLocale(
             RESOURCE_SPECS.media,
@@ -60,7 +60,7 @@ export const updateMedia = defineServiceMethod({
                 { base: base.fields, patch },
                 {
                     operation: 'update',
-                    record: toMedia(base),
+                    record: base,
                     user: ctx.user,
                     scan: () => mediaRepository.findByLocale(locale),
                     excludeId: id,
@@ -83,7 +83,7 @@ export const updateMedia = defineServiceMethod({
         // The version, the row write and the index write are one transaction: an
         // index that outlived a failed write would name relations the stored
         // fields do not.
-        const updated = await transaction(async () => {
+        return transaction(async () => {
             if (current && changesVersionedContent(RESOURCE_SPECS.media, current, next)) {
                 await snapshotVersion(
                     RESOURCE_SPECS.media,
@@ -117,8 +117,6 @@ export const updateMedia = defineServiceMethod({
             }
             return row;
         });
-
-        return toMedia(updated);
     },
 });
 

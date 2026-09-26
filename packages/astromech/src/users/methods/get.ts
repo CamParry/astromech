@@ -1,11 +1,11 @@
-import type { User } from '@/types/index';
+import type { UserResource } from '../repository';
 import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
 import { resolveResourceLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { toUser } from '../internal/to-user';
 import { userRepository } from '../repository';
+import { userSchema } from '../schema';
 
 /**
  * Read one user by id, or null when there is no such user. A locale with no
@@ -15,19 +15,19 @@ import { userRepository } from '../repository';
 export const getUser = defineServiceMethod({
     summary: 'Read one user by id.',
     input: z.object({ id: z.string(), locale: z.string().optional() }),
+    output: userSchema.nullable(),
     access: 'users:read',
     mutates: false,
-    async handler(params, ctx): Promise<User | null> {
+    async handler(params, ctx): Promise<UserResource | null> {
         const locale = resolveResourceLocale(
             RESOURCE_SPECS.user,
             ctx.config,
             undefined,
             params.locale
         );
-        const resource = await userRepository.findOne(params.id, {
+        return userRepository.findOne(params.id, {
             locale,
             fallbackLocale: defaultContentLocale(ctx.config),
         });
-        return resource ? toUser(resource) : null;
     },
 });

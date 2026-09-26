@@ -1,4 +1,4 @@
-import type { Media } from '@/types/index';
+import type { MediaResource } from '../repository';
 import { z } from '@hono/zod-openapi';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
@@ -6,8 +6,8 @@ import { deletePrefix } from '@/storage/prefix';
 import { getStorageDriver } from '@/storage/registry';
 import { originalKey } from '../internal/keys';
 import { storeFile } from '../internal/store-file';
-import { toMedia } from '../internal/to-media';
 import { mediaRepository } from '../repository';
+import { mediaSchema } from '../schema';
 import { variantPrefix } from '../serving/image/url';
 
 /** Swap a media item's file, keeping its id, URL shape and metadata row. */
@@ -15,10 +15,11 @@ export const replaceMedia = defineServiceMethod({
     summary: 'Replace a media item’s file, keeping its id, URL and metadata.',
     input: z.object({ id: z.string(), file: z.instanceof(File) }),
     binaryInput: true,
+    output: mediaSchema,
     access: 'media:upload',
     mutates: true,
     destructive: true,
-    async handler(params, ctx): Promise<Media> {
+    async handler(params, ctx): Promise<MediaResource> {
         const { id, file } = params;
         const driver = getStorageDriver();
 
@@ -51,6 +52,6 @@ export const replaceMedia = defineServiceMethod({
 
         const updated = await mediaRepository.findOne(id);
         if (!updated) throw new ResourceNotFoundError('media', { id });
-        return toMedia(updated);
+        return updated;
     },
 });

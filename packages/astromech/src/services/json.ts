@@ -1,9 +1,10 @@
 /**
- * The JSON schemas a service method's `input` is built from: the two shapes
- * every module's `schema.ts` needs, typed as the domain types they parse to.
+ * The JSON schemas a service method's `input` and `output` are built from: the
+ * shapes every module's `schema.ts` needs, typed as the domain types they parse to.
  */
 
-import type { JsonValue } from '@/types/index';
+import type { JsonObject, JsonValue } from '@/types/index';
+import { z } from '@hono/zod-openapi';
 import * as zod from 'zod';
 
 /**
@@ -24,3 +25,15 @@ export const jsonValue = zod.unknown() as unknown as zod.ZodType<JsonValue, Json
  * `JsonObject` the domain types deal in.
  */
 export const jsonObject = zod.record(zod.string(), jsonValue);
+
+/**
+ * A stored JSON object on the way out, typed without being walked: a write
+ * already checked each value against its field, and a field definition may
+ * change after the data is stored. A read only confirms it is an object.
+ */
+export const unparsedJsonObject = z
+    .custom<JsonObject>(
+        (value) => typeof value === 'object' && value !== null && !Array.isArray(value),
+        { message: 'Expected a JSON object' }
+    )
+    .openapi({ type: 'object', additionalProperties: true });

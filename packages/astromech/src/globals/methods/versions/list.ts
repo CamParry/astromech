@@ -1,8 +1,9 @@
 import type { GlobalVersion, JsonObject } from '@/types/index';
+import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
 import { getCanonicalGlobal } from '../../internal/global';
-import { localised } from '../../schema';
+import { globalVersionSchema, localised } from '../../schema';
 
 /**
  * Lists the saved versions of one locale of a global, newest first. Throws when
@@ -11,6 +12,7 @@ import { localised } from '../../schema';
 export const listGlobalVersions = defineServiceMethod({
     summary: 'List the version history of a global.',
     input: localised,
+    output: z.array(globalVersionSchema),
     access: gate('read'),
     requires: 'versioning',
     mutates: false,

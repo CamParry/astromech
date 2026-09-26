@@ -1,14 +1,8 @@
-import type { ListParams } from '../repository/types';
+import type { EntryResource, ListParams } from '../repository/types';
 import type { VisibilityShape } from '@/content/visibility';
-import type {
-    Entry,
-    Field,
-    QueryResult,
-    ReferencesFilter,
-    ResolvedConfig,
-} from '@/types/index';
+import type { Field, QueryResult, ReferencesFilter, ResolvedConfig } from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { queryPage, sortSchema } from '@/content/list';
+import { queryPage, queryResultSchema, sortSchema } from '@/content/list';
 import { applyVisibility } from '@/content/visibility';
 import { resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
@@ -17,8 +11,8 @@ import { defineServiceMethod } from '@/services/define-service-method';
 import { InvalidReferencesFilterError, PublicTrashedReadError } from '../errors';
 import { entryGate } from '../internal/access';
 import { queryPreviewEntries } from '../internal/preview-read';
-import { toEntry } from '../internal/read-entry';
 import { entryRepository } from '../repository/entries-table';
+import { entrySchema } from '../schema';
 
 /**
  * Lists entries of one or more types, paginated and filtered to the caller's
@@ -42,9 +36,10 @@ export const queryEntries = defineServiceMethod({
         previewToken: z.string().optional(),
         staged: z.boolean().optional(),
     }),
+    output: queryResultSchema(entrySchema),
     access: entryGate('read'),
     mutates: false,
-    async handler(params, ctx): Promise<QueryResult<Entry>> {
+    async handler(params, ctx): Promise<QueryResult<EntryResource>> {
         // Preview (forward versioning): token-authorized read that bypasses the
         // publish gate. Public shape only; diverges enough to take its own path.
         if (params.previewToken) return queryPreviewEntries(ctx.config, params);
@@ -96,13 +91,11 @@ export const queryEntries = defineServiceMethod({
             where: effectiveWhere,
             ...(filtersPublished ? { publishedAsOf: now } : {}),
         };
-        const { data: rows, pagination } = await queryPage(params, {
+        const { data, pagination } = await queryPage(params, {
             list: (page) =>
                 entryRepository.findMany({ ...filters, sort: params.sort, ...page }),
             count: () => entryRepository.count(filters),
         });
-
-        const data = rows.map(toEntry);
 
         const audience = { now };
 
@@ -119,7 +112,7 @@ export const queryEntries = defineServiceMethod({
             return fields;
         };
 
-        const visibleData: Entry[] = [];
+        const visibleData: EntryResource[] = [];
         for (const entry of data) {
             const rowFields = fieldsOf(entry.type);
 

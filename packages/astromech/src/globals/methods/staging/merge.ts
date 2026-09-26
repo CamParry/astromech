@@ -1,14 +1,14 @@
-import type { Global } from '@/types/index';
+import type { GlobalResource } from '../../repository';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { requireStagedChange } from '@/content/staging';
 import { snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
-import { getCanonicalGlobal, toGlobal } from '../../internal/global';
+import { getCanonicalGlobal } from '../../internal/global';
 import { syncGlobalRelationships } from '../../internal/relationships';
 import { toStoredFields } from '../../internal/stored-fields';
-import { localised } from '../../schema';
+import { globalSchema, localised } from '../../schema';
 
 /**
  * Merges a staged change into the canonical content row it was made from:
@@ -20,10 +20,11 @@ import { localised } from '../../schema';
 export const mergeStagedGlobal = defineServiceMethod({
     summary: 'Merge the staged change into a global.',
     input: localised,
+    output: globalSchema,
     access: gate('publish'),
     requires: 'staging',
     mutates: true,
-    async handler(params, ctx): Promise<Global> {
+    async handler(params, ctx): Promise<GlobalResource> {
         const { global, repository, id, locale, current } = await getCanonicalGlobal(
             ctx.config,
             params
@@ -52,7 +53,7 @@ export const mergeStagedGlobal = defineServiceMethod({
             config: ctx.config,
         });
 
-        const merged = await transaction(async () => {
+        return transaction(async () => {
             // Snapshot the canonical first, so a partial failure leaves a
             // recoverable version.
             if (global.capabilities.versioning) {
@@ -73,7 +74,5 @@ export const mergeStagedGlobal = defineServiceMethod({
             await syncGlobalRelationships(ctx.config, id);
             return row;
         });
-
-        return toGlobal(merged);
     },
 });
