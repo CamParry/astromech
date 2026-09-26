@@ -26,7 +26,10 @@ export type ContentShape<
     C extends Table = Table,
     V extends Table = Table,
 > = {
-    /** The resource row: `entries`, `globals`. */
+    /**
+     * The resource row: `entries`, `globals`. Its `updatedAt` declares
+     * `onUpdate`, and every canonical write stamps it.
+     */
     table: O;
     /** One row per locale of what editors author: `entry_content`. */
     contentTable: C;
@@ -81,8 +84,12 @@ export type Resource = {
     fields: JsonObject;
     /** The resource row's `createdAt` — when the item itself was created. */
     createdAt: Date;
-    /** The content row's `updatedAt` — this locale's last edit. */
+    /** The resource row's `updatedAt`: the last canonical write in any locale. */
     updatedAt: Date;
+    /** This content row's `createdAt`. Internal: the staged read's divergence check. */
+    contentCreatedAt: Date;
+    /** This content row's `updatedAt`. Internal: the staged read's divergence check. */
+    contentUpdatedAt: Date;
     createdBy?: string | null;
     updatedBy?: string | null;
     status?: EntryStatus;
@@ -151,7 +158,10 @@ export type ContentRepository<R extends Resource, V extends Table = Table> = {
     count(where: JoinedWhere): Promise<number>;
     /** Insert the resource row and its first content row. */
     create(resourceRow: Record<string, unknown>, content: ContentWrite): Promise<R>;
-    /** Write one locale's content row, creating it when it does not exist. */
+    /**
+     * Write one locale's content row, creating it when it does not exist, and
+     * stamp the resource row's `updatedAt` (and `updatedBy`, where it has one).
+     */
     update(ref: ContentRef, data: ContentWrite): Promise<R>;
     /** Hard-delete the resource row; content rows and versions cascade. */
     delete(id: string): Promise<void>;
@@ -170,7 +180,7 @@ export type ContentRepository<R extends Resource, V extends Table = Table> = {
     translatable: {
         /** The item's other canonical locales, excluding `excludeLocale`. */
         siblings(id: string, excludeLocale?: string): Promise<R[]>;
-        /** Merge `values` into each sibling's fields. */
+        /** Merge `values` into each sibling's fields, and stamp the resource row. */
         propagateFields(
             id: string,
             excludeLocale: string,
@@ -181,7 +191,10 @@ export type ContentRepository<R extends Resource, V extends Table = Table> = {
     staging: {
         /** The staged change for one locale, or null. */
         findOne(ref: ContentRef): Promise<R | null>;
-        /** Add a second content row for that locale, staged for the canonical. */
+        /**
+         * Add a second content row for that locale, staged for the canonical.
+         * Staging writes leave the resource row alone.
+         */
         create(ref: ContentRef, data: ContentWrite): Promise<R>;
         /** Write that locale's staged content row; it must already exist. */
         update(ref: ContentRef, data: ContentWrite): Promise<R>;

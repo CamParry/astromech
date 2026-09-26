@@ -1,5 +1,6 @@
-/** The staged-change lookup entries and globals share. */
+/** The staged-change lookup and divergence check entries and globals share. */
 
+import type { Resource } from './repository/types';
 import { ResourceNotFoundError } from '@/errors/resource';
 
 /**
@@ -23,4 +24,15 @@ export async function requireStagedChange<R>(
         });
     }
     return staged;
+}
+
+/**
+ * True when the canonical content row was written after the staged change was
+ * made from it, so a merge would overwrite that later write.
+ */
+export function hasDiverged(
+    canonical: Pick<Resource, 'contentUpdatedAt'>,
+    staged: Pick<Resource, 'contentCreatedAt'>
+): boolean {
+    return canonical.contentUpdatedAt.getTime() > staged.contentCreatedAt.getTime();
 }

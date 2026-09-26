@@ -64,8 +64,8 @@ A `User` carries:
   slug of the user's role resolved against the config.
 - The content: `fields`, and the `locale` it was read in with the `locales`
   that have content.
-- The stamps: `createdAt`, and `updatedAt`, which is the account row's last
-  change (profile, email or role).
+- The stamps: `createdAt`, and `updatedAt`, which is the user's last change:
+  to the name, email or role, or to the content in any locale.
 
 ## Translation
 

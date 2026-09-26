@@ -18,7 +18,7 @@ import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createFileTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { getDb } from '@/database/registry';
@@ -45,6 +45,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+    vi.useRealTimers();
     for (const suffix of ['', '-wal', '-shm']) {
         try {
             rmSync(`${dbPath}${suffix}`);
@@ -149,6 +150,84 @@ describe('getStaged', () => {
         expect(got?.id).toBe(staged.id);
         expect(got?.staged).toBe(true);
         expect(got?.title).toBe(canonical.title);
+    });
+});
+
+describe('the entry row stamp and divergence', () => {
+    const t0 = new Date('2026-01-01T00:00:00.000Z');
+    const t1 = new Date('2026-01-02T00:00:00.000Z');
+    const t2 = new Date('2026-01-03T00:00:00.000Z');
+
+    /** A `post` created at t0 with a staged change made at t1. */
+    async function stagedPost(): Promise<string> {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(t0);
+        const canonical = await api.create({
+            type: 'post',
+            data: { title: 'Live', slug: 'live' },
+        });
+        vi.setSystemTime(t1);
+        await api.createStaged({ type: 'post', id: canonical.id });
+        return canonical.id;
+    }
+
+    async function entryUpdatedAt(id: string): Promise<Date | undefined> {
+        const rows = await entryRepository.findEntryRowsByType('post');
+        return rows.find((row) => row.id === id)?.updatedAt;
+    }
+
+    it('reports a staged change as not diverged while the canonical is untouched', async () => {
+        const id = await stagedPost();
+
+        expect((await api.getStaged({ type: 'post', id }))?.diverged).toBe(false);
+    });
+
+    it('reports it diverged once the canonical is written after it', async () => {
+        const id = await stagedPost();
+        vi.setSystemTime(t2);
+        await api.update({ type: 'post', id, data: { title: 'Edited' } });
+
+        expect((await api.getStaged({ type: 'post', id }))?.diverged).toBe(true);
+    });
+
+    it('does not count a write to another locale as divergence', async () => {
+        const id = await stagedPost();
+        vi.setSystemTime(t2);
+        await api.update({ type: 'post', id, locale: 'de', data: { title: 'DE' } });
+
+        expect((await api.getStaged({ type: 'post', id }))?.diverged).toBe(false);
+        expect(await entryUpdatedAt(id)).toEqual(t2);
+    });
+
+    it('leaves the entry row alone on a staged create and a staged write', async () => {
+        const id = await stagedPost();
+        vi.setSystemTime(t2);
+        await api.update({ type: 'post', id, staged: true, data: { title: 'Draft' } });
+
+        expect(await entryUpdatedAt(id)).toEqual(t0);
+    });
+
+    it('stamps the entry row on a merge', async () => {
+        const id = await stagedPost();
+        vi.setSystemTime(t2);
+
+        const merged = await api.mergeStaged({ type: 'post', id });
+
+        expect(await entryUpdatedAt(id)).toEqual(t2);
+        expect(merged.updatedAt).toEqual(t2);
+    });
+
+    it('keeps the content row timestamps out of the public shape', async () => {
+        const id = await stagedPost();
+
+        const staged = await api.getStaged({ type: 'post', id });
+        const canonical = await api.get({ type: 'post', id, full: true });
+
+        for (const read of [staged, canonical]) {
+            expect(read).not.toHaveProperty('contentId');
+            expect(read).not.toHaveProperty('contentCreatedAt');
+            expect(read).not.toHaveProperty('contentUpdatedAt');
+        }
     });
 });
 

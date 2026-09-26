@@ -10,8 +10,8 @@ import type { ContentRowId, Resource } from '@/content/repository/types';
 import type { Db } from '@/database/types';
 import type { GlobalContentRow, GlobalTableRow } from '@/globals/tables';
 import type { JsonObject } from '@/types/index';
-import { createTestDb, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { createTestDb, createTestUser, setupTestConfig } from '@tests/harness';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContentRepository } from '@/content/repository/content-table';
 import { globalContentTable, globalsTable, globalVersionsTable } from '@/database/tables';
 
@@ -33,7 +33,10 @@ function decode(
         status: contentRow.status,
         publishedAt: contentRow.publishedAt,
         createdAt: resourceRow.createdAt,
-        updatedAt: contentRow.updatedAt,
+        updatedAt: resourceRow.updatedAt,
+        contentCreatedAt: contentRow.createdAt,
+        contentUpdatedAt: contentRow.updatedAt,
+        updatedBy: resourceRow.updatedBy,
     };
 }
 
@@ -184,6 +187,90 @@ describe('translatable', () => {
             title: 'Site',
             shared: 'old',
         });
+    });
+});
+
+describe('the resource row stamp', () => {
+    const created = new Date('2026-01-01T00:00:00.000Z');
+    const later = new Date('2026-01-02T00:00:00.000Z');
+
+    beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(created);
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    async function resourceRow(id: string) {
+        return db
+            .selectFrom('globals')
+            .select(['updatedAt', 'updatedBy'])
+            .where('id', '=', id)
+            .executeTakeFirstOrThrow();
+    }
+
+    it('moves with an update to any locale, and reads as the public updatedAt', async () => {
+        const site = await createSite();
+        vi.setSystemTime(later);
+
+        const updated = await repository.update(
+            { id: site.id },
+            { fields: { title: 'Changed' } }
+        );
+
+        expect(new Date((await resourceRow(site.id)).updatedAt)).toEqual(later);
+        expect(updated.updatedAt).toEqual(later);
+    });
+
+    it('moves when an update creates a new locale', async () => {
+        const site = await createSite();
+        vi.setSystemTime(later);
+
+        await repository.update({ id: site.id, locale: 'de' }, { fields: {} });
+
+        expect(new Date((await resourceRow(site.id)).updatedAt)).toEqual(later);
+        // The default locale's own content row is untouched.
+        const en = await repository.findOne({ id: site.id });
+        expect(en?.updatedAt).toEqual(later);
+        expect(en?.contentUpdatedAt).toEqual(created);
+    });
+
+    it('records the writer of an update as updatedBy', async () => {
+        const writer = await createTestUser(db);
+        const site = await createSite();
+
+        const updated = await repository.update(
+            { id: site.id },
+            { fields: {}, updatedBy: writer.id }
+        );
+
+        expect((await resourceRow(site.id)).updatedBy).toBe(writer.id);
+        expect(updated.updatedBy).toBe(writer.id);
+    });
+
+    it('moves when shared fields propagate to other locales', async () => {
+        const site = await createSite();
+        await repository.update({ id: site.id, locale: 'de' }, { fields: {} });
+        vi.setSystemTime(later);
+
+        await repository.translatable.propagateFields(site.id, 'en', { shared: 'x' });
+
+        expect(new Date((await resourceRow(site.id)).updatedAt)).toEqual(later);
+    });
+
+    it('stays put when a staged change is created or written', async () => {
+        const site = await createSite();
+        vi.setSystemTime(later);
+
+        await repository.staging.create({ id: site.id }, { fields: { title: 'Draft' } });
+        await repository.staging.update(
+            { id: site.id },
+            { fields: { title: 'Draft 2' } }
+        );
+
+        expect(new Date((await resourceRow(site.id)).updatedAt)).toEqual(created);
     });
 });
 

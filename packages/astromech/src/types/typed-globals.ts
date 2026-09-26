@@ -121,8 +121,11 @@ export type TypedGlobalsServiceFor<GlobalMap> = {
     getStaged<K extends keyof GlobalMap>(params: {
         key: K;
         locale?: string;
-    }): Promise<TypedGlobal<FieldsForMap<GlobalMap, K>> | null>;
-    getStaged(params: { key: string; locale?: string }): Promise<Global | null>;
+    }): Promise<(TypedGlobal<FieldsForMap<GlobalMap, K>> & { diverged: boolean }) | null>;
+    getStaged(params: {
+        key: string;
+        locale?: string;
+    }): Promise<(Global & { diverged: boolean }) | null>;
 
     mergeStaged<K extends keyof GlobalMap>(params: {
         key: K;

@@ -193,7 +193,7 @@ async function writeRow(params: {
     const row =
         id === null
             ? await repository.create(
-                  { key: params.key },
+                  { key: params.key, createdBy: userId, updatedBy: userId },
                   {
                       locale,
                       fields,

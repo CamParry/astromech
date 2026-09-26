@@ -5,8 +5,9 @@
  */
 
 import { createTestDb, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
+import { getDb } from '@/database/registry';
 import { CapabilityError } from '@/errors/capability';
 import {
     ResourceNotFoundError,
@@ -114,6 +115,68 @@ describe('getStaged', () => {
             expect((e as ResourceValidationError).form?.[0]).toContain(
                 '`staged` requires `full`'
             );
+        }
+    });
+});
+
+describe('the global row stamp and divergence', () => {
+    const t0 = new Date('2026-01-01T00:00:00.000Z');
+    const t1 = new Date('2026-01-02T00:00:00.000Z');
+    const t2 = new Date('2026-01-03T00:00:00.000Z');
+
+    beforeEach(async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(t0);
+        await saveSite();
+        vi.setSystemTime(t1);
+        await api.createStaged({ key: 'site' });
+        vi.setSystemTime(t2);
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    async function globalUpdatedAt(): Promise<Date> {
+        const row = await getDb()
+            .selectFrom('globals')
+            .select('updatedAt')
+            .where('key', '=', 'site')
+            .executeTakeFirstOrThrow();
+        return new Date(row.updatedAt);
+    }
+
+    it('reports a staged change as not diverged while the canonical is untouched', async () => {
+        expect((await api.getStaged({ key: 'site' }))?.diverged).toBe(false);
+    });
+
+    it('reports it diverged once the canonical is written after it', async () => {
+        await api.update({ key: 'site', data: { fields: { title: 'Edited' } } });
+
+        expect((await api.getStaged({ key: 'site' }))?.diverged).toBe(true);
+    });
+
+    it('leaves the global row alone on a staged create and a staged write', async () => {
+        await api.update({ key: 'site', staged: true, data: { fields: { title: 'D' } } });
+
+        expect(await globalUpdatedAt()).toEqual(t0);
+    });
+
+    it('stamps the global row on a merge', async () => {
+        const merged = await api.mergeStaged({ key: 'site' });
+
+        expect(await globalUpdatedAt()).toEqual(t2);
+        expect(merged.updatedAt).toEqual(t2);
+    });
+
+    it('keeps the content row timestamps out of the public shape', async () => {
+        const staged = await api.getStaged({ key: 'site' });
+        const canonical = await api.get({ key: 'site', full: true });
+
+        for (const read of [staged, canonical]) {
+            expect(read).not.toHaveProperty('contentId');
+            expect(read).not.toHaveProperty('contentCreatedAt');
+            expect(read).not.toHaveProperty('contentUpdatedAt');
         }
     });
 });

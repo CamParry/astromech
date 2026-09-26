@@ -1,16 +1,18 @@
 /**
  * Every resource answers the shared behaviour the same way: a missing one is a
- * 404, a locale it cannot hold is refused, a version round-trips, its references
- * reach `usedBy`, and an unknown sort answers 400. How each resource is called
- * differs, and that difference is the adapter table below.
+ * 404, a locale it cannot hold is refused, a version round-trips, a canonical
+ * write stamps the resource row's `updatedAt`, its references reach `usedBy`,
+ * and an unknown sort answers 400. How each resource is called differs, and
+ * that difference is the adapter table below.
  */
 
 import type { JsonObject, ResourceType } from '@/types/index';
 import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { RESOURCE_SPECS } from '@/content/resources';
+import { getDb } from '@/database/registry';
 import { mediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { RESOURCE_TYPES } from '@/types/domain';
@@ -25,9 +27,18 @@ type Adapter = {
     /** Save one resource holding `fields`; answers its address. */
     save(fields: JsonObject): Promise<string>;
     /** Write `fields` to one locale of it. */
-    update(id: string, fields: JsonObject, locale?: string): Promise<unknown>;
+    update(
+        id: string,
+        fields: JsonObject,
+        locale?: string
+    ): Promise<{ updatedAt: Date } | null>;
     versions(id: string): Promise<{ id: string }[]>;
-    restore(id: string, versionId: string): Promise<{ fields: JsonObject }>;
+    restore(
+        id: string,
+        versionId: string
+    ): Promise<{ fields: JsonObject; updatedAt: Date }>;
+    /** The stored `updatedAt` of its resource row. */
+    stamped(id: string): Promise<Date>;
     /** A read of one that does not exist, where the method must throw. */
     missing(): Promise<unknown>;
     /** A list sorted by `sort`; absent for a resource with no list. */
@@ -63,6 +74,7 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
         versions: (id) => entriesService.versions({ type: 'page', id }),
         restore: (id, versionId) =>
             entriesService.restoreVersion({ type: 'page', id, versionId }),
+        stamped: (id) => stampedAt('entries', 'id', id),
         missing: () => entriesService.versions({ type: 'page', id: 'nope' }),
         list: (sort) => entriesService.query({ type: 'page', sort, full: true }),
     },
@@ -79,6 +91,7 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
             }),
         versions: (key) => globalsService.versions({ key }),
         restore: (key, versionId) => globalsService.restoreVersion({ key, versionId }),
+        stamped: (key) => stampedAt('globals', 'key', key),
         missing: () => globalsService.versions({ key: 'nope' }),
     },
     user: {
@@ -96,6 +109,7 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
             usersService.update({ id, ...(locale ? { locale } : {}), data: { fields } }),
         versions: (id) => usersService.versions({ id }),
         restore: (id, versionId) => usersService.restoreVersion({ id, versionId }),
+        stamped: (id) => stampedAt('users', 'id', id),
         missing: () => usersService.versions({ id: 'nope' }),
         list: (sort) => usersService.query({ sort }),
     },
@@ -112,6 +126,7 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
             mediaService.update({ id, ...(locale ? { locale } : {}), data: { fields } }),
         versions: (id) => mediaService.versions({ id }),
         restore: (id, versionId) => mediaService.restoreVersion({ id, versionId }),
+        stamped: (id) => stampedAt('media', 'id', id),
         missing: () => mediaService.versions({ id: 'nope' }),
         list: (sort) => mediaService.query({ sort }),
     },
@@ -138,6 +153,20 @@ beforeEach(async () => {
     });
     setStorageDriver(noopStorage);
 });
+
+/** The stored `updatedAt` of the resource row whose `column` is `value`. */
+async function stampedAt(
+    table: 'entries' | 'globals' | 'users' | 'media',
+    column: 'id' | 'key',
+    value: string
+): Promise<Date> {
+    const row = await getDb()
+        .selectFrom(table)
+        .select('updatedAt')
+        .where(column as 'id', '=', value)
+        .executeTakeFirstOrThrow();
+    return new Date(row.updatedAt);
+}
 
 /** A media item for the others to reference. */
 async function mediaTarget(): Promise<string> {
@@ -175,6 +204,42 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
         expect(version).toBeDefined();
         const restored = await adapter.restore(id, version?.id ?? '');
         expect(restored.fields['title']).toBe('One');
+    });
+
+    describe('the resource row stamp', () => {
+        const saved = new Date('2026-01-01T00:00:00.000Z');
+        const later = new Date('2026-01-02T00:00:00.000Z');
+
+        beforeEach(() => {
+            vi.useFakeTimers({ toFake: ['Date'] });
+            vi.setSystemTime(saved);
+        });
+
+        afterEach(() => {
+            vi.useRealTimers();
+        });
+
+        it('moves with a fields-only write, which reads as the public updatedAt', async () => {
+            const id = await adapter.save({ title: 'One' });
+            vi.setSystemTime(later);
+
+            const updated = await adapter.update(id, { title: 'Two' });
+
+            expect(await adapter.stamped(id)).toEqual(later);
+            expect(updated?.updatedAt).toEqual(later);
+        });
+
+        it('moves with a version restore', async () => {
+            const id = await adapter.save({ title: 'One' });
+            await adapter.update(id, { title: 'Two' });
+            const [version] = await adapter.versions(id);
+            vi.setSystemTime(later);
+
+            const restored = await adapter.restore(id, version?.id ?? '');
+
+            expect(await adapter.stamped(id)).toEqual(later);
+            expect(restored.updatedAt).toEqual(later);
+        });
     });
 
     it('reaches usedBy through its references', async () => {

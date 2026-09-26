@@ -39,9 +39,6 @@ export type MediaResource = Resource & {
     title: string | null;
     alt: string | null;
     caption: string | null;
-    /** The resource row's `updatedAt`: the file's last change. */
-    fileUpdatedAt: Date;
-    fileUpdatedBy: string | null;
 };
 
 /** What `findMany` and `count` filter, order and page by. */
@@ -92,10 +89,10 @@ function toMediaResource(
         caption: contentRow.caption,
         createdAt: resourceRow.createdAt,
         createdBy: resourceRow.createdBy,
-        updatedAt: contentRow.updatedAt,
-        updatedBy: contentRow.updatedBy,
-        fileUpdatedAt: resourceRow.updatedAt,
-        fileUpdatedBy: resourceRow.updatedBy,
+        updatedAt: resourceRow.updatedAt,
+        updatedBy: resourceRow.updatedBy,
+        contentCreatedAt: contentRow.createdAt,
+        contentUpdatedAt: contentRow.updatedAt,
     };
 }
 

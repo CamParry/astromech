@@ -32,8 +32,6 @@ export type UserResource = Resource & {
     emailVerified: boolean;
     image: string | null;
     role: string;
-    /** The `users` row's `updatedAt`. */
-    accountUpdatedAt: Date;
 };
 
 /** What `findMany` and `count` filter, order and page by. */
@@ -70,10 +68,12 @@ function toUserResource(
         image: resourceRow.image,
         role: resourceRow.role,
         createdAt: resourceRow.createdAt,
-        updatedAt: contentRow.updatedAt,
+        updatedAt: resourceRow.updatedAt,
+        contentCreatedAt: contentRow.createdAt,
+        contentUpdatedAt: contentRow.updatedAt,
         createdBy: contentRow.createdBy,
+        // `users` has no `updatedBy` column, so this is the content row's.
         updatedBy: contentRow.updatedBy,
-        accountUpdatedAt: resourceRow.updatedAt,
     };
 }
 

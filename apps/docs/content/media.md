@@ -72,9 +72,9 @@ A `Media` carries:
 - The content: `title`, `alt`, `caption`, `fields`, and the `locale` it was read
   in with the `locales` that have content.
 - The stamps: `createdAt`, `createdBy`, plus `updatedAt` and `updatedBy`, which
-  are the file's last change and whoever made it. A caption edit does not move
-  them; replacing the file does, which is what makes `updatedAt` usable as a
-  cache-buster on an image URL.
+  are the item's last change and whoever made it: replacing the file, or editing
+  the content in any locale. To tell whether the file itself changed, compare
+  `metadata.version`, the content hash of an optimisable image.
 
 What `url` points at depends on the access mode: see
 [media access modes](../configuration/storage.md#media-access-modes).

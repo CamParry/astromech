@@ -112,7 +112,7 @@ describe('restoreVersion', () => {
 });
 
 describe('replace', () => {
-    it('writes no version and moves the file timestamps alone', async () => {
+    it('writes no version and stamps the media row', async () => {
         const before = await api.get({ id });
         if (!before) throw new Error('expected the item');
         vi.useFakeTimers({ toFake: ['Date'] });

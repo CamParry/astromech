@@ -90,11 +90,22 @@ export async function getCanonicalGlobal(
 }
 
 /**
- * Narrow a `GlobalResource` to the public `Global`, dropping `contentId`, which
- * never leaves the service. The shared `Resource` types `status` and
- * `publishedAt` as optional; `global_content` always has both, hence the cast.
+ * Narrow a `GlobalResource` to the public `Global`, key by key, so the content
+ * row's id and timestamps never leave the service.
  */
 export function toGlobal(resource: GlobalResource): Global {
-    const { contentId: _contentId, ...global } = resource;
-    return global as Global;
+    return {
+        id: resource.id,
+        key: resource.key,
+        locale: resource.locale,
+        locales: resource.locales,
+        fields: resource.fields,
+        status: resource.status,
+        staged: resource.staged,
+        publishedAt: resource.publishedAt,
+        createdAt: resource.createdAt,
+        updatedAt: resource.updatedAt,
+        createdBy: resource.createdBy ?? null,
+        updatedBy: resource.updatedBy ?? null,
+    };
 }

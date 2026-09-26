@@ -9,7 +9,7 @@
 
 import type { ContentRowId } from '@/content/repository/types';
 import { createTestDb, setupTestConfig } from '@tests/harness';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { transaction } from '@/database/transaction';
 import { entryRepository } from '@/entries/repository/entries-table';
 
@@ -245,6 +245,42 @@ describe('findMany and count', () => {
             sort: { title: 'asc' },
         });
         expect(sorted.map((e) => e.title)).toEqual(['Alpha', 'Bravo']);
+    });
+
+    describe('sorted by updatedAt', () => {
+        afterEach(() => {
+            vi.useRealTimers();
+        });
+
+        it('follows the entry row, which a write to any locale moves', async () => {
+            vi.useFakeTimers({ toFake: ['Date'] });
+            vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+            const first = await entryRepository.create({
+                type: 'post',
+                title: 'First',
+                slug: 'first',
+            });
+            vi.setSystemTime(new Date('2026-01-02T00:00:00.000Z'));
+            await entryRepository.create({
+                type: 'post',
+                title: 'Second',
+                slug: 'second',
+            });
+            // Only the `de` row is written, so `first`'s `en` row keeps its
+            // older content timestamp while the entry row moves past `second`.
+            vi.setSystemTime(new Date('2026-01-03T00:00:00.000Z'));
+            await entryRepository.update(
+                { id: first.id, locale: 'de' },
+                { title: 'Erste', slug: 'erste' }
+            );
+
+            const sorted = await entryRepository.findMany({
+                type: 'post',
+                locale: 'en',
+                sort: { updatedAt: 'desc' },
+            });
+            expect(sorted.map((e) => e.title)).toEqual(['First', 'Second']);
+        });
     });
 
     it('searches by slug as well as title', async () => {
@@ -586,6 +622,27 @@ describe('previewToken', () => {
 
     it('returns null for an unknown hash', async () => {
         expect(await entryRepository.previewToken.findByHash('nope')).toBeNull();
+    });
+
+    it('leaves the entry row updatedAt alone', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        try {
+            vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+            const e = await entryRepository.create({
+                type: 'post',
+                title: 'P',
+                slug: 'p',
+            });
+            vi.setSystemTime(new Date('2026-01-02T00:00:00.000Z'));
+
+            await entryRepository.previewToken.set(e.id, 'hash-abc', null);
+            await entryRepository.previewToken.clear(e.id);
+
+            const [row] = await entryRepository.findEntryRowsByType('post');
+            expect(row?.updatedAt).toEqual(new Date('2026-01-01T00:00:00.000Z'));
+        } finally {
+            vi.useRealTimers();
+        }
     });
 });
 

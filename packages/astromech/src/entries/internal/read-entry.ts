@@ -5,7 +5,7 @@
  */
 
 import type { EntryResource } from '../repository/types';
-import type { ContentRowId } from '@/content/repository/types';
+import type { Resource } from '@/content/repository/types';
 import type { Entry } from '@/types/index';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { ResourceNotFoundError } from '@/errors/resource';
@@ -13,17 +13,34 @@ import { entryRepository } from '../repository/entries-table';
 
 /**
  * One locale of one entry as the operations read it: the public shape plus the
- * content row it came from, which versions and staging key on.
+ * content row it came from and that row's timestamps, which versions and
+ * staging key on.
  */
-export type EntryWithContentId = Entry & { contentId: ContentRowId };
+export type EntryWithContentId = Entry &
+    Pick<Resource, 'contentId' | 'contentCreatedAt' | 'contentUpdatedAt'>;
 
 /**
- * Narrow an `EntryResource` to the public `Entry`. `contentId` is dropped, as
- * it never leaves the service.
+ * Narrow a read to the public `Entry`, key by key, so the content row's id and
+ * timestamps never leave the service.
  */
-export function toEntry(resource: EntryResource): Entry {
-    const { contentId: _contentId, ...entry } = toEntryWithContentId(resource);
-    return entry;
+export function toEntry(resource: Entry): Entry {
+    return {
+        id: resource.id,
+        type: resource.type,
+        locale: resource.locale,
+        locales: resource.locales,
+        slug: resource.slug,
+        title: resource.title,
+        fields: resource.fields,
+        status: resource.status,
+        staged: resource.staged,
+        publishedAt: resource.publishedAt,
+        deletedAt: resource.deletedAt,
+        createdAt: resource.createdAt,
+        updatedAt: resource.updatedAt,
+        createdBy: resource.createdBy ?? null,
+        updatedBy: resource.updatedBy ?? null,
+    };
 }
 
 /** The same narrowing, keeping the content row an operation still needs. */

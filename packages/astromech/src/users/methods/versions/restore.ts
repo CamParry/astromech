@@ -43,7 +43,10 @@ export const restoreUserVersion = defineServiceMethod({
             address: { id, locale },
             user: ctx.user,
             write: async ({ fields }) => {
-                const row = await userRepository.update({ id, locale }, { fields });
+                const row = await userRepository.update(
+                    { id, locale },
+                    { fields, updatedBy: ctx.user?.id ?? null }
+                );
                 await syncUserRelationships(ctx.config, id);
                 return toUser(row);
             },

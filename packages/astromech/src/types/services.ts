@@ -219,12 +219,15 @@ export type EntriesService = {
     /** Stage a change: copy this locale's content into a second, linked row.
      * Throws `StagedChangeExistsError` if one already exists. */
     createStaged(params: { type: string; id: string; locale?: string }): Promise<Entry>;
-    /** This locale's staged change, or null. */
+    /**
+     * This locale's staged change, or null. `diverged` is true when the
+     * canonical was written after the staged change was made from it.
+     */
     getStaged(params: {
         type: string;
         id: string;
         locale?: string;
-    }): Promise<Entry | null>;
+    }): Promise<(Entry & { diverged: boolean }) | null>;
     /** Merge the staged change into the canonical row (backup → update → cleanup);
      * returns the updated canonical. Content-only — does not change status. */
     mergeStaged(params: { type: string; id: string; locale?: string }): Promise<Entry>;
@@ -341,8 +344,15 @@ export type GlobalsService = {
         locale?: string;
         data?: Pick<GlobalUpdateData, 'fields'>;
     }): Promise<Global>;
-    /** This locale's staged change, or null. Needs the `staging` capability. */
-    getStaged(params: { key: string; locale?: string }): Promise<Global | null>;
+    /**
+     * This locale's staged change, or null. Needs the `staging` capability.
+     * `diverged` is true when the canonical was written after the staged change
+     * was made from it.
+     */
+    getStaged(params: {
+        key: string;
+        locale?: string;
+    }): Promise<(Global & { diverged: boolean }) | null>;
     /**
      * Merge the staged change into the canonical row (snapshot, overwrite,
      * discard) and return the updated canonical. Content-only: the canonical's

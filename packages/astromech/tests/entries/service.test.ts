@@ -608,6 +608,24 @@ describe('translatable', () => {
         expect(deAfter?.fields).toEqual({ body: 'debody', category: 'updated' });
     });
 
+    it("moves every locale's updatedAt with a write to one of them", async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+        const { en } = await makePair();
+        const later = new Date('2026-01-02T00:00:00.000Z');
+        vi.setSystemTime(later);
+
+        await api.update({
+            type: 'post',
+            id: en.id,
+            locale: 'de',
+            data: { title: 'DE 2' },
+        });
+
+        const enAfter = await api.get({ type: 'post', id: en.id, full: true });
+        expect(enAfter?.updatedAt).toEqual(later);
+    });
+
     it('does not propagate a translatable field to siblings', async () => {
         const { en, de } = await makePair();
         await api.update({
@@ -631,6 +649,20 @@ describe('publish / unpublish / schedule', () => {
         const pub = await api.publish({ type: 'post', id: e.id });
         expect(pub.status).toBe('published');
         expect(pub.publishedAt).toBeInstanceOf(Date);
+    });
+
+    it('publish stamps the entry row updatedAt', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+        const e = await api.create({ type: 'post', data: { title: 'P' } });
+        const later = new Date('2026-01-02T00:00:00.000Z');
+        vi.setSystemTime(later);
+
+        const pub = await api.publish({ type: 'post', id: e.id });
+
+        const [row] = await entryRepository.findEntryRowsByType('post');
+        expect(row?.updatedAt).toEqual(later);
+        expect(pub.updatedAt).toEqual(later);
     });
 
     // CHARACTERIZED: unpublish passes publishedAt: null through update, clearing publishedAt.

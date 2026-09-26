@@ -4,7 +4,8 @@
  * The global edit page. A global is declared by config and its row is created
  * on demand, so a `null` read is an empty form whose first save is the write
  * that creates it. One `update` carries the fields and the status the publish
- * panel asks for, and a locale with no row is opened, not written.
+ * panel asks for, a locale with no row is opened, not written, and the merge
+ * confirm warns when the staged read reports `diverged`.
  */
 
 import type { AuthUser } from '@/admin/context/auth';
@@ -387,8 +388,11 @@ describe('the global edit page', () => {
     });
 
     /** The staged view of a staging-capable global, with a staged row present. */
-    async function mountStaged() {
-        const staged = makeGlobal({ staged: true, fields: { tagline: 'Staged' } });
+    async function mountStaged(diverged = false) {
+        const staged = {
+            ...makeGlobal({ staged: true, fields: { tagline: 'Staged' } }),
+            diverged,
+        };
         const handles = makeApi({ canonical: makeGlobal(), staged });
         mountPage({
             api: handles.api,
@@ -417,6 +421,26 @@ describe('the global edit page', () => {
         await waitFor(() => {
             expect(mergeStaged).toHaveBeenCalledWith({ key: KEY, locale: 'en' });
         });
+    });
+
+    it('confirms a merge plainly when the canonical has not moved on', async () => {
+        await mountStaged(false);
+
+        await clickHeaderButton('staging.merge');
+
+        expect(await screen.findByText('staging.confirmMergeMessage')).toBeTruthy();
+        expect(screen.queryByText('staging.confirmMergeDivergedMessage')).toBeNull();
+    });
+
+    it('warns before a merge when the server reports the canonical diverged', async () => {
+        await mountStaged(true);
+
+        await clickHeaderButton('staging.merge');
+
+        expect(
+            await screen.findByText('staging.confirmMergeDivergedMessage')
+        ).toBeTruthy();
+        expect(screen.queryByText('staging.confirmMergeMessage')).toBeNull();
     });
 
     it('saves the staged row itself, not the canonical one', async () => {

@@ -6,7 +6,7 @@
 
 import type { Resource } from '@/content/repository/types';
 import type { GlobalContentRow, GlobalTableRow } from '@/globals/tables';
-import type { JsonObject } from '@/types/index';
+import type { EntryStatus, JsonObject } from '@/types/index';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { createContentRepository } from '@/content/repository/content-table';
 import { kyselyTableKey } from '@/database/codec';
@@ -14,7 +14,11 @@ import { createRepository } from '@/database/repository/create-repository';
 import { globalContentTable, globalsTable, globalVersionsTable } from '@/database/tables';
 
 /** One locale of one global, as the globals service reads it. */
-export type GlobalResource = Resource & { key: string };
+export type GlobalResource = Resource & {
+    key: string;
+    status: EntryStatus;
+    publishedAt: Date | null;
+};
 
 export type GlobalRepository = ReturnType<typeof createGlobalRepository>;
 
@@ -35,9 +39,11 @@ function toGlobalResource(
         status: contentRow.status,
         publishedAt: contentRow.publishedAt,
         createdAt: resourceRow.createdAt,
-        updatedAt: contentRow.updatedAt,
+        updatedAt: resourceRow.updatedAt,
+        contentCreatedAt: contentRow.createdAt,
+        contentUpdatedAt: contentRow.updatedAt,
         createdBy: contentRow.createdBy,
-        updatedBy: contentRow.updatedBy,
+        updatedBy: resourceRow.updatedBy,
     };
 }
 

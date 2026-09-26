@@ -56,11 +56,14 @@ export type Entry = {
     deletedAt: Date | null;
     /** When the entry was created; every locale of it reports the same value. */
     createdAt: Date;
-    /** When this locale was last edited. */
+    /**
+     * The entry's last change, in any locale; every locale reports the same
+     * value. A staged change does not move it until it is merged.
+     */
     updatedAt: Date;
     /**
-     * Who made this locale and who last wrote to it. Null for a write with no
-     * request identity: a seed script, the CLI, the scheduler.
+     * Who made this locale, and who made the entry's last change. Null for a
+     * write with no request identity: a seed script, the CLI, the scheduler.
      */
     createdBy?: string | null;
     updatedBy?: string | null;
@@ -86,11 +89,14 @@ export type Global = {
     publishedAt: Date | null;
     /** When the global was first saved; every locale reports the same value. */
     createdAt: Date;
-    /** When this locale was last edited. */
+    /**
+     * The global's last change, in any locale; every locale reports the same
+     * value. A staged change does not move it until it is merged.
+     */
     updatedAt: Date;
     /**
-     * Who made this locale and who last wrote to it. Null for a write with no
-     * request identity — a seed script, the CLI, the scheduler.
+     * Who made this locale, and who made the global's last change. Null for a
+     * write with no request identity: a seed script, the CLI, the scheduler.
      */
     createdBy?: string | null;
     updatedBy?: string | null;
@@ -181,13 +187,10 @@ export type Media = {
     caption: string | null;
     fields: JsonObject;
     createdAt: Date;
-    /**
-     * The file's last change (upload or replace), which the admin uses to bust
-     * its image cache.
-     */
+    /** The item's last change: a file replace, or a content edit in any locale. */
     updatedAt: Date;
     createdBy: string | null;
-    /** Who last replaced the file. */
+    /** Who made the item's last change. */
     updatedBy: string | null;
 };
 
@@ -240,7 +243,7 @@ export type User = {
     /** The slug of the user's role, resolved against the config. */
     role: string;
     createdAt: Date;
-    /** The `users` row's last change: profile, email, role. */
+    /** The user's last change: name, email or role, or content in any locale. */
     updatedAt: Date;
 };
 

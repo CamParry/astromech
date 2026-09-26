@@ -77,7 +77,11 @@ export const mergeStagedEntry = defineServiceMethod({
             //    a separate action, so an unpublished canonical stays unpublished.
             const updated = await entryRepository.update(
                 { id, locale: canonical.locale },
-                { title: staged.title, fields: mergedFields }
+                {
+                    title: staged.title,
+                    fields: mergedFields,
+                    updatedBy: ctx.user?.id ?? null,
+                }
             );
 
             // 3. Cleanup: discard the staged row before re-indexing, so the

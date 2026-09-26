@@ -63,7 +63,10 @@ export const mergeStagedGlobal = defineServiceMethod({
                     ctx.user
                 );
             }
-            const row = await repository.update({ id, locale }, { fields });
+            const row = await repository.update(
+                { id, locale },
+                { fields, updatedBy: ctx.user?.id ?? null }
+            );
             // Discard the staged row before re-indexing, so the references it
             // held on its own do not survive the merge.
             await repository.staging.delete({ id, locale });

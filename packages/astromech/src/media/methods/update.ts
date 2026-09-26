@@ -92,9 +92,8 @@ export const updateMedia = defineServiceMethod({
                     ctx.user
                 );
             }
-            // `updatedAt` is stamped by the repository (the column declares
-            // `onUpdate`); an explicitly-`undefined` key means "leave this
-            // column alone".
+            // The repository stamps `updatedAt` and `updatedBy` on the media
+            // row; an explicitly-`undefined` key means "leave this column alone".
             const row = await mediaRepository.update(
                 { id, locale },
                 {

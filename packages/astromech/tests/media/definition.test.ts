@@ -1,7 +1,7 @@
 /**
  * The media service as a definition: what its catalogue declares, and that
- * `bind(ctx)` records the context's user as the author with no request store in
- * play.
+ * `bind(ctx)` records the context's user as the author and the last editor with
+ * no request store in play.
  */
 
 import type { Role } from '@/types/index';
@@ -12,7 +12,7 @@ import {
     makeTestConfig,
     setupTestConfig,
 } from '@tests/harness';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppContext } from '@/app-context/app-context';
 import { getDb } from '@/database/registry';
 import { mediaDefinition } from '@/media/service';
@@ -97,5 +97,33 @@ describe('bind', () => {
 
         expect(read?.title).toBe('Titled');
         expect(read?.createdBy).toBe(author.id);
+    });
+
+    describe('a metadata edit', () => {
+        afterEach(() => {
+            vi.useRealTimers();
+        });
+
+        it('stamps the media row and records the editor as updatedBy', async () => {
+            const author = await createTestUser(getDb(), { name: 'Author' });
+            const editor = await createTestUser(getDb(), { name: 'Editor' });
+            vi.useFakeTimers({ toFake: ['Date'] });
+            vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+            const uploaded = await createAppContext({
+                user: { id: author.id } as never,
+                role: admin,
+            }).media.upload({ file: new File(['x'], 'c.txt', { type: 'text/plain' }) });
+            const later = new Date('2026-01-02T00:00:00.000Z');
+            vi.setSystemTime(later);
+
+            const edited = await createAppContext({
+                user: { id: editor.id } as never,
+                role: admin,
+            }).media.update({ id: uploaded.id, data: { alt: 'Described' } });
+
+            expect(edited.updatedAt).toEqual(later);
+            expect(edited.updatedBy).toBe(editor.id);
+            expect(edited.createdBy).toBe(author.id);
+        });
     });
 });

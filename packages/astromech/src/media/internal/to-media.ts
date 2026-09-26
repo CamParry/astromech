@@ -7,9 +7,8 @@ import type { MediaResource } from '../repository';
 import type { Media } from '@/types/index';
 
 /**
- * The public `Media`, mapped column by column rather than spread: `contentId`
- * never leaves the repository layer, and `Media.updatedAt` is the file's last
- * change, which the resource carries as `fileUpdatedAt`.
+ * The public `Media`, mapped column by column rather than spread, so the
+ * internal members never leave the repository layer.
  */
 export function toMedia(resource: MediaResource): Media {
     return {
@@ -28,8 +27,8 @@ export function toMedia(resource: MediaResource): Media {
         caption: resource.caption,
         fields: resource.fields,
         createdAt: resource.createdAt,
-        updatedAt: resource.fileUpdatedAt,
+        updatedAt: resource.updatedAt,
         createdBy: resource.createdBy ?? null,
-        updatedBy: resource.fileUpdatedBy,
+        updatedBy: resource.updatedBy ?? null,
     };
 }

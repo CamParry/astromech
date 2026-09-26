@@ -68,6 +68,7 @@ export function createContentRepository<
     const resourceColumns = Object.keys(shape.table.columns);
     const contentColumns = Object.keys(shape.contentTable.columns);
     const hasStagedFor = contentColumns.includes('stagedFor');
+    const resourceHasUpdatedBy = resourceColumns.includes('updatedBy');
     const resourceFilter: ResourceFilter = opts.resourceFilter ?? (() => []);
 
     // Unbound when there is no override, so they follow `setDb` per call exactly
@@ -131,6 +132,20 @@ export function createContentRepository<
             patch[key] = value;
         }
         return patch;
+    }
+
+    /**
+     * Stamp the resource row's `updatedAt`, and its `updatedBy` where the table
+     * has one and the write names it, so the resource row records the last
+     * canonical write in any locale.
+     */
+    async function touch(id: string, updatedBy?: string | null): Promise<void> {
+        await resourceRows.update(
+            id,
+            (resourceHasUpdatedBy && updatedBy !== undefined
+                ? { updatedBy }
+                : {}) as never
+        );
     }
 
     /** `SELECT` over the join: every content column and every aliased resource column. */
@@ -391,11 +406,25 @@ export function createContentRepository<
     }
 
     /**
-     * Write one locale's content row. A locale with no row yet gets one — the
-     * write that makes a translation. Nothing on the resource row changes: it
-     * carries no per-locale content.
+     * Write one locale's content row and stamp the resource row. A locale with
+     * no row yet gets one, the write that makes a translation.
      */
     async function update(ref: ContentRef, data: ContentWrite): Promise<R> {
+        return transaction(async () => {
+            await writeCanonical(ref, data);
+            await touch(ref.id, data.updatedBy);
+            return required(
+                await findOne(
+                    { id: ref.id, locale: ref.locale ?? defaultLocale() },
+                    { includeTrashed: true }
+                ),
+                ref.id
+            );
+        });
+    }
+
+    /** The content-row half of `update`: insert the locale's row, or patch it. */
+    async function writeCanonical(ref: ContentRef, data: ContentWrite): Promise<void> {
         const locale = ref.locale ?? defaultLocale();
         const existing = await findCanonical(ref.id, locale, true);
 
@@ -417,16 +446,11 @@ export function createContentRepository<
         } else {
             // An explicitly-`undefined` key means "leave this column alone"
             // (`Patch` admits it and the encoder drops it), so the partial write
-            // forwards straight through. `updatedAt` is stamped by the wrapper
-            // (the column declares `onUpdate`).
+            // forwards straight through. The wrapper stamps the content row's
+            // `updatedAt` (the column declares `onUpdate`).
             const { contentRow } = split(existing);
             await contents.update(String(contentRow['id']), patchValues(data) as never);
         }
-
-        return required(
-            await findOne({ id: ref.id, locale }, { includeTrashed: true }),
-            ref.id
-        );
     }
 
     async function del(id: string): Promise<void> {
@@ -451,6 +475,8 @@ export function createContentRepository<
             .executeTakeFirst();
     }
 
+    // A staged write leaves the resource row alone: a staged change is not the
+    // resource until the merge, which writes through `update`.
     const staging = {
         findOne: async (ref: ContentRef): Promise<R | null> => {
             return one(await findStaged(ref.id, ref.locale ?? defaultLocale()));
@@ -525,14 +551,19 @@ export function createContentRepository<
                 },
             });
 
-            for (const sibling of siblings) {
-                // Rows come back decoded, so `fields` is already the parsed object.
-                const row = sibling as Record<string, unknown>;
-                const existingFields = (row['fields'] ?? {}) as JsonObject;
-                await contents.update(String(row['id']), {
-                    fields: { ...existingFields, ...values },
-                } as never);
-            }
+            if (siblings.length === 0) return;
+
+            await transaction(async () => {
+                for (const sibling of siblings) {
+                    // Rows come back decoded, so `fields` is already the parsed object.
+                    const row = sibling as Record<string, unknown>;
+                    const existingFields = (row['fields'] ?? {}) as JsonObject;
+                    await contents.update(String(row['id']), {
+                        fields: { ...existingFields, ...values },
+                    } as never);
+                }
+                await touch(id);
+            });
         },
     };
 

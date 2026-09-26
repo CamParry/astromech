@@ -33,7 +33,10 @@ export const restoreGlobalVersion = defineServiceMethod({
             address: { id: params.key, locale },
             user: ctx.user,
             write: async ({ fields }) => {
-                const row = await repository.update({ id, locale }, { fields });
+                const row = await repository.update(
+                    { id, locale },
+                    { fields, updatedBy: ctx.user?.id ?? null }
+                );
                 await syncGlobalRelationships(ctx.config, id);
                 return toGlobal(row);
             },

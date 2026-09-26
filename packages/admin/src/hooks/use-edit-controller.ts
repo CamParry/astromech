@@ -45,7 +45,8 @@ export type EditResource<TRecord extends EditRecord, TAddress> = {
     can: (action: 'update' | 'publish') => boolean;
     form: { hasSlug: boolean; hasStatuses: boolean; main: Field[]; sidebar: Field[] };
     canonical: EditQuery<TRecord | null>;
-    staged: EditQuery<TRecord | null>;
+    /** The staged change, flagged `diverged` when the canonical moved on after it. */
+    staged: EditQuery<(TRecord & { diverged: boolean }) | null>;
     versions: EditQuery<unknown[]>;
     /** Every key the resource's writes make stale. */
     all: QueryKey;
@@ -239,17 +240,12 @@ export function useEditController<TRecord extends EditRecord, TAddress>(
     });
 
     function handleMerge(): void {
-        // The canonical was edited after this staged change began.
-        const diverged =
-            canonical.data != null &&
-            record != null &&
-            new Date(canonical.data.updatedAt).getTime() >
-                new Date(record.createdAt).getTime();
         confirm({
             title: t('staging.confirmMergeTitle'),
-            description: diverged
-                ? t('staging.confirmMergeDivergedMessage')
-                : t('staging.confirmMergeMessage'),
+            description:
+                stagedChange.data?.diverged === true
+                    ? t('staging.confirmMergeDivergedMessage')
+                    : t('staging.confirmMergeMessage'),
             variant: 'primary',
             confirmLabel: t('staging.merge'),
             onConfirm: () => mergeStaged.mutate(resource.address),

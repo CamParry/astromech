@@ -50,6 +50,7 @@ export const restoreEntryVersion = defineServiceMethod({
                         title: columns['title'] as string,
                         slug: slug ?? currentEntry.slug,
                         fields,
+                        updatedBy: ctx.user?.id ?? null,
                     }
                 );
                 await syncEntryRelationships(ctx.config, row, type);

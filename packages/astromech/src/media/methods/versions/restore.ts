@@ -44,7 +44,7 @@ export const restoreMediaVersion = defineServiceMethod({
             write: async ({ fields, columns }) => {
                 const row = await mediaRepository.update(
                     { id, locale },
-                    { ...columns, fields }
+                    { ...columns, fields, updatedBy: ctx.user?.id ?? null }
                 );
                 await syncMediaRelationships(ctx.config, id);
                 return toMedia(row);

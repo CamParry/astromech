@@ -37,16 +37,19 @@ const CONTENT_WHERE_KEYS = new Set(['status', 'slug', 'title']);
 
 type OrderPair = [column: string, direction: 'asc' | 'desc'];
 
+/** Sort columns on the entry row; every other sortable column is the content row's. */
+const ENTRY_SORT_COLUMNS = new Set(['createdAt', 'updatedAt']);
+
 /**
- * `createdAt` is the entry's, every other sortable column the content row's —
- * the same split the returned shape makes.
+ * `createdAt` and `updatedAt` are the entry row's, every other sortable column
+ * the content row's: the same split the returned shape makes.
  */
 function orderPairs(sort?: SortOption | SortOption[]): OrderPair[] {
     return buildOrderBy(RESOURCE_SPECS.entry.sortable, sort, [
         { field: 'createdAt', direction: 'desc' },
     ]).map(
         ({ field, direction }): OrderPair => [
-            field === 'createdAt' ? 'entries.createdAt' : `entryContent.${field}`,
+            ENTRY_SORT_COLUMNS.has(field) ? `entries.${field}` : `entryContent.${field}`,
             direction,
         ]
     );
@@ -192,9 +195,11 @@ function toEntryResource(
         publishedAt: contentRow.publishedAt,
         deletedAt: resourceRow.deletedAt,
         createdAt: resourceRow.createdAt,
-        updatedAt: contentRow.updatedAt,
+        updatedAt: resourceRow.updatedAt,
+        contentCreatedAt: contentRow.createdAt,
+        contentUpdatedAt: contentRow.updatedAt,
         createdBy: contentRow.createdBy,
-        updatedBy: contentRow.updatedBy,
+        updatedBy: resourceRow.updatedBy,
     };
 }
 
@@ -359,20 +364,32 @@ function createEntryRepository() {
         },
     };
 
-    const previewToken = {
-        set: async (id: string, hash: string, expiresAt: Date | null): Promise<void> => {
-            await resourceRows.update(id, {
-                previewToken: hash,
-                previewTokenExpiresAt: expiresAt,
-            });
-        },
+    /**
+     * Raw rather than `resourceRows.update`, which stamps `updatedAt`: a preview
+     * token is access to the entry, not a change to it.
+     */
+    async function writePreviewToken(
+        id: string,
+        hash: string | null,
+        expiresAt: Date | null
+    ): Promise<void> {
+        await getDb()
+            .updateTable('entries')
+            .set(
+                encodePatchWith(entriesTable, {
+                    previewToken: hash,
+                    previewTokenExpiresAt: expiresAt,
+                })
+            )
+            .where('id', '=', id)
+            .execute();
+    }
 
-        clear: async (id: string): Promise<void> => {
-            await resourceRows.update(id, {
-                previewToken: null,
-                previewTokenExpiresAt: null,
-            });
-        },
+    const previewToken = {
+        set: (id: string, hash: string, expiresAt: Date | null): Promise<void> =>
+            writePreviewToken(id, hash, expiresAt),
+
+        clear: (id: string): Promise<void> => writePreviewToken(id, null, null),
 
         findByHash: async (hash: string): Promise<PreviewTokenRecord | null> => {
             const row = await resourceRows.findOne({ previewToken: hash });

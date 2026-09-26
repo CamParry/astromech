@@ -3,8 +3,8 @@ import type { User } from '@/types/index';
 
 /**
  * The resource as the public type. Every read path returns through here. Mapped
- * column by column, not spread: `contentId` and `staged` never leave the
- * repository layer, and `User.updatedAt` is the `users` row's last change.
+ * column by column, not spread, so the internal members never leave the
+ * repository layer.
  */
 export function toUser(resource: UserResource): User {
     return {
@@ -18,6 +18,6 @@ export function toUser(resource: UserResource): User {
         fields: resource.fields,
         role: resource.role,
         createdAt: resource.createdAt,
-        updatedAt: resource.accountUpdatedAt,
+        updatedAt: resource.updatedAt,
     };
 }
