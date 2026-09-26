@@ -150,7 +150,7 @@ z.output<typeof userSchema>`, with the schema in the resource's `schema.ts`.
       `types/domain.ts` go.
 - [x] **6. OpenAPI.** `documentRoute()` registers each method's output schema as
       the response body, taken from the schema object directly.
-- [ ] **7. Plugins.** Redirects and forms declare outputs on their methods; the
+- [x] **7. Plugins.** Redirects and forms declare outputs on their methods; the
       plugin docs describe `output`.
 - [ ] **8. Versions in the public shape.** `versions.get({ id, locale, version })`,
       addressed by resource id and version number, returns the version's
