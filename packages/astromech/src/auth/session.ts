@@ -22,8 +22,8 @@ type GetSessionResult = Awaited<
 type AuthSession = NonNullable<GetSessionResult>['session'];
 
 /**
- * Resolve the Better Auth session into a full user row + role + session, or
- * null if there is no valid session.
+ * Resolve the Better Auth session into the user, role and session, or null when
+ * there is no valid session or the user it names has no content row.
  */
 export async function getSession(
     headers: Headers
@@ -31,22 +31,22 @@ export async function getSession(
     const session = await getAuth().api.getSession({ headers });
     if (!session?.user) return null;
 
-    // Load the full user row (Better Auth session may not include custom fields)
-    const userRow = await userRepository.findOne(session.user.id, {
+    // Load the whole user: Better Auth's session carries no custom fields.
+    const resource = await userRepository.findOne(session.user.id, {
         fallbackLocale: getDefaultContentLocale(),
     });
-    if (!userRow) return null;
+    if (!resource) return null;
 
-    const user = toUser(userRow);
+    const user = toUser(resource);
 
     // A role the config no longer defines refuses the session rather than
     // resolving to something. Removing a role from `astromech.config.ts` logs
     // out everyone who held it, which is visible; the alternative is granting
     // them a role nobody chose, which is not.
-    const role = resolveRole(getConfig(), userRow.role);
+    const role = resolveRole(getConfig(), resource.role);
     if (!role) {
         log.warn(
-            `User ${userRow.id} holds role "${userRow.role}", which is not in the config. Refusing the session. Configured roles are in \`astromech.config.ts\`.`
+            `User ${resource.id} holds role "${resource.role}", which is not in the config. Refusing the session. Configured roles are in \`astromech.config.ts\`.`
         );
         return null;
     }

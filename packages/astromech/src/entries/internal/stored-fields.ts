@@ -17,7 +17,7 @@ import { RESOURCE_SPECS } from '@/content/resources';
 import { inheritSharedFields } from '@/content/translatable';
 import { writeFields } from '@/content/write-fields';
 import { entryRepository } from '../repository/entries-table';
-import { listEntryRows } from './read-entry';
+import { listEntriesInLocale } from './read-entry';
 
 /**
  * The three write paths that store field values, each with what its own
@@ -87,7 +87,7 @@ export async function toStoredFields(input: StoredFieldsInput): Promise<JsonObje
                 record: null,
                 user,
                 status: input.status,
-                scan: () => listEntryRows(type, input.locale),
+                scan: () => listEntriesInLocale(type, input.locale),
             }
         );
     }
@@ -115,7 +115,7 @@ export async function toStoredFields(input: StoredFieldsInput): Promise<JsonObje
         record: current,
         user,
         status,
-        scan: () => listEntryRows(type, current.locale),
+        scan: () => listEntriesInLocale(type, current.locale),
         // The entry's own row is the only one the scan must ignore: its staged
         // copy shares its id and `list` excludes staged rows anyway.
         excludeId: current.id,

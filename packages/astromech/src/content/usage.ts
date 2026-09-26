@@ -79,8 +79,8 @@ async function loadSourceTitles(
         }
     }
 
-    // A name or an email is all a title needs, so the account row is enough.
-    for (const user of await userRepository.findAccounts(userIds)) {
+    // A name or an email is all a title needs, so the `users` row is enough.
+    for (const user of await userRepository.findUserRows(userIds)) {
         titles.set(
             sourceKey({ sourceKind: 'user', sourceId: user.id }),
             user.name || user.email

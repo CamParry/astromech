@@ -47,7 +47,7 @@ export const restoreMediaVersion = defineServiceMethod({
                     { ...columns, fields }
                 );
                 await syncMediaRelationships(ctx.config, id);
-                return toMedia(ctx.config, row);
+                return toMedia(row);
             },
         });
     },

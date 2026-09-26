@@ -33,7 +33,7 @@ export type ContentShape<
     /** Snapshots of a content row: `entry_versions`. */
     versionsTable: V;
     /** The content table's FK column to the resource row: `entryId`, `globalId`. */
-    ownerColumn: string;
+    resourceIdColumn: string;
     /**
      * Content columns copied from the resource row when a content row is
      * inserted and the write does not name them — entries' denormalized `type`.
@@ -64,8 +64,11 @@ export type ContentRef = {
     locale?: string | undefined;
 };
 
-/** What every resource's content read carries. */
-export type ContentRow = {
+/**
+ * One locale of one resource: the resource row joined with that locale's
+ * content row, plus the locales that have one. Every resource extends it.
+ */
+export type Resource = {
     /** The resource id (`entries.id`, `globals.id`). */
     id: string;
     /** The content row this read came from. Never leaves the repository layer. */
@@ -116,26 +119,26 @@ export type NewVersionSnapshot = {
 };
 
 /** Extra conditions on the resource row, ANDed into every joined read. */
-export type OwnerFilter = (
+export type ResourceFilter = (
     eb: ExpressionBuilder<Record<string, Record<string, unknown>>, string>,
     opts: { includeTrashed?: boolean | undefined }
 ) => Expression<SqlBool>[];
 
 /** The reads and writes a resource's own repository composes over. */
-export type ContentRepository<R extends ContentRow, V extends Table = Table> = {
+export type ContentRepository<R extends Resource, V extends Table = Table> = {
     /**
-     * One canonical (non-staged) content row of one item, or null. No fallback
-     * to another locale.
+     * One item in one locale, read from its canonical (non-staged) content row,
+     * or null. No fallback to another locale.
      */
     findOne(ref: ContentRef, opts?: { includeTrashed?: boolean }): Promise<R | null>;
     /**
      * The item in any one locale: the default content locale when it has a
-     * row, else whichever comes first alphabetically.
+     * content row, else whichever comes first alphabetically.
      */
     findAnyLocale(id: string, opts?: { includeTrashed?: boolean }): Promise<R | null>;
     /**
-     * A page of the join under `where`, ordered by resource-row columns and
-     * read in `locale` where each row has one; no `limit` reads every match.
+     * A page of resources under `where`, ordered by resource-row columns and
+     * read in `locale` where each has a content row; no `limit` reads every match.
      */
     findMany(params: {
         where: JoinedWhere;
@@ -146,8 +149,8 @@ export type ContentRepository<R extends ContentRow, V extends Table = Table> = {
     }): Promise<R[]>;
     /** `COUNT(*)` over the join under `where`. */
     count(where: JoinedWhere): Promise<number>;
-    /** Insert the resource row (`own` columns) and its first content row. */
-    create(own: Record<string, unknown>, content: ContentWrite): Promise<R>;
+    /** Insert the resource row and its first content row. */
+    create(resourceRow: Record<string, unknown>, content: ContentWrite): Promise<R>;
     /** Write one locale's content row, creating it when it does not exist. */
     update(ref: ContentRef, data: ContentWrite): Promise<R>;
     /** Hard-delete the resource row; content rows and versions cascade. */
@@ -159,10 +162,10 @@ export type ContentRepository<R extends ContentRow, V extends Table = Table> = {
      * staged included), decoded but not joined. No `ids` reads every resource.
      */
     findStoredRows(ids?: readonly string[]): Promise<StoredRows>;
-    /** Decode joined rows from `kysely().joined()` and attach each one's locale list. */
+    /** Decode rows from `kysely().joined()` into resources, with their locale lists. */
     decodeRows(raw: Record<string, unknown>[]): Promise<R[]>;
-    /** Each row replaced by its `locale` row where it has one. */
-    overlayLocale(rows: R[], locale: string): Promise<R[]>;
+    /** Each resource replaced by its read in `locale`, where it has one. */
+    overlayLocale(resources: R[], locale: string): Promise<R[]>;
 
     translatable: {
         /** The item's other canonical locales, excluding `excludeLocale`. */
@@ -196,7 +199,7 @@ export type ContentRepository<R extends ContentRow, V extends Table = Table> = {
     kysely(): {
         db: GenericDb;
         /** The Kysely `DB` keys of the two tables, for a hand-built query. */
-        ownerKey: string;
+        resourceKey: string;
         contentKey: string;
         /** A `SELECT` over the join, with every column of both tables. */
         joined(): JoinedQuery;
@@ -205,7 +208,7 @@ export type ContentRepository<R extends ContentRow, V extends Table = Table> = {
 
 /** Resource rows and their content rows, each as its table stores it. */
 export type StoredRows = {
-    owners: Record<string, unknown>[];
+    resourceRows: Record<string, unknown>[];
     contents: Record<string, unknown>[];
 };
 
@@ -240,16 +243,20 @@ export type ContentVersions<Row = Record<string, unknown>> = {
 
 /**
  * Build a resource's content repository. `decode` turns one joined row into the
- * resource's row shape; `ownerFilter` adds a predicate on the resource row that
- * every read applies (entries' `deletedAt IS NULL`).
+ * resource; `resourceFilter` adds a predicate on the resource row that every
+ * read applies (entries' `deletedAt IS NULL`).
  */
 export type ContentRepositoryOptions<
-    R extends ContentRow,
+    R extends Resource,
     O extends Table,
     C extends Table,
 > = {
     db?: Db | undefined;
     defaultLocale?: string | (() => string) | undefined;
-    decode: (own: TableSelect<O>, content: TableSelect<C>, locales: string[]) => R;
-    ownerFilter?: OwnerFilter | undefined;
+    decode: (
+        resourceRow: TableSelect<O>,
+        contentRow: TableSelect<C>,
+        locales: string[]
+    ) => R;
+    resourceFilter?: ResourceFilter | undefined;
 };

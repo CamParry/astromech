@@ -35,7 +35,7 @@ describe('versions', () => {
         expect(versions[0]?.locale).toBe('en');
     });
 
-    it('writes no version when only the account row changes', async () => {
+    it('writes no version when only the `users` row changes', async () => {
         await api.update({ id, data: { name: 'Annabel' } });
         expect(await api.versions({ id })).toEqual([]);
     });

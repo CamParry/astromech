@@ -4,7 +4,7 @@
  * merges its patch over the current row.
  */
 
-import type { GlobalRepository, GlobalRow } from '../repository';
+import type { GlobalRepository, GlobalResource } from '../repository';
 import type {
     EntryStatus,
     JsonObject,
@@ -32,7 +32,7 @@ export async function toStoredFields(input: {
     id: string | null;
     locale: string;
     patch: Record<string, unknown>;
-    current: GlobalRow | null;
+    current: GlobalResource | null;
     /** The status the row has after the write; it decides the validation mode. */
     status: EntryStatus | undefined;
     /** Who the write is attributed to; the field validators read it. */

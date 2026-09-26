@@ -70,7 +70,7 @@ describe('writing a locale with no content row', () => {
         expect(en?.fields['bio']).toBe('EN bio');
     });
 
-    it('writes the account row without creating a content row', async () => {
+    it('writes the `users` row without creating a content row', async () => {
         const updated = await api.update({ id, locale: 'fr', data: { name: 'Annabel' } });
 
         expect(updated.name).toBe('Annabel');

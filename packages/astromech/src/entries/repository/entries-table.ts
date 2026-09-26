@@ -6,7 +6,7 @@
 
 import type {
     EntryRef,
-    EntryRow,
+    EntryResource,
     EntryWrite,
     ListParams,
     PreviewTokenRecord,
@@ -172,29 +172,29 @@ function referencesExists(eb: JoinedEb, filter: ReferencesFilter): Expression<Sq
     );
 }
 
-/** The two joined rows plus the locale list, in the shape the service reads. */
-function toEntryRow(
-    entry: EntryTableRow,
-    content: EntryContentRow,
+/** The two joined rows plus the locale list, as the resource the service reads. */
+function toEntryResource(
+    resourceRow: EntryTableRow,
+    contentRow: EntryContentRow,
     locales: string[]
-): EntryRow {
+): EntryResource {
     return {
-        id: content.entryId,
-        contentId: content.id as ContentRowId,
-        type: content.type,
-        locale: content.locale,
+        id: contentRow.entryId,
+        contentId: contentRow.id as ContentRowId,
+        type: contentRow.type,
+        locale: contentRow.locale,
         locales,
-        staged: content.stagedFor !== null,
-        title: content.title,
-        slug: content.slug,
-        fields: (content.fields ?? {}) as JsonObject,
-        status: content.status,
-        publishedAt: content.publishedAt,
-        deletedAt: entry.deletedAt,
-        createdAt: entry.createdAt,
-        updatedAt: content.updatedAt,
-        createdBy: content.createdBy,
-        updatedBy: content.updatedBy,
+        staged: contentRow.stagedFor !== null,
+        title: contentRow.title,
+        slug: contentRow.slug,
+        fields: (contentRow.fields ?? {}) as JsonObject,
+        status: contentRow.status,
+        publishedAt: contentRow.publishedAt,
+        deletedAt: resourceRow.deletedAt,
+        createdAt: resourceRow.createdAt,
+        updatedAt: contentRow.updatedAt,
+        createdBy: contentRow.createdBy,
+        updatedBy: contentRow.updatedBy,
     };
 }
 
@@ -203,7 +203,7 @@ function toEntryRow(
  * call, so the one object follows `setDb`, a transaction and a config reload.
  */
 function createEntryRepository() {
-    const owners = createRepository(entriesTable);
+    const resourceRows = createRepository(entriesTable);
     const contents = createRepository(entryContentTable);
 
     const content = createContentRepository(
@@ -211,16 +211,16 @@ function createEntryRepository() {
             table: entriesTable,
             contentTable: entryContentTable,
             versionsTable: entryVersionsTable,
-            ownerColumn: 'entryId',
+            resourceIdColumn: 'entryId',
             // `entry_content.type` is copied from `entries.type`: the slug-unique
             // and list indexes cannot reach across the join.
             inheritedColumns: ['type'],
             insertDefaults: { title: '', slug: null },
         },
         {
-            decode: toEntryRow,
+            decode: toEntryResource,
             // Trash is resource-level, so it filters on the entry row.
-            ownerFilter: (eb, options) =>
+            resourceFilter: (eb, options) =>
                 options.includeTrashed === true
                     ? []
                     : [eb('entries.deletedAt', 'is', null)],
@@ -277,7 +277,7 @@ function createEntryRepository() {
         return buildListWhere(params, getDefaultContentLocale(), types);
     }
 
-    async function findMany(params: ListParams): Promise<EntryRow[]> {
+    async function findMany(params: ListParams): Promise<EntryResource[]> {
         let query = content.kysely().joined().where(listWhere(params));
         for (const [column, direction] of orderPairs(params.sort)) {
             query = query.orderBy(column, direction);
@@ -293,7 +293,7 @@ function createEntryRepository() {
 
     /** Every `entries` row, of `type` when given, trashed rows included. */
     async function findEntryRowsByType(type?: string): Promise<EntryTableRow[]> {
-        return owners.findMany({ where: type === undefined ? {} : { type } });
+        return resourceRows.findMany({ where: type === undefined ? {} : { type } });
     }
 
     /** Every `entry_content` row, of `type` when given, staged rows included. */
@@ -306,7 +306,7 @@ function createEntryRepository() {
         return contents.findMany({ where: { entryId } });
     }
 
-    async function create(data: EntryWrite & { type: string }): Promise<EntryRow> {
+    async function create(data: EntryWrite & { type: string }): Promise<EntryResource> {
         const { type, ...write } = data;
         return content.create(
             {
@@ -320,19 +320,19 @@ function createEntryRepository() {
 
     const trash = {
         trash: async (id: string, actor?: string | null): Promise<void> => {
-            const row = await owners.findOne({ id });
+            const row = await resourceRows.findOne({ id });
             if (!row) throw new ResourceNotFoundError('entry', { id });
 
             // Idempotent: re-trashing an already-trashed entry is a no-op.
             if (row.deletedAt === null) {
-                await owners.update(id, {
+                await resourceRows.update(id, {
                     deletedAt: new Date(),
                     ...(actor === undefined ? {} : { updatedBy: actor }),
                 });
             }
         },
 
-        restore: async (id: string, actor?: string | null): Promise<EntryRow> => {
+        restore: async (id: string, actor?: string | null): Promise<EntryResource> => {
             // Guarded *and* returning: not expressible through the wrapper's
             // primary-key `update` / count-returning `updateMany`.
             await getDb()
@@ -355,27 +355,27 @@ function createEntryRepository() {
         },
 
         emptyTrash: async (type: string): Promise<void> => {
-            await owners.deleteMany({ type, deletedAt: { ne: null } });
+            await resourceRows.deleteMany({ type, deletedAt: { ne: null } });
         },
     };
 
     const previewToken = {
         set: async (id: string, hash: string, expiresAt: Date | null): Promise<void> => {
-            await owners.update(id, {
+            await resourceRows.update(id, {
                 previewToken: hash,
                 previewTokenExpiresAt: expiresAt,
             });
         },
 
         clear: async (id: string): Promise<void> => {
-            await owners.update(id, {
+            await resourceRows.update(id, {
                 previewToken: null,
                 previewTokenExpiresAt: null,
             });
         },
 
         findByHash: async (hash: string): Promise<PreviewTokenRecord | null> => {
-            const row = await owners.findOne({ previewToken: hash });
+            const row = await resourceRows.findOne({ previewToken: hash });
             if (!row) return null;
             return { id: row.id, expiresAt: row.previewTokenExpiresAt };
         },
@@ -394,7 +394,7 @@ function createEntryRepository() {
             options?: { includeTrashed?: boolean }
         ) => ofType(await content.findAnyLocale(ref.id, options), ref.type),
         create,
-        update: (ref: EntryRef, data: EntryWrite): Promise<EntryRow> =>
+        update: (ref: EntryRef, data: EntryWrite): Promise<EntryResource> =>
             content.update(ref, data),
         delete: content.delete,
         trash,
@@ -411,7 +411,7 @@ function createEntryRepository() {
 /** The one entry repository every entry type reads and writes through. */
 export const entryRepository = createEntryRepository();
 
-/** The row when it is of the addressed type, else null. */
-function ofType<R extends { type?: string }>(row: R | null, type: string): R | null {
-    return row?.type === type ? row : null;
+/** The resource when it is of the addressed type, else null. */
+function ofType<R extends { type?: string }>(resource: R | null, type: string): R | null {
+    return resource?.type === type ? resource : null;
 }

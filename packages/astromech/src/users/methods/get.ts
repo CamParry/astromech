@@ -8,9 +8,9 @@ import { toUser } from '../internal/to-user';
 import { userRepository } from '../repository';
 
 /**
- * Read one user by id, or null when there is no such row. A locale with no
- * content row falls back to the default one, and the returned `locale` names
- * where the content came from.
+ * Read one user by id, or null when there is no such user. A locale with no
+ * content row falls back to the default one, then to any locale the user has,
+ * and the returned `locale` names where the content came from.
  */
 export const getUser = defineServiceMethod({
     summary: 'Read one user by id.',
@@ -24,10 +24,10 @@ export const getUser = defineServiceMethod({
             undefined,
             params.locale
         );
-        const row = await userRepository.findOne(params.id, {
+        const resource = await userRepository.findOne(params.id, {
             locale,
             fallbackLocale: defaultContentLocale(ctx.config),
         });
-        return row ? toUser(row) : null;
+        return resource ? toUser(resource) : null;
     },
 });

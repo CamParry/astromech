@@ -1,9 +1,9 @@
 /**
- * The shapes the entry repository reads and writes: the row it returns, a write
- * to a content row, the list filters and a preview token.
+ * The shapes the entry repository reads and writes: the resource it returns, a
+ * write to a content row, the list filters and a preview token.
  */
 
-import type { ContentRef, ContentRow } from '@/content/repository/types';
+import type { ContentRef, Resource } from '@/content/repository/types';
 import type { EntryStatus, JsonObject, SortOption, WhereFilters } from '@/types/index';
 
 /**
@@ -14,10 +14,10 @@ import type { EntryStatus, JsonObject, SortOption, WhereFilters } from '@/types/
 export type EntryRef = ContentRef;
 
 /**
- * One locale of one entry as the repository returns it: the shared content
+ * One locale of one entry as the repository returns it: the shared resource
  * shape plus the entry's own columns.
  */
-export type EntryRow = ContentRow & {
+export type EntryResource = Resource & {
     type: string;
     title: string;
     slug: string | null;

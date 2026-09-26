@@ -96,11 +96,13 @@ const noAmbientRead = ['ImportDeclaration', 'ImportExpression'].map((node) => ({
         "Content modules take the user, config, hooks and sibling services from the method's ctx — pass them in rather than reading the request scope, the config registry or the current request's services (see DECISIONS.md).",
 }));
 
-// The two files below a content module that legitimately read ambiently:
+// The files below a content module that legitimately read ambiently:
 // `globals/internal/access.ts` (an access rule is a function of the input, so
-// it runs before there is a ctx), and the media delivery handler.
+// it runs before there is a ctx), the media delivery handler, and the media URL
+// policy (the repository's decoder resolves `url`, and a decoder has no ctx).
 const ambientReadExceptions = [
     'packages/astromech/src/globals/internal/access.ts',
+    'packages/astromech/src/media/internal/media-url.ts',
     'packages/astromech/src/media/serving/handler.ts',
 ];
 

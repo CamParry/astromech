@@ -39,7 +39,6 @@ export const uploadMedia = defineServiceMethod({
         // The resource row and its default-locale content row are one insert
         // pair: the repository wraps both in a transaction.
         return toMedia(
-            ctx.config,
             await mediaRepository.create(
                 {
                     id,

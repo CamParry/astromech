@@ -4,7 +4,7 @@
  * propagated to the other locales when the default one is updated.
  */
 
-import type { ContentRef, ContentRow } from './repository/types';
+import type { ContentRef, Resource } from './repository/types';
 import type { ResourceSpec } from './resources';
 import type { DataField } from '@/types/fields';
 import type { JsonObject, ResolvedConfig } from '@/types/index';
@@ -16,7 +16,7 @@ type ContentReader = {
     findOne(
         ref: ContentRef,
         opts?: { includeTrashed?: boolean }
-    ): Promise<Pick<ContentRow, 'fields'> | null>;
+    ): Promise<Pick<Resource, 'fields'> | null>;
 };
 
 /** The write `propagateSharedFields` needs. */

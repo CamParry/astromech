@@ -1,10 +1,7 @@
 /**
- * Media access modes — `Media.url` resolution (spec §8.1–8.2).
- *
- * `toMedia` is the one place a media URL is produced, so it is the one place
- * the `media.access` policy is applied. These tests pin both directions of the
- * policy and the driver feature-detection fallback that keeps `filesystem()`
- * and a `publicUrl`-less `r2()` working unchanged.
+ * Media access modes and `Media.url` resolution. `resolveMediaUrl`, called by
+ * `toMediaResource`, is the one place the `media.access` policy is applied;
+ * these tests pin both directions of it and the driver fallback.
  */
 
 import type { AstromechConfig, MediaAccess, StorageDriver } from '@/types/index';

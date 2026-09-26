@@ -1,4 +1,4 @@
-import type { GlobalRepository, GlobalRow } from '../repository';
+import type { GlobalRepository, GlobalResource } from '../repository';
 import type { VisibilityShape } from '@/content/visibility';
 import type { Global } from '@/types/index';
 import { z } from '@hono/zod-openapi';
@@ -89,7 +89,7 @@ async function findStaged(
     repository: GlobalRepository,
     key: string,
     locale: string
-): Promise<GlobalRow | null> {
+): Promise<GlobalResource | null> {
     const id = await repository.findIdByKey(key);
     return id === null ? null : repository.staging.findOne({ id, locale });
 }

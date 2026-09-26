@@ -1,12 +1,12 @@
 /**
  * Tests for the shared content repository, built directly over the globals
  * shape: the second consumer of `createContentRepository`, and the one that
- * declares no slug, no trash and no owner filter. What it proves is that the
+ * declares no slug, no trash and no resource filter. What it proves is that the
  * generic half is genuinely generic: the entries suite covers the same
  * machinery with entries' own columns bolted on.
  */
 
-import type { ContentRow, ContentRowId } from '@/content/repository/types';
+import type { ContentRowId, Resource } from '@/content/repository/types';
 import type { Db } from '@/database/types';
 import type { GlobalContentRow, GlobalTableRow } from '@/globals/tables';
 import type { JsonObject } from '@/types/index';
@@ -15,25 +15,25 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createContentRepository } from '@/content/repository/content-table';
 import { globalContentTable, globalsTable, globalVersionsTable } from '@/database/tables';
 
-type Row = ContentRow & { key: string };
+type TestResource = Resource & { key: string };
 
 function decode(
-    global: GlobalTableRow,
-    content: GlobalContentRow,
+    resourceRow: GlobalTableRow,
+    contentRow: GlobalContentRow,
     locales: string[]
-): Row {
+): TestResource {
     return {
-        id: content.globalId,
-        contentId: content.id as ContentRowId,
-        key: global.key,
-        locale: content.locale,
+        id: contentRow.globalId,
+        contentId: contentRow.id as ContentRowId,
+        key: resourceRow.key,
+        locale: contentRow.locale,
         locales,
-        staged: content.stagedFor !== null,
-        fields: (content.fields ?? {}) as JsonObject,
-        status: content.status,
-        publishedAt: content.publishedAt,
-        createdAt: global.createdAt,
-        updatedAt: content.updatedAt,
+        staged: contentRow.stagedFor !== null,
+        fields: (contentRow.fields ?? {}) as JsonObject,
+        status: contentRow.status,
+        publishedAt: contentRow.publishedAt,
+        createdAt: resourceRow.createdAt,
+        updatedAt: contentRow.updatedAt,
     };
 }
 
@@ -43,7 +43,7 @@ function createRepository() {
             table: globalsTable,
             contentTable: globalContentTable,
             versionsTable: globalVersionsTable,
-            ownerColumn: 'globalId',
+            resourceIdColumn: 'globalId',
         },
         { decode }
     );

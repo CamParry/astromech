@@ -1,10 +1,10 @@
 /**
  * Config-derived helpers shared across the globals operations: resolving a key
  * to its declaration, the capability a method requires, the canonical row a
- * call addresses, and the row → `Global` narrowing.
+ * call addresses, and the resource → `Global` narrowing.
  */
 
-import type { GlobalRepository, GlobalRow } from '../repository';
+import type { GlobalRepository, GlobalResource } from '../repository';
 import type { Global, ResolvedConfig, ResolvedGlobal } from '@/types/index';
 import { assertCapability } from '@/content/capabilities';
 import { resolveResourceLocale } from '@/content/locale';
@@ -64,7 +64,7 @@ export type CanonicalGlobal = {
     repository: GlobalRepository;
     /** The `globals.id` — the row exists, so this is never null. */
     id: string;
-    current: GlobalRow;
+    current: GlobalResource;
 };
 
 /**
@@ -90,13 +90,11 @@ export async function getCanonicalGlobal(
 }
 
 /**
- * Narrow a repository row to the public `Global`. The row already carries every
- * member; `contentId` is dropped, as it never leaves the service. The shared
- * `ContentRow` types `status` and `publishedAt` as optional (a resource may have
- * no such column); `global_content` always has both, so the cast is the one
- * place that fact is stated.
+ * Narrow a `GlobalResource` to the public `Global`, dropping `contentId`, which
+ * never leaves the service. The shared `Resource` types `status` and
+ * `publishedAt` as optional; `global_content` always has both, hence the cast.
  */
-export function toGlobal(row: GlobalRow): Global {
-    const { contentId: _contentId, ...global } = row;
+export function toGlobal(resource: GlobalResource): Global {
+    const { contentId: _contentId, ...global } = resource;
     return global as Global;
 }

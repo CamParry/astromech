@@ -8,12 +8,14 @@
  */
 
 import type { AstromechConfig } from '@/types/index';
+import { noopStorage } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { InvalidReferencesFilterError, UnknownWhereKeyError } from '@/entries/errors';
 import { UnknownSortKeyError } from '@/errors/query';
 import { mediaRepository } from '@/media/repository';
+import { setStorageDriver } from '@/storage/registry';
 
 const api = currentServices.entries;
 
@@ -62,9 +64,11 @@ function makeReferencesConfig(): AstromechConfig {
 beforeEach(async () => {
     await createTestDb();
     setupTestConfig(makeReferencesConfig());
+    // Reading a media item resolves its URL, which asks the driver.
+    setStorageDriver(noopStorage);
 });
 
-/** A media row, inserted through the repository so no driver or real bytes are needed. */
+/** A media item, inserted through the repository so no real bytes are needed. */
 async function createMedia(filename: string): Promise<string> {
     const row = await mediaRepository.create(
         {

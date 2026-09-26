@@ -1,8 +1,7 @@
 /**
- * A `users` row with no content row still reads. better-auth mints the account
- * row outside Astromech's write path, so a provider that never runs the content
- * hook must not lock the user out of their own session; the first `update` with
- * `fields` is what creates the row.
+ * Reading a user whose content rows do not cover the asked locale. A fallback
+ * read tries the asked locale, then the fallback, then any locale the user has;
+ * a `users` row with no content row at all reads as null.
  */
 
 import type { DB } from '@/database/types';
@@ -12,6 +11,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { encodeWith } from '@/database/codec';
 import { usersTable } from '@/database/tables';
+import { ResourceNotFoundError } from '@/errors/resource';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { userRepository } from '@/users/repository';
 
@@ -20,8 +20,8 @@ const api = currentServices.users;
 let db: Kysely<DB>;
 let id: string;
 
-/** The account row alone — what better-auth's insert leaves behind. */
-async function insertAccountRow(): Promise<string> {
+/** The `users` row alone, with no content row. */
+async function insertUserRow(): Promise<string> {
     const row = await db
         .insertInto('users')
         .values(
@@ -39,43 +39,49 @@ async function insertAccountRow(): Promise<string> {
 beforeEach(async () => {
     db = await createTestDb();
     setupTestConfig();
-    id = await insertAccountRow();
+    id = await insertUserRow();
 });
 
 describe('a user with no content row', () => {
-    it('reads through the service as empty content', async () => {
-        const user = await api.get({ id });
-        expect(user?.name).toBe('No Profile');
-        expect(user?.fields).toEqual({});
-        expect(user?.locale).toBe('en');
-        expect(user?.locales).toEqual([]);
+    it('reads as null through the service', async () => {
+        expect(await api.get({ id })).toBeNull();
     });
 
-    it('reads through the repository the session resolves with', async () => {
-        const row = await userRepository.findOne(id, { fallbackLocale: 'en' });
-        expect(row?.email).toBe('noprofile@test.dev');
-        expect(row?.fields).toEqual({});
-        expect(row?.locales).toEqual([]);
+    it('reads as null through the repository, with or without a fallback', async () => {
+        expect(await userRepository.findOne(id)).toBeNull();
+        expect(await userRepository.findOne(id, { fallbackLocale: 'en' })).toBeNull();
+        expect(
+            await userRepository.findOne(id, { locale: 'de', fallbackLocale: 'en' })
+        ).toBeNull();
     });
 
-    it('reads as null through the repository without a fallback locale', async () => {
+    it('is not found by an update', async () => {
+        await expect(
+            api.update({ id, data: { fields: { bio: 'hello' } } })
+        ).rejects.toThrow(ResourceNotFoundError);
+    });
+});
+
+describe('a user with a content row in a non-default locale only', () => {
+    beforeEach(async () => {
+        await userRepository.update({ id, locale: 'de' }, { fields: { bio: 'DE bio' } });
+    });
+
+    it('reads that locale when neither the asked nor the fallback locale has a row', async () => {
+        const resource = await userRepository.findOne(id, { fallbackLocale: 'en' });
+        expect(resource?.locale).toBe('de');
+        expect(resource?.locales).toEqual(['de']);
+        expect(resource?.fields['bio']).toBe('DE bio');
+    });
+
+    it('reads as null without a fallback locale', async () => {
         expect(await userRepository.findOne(id)).toBeNull();
     });
 
-    it('reads the account row when neither the asked nor the fallback locale has a row', async () => {
-        const row = await userRepository.findOne(id, {
-            locale: 'fr',
-            fallbackLocale: 'en',
-        });
-        expect(row?.email).toBe('noprofile@test.dev');
-        expect(row?.locales).toEqual([]);
-    });
-
-    it('gets a default-locale row from the first fields update', async () => {
-        const updated = await api.update({ id, data: { fields: { bio: 'hello' } } });
-
-        expect(updated.fields['bio']).toBe('hello');
-        expect(updated.locale).toBe('en');
-        expect(updated.locales).toEqual(['en']);
+    it('reads through the service in that locale', async () => {
+        const user = await api.get({ id });
+        expect(user?.name).toBe('No Profile');
+        expect(user?.locale).toBe('de');
+        expect(user?.fields['bio']).toBe('DE bio');
     });
 });

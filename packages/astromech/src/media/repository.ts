@@ -5,7 +5,7 @@
  */
 
 import type { MediaContentRow, MediaTableRow, NewMediaTableRow } from './tables';
-import type { ContentRow, ContentWrite, JoinedWhere } from '@/content/repository/types';
+import type { ContentWrite, JoinedWhere, Resource } from '@/content/repository/types';
 import type { Patch } from '@/database/repository/create-repository';
 import type {
     JsonObject,
@@ -24,12 +24,15 @@ import { chunks } from '@/database/chunks';
 import { kyselyTableKey } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 import { mediaContentTable, mediaTable, mediaVersionsTable } from '@/database/tables';
+import { resolveMediaUrl } from './internal/media-url';
 
 /** One locale of one media item, as the media service reads it. */
-export type MediaRow = ContentRow & {
+export type MediaResource = Resource & {
     filename: string;
     mimeType: string;
     size: number;
+    /** The delivery URL, resolved under the configured `media.access`. */
+    url: string;
     width: number | null;
     height: number | null;
     metadata: MediaMetadata | null;
@@ -46,7 +49,7 @@ export type MediaListParams = {
     search?: string | undefined;
     where?: { mimeType?: MediaMimeTypeFilter | undefined } | undefined;
     sort?: SortOption | SortOption[] | undefined;
-    /** The locale each row is read in where it has one; the default otherwise. */
+    /** The locale each item is read in where it has one; the default otherwise. */
     locale?: string | undefined;
     limit?: number | undefined;
     offset?: number | undefined;
@@ -61,34 +64,38 @@ type MediaFilePatch = Pick<
 /** The expression builder the joined list query is compiled against. */
 type JoinedEb = Parameters<JoinedWhere>[0];
 
-/** The two joined rows plus the locale list, in the shape the service reads. */
-function toMediaRow(
-    media: MediaTableRow,
-    content: MediaContentRow,
+/**
+ * The two joined rows plus the locale list, as the resource the service reads,
+ * with its delivery URL resolved.
+ */
+function toMediaResource(
+    resourceRow: MediaTableRow,
+    contentRow: MediaContentRow,
     locales: string[]
-): MediaRow {
+): MediaResource {
     return {
-        id: content.mediaId,
-        contentId: content.id as MediaRow['contentId'],
-        locale: content.locale,
+        id: contentRow.mediaId,
+        contentId: contentRow.id as MediaResource['contentId'],
+        locale: contentRow.locale,
         locales,
         staged: false,
-        fields: (content.fields ?? {}) as JsonObject,
-        filename: media.filename,
-        mimeType: media.mimeType,
-        size: media.size,
-        width: media.width,
-        height: media.height,
-        metadata: media.metadata,
-        title: content.title,
-        alt: content.alt,
-        caption: content.caption,
-        createdAt: media.createdAt,
-        createdBy: media.createdBy,
-        updatedAt: content.updatedAt,
-        updatedBy: content.updatedBy,
-        fileUpdatedAt: media.updatedAt,
-        fileUpdatedBy: media.updatedBy,
+        fields: (contentRow.fields ?? {}) as JsonObject,
+        filename: resourceRow.filename,
+        mimeType: resourceRow.mimeType,
+        size: resourceRow.size,
+        url: resolveMediaUrl(resourceRow.id, resourceRow.filename),
+        width: resourceRow.width,
+        height: resourceRow.height,
+        metadata: resourceRow.metadata,
+        title: contentRow.title,
+        alt: contentRow.alt,
+        caption: contentRow.caption,
+        createdAt: resourceRow.createdAt,
+        createdBy: resourceRow.createdBy,
+        updatedAt: contentRow.updatedAt,
+        updatedBy: contentRow.updatedBy,
+        fileUpdatedAt: resourceRow.updatedAt,
+        fileUpdatedBy: resourceRow.updatedBy,
     };
 }
 
@@ -98,10 +105,10 @@ function toMediaRow(
  */
 function mimeBucket(
     eb: JoinedEb,
-    ownerKey: string,
+    resourceKey: string,
     bucket: MediaMimeTypeFilter | undefined
 ): Expression<SqlBool> | null {
-    const column = `${ownerKey}.mimeType`;
+    const column = `${resourceKey}.mimeType`;
     if (bucket === 'images') return eb(column, 'like', 'image/%');
     if (bucket === 'videos') return eb(column, 'like', 'video/%');
     if (bucket === 'documents') {
@@ -121,18 +128,18 @@ function mimeBucket(
  * repository follows a transaction scope and a config reload.
  */
 function createMediaRepository() {
-    const owners = createRepository(mediaTable);
+    const resourceRows = createRepository(mediaTable);
     const content = createContentRepository(
         {
             table: mediaTable,
             contentTable: mediaContentTable,
             versionsTable: mediaVersionsTable,
-            ownerColumn: 'mediaId',
+            resourceIdColumn: 'mediaId',
         },
-        { decode: toMediaRow }
+        { decode: toMediaResource }
     );
 
-    const ownerKey = kyselyTableKey(mediaTable.name);
+    const resourceKey = kyselyTableKey(mediaTable.name);
     const contentKey = kyselyTableKey(mediaContentTable.name);
 
     /**
@@ -148,9 +155,9 @@ function createMediaRepository() {
                 eb(`${contentKey}.locale`, '=', defaultLocale),
             ];
             if (search) {
-                conditions.push(eb(`${ownerKey}.filename`, 'like', `%${search}%`));
+                conditions.push(eb(`${resourceKey}.filename`, 'like', `%${search}%`));
             }
-            const bucket = mimeBucket(eb, ownerKey, params.where?.mimeType);
+            const bucket = mimeBucket(eb, resourceKey, params.where?.mimeType);
             if (bucket) conditions.push(bucket);
             return eb.and(conditions);
         };
@@ -160,7 +167,7 @@ function createMediaRepository() {
      * Newest first unless `params.sort` says otherwise; an unknown sort throws.
      * Omit `limit` for every match.
      */
-    async function findMany(params: MediaListParams = {}): Promise<MediaRow[]> {
+    async function findMany(params: MediaListParams = {}): Promise<MediaResource[]> {
         return content.findMany({
             where: filter(params),
             orderBy: buildOrderBy(RESOURCE_SPECS.media.sortable, params.sort, [
@@ -177,7 +184,7 @@ function createMediaRepository() {
     }
 
     /** Every content row written in `locale`, for the uniqueness and validity scans. */
-    async function findByLocale(locale: string): Promise<MediaRow[]> {
+    async function findByLocale(locale: string): Promise<MediaResource[]> {
         const raw = await content
             .kysely()
             .joined()
@@ -193,7 +200,7 @@ function createMediaRepository() {
     async function findOne(
         id: string,
         options?: { locale?: string | undefined; fallbackLocale?: string | undefined }
-    ): Promise<MediaRow | null> {
+    ): Promise<MediaResource | null> {
         const locale = options?.locale ?? getDefaultContentLocale();
         const found = await content.findOne({ id, locale });
         const fallbackLocale = options?.fallbackLocale;
@@ -207,19 +214,22 @@ function createMediaRepository() {
     async function findFiles(ids: Iterable<string>): Promise<MediaTableRow[]> {
         const rows: MediaTableRow[] = [];
         for (const chunk of chunks(ids)) {
-            rows.push(...(await owners.findMany({ where: { id: { in: chunk } } })));
+            rows.push(...(await resourceRows.findMany({ where: { id: { in: chunk } } })));
         }
         return rows;
     }
 
-    async function create(own: NewMediaTableRow, write: ContentWrite): Promise<MediaRow> {
-        return content.create(own, write);
+    async function create(
+        resourceRow: NewMediaTableRow,
+        write: ContentWrite
+    ): Promise<MediaResource> {
+        return content.create(resourceRow, write);
     }
 
     /**
-     * Drops the row and every relationship pointing at (or from) it. Call it
-     * inside a transaction: an index outliving a failed delete would name a row
-     * that is gone.
+     * Drops the media item and every relationship pointing at (or from) it. Call
+     * it inside a transaction: an index outliving a failed delete would name an
+     * item that is gone.
      */
     async function del(id: string): Promise<void> {
         await relationshipRepository.deleteByResource(id, 'media');
@@ -233,13 +243,14 @@ function createMediaRepository() {
         count,
         findByLocale,
         /** The file row alone, with no authored content, or null. */
-        findFile: (id: string): Promise<MediaTableRow | null> => owners.findOne({ id }),
+        findFile: (id: string): Promise<MediaTableRow | null> =>
+            resourceRows.findOne({ id }),
         findFiles,
         create,
         update: content.update,
         /** Write the file-row columns, whatever the locale. */
         updateFile: async (id: string, patch: MediaFilePatch): Promise<void> => {
-            await owners.update(id, patch);
+            await resourceRows.update(id, patch);
         },
         delete: del,
         versions: content.versions,

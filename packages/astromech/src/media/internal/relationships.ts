@@ -9,7 +9,7 @@ import { mediaRepository } from '@/media/repository';
 
 const relationships = createContentRelationships({
     repository: mediaRepository,
-    ownerColumn: 'mediaId',
+    resourceIdColumn: 'mediaId',
     kind: 'media',
     fields: (config) => RESOURCE_SPECS.media.fields(config),
 });

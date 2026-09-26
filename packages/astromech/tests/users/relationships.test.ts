@@ -55,8 +55,8 @@ async function credits(): Promise<string[]> {
     return rows.map((row) => row.targetId).sort();
 }
 
-/** The account row alone — no content row, as better-auth's own insert leaves. */
-async function insertAccountOnlyUser(): Promise<string> {
+/** The `users` row alone, with no content row. */
+async function insertUserRowOnly(): Promise<string> {
     const row = await db
         .insertInto('users')
         .values(
@@ -120,7 +120,7 @@ describe('user relationships across locales', () => {
     });
 
     it('gives a user with no content row a source with no references', async () => {
-        const noContentId = await insertAccountOnlyUser();
+        const noContentId = await insertUserRowOnly();
 
         await rebuildRelationshipIndex();
 

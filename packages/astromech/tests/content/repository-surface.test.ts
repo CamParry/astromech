@@ -29,7 +29,7 @@ describe('resource repository surface', () => {
     });
 
     it.each(Object.entries(repositories))('%s exposes no retired name', (_, get) => {
-        for (const name of ['get', 'list', 'anyLocale', 'owners']) {
+        for (const name of ['get', 'list', 'anyLocale', 'owners', 'resourceRows']) {
             expect(get()).not.toHaveProperty(name);
         }
     });

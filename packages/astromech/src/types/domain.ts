@@ -240,7 +240,7 @@ export type User = {
     /** The slug of the user's role, resolved against the config. */
     role: string;
     createdAt: Date;
-    /** The account row's last change: profile, email, role. */
+    /** The `users` row's last change: profile, email, role. */
     updatedAt: Date;
 };
 

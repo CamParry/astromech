@@ -4,7 +4,7 @@
  * nothing a version preserves, which is the rule entries apply too.
  */
 
-import type { GlobalRow } from '../repository';
+import type { GlobalResource } from '../repository';
 import type { ContentWrite } from '@/content/repository/types';
 import type { Global, ResolvedConfig, User } from '@/types/index';
 import { defineServiceMethod } from '@/services/define-service-method';
@@ -71,7 +71,7 @@ async function writeStatus(
     config: ResolvedConfig,
     params: { key: string; locale?: string | undefined },
     user: User | null,
-    write: (current: GlobalRow) => ContentWrite
+    write: (current: GlobalResource) => ContentWrite
 ): Promise<Global> {
     const { repository, id, locale, current } = await getCanonicalGlobal(config, params);
 

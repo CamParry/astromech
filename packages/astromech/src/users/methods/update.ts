@@ -18,7 +18,7 @@ import { updateUserSchema } from '../schema';
 
 /**
  * Update a user's profile, role and custom fields. `name`, `email` and `role`
- * are the account row and are written whatever the locale; `fields` addresses
+ * are the `users` row and are written whatever the locale; `fields` addresses
  * one locale's content row, and a locale with none gets one seeded from the
  * default-locale row with the patch applied over it. Demoting the last admin is refused.
  */
@@ -44,8 +44,9 @@ export const updateUser = defineServiceMethod({
         );
         const fallbackLocale = defaultContentLocale(ctx.config);
 
-        // The row this write edits, or — when the locale has none — the
-        // default-locale row the new one is copied from.
+        // The resource this write edits or, when the locale has no content row,
+        // the one the new row is copied from: the default locale's, else any
+        // locale's. A user with no content row at all is not found.
         const current = await userRepository.findOne(id, { locale });
         const base = current ?? (await userRepository.findOne(id, { fallbackLocale }));
         if (!base) throw new ResourceNotFoundError('user', { id });
@@ -66,7 +67,7 @@ export const updateUser = defineServiceMethod({
 
         // A patch is merged over `base`, so a locale being written for the first
         // time is seeded from the default-locale row. A write naming no `fields`
-        // at all touches the account row alone and creates no content row.
+        // at all touches the `users` row alone and creates no content row.
         const fields =
             patch === undefined
                 ? undefined
@@ -86,7 +87,7 @@ export const updateUser = defineServiceMethod({
         const { name, email, role } = data;
         const userId = ctx.user?.id ?? null;
 
-        // The version, the account write, the content write and the index write
+        // The version, the `users` row write, the content write and the index write
         // are one transaction: an index that outlived a failed write would name
         // relations the stored fields do not.
         await transaction(async () => {
@@ -102,7 +103,7 @@ export const updateUser = defineServiceMethod({
                 );
             }
             if (name !== undefined || email !== undefined || role !== undefined) {
-                await userRepository.updateAccount(id, { name, email, role });
+                await userRepository.updateUserRow(id, { name, email, role });
             }
             if (fields !== undefined) {
                 await userRepository.update(
@@ -111,7 +112,7 @@ export const updateUser = defineServiceMethod({
                         fields,
                         updatedBy: userId,
                         // A locale being written for the first time is authored
-                        // now, whoever created the account.
+                        // now, whoever created the user.
                         ...(current ? {} : { createdBy: userId }),
                     }
                 );

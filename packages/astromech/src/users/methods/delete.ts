@@ -16,11 +16,11 @@ export const deleteUser = defineServiceMethod({
     mutates: true,
     destructive: true,
     async handler(params): Promise<void> {
-        const account = await userRepository.findAccount(params.id);
-        if (account) {
+        const userRow = await userRepository.findUserRow(params.id);
+        if (userRow) {
             await assertKeepsAnAdmin(
                 userRepository,
-                account,
+                userRow,
                 null,
                 'Cannot delete the last administrator'
             );

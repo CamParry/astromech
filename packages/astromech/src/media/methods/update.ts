@@ -1,4 +1,4 @@
-import type { MediaRow } from '../repository';
+import type { MediaResource } from '../repository';
 import type { JsonObject, Media } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { resolveResourceLocale } from '@/content/locale';
@@ -60,7 +60,7 @@ export const updateMedia = defineServiceMethod({
                 { base: base.fields, patch },
                 {
                     operation: 'update',
-                    record: toMedia(config, base),
+                    record: toMedia(base),
                     user: ctx.user,
                     scan: () => mediaRepository.findByLocale(locale),
                     excludeId: id,
@@ -119,7 +119,7 @@ export const updateMedia = defineServiceMethod({
             return row;
         });
 
-        return toMedia(config, updated);
+        return toMedia(updated);
     },
 });
 
@@ -129,8 +129,8 @@ export const updateMedia = defineServiceMethod({
  */
 function inherited(
     value: string | null | undefined,
-    current: MediaRow | null,
-    base: MediaRow,
+    current: MediaResource | null,
+    base: MediaResource,
     column: 'title' | 'alt' | 'caption'
 ): string | null | undefined {
     if (value !== undefined) return value;

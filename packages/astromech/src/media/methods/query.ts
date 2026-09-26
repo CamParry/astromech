@@ -30,6 +30,6 @@ export const queryMedia = defineServiceMethod({
                 mediaRepository.findMany({ search, where, sort, locale, ...page }),
             count: () => mediaRepository.count({ search, where }),
         });
-        return { ...result, data: result.data.map((row) => toMedia(ctx.config, row)) };
+        return { ...result, data: result.data.map((row) => toMedia(row)) };
     },
 });

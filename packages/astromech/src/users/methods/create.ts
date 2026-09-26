@@ -43,7 +43,7 @@ export const createUser = defineServiceMethod({
         const passwordHash =
             data.password === undefined ? undefined : await hashCredential(data.password);
 
-        // The account row, its credential, its content row and the index write
+        // The `users` row, its credential, its content row and the index write
         // are one transaction: an index that outlived a failed create would name
         // a user that is not there.
         const userId = ctx.user?.id ?? null;

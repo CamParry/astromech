@@ -1,10 +1,10 @@
 /**
- * Row helpers: narrow a repository row to the public `Entry`, and read one
+ * Read helpers: narrow an `EntryResource` to the public `Entry`, and read one
  * locale (or the whole resource) of an entry of a given type. The type is part
  * of the read, so an entry of another type is not found.
  */
 
-import type { EntryRow } from '../repository/types';
+import type { EntryResource } from '../repository/types';
 import type { ContentRowId } from '@/content/repository/types';
 import type { Entry } from '@/types/index';
 import { getDefaultContentLocale } from '@/config/content-locale';
@@ -18,17 +18,17 @@ import { entryRepository } from '../repository/entries-table';
 export type EntryWithContentId = Entry & { contentId: ContentRowId };
 
 /**
- * Narrow a repository `EntryRow` to the public `Entry`. `contentId` is dropped,
- * as it never leaves the service.
+ * Narrow an `EntryResource` to the public `Entry`. `contentId` is dropped, as
+ * it never leaves the service.
  */
-export function toEntry(row: EntryRow): Entry {
-    const { contentId: _contentId, ...entry } = toEntryWithContentId(row);
+export function toEntry(resource: EntryResource): Entry {
+    const { contentId: _contentId, ...entry } = toEntryWithContentId(resource);
     return entry;
 }
 
 /** The same narrowing, keeping the content row an operation still needs. */
-export function toEntryWithContentId(row: EntryRow): EntryWithContentId {
-    return row;
+export function toEntryWithContentId(resource: EntryResource): EntryWithContentId {
+    return resource;
 }
 
 /**
@@ -82,10 +82,13 @@ export async function getEntryResource(
 }
 
 /**
- * Every live row of one type in one locale, staged rows excluded: what a
+ * Every live entry of one type in one locale, staged content excluded: what a
  * uniqueness check scans.
  */
-export async function listEntryRows(type: string, locale: string): Promise<EntryRow[]> {
+export async function listEntriesInLocale(
+    type: string,
+    locale: string
+): Promise<EntryResource[]> {
     return entryRepository.findMany({ type, locale, trashed: false });
 }
 

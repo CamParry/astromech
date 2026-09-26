@@ -9,7 +9,7 @@ import { userRepository } from '@/users/repository';
 
 const relationships = createContentRelationships({
     repository: userRepository,
-    ownerColumn: 'userId',
+    resourceIdColumn: 'userId',
     kind: 'user',
     fields: (config) => RESOURCE_SPECS.user.fields(config),
 });

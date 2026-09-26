@@ -1,5 +1,5 @@
 /**
- * The users tables. `users` is better-auth's account row, so the descriptor
+ * The users tables. `users` is better-auth's user table, so the descriptor
  * describes its on-disk format rather than defining it. `user_content` holds one
  * row per locale of what the site's own fields say, and `user_versions` snapshots one.
  */

@@ -51,6 +51,6 @@ export const replaceMedia = defineServiceMethod({
 
         const updated = await mediaRepository.findOne(id);
         if (!updated) throw new ResourceNotFoundError('media', { id });
-        return toMedia(ctx.config, updated);
+        return toMedia(updated);
     },
 });

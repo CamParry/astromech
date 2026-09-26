@@ -28,6 +28,6 @@ export const getMedia = defineServiceMethod({
             locale,
             fallbackLocale: defaultContentLocale(ctx.config),
         });
-        return row ? toMedia(ctx.config, row) : null;
+        return row ? toMedia(row) : null;
     },
 });

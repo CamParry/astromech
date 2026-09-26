@@ -1,4 +1,4 @@
-import type { GlobalRepository, GlobalRow } from '../repository';
+import type { GlobalRepository, GlobalResource } from '../repository';
 import type {
     EntryStatus,
     Global,
@@ -175,7 +175,7 @@ async function writeRow(params: {
     key: string;
     id: string | null;
     locale: string;
-    current: GlobalRow | null;
+    current: GlobalResource | null;
     fields: JsonObject;
     status: EntryStatus | undefined;
     publishedAt: Date | null | undefined;

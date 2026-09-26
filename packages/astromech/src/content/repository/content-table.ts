@@ -9,12 +9,12 @@ import type {
     ContentRef,
     ContentRepository,
     ContentRepositoryOptions,
-    ContentRow,
     ContentShape,
     ContentWrite,
     JoinedQuery,
     JoinedWhere,
-    OwnerFilter,
+    Resource,
+    ResourceFilter,
     StoredRows,
 } from './types';
 import type { SortClause } from '@/content/list';
@@ -36,17 +36,17 @@ import { createVersionsRepository } from './versions';
  * read carries both rows in one flat record without either shadowing the other.
  * CamelCase so `CamelCasePlugin` round-trips it.
  */
-const OWNER_PREFIX = 'owner';
+const RESOURCE_PREFIX = 'resource';
 
-function ownerAlias(column: string): string {
-    return `${OWNER_PREFIX}${column.charAt(0).toUpperCase()}${column.slice(1)}`;
+function resourceAlias(column: string): string {
+    return `${RESOURCE_PREFIX}${column.charAt(0).toUpperCase()}${column.slice(1)}`;
 }
 
 /** The write keys that are not content columns and never reach a row patch. */
 const NON_COLUMN_KEYS = new Set(['locale']);
 
 export function createContentRepository<
-    R extends ContentRow,
+    R extends Resource,
     O extends Table,
     C extends Table,
     V extends Table,
@@ -61,18 +61,18 @@ export function createContentRepository<
         typeof opts.defaultLocale === 'function'
             ? opts.defaultLocale()
             : (opts.defaultLocale ?? getDefaultContentLocale());
-    const { ownerColumn } = shape;
+    const { resourceIdColumn } = shape;
     const inheritedColumns = shape.inheritedColumns ?? [];
-    const ownerKey = kyselyTableKey(shape.table.name);
+    const resourceKey = kyselyTableKey(shape.table.name);
     const contentKey = kyselyTableKey(shape.contentTable.name);
-    const ownerColumns = Object.keys(shape.table.columns);
+    const resourceColumns = Object.keys(shape.table.columns);
     const contentColumns = Object.keys(shape.contentTable.columns);
     const hasStagedFor = contentColumns.includes('stagedFor');
-    const ownerFilter: OwnerFilter = opts.ownerFilter ?? (() => []);
+    const resourceFilter: ResourceFilter = opts.resourceFilter ?? (() => []);
 
     // Unbound when there is no override, so they follow `setDb` per call exactly
     // as `handle()` does.
-    const owners = createRepository(shape.table, dbOverride);
+    const resourceRows = createRepository(shape.table, dbOverride);
     const contents = createRepository(shape.contentTable, dbOverride);
     const versionsRepository = createVersionsRepository(shape.versionsTable, dbOverride);
 
@@ -90,24 +90,26 @@ export function createContentRepository<
     };
 
     /**
-     * A content-row INSERT: the write's own columns, the owner row's inherited
-     * ones, and the defaults for whatever is still missing.
+     * A content-row INSERT: the write's own columns, the resource row's
+     * inherited ones, and the defaults for whatever is still missing.
      */
     function insertValues(params: {
         id: string;
         locale: string;
         stagedFor: string | null;
-        own: Record<string, unknown>;
+        resourceRow: Record<string, unknown>;
         data: ContentWrite;
     }): Record<string, unknown> {
         const values: Record<string, unknown> = {
-            [ownerColumn]: params.id,
+            [resourceIdColumn]: params.id,
             locale: params.locale,
             createdBy: params.data.createdBy ?? null,
             updatedBy: params.data.updatedBy ?? null,
         };
         if (hasStagedFor) values['stagedFor'] = params.stagedFor;
-        for (const column of inheritedColumns) values[column] = params.own[column];
+        for (const column of inheritedColumns) {
+            values[column] = params.resourceRow[column];
+        }
         for (const [key, value] of Object.entries(params.data)) {
             if (NON_COLUMN_KEYS.has(key) || value === undefined) continue;
             values[key] = value;
@@ -131,15 +133,19 @@ export function createContentRepository<
         return patch;
     }
 
-    /** `SELECT` over the join, every content column plus every aliased owner one. */
+    /** `SELECT` over the join: every content column and every aliased resource column. */
     function joined(): JoinedQuery {
         let query = db()
             .selectFrom(contentKey)
-            .innerJoin(ownerKey, `${ownerKey}.id`, `${contentKey}.${ownerColumn}`)
+            .innerJoin(
+                resourceKey,
+                `${resourceKey}.id`,
+                `${contentKey}.${resourceIdColumn}`
+            )
             .selectAll(contentKey);
-        for (const column of ownerColumns) {
+        for (const column of resourceColumns) {
             query = query.select(
-                `${ownerKey}.${column} as ${ownerAlias(column)}` as never
+                `${resourceKey}.${column} as ${resourceAlias(column)}` as never
             );
         }
         return query;
@@ -148,7 +154,11 @@ export function createContentRepository<
     async function count(where: JoinedWhere): Promise<number> {
         const row = await db()
             .selectFrom(contentKey)
-            .innerJoin(ownerKey, `${ownerKey}.id`, `${contentKey}.${ownerColumn}`)
+            .innerJoin(
+                resourceKey,
+                `${resourceKey}.id`,
+                `${contentKey}.${resourceIdColumn}`
+            )
             .select((eb) => eb.fn.countAll<number>().as('c'))
             .where(where)
             .executeTakeFirst();
@@ -157,21 +167,23 @@ export function createContentRepository<
 
     /** Split a joined record back into the two rows and decode each. */
     function split(row: Record<string, unknown>): {
-        own: Record<string, unknown>;
-        content: Record<string, unknown>;
+        resourceRow: Record<string, unknown>;
+        contentRow: Record<string, unknown>;
     } {
-        const own: Record<string, unknown> = {};
-        for (const column of ownerColumns) own[column] = row[ownerAlias(column)];
-        const content: Record<string, unknown> = {};
-        for (const column of contentColumns) content[column] = row[column];
+        const resourceRow: Record<string, unknown> = {};
+        for (const column of resourceColumns) {
+            resourceRow[column] = row[resourceAlias(column)];
+        }
+        const contentRow: Record<string, unknown> = {};
+        for (const column of contentColumns) contentRow[column] = row[column];
         return {
-            own: decodeWith(shape.table, own),
-            content: decodeWith(shape.contentTable, content),
+            resourceRow: decodeWith(shape.table, resourceRow),
+            contentRow: decodeWith(shape.contentTable, contentRow),
         };
     }
 
     /**
-     * One grouped `SELECT <ownerColumn>, locale FROM <content>` over the page,
+     * One grouped `SELECT <resourceIdColumn>, locale FROM <content>` over the page,
      * so a list of N rows costs one extra query rather than N.
      */
     async function locales(ids: string[]): Promise<Map<string, string[]>> {
@@ -180,12 +192,12 @@ export function createContentRepository<
 
         const rows = await contents.findMany({
             where: {
-                [ownerColumn]: { in: ids },
+                [resourceIdColumn]: { in: ids },
                 ...(hasStagedFor ? { stagedFor: null } : {}),
             },
         });
         for (const row of rows) {
-            const key = String((row as Record<string, unknown>)[ownerColumn]);
+            const key = String((row as Record<string, unknown>)[resourceIdColumn]);
             const found = byId.get(key);
             if (found) found.push(String(row.locale));
             else byId.set(key, [String(row.locale)]);
@@ -198,43 +210,47 @@ export function createContentRepository<
     async function findStoredRows(ids?: readonly string[]): Promise<StoredRows> {
         if (ids === undefined) {
             return {
-                owners: await owners.findMany(),
+                resourceRows: await resourceRows.findMany(),
                 contents: await contents.findMany(),
             };
         }
-        const stored: StoredRows = { owners: [], contents: [] };
+        const stored: StoredRows = { resourceRows: [], contents: [] };
         for (const chunk of chunks(ids)) {
-            const ownRows = await owners.findMany({ where: { id: { in: chunk } } });
-            const contentRows = await contents.findMany({
-                where: { [ownerColumn]: { in: chunk } } as never,
+            const resourceChunk = await resourceRows.findMany({
+                where: { id: { in: chunk } },
             });
-            stored.owners.push(...(ownRows as Record<string, unknown>[]));
+            const contentRows = await contents.findMany({
+                where: { [resourceIdColumn]: { in: chunk } } as never,
+            });
+            stored.resourceRows.push(...(resourceChunk as Record<string, unknown>[]));
             stored.contents.push(...(contentRows as Record<string, unknown>[]));
         }
         return stored;
     }
 
-    /** Decode joined rows and attach each one's locale list. */
+    /** Decode joined rows into resources and attach each one's locale list. */
     async function decodeRows(raw: Record<string, unknown>[]): Promise<R[]> {
         if (raw.length === 0) return [];
         const split_ = raw.map(split);
         const ids = Array.from(
-            new Set(split_.map(({ content }) => String(content[ownerColumn])))
+            new Set(split_.map(({ contentRow }) => String(contentRow[resourceIdColumn])))
         );
         const byId = await locales(ids);
-        return split_.map(({ own, content }) =>
+        return split_.map(({ resourceRow, contentRow }) =>
             opts.decode(
-                own as never,
-                content as never,
-                byId.get(String(content[ownerColumn])) ?? [String(content['locale'])]
+                resourceRow as never,
+                contentRow as never,
+                byId.get(String(contentRow[resourceIdColumn])) ?? [
+                    String(contentRow['locale']),
+                ]
             )
         );
     }
 
     /**
-     * Replace each row with its `locale` row where it has one; a row with none
-     * keeps what it was read in. One query per chunk of ids, for a page read in
-     * the default locale.
+     * Replace each resource with its read in `locale` where it has a content row
+     * there; one with none keeps what it was read in. One query per chunk of
+     * ids, for a page read in the default locale.
      */
     async function overlayLocale(read: R[], locale: string): Promise<R[]> {
         const byId = new Map<string, R>();
@@ -246,7 +262,7 @@ export function createContentRepository<
             const raw = await joined()
                 .where((eb) =>
                     eb.and([
-                        eb(`${contentKey}.${ownerColumn}`, 'in', chunk),
+                        eb(`${contentKey}.${resourceIdColumn}`, 'in', chunk),
                         eb(`${contentKey}.locale`, '=', locale),
                         ...canonicalOnly(eb),
                     ])
@@ -258,8 +274,8 @@ export function createContentRepository<
     }
 
     /**
-     * A page of the joined read under `where`, ordered by resource-row columns,
-     * each row read in `locale` where it has one. Omit `limit` for every match.
+     * A page of resources under `where`, ordered by resource-row columns, each
+     * read in `locale` where it has a content row. Omit `limit` for every match.
      */
     async function findMany(params: {
         where: JoinedWhere;
@@ -270,7 +286,7 @@ export function createContentRepository<
     }): Promise<R[]> {
         let q = joined().where(params.where);
         for (const { field, direction } of params.orderBy) {
-            q = q.orderBy(`${ownerKey}.${field}`, direction);
+            q = q.orderBy(`${resourceKey}.${field}`, direction);
         }
         if (params.limit !== undefined) q = q.limit(params.limit);
         if (params.offset !== undefined) q = q.offset(params.offset);
@@ -295,10 +311,10 @@ export function createContentRepository<
         return joined()
             .where((eb) =>
                 eb.and([
-                    eb(`${contentKey}.${ownerColumn}`, '=', id),
+                    eb(`${contentKey}.${resourceIdColumn}`, '=', id),
                     eb(`${contentKey}.locale`, '=', locale),
                     ...canonicalOnly(eb),
-                    ...ownerFilter(eb, { includeTrashed }),
+                    ...resourceFilter(eb, { includeTrashed }),
                 ])
             )
             .executeTakeFirst();
@@ -333,9 +349,9 @@ export function createContentRepository<
             await joined()
                 .where((eb) =>
                     eb.and([
-                        eb(`${contentKey}.${ownerColumn}`, '=', id),
+                        eb(`${contentKey}.${resourceIdColumn}`, '=', id),
                         ...canonicalOnly(eb),
-                        ...ownerFilter(eb, { includeTrashed }),
+                        ...resourceFilter(eb, { includeTrashed }),
                     ])
                 )
                 .orderBy(`${contentKey}.locale`, 'asc')
@@ -344,18 +360,21 @@ export function createContentRepository<
     }
 
     async function create(
-        own: Record<string, unknown>,
+        resourceRow: Record<string, unknown>,
         content: ContentWrite
     ): Promise<R> {
         return transaction(async () => {
-            const ownRow = (await owners.create(own as never)) as Record<string, unknown>;
-            const id = String(ownRow['id']);
+            const created = (await resourceRows.create(resourceRow as never)) as Record<
+                string,
+                unknown
+            >;
+            const id = String(created['id']);
             await contents.create(
                 insertValues({
                     id,
                     locale: content.locale ?? defaultLocale(),
                     stagedFor: null,
-                    own: ownRow,
+                    resourceRow: created,
                     data: content,
                 }) as never
             );
@@ -381,17 +400,17 @@ export function createContentRepository<
         const existing = await findCanonical(ref.id, locale, true);
 
         if (!existing) {
-            const ownRow = (await owners.findOne({ id: ref.id })) as Record<
+            const resourceRow = (await resourceRows.findOne({ id: ref.id })) as Record<
                 string,
                 unknown
             > | null;
-            if (!ownRow) throw missing(ref.id);
+            if (!resourceRow) throw missing(ref.id);
             await contents.create(
                 insertValues({
                     id: ref.id,
                     locale,
                     stagedFor: null,
-                    own: ownRow,
+                    resourceRow,
                     data,
                 }) as never
             );
@@ -400,8 +419,8 @@ export function createContentRepository<
             // (`Patch` admits it and the encoder drops it), so the partial write
             // forwards straight through. `updatedAt` is stamped by the wrapper
             // (the column declares `onUpdate`).
-            const { content } = split(existing);
-            await contents.update(String(content['id']), patchValues(data) as never);
+            const { contentRow } = split(existing);
+            await contents.update(String(contentRow['id']), patchValues(data) as never);
         }
 
         return required(
@@ -411,7 +430,7 @@ export function createContentRepository<
     }
 
     async function del(id: string): Promise<void> {
-        await owners.delete(id);
+        await resourceRows.delete(id);
     }
 
     /** The staged content row for one locale, encoded, or undefined. */
@@ -423,10 +442,10 @@ export function createContentRepository<
         return joined()
             .where((eb) =>
                 eb.and([
-                    eb(`${contentKey}.${ownerColumn}`, '=', id),
+                    eb(`${contentKey}.${resourceIdColumn}`, '=', id),
                     eb(`${contentKey}.locale`, '=', locale),
                     eb(`${contentKey}.stagedFor`, 'is not', null),
-                    ...ownerFilter(eb, { includeTrashed: false }),
+                    ...resourceFilter(eb, { includeTrashed: false }),
                 ])
             )
             .executeTakeFirst();
@@ -441,14 +460,14 @@ export function createContentRepository<
             const locale = ref.locale ?? defaultLocale();
             const canonical = await findCanonical(ref.id, locale, false);
             if (!canonical) throw missing(ref.id);
-            const { own, content } = split(canonical);
+            const { resourceRow, contentRow } = split(canonical);
 
             await contents.create(
                 insertValues({
                     id: ref.id,
                     locale,
-                    stagedFor: String(content['id']),
-                    own,
+                    stagedFor: String(contentRow['id']),
+                    resourceRow,
                     data,
                 }) as never
             );
@@ -460,8 +479,8 @@ export function createContentRepository<
             const existing = await findStaged(ref.id, locale);
             if (!existing) throw noStaged(ref.id);
 
-            const { content } = split(existing);
-            await contents.update(String(content['id']), patchValues(data) as never);
+            const { contentRow } = split(existing);
+            await contents.update(String(contentRow['id']), patchValues(data) as never);
             const updated = await staging.findOne({ id: ref.id, locale });
             if (!updated) throw noStaged(ref.id);
             return updated;
@@ -469,7 +488,7 @@ export function createContentRepository<
 
         delete: async (ref: ContentRef): Promise<void> => {
             await contents.deleteMany({
-                [ownerColumn]: ref.id,
+                [resourceIdColumn]: ref.id,
                 locale: ref.locale ?? defaultLocale(),
                 stagedFor: { ne: null },
             });
@@ -481,9 +500,9 @@ export function createContentRepository<
             const raw = await joined()
                 .where((eb) =>
                     eb.and([
-                        eb(`${contentKey}.${ownerColumn}`, '=', id),
+                        eb(`${contentKey}.${resourceIdColumn}`, '=', id),
                         ...canonicalOnly(eb),
-                        ...ownerFilter(eb, { includeTrashed: false }),
+                        ...resourceFilter(eb, { includeTrashed: false }),
                         ...(excludeLocale === undefined
                             ? []
                             : [eb(`${contentKey}.locale`, '!=', excludeLocale)]),
@@ -500,7 +519,7 @@ export function createContentRepository<
         ): Promise<void> => {
             const siblings = await contents.findMany({
                 where: {
-                    [ownerColumn]: id,
+                    [resourceIdColumn]: id,
                     locale: { ne: excludeLocale },
                     ...(hasStagedFor ? { stagedFor: null } : {}),
                 },
@@ -545,6 +564,6 @@ export function createContentRepository<
         translatable,
         staging,
         versions: versionsRepository,
-        kysely: () => ({ db: db(), ownerKey, contentKey, joined }),
+        kysely: () => ({ db: db(), resourceKey, contentKey, joined }),
     };
 }

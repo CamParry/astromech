@@ -1,11 +1,11 @@
 /**
  * The user repository: the shared content repository over
  * `users`/`user_content`/`user_versions`, the user reads with their locale
- * fallback and name/email search, and the named account-row reads and writes.
+ * fallback and name/email search, and the named `users` row reads and writes.
  */
 
 import type { NewUserTableRow, UserContentRow, UserTableRow } from './tables';
-import type { ContentRow, ContentWrite, JoinedWhere } from '@/content/repository/types';
+import type { ContentWrite, JoinedWhere, Resource } from '@/content/repository/types';
 import type { Patch } from '@/database/repository/create-repository';
 import type { JsonObject, SortOption } from '@/types/index';
 import type { Expression, SqlBool } from 'kysely';
@@ -26,13 +26,13 @@ import {
 } from '@/database/tables';
 
 /** One locale of one user, as the users service reads it. */
-export type UserRow = ContentRow & {
+export type UserResource = Resource & {
     email: string;
     name: string;
     emailVerified: boolean;
     image: string | null;
     role: string;
-    /** The account row's `updatedAt`. */
+    /** The `users` row's `updatedAt`. */
     accountUpdatedAt: Date;
 };
 
@@ -40,40 +40,40 @@ export type UserRow = ContentRow & {
 export type UserListParams = {
     search?: string | undefined;
     sort?: SortOption | SortOption[] | undefined;
-    /** The locale each row is read in where it has one; the default otherwise. */
+    /** The locale each user is read in where they have one; the default otherwise. */
     locale?: string | undefined;
     limit?: number | undefined;
     offset?: number | undefined;
 };
 
-/** The account-row columns a profile write may change. */
-type UserAccountPatch = Pick<Patch<typeof usersTable>, 'name' | 'email' | 'role'>;
+/** The `users` row columns a profile write may change. */
+type UserRowPatch = Pick<Patch<typeof usersTable>, 'name' | 'email' | 'role'>;
 
 export type UserRepository = ReturnType<typeof createUserRepository>;
 
-/** The two joined rows plus the locale list, in the shape the service reads. */
-function toUserRow(
-    own: UserTableRow,
-    content: UserContentRow,
+/** The two joined rows plus the locale list, as the resource the service reads. */
+function toUserResource(
+    resourceRow: UserTableRow,
+    contentRow: UserContentRow,
     locales: string[]
-): UserRow {
+): UserResource {
     return {
-        id: content.userId,
-        contentId: content.id as UserRow['contentId'],
-        locale: content.locale,
+        id: contentRow.userId,
+        contentId: contentRow.id as UserResource['contentId'],
+        locale: contentRow.locale,
         locales,
         staged: false,
-        fields: (content.fields ?? {}) as JsonObject,
-        email: own.email,
-        name: own.name,
-        emailVerified: own.emailVerified,
-        image: own.image,
-        role: own.role,
-        createdAt: own.createdAt,
-        updatedAt: content.updatedAt,
-        createdBy: content.createdBy,
-        updatedBy: content.updatedBy,
-        accountUpdatedAt: own.updatedAt,
+        fields: (contentRow.fields ?? {}) as JsonObject,
+        email: resourceRow.email,
+        name: resourceRow.name,
+        emailVerified: resourceRow.emailVerified,
+        image: resourceRow.image,
+        role: resourceRow.role,
+        createdAt: resourceRow.createdAt,
+        updatedAt: contentRow.updatedAt,
+        createdBy: contentRow.createdBy,
+        updatedBy: contentRow.updatedBy,
+        accountUpdatedAt: resourceRow.updatedAt,
     };
 }
 
@@ -82,19 +82,19 @@ function toUserRow(
  * repository follows a transaction scope and a config reload.
  */
 function createUserRepository() {
-    const owners = createRepository(usersTable);
+    const resourceRows = createRepository(usersTable);
     const accounts = createRepository(accountsTable);
     const content = createContentRepository(
         {
             table: usersTable,
             contentTable: userContentTable,
             versionsTable: userVersionsTable,
-            ownerColumn: 'userId',
+            resourceIdColumn: 'userId',
         },
-        { decode: toUserRow }
+        { decode: toUserResource }
     );
 
-    const ownerKey = kyselyTableKey(usersTable.name);
+    const resourceKey = kyselyTableKey(usersTable.name);
     const contentKey = kyselyTableKey(userContentTable.name);
 
     /**
@@ -111,8 +111,8 @@ function createUserRepository() {
             if (search) {
                 conditions.push(
                     eb.or([
-                        eb(`${ownerKey}.name`, 'like', `%${search}%`),
-                        eb(`${ownerKey}.email`, 'like', `%${search}%`),
+                        eb(`${resourceKey}.name`, 'like', `%${search}%`),
+                        eb(`${resourceKey}.email`, 'like', `%${search}%`),
                     ])
                 );
             }
@@ -124,7 +124,7 @@ function createUserRepository() {
      * Name order unless `params.sort` says otherwise; an unknown sort throws.
      * Omit `limit` for every match.
      */
-    async function findMany(params: UserListParams = {}): Promise<UserRow[]> {
+    async function findMany(params: UserListParams = {}): Promise<UserResource[]> {
         return content.findMany({
             where: filter(params),
             orderBy: buildOrderBy(RESOURCE_SPECS.user.sortable, params.sort, [
@@ -141,7 +141,7 @@ function createUserRepository() {
     }
 
     /** Every content row written in `locale`, for the relationship and validity scans. */
-    async function findByLocale(locale: string): Promise<UserRow[]> {
+    async function findByLocale(locale: string): Promise<UserResource[]> {
         const raw = await content
             .kysely()
             .joined()
@@ -150,39 +150,15 @@ function createUserRepository() {
         return content.decodeRows(raw);
     }
 
-    /** The account row alone, read as a `UserRow` with no content. */
-    async function findAccountRow(id: string): Promise<UserRow | null> {
-        const own = await owners.findOne({ id });
-        if (!own) return null;
-        return {
-            id: own.id,
-            contentId: '' as UserRow['contentId'],
-            locale: getDefaultContentLocale(),
-            locales: [],
-            staged: false,
-            fields: {},
-            email: own.email,
-            name: own.name,
-            emailVerified: own.emailVerified,
-            image: own.image,
-            role: own.role,
-            createdAt: own.createdAt,
-            updatedAt: own.updatedAt,
-            createdBy: null,
-            updatedBy: null,
-            accountUpdatedAt: own.updatedAt,
-        };
-    }
-
     /**
      * One user in `locale` (the default when absent). With `fallbackLocale`, a
-     * miss reads that locale, then the account row alone: a `users` row written
-     * outside the users service has no content row, and must still read.
+     * miss reads that locale, then any locale the user has; a user with no
+     * content row reads as null.
      */
     async function findOne(
         id: string,
         options?: { locale?: string | undefined; fallbackLocale?: string | undefined }
-    ): Promise<UserRow | null> {
+    ): Promise<UserResource | null> {
         const locale = options?.locale ?? getDefaultContentLocale();
         const found = await content.findOne({ id, locale });
         const fallbackLocale = options?.fallbackLocale;
@@ -191,20 +167,23 @@ function createUserRepository() {
             const fallback = await content.findOne({ id, locale: fallbackLocale });
             if (fallback) return fallback;
         }
-        return findAccountRow(id);
+        return content.findAnyLocale(id);
     }
 
-    /** The account rows for `ids`, in slices small enough for one `IN (…)` each. */
-    async function findAccounts(ids: Iterable<string>): Promise<UserTableRow[]> {
+    /** The `users` rows for `ids`, in slices small enough for one `IN (…)` each. */
+    async function findUserRows(ids: Iterable<string>): Promise<UserTableRow[]> {
         const rows: UserTableRow[] = [];
         for (const chunk of chunks(ids)) {
-            rows.push(...(await owners.findMany({ where: { id: { in: chunk } } })));
+            rows.push(...(await resourceRows.findMany({ where: { id: { in: chunk } } })));
         }
         return rows;
     }
 
-    async function create(own: NewUserTableRow, write: ContentWrite): Promise<UserRow> {
-        return content.create(own, write);
+    async function create(
+        resourceRow: NewUserTableRow,
+        write: ContentWrite
+    ): Promise<UserResource> {
+        return content.create(resourceRow, write);
     }
 
     /**
@@ -213,7 +192,7 @@ function createUserRepository() {
      * racer inserts nothing.
      */
     async function createIfEmpty(row: NewUserTableRow): Promise<boolean> {
-        const { db, table } = owners.kysely();
+        const { db, table } = resourceRows.kysely();
         // `encodeWith` mints the id and the timestamps the columns default, and
         // serializes every value; the Kysely handle spells the column names the
         // way `CamelCasePlugin` does.
@@ -251,9 +230,9 @@ function createUserRepository() {
     }
 
     /**
-     * Drops the row and every relationship pointing at (or from) it. Call it
-     * inside a transaction: an index outliving a failed delete would name a row
-     * that is gone.
+     * Drops the user and every relationship pointing at (or from) them. Call it
+     * inside a transaction: an index outliving a failed delete would name a user
+     * who is gone.
      */
     async function del(id: string): Promise<void> {
         // Relationship rows first: deleting the user row is what orphans them.
@@ -267,23 +246,24 @@ function createUserRepository() {
         findMany,
         count,
         findByLocale,
-        /** The account row alone, the one better-auth writes, or null. */
-        findAccount: (id: string): Promise<UserTableRow | null> => owners.findOne({ id }),
-        findAccounts,
+        /** The `users` row alone, the one better-auth writes, or null. */
+        findUserRow: (id: string): Promise<UserTableRow | null> =>
+            resourceRows.findOne({ id }),
+        findUserRows,
         /** Every user's id. */
-        findIds: (): Promise<string[]> => owners.pluck('id'),
+        findIds: (): Promise<string[]> => resourceRows.pluck('id'),
         /** The ids of the users holding `role`. */
         findIdsByRole: (role: string): Promise<string[]> =>
-            owners.pluck('id', { where: { role } }),
+            resourceRows.pluck('id', { where: { role } }),
         /** How many users hold `role`. */
-        countByRole: (role: string): Promise<number> => owners.count({ role }),
+        countByRole: (role: string): Promise<number> => resourceRows.count({ role }),
         create,
         createIfEmpty,
         createCredentialAccount,
         update: content.update,
-        /** Write the account-row columns, whatever the locale. */
-        updateAccount: async (id: string, patch: UserAccountPatch): Promise<void> => {
-            await owners.update(id, patch);
+        /** Write the `users` row columns, whatever the locale. */
+        updateUserRow: async (id: string, patch: UserRowPatch): Promise<void> => {
+            await resourceRows.update(id, patch);
         },
         delete: del,
         versions: content.versions,

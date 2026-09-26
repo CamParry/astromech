@@ -141,7 +141,14 @@ transport takes an app context instead. Named like the transaction scope. Not
 "request context", which reads as the app context.
 
 **Resource.** An entry, a global, a media item or a user: the four things that
-carry fields and run the field pipeline. Not "record" or "document".
+carry fields and run the field pipeline. Not "record" or "document". In code,
+the internal model of one is also a resource (`EntryResource`, `GlobalResource`,
+`MediaResource`, `UserResource`, on the base `Resource`): the resource row
+joined with one locale's content row, plus the locales that have one. Its
+version rows are not part of it. The repository's decoder builds it
+(`toUserResource`), and the public type keeps the plain name (`User`). Not
+`UserRow`, `StoredUser`, `UserEntity`, `UserInstance` or `UserInternal`, and
+not `UserOutput` or `PublicUser` for the public type.
 
 **Schema.** Request validation, or a whole-shape aggregate. Never the table
 declarations, which are tables.
@@ -161,7 +168,8 @@ version.
 and never a value's column form (encoded).
 
 **Table.** A declared database table and its row types. Migrations are generated
-by diffing the declarations.
+by diffing the declarations. A row is one row of one table (a resource row, a
+content row, a version row) and nothing else: a joined read is a resource.
 
 **Tool definition.** A manifest method projected into something a model may call,
 with its description, input schema and confirmation wording.

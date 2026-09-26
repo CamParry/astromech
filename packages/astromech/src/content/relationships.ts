@@ -21,12 +21,12 @@ type ContentRelationshipsShape = {
     /** The resource's repository; only its stored-row read is used. */
     repository: { findStoredRows(ids?: readonly string[]): Promise<StoredRows> };
     /** The content rows' column holding the resource id: `userId`, `globalId`. */
-    ownerColumn: string;
+    resourceIdColumn: string;
     kind: ResourceType;
     /** The field tree one resource row's content is read against. */
-    fields: (config: ResolvedConfig, owner: Record<string, unknown>) => Field[];
+    fields: (config: ResolvedConfig, resourceRow: Record<string, unknown>) => Field[];
     /** The index's `sourceType` for one resource row; absent means null. */
-    sourceType?: (owner: Record<string, unknown>) => string | null;
+    sourceType?: (resourceRow: Record<string, unknown>) => string | null;
 };
 
 /**
@@ -72,34 +72,38 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
         config: ResolvedConfig,
         ids?: readonly string[]
     ): Promise<RelationshipIndexSource[]> {
-        const { owners, contents } = await shape.repository.findStoredRows(ids);
+        const { resourceRows, contents } = await shape.repository.findStoredRows(ids);
 
-        const rowsByOwner = new Map<string, ContentFields[]>();
+        const contentRowsById = new Map<string, ContentFields[]>();
         for (const row of contents) {
-            const ownerId = String(row[shape.ownerColumn]);
-            const held = rowsByOwner.get(ownerId);
+            const resourceId = String(row[shape.resourceIdColumn]);
+            const held = contentRowsById.get(resourceId);
             if (held) held.push(row);
-            else rowsByOwner.set(ownerId, [row]);
+            else contentRowsById.set(resourceId, [row]);
         }
 
-        return owners.map((owner) =>
-            indexSource(config, owner, rowsByOwner.get(String(owner['id'])) ?? [])
+        return resourceRows.map((resourceRow) =>
+            indexSource(
+                config,
+                resourceRow,
+                contentRowsById.get(String(resourceRow['id'])) ?? []
+            )
         );
     }
 
     function indexSource(
         config: ResolvedConfig,
-        owner: Record<string, unknown>,
+        resourceRow: Record<string, unknown>,
         rows: readonly ContentFields[]
     ): RelationshipIndexSource {
-        const definitions = flattenFieldNodes(shape.fields(config, owner));
+        const definitions = flattenFieldNodes(shape.fields(config, resourceRow));
         return {
             // A resource with a staged row is still live, so the source is
             // never itself staged; the per-reference flag carries staging.
             source: {
-                id: String(owner['id']),
+                id: String(resourceRow['id']),
                 kind: shape.kind,
-                type: shape.sourceType?.(owner) ?? null,
+                type: shape.sourceType?.(resourceRow) ?? null,
                 staged: false,
             },
             references: mergeContentReferences(rows, (fields) =>
