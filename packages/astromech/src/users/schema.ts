@@ -1,12 +1,9 @@
 import { z } from '@hono/zod-openapi';
 import { sortSchema } from '@/content/list';
+import { versionSchema } from '@/content/schema';
 import { DEFAULT_ROLE_SLUG } from '@/permissions/roles';
 import { withFallback } from '@/services/fallback';
-import {
-    jsonObject,
-    nullableUnparsedJsonObject,
-    unparsedJsonObject,
-} from '@/services/json';
+import { jsonObject, unparsedJsonObject } from '@/services/json';
 
 export const createUserSchema = z
     .object({
@@ -65,16 +62,13 @@ export const userSchema = z
     })
     .openapi('User');
 
-/** A saved snapshot of one locale of one user's fields. */
-export const userVersionSchema = z
-    .object({
-        id: z.string(),
-        userId: z.string(),
-        locale: z.string(),
-        /** Position in the sequence, which runs per user and locale from 1. */
-        version: z.number(),
-        fields: nullableUnparsedJsonObject,
-        createdAt: z.date(),
-        createdBy: withFallback(z.string().nullable(), null),
-    })
-    .openapi('UserVersion');
+/**
+ * The keys a user version keeps: the site's own fields in one locale. The
+ * account (`name`, `email`, `role`) is never versioned.
+ */
+export const userSnapshotSchema = userSchema
+    .pick({ fields: true })
+    .openapi('UserSnapshot');
+
+/** One saved version of one locale of a user's fields, as `getVersion` answers it. */
+export const userVersionSchema = versionSchema('UserVersion', userSnapshotSchema);

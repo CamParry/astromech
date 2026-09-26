@@ -285,10 +285,7 @@ describe('the documented responses', () => {
         const doc = document();
         const object = { type: 'object', additionalProperties: true };
         expect(component(doc, 'Entry').properties?.['fields']).toEqual(object);
-        expect(component(doc, 'EntryVersion').properties?.['fields']).toEqual({
-            ...object,
-            nullable: true,
-        });
+        expect(component(doc, 'EntrySnapshot').properties?.['fields']).toEqual(object);
     });
 
     it('lists a key with a fallback as required, and an optional one as optional', () => {
@@ -311,10 +308,73 @@ describe('the documented responses', () => {
             type: 'number',
             nullable: true,
         });
-        expect(component(doc, 'EntryVersion').properties?.['status']).toEqual({
+        expect(component(doc, 'MediaSnapshot').properties?.['alt']).toEqual({
             type: 'string',
-            enum: ['unpublished', 'published', 'scheduled'],
             nullable: true,
         });
+    });
+});
+
+describe('the documented versions', () => {
+    const resources = [
+        ['/entries/{type}/{id}', 'Entry'],
+        ['/globals/{key}', 'Global'],
+        ['/media/{id}', 'Media'],
+        ['/users/{id}', 'User'],
+    ] as const;
+
+    it('lists every resource’s versions as the shared metadata component', () => {
+        const doc = document();
+        for (const [path] of resources) {
+            const list = responseSchema(doc.paths[`${path}/versions`]?.['get'], 200);
+            expect(list?.properties?.['data']?.items, path).toEqual({
+                $ref: '#/components/schemas/VersionMetadata',
+            });
+        }
+        expect(Object.keys(component(doc, 'VersionMetadata').properties ?? {})).toEqual([
+            'version',
+            'locale',
+            'createdAt',
+            'createdBy',
+        ]);
+    });
+
+    it('answers one version as metadata plus the resource’s snapshot', () => {
+        const doc = document();
+        for (const [path, name] of resources) {
+            const get = doc.paths[`${path}/versions/{version}`]?.['get'];
+            expect(responseSchema(get, 200)?.properties?.['data'], path).toEqual({
+                $ref: `#/components/schemas/${name}Version`,
+            });
+            expect(responseSchema(get, 404), path).toEqual({
+                $ref: '#/components/schemas/Error',
+            });
+            const [metadata, own] = component(doc, `${name}Version`).allOf ?? [];
+            expect(metadata).toEqual({ $ref: '#/components/schemas/VersionMetadata' });
+            expect(own?.properties?.['snapshot']).toEqual({
+                $ref: `#/components/schemas/${name}Snapshot`,
+            });
+            expect(own?.required).toEqual(['snapshot']);
+        }
+    });
+
+    it('narrows each snapshot to the keys a version keeps', () => {
+        const doc = document();
+        const keys = (name: string): string[] =>
+            Object.keys(component(doc, name).properties ?? {}).sort();
+        expect(keys('EntrySnapshot')).toEqual(['fields', 'slug', 'title']);
+        expect(keys('GlobalSnapshot')).toEqual(['fields']);
+        expect(keys('MediaSnapshot')).toEqual(['alt', 'caption', 'fields', 'title']);
+        expect(keys('UserSnapshot')).toEqual(['fields']);
+    });
+
+    it('documents the version number on the path as an integer', () => {
+        const doc = document();
+        const get = doc.paths['/users/{id}/versions/{version}']?.['get'];
+        const version = (get?.parameters ?? []).find((p) => p.name === 'version') as
+            | { in: string; schema?: Schema }
+            | undefined;
+        expect(version?.in).toBe('path');
+        expect(version?.schema).toEqual({ type: 'integer' });
     });
 });

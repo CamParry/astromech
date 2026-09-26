@@ -27,6 +27,15 @@ export function globalVersionsQueryOptions(key: string, locale: string) {
     });
 }
 
+/** One saved version of one locale of a global, with its snapshot. */
+export function globalVersionQueryOptions(key: string, locale: string, version: number) {
+    return queryOptions({
+        queryKey: queryKeys.globals.version(key, locale, version),
+        queryFn: () =>
+            astromechUntypedClient.globals.getVersion({ key, locale, version }),
+    });
+}
+
 export function useGlobalVersions(key: string, locale: string, enabled = true) {
     return useQuery({ ...globalVersionsQueryOptions(key, locale), enabled });
 }
@@ -39,8 +48,8 @@ export function globalMutations(key: string) {
     return {
         restoreVersion: mutationOptions({
             mutationKey: [...all, 'restoreVersion'],
-            mutationFn: ({ locale, versionId }: { locale: string; versionId: string }) =>
-                globals.restoreVersion({ key, locale, versionId }),
+            mutationFn: ({ locale, version }: { locale: string; version: number }) =>
+                globals.restoreVersion({ key, locale, version }),
             meta: {
                 invalidates,
                 successMessage: 'versions.restored',

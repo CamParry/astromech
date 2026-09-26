@@ -9,7 +9,11 @@ import type { UseAdminGlobalResult } from '../../hooks/use-admin-global';
 import { useNavigate } from '@tanstack/react-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { globalMutations, useGlobalVersions } from '../../hooks/globals';
+import {
+    globalMutations,
+    globalVersionQueryOptions,
+    useGlobalVersions,
+} from '../../hooks/globals';
 import { useAdminGlobal } from '../../hooks/use-admin-global';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { resolveLabel } from '../../i18n/labels';
@@ -57,7 +61,8 @@ function GlobalVersionsBody({
         <VersionHistory
             versions={versions}
             isLoading={isLoading}
-            onRestore={(versionId) => restoreMutation.mutate({ locale, versionId })}
+            versionQuery={(version) => globalVersionQueryOptions(key, locale, version)}
+            onRestore={(version) => restoreMutation.mutate({ locale, version })}
             isRestoring={restoreMutation.isPending}
             // A global has no list to go back to, so the trail starts at itself.
             breadcrumb={[{ label, to: editPath }, { label: t('versions.pageTitle') }]}

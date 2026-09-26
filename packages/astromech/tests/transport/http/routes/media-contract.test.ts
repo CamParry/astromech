@@ -5,7 +5,7 @@
  * and the permission each enforces.
  */
 
-import type { Media, MediaVersion, Role } from '@/types/index';
+import type { Media, MediaVersion, Role, VersionMetadata } from '@/types/index';
 import { adminRole, noopStorage, roleWith } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { mountRouter, seedTestUser } from '@tests/mount-router';
@@ -224,10 +224,25 @@ describe('GET /media/:id/versions', () => {
 
         const res = await app().request(`/media/${pngId}/versions`);
         expect(res.status).toBe(200);
-        const body = (await res.json()) as { data: MediaVersion[] };
+        const body = (await res.json()) as { data: VersionMetadata[] };
         expect(Object.keys(body)).toEqual(['data']);
-        // Newest first, and the upload's empty row is what the first save replaced.
-        expect(body.data.map((v) => v.alt)).toEqual(['first', null]);
+        expect(body.data.map((v) => v.version)).toEqual([2, 1]);
+    });
+
+    it('reads one version, and the upload’s empty row is what the first save replaced', async () => {
+        await mediaService.update({ id: pngId, data: { alt: 'first' } });
+        await mediaService.update({ id: pngId, data: { alt: 'second' } });
+
+        const alts = await Promise.all(
+            [2, 1].map(async (version) => {
+                const res = await app().request(
+                    `/media/${pngId}/versions/${String(version)}`
+                );
+                expect(res.status).toBe(200);
+                return ((await res.json()) as { data: MediaVersion }).data.snapshot.alt;
+            })
+        );
+        expect(alts).toEqual(['first', null]);
     });
 
     it('422s another locale — this config does not declare media translatable', async () => {
@@ -241,18 +256,19 @@ describe('GET /media/:id/versions', () => {
     });
 });
 
-describe('POST /media/:id/versions/:versionId/restore', () => {
-    async function firstVersionId(): Promise<string> {
+describe('POST /media/:id/versions/:version/restore', () => {
+    /** The newest version's number, after two saves. */
+    async function latestVersion(): Promise<string> {
         await mediaService.update({ id: pngId, data: { alt: 'first' } });
         await mediaService.update({ id: pngId, data: { alt: 'second' } });
         const [version] = await mediaService.versions({ id: pngId });
         if (!version) throw new Error('expected a version');
-        return version.id;
+        return String(version.version);
     }
 
     it('restores and returns { data: media }', async () => {
-        const versionId = await firstVersionId();
-        const res = await app().request(`/media/${pngId}/versions/${versionId}/restore`, {
+        const version = await latestVersion();
+        const res = await app().request(`/media/${pngId}/versions/${version}/restore`, {
             method: 'POST',
         });
         expect(res.status).toBe(200);
@@ -261,17 +277,17 @@ describe('POST /media/:id/versions/:versionId/restore', () => {
         expect(body.data.alt).toBe('first');
     });
 
-    it('404s an unknown version id', async () => {
-        const res = await app().request(`/media/${pngId}/versions/nope/restore`, {
+    it('404s an unknown version number', async () => {
+        const res = await app().request(`/media/${pngId}/versions/9/restore`, {
             method: 'POST',
         });
         expect(res.status).toBe(404);
     });
 
     it('403s without media:update', async () => {
-        const versionId = await firstVersionId();
+        const version = await latestVersion();
         const res = await app(roleWith(['media:read'])).request(
-            `/media/${pngId}/versions/${versionId}/restore`,
+            `/media/${pngId}/versions/${version}/restore`,
             { method: 'POST' }
         );
         expect(res.status).toBe(403);

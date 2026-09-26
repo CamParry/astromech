@@ -81,13 +81,13 @@ describe('mediaMutations().restoreVersion', () => {
             useAdminMutation(mediaMutations().restoreVersion, { onSuccess })
         );
 
-        result.current.mutate({ id: 'm1', locale: 'fr', versionId: 'v2' });
+        result.current.mutate({ id: 'm1', locale: 'fr', version: 2 });
 
         await waitFor(() => expect(onSuccess).toHaveBeenCalled());
         expect(restoreVersion).toHaveBeenCalledWith({
             id: 'm1',
             locale: 'fr',
-            versionId: 'v2',
+            version: 2,
         });
         expect(invalidate).toHaveBeenCalledWith({
             queryKey: queryKeys.media.all(),

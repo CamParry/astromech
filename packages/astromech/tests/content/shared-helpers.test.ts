@@ -1,7 +1,8 @@
 /**
  * The edges of the helpers the resources share: what a spec answers for a
  * target nothing declares, and the early returns of the translatable, index,
- * uniqueness, restore and usage helpers.
+ * uniqueness, restore and usage helpers, and that each version snapshot
+ * carries exactly the columns a version stores.
  */
 
 import type { ContentRowId } from '@/content/repository/types';
@@ -17,8 +18,12 @@ import { inheritSharedFields, propagateSharedFields } from '@/content/translatab
 import { isUniqueAmong } from '@/content/unique';
 import { listUsage } from '@/content/usage';
 import { restoreVersion } from '@/content/versions';
+import { entrySnapshotSchema } from '@/entries/schema';
 import { syncGlobalRelationships } from '@/globals/internal/relationships';
+import { globalSnapshotSchema } from '@/globals/schema';
+import { mediaSnapshotSchema } from '@/media/schema';
 import { RESOURCE_TYPES } from '@/types/domain';
+import { userSnapshotSchema } from '@/users/schema';
 
 const entriesService = currentServices.entries;
 const globalsService = currentServices.globals;
@@ -182,21 +187,43 @@ describe('isUniqueAmong', () => {
     });
 });
 
+describe('version snapshots', () => {
+    it('carry the spec’s versioned columns and `fields`, nothing else', () => {
+        const snapshots = {
+            entry: entrySnapshotSchema,
+            global: globalSnapshotSchema,
+            media: mediaSnapshotSchema,
+            user: userSnapshotSchema,
+        };
+        for (const kind of RESOURCE_TYPES) {
+            expect(Object.keys(snapshots[kind].shape).sort(), kind).toEqual(
+                [...RESOURCE_SPECS[kind].versionedColumns, 'fields'].sort()
+            );
+        }
+    });
+});
+
 describe('restoreVersion', () => {
     it('keeps the current fields when the version stored none', async () => {
         const contentId = 'c1' as ContentRowId;
         const versions = {
             findMany: () => Promise.resolve([]),
-            findOne: () => Promise.resolve({ contentId, fields: null }),
+            findOne: () =>
+                Promise.resolve({
+                    version: 1,
+                    fields: null,
+                    createdAt: new Date(),
+                    createdBy: null,
+                }),
             create: () => Promise.resolve(),
             latestNumber: () => Promise.resolve(0),
         };
         const restored = await restoreVersion({
             spec: RESOURCE_SPECS.user,
             versions,
-            current: { contentId, fields: { bio: 'Now' } },
-            versionId: 'v1',
-            address: { id: 'u1', locale: 'en' },
+            current: { contentId, locale: 'en', fields: { bio: 'Now' } },
+            version: 1,
+            address: { id: 'u1' },
             user: null,
             write: ({ fields }) => Promise.resolve(fields),
         });

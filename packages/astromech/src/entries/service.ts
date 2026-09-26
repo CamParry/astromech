@@ -23,6 +23,7 @@ import { publishEntries, scheduleEntries, unpublishEntries } from './methods/sta
 import { emptyTrash, trashEntries } from './methods/trash';
 import { updateEntries } from './methods/update';
 import { listEntryUsage } from './methods/used-by';
+import { getEntryVersion } from './methods/versions/get';
 import { listEntryVersions } from './methods/versions/list';
 import { restoreEntryVersion } from './methods/versions/restore';
 
@@ -39,6 +40,7 @@ export const entriesDefinition = defineService<EntriesService>(
         delete: deleteEntries,
         emptyTrash,
         versions: listEntryVersions,
+        getVersion: getEntryVersion,
         restoreVersion: restoreEntryVersion,
         publish: publishEntries,
         unpublish: unpublishEntries,

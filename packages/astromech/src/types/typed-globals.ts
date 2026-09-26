@@ -7,7 +7,7 @@
  * `TypedGlobal` result instead of the wide `Global`.
  */
 
-import type { Global, GlobalVersion } from './domain';
+import type { Global, VersionMetadata } from './domain';
 import type { GlobalsService, GlobalUpdateData } from './services';
 
 /**
@@ -94,17 +94,17 @@ export type TypedGlobalsServiceFor<GlobalMap> = {
         publishedAt: Date;
     }): Promise<Global>;
 
-    versions(params: { key: string; locale?: string }): Promise<GlobalVersion[]>;
+    versions(params: { key: string; locale?: string }): Promise<VersionMetadata[]>;
 
     restoreVersion<K extends keyof GlobalMap>(params: {
         key: K;
         locale?: string;
-        versionId: string;
+        version: number;
     }): Promise<TypedGlobal<FieldsForMap<GlobalMap, K>>>;
     restoreVersion(params: {
         key: string;
         locale?: string;
-        versionId: string;
+        version: number;
     }): Promise<Global>;
 
     createStaged<K extends keyof GlobalMap>(params: {

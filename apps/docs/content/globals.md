@@ -168,15 +168,22 @@ value, and an array or container is replaced whole.
 
 ## Versions
 
-Every change to a global's fields snapshots the previous state. List and restore
-them from the service, or from the versions page in the admin:
+Every change to a global's fields snapshots the previous state. List, read and
+restore them from the service, or from the versions page in the admin. A
+version is addressed by the global's key, the locale and its number, which runs
+from 1 per locale:
 
 ```ts
 const history = await app.globals.versions({ key: 'site', locale: 'en' });
-await app.globals.restoreVersion({ key: 'site', versionId: history[1].id });
+const version = await app.globals.getVersion({ key: 'site', locale: 'en', version: 2 });
+version.snapshot.fields; // the fields as they were
+await app.globals.restoreVersion({ key: 'site', locale: 'en', version: 2 });
 ```
 
-Restoring snapshots the current state first, so a restore is itself undoable.
+`versions` returns newest first, and each item carries only `version`,
+`locale`, `createdAt` and `createdBy`. `getVersion` adds `snapshot`, the fields
+the version holds. A number the locale has no version for is a 404. Restoring
+snapshots the current state first, so a restore is itself undoable.
 Declare `versioning: false` to turn history off for a global.
 
 ## Publishing and scheduling

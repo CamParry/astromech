@@ -1,21 +1,20 @@
 import type { GlobalResource } from '../../repository';
-import { z } from '@hono/zod-openapi';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { restoreVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
 import { getCanonicalGlobal } from '../../internal/global';
 import { syncGlobalRelationships } from '../../internal/relationships';
-import { globalSchema, localised } from '../../schema';
+import { globalSchema, versionAddress } from '../../schema';
 
 /**
- * Restores one locale of a global to one of its saved versions, snapshotting the
- * state being overwritten first so a restore is itself reversible. Throws when
- * the version does not exist or belongs to another locale.
+ * Restores one locale of a global to one of its saved versions, by its number,
+ * snapshotting the state being overwritten first so a restore is itself
+ * reversible. Throws when that locale has no version with the number.
  */
 export const restoreGlobalVersion = defineServiceMethod({
     summary: 'Roll a global back to an earlier version.',
-    input: localised.extend({ versionId: z.string() }),
+    input: versionAddress,
     output: globalSchema,
     access: gate('update'),
     requires: 'versioning',
@@ -30,8 +29,8 @@ export const restoreGlobalVersion = defineServiceMethod({
             spec: RESOURCE_SPECS.global,
             versions: repository.versions,
             current,
-            versionId: params.versionId,
-            address: { id: params.key, locale },
+            version: params.version,
+            address: { id: params.key },
             user: ctx.user,
             write: async ({ fields }) => {
                 const row = await repository.update(

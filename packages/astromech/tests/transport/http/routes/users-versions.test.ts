@@ -7,7 +7,7 @@
  * and a foreign version give, and the grant a restore demands.
  */
 
-import type { User, UserVersion } from '@/types/index';
+import type { User, UserVersion, VersionMetadata } from '@/types/index';
 import { adminRole, roleWith } from '@tests/fixtures';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { mountRouter, seedTestUser } from '@tests/mount-router';
@@ -98,12 +98,16 @@ describe('GET /users/:id/versions', () => {
             data: { fields: { bio: 'deux' } },
         });
 
-        const versions = await data<UserVersion[]>(
+        const versions = await data<VersionMetadata[]>(
             await app().request(`/users/${user.id}/versions?locale=fr`)
         );
         expect(versions).toHaveLength(1);
-        expect(versions[0]?.fields?.['bio']).toBe('un');
         expect(versions[0]?.locale).toBe('fr');
+
+        const first = await data<UserVersion>(
+            await app().request(`/users/${user.id}/versions/1?locale=fr`)
+        );
+        expect(first.snapshot.fields['bio']).toBe('un');
 
         // The default locale has a sequence of its own, and it is empty.
         expect(await data(await app().request(`/users/${user.id}/versions`))).toEqual([]);
@@ -114,7 +118,14 @@ describe('GET /users/:id/versions', () => {
     });
 });
 
-describe('POST /users/:id/versions/:versionId/restore', () => {
+describe('GET /users/:id/versions/:version', () => {
+    it('404s a number the locale has no version for', async () => {
+        const user = await makeUser('a@test.dev', 'Ann');
+        expect((await app().request(`/users/${user.id}/versions/1`)).status).toBe(404);
+    });
+});
+
+describe('POST /users/:id/versions/:version/restore', () => {
     it('restores the named version and returns the user', async () => {
         const user = await makeUser('a@test.dev', 'Ann');
         await usersService.update({
@@ -131,7 +142,7 @@ describe('POST /users/:id/versions/:versionId/restore', () => {
 
         const item = await data<{ locale: string; fields: { bio: string } }>(
             await app().request(
-                `/users/${user.id}/versions/${version?.id ?? ''}/restore?locale=fr`,
+                `/users/${user.id}/versions/${String(version?.version)}/restore?locale=fr`,
                 { method: 'POST' }
             )
         );
@@ -139,7 +150,7 @@ describe('POST /users/:id/versions/:versionId/restore', () => {
         expect(item.locale).toBe('fr');
     });
 
-    it('404s a version belonging to another locale', async () => {
+    it('404s a number only another locale has a version for', async () => {
         const user = await makeUser('a@test.dev', 'Ann');
         await usersService.update({
             id: user.id,
@@ -154,7 +165,7 @@ describe('POST /users/:id/versions/:versionId/restore', () => {
         const [version] = await usersService.versions({ id: user.id, locale: 'fr' });
 
         const res = await app().request(
-            `/users/${user.id}/versions/${version?.id ?? ''}/restore`,
+            `/users/${user.id}/versions/${String(version?.version)}/restore`,
             { method: 'POST' }
         );
         expect(res.status).toBe(404);
@@ -181,7 +192,7 @@ describe('POST /users/:id/versions/:versionId/restore', () => {
         expect(
             (
                 await app(reader).request(
-                    `/users/${user.id}/versions/${version?.id ?? ''}/restore?locale=fr`,
+                    `/users/${user.id}/versions/${String(version?.version)}/restore?locale=fr`,
                     { method: 'POST' }
                 )
             ).status

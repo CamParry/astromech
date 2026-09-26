@@ -162,6 +162,11 @@ access rule, input and output schemas, effect hints and handler, declared once
 and read by every transport. A client is an assembled consumer object such as
 `astromechClient`. API means the HTTP surface only.
 
+**Snapshot.** What a version holds: the resource's public shape narrowed to the
+keys a version stores (`fields`, plus an entry's title and slug or a media
+item's title, alt text and caption). Never the whole resource, whose other keys
+belong to the present.
+
 **Staged change.** A prepared future change to one locale of a live entry or
 global, edited and previewed on its own and merged deliberately. It shares the
 item's id, so a read asks for it rather than naming another id. Separate from a
@@ -189,4 +194,7 @@ value valid). A draft is checked for correctness only, so it saves half-finished
 but never malformed.
 
 **Version.** An append-only snapshot of one content row as it was, listed per
-resource and locale. Separate from a staged change.
+resource and locale. Separate from a staged change. A version is addressed by
+the resource's id (a global's key), the locale and its number, which runs from
+1 per resource and locale; the version row's own id is internal. It carries its
+metadata (`version`, `locale`, `createdAt`, `createdBy`) and its snapshot.

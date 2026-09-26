@@ -19,8 +19,9 @@ const LABELS: Record<ResourceType, string> = {
 
 /**
  * Thrown for an id (a global's key) no row or declaration holds, for a locale of
- * one with no content row where an operation requires one, and, with `staged`,
- * for a locale with no staged change. A `get` answers null rather than throwing.
+ * one with no content row where an operation requires one, with `staged` for a
+ * locale with no staged change, and with `version` for a version number that
+ * locale does not have. A `get` answers null rather than throwing.
  */
 export class ResourceNotFoundError extends ApiError {
     public readonly kind: ResourceType;
@@ -30,7 +31,12 @@ export class ResourceNotFoundError extends ApiError {
 
     constructor(
         kind: ResourceType,
-        args: { id: string; locale?: string | undefined; staged?: boolean }
+        args: {
+            id: string;
+            locale?: string | undefined;
+            staged?: boolean;
+            version?: number;
+        }
     ) {
         super(notFoundMessage(`${LABELS[kind]} '${args.id}'`, args), {
             status: 404,
@@ -86,8 +92,11 @@ export class StagedChangeExistsError extends ApiError {
 
 function notFoundMessage(
     subject: string,
-    args: { locale?: string | undefined; staged?: boolean }
+    args: { locale?: string | undefined; staged?: boolean; version?: number }
 ): string {
+    if (args.version !== undefined) {
+        return `${subject} has no version ${args.version} in locale '${args.locale ?? ''}'`;
+    }
     if (args.staged === true) {
         return `${subject} has no staged change in locale '${args.locale ?? ''}'`;
     }

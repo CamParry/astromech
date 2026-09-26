@@ -4,9 +4,15 @@
  * versions table, so entries and globals share one implementation.
  */
 
-import type { ContentRowId, ContentVersions, NewVersionSnapshot } from './types';
+import type {
+    ContentRowId,
+    ContentVersions,
+    NewVersionSnapshot,
+    VersionMetadataRow,
+} from './types';
 import type { Table, TableSelect } from '@/database/define-table';
 import type { Db } from '@/database/types';
+import { decodeWith } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
 
 export function createVersionsRepository<V extends Table>(
@@ -18,16 +24,34 @@ export function createVersionsRepository<V extends Table>(
     // opens still binds to the open scope (`DECISIONS.md`).
     const repository = createRepository(table, db);
 
-    /** Every version of a content row, newest first. */
-    async function findMany(contentId: ContentRowId): Promise<TableSelect<V>[]> {
-        return repository.findMany({
-            where: { contentId },
-            orderBy: [['version', 'desc']] as never,
+    /**
+     * Every version of a content row, newest first. A list shows no content, so
+     * only the metadata columns are read and decoded.
+     */
+    async function findMany(contentId: ContentRowId): Promise<VersionMetadataRow[]> {
+        const { db: handle, table: tableKey } = repository.kysely();
+        const rows = await handle
+            .selectFrom(tableKey)
+            .select(['version', 'createdAt', 'createdBy'])
+            .where('contentId', '=', contentId)
+            .orderBy('version', 'desc')
+            .execute();
+        // `decodeWith` skips absent columns, so a three-column row decodes fine.
+        return rows.map((row) => {
+            const decoded = decodeWith(table, row) as Record<string, unknown>;
+            return {
+                version: decoded['version'] as number,
+                createdAt: decoded['createdAt'] as Date,
+                createdBy: (decoded['createdBy'] ?? null) as string | null,
+            };
         });
     }
 
-    async function findOne(id: string): Promise<TableSelect<V> | null> {
-        return repository.findOne({ id });
+    async function findOne(
+        contentId: ContentRowId,
+        version: number
+    ): Promise<TableSelect<V> | null> {
+        return repository.findOne({ contentId, version });
     }
 
     /** Write one snapshot. A resource's own snapshot columns pass through. */

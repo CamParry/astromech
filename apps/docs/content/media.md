@@ -90,8 +90,8 @@ media: {
 ```
 
 Every locale in `locales` may then hold its own title, alt text, caption and
-fields, and `get`, `query`, `update`, `versions` and `restoreVersion` take a
-`locale`:
+fields, and `get`, `query`, `update`, `versions`, `getVersion` and
+`restoreVersion` take a `locale`:
 
 ```ts
 const image = await app.media.get({ id, locale: 'fr' });
@@ -140,12 +140,18 @@ Versions are per locale, always on, and there is no option to turn them off:
 
 ```ts
 const history = await app.media.versions({ id, locale: 'en' });
-await app.media.restoreVersion({ id, locale: 'en', versionId: history[1].id });
+const version = await app.media.getVersion({ id, locale: 'en', version: 2 });
+version.snapshot.alt; // the alt text as it was
+await app.media.restoreVersion({ id, locale: 'en', version: 2 });
 ```
 
-`versions` returns newest first. Restoring snapshots the current state first, so
-a restore is itself undoable. Neither method falls back: they address one
-locale's content, and a locale with none is a 404.
+A version is addressed by the item's id, the locale and its number, which runs
+from 1 per locale. `versions` returns newest first, and each item carries only
+`version`, `locale`, `createdAt` and `createdBy`. `getVersion` adds `snapshot`:
+the title, alt text, caption and fields the version holds. Restoring snapshots
+the current state first, so a restore is itself undoable. None of the three
+falls back: they address one locale's content, and a locale with none, or a
+number it has no version for, is a 404.
 
 Replacing the file writes no version, because a version holds words rather than
 bytes. It does change `updatedAt` and `updatedBy`:
@@ -173,12 +179,12 @@ locale shows the default locale's versions.
 
 Media has four permissions, and every method is gated by one of them:
 
-| permission     | methods                              |
-| -------------- | ------------------------------------ |
-| `media:read`   | `query`, `get`, `usedBy`, `versions` |
-| `media:upload` | `upload`, `replace`                  |
-| `media:update` | `update`, `restoreVersion`           |
-| `media:delete` | `delete`                             |
+| permission     | methods                                            |
+| -------------- | -------------------------------------------------- |
+| `media:read`   | `query`, `get`, `usedBy`, `versions`, `getVersion` |
+| `media:upload` | `upload`, `replace`                                |
+| `media:update` | `update`, `restoreVersion`                         |
+| `media:delete` | `delete`                                           |
 
 `replace` is an upload rather than an update: it writes new bytes to storage
 under the same id.

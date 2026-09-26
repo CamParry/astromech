@@ -19,6 +19,7 @@ import type {
     Notification,
     User,
     UserVersion,
+    VersionMetadata,
 } from './domain';
 import type { PluginServiceNamespace } from './plugins';
 import type {
@@ -140,15 +141,23 @@ export type EntriesService = {
 
     emptyTrash(params: { type: string }): Promise<void>;
 
+    /** This locale's saved versions, newest first, as their metadata. */
     versions(params: {
         type: string;
         id: string;
         locale?: string;
-    }): Promise<EntryVersion[]>;
+    }): Promise<VersionMetadata[]>;
+    /** One saved version of this locale, by its number, with its snapshot. */
+    getVersion(params: {
+        type: string;
+        id: string;
+        locale?: string;
+        version: number;
+    }): Promise<EntryVersion>;
     restoreVersion(params: {
         type: string;
         id: string;
-        versionId: string;
+        version: number;
         locale?: string;
     }): Promise<Entry>;
 
@@ -303,18 +312,27 @@ export type GlobalsService = {
         publishedAt: Date | string;
     }): Promise<Global>;
     /**
-     * The saved versions of this locale, newest first. Needs the `versioning`
-     * capability and an already-saved locale.
+     * The saved versions of this locale, newest first, as their metadata. Needs
+     * the `versioning` capability and an already-saved locale.
      */
-    versions(params: { key: string; locale?: string }): Promise<GlobalVersion[]>;
+    versions(params: { key: string; locale?: string }): Promise<VersionMetadata[]>;
     /**
-     * Roll this locale back to one of its versions, snapshotting the state
-     * being overwritten first. Needs the `versioning` capability.
+     * One saved version of this locale, by its number, with its snapshot. Needs
+     * the `versioning` capability; a number with no version throws.
+     */
+    getVersion(params: {
+        key: string;
+        locale?: string;
+        version: number;
+    }): Promise<GlobalVersion>;
+    /**
+     * Roll this locale back to one of its versions, by its number, snapshotting
+     * the state being overwritten first. Needs the `versioning` capability.
      */
     restoreVersion(params: {
         key: string;
         locale?: string;
-        versionId: string;
+        version: number;
     }): Promise<Global>;
     /**
      * Stage a change: copy this locale's content into a second, linked row,
@@ -352,7 +370,7 @@ export type MediaUpdateData = z.input<typeof updateMediaSchema>;
 /**
  * The media domain's service contract. A missing `locale` is the default content
  * locale; `query` and `get` fall back to it when the one asked for has no
- * content row, while `versions` and `restoreVersion` address a content row and
+ * content row, while the version methods address a content row and
  * throw `ResourceNotFoundError` when there is none.
  */
 export type MediaService = {
@@ -368,11 +386,18 @@ export type MediaService = {
     delete(params: { id: string }): Promise<void>;
     /** Every reference to this media item, from any resource. */
     usedBy(params: { id: string }): Promise<Usage[]>;
-    versions(params: { id: string; locale?: string }): Promise<MediaVersion[]>;
+    /** This locale's saved versions, newest first, as their metadata. */
+    versions(params: { id: string; locale?: string }): Promise<VersionMetadata[]>;
+    /** One saved version of this locale, by its number, with its snapshot. */
+    getVersion(params: {
+        id: string;
+        locale?: string;
+        version: number;
+    }): Promise<MediaVersion>;
     restoreVersion(params: {
         id: string;
         locale?: string;
-        versionId: string;
+        version: number;
     }): Promise<Media>;
 };
 
@@ -385,7 +410,7 @@ export type UserUpdateData = z.input<typeof updateUserSchema>;
 /**
  * The users domain's service contract. A missing `locale` is the default content
  * locale; `query` and `get` fall back to it when the one asked for has no
- * content row, while `versions` and `restoreVersion` address a content row and
+ * content row, while the version methods address a content row and
  * throw `ResourceNotFoundError` when there is none.
  */
 export type UsersService = {
@@ -394,11 +419,18 @@ export type UsersService = {
     create(params: { data: UserCreateData }): Promise<User>;
     update(params: { id: string; locale?: string; data: UserUpdateData }): Promise<User>;
     delete(params: { id: string }): Promise<void>;
-    versions(params: { id: string; locale?: string }): Promise<UserVersion[]>;
+    /** This locale's saved versions, newest first, as their metadata. */
+    versions(params: { id: string; locale?: string }): Promise<VersionMetadata[]>;
+    /** One saved version of this locale, by its number, with its snapshot. */
+    getVersion(params: {
+        id: string;
+        locale?: string;
+        version: number;
+    }): Promise<UserVersion>;
     restoreVersion(params: {
         id: string;
         locale?: string;
-        versionId: string;
+        version: number;
     }): Promise<User>;
 };
 

@@ -373,11 +373,13 @@ describe('versions', () => {
         ).toEqual([2, 1]);
         expect(await repository.versions.findMany(site.contentId)).toHaveLength(1);
 
-        const [first] = await repository.versions.findMany(site.contentId);
-        expect((await repository.versions.findOne(first!.id))?.fields).toEqual({
+        expect((await repository.versions.findOne(site.contentId, 1))?.fields).toEqual({
             title: 'EN v1',
         });
-        expect(await repository.versions.findOne('nope')).toBeNull();
+        expect((await repository.versions.findOne(de.contentId, 2))?.fields).toEqual({
+            title: 'DE v2',
+        });
+        expect(await repository.versions.findOne(site.contentId, 2)).toBeNull();
 
         await repository.delete(site.id);
         expect(await db.selectFrom('globalVersions').selectAll().execute()).toEqual([]);

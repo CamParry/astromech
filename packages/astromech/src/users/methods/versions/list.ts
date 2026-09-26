@@ -1,44 +1,24 @@
-import type { JsonObject, UserVersion } from '@/types/index';
+import type { VersionMetadata } from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { resolveResourceLocale } from '@/content/locale';
-import { RESOURCE_SPECS } from '@/content/resources';
-import { ResourceNotFoundError } from '@/errors/resource';
+import { versionMetadataSchema } from '@/content/schema';
+import { listVersions } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
+import { getUserInLocale } from '../../internal/versions';
 import { userRepository } from '../../repository';
-import { userVersionSchema } from '../../schema';
 
 /**
- * Lists the saved versions of one locale of a user's fields, newest first.
- * Unlike a read, this addresses a content row: a locale with none throws rather
- * than falling back to the default.
+ * Lists the saved versions of one locale of a user's fields, newest first, as their
+ * metadata; `getVersion` reads one's content. Unlike a read, this addresses a
+ * content row: a locale with none throws rather than falling back to the default.
  */
 export const listUserVersions = defineServiceMethod({
     summary: 'List the saved versions of one locale of a user’s fields.',
     input: z.object({ id: z.string(), locale: z.string().optional() }),
-    output: z.array(userVersionSchema),
+    output: z.array(versionMetadataSchema),
     access: 'users:read',
     mutates: false,
-    async handler(params, ctx): Promise<UserVersion[]> {
-        const locale = resolveResourceLocale(
-            RESOURCE_SPECS.user,
-            ctx.config,
-            undefined,
-            params.locale
-        );
-        const current = await userRepository.findOne(params.id, { locale });
-        if (!current) throw new ResourceNotFoundError('user', { id: params.id, locale });
-
-        const rows = await userRepository.versions.findMany(current.contentId);
-        return rows.map((row) => ({
-            id: row.id,
-            // A version row names the content row it snapshots, so the user and
-            // locale come from the record it was read for.
-            userId: params.id,
-            locale: current.locale,
-            version: row.version,
-            fields: (row.fields ?? null) as JsonObject | null,
-            createdAt: row.createdAt,
-            createdBy: row.createdBy,
-        }));
+    async handler(params, ctx): Promise<VersionMetadata[]> {
+        const current = await getUserInLocale(ctx.config, params);
+        return listVersions(userRepository.versions, current);
     },
 });

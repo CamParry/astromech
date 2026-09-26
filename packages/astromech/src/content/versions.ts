@@ -1,12 +1,13 @@
 /**
- * Version helpers every resource's write and restore share. A version snapshots
- * one content row, so the sequence runs per item and locale; which columns it
- * keeps beside `fields` is the resource spec's `versionedColumns`.
+ * Version helpers every resource's write, read and restore share. A version
+ * snapshots one content row, so the sequence runs per item and locale, and a
+ * version is addressed by the resource, the locale and its number. Which
+ * columns it keeps beside `fields` is the resource spec's `versionedColumns`.
  */
 
 import type { ContentRowId, ContentVersions } from './repository/types';
 import type { ResourceSpec } from './resources';
-import type { JsonObject, User } from '@/types/index';
+import type { JsonObject, User, VersionMetadata } from '@/types/index';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { deepEqual } from '@/utilities/deep-equal';
@@ -17,8 +18,60 @@ type VersionedRecord = { contentId: ContentRowId; fields: JsonObject } & Record<
     unknown
 >;
 
-/** A stored version as the restore reads it. */
-type StoredVersion = { contentId: string; fields: unknown } & Record<string, unknown>;
+/** A stored version as the read and the restore take it. */
+type StoredVersion = {
+    version: number;
+    fields: unknown;
+    createdAt: Date;
+    createdBy: string | null;
+} & Record<string, unknown>;
+
+/** The content row a version call addressed, as the version helpers read it. */
+type AddressedRecord = { contentId: ContentRowId; locale: string };
+
+/** The id (a global's key) a call addressed, for the not-found error. */
+type Address = { id: string };
+
+/**
+ * Every version of the addressed content row, newest first, as the metadata
+ * `versions` answers. The version row names the content row it snapshots, so
+ * the locale comes from the record it was read for.
+ */
+export async function listVersions(
+    versions: ContentVersions<unknown>,
+    record: AddressedRecord
+): Promise<VersionMetadata[]> {
+    const rows = await versions.findMany(record.contentId);
+    return rows.map((row) => ({ ...row, locale: record.locale }));
+}
+
+/**
+ * One version of the addressed content row: its metadata, and `snapshot`, the
+ * fields and versioned columns it holds. A number the row has no version for
+ * is not found. `S` is the snapshot's type as the method's output schema takes
+ * it; that schema checks the value on the way out.
+ */
+export async function readVersion<S extends object>(params: {
+    spec: ResourceSpec;
+    versions: ContentVersions<StoredVersion>;
+    record: AddressedRecord;
+    version: number;
+    address: Address;
+}): Promise<VersionMetadata & { snapshot: S }> {
+    const { spec, record } = params;
+    const row = await findVersion(params.versions, record, params.version, {
+        kind: spec.kind,
+        id: params.address.id,
+    });
+    const snapshot = { ...pick(row, spec.versionedColumns), fields: row.fields };
+    return {
+        version: row.version,
+        locale: record.locale,
+        createdAt: row.createdAt,
+        createdBy: row.createdBy,
+        snapshot: snapshot as S,
+    };
+}
 
 /**
  * Saves the content row's current state as its next version, credited to the
@@ -59,18 +112,19 @@ export function changesVersionedContent(
 }
 
 /**
- * Restores one content row to a saved version. The version must snapshot this
- * row, else the call is not found. In one transaction it snapshots the row as it
- * stands, so a restore is itself reversible, then hands `write` the version's
- * fields and versioned columns; `write` updates the row and re-indexes it.
+ * Restores one content row to a saved version, found by its number. A number
+ * the row has no version for is not found. In one transaction it snapshots the
+ * row as it stands, so a restore is itself reversible, then hands `write` the
+ * version's fields and versioned columns; `write` updates the row and
+ * re-indexes it.
  */
 export async function restoreVersion<R, V extends StoredVersion>(params: {
     spec: ResourceSpec;
     versions: ContentVersions<V>;
-    current: VersionedRecord;
-    versionId: string;
-    /** The id (a global's key) and locale the call addressed, for the 404. */
-    address: { id: string; locale: string };
+    current: VersionedRecord & { locale: string };
+    version: number;
+    /** The id (a global's key) the call addressed, for the 404. */
+    address: Address;
     user: User | null;
     write: (restored: {
         fields: JsonObject;
@@ -78,15 +132,33 @@ export async function restoreVersion<R, V extends StoredVersion>(params: {
     }) => Promise<R>;
 }): Promise<R> {
     const { spec, versions, current } = params;
-    const version = await versions.findOne(params.versionId);
-    if (!version || version.contentId !== current.contentId) {
-        throw new ResourceNotFoundError(spec.kind, params.address);
-    }
+    const version = await findVersion(versions, current, params.version, {
+        kind: spec.kind,
+        id: params.address.id,
+    });
     const fields = (version.fields as JsonObject | null) ?? current.fields;
     return transaction(async () => {
         await snapshotVersion(spec, versions, current, params.user);
         return params.write({ fields, columns: pick(version, spec.versionedColumns) });
     });
+}
+
+/** The addressed row's version with this number, or the not-found error. */
+async function findVersion<V>(
+    versions: ContentVersions<V>,
+    record: AddressedRecord,
+    version: number,
+    error: { kind: ResourceSpec['kind']; id: string }
+): Promise<V> {
+    const row = await versions.findOne(record.contentId, version);
+    if (row === null) {
+        throw new ResourceNotFoundError(error.kind, {
+            id: error.id,
+            locale: record.locale,
+            version,
+        });
+    }
+    return row;
 }
 
 function pick(

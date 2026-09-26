@@ -1,11 +1,7 @@
 import { z } from '@hono/zod-openapi';
+import { auditKeys, publishedAtKey, versionSchema } from '@/content/schema';
 import { optionalDate, scheduleEntrySchema, statusSchema } from '@/entries/schema';
-import { withFallback } from '@/services/fallback';
-import {
-    jsonObject,
-    nullableUnparsedJsonObject,
-    unparsedJsonObject,
-} from '@/services/json';
+import { jsonObject, unparsedJsonObject } from '@/services/json';
 
 /**
  * The payload a `globals.update` call carries: a fields patch and, on a global
@@ -35,6 +31,9 @@ const locale = z.string().optional();
 /** A content-level method addresses one locale of the global. */
 export const localised = z.object({ key, locale });
 
+/** A version method addresses one version of one locale, by its number. */
+export const versionAddress = localised.extend({ version: z.number().int() });
+
 /**
  * The `globals.createStaged` call input. Named because the bespoke `POST
  * /:key/staged` route parses its body against it directly.
@@ -59,23 +58,8 @@ export const globalSchema = z
         status: statusSchema,
         /** True when this read is the staged change rather than the canonical row. */
         staged: z.boolean(),
-        /** The publication gate, read exactly as `Entry.publishedAt` is. */
-        publishedAt: withFallback(z.date().nullable(), null),
-        /** When the global was first saved; every locale reports the same value. */
-        createdAt: z.date(),
-        /**
-         * The global's last change, in any locale; every locale reports the same
-         * value. A staged read reports the staged change's own last edit instead,
-         * and a staged edit never moves the global's.
-         */
-        updatedAt: z.date(),
-        /**
-         * Who made this locale. Null for a write with no request identity: a seed
-         * script, the CLI, the scheduler.
-         */
-        createdBy: withFallback(z.string().nullable(), null),
-        /** Who made the global's last change (on a staged read, the staged change's). */
-        updatedBy: withFallback(z.string().nullable(), null),
+        ...publishedAtKey,
+        ...auditKeys,
     })
     .openapi('Global');
 
@@ -87,17 +71,10 @@ export const stagedGlobalSchema = globalSchema
     .extend({ diverged: z.boolean() })
     .openapi('StagedGlobal');
 
-/** A saved snapshot of one locale of one global. */
-export const globalVersionSchema = z
-    .object({
-        id: z.string(),
-        key: z.string(),
-        locale: z.string(),
-        /** Position in the sequence, which runs per global and locale from 1. */
-        version: z.number(),
-        fields: nullableUnparsedJsonObject,
-        status: withFallback(statusSchema.nullable(), null),
-        createdAt: z.date(),
-        createdBy: withFallback(z.string().nullable(), null),
-    })
-    .openapi('GlobalVersion');
+/** The keys a global version keeps: the fields of one locale. */
+export const globalSnapshotSchema = globalSchema
+    .pick({ fields: true })
+    .openapi('GlobalSnapshot');
+
+/** One saved version of one locale of a global, as `getVersion` answers it. */
+export const globalVersionSchema = versionSchema('GlobalVersion', globalSnapshotSchema);

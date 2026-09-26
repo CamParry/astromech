@@ -12,7 +12,12 @@
  * translatable type.
  */
 
-import type { AstromechConfig, Entry, EntryVersion } from '@/types/index';
+import type {
+    AstromechConfig,
+    Entry,
+    EntryVersion,
+    VersionMetadata,
+} from '@/types/index';
 import { adminRole } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { mountRouter, seedTestUser } from '@tests/mount-router';
@@ -203,14 +208,22 @@ describe('GET /entries/:type/:id/versions?locale=', () => {
 
         const de = await app().request(`/entries/post/${created.id}/versions?locale=de`);
         expect(de.status).toBe(200);
-        const deVersions = ((await de.json()) as { data: EntryVersion[] }).data;
+        const deVersions = ((await de.json()) as { data: VersionMetadata[] }).data;
         expect(deVersions.length).toBeGreaterThan(0);
         expect(deVersions.every((version) => version.locale === 'de')).toBe(true);
-        expect(deVersions.every((version) => version.entryId === created.id)).toBe(true);
 
         const en = await app().request(`/entries/post/${created.id}/versions`);
-        const enVersions = ((await en.json()) as { data: EntryVersion[] }).data;
+        const enVersions = ((await en.json()) as { data: VersionMetadata[] }).data;
         expect(enVersions.every((version) => version.locale === 'en')).toBe(true);
-        expect(enVersions.map((version) => version.title)).not.toContain('Hallo');
+
+        const titles = await Promise.all(
+            enVersions.map(async ({ version }) => {
+                const res = await app().request(
+                    `/entries/post/${created.id}/versions/${String(version)}`
+                );
+                return ((await res.json()) as { data: EntryVersion }).data.snapshot.title;
+            })
+        );
+        expect(titles).not.toContain('Hallo');
     });
 });

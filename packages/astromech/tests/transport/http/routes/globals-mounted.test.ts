@@ -32,7 +32,7 @@ async function request(
     key: string,
     spec: (typeof GLOBALS_ROUTE_SPECS)[number]
 ): Promise<Response> {
-    const path = spec.path.replace(':key', key).replace(':versionId', 'v1');
+    const path = spec.path.replace(':key', key).replace(':version', '1');
     const method = spec.verb.toUpperCase();
     const body = method === 'GET' || method === 'DELETE' ? undefined : JSON.stringify({});
     return app(adminRole).request(`/globals${path}`, {

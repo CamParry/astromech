@@ -2,8 +2,10 @@
  * @vitest-environment happy-dom
  *
  * The global version history page. A version snapshots one locale's content
- * row, so the list is that locale's history newest first, and restoring names
- * the global by key and locale — never by a row id.
+ * row, so the list is that locale's history newest first. The list carries no
+ * content, so the page reads the selected version and the one before it to
+ * diff them. Restoring names the global by key, locale and version number,
+ * never by a row id.
  */
 
 import type { AuthUser } from '@/admin/context/auth';
@@ -13,6 +15,7 @@ import type {
     GlobalVersion,
     QueryResult,
     User,
+    VersionMetadata,
 } from '@/types/index';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -83,23 +86,25 @@ const CONFIG = {
     nav: true,
 } as AdminGlobal;
 
-function version(n: number): GlobalVersion {
+function metadata(n: number): VersionMetadata {
     return {
-        id: `v${n}`,
-        key: KEY,
         locale: 'en',
         version: n,
-        fields: { tagline: `Tagline ${n}` },
-        status: 'unpublished',
         createdAt: new Date(`2026-0${n}-01T00:00:00Z`),
         createdBy: null,
     };
 }
 
+function version(n: number): GlobalVersion {
+    return { ...metadata(n), snapshot: { fields: { tagline: `Tagline ${n}` } } };
+}
+
 function mountPage() {
-    const restoreVersion = vi.fn(async () => version(3));
+    const restoreVersion = vi.fn(async () => null);
+    const getVersion = vi.fn(async ({ version: n }: { version: number }) => version(n));
     const api = {
-        versions: vi.fn(async () => [version(1), version(2), version(3)]),
+        versions: vi.fn(async () => [metadata(1), metadata(2), metadata(3)]),
+        getVersion,
         restoreVersion,
         get: vi.fn(async () => null),
     } as unknown as GlobalsService;
@@ -147,7 +152,7 @@ function mountPage() {
         </QueryClientProvider>
     );
 
-    return { restoreVersion };
+    return { restoreVersion, getVersion };
 }
 
 describe('the global versions page', () => {
@@ -164,7 +169,22 @@ describe('the global versions page', () => {
         expect(numbers).toEqual(['#3', '#2', '#1']);
     });
 
-    it('restores the selected version by key and locale', async () => {
+    it('reads the selected version and the one before it, and diffs them', async () => {
+        const { getVersion } = mountPage();
+
+        const values = await waitFor(() => {
+            const found = [...document.querySelectorAll('.am-versions-diff-new')].map(
+                (el) => el.textContent
+            );
+            if (found.length === 0) throw new Error('no diff rendered');
+            return found;
+        });
+        expect(values).toEqual(['Tagline 3']);
+        expect(getVersion).toHaveBeenCalledWith({ key: KEY, locale: 'en', version: 3 });
+        expect(getVersion).toHaveBeenCalledWith({ key: KEY, locale: 'en', version: 2 });
+    });
+
+    it('restores the selected version by key, locale and number', async () => {
         const user = userEvent.setup({ delay: null });
         const { restoreVersion } = mountPage();
 
@@ -191,7 +211,7 @@ describe('the global versions page', () => {
                 key: KEY,
                 locale: 'en',
                 // The newest version is selected on load.
-                versionId: 'v3',
+                version: 3,
             });
         });
     });

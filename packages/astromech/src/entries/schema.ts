@@ -1,10 +1,7 @@
 import { z } from '@hono/zod-openapi';
+import { auditKeys, publishedAtKey, versionSchema } from '@/content/schema';
 import { withFallback } from '@/services/fallback';
-import {
-    jsonObject,
-    nullableUnparsedJsonObject,
-    unparsedJsonObject,
-} from '@/services/json';
+import { jsonObject, unparsedJsonObject } from '@/services/json';
 
 /** The three publication states an entry or global row may carry. */
 export const statusSchema = z.enum(['unpublished', 'published', 'scheduled']);
@@ -133,30 +130,9 @@ export const entrySchema = z
         status: statusSchema,
         /** True when this read is the staged change rather than the canonical row. */
         staged: z.boolean(),
-        /**
-         * The publication gate, not a record of when publication happened. While
-         * `status` is `'scheduled'` this holds a time ahead of now, and
-         * `content/visibility.ts` compares it against the clock: an entry whose
-         * `publishedAt` is in the future is not publicly visible. Null means no gate
-         * is set. `status` is what tells you which side of now the value is on.
-         */
-        publishedAt: withFallback(z.date().nullable(), null),
+        ...publishedAtKey,
         deletedAt: withFallback(z.date().nullable(), null),
-        /** When the entry was created; every locale of it reports the same value. */
-        createdAt: z.date(),
-        /**
-         * The entry's last change, in any locale; every locale reports the same
-         * value. A staged read reports the staged change's own last edit instead,
-         * and a staged edit never moves the entry's.
-         */
-        updatedAt: z.date(),
-        /**
-         * Who made this locale. Null for a write with no request identity: a seed
-         * script, the CLI, the scheduler.
-         */
-        createdBy: withFallback(z.string().nullable(), null),
-        /** Who made the entry's last change (on a staged read, the staged change's). */
-        updatedBy: withFallback(z.string().nullable(), null),
+        ...auditKeys,
     })
     .openapi('Entry');
 
@@ -168,19 +144,13 @@ export const stagedEntrySchema = entrySchema
     .extend({ diverged: z.boolean() })
     .openapi('StagedEntry');
 
-/** A saved snapshot of one locale of one entry. */
-export const entryVersionSchema = z
-    .object({
-        id: z.string(),
-        entryId: z.string(),
-        locale: z.string(),
-        /** Position in the sequence, which runs per entry and locale from 1. */
-        version: z.number(),
-        title: z.string(),
-        slug: withFallback(z.string().nullable(), null),
-        fields: nullableUnparsedJsonObject,
-        status: withFallback(statusSchema.nullable(), null),
-        createdAt: z.date(),
-        createdBy: withFallback(z.string().nullable(), null),
-    })
-    .openapi('EntryVersion');
+/**
+ * The keys an entry version keeps: the title, slug and fields of one locale.
+ * `status` and the entry-level keys are never versioned.
+ */
+export const entrySnapshotSchema = entrySchema
+    .pick({ title: true, slug: true, fields: true })
+    .openapi('EntrySnapshot');
+
+/** One saved version of one locale of an entry, as `getVersion` answers it. */
+export const entryVersionSchema = versionSchema('EntryVersion', entrySnapshotSchema);

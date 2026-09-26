@@ -1,11 +1,8 @@
 import { z } from '@hono/zod-openapi';
 import { sortSchema } from '@/content/list';
+import { auditKeys, versionSchema } from '@/content/schema';
 import { withFallback } from '@/services/fallback';
-import {
-    jsonObject,
-    nullableUnparsedJsonObject,
-    unparsedJsonObject,
-} from '@/services/json';
+import { jsonObject, unparsedJsonObject } from '@/services/json';
 import { MEDIA_MIME_TYPE_FILTERS } from '@/types/query';
 
 export const updateMediaSchema = z
@@ -65,28 +62,17 @@ export const mediaSchema = z
         alt: withFallback(z.string().nullable(), null),
         caption: withFallback(z.string().nullable(), null),
         fields: unparsedJsonObject,
-        createdAt: z.date(),
-        /** The item's last change: a file replace, or a content edit in any locale. */
-        updatedAt: z.date(),
-        createdBy: withFallback(z.string().nullable(), null),
-        /** Who made the item's last change. */
-        updatedBy: withFallback(z.string().nullable(), null),
+        ...auditKeys,
     })
     .openapi('Media');
 
-/** A saved snapshot of one locale of one media item. */
-export const mediaVersionSchema = z
-    .object({
-        id: z.string(),
-        mediaId: z.string(),
-        locale: z.string(),
-        /** Position in the sequence, which runs per media item and locale from 1. */
-        version: z.number(),
-        title: withFallback(z.string().nullable(), null),
-        alt: withFallback(z.string().nullable(), null),
-        caption: withFallback(z.string().nullable(), null),
-        fields: nullableUnparsedJsonObject,
-        createdAt: z.date(),
-        createdBy: withFallback(z.string().nullable(), null),
-    })
-    .openapi('MediaVersion');
+/**
+ * The keys a media version keeps: the title, alt text, caption and fields of
+ * one locale. The file and its dimensions are never versioned.
+ */
+export const mediaSnapshotSchema = mediaSchema
+    .pick({ title: true, alt: true, caption: true, fields: true })
+    .openapi('MediaSnapshot');
+
+/** One saved version of one locale of a media item, as `getVersion` answers it. */
+export const mediaVersionSchema = versionSchema('MediaVersion', mediaSnapshotSchema);

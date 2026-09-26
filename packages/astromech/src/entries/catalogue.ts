@@ -118,6 +118,8 @@ function entryMethodSummary(method: EntryMethodName, type: string): string {
             return `Permanently delete every trashed "${type}" entry.`;
         case 'versions':
             return `List the version history of a "${type}" entry.`;
+        case 'getVersion':
+            return `Read one version of a "${type}" entry.`;
         case 'restoreVersion':
             return `Roll a "${type}" entry back to an earlier version.`;
         case 'usedBy':
@@ -196,7 +198,8 @@ function entryInputSchemas(
         restore: oneOrMany(z.object({ type, ...batchAddress })),
         emptyTrash: z.object({ type }),
         versions: localised,
-        restoreVersion: z.object({ type, id, locale, versionId: z.string() }),
+        getVersion: localised.extend({ version: z.number().int() }),
+        restoreVersion: localised.extend({ version: z.number().int() }),
         publish: oneOrMany(z.object({ type, ...batchAddress, locale })),
         unpublish: oneOrMany(z.object({ type, ...batchAddress, locale })),
         schedule: oneOrMany(

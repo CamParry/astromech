@@ -67,6 +67,16 @@ is guessable from any other.
   and which the OpenAPI document shows as `schema`. Never a bare `.catch`.
   Everything else is plain, so a bad value fails the call.
 
+- **Share keys, don't copy them.** Keys several resources carry (`auditKeys`,
+  `publishedAtKey`) and the version shapes live in `content/schema.ts`. A
+  version's `snapshot` is the resource's output schema narrowed with `.pick()`
+  to the keys a version stores, and `versionSchema(name, snapshot)` adds the
+  shared metadata.
+
+- **A version is addressed by number.** Version methods take the resource's
+  address, the locale and `version`, never the version row's id, which stays
+  internal like the content row's.
+
 A REST route keeps a flat body under this: the route spec declares
 `bodyKey: 'data'` and the generated client sends that key alone.
 

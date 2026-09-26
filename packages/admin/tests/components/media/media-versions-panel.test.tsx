@@ -5,7 +5,7 @@
  * and no restore action at all for a viewer who may not update.
  */
 
-import type { MediaVersion } from '@/types/index';
+import type { VersionMetadata } from '@/types/index';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from 'i18next';
@@ -23,7 +23,7 @@ const { restoreMutate, mutations } = vi.hoisted(() => {
     };
 });
 
-let versions: MediaVersion[] = [];
+let versions: VersionMetadata[] = [];
 
 vi.mock('@/admin/hooks/media', async (importOriginal) => ({
     ...(await importOriginal<object>()),
@@ -38,16 +38,10 @@ vi.mock('@/admin/hooks/use-admin-mutation', () => ({
     }),
 }));
 
-function makeVersion(version: number, id: string): MediaVersion {
+function makeVersion(version: number): VersionMetadata {
     return {
-        id,
-        mediaId: 'm1',
         locale: 'en',
         version,
-        title: `Title ${version}`,
-        alt: null,
-        caption: null,
-        fields: {},
         createdAt: new Date(`2026-01-0${version}T00:00:00Z`),
         createdBy: null,
     };
@@ -82,7 +76,7 @@ describe('MediaVersionsPanel', () => {
     });
 
     it('lists the versions newest first whatever order they arrive in', () => {
-        versions = [makeVersion(1, 'v1'), makeVersion(3, 'v3'), makeVersion(2, 'v2')];
+        versions = [makeVersion(1), makeVersion(3), makeVersion(2)];
         renderPanel();
 
         expect(
@@ -94,7 +88,7 @@ describe('MediaVersionsPanel', () => {
 
     it('restores the version whose row was clicked, once confirmed', async () => {
         const user = userEvent.setup();
-        versions = [makeVersion(1, 'v1'), makeVersion(2, 'v2')];
+        versions = [makeVersion(1), makeVersion(2)];
         renderPanel();
 
         const buttons = screen.getAllByRole('button', { name: 'Restore this version' });
@@ -105,12 +99,12 @@ describe('MediaVersionsPanel', () => {
         expect(restoreMutate).toHaveBeenCalledWith({
             id: 'm1',
             locale: 'en',
-            versionId: 'v1',
+            version: 1,
         });
     });
 
     it('renders no restore action without update permission', () => {
-        versions = [makeVersion(1, 'v1')];
+        versions = [makeVersion(1)];
         renderPanel(false);
 
         expect(screen.queryByRole('button', { name: 'Restore this version' })).toBeNull();

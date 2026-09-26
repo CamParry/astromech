@@ -327,7 +327,12 @@ describe('mergeStaged', () => {
 
         const versions = await api.versions({ type: 'post', id: canonical.id });
         expect(versions).toHaveLength(1);
-        expect(versions[0]?.fields?.body).toBe('v1'); // the pre-merge canonical
+        const version = await api.getVersion({
+            type: 'post',
+            id: canonical.id,
+            version: 1,
+        });
+        expect(version.snapshot.fields['body']).toBe('v1'); // the pre-merge canonical
     });
 
     it('merges without a backup version when versioning is off (note)', async () => {

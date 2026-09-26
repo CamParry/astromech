@@ -35,10 +35,10 @@ type Adapter = {
         fields: JsonObject,
         locale?: string
     ): Promise<{ updatedAt: Date } | null>;
-    versions(id: string): Promise<{ id: string }[]>;
+    versions(id: string): Promise<{ version: number }[]>;
     restore(
         id: string,
-        versionId: string
+        version: number
     ): Promise<{ fields: JsonObject; updatedAt: Date }>;
     /** The stored `updatedAt` of its resource row. */
     stamped(id: string): Promise<Date>;
@@ -76,8 +76,8 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
                 data: { fields },
             }),
         versions: (id) => entriesService.versions({ type: 'page', id }),
-        restore: (id, versionId) =>
-            entriesService.restoreVersion({ type: 'page', id, versionId }),
+        restore: (id, version) =>
+            entriesService.restoreVersion({ type: 'page', id, version }),
         stamped: (id) => stampedAt('entries', 'id', id),
         missing: () => entriesService.versions({ type: 'page', id: 'nope' }),
         list: (sort) => entriesService.query({ type: 'page', sort, full: true }),
@@ -95,7 +95,7 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
                 data: { fields },
             }),
         versions: (key) => globalsService.versions({ key }),
-        restore: (key, versionId) => globalsService.restoreVersion({ key, versionId }),
+        restore: (key, version) => globalsService.restoreVersion({ key, version }),
         stamped: (key) => stampedAt('globals', 'key', key),
         missing: () => globalsService.versions({ key: 'nope' }),
     },
@@ -114,7 +114,7 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
         update: (id, fields, locale) =>
             usersService.update({ id, ...(locale ? { locale } : {}), data: { fields } }),
         versions: (id) => usersService.versions({ id }),
-        restore: (id, versionId) => usersService.restoreVersion({ id, versionId }),
+        restore: (id, version) => usersService.restoreVersion({ id, version }),
         stamped: (id) => stampedAt('users', 'id', id),
         missing: () => usersService.versions({ id: 'nope' }),
         list: (sort) => usersService.query({ sort }),
@@ -132,7 +132,7 @@ const ADAPTERS: Record<ResourceType, Adapter> = {
         update: (id, fields, locale) =>
             mediaService.update({ id, ...(locale ? { locale } : {}), data: { fields } }),
         versions: (id) => mediaService.versions({ id }),
-        restore: (id, versionId) => mediaService.restoreVersion({ id, versionId }),
+        restore: (id, version) => mediaService.restoreVersion({ id, version }),
         stamped: (id) => stampedAt('media', 'id', id),
         missing: () => mediaService.versions({ id: 'nope' }),
         list: (sort) => mediaService.query({ sort }),
@@ -224,7 +224,7 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
 
         const [version] = await adapter.versions(id);
         expect(version).toBeDefined();
-        const restored = await adapter.restore(id, version?.id ?? '');
+        const restored = await adapter.restore(id, version?.version ?? 0);
         expect(restored.fields['title']).toBe('One');
     });
 
@@ -257,7 +257,7 @@ describe.each(RESOURCE_TYPES)('%s', (kind) => {
             const [version] = await adapter.versions(id);
             vi.setSystemTime(later);
 
-            const restored = await adapter.restore(id, version?.id ?? '');
+            const restored = await adapter.restore(id, version?.version ?? 0);
 
             expect(await adapter.stamped(id)).toEqual(later);
             expect(restored.updatedAt).toEqual(later);

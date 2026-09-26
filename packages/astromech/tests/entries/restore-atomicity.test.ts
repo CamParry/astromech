@@ -69,7 +69,7 @@ describe('restoreVersion atomicity', () => {
 
         state.failing = true;
         await expect(
-            api.restoreVersion({ type: 'post', id: entry.id, versionId: v1.id })
+            api.restoreVersion({ type: 'post', id: entry.id, version: v1.version })
         ).rejects.toThrow('boom');
 
         const row = await getDb()

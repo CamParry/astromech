@@ -387,11 +387,48 @@ describe('versioning (on)', () => {
         });
         const versions = await api.versions({ type: 'post', id: e.id });
         expect(versions).toHaveLength(1);
-        expect(versions[0]?.title).toBe('V1');
-        expect(versions[0]?.fields).toEqual({ body: 'one' });
         expect(versions[0]?.version).toBe(1);
-        expect(versions[0]?.entryId).toBe(e.id);
         expect(versions[0]?.locale).toBe('en');
+
+        const version = await api.getVersion({ type: 'post', id: e.id, version: 1 });
+        expect(version.snapshot).toEqual({
+            title: 'V1',
+            slug: 'v1',
+            fields: { body: 'one' },
+        });
+    });
+
+    it('lists metadata only, with no snapshot and no row id', async () => {
+        const e = await api.create({ type: 'post', data: { title: 'V1' } });
+        await api.update({ type: 'post', id: e.id, data: { title: 'V2' } });
+        const [item] = await api.versions({ type: 'post', id: e.id });
+        expect(Object.keys(item ?? {}).sort()).toEqual([
+            'createdAt',
+            'createdBy',
+            'locale',
+            'version',
+        ]);
+    });
+
+    it('reads one version with its snapshot and no internal key', async () => {
+        const e = await api.create({ type: 'post', data: { title: 'V1' } });
+        await api.update({ type: 'post', id: e.id, data: { title: 'V2' } });
+        const version = await api.getVersion({ type: 'post', id: e.id, version: 1 });
+        expect(Object.keys(version).sort()).toEqual([
+            'createdAt',
+            'createdBy',
+            'locale',
+            'snapshot',
+            'version',
+        ]);
+        expect(Object.keys(version.snapshot).sort()).toEqual(['fields', 'slug', 'title']);
+    });
+
+    it('refuses to read a number the locale has no version for', async () => {
+        const e = await api.create({ type: 'post', data: { title: 'V1' } });
+        await expect(
+            api.getVersion({ type: 'post', id: e.id, version: 1 })
+        ).rejects.toThrow(`Entry '${e.id}' has no version 1 in locale 'en'`);
     });
 
     it('keeps a separate version sequence per locale', async () => {
@@ -420,14 +457,21 @@ describe('versioning (on)', () => {
         const en = await api.versions({ type: 'post', id: e.id });
         const de = await api.versions({ type: 'post', id: e.id, locale: 'de' });
 
-        expect(en.map((v) => v.title)).toEqual(['EN v1']);
-        expect(de.map((v) => v.title)).toEqual(['DE v1']);
         // Both sequences start at 1, and each version names its own locale.
         expect(en.map((v) => v.version)).toEqual([1]);
         expect(de.map((v) => v.version)).toEqual([1]);
         expect(en[0]?.locale).toBe('en');
         expect(de[0]?.locale).toBe('de');
-        expect(de[0]?.entryId).toBe(e.id);
+
+        const enFirst = await api.getVersion({ type: 'post', id: e.id, version: 1 });
+        const deFirst = await api.getVersion({
+            type: 'post',
+            id: e.id,
+            locale: 'de',
+            version: 1,
+        });
+        expect(enFirst.snapshot.title).toBe('EN v1');
+        expect(deFirst.snapshot.title).toBe('DE v1');
     });
 
     it('restores a version into its own locale, leaving the other alone', async () => {
@@ -445,12 +489,10 @@ describe('versioning (on)', () => {
             data: { title: 'DE v2' },
         });
 
-        const [version] = await api.versions({ type: 'post', id: e.id, locale: 'de' });
-        if (!version) throw new Error('expected a de version');
         const restored = await api.restoreVersion({
             type: 'post',
             id: e.id,
-            versionId: version.id,
+            version: 1,
             locale: 'de',
         });
 
@@ -460,11 +502,9 @@ describe('versioning (on)', () => {
         expect(en?.title).toBe('EN v1');
     });
 
-    it('refuses a version that belongs to another locale', async () => {
+    it('refuses a number only another locale has a version for', async () => {
         const e = await api.create({ type: 'post', data: { title: 'EN v1' } });
         await api.update({ type: 'post', id: e.id, data: { title: 'EN v2' } });
-        const [version] = await api.versions({ type: 'post', id: e.id });
-        if (!version) throw new Error('expected an en version');
         await api.update({
             type: 'post',
             id: e.id,
@@ -476,7 +516,7 @@ describe('versioning (on)', () => {
             api.restoreVersion({
                 type: 'post',
                 id: e.id,
-                versionId: version.id,
+                version: 1,
                 locale: 'de',
             })
         ).rejects.toBeInstanceOf(ResourceNotFoundError);
@@ -512,7 +552,8 @@ describe('versioning (on)', () => {
         });
         const versions = await api.versions({ type: 'post', id: e.id });
         expect(versions.map((v) => v.version)).toEqual([2, 1]);
-        expect(versions[0]?.title).toBe('B'); // pre-update of the C change
+        const latest = await api.getVersion({ type: 'post', id: e.id, version: 2 });
+        expect(latest.snapshot.title).toBe('B'); // pre-update of the C change
     });
 
     // CHARACTERIZED: restoreVersion (a) snapshots the current (pre-restore)
@@ -527,22 +568,27 @@ describe('versioning (on)', () => {
             id: e.id,
             data: { title: 'Changed', fields: { body: 'changed' } },
         });
-        const [v1] = await api.versions({ type: 'post', id: e.id });
-        if (!v1) throw new Error('expected a version snapshot');
-
         const restored = await api.restoreVersion({
             type: 'post',
             id: e.id,
-            versionId: v1.id,
+            version: 1,
         });
         expect(restored.title).toBe('Orig');
         expect(restored.fields).toEqual({ body: 'orig' });
 
         const after = await api.versions({ type: 'post', id: e.id });
-        expect(after).toHaveLength(2);
+        expect(after.map((v) => v.version)).toEqual([2, 1]);
         // newest version snapshots the pre-restore ("Changed") state.
-        expect(after[0]?.title).toBe('Changed');
-        expect(after[0]?.fields).toEqual({ body: 'changed' });
+        const saved = await api.getVersion({ type: 'post', id: e.id, version: 2 });
+        expect(saved.snapshot.title).toBe('Changed');
+        expect(saved.snapshot.fields).toEqual({ body: 'changed' });
+    });
+
+    it('refuses to restore an unknown version number', async () => {
+        const e = await api.create({ type: 'post', data: { title: 'Orig' } });
+        await expect(
+            api.restoreVersion({ type: 'post', id: e.id, version: 3 })
+        ).rejects.toBeInstanceOf(ResourceNotFoundError);
     });
 });
 
@@ -848,10 +894,8 @@ describe('an entry addressed as another type', () => {
                 }),
         ],
         ['versions', (id) => api.versions({ type: 'post', id })],
-        [
-            'restoreVersion',
-            (id) => api.restoreVersion({ type: 'post', id, versionId: 'any' }),
-        ],
+        ['getVersion', (id) => api.getVersion({ type: 'post', id, version: 1 })],
+        ['restoreVersion', (id) => api.restoreVersion({ type: 'post', id, version: 1 })],
         ['createStaged', (id) => api.createStaged({ type: 'post', id })],
         ['getStaged', (id) => api.getStaged({ type: 'post', id })],
         ['mergeStaged', (id) => api.mergeStaged({ type: 'post', id })],

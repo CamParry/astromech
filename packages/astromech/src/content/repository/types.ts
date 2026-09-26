@@ -247,11 +247,22 @@ export type JoinedQuery = {
     executeTakeFirst(): Promise<Record<string, unknown> | undefined>;
 };
 
-/** The versions group, keyed on the content row a version snapshots. */
+/** The columns a versions list reads: every version table has them. */
+export type VersionMetadataRow = {
+    version: number;
+    createdAt: Date;
+    createdBy: string | null;
+};
+
+/**
+ * The versions group, keyed on the content row a version snapshots. A version
+ * is found by that row and its number, never by its own row id.
+ */
 export type ContentVersions<Row = Record<string, unknown>> = {
-    /** Every version of a content row, newest first. */
-    findMany(contentId: ContentRowId): Promise<Row[]>;
-    findOne(versionId: string): Promise<Row | null>;
+    /** Every version of a content row, newest first, as its metadata columns only. */
+    findMany(contentId: ContentRowId): Promise<VersionMetadataRow[]>;
+    /** One version of a content row by its number; null when there is none. */
+    findOne(contentId: ContentRowId, version: number): Promise<Row | null>;
     create(snapshot: NewVersionSnapshot): Promise<void>;
     /** The highest version number for a content row; 0 when it has none. */
     latestNumber(contentId: ContentRowId): Promise<number>;

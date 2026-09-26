@@ -5,6 +5,7 @@
  * a list alone, sized for a sidebar panel.
  */
 
+import type { VersionMetadata } from 'astromech';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatDatetime } from '../../utilities/dates';
@@ -12,18 +13,15 @@ import { Button } from '../ui/button';
 import { useConfirm } from '../ui/confirm';
 import { Spinner } from '../ui/spinner';
 
-/** The shape every resource's version list shares — enough to list and restore. */
-export type VersionListItem = {
-    id: string;
-    version: number;
-    createdAt: Date;
-};
+/** The part of a version list item this panel reads: enough to list and restore. */
+export type VersionListItem = Pick<VersionMetadata, 'version' | 'createdAt'>;
 
 export type ContentVersionsPanelProps = {
     versions: VersionListItem[];
     isLoading: boolean;
     canUpdate: boolean;
-    onRestore: (versionId: string) => void;
+    /** Restore the version with this number. */
+    onRestore: (version: number) => void;
     isRestoring: boolean;
 };
 
@@ -39,12 +37,12 @@ export function ContentVersionsPanel({
 
     const sorted = [...versions].sort((a, b) => b.version - a.version);
 
-    function requestRestore(versionId: string, version: number): void {
+    function requestRestore(version: number): void {
         confirm({
             title: t('versions.confirmRestoreTitle', { number: version }),
             description: t('versions.confirmRestoreMessage'),
             confirmLabel: t('versions.confirmRestoreLabel'),
-            onConfirm: () => onRestore(versionId),
+            onConfirm: () => onRestore(version),
         });
     }
 
@@ -58,7 +56,7 @@ export function ContentVersionsPanel({
             ) : (
                 <ul className="am-content-versions-list">
                     {sorted.map((version) => (
-                        <li className="am-content-versions-item" key={version.id}>
+                        <li className="am-content-versions-item" key={version.version}>
                             <span className="am-content-versions-number">
                                 v{version.version}
                             </span>
@@ -69,9 +67,7 @@ export function ContentVersionsPanel({
                                 <Button
                                     variant="secondary"
                                     size="sm"
-                                    onClick={() =>
-                                        requestRestore(version.id, version.version)
-                                    }
+                                    onClick={() => requestRestore(version.version)}
                                     disabled={isRestoring}
                                 >
                                     {t('versions.restoreButton')}

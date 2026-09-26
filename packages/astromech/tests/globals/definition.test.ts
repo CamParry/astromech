@@ -27,6 +27,7 @@ const REQUIRES: Record<keyof GlobalsService, string | undefined> = {
     unpublish: 'statuses',
     schedule: 'statuses',
     versions: 'versioning',
+    getVersion: 'versioning',
     restoreVersion: 'versioning',
     createStaged: 'staging',
     getStaged: 'staging',

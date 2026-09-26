@@ -14,6 +14,7 @@ import { getStagedGlobal } from './methods/staging/get';
 import { mergeStagedGlobal } from './methods/staging/merge';
 import { publishGlobal, scheduleGlobal, unpublishGlobal } from './methods/status';
 import { updateGlobal } from './methods/update';
+import { getGlobalVersion } from './methods/versions/get';
 import { listGlobalVersions } from './methods/versions/list';
 import { restoreGlobalVersion } from './methods/versions/restore';
 
@@ -26,6 +27,7 @@ export const globalsDefinition = defineService<GlobalsService>(
         unpublish: unpublishGlobal,
         schedule: scheduleGlobal,
         versions: listGlobalVersions,
+        getVersion: getGlobalVersion,
         restoreVersion: restoreGlobalVersion,
         createStaged: createStagedGlobal,
         getStaged: getStagedGlobal,

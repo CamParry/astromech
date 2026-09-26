@@ -39,7 +39,7 @@ export function useMediaItem(id: string, enabled = true, locale?: string) {
     return useQuery({ ...mediaItemQueryOptions(id, locale), enabled });
 }
 
-/** One locale's saved versions of a media item, newest last. */
+/** One locale's saved versions of a media item, newest first. */
 function mediaVersionsQueryOptions(id: string, locale: string) {
     return queryOptions({
         queryKey: queryKeys.media.versions(id, locale),
@@ -140,12 +140,12 @@ export function mediaMutations() {
             mutationFn: ({
                 id,
                 locale,
-                versionId,
+                version,
             }: {
                 id: string;
                 locale: string;
-                versionId: string;
-            }) => media.restoreVersion({ id, locale, versionId }),
+                version: number;
+            }) => media.restoreVersion({ id, locale, version }),
             meta: {
                 invalidates,
                 successMessage: 'versions.restored',

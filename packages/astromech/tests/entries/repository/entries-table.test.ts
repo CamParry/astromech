@@ -541,10 +541,15 @@ describe('versions sub-surface', () => {
         expect(await entryRepository.versions.latestNumber(contentId)).toBe(2);
         const list = await entryRepository.versions.findMany(contentId);
         expect(list.map((v) => v.version)).toEqual([2, 1]);
+        // A list reads the metadata columns only.
+        expect(Object.keys(list[0] ?? {}).sort()).toEqual([
+            'createdAt',
+            'createdBy',
+            'version',
+        ]);
+        expect(list[0]?.createdAt).toBeInstanceOf(Date);
 
-        const one = list.find((v) => v.version === 1);
-        if (!one) throw new Error('expected version 1');
-        const got = await entryRepository.versions.findOne(one.id);
+        const got = await entryRepository.versions.findOne(contentId, 1);
         expect(got?.title).toBe('V1');
     });
 

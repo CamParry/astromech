@@ -56,7 +56,7 @@ function configWithStaging(): AstromechConfig {
 }
 
 let id: string;
-let versionId: string;
+let version: number;
 
 beforeEach(async () => {
     const db = await createTestDb();
@@ -70,7 +70,7 @@ beforeEach(async () => {
     });
     id = created.id;
     await api.update({ type: 'post', id, data: { fields: { body: 'v2' } } });
-    versionId = (await api.versions({ type: 'post', id }))[0]?.id ?? '';
+    version = (await api.versions({ type: 'post', id }))[0]?.version ?? 0;
 });
 
 describe('every entries route demands one entry action', () => {
@@ -144,9 +144,15 @@ describe('every entries route demands one entry action', () => {
             ],
             ['GET /:type/:id/versions', 'read', `/post/${id}/versions`, undefined],
             [
-                'POST /:type/:id/versions/:versionId/restore',
+                'GET /:type/:id/versions/:version',
+                'read',
+                `/post/${id}/versions/${String(version)}`,
+                undefined,
+            ],
+            [
+                'POST /:type/:id/versions/:version/restore',
                 'update',
-                `/post/${id}/versions/${versionId}/restore`,
+                `/post/${id}/versions/${String(version)}/restore`,
                 json({}),
             ],
             ['GET /:type/:id/used-by', 'read', `/post/${id}/used-by`, undefined],

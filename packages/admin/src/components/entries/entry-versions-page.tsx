@@ -9,7 +9,12 @@ import type { UseAdminEntryTypeResult } from '../../hooks/use-admin-entry-type';
 import { useNavigate } from '@tanstack/react-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { entryMutations, useEntry, useEntryVersions } from '../../hooks/entries';
+import {
+    entryMutations,
+    entryVersionQueryOptions,
+    useEntry,
+    useEntryVersions,
+} from '../../hooks/entries';
 import { useAdminEntryType } from '../../hooks/use-admin-entry-type';
 import { useAdminMutation } from '../../hooks/use-admin-mutation';
 import { defaultContentLocale } from '../../utilities/content-locale';
@@ -62,7 +67,10 @@ function EntryVersionsBody({
         <VersionHistory
             versions={versions}
             isLoading={isLoading}
-            onRestore={(versionId) => restoreMutation.mutate({ id, locale, versionId })}
+            versionQuery={(version) =>
+                entryVersionQueryOptions(type, id, locale, version)
+            }
+            onRestore={(version) => restoreMutation.mutate({ id, locale, version })}
             isRestoring={restoreMutation.isPending}
             breadcrumb={[
                 { label: plural, to: basePath },

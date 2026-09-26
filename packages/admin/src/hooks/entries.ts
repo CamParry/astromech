@@ -35,6 +35,20 @@ export function entryVersionsQueryOptions(type: string, id: string, locale: stri
     });
 }
 
+/** One saved version of one locale of an entry, with its snapshot. */
+export function entryVersionQueryOptions(
+    type: string,
+    id: string,
+    locale: string,
+    version: number
+) {
+    return queryOptions({
+        queryKey: queryKeys.entries.version(type, id, locale, version),
+        queryFn: () =>
+            astromechUntypedClient.entries.getVersion({ type, id, locale, version }),
+    });
+}
+
 export function useEntry(type: string, id: string, locale: string) {
     return useQuery(entryQueryOptions(type, id, locale));
 }
@@ -161,12 +175,8 @@ export function entryMutations(type: string, name: string = type) {
         }),
         restoreVersion: mutationOptions({
             mutationKey: [...all, 'restoreVersion'],
-            mutationFn: ({
-                id,
-                locale,
-                versionId,
-            }: EntryLocale & { versionId: string }) =>
-                entries.restoreVersion({ type, id, locale, versionId }),
+            mutationFn: ({ id, locale, version }: EntryLocale & { version: number }) =>
+                entries.restoreVersion({ type, id, locale, version }),
             meta: {
                 invalidates,
                 successMessage: 'versions.restored',

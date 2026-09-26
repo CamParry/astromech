@@ -296,8 +296,12 @@ describe('mergeStaged', () => {
         expect(merged.status).toBe('published');
         expect(await api.getStaged({ key: 'site' })).toBeNull();
 
-        const versions = await api.versions({ key: 'site' });
-        expect(versions[0]?.fields).toEqual({ title: 'Live', brand: 'Acme' });
+        const [latest] = await api.versions({ key: 'site' });
+        const version = await api.getVersion({
+            key: 'site',
+            version: latest?.version ?? 0,
+        });
+        expect(version.snapshot.fields).toEqual({ title: 'Live', brand: 'Acme' });
     });
 
     it('refuses when there is no staged change, with a 404', async () => {

@@ -11,6 +11,7 @@ import { deleteUser } from './methods/delete';
 import { getUser } from './methods/get';
 import { queryUsers } from './methods/query';
 import { updateUser } from './methods/update';
+import { getUserVersion } from './methods/versions/get';
 import { listUserVersions } from './methods/versions/list';
 import { restoreUserVersion } from './methods/versions/restore';
 
@@ -21,5 +22,6 @@ export const usersDefinition = defineService<UsersService>('users', {
     update: updateUser,
     delete: deleteUser,
     versions: listUserVersions,
+    getVersion: getUserVersion,
     restoreVersion: restoreUserVersion,
 });

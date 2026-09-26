@@ -100,9 +100,9 @@ describe('restoreVersion atomicity', () => {
         if (!version) throw new Error('expected a version snapshot');
 
         state.failing = true;
-        await expect(api.restoreVersion({ id, versionId: version.id })).rejects.toThrow(
-            'boom'
-        );
+        await expect(
+            api.restoreVersion({ id, version: version.version })
+        ).rejects.toThrow('boom');
 
         state.failing = false;
         const user = await api.get({ id });

@@ -126,12 +126,18 @@ always on, and there is no option to turn them off:
 
 ```ts
 const history = await app.users.versions({ id, locale: 'en' });
-await app.users.restoreVersion({ id, locale: 'en', versionId: history[1].id });
+const version = await app.users.getVersion({ id, locale: 'en', version: 2 });
+version.snapshot.fields; // the fields as they were
+await app.users.restoreVersion({ id, locale: 'en', version: 2 });
 ```
 
-`versions` returns newest first. Restoring snapshots the current state first,
-so a restore is itself undoable. Neither method falls back: they address one
-locale's content, and a locale with none is a 404.
+A version is addressed by the user's id, the locale and its number, which runs
+from 1 per locale. `versions` returns newest first, and each item carries only
+`version`, `locale`, `createdAt` and `createdBy`. `getVersion` adds `snapshot`,
+the fields the version holds. Restoring snapshots the current state first, so a
+restore is itself undoable. None of the three falls back: they address one
+locale's content, and a locale with none, or a number it has no version for,
+is a 404.
 
 A change to `name`, `email` or `role` writes no version, because a version
 holds what the site's own fields say, not the account.
@@ -148,17 +154,17 @@ newest first with a restore action.
 
 Users have four permissions:
 
-| permission     | methods                    |
-| -------------- | -------------------------- |
-| `users:read`   | `query`, `get`, `versions` |
-| `users:create` | `create`                   |
-| `users:update` | `update`, `restoreVersion` |
-| `users:delete` | `delete`                   |
+| permission     | methods                                  |
+| -------------- | ---------------------------------------- |
+| `users:read`   | `query`, `get`, `versions`, `getVersion` |
+| `users:create` | `create`                                 |
+| `users:update` | `update`, `restoreVersion`               |
+| `users:delete` | `delete`                                 |
 
 `get` and `update` have a self-access rule beside the permission: a caller
 reading or updating their own user row passes without `users:read` or
-`users:update`. `versions` and `restoreVersion` have no such rule and always
-need the permission, even for the caller's own row.
+`users:update`. The version methods have no such rule and always need the
+permission, even for the caller's own row.
 
 `create` takes an optional `password` of at least eight characters, and with
 one writes the credential account the user signs in with; without one the user

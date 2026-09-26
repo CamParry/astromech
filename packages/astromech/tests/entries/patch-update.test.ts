@@ -342,6 +342,7 @@ describe('update — version snapshots', () => {
 
         const versions = await api.versions({ type: 'post', id: entry.id });
         expect(versions).toHaveLength(1);
-        expect((versions[0]?.fields as JsonObject).body).toBe('B');
+        const version = await api.getVersion({ type: 'post', id: entry.id, version: 1 });
+        expect(version.snapshot.fields['body']).toBe('B');
     });
 });

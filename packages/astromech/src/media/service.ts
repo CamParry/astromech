@@ -13,6 +13,7 @@ import { replaceMedia } from './methods/replace';
 import { updateMedia } from './methods/update';
 import { uploadMedia } from './methods/upload';
 import { listMediaUsage } from './methods/used-by';
+import { getMediaVersion } from './methods/versions/get';
 import { listMediaVersions } from './methods/versions/list';
 import { restoreMediaVersion } from './methods/versions/restore';
 
@@ -25,5 +26,6 @@ export const mediaDefinition = defineService<MediaService>('media', {
     replace: replaceMedia,
     usedBy: listMediaUsage,
     versions: listMediaVersions,
+    getVersion: getMediaVersion,
     restoreVersion: restoreMediaVersion,
 });

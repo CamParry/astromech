@@ -82,7 +82,10 @@ async function handleRestRoute(
     if (dir !== undefined && dir !== 'asc' && dir !== 'desc') {
         return badRequest(c, '`dir` must be `asc` or `desc`');
     }
-    const urlArgs = { ...queryArgs(c, route, contract.input), ...c.req.param() };
+    const urlArgs = {
+        ...queryArgs(c, route, contract.input),
+        ...pathArgs(c, contract.input),
+    };
 
     // Checked before the body is read, so a caller that may not call this method
     // learns nothing about the request it sent.
@@ -121,7 +124,7 @@ function queryArgs(
     route: HttpRouteSpec,
     input: z.ZodType
 ): Record<string, unknown> {
-    const shape = input instanceof z.ZodObject ? input.shape : {};
+    const shape = inputShape(input);
     const readsAll = route.verb === 'get' || route.verb === 'delete';
     const names = new Set(route.queryArgs ?? []);
     const query = Object.fromEntries(
@@ -130,13 +133,32 @@ function queryArgs(
 
     const args = fromQueryParams(query);
     for (const [name, value] of Object.entries(args)) {
-        if (typeof value === 'string') args[name] = fromQueryString(value, shape[name]);
+        if (typeof value === 'string') args[name] = fromUrlValue(value, shape[name]);
     }
     return args;
 }
 
-/** A query-string value as the input field `schema` types it. */
-function fromQueryString(value: string, schema: z.ZodType | undefined): unknown {
+/**
+ * The arguments the path carries, converted as the query string's are: a
+ * version is addressed by its number (`/versions/3`), which arrives as a string.
+ */
+function pathArgs(c: Context<Env>, input: z.ZodType): Record<string, unknown> {
+    const shape = inputShape(input);
+    return Object.fromEntries(
+        Object.entries(c.req.param()).map(([name, value]) => [
+            name,
+            fromUrlValue(value, shape[name]),
+        ])
+    );
+}
+
+/** The method input's keys, or none when the input is not an object. */
+function inputShape(input: z.ZodType | undefined): Record<string, z.ZodType> {
+    return input instanceof z.ZodObject ? input.shape : {};
+}
+
+/** A query-string or path value as the input field `schema` types it. */
+function fromUrlValue(value: string, schema: z.ZodType | undefined): unknown {
     if (accepts(schema, z.ZodBoolean)) {
         if (value === 'true' || value === '1') return true;
         if (value === 'false' || value === '0') return false;
@@ -245,7 +267,7 @@ function documentRoute(
     const contract = contracts[methodName(route.id)];
     if (contract === undefined) return;
 
-    const params = pathParams(route.path);
+    const params = pathParams(route.path, contract.input);
     const body = requestBody(route, contract);
     const query = documentedQuery(route, contract);
     const status = route.status ?? (route.envelope === 'empty' ? 204 : 200);
@@ -326,7 +348,7 @@ function documentedQuery(
     contract: ServiceMethodContract
 ): z.ZodObject | undefined {
     const input = contract.input;
-    const shape = input instanceof z.ZodObject ? input.shape : {};
+    const shape = inputShape(input);
     const onPath = new Set(paramNames(route.path));
     const names =
         route.verb === 'get' || route.verb === 'delete'
@@ -373,11 +395,28 @@ function paramNames(path: string): string[] {
     return [...path.matchAll(/:([A-Za-z0-9_]+)/g)].map(([, name]) => name ?? '');
 }
 
-/** The path params of `path` as a schema, or undefined when it has none. */
-function pathParams(path: string): z.ZodObject | undefined {
+/**
+ * The path params of `path` as a schema, or undefined when it has none. A param
+ * the method's input declares a number is documented as that number; every
+ * other param is a string.
+ */
+function pathParams(path: string, input: z.ZodType): z.ZodObject | undefined {
     const names = paramNames(path);
     if (names.length === 0) return undefined;
-    return z.object(Object.fromEntries(names.map((name) => [name, z.string()])));
+    const shape = inputShape(input);
+    return z.object(
+        Object.fromEntries(
+            names.map((name) => {
+                const schema = shape[name];
+                return [
+                    name,
+                    schema !== undefined && accepts(schema, z.ZodNumber)
+                        ? schema
+                        : z.string(),
+                ];
+            })
+        )
+    );
 }
 
 /**

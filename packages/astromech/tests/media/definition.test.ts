@@ -35,6 +35,7 @@ const ACCESS = {
     replace: 'media:upload',
     usedBy: 'media:read',
     versions: 'media:read',
+    getVersion: 'media:read',
     restoreVersion: 'media:update',
 } as const;
 

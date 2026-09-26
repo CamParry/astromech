@@ -11,9 +11,9 @@ import { entryRepository } from '../../repository/entries-table';
 import { entrySchema } from '../../schema';
 
 /**
- * Restores one locale of an entry to one of its saved versions: overwrites the
- * content row with the version's title, slug and fields, and re-indexes it.
- * Throws if the version does not exist or belongs to another locale.
+ * Restores one locale of an entry to one of its saved versions, by its number:
+ * overwrites the content row with the version's title, slug and fields, and
+ * re-indexes it. Throws if that locale has no version with the number.
  */
 export const restoreEntryVersion = defineServiceMethod({
     summary: 'Roll an entry back to an earlier version.',
@@ -21,7 +21,7 @@ export const restoreEntryVersion = defineServiceMethod({
         type: z.string(),
         id: z.string(),
         locale: z.string().optional(),
-        versionId: z.string(),
+        version: z.number().int(),
     }),
     output: entrySchema,
     access: entryGate('update'),
@@ -37,8 +37,8 @@ export const restoreEntryVersion = defineServiceMethod({
             spec: RESOURCE_SPECS.entry,
             versions: entryRepository.versions,
             current: currentEntry,
-            versionId: params.versionId,
-            address: { id, locale: currentEntry.locale },
+            version: params.version,
+            address: { id },
             user: ctx.user,
             write: async ({ fields, columns }) => {
                 const slug = await uniqueSlugIfChanged({

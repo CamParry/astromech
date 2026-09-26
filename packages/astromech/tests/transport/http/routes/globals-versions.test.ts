@@ -1,9 +1,9 @@
 /**
- * `GET /globals/:key/versions` and the restore route, and the 409 a global with
- * `versioning: false` answers to both.
+ * `GET /globals/:key/versions`, the read and restore routes for one version,
+ * and the 409 a global with `versioning: false` answers to each.
  */
 
-import type { Global, GlobalVersion } from '@/types/index';
+import type { Global, GlobalVersion, VersionMetadata } from '@/types/index';
 import { createTestDb, setupTestConfig } from '@tests/harness';
 import { seedTestUser } from '@tests/mount-router';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -21,10 +21,17 @@ async function save(email: string): Promise<void> {
     expect(res.status).toBe(200);
 }
 
-async function versions(): Promise<GlobalVersion[]> {
+async function versions(): Promise<VersionMetadata[]> {
     const res = await app().request('/globals/contact/versions');
     expect(res.status).toBe(200);
-    return ((await res.json()) as { data: GlobalVersion[] }).data;
+    return ((await res.json()) as { data: VersionMetadata[] }).data;
+}
+
+/** Read version `version` of `contact`. */
+async function read(version: number): Promise<GlobalVersion> {
+    const res = await app().request(`/globals/contact/versions/${String(version)}`);
+    expect(res.status).toBe(200);
+    return ((await res.json()) as { data: GlobalVersion }).data;
 }
 
 describe('GET /globals/:key/versions', () => {
@@ -36,10 +43,9 @@ describe('GET /globals/:key/versions', () => {
 
         const listed = await versions();
         expect(listed.map((version) => version.version)).toEqual([2, 1]);
-        expect(listed.map((version) => version.fields?.['email'])).toEqual([
-            'two@b.dev',
-            'one@b.dev',
-        ]);
+        expect(listed.every((version) => !('snapshot' in version))).toBe(true);
+        expect((await read(2)).snapshot.fields['email']).toBe('two@b.dev');
+        expect((await read(1)).snapshot.fields['email']).toBe('one@b.dev');
     });
 
     it('returns an empty list for a global saved once', async () => {
@@ -48,14 +54,22 @@ describe('GET /globals/:key/versions', () => {
     });
 });
 
-describe('POST /globals/:key/versions/:versionId/restore', () => {
+describe('GET /globals/:key/versions/:version', () => {
+    it('404s a number the locale has no version for', async () => {
+        await save('one@b.dev');
+        const res = await app().request('/globals/contact/versions/1');
+        expect(res.status).toBe(404);
+    });
+});
+
+describe('POST /globals/:key/versions/:version/restore', () => {
     it('rolls the fields back to the named version', async () => {
         await save('one@b.dev');
         await save('two@b.dev');
         const [first] = await versions();
 
         const res = await app().request(
-            `/globals/contact/versions/${first?.id}/restore`,
+            `/globals/contact/versions/${String(first?.version)}/restore`,
             json({})
         );
         expect(res.status).toBe(200);
@@ -66,10 +80,7 @@ describe('POST /globals/:key/versions/:versionId/restore', () => {
     it('404s a version that does not exist', async () => {
         await save('one@b.dev');
 
-        const res = await app().request(
-            '/globals/contact/versions/missing/restore',
-            json({})
-        );
+        const res = await app().request('/globals/contact/versions/9/restore', json({}));
         expect(res.status).toBe(404);
     });
 });
@@ -77,7 +88,8 @@ describe('POST /globals/:key/versions/:versionId/restore', () => {
 describe('a global with versioning off', () => {
     it.each([
         ['GET', '/globals/theme/versions'],
-        ['POST', '/globals/theme/versions/v1/restore'],
+        ['GET', '/globals/theme/versions/1'],
+        ['POST', '/globals/theme/versions/1/restore'],
     ])('409s %s %s', async (method, path) => {
         await app().request('/globals/theme', put({ fields: { accent: 'red' } }));
 

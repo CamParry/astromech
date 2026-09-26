@@ -7,7 +7,7 @@
  * `TypedEntry` result instead of the wide `Entry`.
  */
 
-import type { Entry, EntryStatus, EntryVersion, JsonObject } from './domain';
+import type { Entry, EntryStatus, JsonObject, VersionMetadata } from './domain';
 import type { EntryQueryParams, QueryResult } from './query';
 import type {
     EntriesService,
@@ -265,17 +265,17 @@ export type TypedEntriesServiceFor<EntryMap> = {
         type: string;
         id: string;
         locale?: string;
-    }): Promise<EntryVersion[]>;
+    }): Promise<VersionMetadata[]>;
     restoreVersion<T extends keyof EntryMap>(params: {
         type: T;
         id: string;
-        versionId: string;
+        version: number;
         locale?: string;
     }): Promise<TypedEntry<FieldsForMap<EntryMap, T>>>;
     restoreVersion(params: {
         type: string;
         id: string;
-        versionId: string;
+        version: number;
         locale?: string;
     }): Promise<Entry>;
 } & Omit<

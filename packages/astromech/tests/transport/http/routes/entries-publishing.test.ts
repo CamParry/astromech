@@ -8,7 +8,7 @@
  * on here.
  */
 
-import type { Entry, EntryVersion, Usage } from '@/types/index';
+import type { Entry, EntryVersion, Usage, VersionMetadata } from '@/types/index';
 import { adminRole } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { mountRouter, seedTestUser } from '@tests/mount-router';
@@ -149,19 +149,14 @@ describe('GET /entries/:type/:id/versions', () => {
 
         const res = await app().request(`/entries/post/${id}/versions`);
         expect(res.status).toBe(200);
-        const body = (await res.json()) as { data: EntryVersion[] };
+        const body = (await res.json()) as { data: VersionMetadata[] };
         expect(Object.keys(body)).toEqual(['data']);
         expect(body.data.length).toBeGreaterThan(0);
+        // Metadata only: no snapshot, and no version row id or entry id.
         expect(Object.keys(body.data[0] ?? {}).sort()).toEqual([
             'createdAt',
             'createdBy',
-            'entryId',
-            'fields',
-            'id',
             'locale',
-            'slug',
-            'status',
-            'title',
             'version',
         ]);
     });
@@ -175,13 +170,39 @@ describe('GET /entries/:type/:id/versions', () => {
     });
 });
 
-describe('POST /entries/:type/:id/versions/:versionId/restore', () => {
+describe('GET /entries/:type/:id/versions/:version', () => {
+    it('returns { data: version } with the snapshot', async () => {
+        await api.update({ type: 'post', id, data: { fields: { body: 'v2' } } });
+
+        const res = await app().request(`/entries/post/${id}/versions/1`);
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { data: EntryVersion };
+        expect(body.data.version).toBe(1);
+        expect(Object.keys(body.data.snapshot).sort()).toEqual([
+            'fields',
+            'slug',
+            'title',
+        ]);
+    });
+
+    it('404s a number the locale has no version for', async () => {
+        const res = await app().request(`/entries/post/${id}/versions/99`);
+        expect(res.status).toBe(404);
+    });
+
+    it('422s a version that is not a number', async () => {
+        const res = await app().request(`/entries/post/${id}/versions/latest`);
+        expect(res.status).toBe(422);
+    });
+});
+
+describe('POST /entries/:type/:id/versions/:version/restore', () => {
     it('rolls the entry back and returns { data: entry }', async () => {
         await api.update({ type: 'post', id, data: { fields: { body: 'v2' } } });
         const [version] = await api.versions({ type: 'post', id });
 
         const res = await app().request(
-            `/entries/post/${id}/versions/${version?.id}/restore`,
+            `/entries/post/${id}/versions/${String(version?.version)}/restore`,
             { method: 'POST' }
         );
         expect(res.status).toBe(200);
@@ -191,7 +212,7 @@ describe('POST /entries/:type/:id/versions/:versionId/restore', () => {
     });
 
     it('404s a version that does not exist', async () => {
-        const res = await app().request(`/entries/post/${id}/versions/missing/restore`, {
+        const res = await app().request(`/entries/post/${id}/versions/99/restore`, {
             method: 'POST',
         });
         expect(res.status).toBe(404);
@@ -202,7 +223,7 @@ describe('POST /entries/:type/:id/versions/:versionId/restore', () => {
             type: 'note',
             data: { title: 'N2', slug: 'n2' },
         });
-        const res = await app().request(`/entries/note/${note.id}/versions/v1/restore`, {
+        const res = await app().request(`/entries/note/${note.id}/versions/1/restore`, {
             method: 'POST',
         });
         expect(res.status).toBe(409);
@@ -211,7 +232,7 @@ describe('POST /entries/:type/:id/versions/:versionId/restore', () => {
     });
 
     it('404s an unknown type before the version is looked up', async () => {
-        const res = await app().request('/entries/nope/x/versions/y/restore', {
+        const res = await app().request('/entries/nope/x/versions/1/restore', {
             method: 'POST',
         });
         expect(res.status).toBe(404);

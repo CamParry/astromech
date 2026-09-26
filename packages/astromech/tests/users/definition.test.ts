@@ -28,6 +28,7 @@ const ACCESS: Record<keyof UsersService, string> = {
     update: 'users:update',
     delete: 'users:delete',
     versions: 'users:read',
+    getVersion: 'users:read',
     restoreVersion: 'users:update',
 };
 

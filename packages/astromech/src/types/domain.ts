@@ -3,6 +3,7 @@
  * resource's public type is inferred from its output schema in its `schema.ts`.
  */
 
+import type { versionMetadataSchema } from '@/content/schema';
 import type { entrySchema, entryVersionSchema } from '@/entries/schema';
 import type { globalSchema, globalVersionSchema } from '@/globals/schema';
 import type {
@@ -49,17 +50,36 @@ export type Entry = z.output<typeof entrySchema>;
 /** One locale of a global. Documented key by key on `globalSchema`. */
 export type Global = z.output<typeof globalSchema>;
 
-/** A saved snapshot of one locale of one global. */
+/**
+ * What every saved version carries besides its content: its number, locale,
+ * and when and by whom it was saved. An item of a `versions` list, for any
+ * resource. Documented key by key on `versionMetadataSchema`.
+ */
+export type VersionMetadata = z.output<typeof versionMetadataSchema>;
+
+/**
+ * One saved version of one locale of an entry: its metadata, and `snapshot`,
+ * the title, slug and fields as they were.
+ */
+export type EntryVersion = z.output<typeof entryVersionSchema>;
+
+/**
+ * One saved version of one locale of a global: its metadata, and `snapshot`,
+ * the fields as they were.
+ */
 export type GlobalVersion = z.output<typeof globalVersionSchema>;
 
-/** A saved snapshot of one locale of one user's fields. */
-export type UserVersion = z.output<typeof userVersionSchema>;
-
-/** A saved snapshot of one locale of one media item. */
+/**
+ * One saved version of one locale of a media item: its metadata, and
+ * `snapshot`, the title, alt text, caption and fields as they were.
+ */
 export type MediaVersion = z.output<typeof mediaVersionSchema>;
 
-/** A saved snapshot of one locale of one entry. */
-export type EntryVersion = z.output<typeof entryVersionSchema>;
+/**
+ * One saved version of one locale of a user's fields: its metadata, and
+ * `snapshot`, the fields as they were.
+ */
+export type UserVersion = z.output<typeof userVersionSchema>;
 
 // A relationship row has no hand-written type: it is a derived index whose
 // shape comes from its `Table`, so `RelationshipRow` in `database/schema.ts`

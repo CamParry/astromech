@@ -84,12 +84,16 @@ describe('GET /media/:id/versions', () => {
         await mediaService.update({ id, locale: 'fr', data: { alt: 'un' } });
         await mediaService.update({ id, locale: 'fr', data: { alt: 'deux' } });
 
-        const versions = await data<{ locale: string; alt: string }[]>(
+        const versions = await data<{ locale: string; version: number }[]>(
             await app().request(`/media/${id}/versions?locale=fr`)
         );
         expect(versions).toHaveLength(1);
-        expect(versions[0]?.alt).toBe('un');
         expect(versions[0]?.locale).toBe('fr');
+
+        const first = await data<{ snapshot: { alt: string } }>(
+            await app().request(`/media/${id}/versions/1?locale=fr`)
+        );
+        expect(first.snapshot.alt).toBe('un');
 
         // The default locale has a sequence of its own, and it is empty.
         expect(await data(await app().request(`/media/${id}/versions`))).toEqual([]);
@@ -100,7 +104,13 @@ describe('GET /media/:id/versions', () => {
     });
 });
 
-describe('POST /media/:id/versions/:versionId/restore', () => {
+describe('GET /media/:id/versions/:version', () => {
+    it('404s a number the locale has no version for', async () => {
+        expect((await app().request(`/media/${id}/versions/1`)).status).toBe(404);
+    });
+});
+
+describe('POST /media/:id/versions/:version/restore', () => {
     it('restores the named version and returns the item', async () => {
         await mediaService.update({ id, locale: 'fr', data: { alt: 'un' } });
         await mediaService.update({ id, locale: 'fr', data: { alt: 'deux' } });
@@ -108,7 +118,7 @@ describe('POST /media/:id/versions/:versionId/restore', () => {
 
         const item = await data<{ locale: string; alt: string }>(
             await app().request(
-                `/media/${id}/versions/${version?.id ?? ''}/restore?locale=fr`,
+                `/media/${id}/versions/${String(version?.version)}/restore?locale=fr`,
                 { method: 'POST' }
             )
         );
@@ -116,13 +126,13 @@ describe('POST /media/:id/versions/:versionId/restore', () => {
         expect(item.locale).toBe('fr');
     });
 
-    it('404s a version belonging to another locale', async () => {
+    it('404s a number only another locale has a version for', async () => {
         await mediaService.update({ id, locale: 'fr', data: { alt: 'un' } });
         await mediaService.update({ id, locale: 'fr', data: { alt: 'deux' } });
         const [version] = await mediaService.versions({ id, locale: 'fr' });
 
         const res = await app().request(
-            `/media/${id}/versions/${version?.id ?? ''}/restore`,
+            `/media/${id}/versions/${String(version?.version)}/restore`,
             { method: 'POST' }
         );
         expect(res.status).toBe(404);
@@ -140,7 +150,7 @@ describe('POST /media/:id/versions/:versionId/restore', () => {
         expect(
             (
                 await app(reader).request(
-                    `/media/${id}/versions/${version?.id ?? ''}/restore?locale=fr`,
+                    `/media/${id}/versions/${String(version?.version)}/restore?locale=fr`,
                     { method: 'POST' }
                 )
             ).status

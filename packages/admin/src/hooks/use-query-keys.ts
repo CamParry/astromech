@@ -18,6 +18,9 @@ export const queryKeys = {
             ['entries', type, 'detail', id, locale] as const,
         versions: (type: string, id: string, locale: string) =>
             ['entries', type, 'versions', id, locale] as const,
+        /** One saved version of one locale of an entry, by its number. */
+        version: (type: string, id: string, locale: string, version: number) =>
+            ['entries', type, 'versions', id, locale, version] as const,
         /** The staged change of one locale of an entry (forward versioning). */
         staged: (type: string, id: string, locale: string) =>
             ['entries', type, 'staged', id, locale] as const,
@@ -35,6 +38,9 @@ export const queryKeys = {
         get: (key: string, locale: string) => ['globals', key, 'detail', locale] as const,
         versions: (key: string, locale: string) =>
             ['globals', key, 'versions', locale] as const,
+        /** One saved version of one locale of a global, by its number. */
+        version: (key: string, locale: string, version: number) =>
+            ['globals', key, 'versions', locale, version] as const,
         /** The staged change of one locale of a global (forward versioning). */
         staged: (key: string, locale: string) =>
             ['globals', key, 'staged', locale] as const,

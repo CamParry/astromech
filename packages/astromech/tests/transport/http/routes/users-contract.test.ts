@@ -8,7 +8,7 @@
  */
 
 import type { DB } from '@/database/types';
-import type { Role, User, UserVersion } from '@/types/index';
+import type { Role, User, UserVersion, VersionMetadata } from '@/types/index';
 import type { Kysely } from 'kysely';
 import { adminRole, roleWith } from '@tests/fixtures';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
@@ -370,10 +370,10 @@ describe('GET /users/:id/versions', () => {
 
         const res = await app().request(`/users/${user.id}/versions`);
         expect(res.status).toBe(200);
-        const body = (await res.json()) as { data: UserVersion[] };
+        const body = (await res.json()) as { data: VersionMetadata[] };
         expect(Object.keys(body)).toEqual(['data']);
         expect(body.data).toHaveLength(1);
-        expect(body.data[0]?.userId).toBe(user.id);
+        expect(body.data[0]?.version).toBe(1);
         expect(body.data[0]?.locale).toBe('en');
     });
 
@@ -389,7 +389,32 @@ describe('GET /users/:id/versions', () => {
     });
 });
 
-describe('POST /users/:id/versions/:versionId/restore', () => {
+describe('GET /users/:id/versions/:version', () => {
+    it('returns { data: version } with the snapshot', async () => {
+        const user = await makeUser('a@test.dev', 'Ann');
+        await usersService.update({ id: user.id, data: { fields: { bio: 'second' } } });
+
+        const res = await app().request(`/users/${user.id}/versions/1`);
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { data: UserVersion };
+        expect(Object.keys(body.data).sort()).toEqual([
+            'createdAt',
+            'createdBy',
+            'locale',
+            'snapshot',
+            'version',
+        ]);
+        expect(Object.keys(body.data.snapshot)).toEqual(['fields']);
+    });
+
+    it('403s without users:read', async () => {
+        const user = await makeUser('a@test.dev', 'Ann');
+        const res = await app(roleWith([])).request(`/users/${user.id}/versions/1`);
+        expect(res.status).toBe(403);
+    });
+});
+
+describe('POST /users/:id/versions/:version/restore', () => {
     // The restore snapshots the state it overwrites, crediting the acting user,
     // so that row has to exist or the foreign key fails.
     beforeEach(async () => {
@@ -404,7 +429,7 @@ describe('POST /users/:id/versions/:versionId/restore', () => {
         if (!version) throw new Error('expected a version');
 
         const res = await app().request(
-            `/users/${user.id}/versions/${version.id}/restore`,
+            `/users/${user.id}/versions/${String(version.version)}/restore`,
             { method: 'POST' }
         );
         expect(res.status).toBe(200);
@@ -416,7 +441,7 @@ describe('POST /users/:id/versions/:versionId/restore', () => {
     it('403s without users:update', async () => {
         const user = await makeUser('a@test.dev', 'Ann');
         const res = await app(roleWith(['users:read'])).request(
-            `/users/${user.id}/versions/anything/restore`,
+            `/users/${user.id}/versions/1/restore`,
             { method: 'POST' }
         );
         expect(res.status).toBe(403);

@@ -1,11 +1,14 @@
 /**
  * Version history UI: the list of a locale's saved versions, the diff of the
  * selected one against its predecessor, and the restore action. Shared by
- * `EntryVersionsPage` and `GlobalVersionsPage`, which fetch through their own
- * hooks and pass the results in.
+ * `EntryVersionsPage` and `GlobalVersionsPage`, which pass in the version list
+ * and the query that reads one version. The list carries metadata only, so the
+ * page reads the selected version and the one before it for the diff.
  */
 
-import type { EntryStatus, JsonObject } from 'astromech';
+import type { QueryKey, UseQueryOptions } from '@tanstack/react-query';
+import type { JsonObject, VersionMetadata } from 'astromech';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,22 +20,24 @@ import { Button } from '../ui/button';
 import { useConfirm } from '../ui/confirm';
 import { Page, PageContent, PageHeader, PageLoading, PageTitle } from '../ui/page';
 import { Panel } from '../ui/panel';
+import { Spinner } from '../ui/spinner';
 
 /**
- * The part of a saved version this UI reads — the structural subset both
+ * The part of a version's snapshot this UI diffs: the structural subset both
  * `EntryVersion` and `GlobalVersion` satisfy. `title` and `slug` belong to an
  * entry alone and are diffed only when they are there.
  */
-export type Version = {
-    id: string;
-    version: number;
-    fields: JsonObject | null;
-    status: EntryStatus | null;
-    createdAt: Date | string;
-    createdBy: string | null;
+export type VersionSnapshot = {
+    fields: JsonObject;
     title?: string;
     slug?: string | null;
 };
+
+/** One version as `getVersion` answers it, read for the diff. */
+export type VersionWithSnapshot = { version: number; snapshot: VersionSnapshot };
+
+/** A version list item as this UI reads it. */
+type VersionListItem = Pick<VersionMetadata, 'version' | 'createdAt' | 'createdBy'>;
 
 type DiffEntry = {
     field: string;
@@ -41,8 +46,8 @@ type DiffEntry = {
 };
 
 function computeDiff(
-    older: Version | null,
-    newer: Version,
+    older: VersionSnapshot | null,
+    newer: VersionSnapshot,
     hasTitle: boolean
 ): DiffEntry[] {
     // A resource with no slug column (a global) contributes no slug row; an
@@ -51,14 +56,12 @@ function computeDiff(
     const olderFields: Record<string, unknown> = {
         ...(hasTitle ? { title: older?.title ?? '' } : {}),
         ...(hasSlug ? { slug: older?.slug ?? '' } : {}),
-        status: older?.status ?? '',
         ...(older?.fields ?? {}),
     };
     const newerFields: Record<string, unknown> = {
         ...(hasTitle ? { title: newer.title } : {}),
         ...(hasSlug ? { slug: newer.slug ?? '' } : {}),
-        status: newer.status ?? '',
-        ...(newer.fields ?? {}),
+        ...newer.fields,
     };
 
     const allKeys = new Set([...Object.keys(olderFields), ...Object.keys(newerFields)]);
@@ -92,7 +95,7 @@ function renderFieldValue(value: unknown): React.ReactElement {
 }
 
 type VersionItemProps = {
-    version: Version;
+    version: VersionListItem;
     isSelected: boolean;
     authorNames: Map<string, string>;
     onClick: () => void;
@@ -128,8 +131,12 @@ function VersionItem({
 }
 
 type DiffViewProps = {
-    selected: Version;
-    previous: Version | null;
+    /** The selected version's list item, for its number, date and author. */
+    selected: VersionListItem;
+    /** What the selected version holds. */
+    snapshot: VersionSnapshot;
+    /** What the version before it holds; null for the first version. */
+    previous: VersionSnapshot | null;
     authorNames: Map<string, string>;
     onRestore: () => void;
     isRestoring: boolean;
@@ -138,6 +145,7 @@ type DiffViewProps = {
 
 function DiffView({
     selected,
+    snapshot,
     previous,
     authorNames,
     onRestore,
@@ -145,7 +153,7 @@ function DiffView({
     hasTitle,
 }: DiffViewProps): React.ReactElement {
     const { t } = useTranslation();
-    const diff = computeDiff(previous, selected, hasTitle);
+    const diff = computeDiff(previous, snapshot, hasTitle);
     const author = authorName(selected.createdBy, authorNames);
 
     return (
@@ -207,11 +215,14 @@ function DiffView({
     );
 }
 
-export type VersionHistoryProps = {
+export type VersionHistoryProps<V extends VersionWithSnapshot, K extends QueryKey> = {
     /** The locale's versions, in any order; the list sorts newest first. */
-    versions: Version[] | undefined;
+    versions: VersionListItem[] | undefined;
     isLoading: boolean;
-    onRestore: (versionId: string) => void;
+    /** The query that reads one version of this locale, with its snapshot. */
+    versionQuery: (version: number) => UseQueryOptions<V, Error, V, K>;
+    /** Restore the version with this number. */
+    onRestore: (version: number) => void;
     isRestoring: boolean;
     /** Trail above the page title, ending at the version-history crumb. */
     breadcrumb: { label: string; to?: string }[];
@@ -221,19 +232,20 @@ export type VersionHistoryProps = {
     hasTitle: boolean;
 };
 
-export function VersionHistory({
+export function VersionHistory<V extends VersionWithSnapshot, K extends QueryKey>({
     versions: rawVersions,
     isLoading,
+    versionQuery,
     onRestore,
     isRestoring,
     breadcrumb,
     editPath,
     hasTitle,
-}: VersionHistoryProps): React.ReactElement {
+}: VersionHistoryProps<V, K>): React.ReactElement {
     const confirm = useConfirm();
     const { t } = useTranslation();
 
-    const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+    const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
 
     const authorNames = useAuthorNames();
 
@@ -243,26 +255,43 @@ export function VersionHistory({
             : undefined;
 
     // Auto-select the first (latest) version on load
-    const resolvedSelectedId =
-        selectedVersionId ?? (versions != null ? (versions[0]?.id ?? null) : null);
+    const resolvedNumber =
+        selectedNumber ?? (versions != null ? (versions[0]?.version ?? null) : null);
 
-    const selectedVersion = versions?.find((v) => v.id === resolvedSelectedId) ?? null;
-    const selectedIndex = versions?.findIndex((v) => v.id === resolvedSelectedId) ?? -1;
+    const selectedVersion = versions?.find((v) => v.version === resolvedNumber) ?? null;
+    const selectedIndex = versions?.findIndex((v) => v.version === resolvedNumber) ?? -1;
     // Previous version in sorted array = the one after selected (older)
     const previousVersion =
         selectedIndex >= 0 && versions != null
             ? (versions[selectedIndex + 1] ?? null)
             : null;
 
+    // The list carries no content, so the diff reads both sides it compares.
+    const selectedRead = useQuery({
+        ...versionQuery(selectedVersion?.version ?? 0),
+        enabled: selectedVersion !== null,
+    });
+    const previousRead = useQuery({
+        ...versionQuery(previousVersion?.version ?? 0),
+        enabled: previousVersion !== null,
+    });
+    const snapshots =
+        selectedRead.data !== undefined &&
+        (previousVersion === null || previousRead.data !== undefined)
+            ? {
+                  selected: selectedRead.data.snapshot,
+                  previous: previousRead.data?.snapshot ?? null,
+              }
+            : null;
+
     function handleRestore(): void {
         if (selectedVersion == null) return;
+        const { version } = selectedVersion;
         confirm({
-            title: t('versions.confirmRestoreTitle', {
-                number: selectedVersion.version,
-            }),
+            title: t('versions.confirmRestoreTitle', { number: version }),
             description: t('versions.confirmRestoreMessage'),
             confirmLabel: t('versions.confirmRestoreLabel'),
-            onConfirm: () => onRestore(selectedVersion.id),
+            onConfirm: () => onRestore(version),
         });
     }
 
@@ -305,11 +334,11 @@ export function VersionHistory({
                             <div className="am-versions-list">
                                 {versions.map((version) => (
                                     <VersionItem
-                                        key={version.id}
+                                        key={version.version}
                                         version={version}
-                                        isSelected={version.id === resolvedSelectedId}
+                                        isSelected={version.version === resolvedNumber}
                                         authorNames={authorNames}
-                                        onClick={() => setSelectedVersionId(version.id)}
+                                        onClick={() => setSelectedNumber(version.version)}
                                     />
                                 ))}
                             </div>
@@ -324,10 +353,15 @@ export function VersionHistory({
                                     {t('versions.selectVersion')}
                                 </p>
                             </Panel>
+                        ) : snapshots === null ? (
+                            <Panel>
+                                <Spinner />
+                            </Panel>
                         ) : (
                             <DiffView
                                 selected={selectedVersion}
-                                previous={previousVersion}
+                                snapshot={snapshots.selected}
+                                previous={snapshots.previous}
                                 authorNames={authorNames}
                                 onRestore={handleRestore}
                                 isRestoring={isRestoring}

@@ -28,8 +28,8 @@ export function UserVersionsPanel({
             versions={data ?? []}
             isLoading={isLoading}
             canUpdate={canUpdate}
-            onRestore={(versionId) =>
-                restoreMutation.mutate({ id: userId, locale, versionId })
+            onRestore={(version) =>
+                restoreMutation.mutate({ id: userId, locale, version })
             }
             isRestoring={restoreMutation.isPending}
         />

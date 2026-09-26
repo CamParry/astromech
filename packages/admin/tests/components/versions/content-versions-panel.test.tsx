@@ -14,9 +14,8 @@ import { ConfirmProvider } from '@/admin/components/ui/confirm';
 import { ContentVersionsPanel } from '@/admin/components/versions/content-versions-panel';
 import en from '@/admin/locales/en.json';
 
-function makeVersion(version: number, id: string): VersionListItem {
+function makeVersion(version: number): VersionListItem {
     return {
-        id,
         version,
         createdAt: new Date(`2026-01-0${version}T00:00:00Z`),
     };
@@ -35,8 +34,8 @@ function renderPanel(
     {
         canUpdate = true,
         onRestore = vi.fn(),
-    }: { canUpdate?: boolean; onRestore?: (id: string) => void } = {}
-): { onRestore: (id: string) => void } {
+    }: { canUpdate?: boolean; onRestore?: (version: number) => void } = {}
+): { onRestore: (version: number) => void } {
     render(
         <ConfirmProvider>
             <ContentVersionsPanel
@@ -59,7 +58,7 @@ describe('ContentVersionsPanel', () => {
     });
 
     it('lists the versions newest first whatever order they arrive in', () => {
-        renderPanel([makeVersion(1, 'v1'), makeVersion(3, 'v3'), makeVersion(2, 'v2')]);
+        renderPanel([makeVersion(1), makeVersion(3), makeVersion(2)]);
 
         expect(
             [...document.querySelectorAll('.am-content-versions-number')].map(
@@ -71,18 +70,18 @@ describe('ContentVersionsPanel', () => {
     it('restores the version whose row was clicked, once confirmed', async () => {
         const user = userEvent.setup();
         const onRestore = vi.fn();
-        renderPanel([makeVersion(1, 'v1'), makeVersion(2, 'v2')], { onRestore });
+        renderPanel([makeVersion(1), makeVersion(2)], { onRestore });
 
         const buttons = screen.getAllByRole('button', { name: 'Restore this version' });
         // The list is newest first, so the second row is version 1.
         await user.click(buttons[1] as HTMLElement);
         await user.click(screen.getByRole('button', { name: 'Restore' }));
 
-        expect(onRestore).toHaveBeenCalledWith('v1');
+        expect(onRestore).toHaveBeenCalledWith(1);
     });
 
     it('renders no restore action without update permission', () => {
-        renderPanel([makeVersion(1, 'v1')], { canUpdate: false });
+        renderPanel([makeVersion(1)], { canUpdate: false });
 
         expect(screen.queryByRole('button', { name: 'Restore this version' })).toBeNull();
     });

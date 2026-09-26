@@ -36,7 +36,7 @@ export function useUser(id: string, locale?: string) {
     return useQuery(userQueryOptions(id, locale));
 }
 
-/** One locale's saved versions of a user, newest last. */
+/** One locale's saved versions of a user, newest first. */
 function userVersionsQueryOptions(id: string, locale: string) {
     return queryOptions({
         queryKey: queryKeys.users.versions(id, locale),
@@ -96,12 +96,12 @@ export function userMutations() {
             mutationFn: ({
                 id,
                 locale,
-                versionId,
+                version,
             }: {
                 id: string;
                 locale: string;
-                versionId: string;
-            }) => users.restoreVersion({ id, locale, versionId }),
+                version: number;
+            }) => users.restoreVersion({ id, locale, version }),
             meta: {
                 invalidates,
                 successMessage: 'versions.restored',

@@ -188,8 +188,14 @@ export const ENTRIES_ROUTE_SPECS = [
         id: 'entries.versions',
     },
     {
+        verb: 'get',
+        path: '/:type/:id/versions/:version',
+        id: 'entries.getVersion',
+        notFound: 'Version',
+    },
+    {
         verb: 'post',
-        path: '/:type/:id/versions/:versionId/restore',
+        path: '/:type/:id/versions/:version/restore',
         id: 'entries.restoreVersion',
         queryArgs: ['locale'],
     },
@@ -265,8 +271,14 @@ export const GLOBALS_ROUTE_SPECS = [
         id: 'globals.versions',
     },
     {
+        verb: 'get',
+        path: '/:key/versions/:version',
+        id: 'globals.getVersion',
+        notFound: 'Version',
+    },
+    {
         verb: 'post',
-        path: '/:key/versions/:versionId/restore',
+        path: '/:key/versions/:version/restore',
         id: 'globals.restoreVersion',
         queryArgs: ['locale'],
     },
@@ -321,8 +333,14 @@ export const USERS_ROUTE_SPECS = [
         id: 'users.versions',
     },
     {
+        verb: 'get',
+        path: '/:id/versions/:version',
+        id: 'users.getVersion',
+        notFound: 'Version',
+    },
+    {
         verb: 'post',
-        path: '/:id/versions/:versionId/restore',
+        path: '/:id/versions/:version/restore',
         id: 'users.restoreVersion',
         queryArgs: ['locale'],
     },
@@ -351,8 +369,14 @@ export const MEDIA_ROUTE_SPECS = [
         id: 'media.versions',
     },
     {
+        verb: 'get',
+        path: '/:id/versions/:version',
+        id: 'media.getVersion',
+        notFound: 'Version',
+    },
+    {
         verb: 'post',
-        path: '/:id/versions/:versionId/restore',
+        path: '/:id/versions/:version/restore',
         id: 'media.restoreVersion',
         queryArgs: ['locale'],
     },

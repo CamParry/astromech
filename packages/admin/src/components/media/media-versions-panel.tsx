@@ -28,8 +28,8 @@ export function MediaVersionsPanel({
             versions={data ?? []}
             isLoading={isLoading}
             canUpdate={canUpdate}
-            onRestore={(versionId) =>
-                restoreMutation.mutate({ id: mediaId, locale, versionId })
+            onRestore={(version) =>
+                restoreMutation.mutate({ id: mediaId, locale, version })
             }
             isRestoring={restoreMutation.isPending}
         />

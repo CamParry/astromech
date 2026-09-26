@@ -213,13 +213,12 @@ Or, after a package build, point directly at the built CLI:
 **Requires** `@modelcontextprotocol/sdk` to be installed in the project. If it
 is missing, the command prints an install hint and exits with code 1.
 
-**v1 coverage:** core domain methods (users, globals, media query/get/delete)
-and the standard entry CRUD+publish actions (query, get, create, update,
-publish, unpublish, delete). Not yet projected: plugin service methods, media
-upload/replace (binary data cannot cross JSON-RPC), the notifications methods
-(they act on the signed-in user's own rows and this transport has no signed-in
-user), and entries long-tail actions (duplicate, trash, restore, emptyTrash,
-versions, restoreVersion, schedule).
+**Coverage:** every method in the manifest that declares its input becomes a
+tool: the entries, globals, users and media methods (the version methods
+`versions`, `getVersion` and `restoreVersion` included) and plugin service
+methods. Not projected: media upload and replace (binary data cannot cross
+JSON-RPC) and the notifications methods (they act on the signed-in user's own
+rows, and this transport has no signed-in user).
 
 `astromech methods` lists everything in the manifest, including the methods MCP
 declines to project, so a method missing from the tool list is still visible
