@@ -10,13 +10,17 @@ The pass runs in groups small enough to hold in view at once. The first is the
 reference: the shape is reviewed there before the rest follow it.
 
 - [x] Users: `users/methods/` and `users/internal/`.
-- [ ] Media and notifications: `media/methods/`, `media/internal/`,
+- [x] Media and notifications: `media/methods/`, `media/internal/`,
       `notifications/methods/`.
 - [ ] Globals: `globals/methods/` and `globals/internal/`; `gate` and
       `readGate` become `globalAccess`. After `publish-defects` merges.
 - [ ] Entry writes: `create`, `update`, `delete`, `duplicate`, and
       `entries/internal/update-batch.ts` and `delete-batch.ts`; `entryGate`
       becomes `entryAccess`. After `publish-defects` merges.
+- [ ] Effect hints agree across the four resources: a version restore saves a
+      version each call, yet `restore` is `idempotent` for entries and globals
+      and not for users and media; no `deleteStaged` is `destructive`. Settle
+      each with the entry groups below.
 - [ ] Entry reads and status: `get`, `query`, `status`, `trash`, `restore`,
       `used-by`, `preview/`.
 - [ ] Entry staging and versions, with the catalogue: building each type's
