@@ -93,7 +93,7 @@ describe('RESOURCE_SPECS', () => {
 describe('inheritSharedFields and propagateSharedFields', () => {
     it('keeps the values when the default-locale row is missing', async () => {
         const values = { brand: 'Mine' };
-        const inherited = await inheritSharedFields(RESOURCE_SPECS.global, config, {
+        const inherited = await inheritSharedFields('global', config, {
             target: 'site',
             repository: { findOne: () => Promise.resolve(null) },
             values,
@@ -105,7 +105,7 @@ describe('inheritSharedFields and propagateSharedFields', () => {
 
     it('propagates nothing without a propagator', async () => {
         await expect(
-            propagateSharedFields(RESOURCE_SPECS.global, config, {
+            propagateSharedFields('global', config, {
                 target: 'site',
                 translatable: undefined,
                 record: { id: 'g1', locale: 'en' },
@@ -117,7 +117,7 @@ describe('inheritSharedFields and propagateSharedFields', () => {
 
     it('propagates only the shared fields the write patched', async () => {
         const propagateFields = vi.fn(() => Promise.resolve());
-        await propagateSharedFields(RESOURCE_SPECS.global, config, {
+        await propagateSharedFields('global', config, {
             target: 'site',
             translatable: { propagateFields },
             record: { id: 'g1', locale: 'en' },
@@ -219,7 +219,7 @@ describe('restoreVersion', () => {
             latestNumber: () => Promise.resolve(0),
         };
         const restored = await restoreVersion({
-            spec: RESOURCE_SPECS.user,
+            resource: 'user',
             versions,
             current: { contentId, locale: 'en', fields: { bio: 'Now' } },
             version: 1,

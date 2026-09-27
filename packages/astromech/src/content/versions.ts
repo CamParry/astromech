@@ -2,15 +2,15 @@
  * Version helpers every resource's write, read and restore share. A version
  * snapshots one content row, so the sequence runs per item and locale, and a
  * version is addressed by the resource, the locale and its number. Which
- * columns it keeps beside `fields` is the resource spec's `versionedColumns`.
+ * columns it keeps beside `fields` is the resource's `versionedColumns`.
  */
 
 import type { ContentRowId, ContentVersions } from './repository/types';
-import type { ResourceSpec } from './resources';
-import type { JsonObject, User, VersionMetadata } from '@/types/index';
+import type { JsonObject, ResourceType, User, VersionMetadata } from '@/types/index';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { deepEqual } from '@/utilities/deep-equal';
+import { RESOURCE_SPECS } from './resources';
 
 /** A content row as the helpers read it: its row id, fields and own columns. */
 type VersionedRecord = { contentId: ContentRowId; fields: JsonObject } & Record<
@@ -52,18 +52,21 @@ export async function listVersions(
  * it; that schema checks the value on the way out.
  */
 export async function readVersion<S extends object>(params: {
-    spec: ResourceSpec;
+    resource: ResourceType;
     versions: ContentVersions<StoredVersion>;
     record: AddressedRecord;
     version: number;
     address: Address;
 }): Promise<VersionMetadata & { snapshot: S }> {
-    const { spec, record } = params;
+    const { resource, record } = params;
     const row = await findVersion(params.versions, record, params.version, {
-        kind: spec.kind,
+        kind: resource,
         id: params.address.id,
     });
-    const snapshot = { ...pick(row, spec.versionedColumns), fields: row.fields };
+    const snapshot = {
+        ...pick(row, RESOURCE_SPECS[resource].versionedColumns),
+        fields: row.fields,
+    };
     return {
         version: row.version,
         locale: record.locale,
@@ -79,7 +82,7 @@ export async function readVersion<S extends object>(params: {
  * and writes it. Outside a request (a CLI job, a seed script) there is no author.
  */
 export async function snapshotVersion(
-    spec: ResourceSpec,
+    resource: ResourceType,
     versions: ContentVersions<unknown>,
     record: VersionedRecord,
     /** Who the version is credited to; null outside a request. */
@@ -87,7 +90,7 @@ export async function snapshotVersion(
 ): Promise<void> {
     const latestNumber = await versions.latestNumber(record.contentId);
     await versions.create({
-        ...pick(record, spec.versionedColumns),
+        ...pick(record, RESOURCE_SPECS[resource].versionedColumns),
         contentId: record.contentId,
         version: latestNumber + 1,
         fields: record.fields,
@@ -97,15 +100,15 @@ export async function snapshotVersion(
 
 /**
  * True when an update changes something a version preserves: the fields, or one
- * of the spec's versioned columns (an entry's title and slug). An update
+ * of the resource's versioned columns (an entry's title and slug). An update
  * touching only `status` writes no version.
  */
 export function changesVersionedContent(
-    spec: ResourceSpec,
+    resource: ResourceType,
     current: { fields: JsonObject } & Record<string, unknown>,
     next: { fields?: JsonObject | undefined } & Record<string, unknown>
 ): boolean {
-    for (const column of spec.versionedColumns) {
+    for (const column of RESOURCE_SPECS[resource].versionedColumns) {
         if (next[column] !== undefined && next[column] !== current[column]) return true;
     }
     return next.fields !== undefined && !deepEqual(current.fields, next.fields);
@@ -119,7 +122,7 @@ export function changesVersionedContent(
  * re-indexes it.
  */
 export async function restoreVersion<R, V extends StoredVersion>(params: {
-    spec: ResourceSpec;
+    resource: ResourceType;
     versions: ContentVersions<V>;
     current: VersionedRecord & { locale: string };
     version: number;
@@ -131,15 +134,16 @@ export async function restoreVersion<R, V extends StoredVersion>(params: {
         columns: Record<string, unknown>;
     }) => Promise<R>;
 }): Promise<R> {
-    const { spec, versions, current } = params;
+    const { resource, versions, current } = params;
     const version = await findVersion(versions, current, params.version, {
-        kind: spec.kind,
+        kind: resource,
         id: params.address.id,
     });
     const fields = (version.fields as JsonObject | null) ?? current.fields;
+    const columns = pick(version, RESOURCE_SPECS[resource].versionedColumns);
     return transaction(async () => {
-        await snapshotVersion(spec, versions, current, params.user);
-        return params.write({ fields, columns: pick(version, spec.versionedColumns) });
+        await snapshotVersion(resource, versions, current, params.user);
+        return params.write({ fields, columns });
     });
 }
 
@@ -148,7 +152,7 @@ async function findVersion<V>(
     versions: ContentVersions<V>,
     record: AddressedRecord,
     version: number,
-    error: { kind: ResourceSpec['kind']; id: string }
+    error: { kind: ResourceType; id: string }
 ): Promise<V> {
     const row = await versions.findOne(record.contentId, version);
     if (row === null) {

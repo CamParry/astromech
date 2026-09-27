@@ -1,7 +1,6 @@
 import type { UserResource } from '../../repository';
 import { z } from '@hono/zod-openapi';
 import { getResourceInLocale } from '@/content/locale';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { restoreVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { syncUserRelationships } from '../../relationships';
@@ -28,16 +27,11 @@ export const restoreUserVersion = defineServiceMethod({
         const { id, version } = params;
         const { config, user } = ctx;
         const userId = user?.id ?? null;
-        const current = await getResourceInLocale(
-            RESOURCE_SPECS.user,
-            config,
-            userRepository,
-            params
-        );
+        const current = await getResourceInLocale('user', config, userRepository, params);
         const { locale } = current;
 
         return restoreVersion({
-            spec: RESOURCE_SPECS.user,
+            resource: 'user',
             versions: userRepository.versions,
             current,
             version,

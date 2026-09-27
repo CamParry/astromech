@@ -1,6 +1,5 @@
 import type { entrySnapshotSchema } from '../../schema';
 import { z } from '@hono/zod-openapi';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { readVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
@@ -25,7 +24,7 @@ export const getEntryVersion = defineServiceMethod({
         const { type, id, version } = params;
         const entry = await getEntryOfType(type, id, params.locale);
         return readVersion<z.input<typeof entrySnapshotSchema>>({
-            spec: RESOURCE_SPECS.entry,
+            resource: 'entry',
             versions: entryRepository.versions,
             record: entry,
             version,

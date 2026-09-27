@@ -1,7 +1,6 @@
 import type { EntryResource } from '../repository/types';
 import { z } from '@hono/zod-openapi';
 import { resolveResourceLocale } from '@/content/locale';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { transaction } from '@/database/transaction';
 import { resolveEntryType } from '@/entries/entry-types';
 import { parseInput } from '@/errors/validation';
@@ -53,12 +52,7 @@ export const createEntry = defineServiceMethod({
 
         const title = validated.title ?? '';
         const status = validated.status ?? 'unpublished';
-        const locale = resolveResourceLocale(
-            RESOURCE_SPECS.entry,
-            config,
-            entryType.id,
-            data.locale
-        );
+        const locale = resolveResourceLocale('entry', config, entryType.id, data.locale);
         const publishedAt =
             status === 'published' ? new Date() : (validated.publishedAt ?? null);
 

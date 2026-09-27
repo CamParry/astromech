@@ -1,6 +1,5 @@
 import type { EntryResource } from '../../repository/types';
 import { z } from '@hono/zod-openapi';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { requireStagedChange } from '@/content/staging';
 import { snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
@@ -61,12 +60,7 @@ export const mergeStagedEntry = defineServiceMethod({
             // 1. Backup (conditional on versioning): snapshot the canonical first so
             //    a partial failure leaves a recoverable version.
             if (versioningOn) {
-                await snapshotVersion(
-                    RESOURCE_SPECS.entry,
-                    entryRepository.versions,
-                    canonical,
-                    user
-                );
+                await snapshotVersion('entry', entryRepository.versions, canonical, user);
             }
 
             // 2. Update the canonical row in place (id + slug preserved → external

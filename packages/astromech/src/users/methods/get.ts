@@ -2,7 +2,6 @@ import type { UserResource } from '../repository';
 import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
 import { resolveResourceLocale } from '@/content/locale';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { userRepository } from '../repository';
 import { userSchema } from '../schema';
@@ -21,12 +20,7 @@ export const getUser = defineServiceMethod({
     async handler(params, ctx): Promise<UserResource | null> {
         const { id } = params;
         const { config } = ctx;
-        const locale = resolveResourceLocale(
-            RESOURCE_SPECS.user,
-            config,
-            undefined,
-            params.locale
-        );
+        const locale = resolveResourceLocale('user', config, undefined, params.locale);
         return userRepository.findOne(id, {
             locale,
             fallbackLocale: defaultContentLocale(config),

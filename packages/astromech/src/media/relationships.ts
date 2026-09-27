@@ -4,14 +4,12 @@
  */
 
 import { createContentRelationships } from '@/content/relationships';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { mediaRepository } from '@/media/repository';
 
 const relationships = createContentRelationships({
     repository: mediaRepository,
     resourceIdColumn: 'mediaId',
     kind: 'media',
-    fields: (config) => RESOURCE_SPECS.media.fields(config),
 });
 
 /**

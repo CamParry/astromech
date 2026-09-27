@@ -13,7 +13,6 @@ import type {
     User,
 } from '@/types/index';
 import { prepareFields } from '@/content/prepare-fields';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { inheritSharedFields } from '@/content/translatable';
 
 /**
@@ -39,9 +38,8 @@ export async function toStoredFields(input: {
     config: ResolvedConfig;
 }): Promise<JsonObject> {
     const { global, current, patch, config } = input;
-    const spec = RESOURCE_SPECS.global;
     const write = {
-        spec,
+        resource: 'global' as const,
         config,
         target: global.id,
         user: input.user,
@@ -62,7 +60,7 @@ export async function toStoredFields(input: {
               operation: 'create',
               values: patch,
               inherit: (values) =>
-                  inheritSharedFields(spec, config, {
+                  inheritSharedFields('global', config, {
                       target: global.id,
                       repository: input.repository,
                       values,

@@ -1,9 +1,9 @@
 /** The locale a call on any resource addresses, and the resource read in it. */
 
-import type { ResourceSpec } from './resources';
-import type { ResolvedConfig } from '@/types/index';
+import type { ResolvedConfig, ResourceType } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
 import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resource';
+import { RESOURCE_SPECS } from './resources';
 
 /**
  * The locale a call addresses, the default content locale when it names none. A
@@ -11,11 +11,12 @@ import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resourc
  * other is a caller error rather than a silent write to the wrong row.
  */
 export function resolveResourceLocale(
-    spec: ResourceSpec,
+    resource: ResourceType,
     config: ResolvedConfig,
     target: string | undefined,
     locale: string | undefined
 ): string {
+    const spec = RESOURCE_SPECS[resource];
     const defaultLocale = defaultContentLocale(config);
     const resolved = locale ?? defaultLocale;
     if (resolved !== defaultLocale && !spec.translatable(config, target)) {
@@ -32,13 +33,13 @@ export function resolveResourceLocale(
  * not fall back to the default locale: a locale with no content row throws.
  */
 export async function getResourceInLocale<T>(
-    spec: ResourceSpec,
+    resource: ResourceType,
     config: ResolvedConfig,
     repository: { findOne(id: string, options: { locale: string }): Promise<T | null> },
     params: { id: string; locale?: string | undefined }
 ): Promise<T> {
-    const locale = resolveResourceLocale(spec, config, undefined, params.locale);
+    const locale = resolveResourceLocale(resource, config, undefined, params.locale);
     const current = await repository.findOne(params.id, { locale });
-    if (!current) throw new ResourceNotFoundError(spec.kind, { id: params.id, locale });
+    if (!current) throw new ResourceNotFoundError(resource, { id: params.id, locale });
     return current;
 }

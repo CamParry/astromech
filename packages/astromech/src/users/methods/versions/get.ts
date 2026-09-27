@@ -1,7 +1,6 @@
 import type { userSnapshotSchema } from '../../schema';
 import { z } from '@hono/zod-openapi';
 import { getResourceInLocale } from '@/content/locale';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { readVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { userRepository } from '../../repository';
@@ -25,14 +24,9 @@ export const getUserVersion = defineServiceMethod({
     async handler(params, ctx) {
         const { id, version } = params;
         const { config } = ctx;
-        const current = await getResourceInLocale(
-            RESOURCE_SPECS.user,
-            config,
-            userRepository,
-            params
-        );
+        const current = await getResourceInLocale('user', config, userRepository, params);
         return readVersion<z.input<typeof userSnapshotSchema>>({
-            spec: RESOURCE_SPECS.user,
+            resource: 'user',
             versions: userRepository.versions,
             record: current,
             version,

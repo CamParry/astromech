@@ -11,7 +11,6 @@ import type {
 } from '@/content/repository/types';
 import type { User } from '@/types/index';
 import { describe, expect, it } from 'vitest';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 
 const contentId = 'content-1' as ContentRowId;
@@ -55,7 +54,7 @@ describe('snapshotVersion', () => {
         const { versions, written } = recordingVersions(2);
 
         await snapshotVersion(
-            RESOURCE_SPECS.global,
+            'global',
             versions,
             { contentId, fields: { title: 'Hi' } },
             editor
@@ -73,12 +72,7 @@ describe('snapshotVersion', () => {
     it('credits nobody when given null', async () => {
         const { versions, written } = recordingVersions();
 
-        await snapshotVersion(
-            RESOURCE_SPECS.global,
-            versions,
-            { contentId, fields: {} },
-            null
-        );
+        await snapshotVersion('global', versions, { contentId, fields: {} }, null);
 
         expect(written[0]?.createdBy).toBeNull();
         expect(written[0]?.version).toBe(1);
@@ -88,7 +82,7 @@ describe('snapshotVersion', () => {
         const { versions, written } = recordingVersions();
 
         await snapshotVersion(
-            RESOURCE_SPECS.entry,
+            'entry',
             versions,
             { contentId, fields: {}, title: 'Post', slug: 'post', status: 'published' },
             editor
@@ -102,15 +96,13 @@ describe('snapshotVersion', () => {
 describe('changesVersionedContent', () => {
     it('sees a change to a versioned column', () => {
         const current = { fields: {}, title: 'A', alt: null };
-        expect(changesVersionedContent(RESOURCE_SPECS.media, current, { alt: 'B' })).toBe(
-            true
-        );
+        expect(changesVersionedContent('media', current, { alt: 'B' })).toBe(true);
     });
 
     it('ignores a column the spec does not version', () => {
         const current = { fields: {}, status: 'unpublished' };
         expect(
-            changesVersionedContent(RESOURCE_SPECS.entry, current, {
+            changesVersionedContent('entry', current, {
                 status: 'published',
             })
         ).toBe(false);

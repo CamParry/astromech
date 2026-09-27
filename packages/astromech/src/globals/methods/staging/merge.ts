@@ -1,5 +1,4 @@
 import type { GlobalResource } from '../../repository';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { requireStagedChange } from '@/content/staging';
 import { snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
@@ -60,12 +59,7 @@ export const mergeStagedGlobal = defineServiceMethod({
             // Snapshot the canonical first, so a partial failure leaves a
             // recoverable version.
             if (global.capabilities.versioning) {
-                await snapshotVersion(
-                    RESOURCE_SPECS.global,
-                    repository.versions,
-                    current,
-                    user
-                );
+                await snapshotVersion('global', repository.versions, current, user);
             }
             const row = await repository.update(
                 { id, locale },

@@ -3,7 +3,6 @@ import { z } from '@hono/zod-openapi';
 import { hashPassword } from 'better-auth/crypto';
 import { defaultContentLocale } from '@/config/content-locale';
 import { prepareFields } from '@/content/prepare-fields';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { syncUserRelationships } from '../relationships';
@@ -26,7 +25,7 @@ export const createUser = defineServiceMethod({
         const userId = user?.id ?? null;
 
         const fields = await prepareFields({
-            spec: RESOURCE_SPECS.user,
+            resource: 'user',
             config,
             operation: 'create',
             user,

@@ -106,3 +106,17 @@ export const RESOURCE_SPECS: {
         outputSchema: mediaSchema,
     },
 };
+
+/** The columns a list of `resource` may order by. */
+export function sortableColumns(resource: ResourceType): readonly string[] {
+    return RESOURCE_SPECS[resource].sortable;
+}
+
+/** Whether `resource` keeps a content row per locale; `target` names the entry type or global. */
+export function isTranslatable(
+    resource: ResourceType,
+    config: ResolvedConfig,
+    target?: string
+): boolean {
+    return RESOURCE_SPECS[resource].translatable(config, target);
+}

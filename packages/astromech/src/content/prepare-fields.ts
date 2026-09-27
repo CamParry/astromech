@@ -4,10 +4,15 @@
  * a global, a user and a media item goes through it.
  */
 
-import type { ResourceSpec } from './resources';
 import type { ScannedRow } from './unique';
 import type { DataField } from '@/types/fields';
-import type { EntryStatus, JsonObject, ResolvedConfig, User } from '@/types/index';
+import type {
+    EntryStatus,
+    JsonObject,
+    ResolvedConfig,
+    ResourceType,
+    User,
+} from '@/types/index';
 import { resourceExistenceRepository } from '@/content/repository/resource-existence';
 import { entryValidationMode } from '@/entries/validation-mode';
 import { flattenFieldNodes } from '@/fields/flatten';
@@ -15,11 +20,12 @@ import { parseFields } from '@/fields/parse-fields';
 import { mergePatch, projectToSchema } from '@/fields/values';
 import { parseOutput } from '@/services/parse-method-output';
 import { pruneDanglingRelations } from './dangling-relations';
+import { RESOURCE_SPECS } from './resources';
 import { isUniqueAmong } from './unique';
 
 /** What the field parse needs to know about the write, beyond the values. */
 export type FieldWrite = {
-    spec: ResourceSpec;
+    resource: ResourceType;
     config: ResolvedConfig;
     /** The entry type or global key; users and media have none. */
     target?: string | undefined;
@@ -72,8 +78,8 @@ export type PrepareFieldsInput = FieldWrite & FieldSource;
  * traversal needs, and before the write, so the index derives from its result.
  */
 export async function prepareFields(input: PrepareFieldsInput): Promise<JsonObject> {
-    const { spec, config, target } = input;
-    const definitions = definitionsOf({ spec, config, target });
+    const { resource, config, target } = input;
+    const definitions = definitionsOf({ resource, config, target });
     const patch = input.base === undefined ? undefined : input.patch;
     const values =
         input.base !== undefined
@@ -91,9 +97,9 @@ export async function prepareFields(input: PrepareFieldsInput): Promise<JsonObje
             ...(input.operation === 'update'
                 ? {
                       existing: parseOutput(
-                          spec.outputSchema,
+                          RESOURCE_SPECS[resource].outputSchema,
                           input.existing,
-                          `The ${spec.kind} a field validator reads`
+                          `The ${resource} a field validator reads`
                       ),
                   }
                 : {}),
@@ -120,7 +126,8 @@ export async function prepareFields(input: PrepareFieldsInput): Promise<JsonObje
 export function fieldParseContext(
     write: FieldWrite & { coerceOnly?: ReadonlySet<string> | undefined }
 ): Parameters<typeof parseFields>[2] {
-    const { spec, config, target } = write;
+    const { resource, config, target } = write;
+    const spec = RESOURCE_SPECS[resource];
     const validate = spec.validate(config, target);
     return {
         operation: write.operation,
@@ -129,7 +136,7 @@ export function fieldParseContext(
             hasStatuses: spec.hasStatuses(config, target),
         }),
         resource: {
-            kind: spec.kind,
+            kind: resource,
             record: write.operation === 'update' ? write.existing : null,
         },
         user: write.user,
@@ -142,15 +149,15 @@ export function fieldParseContext(
 
 /** The target's top-level data fields, layout fields unwrapped. */
 export function definitionsOf({
-    spec,
+    resource,
     config,
     target,
 }: {
-    spec: ResourceSpec;
+    resource: ResourceType;
     config: ResolvedConfig;
     target?: string | undefined;
 }): DataField[] {
-    return flattenFieldNodes(spec.fields(config, target));
+    return flattenFieldNodes(RESOURCE_SPECS[resource].fields(config, target));
 }
 
 /** Root field names a patch sends; an `undefined` value is absent. */

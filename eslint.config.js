@@ -111,7 +111,16 @@ const ambientReadExceptions = [
 // all five; each module's own block bans the other four.
 const modulesWithInternal = ['entries', 'globals', 'media', 'users', 'notifications'];
 
-function noInternalImport(modules) {
+// `RESOURCE_SPECS` is read only inside `content/` (DECISIONS.md, "A caller names
+// the resource; `content/` reads its spec"). The `content/` block drops this ban.
+const noResourceSpecsImport = {
+    regex: '^(@/|(\\.{1,2}/)+(.*/)?)content/resources$',
+    importNames: ['RESOURCE_SPECS'],
+    message:
+        "RESOURCE_SPECS is internal to content/. Pass the resource by name (`resource: 'user'`) to a content/ helper, or add a named accessor to content/resources.ts.",
+};
+
+function restrictedCoreImports(modules, { allowResourceSpecs = false } = {}) {
     return [
         'error',
         {
@@ -121,6 +130,7 @@ function noInternalImport(modules) {
                     message:
                         'A module\'s internal/ is private to it. Import from the module root, or move the helper there if another module needs it (see DECISIONS.md, "A module\'s internal/ is private to it").',
                 },
+                ...(allowResourceSpecs ? [] : [noResourceSpecsImport]),
             ],
         },
     ];
@@ -255,17 +265,26 @@ export default tseslint.config(
         files: ['packages/astromech/src/**/*.ts', 'packages/astromech/src/**/*.tsx'],
         rules: {
             '@typescript-eslint/no-restricted-imports':
-                noInternalImport(modulesWithInternal),
+                restrictedCoreImports(modulesWithInternal),
         },
     },
     ...modulesWithInternal.map((own) => ({
         files: [`packages/astromech/src/${own}/**/*.ts`],
         rules: {
-            '@typescript-eslint/no-restricted-imports': noInternalImport(
+            '@typescript-eslint/no-restricted-imports': restrictedCoreImports(
                 modulesWithInternal.filter((m) => m !== own)
             ),
         },
     })),
+    {
+        files: ['packages/astromech/src/content/**/*.ts'],
+        rules: {
+            '@typescript-eslint/no-restricted-imports': restrictedCoreImports(
+                modulesWithInternal,
+                { allowResourceSpecs: true }
+            ),
+        },
+    },
     {
         files: [
             'packages/astromech/tests/**/*.ts',

@@ -4,14 +4,12 @@
  */
 
 import { createContentRelationships } from '@/content/relationships';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { userRepository } from '@/users/repository';
 
 const relationships = createContentRelationships({
     repository: userRepository,
     resourceIdColumn: 'userId',
     kind: 'user',
-    fields: (config) => RESOURCE_SPECS.user.fields(config),
 });
 
 /**

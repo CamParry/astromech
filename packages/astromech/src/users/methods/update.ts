@@ -3,7 +3,6 @@ import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
 import { resolveResourceLocale } from '@/content/locale';
 import { patchedFieldNames, prepareFields } from '@/content/prepare-fields';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
@@ -37,12 +36,7 @@ export const updateUser = defineServiceMethod({
         const { id, data } = params;
         const { config, user } = ctx;
         const userId = user?.id ?? null;
-        const locale = resolveResourceLocale(
-            RESOURCE_SPECS.user,
-            config,
-            undefined,
-            params.locale
-        );
+        const locale = resolveResourceLocale('user', config, undefined, params.locale);
         const fallbackLocale = defaultContentLocale(config);
 
         // The resource this write edits or, when the locale has no content row,
@@ -71,7 +65,7 @@ export const updateUser = defineServiceMethod({
             patch === undefined
                 ? undefined
                 : await prepareFields({
-                      spec: RESOURCE_SPECS.user,
+                      resource: 'user',
                       config,
                       operation: 'update',
                       existing: base,
@@ -88,16 +82,8 @@ export const updateUser = defineServiceMethod({
         // are one transaction: an index that outlived a failed write would name
         // relations the stored fields do not.
         await transaction(async () => {
-            if (
-                current &&
-                changesVersionedContent(RESOURCE_SPECS.user, current, { fields })
-            ) {
-                await snapshotVersion(
-                    RESOURCE_SPECS.user,
-                    userRepository.versions,
-                    current,
-                    user
-                );
+            if (current && changesVersionedContent('user', current, { fields })) {
+                await snapshotVersion('user', userRepository.versions, current, user);
             }
             if (name !== undefined || email !== undefined || role !== undefined) {
                 await userRepository.updateUserRow(id, { name, email, role });
@@ -117,7 +103,7 @@ export const updateUser = defineServiceMethod({
             // An update that never touched `fields` must leave the index and the
             // user's other locales alone.
             if (fields !== undefined && patch !== undefined) {
-                await propagateSharedFields(RESOURCE_SPECS.user, config, {
+                await propagateSharedFields('user', config, {
                     translatable: userRepository.translatable,
                     record: { id, locale },
                     fields,

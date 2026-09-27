@@ -17,10 +17,11 @@ same shape, not only to `createUser`.
       prunes the fields a write stores; it writes nothing. Take one object
       argument, with the three source shapes as its keys, and name the row
       before the write `existing`, carried only by the update operation.
-- [ ] **The shared `content/` helpers take the resource by name.** A call passes
+- [x] **The shared `content/` helpers take the resource by name.** A call passes
       `resource: 'user'` and the helper looks up what it needs, so
-      `RESOURCE_SPECS` is internal to `content/`. Rename it: "resource spec" was
-      never agreed vocabulary.
+      `RESOURCE_SPECS` is internal to `content/`.
+- [ ] **Rename `RESOURCE_SPECS` and `ResourceSpec`.** "Resource spec" was never
+      agreed vocabulary; the new name is still being chosen.
 
 The `scan` argument is left as it is: `backlog.md` asks whether `unique` fields
 stay at all.

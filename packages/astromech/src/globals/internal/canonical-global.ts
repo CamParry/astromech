@@ -3,7 +3,6 @@
 import type { GlobalRepository, GlobalResource } from '../repository';
 import type { ResolvedConfig, ResolvedGlobal } from '@/types/index';
 import { resolveResourceLocale } from '@/content/locale';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { globalRepository } from '../repository';
 import { getDeclaredGlobal } from '../resolve-global';
@@ -28,12 +27,7 @@ export async function getCanonicalGlobal(
     params: { key: string; locale?: string | undefined }
 ): Promise<CanonicalGlobal> {
     const global = getDeclaredGlobal(config, params.key);
-    const locale = resolveResourceLocale(
-        RESOURCE_SPECS.global,
-        config,
-        global.id,
-        params.locale
-    );
+    const locale = resolveResourceLocale('global', config, global.id, params.locale);
 
     const current = await globalRepository.findByKey(params.key, locale);
     if (!current) throw new ResourceNotFoundError('global', { id: params.key, locale });

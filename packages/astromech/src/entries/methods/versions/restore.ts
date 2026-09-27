@@ -1,6 +1,5 @@
 import type { EntryResource } from '../../repository/types';
 import { z } from '@hono/zod-openapi';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { restoreVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
@@ -31,7 +30,7 @@ export const restoreEntryVersion = defineServiceMethod({
         const currentEntry = await getEntryOfType(type, id, params.locale);
 
         return restoreVersion({
-            spec: RESOURCE_SPECS.entry,
+            resource: 'entry',
             versions: entryRepository.versions,
             current: currentEntry,
             version,

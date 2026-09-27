@@ -1,5 +1,4 @@
 import type { GlobalResource } from '../../repository';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { restoreVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
@@ -29,7 +28,7 @@ export const restoreGlobalVersion = defineServiceMethod({
             locale: params.locale,
         });
         return restoreVersion({
-            spec: RESOURCE_SPECS.global,
+            resource: 'global',
             versions: repository.versions,
             current,
             version,

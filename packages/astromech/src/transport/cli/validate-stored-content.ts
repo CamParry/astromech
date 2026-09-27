@@ -9,7 +9,7 @@ import type { FieldErrors } from '@/types/fields';
 import type { AppContext, EntryStatus, JsonObject, ResourceType } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
 import { definitionsOf, fieldParseContext } from '@/content/prepare-fields';
-import { RESOURCE_SPECS } from '@/content/resources';
+import { isTranslatable } from '@/content/resources';
 import { resolveEntryType } from '@/entries/entry-types';
 import { listEntriesInLocale } from '@/entries/read-entry';
 import { entryRepository } from '@/entries/repository/entries-table';
@@ -126,7 +126,7 @@ async function checkContentRows(
         kind === 'media'
             ? mediaRepository.findByLocale(locale)
             : userRepository.findByLocale(locale);
-    for (const locale of locales(ctx, RESOURCE_SPECS[kind].translatable(ctx.config))) {
+    for (const locale of locales(ctx, isTranslatable(kind, ctx.config))) {
         // One load per locale: the run writes nothing, so it cannot go stale.
         const scan = memoize(() => listContent(locale));
         for (const row of await scan()) {
@@ -174,17 +174,16 @@ async function checkRow(
     report: ValidationReport,
     row: StoredRow
 ): Promise<void> {
-    const spec = RESOURCE_SPECS[row.kind];
     // A row whose entry type the config no longer declares has no rules to fail.
     if (row.kind === 'entry' && !resolveEntryType(ctx.config, row.target ?? '')) return;
 
     report.rowsChecked += 1;
     const processed = await safeParseFields(
         row.fields,
-        definitionsOf({ spec, config: ctx.config, target: row.target }),
+        definitionsOf({ resource: row.kind, config: ctx.config, target: row.target }),
         {
             ...fieldParseContext({
-                spec,
+                resource: row.kind,
                 config: ctx.config,
                 target: row.target,
                 operation: 'update',

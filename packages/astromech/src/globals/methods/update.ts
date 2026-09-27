@@ -9,7 +9,6 @@ import { z } from '@hono/zod-openapi';
 import { assertCapability } from '@/content/capabilities';
 import { resolveResourceLocale } from '@/content/locale';
 import { patchedFieldNames } from '@/content/prepare-fields';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
@@ -54,12 +53,7 @@ export const updateGlobal = defineServiceMethod({
         const staged = params.staged === true;
         const global = getDeclaredGlobal(config, key);
         if (staged) assertCapability('global', global, 'staging');
-        const locale = resolveResourceLocale(
-            RESOURCE_SPECS.global,
-            config,
-            global.id,
-            params.locale
-        );
+        const locale = resolveResourceLocale('global', config, global.id, params.locale);
 
         const canonical = staged ? null : await globalRepository.findByKey(key, locale);
         // A locale with no row yet still needs the id when the global exists.
@@ -134,9 +128,9 @@ export const updateGlobal = defineServiceMethod({
                 return row;
             }
             if (current && global.capabilities.versioning) {
-                if (changesVersionedContent(RESOURCE_SPECS.global, current, { fields })) {
+                if (changesVersionedContent('global', current, { fields })) {
                     await snapshotVersion(
-                        RESOURCE_SPECS.global,
+                        'global',
                         globalRepository.versions,
                         current,
                         user
@@ -227,7 +221,7 @@ async function writeRow(params: {
                   }
               );
 
-    await propagateSharedFields(RESOURCE_SPECS.global, config, {
+    await propagateSharedFields('global', config, {
         target: global.id,
         translatable: repository.translatable,
         record: { id: row.id, locale: row.locale },

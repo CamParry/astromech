@@ -9,7 +9,6 @@ import type {
 } from '@/types/index';
 import { resolveResourceLocale } from '@/content/locale';
 import { patchedFieldNames } from '@/content/prepare-fields';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { requireStagedChange } from '@/content/staging';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
@@ -77,12 +76,7 @@ export async function updateEntryBatch(
         );
     }
 
-    const locale = resolveResourceLocale(
-        RESOURCE_SPECS.entry,
-        config,
-        entryType.id,
-        params.locale
-    );
+    const locale = resolveResourceLocale('entry', config, entryType.id, params.locale);
 
     // Each id is read once, at the top: the record feeds both the before-hook
     // context and the write, so nothing loads twice. An id with no row in this
@@ -233,18 +227,13 @@ async function updateOne(params: {
     // Snapshot before the slug is uniquified, so the version compares what the caller sent.
     if (
         entryType.capabilities.versioning &&
-        changesVersionedContent(RESOURCE_SPECS.entry, currentEntry, {
+        changesVersionedContent('entry', currentEntry, {
             title: data.title,
             slug: data.slug,
             fields,
         })
     ) {
-        await snapshotVersion(
-            RESOURCE_SPECS.entry,
-            entryRepository.versions,
-            currentEntry,
-            user
-        );
+        await snapshotVersion('entry', entryRepository.versions, currentEntry, user);
     }
 
     const publishedAt =
@@ -278,7 +267,7 @@ async function updateOne(params: {
         // A staged row is not one of the entry's locales, so its shared fields
         // stay with it until the merge.
         if (!staged) {
-            await propagateSharedFields(RESOURCE_SPECS.entry, config, {
+            await propagateSharedFields('entry', config, {
                 target: entryType.id,
                 translatable: entryRepository.translatable,
                 record: currentEntry,

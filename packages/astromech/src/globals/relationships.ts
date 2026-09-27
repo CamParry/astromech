@@ -5,16 +5,12 @@
  */
 
 import { createContentRelationships } from '@/content/relationships';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { globalRepository } from '@/globals/repository';
 
 const relationships = createContentRelationships({
     repository: globalRepository,
     resourceIdColumn: 'globalId',
     kind: 'global',
-    // A global no longer declared has no fields, so it holds no references.
-    fields: (config, resourceRow) =>
-        RESOURCE_SPECS.global.fields(config, String(resourceRow['key'])),
     sourceType: (resourceRow) => String(resourceRow['key']),
 });
 

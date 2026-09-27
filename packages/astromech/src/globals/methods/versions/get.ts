@@ -1,6 +1,5 @@
 import type { globalSnapshotSchema } from '../../schema';
 import type { z } from '@hono/zod-openapi';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { readVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
@@ -27,7 +26,7 @@ export const getGlobalVersion = defineServiceMethod({
             locale: params.locale,
         });
         return readVersion<z.input<typeof globalSnapshotSchema>>({
-            spec: RESOURCE_SPECS.global,
+            resource: 'global',
             versions: repository.versions,
             record: current,
             version,

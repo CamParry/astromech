@@ -5,11 +5,11 @@
  */
 
 import type { ContentRef, Resource } from './repository/types';
-import type { ResourceSpec } from './resources';
 import type { DataField } from '@/types/fields';
-import type { JsonObject, ResolvedConfig } from '@/types/index';
+import type { JsonObject, ResolvedConfig, ResourceType } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
 import { flattenFieldNodes } from '@/fields/flatten';
+import { RESOURCE_SPECS } from './resources';
 
 /** The read `inheritSharedFields` needs: one locale of one item. */
 type ContentReader = {
@@ -30,7 +30,7 @@ type FieldPropagator = {
  * the stored value over whatever the caller sent.
  */
 export async function inheritSharedFields(
-    spec: ResourceSpec,
+    resource: ResourceType,
     config: ResolvedConfig,
     params: {
         /** The entry type or global key; users and media have none. */
@@ -46,7 +46,7 @@ export async function inheritSharedFields(
     const defaultLocale = defaultContentLocale(config);
     if (id === undefined || locale === defaultLocale) return values;
 
-    const shared = sharedFieldNames(spec, config, params.target, undefined);
+    const shared = sharedFieldNames(resource, config, params.target, undefined);
     if (shared.length === 0) return values;
 
     const source = await repository.findOne(
@@ -68,7 +68,7 @@ export async function inheritSharedFields(
  * holds every field, and propagating an untouched one would overwrite them.
  */
 export async function propagateSharedFields(
-    spec: ResourceSpec,
+    resource: ResourceType,
     config: ResolvedConfig,
     params: {
         target?: string | undefined;
@@ -82,7 +82,7 @@ export async function propagateSharedFields(
     if (!translatable) return;
 
     const shared = sharedFieldNames(
-        spec,
+        resource,
         config,
         params.target,
         params.patchedFieldNames
@@ -102,11 +102,12 @@ export async function propagateSharedFields(
  * given. Empty when the target itself is not translatable.
  */
 function sharedFieldNames(
-    spec: ResourceSpec,
+    resource: ResourceType,
     config: ResolvedConfig,
     target: string | undefined,
     names: readonly string[] | undefined
 ): string[] {
+    const spec = RESOURCE_SPECS[resource];
     if (!spec.translatable(config, target)) return [];
     const definitions: DataField[] = flattenFieldNodes(spec.fields(config, target));
     return definitions

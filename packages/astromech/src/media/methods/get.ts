@@ -2,7 +2,6 @@ import type { MediaResource } from '../repository';
 import { z } from '@hono/zod-openapi';
 import { defaultContentLocale } from '@/config/content-locale';
 import { resolveResourceLocale } from '@/content/locale';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { mediaRepository } from '../repository';
 import { mediaSchema } from '../schema';
@@ -21,12 +20,7 @@ export const getMedia = defineServiceMethod({
     async handler(params, ctx): Promise<MediaResource | null> {
         const { id } = params;
         const { config } = ctx;
-        const locale = resolveResourceLocale(
-            RESOURCE_SPECS.media,
-            config,
-            undefined,
-            params.locale
-        );
+        const locale = resolveResourceLocale('media', config, undefined, params.locale);
         return mediaRepository.findOne(id, {
             locale,
             fallbackLocale: defaultContentLocale(config),

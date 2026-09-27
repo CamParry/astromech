@@ -19,7 +19,7 @@ import type { Expression, SqlBool } from 'kysely';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
 import { createContentRepository, lastUpdate } from '@/content/repository/content-table';
-import { RESOURCE_SPECS } from '@/content/resources';
+import { sortableColumns } from '@/content/resources';
 import { encodePatchWith } from '@/database/codec';
 import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
@@ -45,7 +45,7 @@ const ENTRY_SORT_COLUMNS = new Set(['createdAt', 'updatedAt']);
  * the content row's: the same split the returned shape makes.
  */
 function orderPairs(sort?: SortOption | SortOption[]): OrderPair[] {
-    return buildOrderBy(RESOURCE_SPECS.entry.sortable, sort, [
+    return buildOrderBy(sortableColumns('entry'), sort, [
         { field: 'createdAt', direction: 'desc' },
     ]).map(
         ({ field, direction }): OrderPair => [

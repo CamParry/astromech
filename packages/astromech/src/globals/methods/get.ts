@@ -3,7 +3,6 @@ import type { VisibilityShape } from '@/content/visibility';
 import { z } from '@hono/zod-openapi';
 import { assertCapability } from '@/content/capabilities';
 import { resolveResourceLocale } from '@/content/locale';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { applyVisibility } from '@/content/visibility';
 import { ResourceValidationError } from '@/errors/resource';
 import { flattenEntryFields } from '@/fields/flatten';
@@ -32,12 +31,7 @@ export const getGlobal = defineServiceMethod({
         const { key, full, staged } = params;
         const { config } = ctx;
         const global = getDeclaredGlobal(config, key);
-        const locale = resolveResourceLocale(
-            RESOURCE_SPECS.global,
-            config,
-            global.id,
-            params.locale
-        );
+        const locale = resolveResourceLocale('global', config, global.id, params.locale);
 
         // Before the row lookup, so every caller gets the capability's 409 for
         // `staged` whether or not the global has been saved.

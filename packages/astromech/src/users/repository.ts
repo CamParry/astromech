@@ -14,7 +14,7 @@ import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
 import { relationshipRepository } from '@/content/repository/relationships';
-import { RESOURCE_SPECS } from '@/content/resources';
+import { sortableColumns } from '@/content/resources';
 import { chunks } from '@/database/chunks';
 import { encodeWith, kyselyTableKey } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
@@ -127,7 +127,7 @@ function createUserRepository() {
     async function findMany(params: UserListParams = {}): Promise<UserResource[]> {
         return content.findMany({
             where: filter(params),
-            orderBy: buildOrderBy(RESOURCE_SPECS.user.sortable, params.sort, [
+            orderBy: buildOrderBy(sortableColumns('user'), params.sort, [
                 { field: 'name', direction: 'asc' },
             ]),
             limit: params.limit,

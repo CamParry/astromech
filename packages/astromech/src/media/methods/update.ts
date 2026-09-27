@@ -3,7 +3,6 @@ import type { JsonObject } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { resolveResourceLocale } from '@/content/locale';
 import { patchedFieldNames, prepareFields } from '@/content/prepare-fields';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
@@ -35,12 +34,7 @@ export const updateMedia = defineServiceMethod({
         const { id, data } = params;
         const { config, user } = ctx;
         const userId = user?.id ?? null;
-        const locale = resolveResourceLocale(
-            RESOURCE_SPECS.media,
-            config,
-            undefined,
-            params.locale
-        );
+        const locale = resolveResourceLocale('media', config, undefined, params.locale);
 
         // The row this write edits or, when the locale has none, the
         // default-locale row the new one is copied from.
@@ -56,7 +50,7 @@ export const updateMedia = defineServiceMethod({
             // Merged over `base`, so a locale being written for the first time
             // starts as a copy of the default-locale row.
             fields = await prepareFields({
-                spec: RESOURCE_SPECS.media,
+                resource: 'media',
                 config,
                 operation: 'update',
                 existing: base,
@@ -82,13 +76,8 @@ export const updateMedia = defineServiceMethod({
         // index that outlived a failed write would name relations the stored
         // fields do not.
         return transaction(async () => {
-            if (current && changesVersionedContent(RESOURCE_SPECS.media, current, next)) {
-                await snapshotVersion(
-                    RESOURCE_SPECS.media,
-                    mediaRepository.versions,
-                    current,
-                    user
-                );
+            if (current && changesVersionedContent('media', current, next)) {
+                await snapshotVersion('media', mediaRepository.versions, current, user);
             }
             // The repository stamps `updatedAt` and `updatedBy` on the media
             // row; an explicitly-`undefined` key means "leave this column alone".
@@ -105,7 +94,7 @@ export const updateMedia = defineServiceMethod({
             // An update that never touched `fields` must leave the index and the
             // item's other locales alone.
             if (fields !== undefined && patch !== undefined) {
-                await propagateSharedFields(RESOURCE_SPECS.media, config, {
+                await propagateSharedFields('media', config, {
                     translatable: mediaRepository.translatable,
                     record: { id, locale },
                     fields,

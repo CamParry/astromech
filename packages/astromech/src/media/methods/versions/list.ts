@@ -1,7 +1,6 @@
 import type { VersionMetadata } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { getResourceInLocale } from '@/content/locale';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { versionMetadataSchema } from '@/content/schema';
 import { listVersions } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
@@ -21,7 +20,7 @@ export const listMediaVersions = defineServiceMethod({
     async handler(params, ctx): Promise<VersionMetadata[]> {
         const { config } = ctx;
         const current = await getResourceInLocale(
-            RESOURCE_SPECS.media,
+            'media',
             config,
             mediaRepository,
             params

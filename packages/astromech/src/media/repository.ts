@@ -19,7 +19,7 @@ import { getDefaultContentLocale } from '@/config/content-locale';
 import { buildOrderBy } from '@/content/list';
 import { createContentRepository } from '@/content/repository/content-table';
 import { relationshipRepository } from '@/content/repository/relationships';
-import { RESOURCE_SPECS } from '@/content/resources';
+import { sortableColumns } from '@/content/resources';
 import { chunks } from '@/database/chunks';
 import { kyselyTableKey } from '@/database/codec';
 import { createRepository } from '@/database/repository/create-repository';
@@ -167,7 +167,7 @@ function createMediaRepository() {
     async function findMany(params: MediaListParams = {}): Promise<MediaResource[]> {
         return content.findMany({
             where: filter(params),
-            orderBy: buildOrderBy(RESOURCE_SPECS.media.sortable, params.sort, [
+            orderBy: buildOrderBy(sortableColumns('media'), params.sort, [
                 { field: 'createdAt', direction: 'desc' },
             ]),
             limit: params.limit,

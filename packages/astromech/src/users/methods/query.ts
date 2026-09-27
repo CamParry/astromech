@@ -2,7 +2,6 @@ import type { UserResource } from '../repository';
 import type { QueryResult } from '@/types/index';
 import { queryPage, queryResultSchema } from '@/content/list';
 import { resolveResourceLocale } from '@/content/locale';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { userRepository } from '../repository';
 import { userQuerySchema, userSchema } from '../schema';
@@ -21,12 +20,7 @@ export const queryUsers = defineServiceMethod({
     async handler(params, ctx): Promise<QueryResult<UserResource>> {
         const { search, sort } = params;
         const { config } = ctx;
-        const locale = resolveResourceLocale(
-            RESOURCE_SPECS.user,
-            config,
-            undefined,
-            params.locale
-        );
+        const locale = resolveResourceLocale('user', config, undefined, params.locale);
         return queryPage(params, {
             list: (page) => userRepository.findMany({ search, sort, locale, ...page }),
             count: () => userRepository.count({ search }),

@@ -10,22 +10,23 @@ import type {
 } from '@/content/repository/relationships';
 import type { StoredRows } from '@/content/repository/types';
 import type { FieldReference } from '@/fields/references';
-import type { Field } from '@/types/fields';
 import type { JsonObject, ResolvedConfig, ResourceType } from '@/types/index';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { flattenFieldNodes } from '@/fields/flatten';
 import { findReferences } from '@/fields/references';
+import { RESOURCE_SPECS } from './resources';
 
-/** The resource: where its stored rows come from, how they join, and its fields. */
+/** The resource: where its stored rows come from and how they join. */
 type ContentRelationshipsShape = {
     /** The resource's repository; only its stored-row read is used. */
     repository: { findStoredRows(ids?: readonly string[]): Promise<StoredRows> };
     /** The content rows' column holding the resource id: `userId`, `globalId`. */
     resourceIdColumn: string;
     kind: ResourceType;
-    /** The field tree one resource row's content is read against. */
-    fields: (config: ResolvedConfig, resourceRow: Record<string, unknown>) => Field[];
-    /** The index's `sourceType` for one resource row; absent means null. */
+    /**
+     * The index's `sourceType` for one resource row, and the target its fields
+     * are read for (a global's key); absent means null.
+     */
     sourceType?: (resourceRow: Record<string, unknown>) => string | null;
 };
 
@@ -96,14 +97,18 @@ export function createContentRelationships(shape: ContentRelationshipsShape): {
         resourceRow: Record<string, unknown>,
         rows: readonly ContentFields[]
     ): RelationshipIndexSource {
-        const definitions = flattenFieldNodes(shape.fields(config, resourceRow));
+        const sourceType = shape.sourceType?.(resourceRow) ?? null;
+        // A target no longer declared has no fields, so it holds no references.
+        const definitions = flattenFieldNodes(
+            RESOURCE_SPECS[shape.kind].fields(config, sourceType ?? undefined)
+        );
         return {
             // A resource with a staged row is still live, so the source is
             // never itself staged; the per-reference flag carries staging.
             source: {
                 id: String(resourceRow['id']),
                 kind: shape.kind,
-                type: shape.sourceType?.(resourceRow) ?? null,
+                type: sourceType,
                 staged: false,
             },
             references: mergeContentReferences(rows, (fields) =>

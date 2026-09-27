@@ -14,7 +14,6 @@ import type {
     User,
 } from '@/types/index';
 import { prepareFields } from '@/content/prepare-fields';
-import { RESOURCE_SPECS } from '@/content/resources';
 import { inheritSharedFields } from '@/content/translatable';
 import { listEntriesInLocale } from '../read-entry';
 import { entryRepository } from '../repository/entries-table';
@@ -59,12 +58,11 @@ export type StoredFieldsInput = {
  */
 export async function toStoredFields(input: StoredFieldsInput): Promise<JsonObject> {
     const { config, user } = input;
-    const spec = RESOURCE_SPECS.entry;
 
     if (input.kind === 'create') {
         const type = input.entryType.id;
         return prepareFields({
-            spec,
+            resource: 'entry',
             config,
             target: type,
             operation: 'create',
@@ -73,7 +71,7 @@ export async function toStoredFields(input: StoredFieldsInput): Promise<JsonObje
             scan: () => listEntriesInLocale(type, input.locale),
             values: input.values,
             inherit: (values) =>
-                inheritSharedFields(spec, config, {
+                inheritSharedFields('entry', config, {
                     target: type,
                     // The shared read is by id and locale; an entry read names its type.
                     repository: {
@@ -106,7 +104,7 @@ export async function toStoredFields(input: StoredFieldsInput): Promise<JsonObje
 
     return prepareFields({
         ...(source satisfies FieldSource),
-        spec,
+        resource: 'entry',
         config,
         target: type,
         operation: 'update',
