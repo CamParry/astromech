@@ -15,8 +15,8 @@ beforeEach(async () => {
 
 describe('the redirects methods in the OpenAPI document', () => {
     it('documents `create` with its input as the body and its output as the bare 200', () => {
-        const { api, document, warnings } = servedDocument([redirects()]);
-        const create = document.paths[`${api}/plugins/redirects/create`]?.['post'];
+        const { document, warnings } = servedDocument([redirects()]);
+        const create = document.paths['/plugins/redirects/create']?.['post'];
         expect(create?.summary).toBe('Create a redirect rule.');
 
         const body = create?.requestBody?.content['application/json'].schema;
@@ -48,12 +48,12 @@ describe('the redirects methods in the OpenAPI document', () => {
     });
 
     it('documents the public `lookup` with no 401 or 403', () => {
-        const { api, document } = servedDocument([redirects()]);
-        const lookup = document.paths[`${api}/plugins/redirects/lookup`]?.['post'];
+        const { document } = servedDocument([redirects()]);
+        const lookup = document.paths['/plugins/redirects/lookup']?.['post'];
         expect(Object.keys(lookup?.responses ?? {})).toEqual(['200', '422', '500']);
         const output = lookup?.responses['200']?.content?.['application/json'].schema;
         // Null for a path with no enabled rule.
-        expect(output?.anyOf?.[1]).toEqual({ nullable: true });
+        expect(output?.anyOf?.[1]).toEqual({ type: 'null' });
         expect(Object.keys(output?.anyOf?.[0]?.properties ?? {})).toEqual([
             'to',
             'status',

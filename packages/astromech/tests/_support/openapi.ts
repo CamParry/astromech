@@ -11,9 +11,9 @@ import { openApiDocument } from '@/transport/http/routes/openapi-document';
 
 /** One schema in the document, loosely: the keys the tests read. */
 export type OpenApiSchema = {
-    type?: string;
+    /** One type, or a type array such as `['string', 'null']`. */
+    type?: string | string[];
     format?: string;
-    nullable?: boolean;
     properties?: Record<string, OpenApiSchema>;
     required?: string[];
     items?: OpenApiSchema;
@@ -26,7 +26,9 @@ export type OpenApiSchema = {
 
 /** One operation in the document. */
 export type OpenApiOperation = {
+    operationId?: string;
     summary?: string;
+    security?: Record<string, string[]>[];
     parameters?: { name: string; in: string; schema?: OpenApiSchema }[];
     requestBody?: { content: { 'application/json': { schema: OpenApiSchema } } };
     responses: Record<
@@ -40,14 +42,20 @@ export type OpenApiOperation = {
 
 /** The document, loosely. */
 export type OpenApiDocument = {
+    openapi: string;
+    servers?: { url: string }[];
+    security?: Record<string, string[]>[];
     paths: Record<string, Record<string, OpenApiOperation>>;
-    components?: { schemas?: Record<string, OpenApiSchema> };
+    components?: {
+        schemas?: Record<string, OpenApiSchema>;
+        securitySchemes?: Record<string, Record<string, unknown>>;
+    };
 };
 
 /**
  * The document the app serves with `plugins` registered, the API prefix its
- * paths start with, and each warning building it logged. Needs a test database,
- * since the app is built over the config.
+ * server names (each path is relative to it), and each warning building it
+ * logged. Needs a test database, since the app is built over the config.
  */
 export function servedDocument(plugins: PluginDefinition[]): {
     api: string;
@@ -59,10 +67,7 @@ export function servedDocument(plugins: PluginDefinition[]): {
     const app = createHttpApp(resolved);
     const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     try {
-        const document = openApiDocument(
-            app,
-            `${api}/plugins`
-        ) as unknown as OpenApiDocument;
+        const document = openApiDocument(app, api) as unknown as OpenApiDocument;
         const warnings = logged.mock.calls.map((call) => String(call[0]));
         return { api, document, warnings };
     } finally {

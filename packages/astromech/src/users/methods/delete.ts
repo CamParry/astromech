@@ -16,6 +16,8 @@ export const deleteUser = defineServiceMethod({
     access: 'users:delete',
     mutates: true,
     destructive: true,
+    // A missing row is a no-op rather than a 404, so a second call changes nothing.
+    idempotent: true,
     async handler(params): Promise<void> {
         const userRow = await userRepository.findUserRow(params.id);
         if (userRow) {

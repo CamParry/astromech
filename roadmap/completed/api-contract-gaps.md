@@ -18,4 +18,4 @@ server does.
 - [x] **The version tables' unused `status` column is dropped.** A version
       holds content, not publication state (`DECISIONS.md`).
 
-What this work left open is in `planned/api-contract-follow-ups.md`.
+What this work left open is in `api-contract-follow-ups.md`.

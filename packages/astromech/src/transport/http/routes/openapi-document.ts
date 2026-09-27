@@ -1,5 +1,5 @@
 /**
- * The API's OpenAPI document: the routes the app registered (the route tables
+ * The API's OpenAPI 3.1 document: the routes the app registered (the route tables
  * and `/me`), plus one path per plugin service method, which no route table
  * describes because `POST /plugins/:name/:method` resolves the method per
  * request (`transport/http/routes/plugins.ts`).
@@ -19,7 +19,7 @@ import { nullableAsUnion } from './rest-route';
 
 /** The OpenAPI version and title the API's document declares. */
 const DOCUMENT_CONFIG = {
-    openapi: '3.0.0',
+    openapi: '3.1.0',
     info: {
         title: 'Astromech CMS API',
         version: '1.0.0',
@@ -27,15 +27,19 @@ const DOCUMENT_CONFIG = {
     },
 } as const;
 
-type Document = ReturnType<OpenAPIHono['getOpenAPIDocument']>;
+/** The name the document gives the session every non-public route requires. */
+const SESSION_SCHEME = 'sessionCookie';
+
+type Document = ReturnType<OpenAPIHono['getOpenAPI31Document']>;
 
 /** Which of a plugin method's own schemas its documented route describes. */
 type Described = { body: boolean; output: boolean };
 
 /**
- * `app`'s document with each plugin service method added at
- * `POST ${pluginsBase}/<serviceKey>/<method>`. A raw route is left out: its
- * handler takes a Web `Request` and declares no schema to document it from.
+ * `app`'s document, its paths relative to the server `api` (the API's mount
+ * path), with each plugin service method added at `POST /plugins/<serviceKey>/<method>`.
+ * A raw route is left out: its handler takes a Web `Request` and declares no
+ * schema to document it from.
  *
  * Each method is documented on its own and merged in, so one plugin's schema
  * cannot break the whole document. A schema the generator cannot write (a
@@ -46,17 +50,33 @@ type Described = { body: boolean; output: boolean };
  */
 export function openApiDocument<E extends Env>(
     app: OpenAPIHono<E>,
-    pluginsBase: string
+    api: string
 ): Document {
-    const document = app.getOpenAPIDocument(DOCUMENT_CONFIG);
-    const schemas = ((document.components ??= {}).schemas ??= {});
+    const generated = app.getOpenAPI31Document({
+        ...DOCUMENT_CONFIG,
+        servers: [{ url: api }],
+        security: [{ [SESSION_SCHEME]: [] }],
+    });
+    const document: Document = { ...generated, paths: relativeTo(api, generated.paths) };
+    const components = (document.components ??= {});
+    components.securitySchemes = {
+        [SESSION_SCHEME]: {
+            type: 'apiKey',
+            in: 'cookie',
+            name: 'better-auth.session_token',
+            description:
+                'The session cookie signing in through `/auth/sign-in/email` sets. ' +
+                'Over HTTPS its name carries the `__Secure-` prefix.',
+        },
+    };
+    const schemas = (components.schemas ??= {});
     const owners = new Map(Object.keys(schemas).map((name) => [name, 'core']));
 
     for (const identity of getPluginIdentities()) {
         const methods = getPluginServiceMethods().get(identity.namespace) ?? {};
         for (const [name, method] of Object.entries(methods)) {
             const owner = `plugin "${identity.namespace}"`;
-            const own = methodDocument(identity, name, method, pluginsBase, (candidate) =>
+            const own = methodDocument(identity, name, method, (candidate) =>
                 clashingComponent(candidate, schemas, owners, owner)
             );
             Object.assign((document.paths ??= {}), own.paths);
@@ -73,6 +93,22 @@ export function openApiDocument<E extends Env>(
 }
 
 /**
+ * `paths` keyed relative to `api`, which the document's server names, so a path
+ * is written once whatever base path the site mounts the API at.
+ */
+function relativeTo(
+    api: string,
+    paths: Document['paths']
+): NonNullable<Document['paths']> {
+    return Object.fromEntries(
+        Object.entries(paths ?? {}).map(([path, item]) => [
+            path.startsWith(`${api}/`) ? path.slice(api.length) : path,
+            item,
+        ])
+    );
+}
+
+/**
  * One plugin method's document, describing every schema it declares that can
  * be written without a clash, and warning about each one left out.
  */
@@ -80,11 +116,11 @@ function methodDocument(
     identity: ResolvedPluginIdentity,
     name: string,
     method: AnyServiceMethod,
-    base: string,
     /** Why the document cannot be merged, or undefined when it can. */
     clash: (document: Document) => string | undefined
 ): Document {
-    const path = `${base}/${identity.serviceKey}/${name}`;
+    const id = `plugins.${identity.serviceKey}.${name}`;
+    const path = `/plugins/${identity.serviceKey}/${name}`;
     const declared: Described = {
         body: declaresArguments(method.input),
         output: method.output !== undefined,
@@ -100,7 +136,7 @@ function methodDocument(
     for (const described of attempts) {
         let document: Document;
         try {
-            document = generate(pluginMethodRoute(path, method, described));
+            document = generate(pluginMethodRoute({ id, path }, method, described));
         } catch (error) {
             reason ||= messageOf(error);
             continue;
@@ -116,13 +152,13 @@ function methodDocument(
         if (left.length > 0) {
             log.warn(
                 `The OpenAPI document leaves the ${left.join(' and ')} schema of ` +
-                    `plugins.${identity.serviceKey}.${name} undescribed: ${reason}`
+                    `${id} undescribed: ${reason}`
             );
         }
         return document;
     }
     // The last attempt names no schema of the plugin's, so it cannot fail.
-    throw new Error(`Cannot document plugins.${identity.serviceKey}.${name}: ${reason}`);
+    throw new Error(`Cannot document ${id}: ${reason}`);
 }
 
 /** What went wrong: the generator throws objects that are not `Error`s. */
@@ -137,7 +173,7 @@ function messageOf(error: unknown): string {
 function generate(route: RouteConfig): Document {
     const app = new OpenAPIHono();
     app.openAPIRegistry.registerPath(route);
-    return app.getOpenAPIDocument(DOCUMENT_CONFIG);
+    return app.getOpenAPI31Document(DOCUMENT_CONFIG);
 }
 
 /**
@@ -161,14 +197,13 @@ function clashingComponent(
 }
 
 /**
- * One plugin method as `answerPluginMethod` serves it: the body is the argument
- * object, and a 200 answers the result bare, with no `{ data }` around it. A
- * method with no `output` answers whatever its handler returns, so its 200
- * names no schema. An unknown plugin or method is the router's 404, not a
- * method's, so none is documented here.
+ * One plugin method as `answerPluginMethod` serves it, named by its method id:
+ * the body is the argument object, and a 200 answers the result bare. A method
+ * with no `output` answers whatever its handler returns, so its 200 names no
+ * schema. An unknown plugin or method is the router's 404, so none is documented.
  */
 function pluginMethodRoute(
-    path: string,
+    route: { id: string; path: string },
     method: AnyServiceMethod,
     described: Described
 ): RouteConfig {
@@ -176,8 +211,11 @@ function pluginMethodRoute(
     const success = method.summary ?? 'Success';
     return {
         method: 'post',
-        path,
+        path: route.path,
+        operationId: route.id,
         ...(method.summary !== undefined ? { summary: method.summary } : {}),
+        // A public method is served without a session, so it needs none.
+        ...(method.access === 'public' ? { security: [] } : {}),
         request: takesArguments
             ? {
                   body: {

@@ -60,8 +60,8 @@ describe('the route table', () => {
     it('documents every row, bespoke handlers included', () => {
         const app = new OpenAPIHono<{ Variables: AuthVariables }>();
         app.route('/globals', createGlobalsRouter());
-        const doc = app.getOpenAPIDocument({
-            openapi: '3.0.0',
+        const doc = app.getOpenAPI31Document({
+            openapi: '3.1.0',
             info: { title: 'Astromech CMS API', version: '1.0.0' },
         }) as unknown as Document;
 

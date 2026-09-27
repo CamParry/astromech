@@ -16,7 +16,9 @@ export function withFallback<S extends z.ZodType>(
     schema: S,
     value: z.output<S>
 ): WithFallback<S> {
-    const documented = toJsonSchema(schema, { io: 'output', target: 'openapi-3.0' });
+    // Inside the document the document's dialect applies, so it names none.
+    const { $schema: _dialect, ...converted } = toJsonSchema(schema, { io: 'output' });
+    const documented = nullAsTypeArray(converted);
     const caught = schema.catch(fallback(value));
     if (schema.safeParse(undefined).success) {
         return caught.openapi(documented) as WithFallback<S>;
@@ -27,6 +29,26 @@ export function withFallback<S extends z.ZodType>(
         message: 'Expected a value, received undefined',
     });
     return z.pipe(present, caught).openapi(documented) as WithFallback<S>;
+}
+
+/**
+ * `schema` with a null option written as the OpenAPI generator writes one, a type
+ * array (`type: ['string', 'null']`), rather than zod's `anyOf` with a null
+ * branch: the generator takes a schema from metadata only when it has a `type`.
+ */
+function nullAsTypeArray(schema: Record<string, unknown>): Record<string, unknown> {
+    const { anyOf, ...rest } = schema;
+    if (!Array.isArray(anyOf) || anyOf.length !== 2) return schema;
+    const options = anyOf as Record<string, unknown>[];
+    const value = options.find((option) => option['type'] !== 'null');
+    const type = value?.['type'];
+    if (
+        typeof type !== 'string' ||
+        options.every((option) => option['type'] !== 'null')
+    ) {
+        return schema;
+    }
+    return { ...rest, ...value, type: [type, 'null'] };
 }
 
 /**

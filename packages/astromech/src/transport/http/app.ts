@@ -193,6 +193,8 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
     app.openAPIRegistry.registerPath({
         method: 'get',
         path: `${api}/me`,
+        // No method answers `/me`, so its id follows the path.
+        operationId: 'me.get',
         summary: 'Read the signed-in user and their role.',
         responses: {
             200: {
@@ -216,7 +218,7 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
 
     // Not `app.doc`: the document adds the plugin methods, and `app.doc` answers
     // a failure as `{}` with no log where this one reaches `onError`.
-    app.get(`${api}/openapi.json`, (c) => c.json(openApiDocument(app, `${api}/plugins`)));
+    app.get(`${api}/openapi.json`, (c) => c.json(openApiDocument(app, api)));
 
     if (resolveNodeEnv() === 'development') {
         app.get(`${api}/docs`, swaggerUI({ url: `${api}/openapi.json` }));

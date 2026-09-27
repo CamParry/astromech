@@ -256,17 +256,37 @@ describe('permission is checked before the type is resolved', () => {
 });
 
 describe('POST /query — the cross-type route', () => {
-    it('400s a body with no type', async () => {
-        const res = await request(roleWith(['*']), '/query', json({}));
-        expect(res.status).toBe(400);
-        const body = (await res.json()) as { error: { code: string; message: string } };
-        expect(body.error.code).toBe('invalid_input');
-        expect(body.error.message).toBe('`type` is required (string or string[])');
+    /** The 422 a `type` the route cannot read answers, naming `type` alone. */
+    async function expectTypeRefused(res: Response): Promise<void> {
+        expect(res.status).toBe(422);
+        const body = (await res.json()) as {
+            error: {
+                id: string;
+                code: string;
+                details: { fields: Record<string, string[]> };
+            };
+        };
+        expect(body.error.code).toBe('VALIDATION_FAILED');
+        expect(body.error.id).toMatch(/^err_/);
+        expect(body.error.details.fields).toEqual({
+            type: ['Expected an entry type id, or a non-empty list of them'],
+        });
+    }
+
+    it('422s a body with no type, naming `type`', async () => {
+        await expectTypeRefused(await request(roleWith(['*']), '/query', json({})));
     });
 
-    it('400s a body with an empty type array', async () => {
-        const res = await request(roleWith(['*']), '/query', json({ type: [] }));
-        expect(res.status).toBe(400);
+    it('422s a body with an empty type array', async () => {
+        await expectTypeRefused(
+            await request(roleWith(['*']), '/query', json({ type: [] }))
+        );
+    });
+
+    it('422s a type list naming something other than a string', async () => {
+        await expectTypeRefused(
+            await request(roleWith(['*']), '/query', json({ type: ['post', 1] }))
+        );
     });
 
     it('400s a body that is not JSON', async () => {
@@ -280,9 +300,12 @@ describe('POST /query — the cross-type route', () => {
         expect(body.error.code).toBe('BAD_REQUEST');
     });
 
-    it('400s a type list naming something other than a string', async () => {
-        const res = await request(roleWith(['*']), '/query', json({ type: ['post', 1] }));
+    it('400s a JSON body that is not an object', async () => {
+        const res = await request(roleWith(['*']), '/query', json(['post']));
         expect(res.status).toBe(400);
+        const body = (await res.json()) as { error: { code: string; message: string } };
+        expect(body.error.code).toBe('BAD_REQUEST');
+        expect(body.error.message).toBe('The request body must be a JSON object');
     });
 
     it('422s a field the method input rejects', async () => {

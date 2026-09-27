@@ -15,6 +15,8 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { servedDocument } from '@tests/openapi';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { entrySchema } from '@/entries/schema';
+import { entriesDefinition } from '@/entries/service';
+import { globalsDefinition } from '@/globals/service';
 import { noInput } from '@/services/define-service-method';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
 import { createGlobalsRouter } from '@/transport/http/routes/globals';
@@ -70,10 +72,15 @@ function document(): Document {
     app.route('/users', usersRouter);
     app.route('/media', mediaRouter);
     app.route('/notifications', notificationsRouter);
-    return app.getOpenAPIDocument({
-        openapi: '3.0.0',
+    return app.getOpenAPI31Document({
+        openapi: '3.1.0',
         info: { title: 'Astromech CMS API', version: '1.0.0' },
     }) as unknown as Document;
+}
+
+/** A schema's types, whether it names one or a type array. */
+function types(schema: Schema | undefined): string[] {
+    return schema?.type === undefined ? [] : [schema.type].flat();
 }
 
 /** `/entries` + `/:type/:id` as OpenAPI spells it. */
@@ -222,7 +229,7 @@ describe('the documented responses', () => {
         expect(list?.properties?.['data']?.items).toEqual({
             $ref: '#/components/schemas/Entry',
         });
-        expect(list?.properties?.['pagination']?.nullable).toBe(true);
+        expect(types(list?.properties?.['pagination'])).toEqual(['object', 'null']);
         const trash = doc.paths['/entries/{type}/{id}/trash']?.['post'];
         expect(Object.keys(responseSchema(trash, 200)?.properties ?? {})).toEqual([
             'success',
@@ -245,8 +252,11 @@ describe('the documented responses', () => {
         expect(responseSchema(staged, 200)?.properties?.['data']?.anyOf?.[0]).toEqual({
             $ref: '#/components/schemas/StagedEntry',
         });
+        expect(responseSchema(staged, 200)?.properties?.['data']?.anyOf?.[1]).toEqual({
+            type: 'null',
+        });
         for (const [name, schema] of Object.entries(doc.components?.schemas ?? {})) {
-            expect(schema.nullable, name).toBeUndefined();
+            expect(types(schema), name).not.toContain('null');
         }
     });
 
@@ -283,7 +293,7 @@ describe('the documented responses', () => {
         const entry = component(doc, 'Entry').properties ?? {};
         expect(entry['createdAt']).toEqual(dateTime);
         expect(entry['updatedAt']).toEqual(dateTime);
-        expect(entry['publishedAt']).toEqual({ ...dateTime, nullable: true });
+        expect(entry['publishedAt']).toEqual({ ...dateTime, type: ['string', 'null'] });
         expect(component(doc, 'User').properties?.['createdAt']).toEqual(dateTime);
         expect(component(doc, 'Notification').properties?.['createdAt']).toEqual(
             dateTime
@@ -312,14 +322,12 @@ describe('the documented responses', () => {
     it('documents a key with a fallback as its nullable inner type', () => {
         const doc = document();
         const entry = component(doc, 'Entry').properties ?? {};
-        expect(entry['slug']).toEqual({ type: 'string', nullable: true });
+        expect(entry['slug']).toEqual({ type: ['string', 'null'] });
         expect(component(doc, 'Media').properties?.['width']).toEqual({
-            type: 'number',
-            nullable: true,
+            type: ['number', 'null'],
         });
         expect(component(doc, 'MediaSnapshot').properties?.['alt']).toEqual({
-            type: 'string',
-            nullable: true,
+            type: ['string', 'null'],
         });
     });
 });
@@ -398,12 +406,21 @@ describe('the documented error statuses', () => {
         // `globals.get` needs no permission for a public global, but the router
         // mounts behind `requireAuth`, and a private global or `full` read needs one.
         const get = document().paths['/globals/{key}']?.['get'];
-        expect(statuses(get)).toEqual(['200', '401', '403', '404', '422', '500']);
+        expect(statuses(get)).toEqual(['200', '401', '403', '404', '409', '422', '500']);
     });
 
     it('document 400 for the body, 403 for the permission and 422 for the input on a write', () => {
         const put = document().paths['/entries/{type}/{id}']?.['put'];
-        expect(statuses(put)).toEqual(['200', '400', '401', '403', '422', '500']);
+        expect(statuses(put)).toEqual([
+            '200',
+            '400',
+            '401',
+            '403',
+            '404',
+            '409',
+            '422',
+            '500',
+        ]);
         expect(put?.responses['400']?.description).toBe(
             'Bad request: the body is not valid JSON.'
         );
@@ -429,10 +446,19 @@ describe('the documented error statuses', () => {
     it('document 400 for the sort order and keys on a list', () => {
         const paths = document().paths;
         const entries = paths['/entries/{type}']?.['get'];
-        expect(statuses(entries)).toEqual(['200', '400', '401', '403', '422', '500']);
+        expect(statuses(entries)).toEqual([
+            '200',
+            '400',
+            '401',
+            '403',
+            '404',
+            '422',
+            '500',
+        ]);
         expect(entries?.responses['400']?.description).toBe(
             'Bad request: `dir` is not `asc` or `desc`, or `sort` names a key the list ' +
-                'cannot sort by; `where` names a key the list cannot filter by.'
+                'cannot sort by; `where` names a key the list cannot filter by; ' +
+                '`trashed` is asked for without `full`.'
         );
         expect(statuses(paths['/users']?.['get'])).toEqual([
             '200',
@@ -444,6 +470,105 @@ describe('the documented error statuses', () => {
         ]);
         // A read with no list arguments answers no 400.
         expect(statuses(paths['/media/{id}']?.['get'])).not.toContain('400');
+    });
+
+    it('document 404 wherever the request names a type, a global, a row or a version', () => {
+        const paths = document().paths;
+        expect(paths['/entries/{type}']?.['post']?.responses['404']?.description).toBe(
+            'No entry type matches the request.'
+        );
+        expect(
+            paths['/entries/{type}/{id}/versions/{version}']?.['get']?.responses['404']
+                ?.description
+        ).toBe('No entry type, entry or version matches the request.');
+        expect(
+            paths['/entries/{type}/bulk-update']?.['post']?.responses['404']?.description
+        ).toBe('No entry type or entry matches the request.');
+        expect(paths['/entries/query']?.['post']?.responses['404']?.description).toBe(
+            'No entry type matches the request.'
+        );
+        expect(statuses(paths['/globals/{key}/versions']?.['get'])).toContain('404');
+        expect(statuses(paths['/users/{id}']?.['put'])).toContain('404');
+        expect(statuses(paths['/media/{id}/used-by']?.['get'])).toContain('404');
+        // Nothing addressed, nothing to miss.
+        expect(statuses(paths['/users']?.['get'])).not.toContain('404');
+    });
+
+    it('document no 404 for an idempotent delete, which answers a missing row as done', () => {
+        const paths = document().paths;
+        for (const path of ['/users/{id}', '/media/{id}', '/notifications/{id}']) {
+            expect(statuses(paths[path]?.['delete']), path).not.toContain('404');
+        }
+        // Deleting an entry reads it first, so a missing one is a 404.
+        expect(statuses(paths['/entries/{type}/{id}']?.['delete'])).toContain('404');
+    });
+
+    it('document 409 on every route whose method requires a capability', () => {
+        const doc = document();
+        const catalogues: Record<string, Record<string, { requires?: string }>> = {
+            entries: entriesDefinition.catalogue,
+            globals: globalsDefinition.catalogue,
+        };
+        let checked = 0;
+        for (const route of HTTP_ROUTES) {
+            const [domain = '', method = ''] = route.id.split('.');
+            const requires = catalogues[domain]?.[method]?.requires;
+            if (requires === undefined) continue;
+            const key = documentPath(route.base, route.path);
+            const conflict = doc.paths[key]?.[route.verb]?.responses['409'];
+            expect(conflict?.description, key).toContain(
+                `does not declare \`${requires}\` (\`capability_not_supported\`)`
+            );
+            checked += 1;
+        }
+        expect(checked).toBeGreaterThan(20);
+    });
+
+    it('document the 409s no `requires` states from the row', () => {
+        const paths = document().paths;
+        expect(
+            paths['/entries/{type}/{id}/staged']?.['post']?.responses['409']?.description
+        ).toBe(
+            'Conflict: the entry type does not declare `staging` ' +
+                '(`capability_not_supported`); the locale already has a staged change ' +
+                '(`staged_change_exists`).'
+        );
+        expect(paths['/entries/{type}']?.['post']?.responses['409']?.description).toBe(
+            'Conflict: the body sets `status` or `publishedAt` on a type without ' +
+                '`statuses`, or `slug` on one without `slug` (`capability_not_supported`).'
+        );
+        // A read with neither answers none.
+        expect(statuses(paths['/entries/{type}/{id}']?.['get'])).not.toContain('409');
+    });
+
+    it('document the 400 for the last admin on the user writes that can lose one', () => {
+        const paths = document().paths;
+        expect(paths['/users/{id}']?.['delete']?.responses['400']?.description).toBe(
+            'Bad request: the user is the last admin.'
+        );
+        expect(paths['/users/{id}']?.['put']?.responses['400']?.description).toBe(
+            'Bad request: the body is not valid JSON; the new `role` leaves the site ' +
+                'with no admin.'
+        );
+    });
+
+    it('document the cross-type query’s `type` as one type or a list, and each status it answers', () => {
+        const doc = document();
+        const query = doc.paths['/entries/query']?.['post'];
+        expect(statuses(query)).toEqual([
+            '200',
+            '400',
+            '401',
+            '403',
+            '404',
+            '422',
+            '500',
+        ]);
+        const body = query?.requestBody?.content['application/json'].schema;
+        expect(body?.properties?.['type']).toEqual({
+            anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
+        });
+        expect(body?.required).toEqual(['type']);
     });
 
     it('document every 422 with the validation body and every other error with the error body', () => {
@@ -536,9 +661,45 @@ describe('the served document', () => {
         },
     });
 
+    it('declares OpenAPI 3.1, the API base as its server and the session as its security', () => {
+        const { api, document: doc } = servedDocument([probe]);
+        expect(doc.openapi).toBe('3.1.0');
+        expect(doc.servers).toEqual([{ url: api }]);
+        expect(Object.keys(doc.paths)).toContain('/entries/{type}');
+        expect(doc.security).toEqual([{ sessionCookie: [] }]);
+        expect(doc.components?.securitySchemes?.['sessionCookie']).toMatchObject({
+            type: 'apiKey',
+            in: 'cookie',
+            name: 'better-auth.session_token',
+        });
+        // A public method is served without a session, so it asks for none.
+        expect(doc.paths['/plugins/probe/ping']?.['post']?.security).toEqual([]);
+        expect(doc.paths['/plugins/probe/echo']?.['post']?.security).toBeUndefined();
+    });
+
+    it('names every operation by a unique id, its method id where it has one route', () => {
+        const { document: doc } = servedDocument([probe]);
+        const ids = Object.values(doc.paths).flatMap((operations) =>
+            Object.values(operations).map((operation) => operation.operationId)
+        );
+        expect(ids.every((id) => typeof id === 'string' && id !== '')).toBe(true);
+        expect(new Set(ids).size).toBe(ids.length);
+
+        const id = (path: string, verb: string): string | undefined =>
+            doc.paths[path]?.[verb]?.operationId;
+        expect(id('/entries/{type}/{id}', 'put')).toBe('entries.update');
+        expect(id('/entries/{type}/bulk-update', 'post')).toBe('entries.updateMany');
+        expect(id('/entries/{type}/query', 'post')).toBe('entries.query');
+        expect(id('/entries/query', 'post')).toBe('entries.queryMany');
+        expect(id('/entries/{type}', 'get')).toBe('entries.queryGet');
+        expect(id('/users/{id}', 'delete')).toBe('users.delete');
+        expect(id('/plugins/probe/echo', 'post')).toBe('plugins.probe.echo');
+        expect(id('/me', 'get')).toBe('me.get');
+    });
+
     it('documents `/me` as the signed-in user and their role', () => {
-        const { api, document: doc } = servedDocument([]);
-        const me = doc.paths[`${api}/me`]?.['get'];
+        const { document: doc } = servedDocument([]);
+        const me = doc.paths['/me']?.['get'];
         expect(statuses(me)).toEqual(['200', '401', '500']);
         expect(responseSchema(me, 200)?.properties?.['data']).toEqual({
             $ref: '#/components/schemas/Me',
@@ -556,8 +717,8 @@ describe('the served document', () => {
     });
 
     it('documents a plugin method’s input as its body and its output as the bare 200', () => {
-        const { api, document: doc, warnings } = servedDocument([probe]);
-        const echo = doc.paths[`${api}/plugins/probe/echo`]?.['post'];
+        const { document: doc, warnings } = servedDocument([probe]);
+        const echo = doc.paths['/plugins/probe/echo']?.['post'];
         expect(bodyProperties(echo, doc)).toEqual(['text']);
         expect(responseSchema(echo, 200)?.properties?.['echoed']).toEqual({
             type: 'string',
@@ -567,8 +728,8 @@ describe('the served document', () => {
     });
 
     it('documents no body, and no 422, for a plugin method that takes no arguments', () => {
-        const { api, document: doc } = servedDocument([probe]);
-        const whoami = doc.paths[`${api}/plugins/probe/whoami`]?.['post'];
+        const { document: doc } = servedDocument([probe]);
+        const whoami = doc.paths['/plugins/probe/whoami']?.['post'];
         expect(whoami?.requestBody).toBeUndefined();
         // Signed in is enough, so there is nothing to refuse with a 403.
         expect(statuses(whoami)).toEqual(['200', '401', '500']);
@@ -577,15 +738,15 @@ describe('the served document', () => {
     });
 
     it('documents no 401 or 403 for a public plugin method', () => {
-        const { api, document: doc } = servedDocument([probe]);
-        const ping = doc.paths[`${api}/plugins/probe/ping`]?.['post'];
+        const { document: doc } = servedDocument([probe]);
+        const ping = doc.paths['/plugins/probe/ping']?.['post'];
         expect(ping?.summary).toBe('Answer pong.');
         expect(statuses(ping)).toEqual(['200', '500']);
     });
 
     it('shares a core component a plugin output reuses', () => {
-        const { api, document: doc, warnings } = servedDocument([probe]);
-        const latest = doc.paths[`${api}/plugins/probe/latest`]?.['post'];
+        const { document: doc, warnings } = servedDocument([probe]);
+        const latest = doc.paths['/plugins/probe/latest']?.['post'];
         expect(responseSchema(latest, 200)?.anyOf?.[0]).toEqual({
             $ref: '#/components/schemas/Entry',
         });
@@ -594,9 +755,9 @@ describe('the served document', () => {
 
     it('leaves a plugin schema undescribed when its component name is core’s', () => {
         const before = component(servedDocument([]).document, 'Entry');
-        const { api, document: doc, warnings } = servedDocument([clashing]);
+        const { document: doc, warnings } = servedDocument([clashing]);
         expect(component(doc, 'Entry')).toEqual(before);
-        const read = doc.paths[`${api}/plugins/clashing/read`]?.['post'];
+        const read = doc.paths['/plugins/clashing/read']?.['post'];
         expect(read?.responses['200']?.content).toBeUndefined();
         expect(warnings).toEqual([
             expect.stringContaining(
@@ -607,17 +768,16 @@ describe('the served document', () => {
     });
 
     it('leaves the second of two plugins that name different schemas alike undescribed', () => {
-        const {
-            api,
-            document: doc,
-            warnings,
-        } = servedDocument([thing('first', 'a'), thing('second', 'b')]);
+        const { document: doc, warnings } = servedDocument([
+            thing('first', 'a'),
+            thing('second', 'b'),
+        ]);
         expect(Object.keys(component(doc, 'Thing').properties ?? {})).toEqual(['a']);
+        expect(responseSchema(doc.paths['/plugins/first/read']?.['post'], 200)).toEqual({
+            $ref: '#/components/schemas/Thing',
+        });
         expect(
-            responseSchema(doc.paths[`${api}/plugins/first/read`]?.['post'], 200)
-        ).toEqual({ $ref: '#/components/schemas/Thing' });
-        expect(
-            doc.paths[`${api}/plugins/second/read`]?.['post']?.responses['200']?.content
+            doc.paths['/plugins/second/read']?.['post']?.responses['200']?.content
         ).toBeUndefined();
         expect(warnings).toEqual([
             expect.stringContaining('which plugin "first" names for a different schema'),

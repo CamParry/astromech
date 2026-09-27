@@ -15,14 +15,14 @@ beforeEach(async () => {
 
 describe('the backups methods in the OpenAPI document', () => {
     it('documents `list` with no body and a fallback key as its nullable schema', () => {
-        const { api, document, warnings } = servedDocument([backups()]);
-        const list = document.paths[`${api}/plugins/backups/list`]?.['post'];
+        const { document, warnings } = servedDocument([backups()]);
+        const list = document.paths['/plugins/backups/list']?.['post'];
         expect(list?.requestBody).toBeUndefined();
         expect(Object.keys(list?.responses ?? {})).toEqual(['200', '401', '403', '500']);
 
         const output = list?.responses['200']?.content?.['application/json'].schema;
         const run = output?.properties?.['runs']?.items;
-        expect(run?.properties?.['key']).toEqual({ type: 'string', nullable: true });
+        expect(run?.properties?.['key']).toEqual({ type: ['string', 'null'] });
         expect(run?.required).toContain('key');
         expect(warnings).toEqual([]);
     });

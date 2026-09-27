@@ -1,15 +1,14 @@
 /**
- * A method schema written as JSON Schema, as the method manifest and the OpenAPI
- * document describe it: the JSON a caller sends or receives, so a `Date` is an ISO string.
+ * A method schema written as JSON Schema 2020-12, the dialect of the method
+ * manifest and of the OpenAPI 3.1 document: the JSON a caller sends or receives,
+ * so a `Date` is an ISO string.
  */
 
 import { z } from '@hono/zod-openapi';
 
-/** What `toJsonSchema` writes: a side of the schema, in one dialect. */
+/** What `toJsonSchema` writes: one side of the schema. */
 export type JsonSchemaOptions = {
     io: 'input' | 'output';
-    /** JSON Schema 2020-12 unless given; `openapi-3.0` for the OpenAPI document. */
-    target?: 'draft-2020-12' | 'openapi-3.0';
 };
 
 /**

@@ -17,13 +17,15 @@ const router = new OpenAPIHono<Env>();
 
 const { catalogue } = notificationsDefinition;
 
+// `count` answers `{ data: { count } }`, below, not the scalar the method returns.
+const documented = {
+    ...catalogue,
+    count: { ...catalogue.count, output: z.object({ count: z.number() }) },
+};
+
 mountRestRoutes(router, {
     catalogue,
-    // `count` answers `{ data: { count } }`, below, not the scalar the method returns.
-    documented: {
-        ...catalogue,
-        count: { ...catalogue.count, output: z.object({ count: z.number() }) },
-    },
+    documented: () => documented,
     specs: NOTIFICATIONS_ROUTE_SPECS,
 });
 

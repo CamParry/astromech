@@ -140,11 +140,13 @@ describe('GET /openapi.json', () => {
         expect(res.status).toBe(200);
         const body = (await res.json()) as {
             openapi: string;
+            servers: { url: string }[];
             paths: Record<string, unknown>;
         };
-        expect(body.openapi).toBe('3.0.0');
-        expect(Object.keys(body.paths)).toContain(`${api}/me`);
-        expect(Object.keys(body.paths)).toContain(`${api}/entries/{type}`);
+        expect(body.openapi).toBe('3.1.0');
+        expect(body.servers).toEqual([{ url: api }]);
+        expect(Object.keys(body.paths)).toContain('/me');
+        expect(Object.keys(body.paths)).toContain('/entries/{type}');
     });
 });
 

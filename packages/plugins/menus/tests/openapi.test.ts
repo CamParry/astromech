@@ -14,16 +14,16 @@ beforeEach(async () => {
 
 describe('the menus method in the OpenAPI document', () => {
     it('documents the tree through the `MenuItem` component', () => {
-        const { api, document, warnings } = servedDocument([
+        const { document, warnings } = servedDocument([
             menus({ menus: [{ key: 'main', label: 'Main' }] }),
         ]);
-        const get = document.paths[`${api}/plugins/menus/get`]?.['post'];
+        const get = document.paths['/plugins/menus/get']?.['post'];
         const output = get?.responses['200']?.content?.['application/json'].schema;
         // Null for a menu with no saved global.
         expect(output?.anyOf?.[0]?.items).toEqual({
             $ref: '#/components/schemas/MenuItem',
         });
-        expect(output?.anyOf?.[1]).toEqual({ nullable: true });
+        expect(output?.anyOf?.[1]).toEqual({ type: 'null' });
 
         const item = document.components?.schemas?.['MenuItem'];
         expect(item?.properties?.['children']?.items).toEqual({

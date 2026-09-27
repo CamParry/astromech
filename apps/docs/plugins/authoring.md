@@ -1331,8 +1331,9 @@ the schema (`export type Redirect = z.output<typeof redirectSchema>`) rather tha
 writing it by hand. The first-party plugins all declare `output`;
 `@astromech/redirects` and `@astromech/forms` show the pattern.
 
-The API's OpenAPI document (`${basePath}/api/openapi.json`) lists each method at
-`POST ${basePath}/api/plugins/<serviceKey>/<method>`, with `input` as the request body
+The API's OpenAPI 3.1 document (`${basePath}/api/openapi.json`) lists each method at
+`POST /plugins/<serviceKey>/<method>`, relative to its server `${basePath}/api`, with
+`plugins.<serviceKey>.<method>` as its `operationId`, `input` as the request body
 and `output` as the `200` response. A `z.custom` needs an OpenAPI type to be
 described (`.openapi({ type: 'object', additionalProperties: true })`), and a
 recursive schema needs a name (`.openapi('MenuItem')`). A named schema becomes

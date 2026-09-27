@@ -20,8 +20,10 @@ export type Refusals = {
     session: boolean;
     /** 403: the route answers a caller whose role lacks a permission. */
     permission: boolean;
-    /** 404, naming what is missing. */
+    /** 404, naming what may be missing. */
     notFound?: string;
+    /** 409, with each reason the route can answer it for. None when empty. */
+    conflict?: readonly string[];
     /** 422: the method takes arguments its input parse can refuse. */
     input: boolean;
 };
@@ -45,6 +47,10 @@ export function errorResponses(refusals: Refusals): RouteConfig['responses'] {
     }
     if (refusals.notFound !== undefined) {
         responses[404] = errorResponse(refusals.notFound);
+    }
+    const conflicts = refusals.conflict ?? [];
+    if (conflicts.length > 0) {
+        responses[409] = errorResponse(`Conflict: ${conflicts.join('; ')}.`);
     }
     if (refusals.input) {
         responses[422] = {

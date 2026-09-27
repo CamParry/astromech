@@ -45,6 +45,12 @@ export type HttpRouteSpec = {
      * labels and the route's last path param: `Entry 'abc' not found`.
      */
     notFound?: string;
+    /**
+     * A 400 or 409 the method answers for a reason neither its schemas nor its
+     * `requires` state, worded for the OpenAPI document (the last admin, a
+     * staged change that already exists).
+     */
+    refusals?: { badRequest?: string; conflict?: string };
     /** Marks a route whose server handler is written by hand, not generated. */
     handler?: 'bespoke';
     /**
@@ -67,6 +73,21 @@ export type MountedRoute = HttpRouteSpec & { base: string };
  * One row is bespoke; `transport/http/routes/entries.ts` records the reason
  * against its handler.
  */
+/**
+ * The 409 an entry write answers when its body carries a column the type does
+ * not keep (`assertWritableFields`).
+ */
+const UNKEPT_ENTRY_COLUMN = {
+    conflict:
+        'the body sets `status` or `publishedAt` on a type without `statuses`, or ' +
+        '`slug` on one without `slug` (`capability_not_supported`)',
+};
+
+/** The 409 `createStaged` answers when the locale already has a staged change. */
+const STAGED_CHANGE_EXISTS = {
+    conflict: 'the locale already has a staged change (`staged_change_exists`)',
+};
+
 export const ENTRIES_ROUTE_SPECS = [
     { verb: 'get', path: '/:type', id: 'entries.query', envelope: 'raw', client: 'none' },
     { verb: 'get', path: '/:type/:id', id: 'entries.get', notFound: 'Entry' },
@@ -86,6 +107,7 @@ export const ENTRIES_ROUTE_SPECS = [
         id: 'entries.create',
         status: 201,
         bodyKey: 'data',
+        refusals: UNKEPT_ENTRY_COLUMN,
     },
     {
         verb: 'post',
@@ -93,6 +115,7 @@ export const ENTRIES_ROUTE_SPECS = [
         id: 'entries.update',
         queryArgs: ['locale', 'staged'],
         client: 'list',
+        refusals: UNKEPT_ENTRY_COLUMN,
     },
     {
         verb: 'put',
@@ -100,6 +123,7 @@ export const ENTRIES_ROUTE_SPECS = [
         id: 'entries.update',
         bodyKey: 'data',
         queryArgs: ['locale', 'staged'],
+        refusals: UNKEPT_ENTRY_COLUMN,
     },
     {
         verb: 'post',
@@ -206,6 +230,7 @@ export const ENTRIES_ROUTE_SPECS = [
         id: 'entries.createStaged',
         status: 201,
         queryArgs: ['locale'],
+        refusals: STAGED_CHANGE_EXISTS,
     },
     {
         verb: 'get',
@@ -244,13 +269,27 @@ export const ENTRIES_ROUTE_SPECS = [
  * the `:key` segment.
  */
 export const GLOBALS_ROUTE_SPECS = [
-    { verb: 'get', path: '/:key', id: 'globals.get', notFound: 'Global' },
+    {
+        verb: 'get',
+        path: '/:key',
+        id: 'globals.get',
+        notFound: 'Global',
+        refusals: {
+            conflict:
+                '`staged` on a global without `staging` (`capability_not_supported`)',
+        },
+    },
     {
         verb: 'put',
         path: '/:key',
         id: 'globals.update',
         bodyKey: 'data',
         queryArgs: ['locale', 'staged'],
+        refusals: {
+            conflict:
+                '`staged` on a global without `staging`, or `status` or `publishedAt` ' +
+                'on one without `statuses` (`capability_not_supported`)',
+        },
     },
     { verb: 'post', path: '/:key/publish', id: 'globals.publish', queryArgs: ['locale'] },
     {
@@ -288,6 +327,7 @@ export const GLOBALS_ROUTE_SPECS = [
         id: 'globals.createStaged',
         status: 201,
         queryArgs: ['locale'],
+        refusals: STAGED_CHANGE_EXISTS,
     },
     {
         verb: 'get',
@@ -325,8 +365,15 @@ export const USERS_ROUTE_SPECS = [
         bodyKey: 'data',
         handler: 'bespoke',
         queryArgs: ['locale'],
+        refusals: { badRequest: 'the new `role` leaves the site with no admin' },
     },
-    { verb: 'delete', path: '/:id', id: 'users.delete', envelope: 'success' },
+    {
+        verb: 'delete',
+        path: '/:id',
+        id: 'users.delete',
+        envelope: 'success',
+        refusals: { badRequest: 'the user is the last admin' },
+    },
     {
         verb: 'get',
         path: '/:id/versions',

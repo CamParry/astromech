@@ -33,10 +33,10 @@ export type RestMount = {
     /** The catalogue the service binds: each method's access and input schema. */
     catalogue: ContractCatalogue;
     /**
-     * The catalogue the OpenAPI document is written from, when it differs: the
-     * entries router documents `{type}`, and a bespoke route its own response.
+     * The catalogue the OpenAPI document writes a route from, when it differs:
+     * the entries router documents `{type}` wherever the path carries it.
      */
-    documented?: ContractCatalogue;
+    documented?: (route: HttpRouteSpec) => ContractCatalogue;
     /** The domain's rows. A bespoke row is documented here and served by hand. */
     specs: readonly HttpRouteSpec[];
     /** The 404 a route answers, after the permission, when its target is absent. */
@@ -49,9 +49,8 @@ export type RestMount = {
  * fails here, at boot, rather than on the first request.
  */
 export function mountRestRoutes(router: OpenAPIHono<Env>, mount: RestMount): void {
-    const documented = mount.documented ?? mount.catalogue;
     for (const route of mount.specs) {
-        documentRoute(router, documented, route);
+        documentRoute(router, mount.documented?.(route) ?? mount.catalogue, route);
         if (route.handler === 'bespoke') continue;
 
         const contract = mount.catalogue[methodName(route.id)];
@@ -288,6 +287,7 @@ function documentRoute(
     router.openAPIRegistry.registerPath({
         method: route.verb,
         path: documentPath(route.path),
+        operationId: operationId(route),
         ...(contract.summary !== undefined ? { summary: contract.summary } : {}),
         request: {
             ...(params !== undefined ? { params } : {}),
@@ -309,9 +309,8 @@ function documentRoute(
                 // so a route answers 401 without a session even when its method is public.
                 session: true,
                 permission: accessRefusals(contract.access).permission,
-                ...(route.notFound !== undefined
-                    ? { notFound: `${route.notFound} not found` }
-                    : {}),
+                ...notFoundRefusal(route, contract),
+                conflict: conflictReasons(route, contract),
                 input: declaresArguments(contract.input),
             }),
         },
@@ -319,9 +318,23 @@ function documentRoute(
 }
 
 /**
+ * The route's operation id: its method id (`entries.update`), the manifest's
+ * name for the method. A method with more than one route names the others apart:
+ * a list row adds `Many` (`entries.updateMany`), a row the client never uses its verb.
+ */
+function operationId(route: HttpRouteSpec): string {
+    if (route.client === 'list') return `${route.id}Many`;
+    if (route.client === 'none') {
+        return `${route.id}${route.verb.charAt(0).toUpperCase()}${route.verb.slice(1)}`;
+    }
+    return route.id;
+}
+
+/**
  * Why this route can answer 400: a body that is not JSON (see `readBody`), a
- * `dir` that is neither order, and a list's `sort` or `where` naming a key it
- * cannot use (`UnknownSortKeyError`, `UnknownWhereKeyError`).
+ * `dir` that is neither order, a list's `sort` or `where` naming a key it cannot
+ * use (`UnknownSortKeyError`, `UnknownWhereKeyError`, `InvalidReferencesFilterError`),
+ * a public read of trashed rows (`PublicTrashedReadError`), and the row's own.
  */
 function badRequestReasons(
     route: HttpRouteSpec,
@@ -341,6 +354,77 @@ function badRequestReasons(
         );
     }
     if ('where' in shape) reasons.push('`where` names a key the list cannot filter by');
+    if ('trashed' in shape && 'full' in shape) {
+        reasons.push('`trashed` is asked for without `full`');
+    }
+    if (route.refusals?.badRequest !== undefined) {
+        reasons.push(route.refusals.badRequest);
+    }
+    return reasons;
+}
+
+/**
+ * The 404 a route documents: one when the request names an entry type, a global,
+ * a row or a version, in the path or as a list row's list. An idempotent `DELETE`
+ * answers a missing row as done, so its id alone documents none.
+ */
+function notFoundRefusal(
+    route: HttpRouteSpec,
+    contract: ServiceMethodContract
+): { notFound?: string } {
+    const answersMissingRow = !(route.verb === 'delete' && contract.idempotent === true);
+    const addressed = [
+        ...paramNames(route.path),
+        ...(route.client === 'list' ? [route.listArg ?? 'ids'] : []),
+    ];
+    const nouns = addressed.flatMap((name): string[] => {
+        switch (name) {
+            case 'type':
+                return ['entry type'];
+            case 'key':
+                return ['global'];
+            case 'version':
+                return ['version'];
+            case 'id':
+            case 'ids':
+                return answersMissingRow
+                    ? [ROW_NOUNS[domainName(route.id)] ?? 'row']
+                    : [];
+            default:
+                return [name];
+        }
+    });
+    if (nouns.length === 0) return {};
+    const last = nouns.pop();
+    const list = nouns.length === 0 ? last : `${nouns.join(', ')} or ${last}`;
+    return { notFound: `No ${list} matches the request.` };
+}
+
+/** What one row of each domain is called in a 404's description. */
+const ROW_NOUNS: Record<string, string> = {
+    entries: 'entry',
+    users: 'user',
+    media: 'media item',
+    notifications: 'notification',
+};
+
+/**
+ * Why this route can answer 409: the method `requires` a capability its entry
+ * type or global may not declare (`CapabilityError`), and the row's own reason.
+ */
+function conflictReasons(
+    route: HttpRouteSpec,
+    contract: ServiceMethodContract
+): string[] {
+    const reasons: string[] = [];
+    const { requires } = contract;
+    if (requires !== undefined) {
+        const target = domainName(route.id) === 'globals' ? 'global' : 'entry type';
+        reasons.push(
+            `the ${target} does not declare \`${requires}\` (\`capability_not_supported\`)`
+        );
+    }
+    if (route.refusals?.conflict !== undefined) reasons.push(route.refusals.conflict);
     return reasons;
 }
 
@@ -377,8 +461,7 @@ function dataSchema(output: z.ZodType, notFound: boolean): z.ZodType {
 
 /**
  * `output` with null as a union option rather than `.nullable()`, which on a
- * named schema would make the generator write `nullable` into the shared
- * component.
+ * named schema would make the generator write null into the shared component.
  */
 export function nullableAsUnion(output: z.ZodType): z.ZodType {
     if (!(output instanceof z.ZodNullable)) return output;
