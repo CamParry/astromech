@@ -1,6 +1,7 @@
 /**
- * What the resource lists share: reading a `sort` against the resource's
- * sortable columns, slicing a `query` call into a page, and the page's schema.
+ * What the resource lists share: the paging and sort keys a `query` method takes,
+ * reading a `sort` against the resource's sortable columns, slicing a `query` call
+ * into a page, and the page's schema.
  */
 
 import type { QueryResult, SortOption } from '@/types/index';
@@ -32,6 +33,13 @@ export const sortSchema = z
         additionalProperties: { type: 'string', enum: ['asc', 'desc'] },
         description: 'Field → direction, or a list of such objects.',
     });
+
+/** The paging and sort keys every `query` method's input spreads in. */
+export const listKeys = {
+    page: z.number().optional(),
+    limit: z.union([z.number(), z.literal('all')]).optional(),
+    sort: sortSchema,
+};
 
 /** The rows a page asks for when the caller names no limit. */
 const DEFAULT_PAGE_SIZE = 20;

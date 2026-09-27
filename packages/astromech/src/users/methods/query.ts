@@ -1,7 +1,7 @@
 import type { UserResource } from '../repository';
 import type { QueryResult } from '@/types/index';
 import { z } from '@hono/zod-openapi';
-import { queryPage, queryResultSchema, sortSchema } from '@/content/list';
+import { listKeys, queryPage, queryResultSchema } from '@/content/list';
 import { resolveResourceLocale } from '@/content/locale';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { userRepository } from '../repository';
@@ -16,9 +16,7 @@ export const queryUsers = defineServiceMethod({
     input: z.strictObject({
         locale: z.string().optional(),
         search: z.string().optional(),
-        page: z.number().optional(),
-        limit: z.union([z.number(), z.literal('all')]).optional(),
-        sort: sortSchema,
+        ...listKeys,
     }),
     output: queryResultSchema(userSchema),
     access: 'users:read',
