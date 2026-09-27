@@ -1,9 +1,9 @@
 import type { MediaResource } from '../../repository';
 import { z } from '@hono/zod-openapi';
+import { getResourceInLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { restoreVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { getMediaInLocale } from '../../internal/versions';
 import { syncMediaRelationships } from '../../relationships';
 import { mediaRepository } from '../../repository';
 import { mediaSchema } from '../../schema';
@@ -26,7 +26,12 @@ export const restoreMediaVersion = defineServiceMethod({
     mutates: true,
     async handler(params, ctx): Promise<MediaResource> {
         const { id } = params;
-        const current = await getMediaInLocale(ctx.config, params);
+        const current = await getResourceInLocale(
+            RESOURCE_SPECS.media,
+            ctx.config,
+            mediaRepository,
+            params
+        );
         const { locale } = current;
 
         return restoreVersion({

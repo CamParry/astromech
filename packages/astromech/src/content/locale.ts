@@ -1,9 +1,9 @@
-/** The locale a call on any resource addresses. */
+/** The locale a call on any resource addresses, and the resource read in it. */
 
 import type { ResourceSpec } from './resources';
 import type { ResolvedConfig } from '@/types/index';
 import { defaultContentLocale } from '@/config/content-locale';
-import { ResourceValidationError } from '@/errors/resource';
+import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resource';
 
 /**
  * The locale a call addresses, the default content locale when it names none. A
@@ -25,4 +25,20 @@ export function resolveResourceLocale(
         ]);
     }
     return resolved;
+}
+
+/**
+ * The resource in the locale a version method addresses. Unlike a read, this does
+ * not fall back to the default locale: a locale with no content row throws.
+ */
+export async function getResourceInLocale<T>(
+    spec: ResourceSpec,
+    config: ResolvedConfig,
+    repository: { findOne(id: string, options: { locale: string }): Promise<T | null> },
+    params: { id: string; locale?: string | undefined }
+): Promise<T> {
+    const locale = resolveResourceLocale(spec, config, undefined, params.locale);
+    const current = await repository.findOne(params.id, { locale });
+    if (!current) throw new ResourceNotFoundError(spec.kind, { id: params.id, locale });
+    return current;
 }

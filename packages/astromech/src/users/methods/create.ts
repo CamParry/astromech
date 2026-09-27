@@ -1,12 +1,12 @@
 import type { UserResource } from '../repository';
 import { z } from '@hono/zod-openapi';
+import { hashPassword } from 'better-auth/crypto';
 import { defaultContentLocale } from '@/config/content-locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { writeFields } from '@/content/write-fields';
 import { transaction } from '@/database/transaction';
 import { getRole } from '@/permissions/roles';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { hashCredential } from '../internal/credential-account';
 import { syncUserRelationships } from '../relationships';
 import { userRepository } from '../repository';
 import { createUserSchema, userSchema } from '../schema';
@@ -41,7 +41,7 @@ export const createUser = defineServiceMethod({
 
         // Hashed before the transaction opens, so no lock is held while it runs.
         const passwordHash =
-            data.password === undefined ? undefined : await hashCredential(data.password);
+            data.password === undefined ? undefined : await hashPassword(data.password);
 
         // The `users` row, its credential, its content row and the index write
         // are one transaction: an index that outlived a failed create would name

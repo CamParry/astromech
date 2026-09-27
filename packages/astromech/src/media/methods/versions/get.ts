@@ -1,9 +1,9 @@
 import type { mediaSnapshotSchema } from '../../schema';
 import { z } from '@hono/zod-openapi';
+import { getResourceInLocale } from '@/content/locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { readVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { getMediaInLocale } from '../../internal/versions';
 import { mediaRepository } from '../../repository';
 import { mediaVersionSchema } from '../../schema';
 
@@ -23,7 +23,12 @@ export const getMediaVersion = defineServiceMethod({
     access: 'media:read',
     mutates: false,
     async handler(params, ctx) {
-        const current = await getMediaInLocale(ctx.config, params);
+        const current = await getResourceInLocale(
+            RESOURCE_SPECS.media,
+            ctx.config,
+            mediaRepository,
+            params
+        );
         return readVersion<z.input<typeof mediaSnapshotSchema>>({
             spec: RESOURCE_SPECS.media,
             versions: mediaRepository.versions,

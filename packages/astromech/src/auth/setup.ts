@@ -6,9 +6,9 @@
 
 import type { BuiltInRoleSlug } from '@/permissions/roles';
 import { z } from '@hono/zod-openapi';
+import { hashPassword } from 'better-auth/crypto';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { transaction } from '@/database/transaction';
-import { hashCredential } from '@/users/internal/credential-account';
 import { userRepository } from '@/users/repository';
 
 /** The refusal every closed sign-up path answers with. */
@@ -34,7 +34,7 @@ export async function createFirstAdmin(
 ): Promise<'created' | 'closed'> {
     const id = crypto.randomUUID();
     // Hashed before the transaction opens, so no lock is held while it runs.
-    const passwordHash = await hashCredential(input.password);
+    const passwordHash = await hashPassword(input.password);
 
     // libSQL runs the three writes as one transaction. D1 has no interactive
     // transactions, so there the first statement is the gate on its own: a
