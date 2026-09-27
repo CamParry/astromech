@@ -26,9 +26,10 @@ the repository copies.
           entries only, and the public read hides any status other than
           `published`. The job now sits in `content/jobs/scheduled-publish.ts`
           and moves globals too.
-    - [ ] The scheduler publishes with one bulk write
-          (`entries/repository/maintenance.ts`), so no update hook fires when a
-          scheduled row goes live.
+    - [ ] The scheduler publishes with one bulk write per resource
+          (`entries/repository/maintenance.ts`, `globals/repository.ts`), so no
+          update hook fires when a scheduled row goes live. Publishing through
+          the update path also removes the two copies of that write.
 - [x] **`globals.createStaged` stores fields unvalidated.** It merges `data.fields`
       over the canonical and stores the result without the field parse
       (`globals/methods/staging/create.ts`), so no validation, no repeater ids,
@@ -91,10 +92,11 @@ the repository copies.
 - [ ] **Plugins rebuild the API base URL** from a private build global
       (`@astromech/backups`, `@astromech/assistant`). Add a route helper to the
       plugin context; rename its misnamed `modal` to `confirm`.
-- [ ] **Entry create and duplicate derive the title, status, slug and fields the
-      same way** (`entries/methods/create.ts` and the duplicate path in
-      `entries/internal/update-batch.ts`), which `report:drift` lists. Share it
-      with the `publishedAt` helper above.
+- [ ] **Entry create and a new translation derive the title, status, slug and
+      fields the same way** (`entries/methods/create.ts` and `planTranslation`
+      in `entries/internal/update-batch.ts`), which `report:drift` lists;
+      `entries/methods/duplicate.ts` writes its copy without either (no field
+      parse, no create hooks). Share one derivation.
 - [ ] Smaller: the two identical `VersionsPanel` wrappers in the admin; the two
       no-op cron drivers; `quoteName`/`quoteLiteral` in `packages/schema-engine`;
       the exclusion count in the MCP and CLI `methods` listings.
