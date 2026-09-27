@@ -32,8 +32,9 @@ reading one teaches the rest. `users/methods/create.ts` and
   needs lives in `<module>/internal/` or `content/`. An `internal/` file follows
   the same comment rule: a doc comment per export, no file header.
 - **Declaration keys in this order:** `summary`, `input`, `binaryInput`,
-  `output`, `access`, `requires`, `mutates`, `destructive`, `idempotent`,
-  `handler`.
+  `output`, `access` (or `sessionScoped`), `requires`, `mutates`,
+  `destructive`, `idempotent`, `handler`. A key needs no comment when its
+  contract type documents it (`binaryInput`).
 - **`input` is inline**: `z.strictObject({ … })` over the module's `schema.ts`
   or shared keys from `content/`. No per-method `*Input` builder. A value
   checked against config (a role, a locale) is checked in the schema
