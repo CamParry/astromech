@@ -3,8 +3,8 @@ import { z } from '@hono/zod-openapi';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { restoreVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { syncUserRelationships } from '../../internal/relationships';
 import { getUserInLocale } from '../../internal/versions';
+import { syncUserRelationships } from '../../relationships';
 import { userRepository } from '../../repository';
 import { userSchema } from '../../schema';
 

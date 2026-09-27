@@ -19,7 +19,7 @@ import { isUniqueAmong } from '@/content/unique';
 import { listUsage } from '@/content/usage';
 import { restoreVersion } from '@/content/versions';
 import { entrySnapshotSchema } from '@/entries/schema';
-import { syncGlobalRelationships } from '@/globals/internal/relationships';
+import { syncGlobalRelationships } from '@/globals/relationships';
 import { globalSnapshotSchema } from '@/globals/schema';
 import { mediaSnapshotSchema } from '@/media/schema';
 import { RESOURCE_TYPES } from '@/types/domain';

@@ -9,7 +9,7 @@ import { patchedFieldNames, writeFields } from '@/content/write-fields';
 import { transaction } from '@/database/transaction';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { syncMediaRelationships } from '../internal/relationships';
+import { syncMediaRelationships } from '../relationships';
 import { mediaRepository } from '../repository';
 import { mediaSchema, updateMediaSchema } from '../schema';
 

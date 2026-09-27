@@ -7,7 +7,7 @@ import { transaction } from '@/database/transaction';
 import { getRole } from '@/permissions/roles';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { hashCredential } from '../internal/credential-account';
-import { syncUserRelationships } from '../internal/relationships';
+import { syncUserRelationships } from '../relationships';
 import { userRepository } from '../repository';
 import { createUserSchema, userSchema } from '../schema';
 

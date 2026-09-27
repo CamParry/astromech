@@ -11,7 +11,7 @@ import { ResourceNotFoundError } from '@/errors/resource';
 import { getRole } from '@/permissions/roles';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { assertKeepsAnAdmin } from '../internal/last-admin';
-import { syncUserRelationships } from '../internal/relationships';
+import { syncUserRelationships } from '../relationships';
 import { userRepository } from '../repository';
 import { updateUserSchema, userSchema } from '../schema';
 

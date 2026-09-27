@@ -3,8 +3,8 @@ import { z } from '@hono/zod-openapi';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { restoreVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { syncMediaRelationships } from '../../internal/relationships';
 import { getMediaInLocale } from '../../internal/versions';
+import { syncMediaRelationships } from '../../relationships';
 import { mediaRepository } from '../../repository';
 import { mediaSchema } from '../../schema';
 

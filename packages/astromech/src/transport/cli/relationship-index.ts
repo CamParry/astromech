@@ -3,10 +3,10 @@ import type { RelationshipRow } from '@/database/tables';
 import type { ResourceType } from '@/types/domain';
 import { getConfig } from '@/config/registry';
 import { relationshipRepository } from '@/content/repository/relationships';
-import { allEntryRelationships } from '@/entries/internal/relationships';
-import { allGlobalRelationships } from '@/globals/internal/relationships';
-import { allMediaRelationships } from '@/media/internal/relationships';
-import { allUserRelationships } from '@/users/internal/relationships';
+import { allEntryRelationships } from '@/entries/relationships';
+import { allGlobalRelationships } from '@/globals/relationships';
+import { allMediaRelationships } from '@/media/relationships';
+import { allUserRelationships } from '@/users/relationships';
 
 /**
  * Relationships index repair — rebuild and drift check.

@@ -5,7 +5,7 @@ import { StagedChangeExistsError } from '@/errors/resource';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
 import { getEntryOfType } from '../../internal/read-entry';
-import { syncEntryRelationships } from '../../internal/relationships';
+import { syncEntryRelationships } from '../../relationships';
 import { entryRepository } from '../../repository/entries-table';
 import { entrySchema } from '../../schema';
 

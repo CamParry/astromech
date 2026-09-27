@@ -6,8 +6,8 @@ import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
 import { getCanonicalGlobal } from '../../internal/global';
-import { syncGlobalRelationships } from '../../internal/relationships';
 import { toStoredFields } from '../../internal/stored-fields';
+import { syncGlobalRelationships } from '../../relationships';
 import { globalSchema, localised } from '../../schema';
 
 /**

@@ -18,8 +18,8 @@ import { defineServiceMethod } from '@/services/define-service-method';
 import { parseHookOutput, parseOutput } from '@/services/parse-method-output';
 import { gate } from '../internal/access';
 import { getDeclaredGlobal } from '../internal/global';
-import { syncGlobalRelationships } from '../internal/relationships';
 import { toStoredFields } from '../internal/stored-fields';
+import { syncGlobalRelationships } from '../relationships';
 import { globalRepository } from '../repository';
 import { globalSchema, localised, updateGlobalSchema } from '../schema';
 

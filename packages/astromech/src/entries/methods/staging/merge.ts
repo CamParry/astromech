@@ -8,8 +8,8 @@ import { resolveEntryType } from '@/entries/entry-types';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
 import { getEntryOfType } from '../../internal/read-entry';
-import { syncEntryRelationships } from '../../internal/relationships';
 import { toStoredFields } from '../../internal/stored-fields';
+import { syncEntryRelationships } from '../../relationships';
 import { entryRepository } from '../../repository/entries-table';
 import { entrySchema } from '../../schema';
 

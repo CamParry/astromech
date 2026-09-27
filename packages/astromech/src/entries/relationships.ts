@@ -15,7 +15,7 @@ import { relationshipRepository } from '@/content/repository/relationships';
 import { resolveEntryType } from '@/entries/entry-types';
 import { flattenEntryFields } from '@/fields/flatten';
 import { findReferences } from '@/fields/references';
-import { entryRepository } from '../repository/entries-table';
+import { entryRepository } from './repository/entries-table';
 
 /**
  * Re-index one entry from its stored rows. The index is keyed on the entry, so

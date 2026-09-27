@@ -10,9 +10,9 @@ import { parseOutput } from '@/services/parse-method-output';
 import { UnknownEntryTypeError } from '../errors';
 import { entryGate } from '../internal/access';
 import { assertWritableFields } from '../internal/entry-type';
-import { syncEntryRelationships } from '../internal/relationships';
 import { deriveSlug } from '../internal/slug';
 import { toStoredFields } from '../internal/stored-fields';
+import { syncEntryRelationships } from '../relationships';
 import { entryRepository } from '../repository/entries-table';
 import { createEntryPayloadSchema, createEntrySchema, entrySchema } from '../schema';
 
