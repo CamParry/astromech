@@ -14,10 +14,14 @@ import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
 import { updateEntryBatch } from '../internal/update-batch';
 import { entrySchema, scheduleEntrySchema } from '../schema';
 
-/** Publishes a batch of entries by moving them to `published`. */
-async function publishEntryBatch(
-    params: { type: string; ids: readonly string[]; locale?: string | undefined },
-    ctx: AppContext
+/** The entries one status write moves: a list of ids of one type, in one locale. */
+type StatusBatch = { type: string; ids: readonly string[]; locale?: string | undefined };
+
+/** Moves a batch of entries to `status` through an `update` write. */
+async function moveEntryBatch(
+    params: StatusBatch,
+    ctx: AppContext,
+    data: { status: 'published' | 'unpublished' | 'scheduled'; publishedAt: Date | null }
 ): Promise<EntryResource[]> {
     return updateEntryBatch(
         {
@@ -25,27 +29,26 @@ async function publishEntryBatch(
             ids: params.ids,
             ...(params.locale !== undefined ? { locale: params.locale } : {}),
             createMissingLocale: false,
-            data: { status: 'published', publishedAt: null },
+            data,
         },
         ctx
     );
 }
 
-/** Unpublishes a batch of entries by moving them to `unpublished`. */
-async function unpublishEntryBatch(
-    params: { type: string; ids: readonly string[]; locale?: string | undefined },
+/** Publishes a batch of entries by moving them to `published`. */
+async function publishEntryBatch(
+    params: StatusBatch,
     ctx: AppContext
 ): Promise<EntryResource[]> {
-    return updateEntryBatch(
-        {
-            type: params.type,
-            ids: params.ids,
-            ...(params.locale !== undefined ? { locale: params.locale } : {}),
-            createMissingLocale: false,
-            data: { status: 'unpublished', publishedAt: null },
-        },
-        ctx
-    );
+    return moveEntryBatch(params, ctx, { status: 'published', publishedAt: null });
+}
+
+/** Unpublishes a batch of entries by moving them to `unpublished`. */
+async function unpublishEntryBatch(
+    params: StatusBatch,
+    ctx: AppContext
+): Promise<EntryResource[]> {
+    return moveEntryBatch(params, ctx, { status: 'unpublished', publishedAt: null });
 }
 
 /**
@@ -53,27 +56,16 @@ async function unpublishEntryBatch(
  * the date fails validation.
  */
 async function scheduleEntryBatch(
-    params: {
-        type: string;
-        ids: readonly string[];
-        publishedAt: Date;
-        locale?: string | undefined;
-    },
+    params: StatusBatch & { publishedAt: Date },
     ctx: AppContext
 ): Promise<EntryResource[]> {
     const validated = parseInput(scheduleEntrySchema, {
         publishedAt: params.publishedAt,
     });
-    return updateEntryBatch(
-        {
-            type: params.type,
-            ids: params.ids,
-            ...(params.locale !== undefined ? { locale: params.locale } : {}),
-            createMissingLocale: false,
-            data: { status: 'scheduled', publishedAt: validated.publishedAt },
-        },
-        ctx
-    );
+    return moveEntryBatch(params, ctx, {
+        status: 'scheduled',
+        publishedAt: validated.publishedAt,
+    });
 }
 
 /** One id is a batch of one, and its result and errors are unwrapped. */
