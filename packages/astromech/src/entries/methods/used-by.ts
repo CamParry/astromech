@@ -4,7 +4,7 @@ import { usageSchema } from '@/content/schema';
 import { listUsage } from '@/content/usage';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
-import { getEntryResource } from '../internal/read-entry';
+import { getEntryResource } from '../read-entry';
 
 /**
  * Every reference to an entry, from any resource: what the delete check lists.

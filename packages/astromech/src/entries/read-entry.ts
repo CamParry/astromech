@@ -3,31 +3,25 @@
  * The type is part of the read, so an entry of another type is not found.
  */
 
-import type { EntryResource } from '../repository/types';
+import type { EntryResource } from './repository/types';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { ResourceNotFoundError } from '@/errors/resource';
-import { entryRepository } from '../repository/entries-table';
+import { entryRepository } from './repository/entries-table';
 
 /**
  * Read one locale of an entry of the given type; the default locale when
- * `locale` is absent. Includes trashed rows and applies no visibility filter;
- * null when the entry, that locale's content row, or an entry of that type is absent.
+ * `locale` is absent. Includes trashed rows and applies no visibility filter.
+ * Throws when the entry, an entry of that type, or that locale's row is missing.
  */
-export async function findEntryOfType(
-    type: string,
-    id: string,
-    locale?: string
-): Promise<EntryResource | null> {
-    return entryRepository.findOne({ type, id, locale }, { includeTrashed: true });
-}
-
-/** `findEntryOfType`, throwing when the entry or that locale's row is missing. */
 export async function getEntryOfType(
     type: string,
     id: string,
     locale?: string
 ): Promise<EntryResource> {
-    const entry = await findEntryOfType(type, id, locale);
+    const entry = await entryRepository.findOne(
+        { type, id, locale },
+        { includeTrashed: true }
+    );
     if (!entry) {
         throw new ResourceNotFoundError('entry', {
             id,

@@ -7,7 +7,7 @@
 import type { RelationshipRow } from '@/database/tables';
 import type { ResolvedConfig, TargetKind, Usage } from '@/types/index';
 import { relationshipRepository } from '@/content/repository/relationships';
-import { getEntryResource } from '@/entries/internal/read-entry';
+import { getEntryResource } from '@/entries/read-entry';
 import { resolveGlobal } from '@/globals/resolve-global';
 import { mediaRepository } from '@/media/repository';
 import { userRepository } from '@/users/repository';

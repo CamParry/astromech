@@ -16,8 +16,8 @@ import type {
 import { RESOURCE_SPECS } from '@/content/resources';
 import { inheritSharedFields } from '@/content/translatable';
 import { writeFields } from '@/content/write-fields';
+import { listEntriesInLocale } from '../read-entry';
 import { entryRepository } from '../repository/entries-table';
-import { listEntriesInLocale } from './read-entry';
 
 /**
  * The three write paths that store field values, each with what its own

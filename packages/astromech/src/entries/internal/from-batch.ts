@@ -1,6 +1,7 @@
 /**
- * The adapter between the batch-only writes in `internal/**` and the entries
- * methods, which take one `id` or a list of `ids`.
+ * The adapter between a batch-only write and the entries method over it, which
+ * takes one `id` or a list of `ids`. A write two methods share lives in
+ * `internal/`; one only its method uses lives in that method's file.
  */
 
 import type { AppContext } from '@/types/index';

@@ -4,7 +4,7 @@ import { z } from '@hono/zod-openapi';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
-import { getEntryOfType, getEntryResource } from '../internal/read-entry';
+import { getEntryOfType, getEntryResource } from '../read-entry';
 import { syncEntryRelationships } from '../relationships';
 import { entryRepository } from '../repository/entries-table';
 import { duplicateOverridesSchema, entrySchema } from '../schema';

@@ -4,7 +4,7 @@ import { RESOURCE_SPECS } from '@/content/resources';
 import { readVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
-import { getEntryOfType } from '../../internal/read-entry';
+import { getEntryOfType } from '../../read-entry';
 import { entryRepository } from '../../repository/entries-table';
 import { entryVersionSchema } from '../../schema';
 

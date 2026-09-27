@@ -11,7 +11,7 @@ import { defaultContentLocale } from '@/config/content-locale';
 import { RESOURCE_SPECS } from '@/content/resources';
 import { definitionsOf, fieldParseContext } from '@/content/write-fields';
 import { resolveEntryType } from '@/entries/entry-types';
-import { listEntriesInLocale } from '@/entries/internal/read-entry';
+import { listEntriesInLocale } from '@/entries/read-entry';
 import { entryRepository } from '@/entries/repository/entries-table';
 import { safeParseFields } from '@/fields/parse-fields';
 import { mediaRepository } from '@/media/repository';

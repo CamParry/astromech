@@ -7,7 +7,7 @@ import { ValidationError } from '@/errors/validation';
 import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
-import { getPreviewEntry } from '../internal/preview-read';
+import { getPreviewEntry } from '../internal/preview';
 import { entryRepository } from '../repository/entries-table';
 import { entrySchema } from '../schema';
 

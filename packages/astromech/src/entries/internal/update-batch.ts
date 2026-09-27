@@ -17,12 +17,12 @@ import { resolveEntryType } from '@/entries/entry-types';
 import { ResourceNotFoundError } from '@/errors/resource';
 import { parseInput } from '@/errors/validation';
 import { parseHookOutput, parseOutput } from '@/services/parse-method-output';
+import { assertWritableFields } from '../capabilities';
 import { UnknownEntryTypeError } from '../errors';
+import { getEntryOfType } from '../read-entry';
 import { syncEntryRelationships } from '../relationships';
 import { entryRepository } from '../repository/entries-table';
 import { createEntrySchema, entrySchema, updateEntrySchema } from '../schema';
-import { assertWritableFields } from './entry-type';
-import { findEntryOfType, getEntryOfType } from './read-entry';
 import { deriveSlug, uniqueSlugIfChanged } from './slug';
 import { toStoredFields } from './stored-fields';
 import { writeBatch } from './write-batch';
@@ -90,7 +90,10 @@ export async function updateEntryBatch(
     for (const id of params.ids) {
         const record = staged
             ? await getStagedRecord(id, locale)
-            : await findEntryOfType(entryType.id, id, locale);
+            : await entryRepository.findOne(
+                  { type: entryType.id, id, locale },
+                  { includeTrashed: true }
+              );
         if (!record && params.createMissingLocale === false) {
             throw new ResourceNotFoundError('entry', { id, locale });
         }

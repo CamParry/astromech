@@ -1,10 +1,32 @@
 import type { EntryResource } from '../repository/types';
+import type { AppContext } from '@/types/index';
 import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
 import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
-import { restoreEntryBatch } from '../internal/restore-batch';
+import { writeBatch } from '../internal/write-batch';
+import { getEntryResources } from '../read-entry';
+import { entryRepository } from '../repository/entries-table';
 import { entrySchema } from '../schema';
+
+/**
+ * Restore a batch of trashed entries, atomically, returning each one's
+ * default-locale row. Restoring is resource-level: every locale comes back.
+ * `restore` declares `requires: 'trash'`, so the type keeps a bin. Fires no
+ * hooks, since there is no restore hook event.
+ */
+async function restoreEntryBatch(
+    params: { type: string; ids: readonly string[] },
+    ctx: AppContext
+): Promise<EntryResource[]> {
+    const { type, ids } = params;
+    const entries = await getEntryResources(type, ids);
+    const user = ctx.user;
+
+    return writeBatch(entries, (entry) =>
+        entryRepository.trash.restore(entry.id, user?.id ?? null)
+    );
+}
 
 /** One id is a batch of one, and its result and errors are unwrapped. */
 const restoreOne = fromBatch(restoreEntryBatch);

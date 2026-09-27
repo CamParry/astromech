@@ -28,6 +28,12 @@ export function entryGate(action: EntryAction): ServiceMethodAccess {
     };
 }
 
+/** The type one call's input names, or the empty type when it names none. */
+export function typeOf(input: unknown): string {
+    const type = typeField(input);
+    return typeof type === 'string' ? type : '';
+}
+
 /**
  * The types one call names: one, or each of a cross-type query's list. A call
  * naming none, or naming one badly, resolves to the empty type, whose permission
@@ -35,11 +41,16 @@ export function entryGate(action: EntryAction): ServiceMethodAccess {
  * narrower role and the method's own parse names the real problem.
  */
 function typesOf(input: unknown): string[] {
-    if (typeof input !== 'object' || input === null) return [''];
-    const { type } = input as { type?: unknown };
+    const type = typeField(input);
     const types: unknown[] = Array.isArray(type) ? type : [type];
     const named = types.every((t) => typeof t === 'string' && t.length > 0);
     return named && types.length > 0 ? (types as string[]) : [''];
+}
+
+/** The `type` key of a call's input, whatever it holds. */
+function typeField(input: unknown): unknown {
+    if (typeof input !== 'object' || input === null) return undefined;
+    return (input as { type?: unknown }).type;
 }
 
 /** Whether a write's payload sets `status: 'published'`. */

@@ -2,9 +2,9 @@ import type { EntryResource } from '../repository/types';
 import type { AppContext } from '@/types/index';
 import { relationshipRepository } from '@/content/repository/relationships';
 import { parseOutput } from '@/services/parse-method-output';
+import { getEntryResources } from '../read-entry';
 import { entryRepository } from '../repository/entries-table';
 import { entrySchema } from '../schema';
-import { getEntryResources } from './read-entry';
 import { writeBatch } from './write-batch';
 
 /**

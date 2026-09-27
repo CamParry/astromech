@@ -10,7 +10,7 @@ import { collectRelationshipSchemaPaths } from '@/fields/references';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { InvalidReferencesFilterError, PublicTrashedReadError } from '../errors';
 import { entryGate } from '../internal/access';
-import { queryPreviewEntries } from '../internal/preview-read';
+import { queryPreviewEntries } from '../internal/preview';
 import { entryRepository } from '../repository/entries-table';
 import { entrySchema } from '../schema';
 

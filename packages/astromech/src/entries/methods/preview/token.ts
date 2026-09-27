@@ -2,7 +2,7 @@ import { z } from '@hono/zod-openapi';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../../internal/access';
 import { generatePreviewSecret, hashPreviewToken } from '../../internal/preview';
-import { getEntryResource } from '../../internal/read-entry';
+import { getEntryResource } from '../../read-entry';
 import { entryRepository } from '../../repository/entries-table';
 import { previewTokenSchema } from '../../schema';
 

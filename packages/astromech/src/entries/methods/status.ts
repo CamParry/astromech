@@ -1,20 +1,80 @@
 /**
- * Status transitions — the three methods that move one entry, or a list of
- * them, between statuses. Each is a `update` write underneath, gated on the
- * `statuses` capability.
+ * Status transitions: the three methods that move one entry, or a list of them,
+ * between statuses. Each is an `update` write underneath, gated on `statuses`; a
+ * locale with no content row is a not-found error, since only `update` may add one.
  */
 
 import type { EntryResource } from '../repository/types';
+import type { AppContext } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { parseInput } from '@/errors/validation';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
 import { batchAddress, fromBatch, oneOrMany } from '../internal/from-batch';
-import {
-    publishEntryBatch,
-    scheduleEntryBatch,
-    unpublishEntryBatch,
-} from '../internal/status-batch';
+import { updateEntryBatch } from '../internal/update-batch';
 import { entrySchema, scheduleEntrySchema } from '../schema';
+
+/** Publishes a batch of entries by moving them to `published`. */
+async function publishEntryBatch(
+    params: { type: string; ids: readonly string[]; locale?: string | undefined },
+    ctx: AppContext
+): Promise<EntryResource[]> {
+    return updateEntryBatch(
+        {
+            type: params.type,
+            ids: params.ids,
+            ...(params.locale !== undefined ? { locale: params.locale } : {}),
+            createMissingLocale: false,
+            data: { status: 'published', publishedAt: null },
+        },
+        ctx
+    );
+}
+
+/** Unpublishes a batch of entries by moving them to `unpublished`. */
+async function unpublishEntryBatch(
+    params: { type: string; ids: readonly string[]; locale?: string | undefined },
+    ctx: AppContext
+): Promise<EntryResource[]> {
+    return updateEntryBatch(
+        {
+            type: params.type,
+            ids: params.ids,
+            ...(params.locale !== undefined ? { locale: params.locale } : {}),
+            createMissingLocale: false,
+            data: { status: 'unpublished', publishedAt: null },
+        },
+        ctx
+    );
+}
+
+/**
+ * Schedules a batch of entries to publish at `publishedAt`. Throws a 422 when
+ * the date fails validation.
+ */
+async function scheduleEntryBatch(
+    params: {
+        type: string;
+        ids: readonly string[];
+        publishedAt: Date;
+        locale?: string | undefined;
+    },
+    ctx: AppContext
+): Promise<EntryResource[]> {
+    const validated = parseInput(scheduleEntrySchema, {
+        publishedAt: params.publishedAt,
+    });
+    return updateEntryBatch(
+        {
+            type: params.type,
+            ids: params.ids,
+            ...(params.locale !== undefined ? { locale: params.locale } : {}),
+            createMissingLocale: false,
+            data: { status: 'scheduled', publishedAt: validated.publishedAt },
+        },
+        ctx
+    );
+}
 
 /** One id is a batch of one, and its result and errors are unwrapped. */
 const publishOne = fromBatch(publishEntryBatch);

@@ -7,7 +7,8 @@
 import type { Capability } from './capabilities';
 import type { EntriesService } from '@/types/index';
 import { defineService } from '@/services/define-service';
-import { assertTypeCapability, typeOf } from './internal/entry-type';
+import { assertTypeCapability } from './capabilities';
+import { typeOf } from './internal/access';
 import { createEntry } from './methods/create';
 import { deleteEntries } from './methods/delete';
 import { duplicateEntry } from './methods/duplicate';
