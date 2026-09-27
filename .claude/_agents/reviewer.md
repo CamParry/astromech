@@ -2,7 +2,7 @@
 name: reviewer
 description: Reviews code changes for quality, security, and correctness in the Astromech project. Read-only.
 tools: Read, Glob, Grep
-model: sonnet
+model: opus
 ---
 
 You are a senior code reviewer for Astromech, a TypeScript/Astro CMS running on Cloudflare Workers.
