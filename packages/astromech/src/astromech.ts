@@ -19,6 +19,7 @@ import { setMethodManifest } from '@/codegen/manifest-registry';
 import { generateMethodManifest } from '@/codegen/method-manifest';
 import { setConfig } from '@/config/registry';
 import { resolveConfig } from '@/config/resolve';
+import { scheduledPublishJob } from '@/content/jobs/scheduled-publish';
 import {
     getSchedulerDriver,
     registerCronJob,
@@ -110,7 +111,7 @@ export function getAstromech(): Promise<Astromech> {
 
 /** Register the built-in cron jobs each domain ships. New domains add their jobs here. */
 function registerBuiltInJobs(): void {
-    for (const job of entryJobs) registerCronJob(job);
+    for (const job of [scheduledPublishJob, ...entryJobs]) registerCronJob(job);
 }
 
 /** Boot a runtime: fill the registries, verify, register, boot the plugins, assemble the app. */

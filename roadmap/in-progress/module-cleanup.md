@@ -22,9 +22,10 @@ the repository copies.
           `published`; `globals.update` honours it.
     - [x] `entries.publish` and `globals.publish` may skip the `required` check:
           only a write with a fields patch validates in complete mode.
-    - [ ] A scheduled global never goes live. The `scheduled-publish` job moves
-          entries only (`entries/jobs/scheduled-publish.ts`), and the public
-          read hides any status other than `published`.
+    - [x] A scheduled global never goes live. The `scheduled-publish` job moved
+          entries only, and the public read hides any status other than
+          `published`. The job now sits in `content/jobs/scheduled-publish.ts`
+          and moves globals too.
     - [ ] The scheduler publishes with one bulk write
           (`entries/repository/maintenance.ts`), so no update hook fires when a
           scheduled row goes live.

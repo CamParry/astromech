@@ -54,3 +54,41 @@ describe('the exported repository', () => {
         ).toBeNull();
     });
 });
+
+describe('publishDueScheduled', () => {
+    it('publishes each due canonical row and leaves the rest alone', async () => {
+        const past = new Date(Date.now() - 60_000);
+        const future = new Date(Date.now() + 60_000);
+        const site = await globalRepository.create(
+            { key: 'site' },
+            { status: 'scheduled', publishedAt: past }
+        );
+        await globalRepository.update(
+            { id: site.id, locale: 'de' },
+            { status: 'scheduled', publishedAt: future }
+        );
+        await globalRepository.staging.create(
+            { id: site.id },
+            { status: 'scheduled', publishedAt: past }
+        );
+        await globalRepository.create(
+            { key: 'legal' },
+            { status: 'published', publishedAt: past }
+        );
+
+        expect(await globalRepository.publishDueScheduled(new Date())).toBe(1);
+
+        expect((await globalRepository.findByKey('site'))?.status).toBe('published');
+        expect((await globalRepository.findByKey('site', 'de'))?.status).toBe(
+            'scheduled'
+        );
+        expect(
+            (await globalRepository.staging.findOne({ id: site.id, locale: 'en' }))
+                ?.status
+        ).toBe('scheduled');
+        // Publishing keeps the date the row was scheduled for.
+        expect((await globalRepository.findByKey('site'))?.publishedAt?.getTime()).toBe(
+            past.getTime()
+        );
+    });
+});

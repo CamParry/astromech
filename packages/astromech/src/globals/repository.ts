@@ -9,7 +9,8 @@ import type { GlobalContentRow, GlobalTableRow } from '@/globals/tables';
 import type { EntryStatus, JsonObject } from '@/types/index';
 import { getDefaultContentLocale } from '@/config/content-locale';
 import { createContentRepository, lastUpdate } from '@/content/repository/content-table';
-import { kyselyTableKey } from '@/database/codec';
+import { encodePatchWith, kyselyTableKey } from '@/database/codec';
+import { getDb } from '@/database/registry';
 import { createRepository } from '@/database/repository/create-repository';
 import { globalContentTable, globalsTable, globalVersionsTable } from '@/database/tables';
 
@@ -97,9 +98,30 @@ function createGlobalRepository() {
         return row?.id ?? null;
     }
 
+    /**
+     * Move every canonical scheduled row whose publish time has passed to
+     * published, for the `scheduled-publish` job. Returns the number moved.
+     */
+    async function publishDueScheduled(now: Date): Promise<number> {
+        const result = await getDb()
+            .updateTable('globalContent')
+            .set(encodePatchWith(globalContentTable, { status: 'published' }))
+            .where((eb) =>
+                eb.and([
+                    eb('status', '=', 'scheduled'),
+                    eb('publishedAt', '<=', now.toISOString()),
+                    // Canonical rows only: a staged change publishes at its merge.
+                    eb('stagedFor', 'is', null),
+                ])
+            )
+            .executeTakeFirst();
+        return Number(result.numUpdatedRows);
+    }
+
     return {
         findByKey,
         findIdByKey,
+        publishDueScheduled,
         findOne: content.findOne,
         create: content.create,
         update: content.update,
