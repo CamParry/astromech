@@ -36,6 +36,33 @@ export const errorBodySchema = z
     })
     .openapi('Error');
 
+/** The `details` of a 422: what `validationFailed` builds and the document shows. */
+const validationDetailsSchema = z.object({
+    /** Messages per field, keyed by dotted path, with `_` for the input as a whole. */
+    fields: z.record(z.string(), z.array(z.string())),
+    /** Messages that belong to no single field. */
+    form: z.array(z.string()).optional(),
+    /** The id a batch write failed on. */
+    failedId: z.string().optional(),
+    /** The ids a batch write finished before it failed, all rolled back. */
+    succeededBefore: z.array(z.string()).optional(),
+});
+
+type ValidationDetails = z.input<typeof validationDetailsSchema>;
+
+/** The `{ error }` body of a 422 `VALIDATION_FAILED`, with its `details` spelled out. */
+export const validationErrorBodySchema = z
+    .object({
+        error: z.object({
+            id: z.string(),
+            code: z.literal('VALIDATION_FAILED'),
+            message: z.string(),
+            status: z.literal(422),
+            details: validationDetailsSchema,
+        }),
+    })
+    .openapi('ValidationError');
+
 function generateErrorId(): string {
     return `err_${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -46,7 +73,7 @@ function apiError(
     status: number,
     code: ApiErrorCode,
     message: string,
-    details?: ApiErrorDetails
+    details?: ApiErrorDetails | ValidationDetails
 ): Response {
     const body: z.input<typeof errorBodySchema> = {
         error: {
@@ -98,13 +125,14 @@ function validationFailed(
     c: Context,
     fields: Record<string, string[]>,
     form?: string[],
-    extra?: ApiErrorDetails
+    extra?: Pick<ValidationDetails, 'failedId' | 'succeededBefore'>
 ): Response {
-    return apiError(c, 422, 'VALIDATION_FAILED', 'Validation failed', {
+    const details: ValidationDetails = {
         ...extra,
         fields,
         ...(form && form.length > 0 ? { form } : {}),
-    });
+    };
+    return apiError(c, 422, 'VALIDATION_FAILED', 'Validation failed', details);
 }
 
 /**

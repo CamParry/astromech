@@ -563,6 +563,25 @@ describe('generateMethodManifest — plugin method output', () => {
     });
 });
 
+describe('generateMethodManifest — entry method output', () => {
+    it('gives every entry method an output schema', () => {
+        const entries = parseManifest().methods.filter((m) => m['source'] === 'entries');
+        expect(entries.length).toBeGreaterThan(0);
+        for (const method of entries) {
+            expect(method['output'], String(method['id'])).toEqual(expect.any(Object));
+        }
+    });
+
+    it('describes an entry read as the public entry', () => {
+        const output = findMethod(parseManifest().methods, 'entries.get', 'posts')?.[
+            'output'
+        ] as { anyOf?: { properties?: Record<string, unknown> }[] };
+        const keys = Object.keys(output.anyOf?.[0]?.properties ?? {});
+        expect(keys).toEqual(expect.arrayContaining(['id', 'type', 'title', 'fields']));
+        expect(keys).not.toContain('contentId');
+    });
+});
+
 describe('generateMethodManifest — core method output', () => {
     /** The properties a core method's output documents, through a nullable read. */
     function outputProperties(name: string): Record<string, unknown> {

@@ -96,6 +96,56 @@ describe('GET /me', () => {
         expect(body.data.user.id).toBe(user.id);
         expect(body.data.role.slug).toBe('admin');
     });
+
+    it('answers the public shape, stripping a key its schema does not declare', async () => {
+        const app = await freshApp();
+        const user = await usersService.create({
+            data: { email: 'me@test.dev', name: 'Me' },
+        });
+        mockGetSession.mockResolvedValue({
+            user: { ...user, internal: 'x' } as never,
+            role: { ...adminRole, internal: 'x' } as never,
+            session: { id: 's1', userId: user.id } as never,
+        });
+
+        const res = await app.request(`${api}/me`);
+        const body = (await res.json()) as {
+            data: { user: Record<string, unknown>; role: Record<string, unknown> };
+        };
+        expect(body.data.user).not.toHaveProperty('internal');
+        expect(Object.keys(body.data.role)).toEqual([
+            'slug',
+            'name',
+            'permissions',
+            'isBuiltIn',
+        ]);
+    });
+});
+
+describe('GET /openapi.json', () => {
+    it('401s without a session', async () => {
+        const app = await freshApp();
+        const res = await app.request(`${api}/openapi.json`);
+        expect(res.status).toBe(401);
+    });
+
+    it('serves the document, `/me` included, with a session', async () => {
+        const app = await freshApp();
+        const user = await usersService.create({
+            data: { email: 'me@test.dev', name: 'Me' },
+        });
+        signIn(user);
+
+        const res = await app.request(`${api}/openapi.json`);
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as {
+            openapi: string;
+            paths: Record<string, unknown>;
+        };
+        expect(body.openapi).toBe('3.0.0');
+        expect(Object.keys(body.paths)).toContain(`${api}/me`);
+        expect(Object.keys(body.paths)).toContain(`${api}/entries/{type}`);
+    });
 });
 
 describe('the Better Auth catch-all', () => {

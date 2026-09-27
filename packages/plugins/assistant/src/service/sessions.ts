@@ -32,9 +32,11 @@ const chatSessionSchema = z.object({
     // Checked to be an object and not walked: every part goes back to the
     // provider verbatim, keys this plugin does not know included.
     messages: z.array(
-        z.custom<ChatMessage>((value) => typeof value === 'object' && value !== null, {
-            message: 'Expected a chat message',
-        })
+        z
+            .custom<ChatMessage>((value) => typeof value === 'object' && value !== null, {
+                message: 'Expected a chat message',
+            })
+            .openapi({ type: 'object', additionalProperties: true })
     ),
     pending: z.array(approvalRequestSchema),
 });

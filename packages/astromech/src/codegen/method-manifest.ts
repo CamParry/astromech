@@ -179,6 +179,9 @@ function projectEntryMethod(
         method.plugin = entryType.plugin;
     }
     method.input = toJSONSchema(contract.input, 'input');
+    if (contract.output) {
+        method.output = toJSONSchema(contract.output, 'output');
+    }
     return method;
 }
 

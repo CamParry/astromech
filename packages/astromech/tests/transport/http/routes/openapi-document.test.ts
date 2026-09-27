@@ -8,9 +8,14 @@
  */
 
 import type { AuthVariables } from '@/transport/http/middleware/auth';
-import { OpenAPIHono } from '@hono/zod-openapi';
+import type { PluginDefinition } from '@/types/index';
+import type { OpenApiDocument, OpenApiOperation, OpenApiSchema } from '@tests/openapi';
+import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
+import { servedDocument } from '@tests/openapi';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { entrySchema } from '@/entries/schema';
+import { noInput } from '@/services/define-service-method';
 import { createEntriesRouter } from '@/transport/http/routes/entries';
 import { createGlobalsRouter } from '@/transport/http/routes/globals';
 import { HTTP_ROUTES } from '@/transport/http/routes/http-routes';
@@ -18,32 +23,9 @@ import { mediaRouter } from '@/transport/http/routes/media';
 import { notificationsRouter } from '@/transport/http/routes/notifications';
 import { usersRouter } from '@/transport/http/routes/users';
 
-type Schema = {
-    type?: string;
-    format?: string;
-    nullable?: boolean;
-    properties?: Record<string, Schema>;
-    required?: string[];
-    items?: Schema;
-    anyOf?: Schema[];
-    allOf?: Schema[];
-    additionalProperties?: boolean | Schema;
-    $ref?: string;
-};
-
-type Operation = {
-    summary?: string;
-    parameters?: { name: string; in: string }[];
-    requestBody?: {
-        content: { 'application/json': { schema: Schema } };
-    };
-    responses: Record<string, { content?: { 'application/json': { schema: Schema } } }>;
-};
-
-type Document = {
-    paths: Record<string, Record<string, Operation>>;
-    components?: { schemas?: Record<string, Schema> };
-};
+type Schema = OpenApiSchema;
+type Operation = OpenApiOperation;
+type Document = OpenApiDocument;
 
 /**
  * The JSON request body an operation documents, by property name. A `bodyKey`
@@ -403,5 +385,242 @@ describe('the documented versions', () => {
             | undefined;
         expect(version?.in).toBe('path');
         expect(version?.schema).toEqual({ type: 'integer' });
+    });
+});
+
+/** The statuses an operation documents, in the order the document lists them. */
+function statuses(operation: Operation | undefined): string[] {
+    return Object.keys(operation?.responses ?? {});
+}
+
+describe('the documented error statuses', () => {
+    it('document 401 on a route whose method is public, since every table route needs a session', () => {
+        // `globals.get` needs no permission for a public global, but the router
+        // mounts behind `requireAuth`, and a private global or `full` read needs one.
+        const get = document().paths['/globals/{key}']?.['get'];
+        expect(statuses(get)).toEqual(['200', '401', '403', '404', '422', '500']);
+    });
+
+    it('document 400 for the body, 403 for the permission and 422 for the input on a write', () => {
+        const put = document().paths['/entries/{type}/{id}']?.['put'];
+        expect(statuses(put)).toEqual(['200', '400', '401', '403', '422', '500']);
+        expect(put?.responses['400']?.description).toBe(
+            'Bad request: the body is not valid JSON.'
+        );
+    });
+
+    it('document neither 403 nor 422 on a session-scoped route that takes no arguments', () => {
+        const paths = document().paths;
+        expect(statuses(paths['/notifications']?.['get'])).toEqual(['200', '401', '500']);
+        expect(statuses(paths['/notifications']?.['delete'])).toEqual([
+            '204',
+            '401',
+            '500',
+        ]);
+        // `dismiss` takes an id, so its path param can still fail the parse.
+        expect(statuses(paths['/notifications/{id}']?.['delete'])).toEqual([
+            '204',
+            '401',
+            '422',
+            '500',
+        ]);
+    });
+
+    it('document 400 for the sort order and keys on a list', () => {
+        const paths = document().paths;
+        const entries = paths['/entries/{type}']?.['get'];
+        expect(statuses(entries)).toEqual(['200', '400', '401', '403', '422', '500']);
+        expect(entries?.responses['400']?.description).toBe(
+            'Bad request: `dir` is not `asc` or `desc`, or `sort` names a key the list ' +
+                'cannot sort by; `where` names a key the list cannot filter by.'
+        );
+        expect(statuses(paths['/users']?.['get'])).toEqual([
+            '200',
+            '400',
+            '401',
+            '403',
+            '422',
+            '500',
+        ]);
+        // A read with no list arguments answers no 400.
+        expect(statuses(paths['/media/{id}']?.['get'])).not.toContain('400');
+    });
+
+    it('document every 422 with the validation body and every other error with the error body', () => {
+        const doc = document();
+        for (const [path, operations] of Object.entries(doc.paths)) {
+            for (const [verb, operation] of Object.entries(operations)) {
+                expect(statuses(operation), `${verb} ${path}`).toContain('401');
+                expect(statuses(operation), `${verb} ${path}`).toContain('500');
+                for (const [status, response] of Object.entries(operation.responses)) {
+                    if (Number(status) < 400) continue;
+                    expect(response.content?.['application/json'].schema).toEqual({
+                        $ref: `#/components/schemas/${status === '422' ? 'ValidationError' : 'Error'}`,
+                    });
+                }
+            }
+        }
+        const details = component(doc, 'ValidationError').properties?.['error']
+            ?.properties?.['details'];
+        expect(Object.keys(details?.properties ?? {})).toEqual([
+            'fields',
+            'form',
+            'failedId',
+            'succeededBefore',
+        ]);
+        expect(details?.required).toEqual(['fields']);
+    });
+});
+
+describe('the served document', () => {
+    /** A plugin whose methods cover the access forms and both input shapes. */
+    const probe: PluginDefinition = {
+        package: 'probe',
+        service: {
+            ping: {
+                access: 'public',
+                summary: 'Answer pong.',
+                input: noInput(),
+                output: z.literal('pong'),
+                mutates: false,
+                handler: () => 'pong',
+            },
+            whoami: {
+                access: 'authenticated',
+                input: noInput(),
+                mutates: false,
+                handler: () => null,
+            },
+            echo: {
+                access: { permission: 'read' },
+                input: z.strictObject({ text: z.string() }),
+                output: z.object({ echoed: z.string() }),
+                mutates: false,
+                handler: ({ text }: { text: string }) => ({ echoed: text }),
+            },
+            latest: {
+                access: 'authenticated',
+                input: noInput(),
+                output: entrySchema.nullable(),
+                mutates: false,
+                handler: () => null,
+            },
+        },
+    };
+
+    /** A plugin whose output takes a name core already gives another schema. */
+    const clashing: PluginDefinition = {
+        package: 'clashing',
+        service: {
+            read: {
+                access: 'public',
+                input: noInput(),
+                output: z.object({ other: z.string() }).openapi('Entry'),
+                mutates: false,
+                handler: () => ({ other: '' }),
+            },
+        },
+    };
+
+    /** Two plugins that each name a different schema `Thing`. */
+    const thing = (name: string, key: string): PluginDefinition => ({
+        package: name,
+        service: {
+            read: {
+                access: 'public',
+                input: noInput(),
+                output: z.object({ [key]: z.string() }).openapi('Thing'),
+                mutates: false,
+                handler: () => ({ [key]: '' }),
+            },
+        },
+    });
+
+    it('documents `/me` as the signed-in user and their role', () => {
+        const { api, document: doc } = servedDocument([]);
+        const me = doc.paths[`${api}/me`]?.['get'];
+        expect(statuses(me)).toEqual(['200', '401', '500']);
+        expect(responseSchema(me, 200)?.properties?.['data']).toEqual({
+            $ref: '#/components/schemas/Me',
+        });
+        expect(component(doc, 'Me').properties).toEqual({
+            user: { $ref: '#/components/schemas/User' },
+            role: { $ref: '#/components/schemas/Role' },
+        });
+        expect(Object.keys(component(doc, 'Role').properties ?? {})).toEqual([
+            'slug',
+            'name',
+            'permissions',
+            'isBuiltIn',
+        ]);
+    });
+
+    it('documents a plugin method’s input as its body and its output as the bare 200', () => {
+        const { api, document: doc, warnings } = servedDocument([probe]);
+        const echo = doc.paths[`${api}/plugins/probe/echo`]?.['post'];
+        expect(bodyProperties(echo, doc)).toEqual(['text']);
+        expect(responseSchema(echo, 200)?.properties?.['echoed']).toEqual({
+            type: 'string',
+        });
+        expect(statuses(echo)).toEqual(['200', '401', '403', '422', '500']);
+        expect(warnings).toEqual([]);
+    });
+
+    it('documents no body, and no 422, for a plugin method that takes no arguments', () => {
+        const { api, document: doc } = servedDocument([probe]);
+        const whoami = doc.paths[`${api}/plugins/probe/whoami`]?.['post'];
+        expect(whoami?.requestBody).toBeUndefined();
+        // Signed in is enough, so there is nothing to refuse with a 403.
+        expect(statuses(whoami)).toEqual(['200', '401', '500']);
+        // No `output`, so the 200 names no schema.
+        expect(whoami?.responses['200']?.content).toBeUndefined();
+    });
+
+    it('documents no 401 or 403 for a public plugin method', () => {
+        const { api, document: doc } = servedDocument([probe]);
+        const ping = doc.paths[`${api}/plugins/probe/ping`]?.['post'];
+        expect(ping?.summary).toBe('Answer pong.');
+        expect(statuses(ping)).toEqual(['200', '500']);
+    });
+
+    it('shares a core component a plugin output reuses', () => {
+        const { api, document: doc, warnings } = servedDocument([probe]);
+        const latest = doc.paths[`${api}/plugins/probe/latest`]?.['post'];
+        expect(responseSchema(latest, 200)?.anyOf?.[0]).toEqual({
+            $ref: '#/components/schemas/Entry',
+        });
+        expect(warnings).toEqual([]);
+    });
+
+    it('leaves a plugin schema undescribed when its component name is core’s', () => {
+        const before = component(servedDocument([]).document, 'Entry');
+        const { api, document: doc, warnings } = servedDocument([clashing]);
+        expect(component(doc, 'Entry')).toEqual(before);
+        const read = doc.paths[`${api}/plugins/clashing/read`]?.['post'];
+        expect(read?.responses['200']?.content).toBeUndefined();
+        expect(warnings).toEqual([
+            expect.stringContaining(
+                'leaves the output schema of plugins.clashing.read undescribed: it names ' +
+                    'the component "Entry", which core names for a different schema'
+            ),
+        ]);
+    });
+
+    it('leaves the second of two plugins that name different schemas alike undescribed', () => {
+        const {
+            api,
+            document: doc,
+            warnings,
+        } = servedDocument([thing('first', 'a'), thing('second', 'b')]);
+        expect(Object.keys(component(doc, 'Thing').properties ?? {})).toEqual(['a']);
+        expect(
+            responseSchema(doc.paths[`${api}/plugins/first/read`]?.['post'], 200)
+        ).toEqual({ $ref: '#/components/schemas/Thing' });
+        expect(
+            doc.paths[`${api}/plugins/second/read`]?.['post']?.responses['200']?.content
+        ).toBeUndefined();
+        expect(warnings).toEqual([
+            expect.stringContaining('which plugin "first" names for a different schema'),
+        ]);
     });
 });

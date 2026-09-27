@@ -32,9 +32,11 @@ const publicFormSchema = z.object({
      * an object and not walked: `compileFormFields` built it moments before.
      */
     fields: z.array(
-        z.custom<DataField>(isRecord, {
-            message: 'Expected a field definition',
-        })
+        z
+            .custom<DataField>(isRecord, {
+                message: 'Expected a field definition',
+            })
+            .openapi({ type: 'object', additionalProperties: true })
     ),
     /** Present only when the site configured a provider AND the form uses it. Never carries the secret key. */
     spam: z.object({ provider: z.string(), siteKey: z.string() }).optional(),

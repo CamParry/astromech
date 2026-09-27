@@ -8,15 +8,21 @@ import type { MenuConfig, MenuItem } from '../types';
 import type { PluginContext } from 'astromech';
 import { defineServiceMethod, resolveEntryUrl, z } from 'astromech';
 
-/** One resolved menu item. `children` is left out when the item has none. */
-export const menuItemSchema = z.object({
-    label: z.string(),
-    url: z.string().optional(),
-    newTab: z.boolean().optional(),
-    get children() {
-        return z.array(menuItemSchema).optional();
-    },
-});
+/**
+ * One resolved menu item. `children` is left out when the item has none. Named,
+ * because the OpenAPI document can only describe a recursive schema by
+ * reference to a component.
+ */
+export const menuItemSchema = z
+    .object({
+        label: z.string(),
+        url: z.string().optional(),
+        newTab: z.boolean().optional(),
+        get children() {
+            return z.array(menuItemSchema).optional();
+        },
+    })
+    .openapi('MenuItem');
 
 /** Raw stored node shape (with reserved underscore keys). */
 type RawNode = {

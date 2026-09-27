@@ -9,12 +9,8 @@ import { z } from '@hono/zod-openapi';
 import { createServices } from '@/app-context/services';
 import { ValidationError } from '@/errors/validation';
 import { contentService } from '@/policies/call-method';
-import {
-    badRequest,
-    errorBodySchema,
-    fromZodError,
-    notFound,
-} from '@/transport/http/middleware/errors';
+import { badRequest, fromZodError, notFound } from '@/transport/http/middleware/errors';
+import { accessRefusals, declaresArguments, errorResponses } from './error-responses';
 import { fromQueryParams } from './query-string';
 import { routeAccess } from './route-access';
 
@@ -307,16 +303,45 @@ function documentRoute(
                     ? { content: { 'application/json': { schema: response } } }
                     : {}),
             },
-            ...(route.notFound !== undefined
-                ? {
-                      404: {
-                          description: `${route.notFound} not found`,
-                          content: { 'application/json': { schema: errorBodySchema } },
-                      },
-                  }
-                : {}),
+            ...errorResponses({
+                badRequest: badRequestReasons(route, inputShape(contract.input)),
+                // Every table router mounts behind `requireAuth` (`transport/http/app.ts`),
+                // so a route answers 401 without a session even when its method is public.
+                session: true,
+                permission: accessRefusals(contract.access).permission,
+                ...(route.notFound !== undefined
+                    ? { notFound: `${route.notFound} not found` }
+                    : {}),
+                input: declaresArguments(contract.input),
+            }),
         },
     });
+}
+
+/**
+ * Why this route can answer 400: a body that is not JSON (see `readBody`), a
+ * `dir` that is neither order, and a list's `sort` or `where` naming a key it
+ * cannot use (`UnknownSortKeyError`, `UnknownWhereKeyError`).
+ */
+function badRequestReasons(
+    route: HttpRouteSpec,
+    shape: Record<string, z.ZodType>
+): string[] {
+    const reasons: string[] = [];
+    if (route.verb === 'post' || route.verb === 'put') {
+        reasons.push(
+            route.bodyKey === undefined
+                ? 'the body is not a JSON object'
+                : 'the body is not valid JSON'
+        );
+    }
+    if ('sort' in shape) {
+        reasons.push(
+            '`dir` is not `asc` or `desc`, or `sort` names a key the list cannot sort by'
+        );
+    }
+    if ('where' in shape) reasons.push('`where` names a key the list cannot filter by');
+    return reasons;
 }
 
 /**
@@ -343,13 +368,21 @@ function responseBody(
 
 /**
  * The `data` of a `{ data }` body. A route that answers null with a 404 never
- * sends null. Otherwise null is a union option: `.nullable()` on a named schema
- * would make the generator write `nullable` into the shared component.
+ * sends null.
  */
 function dataSchema(output: z.ZodType, notFound: boolean): z.ZodType {
+    if (notFound && output instanceof z.ZodNullable) return output.unwrap() as z.ZodType;
+    return nullableAsUnion(output);
+}
+
+/**
+ * `output` with null as a union option rather than `.nullable()`, which on a
+ * named schema would make the generator write `nullable` into the shared
+ * component.
+ */
+export function nullableAsUnion(output: z.ZodType): z.ZodType {
     if (!(output instanceof z.ZodNullable)) return output;
-    const present = output.unwrap() as z.ZodType;
-    return notFound ? present : z.union([present, z.null()]);
+    return z.union([output.unwrap() as z.ZodType, z.null()]);
 }
 
 /**

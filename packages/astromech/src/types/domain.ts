@@ -3,6 +3,7 @@
  * resource's public type is inferred from its output schema in its `schema.ts`.
  */
 
+import type { meSchema } from '@/auth/schema';
 import type { versionMetadataSchema } from '@/content/schema';
 import type { entrySchema, entryVersionSchema } from '@/entries/schema';
 import type { globalSchema, globalVersionSchema } from '@/globals/schema';
@@ -127,6 +128,9 @@ export type Role = {
 
 /** An admin user account. Documented key by key on `userSchema`. */
 export type User = z.output<typeof userSchema>;
+
+/** The signed-in user and their role, as `GET /api/me` answers them under `data`. */
+export type Me = z.output<typeof meSchema>;
 
 /** One notification in a user's inbox. */
 export type Notification = z.output<typeof notificationSchema>;

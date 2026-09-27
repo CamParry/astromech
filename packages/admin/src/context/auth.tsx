@@ -4,6 +4,7 @@
  * tree read the same cached key. Uses Better Auth endpoints via fetch.
  */
 
+import type { Me } from 'astromech';
 import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { createContext, useContext } from 'react';
 import { queryKeys } from '../hooks/use-query-keys';
@@ -26,23 +27,8 @@ type AuthContextValue = {
     logout: () => Promise<void>;
 };
 
-type MeResponse = {
-    data: {
-        user: {
-            id: string;
-            name: string;
-            email: string;
-            image: string | null;
-            role: string;
-        };
-        role: {
-            slug: string;
-            name: string;
-            permissions: string[];
-            isBuiltIn: boolean;
-        };
-    };
-};
+/** What `GET /api/me` answers. */
+type MeResponse = { data: Me };
 
 async function fetchSession(): Promise<AuthUser | null> {
     const res = await fetch(`${__ASTROMECH_BASE_PATH__}/api/me`, {

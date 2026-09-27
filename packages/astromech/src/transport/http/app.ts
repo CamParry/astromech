@@ -8,24 +8,28 @@
 import type { AuthVariables } from './middleware/auth';
 import type { ResolvedConfig } from '@/types/index';
 import { swaggerUI } from '@hono/swagger-ui';
-import { OpenAPIHono } from '@hono/zod-openapi';
+import { OpenAPIHono, z } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 import { currentServices } from '@/app-context/services';
 import { getAuth } from '@/auth/better-auth';
+import { meSchema } from '@/auth/schema';
 import { createFirstAdmin, firstAdminSchema, SIGN_UP_CLOSED } from '@/auth/setup';
 import { resolveNodeEnv } from '@/env';
 import { handleMediaRequest } from '@/media/serving/handler';
 import { getRequestScope, runInRequestScope } from '@/request-scope/request-scope';
+import { parseOutput } from '@/services/parse-method-output';
 import { getClientAddress } from '@/transport/http/client-address';
 import { requireAuth } from './middleware/auth';
 import { forbidden, fromZodError, onError, onNotFound } from './middleware/errors';
 import { cronRouter } from './routes/cron';
 import { entriesRouter } from './routes/entries';
 import { entryTypesRouter } from './routes/entry-types';
+import { errorResponses } from './routes/error-responses';
 import { globalsRouter } from './routes/globals';
 import { mediaRouter } from './routes/media';
 import { notificationsRouter } from './routes/notifications';
+import { openApiDocument } from './routes/openapi-document';
 import { createPluginsRouter } from './routes/plugins';
 import { rpcRouter } from './routes/rpc';
 import { usersRouter } from './routes/users';
@@ -179,8 +183,26 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
 
     // GET /me — current user + role (used by admin SPA). Not in a route table:
     // no service method behind it, only the session `requireAuth` resolved.
+    // Parsed as a method's result is, so it answers the public shape.
     app.get(`${api}/me`, (c) => {
-        return c.json({ data: { user: c.var.ctx.user, role: c.var.ctx.role } });
+        const { user, role } = c.var.ctx;
+        return c.json({
+            data: parseOutput(meSchema, { user, role }, 'The /me response'),
+        });
+    });
+    app.openAPIRegistry.registerPath({
+        method: 'get',
+        path: `${api}/me`,
+        summary: 'Read the signed-in user and their role.',
+        responses: {
+            200: {
+                description: 'The signed-in user and their role.',
+                content: {
+                    'application/json': { schema: z.object({ data: meSchema }) },
+                },
+            },
+            ...errorResponses({ session: true, permission: false, input: false }),
+        },
     });
 
     app.route(`${api}/entries`, entriesRouter);
@@ -192,14 +214,9 @@ export function createHttpApp(config: ResolvedConfig): OpenAPIHono<AppEnv> {
     app.route(`${api}/entry-types`, entryTypesRouter);
     app.route(`${api}/notifications`, notificationsRouter);
 
-    app.doc(`${api}/openapi.json`, {
-        openapi: '3.0.0',
-        info: {
-            title: 'Astromech CMS API',
-            version: '1.0.0',
-            description: 'Astromech CMS REST API',
-        },
-    });
+    // Not `app.doc`: the document adds the plugin methods, and `app.doc` answers
+    // a failure as `{}` with no log where this one reaches `onError`.
+    app.get(`${api}/openapi.json`, (c) => c.json(openApiDocument(app, `${api}/plugins`)));
 
     if (resolveNodeEnv() === 'development') {
         app.get(`${api}/docs`, swaggerUI({ url: `${api}/openapi.json` }));
