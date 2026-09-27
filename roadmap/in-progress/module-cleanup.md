@@ -15,7 +15,19 @@ the repository copies.
       `entries/methods/duplicate.ts`, `globals/methods/update.ts`,
       `globals/methods/status.ts`). Give it one helper in `content/`, and decide
       whether a status change fires the update hooks: an entry's does, a
-      global's does not.
+      global's does not. The same class, found reading the code:
+    - [ ] Publishing a scheduled global keeps its future `publishedAt`, so it
+          stays hidden while reporting `published`.
+    - [ ] `entries.create` ignores a caller's `publishedAt` when the status is
+          `published`; `globals.update` honours it.
+    - [ ] `entries.publish` and `globals.publish` may skip the `required` check:
+          only a write with a fields patch validates in complete mode.
+    - [ ] A scheduled global never goes live. The `scheduled-publish` job moves
+          entries only (`entries/jobs/scheduled-publish.ts`), and the public
+          read hides any status other than `published`.
+    - [ ] The scheduler publishes with one bulk write
+          (`entries/repository/maintenance.ts`), so no update hook fires when a
+          scheduled row goes live.
 - [ ] **`globals.createStaged` stores fields unvalidated.** It merges `data.fields`
       over the canonical and stores the result without the field parse
       (`globals/methods/staging/create.ts`), so no validation, no repeater ids,

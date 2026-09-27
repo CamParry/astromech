@@ -26,4 +26,4 @@ same shape, not only to `createUser`.
 
 The `scan` argument is left as it is: `backlog.md` asks whether `unique` fields
 stay at all. Moving `RESOURCE_TYPES` beside `RESOURCE_CONFIG` is in
-`planned/module-cleanup.md`.
+`in-progress/module-cleanup.md`.
