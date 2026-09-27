@@ -9,6 +9,7 @@ import { z } from '@hono/zod-openapi';
 import { assertCapability } from '@/content/capabilities';
 import { resolveResourceLocale } from '@/content/locale';
 import { patchedFieldNames } from '@/content/prepare-fields';
+import { resolvePublishedAt } from '@/content/published-at';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
@@ -186,13 +187,15 @@ async function writeRow(params: {
     userId: string | null;
     patchedNames: string[];
 }): Promise<GlobalResource> {
-    const { config, repository, global, id, locale, current, fields, userId, status } =
-        params;
-    // Publishing stamps the gate when the row has none yet, as `publish` does.
-    const publishedAt =
-        status === 'published' && !current?.publishedAt
-            ? (params.publishedAt ?? new Date())
-            : params.publishedAt;
+    const { config, repository, global, id, locale, current, fields, userId } = params;
+    // The global's first row takes a status whether or not the write names one.
+    const status = id === null ? (params.status ?? 'unpublished') : params.status;
+    const publishedAt = resolvePublishedAt({
+        status,
+        given: params.publishedAt,
+        current: current?.publishedAt ?? null,
+        now: new Date(),
+    });
 
     const row =
         id === null

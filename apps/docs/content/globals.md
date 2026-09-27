@@ -210,6 +210,12 @@ Each locale publishes independently. A scheduled global goes live unattended, so
 it validates as a publish: `required` fields must be filled. A staged write takes
 no status: merge the staged change, then publish.
 
+`publishedAt` follows one rule for globals and entries. A date you pass is
+stored as given. Otherwise publishing keeps a date already in the past and
+stamps the current time over a missing or future one, so re-publishing keeps
+the original date and publishing a scheduled global puts it live at once.
+Unpublishing clears the date, and scheduling keeps the one it names.
+
 ## Staged changes
 
 With `staging: true`, a global can carry a prepared future version alongside the

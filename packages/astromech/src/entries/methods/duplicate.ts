@@ -1,6 +1,7 @@
 import type { EntryResource } from '../repository/types';
 import type { EntryDuplicateOverrides } from '@/types/index';
 import { z } from '@hono/zod-openapi';
+import { resolvePublishedAt } from '@/content/published-at';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { entryGate } from '../internal/access';
@@ -94,7 +95,13 @@ async function copyLocale(params: {
         locale,
         fields: { ...(row.fields ?? {}), ...(overrides?.fields ?? {}) },
         status,
-        publishedAt: status === 'published' ? new Date() : null,
+        // A copy is a new row, so it has no date of its own to keep.
+        publishedAt: resolvePublishedAt({
+            status,
+            given: undefined,
+            current: null,
+            now: new Date(),
+        }),
         createdBy,
         updatedBy: createdBy,
     };

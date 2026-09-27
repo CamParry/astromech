@@ -34,6 +34,22 @@ async function makeSource(fields: Record<string, unknown> = {}): Promise<Entry> 
 }
 
 describe('update into a locale with no row', () => {
+    it('keeps the schedule of a scheduled source', async () => {
+        const en = await makeSource();
+        const future = new Date(Date.now() + 86_400_000);
+        await api.schedule({ type: 'post', id: en.id, publishedAt: future });
+
+        const de = await api.update({
+            type: 'post',
+            id: en.id,
+            locale: 'de',
+            data: { title: 'DE', fields: {} },
+        });
+
+        expect(de.status).toBe('scheduled');
+        expect(de.publishedAt?.getTime()).toBe(future.getTime());
+    });
+
     it('creates the translation under the same id and inherits shared fields', async () => {
         const en = await makeSource();
         const de = await api.update({

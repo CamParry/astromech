@@ -7,12 +7,13 @@
 import type { GlobalResource } from '../repository';
 import type { ContentWrite } from '@/content/repository/types';
 import type { ResolvedConfig, User } from '@/types/index';
+import { resolvePublishedAt } from '@/content/published-at';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../internal/access';
 import { getCanonicalGlobal } from '../internal/canonical-global';
 import { globalSchema, localised, scheduleGlobalSchema } from '../schema';
 
-/** Publishes one locale, stamping `publishedAt` when it has none yet. */
+/** Publishes one locale, keeping a past `publishedAt` and otherwise stamping now. */
 export const publishGlobal = defineServiceMethod({
     summary: 'Publish a global.',
     input: localised,
@@ -24,7 +25,12 @@ export const publishGlobal = defineServiceMethod({
     handler(params, ctx): Promise<GlobalResource> {
         return writeStatus(ctx.config, params, ctx.user, (current) => ({
             status: 'published',
-            publishedAt: current.publishedAt ?? new Date(),
+            publishedAt: resolvePublishedAt({
+                status: 'published',
+                given: undefined,
+                current: current.publishedAt,
+                now: new Date(),
+            }),
         }));
     },
 });

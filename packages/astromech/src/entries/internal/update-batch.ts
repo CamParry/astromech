@@ -9,6 +9,7 @@ import type {
 } from '@/types/index';
 import { resolveResourceLocale } from '@/content/locale';
 import { patchedFieldNames } from '@/content/prepare-fields';
+import { resolvePublishedAt } from '@/content/published-at';
 import { requireStagedChange } from '@/content/staging';
 import { propagateSharedFields } from '@/content/translatable';
 import { changesVersionedContent, snapshotVersion } from '@/content/versions';
@@ -236,10 +237,12 @@ async function updateOne(params: {
         await snapshotVersion('entry', entryRepository.versions, currentEntry, user);
     }
 
-    const publishedAt =
-        data.status === 'published' && !currentEntry.publishedAt
-            ? new Date()
-            : data.publishedAt;
+    const publishedAt = resolvePublishedAt({
+        status: data.status,
+        given: data.publishedAt,
+        current: currentEntry.publishedAt,
+        now: new Date(),
+    });
     const slug = await uniqueSlugIfChanged({
         type: entryType.id,
         entry: currentEntry,
@@ -301,7 +304,7 @@ async function planTranslation(params: {
         slug: data.slug ?? source.slug ?? undefined,
         fields: data.fields,
         status: data.status ?? source.status,
-        publishedAt: data.publishedAt ?? source.publishedAt,
+        publishedAt: data.publishedAt,
     });
 
     const title = validated.title ?? '';
@@ -330,8 +333,14 @@ async function planTranslation(params: {
         locale,
         fields,
         status,
-        publishedAt:
-            status === 'published' ? new Date() : (validated.publishedAt ?? null),
+        // The source row is the current one, so a translation of a scheduled
+        // entry keeps its schedule.
+        publishedAt: resolvePublishedAt({
+            status,
+            given: validated.publishedAt,
+            current: source.publishedAt,
+            now: new Date(),
+        }),
         createdBy: user?.id ?? null,
         updatedBy: user?.id ?? null,
     };

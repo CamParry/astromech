@@ -16,9 +16,9 @@ the repository copies.
       `globals/methods/status.ts`). Give it one helper in `content/`, and decide
       whether a status change fires the update hooks: an entry's does, a
       global's does not. The same class, found reading the code:
-    - [ ] Publishing a scheduled global keeps its future `publishedAt`, so it
+    - [x] Publishing a scheduled global keeps its future `publishedAt`, so it
           stays hidden while reporting `published`.
-    - [ ] `entries.create` ignores a caller's `publishedAt` when the status is
+    - [x] `entries.create` ignores a caller's `publishedAt` when the status is
           `published`; `globals.update` honours it.
     - [ ] `entries.publish` and `globals.publish` may skip the `required` check:
           only a write with a fields patch validates in complete mode.

@@ -22,6 +22,8 @@ Live choices and what each one beat. An entry is here because the losing option 
 
 **Trash is resource-level.** `deletedAt` sits on `entries`, so trashing takes every locale. Rejected: `deletedAt` per content row with a `cascadeLocales` flag, which made "trash this entry" and "remove this translation" one call.
 
+**One rule decides the `publishedAt` a write stores**, for entries and globals alike, in `resolvePublishedAt` (`packages/astromech/src/content/published-at.ts`), which every write path that sets a status calls. A date the caller sends is stored as given. Otherwise the status after the write decides: `published` keeps the row's date when it is set and already past, and otherwise stamps now, so re-publishing keeps the date and publishing a scheduled row puts it live at once; `unpublished` clears it; `scheduled` keeps it; a write with no status leaves it alone. Rejected: WordPress's model, which keeps the date across an unpublish, so the date stops saying when the row last went live; Strapi 5's, which stamps each publish, so a re-publish moves a date readers see; and a rule per write path, under which a re-publish cleared the date, a published create ignored the one it was sent, and publishing a scheduled global kept its future date and stayed hidden.
+
 **`type` is copied onto `entry_content`**, because the indexes `(type, locale, slug)` and `(type, locale, status)` cannot reach across the join. It is the one accepted denormalization. Rejected: slug uniqueness in application code (Craft's answer).
 
 **A preview token is two columns on `entries`**: one hashed token per entry, authorizing every locale. Rejected: an `entry_preview_tokens` table, which nothing needs until someone wants a token audit trail.

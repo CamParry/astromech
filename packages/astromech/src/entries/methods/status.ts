@@ -21,7 +21,9 @@ type StatusBatch = { type: string; ids: readonly string[]; locale?: string | und
 async function moveEntryBatch(
     params: StatusBatch,
     ctx: AppContext,
-    data: { status: 'published' | 'unpublished' | 'scheduled'; publishedAt: Date | null }
+    data:
+        | { status: 'published' | 'unpublished' }
+        | { status: 'scheduled'; publishedAt: Date }
 ): Promise<EntryResource[]> {
     return updateEntryBatch(
         {
@@ -40,7 +42,7 @@ async function publishEntryBatch(
     params: StatusBatch,
     ctx: AppContext
 ): Promise<EntryResource[]> {
-    return moveEntryBatch(params, ctx, { status: 'published', publishedAt: null });
+    return moveEntryBatch(params, ctx, { status: 'published' });
 }
 
 /** Unpublishes a batch of entries by moving them to `unpublished`. */
@@ -48,7 +50,7 @@ async function unpublishEntryBatch(
     params: StatusBatch,
     ctx: AppContext
 ): Promise<EntryResource[]> {
-    return moveEntryBatch(params, ctx, { status: 'unpublished', publishedAt: null });
+    return moveEntryBatch(params, ctx, { status: 'unpublished' });
 }
 
 /**

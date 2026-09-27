@@ -39,6 +39,29 @@ describe('publish / unpublish / schedule', () => {
         expect(again.publishedAt?.getTime()).toBe(first.publishedAt?.getTime());
     });
 
+    it('publishing a scheduled global puts it live now', async () => {
+        await api.update({ key: 'legal', data: { fields: { terms: 'Terms' } } });
+        await api.schedule({
+            key: 'legal',
+            publishedAt: new Date(Date.now() + 86_400_000),
+        });
+        const before = Date.now();
+        const published = await api.publish({ key: 'legal' });
+
+        expect(published.status).toBe('published');
+        expect(published.publishedAt?.getTime()).toBeGreaterThanOrEqual(before);
+        expect(published.publishedAt?.getTime()).toBeLessThanOrEqual(Date.now());
+        expect(await api.get({ key: 'legal' })).not.toBeNull();
+    });
+
+    it('re-publishing a published global keeps its publishedAt', async () => {
+        await api.update({ key: 'contact', data: { fields: {} } });
+        const first = await api.publish({ key: 'contact' });
+        const again = await api.publish({ key: 'contact' });
+
+        expect(again.publishedAt?.getTime()).toBe(first.publishedAt?.getTime());
+    });
+
     it('unpublish clears the publish gate', async () => {
         await api.update({ key: 'contact', data: { fields: {} } });
         await api.publish({ key: 'contact' });

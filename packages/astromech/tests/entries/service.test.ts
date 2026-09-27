@@ -80,6 +80,15 @@ describe('create', () => {
         expect(e.publishedAt).toBeInstanceOf(Date);
     });
 
+    it('status published stores the publishedAt it is given', async () => {
+        const given = new Date('2024-01-01T00:00:00.000Z');
+        const e = await api.create({
+            type: 'post',
+            data: { title: 'Pub', status: 'published', publishedAt: given },
+        });
+        expect(e.publishedAt?.getTime()).toBe(given.getTime());
+    });
+
     it('creates the row in the locale it is given', async () => {
         const de = await api.create({
             type: 'post',
@@ -712,7 +721,42 @@ describe('publish / unpublish / schedule', () => {
         expect(pub.updatedAt).toEqual(later);
     });
 
-    // CHARACTERIZED: unpublish passes publishedAt: null through update, clearing publishedAt.
+    it('re-publishing a published entry keeps its publishedAt', async () => {
+        const e = await api.create({
+            type: 'post',
+            data: { title: 'P', status: 'published' },
+        });
+        const again = await api.publish({ type: 'post', id: e.id });
+        expect(again.publishedAt?.getTime()).toBe(e.publishedAt?.getTime());
+    });
+
+    it('publishing a scheduled entry puts it live now', async () => {
+        const e = await api.create({ type: 'post', data: { title: 'S' } });
+        await api.schedule({
+            type: 'post',
+            id: e.id,
+            publishedAt: new Date(Date.now() + 86_400_000),
+        });
+        const before = Date.now();
+        const pub = await api.publish({ type: 'post', id: e.id });
+        expect(pub.status).toBe('published');
+        expect(pub.publishedAt?.getTime()).toBeGreaterThanOrEqual(before);
+        expect(pub.publishedAt?.getTime()).toBeLessThanOrEqual(Date.now());
+    });
+
+    it('an update to unpublished clears publishedAt, as unpublish does', async () => {
+        const e = await api.create({
+            type: 'post',
+            data: { title: 'P', status: 'published' },
+        });
+        const un = await api.update({
+            type: 'post',
+            id: e.id,
+            data: { status: 'unpublished' },
+        });
+        expect(un.publishedAt).toBeNull();
+    });
+
     it('unpublish sets status to unpublished and clears publishedAt', async () => {
         const e = await api.create({
             type: 'post',
