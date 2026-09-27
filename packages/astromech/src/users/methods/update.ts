@@ -35,13 +35,15 @@ export const updateUser = defineServiceMethod({
     idempotent: true,
     async handler(params, ctx): Promise<UserResource> {
         const { id, data } = params;
+        const { config, user } = ctx;
+        const userId = user?.id ?? null;
         const locale = resolveResourceLocale(
             RESOURCE_SPECS.user,
-            ctx.config,
+            config,
             undefined,
             params.locale
         );
-        const fallbackLocale = defaultContentLocale(ctx.config);
+        const fallbackLocale = defaultContentLocale(config);
 
         // The resource this write edits or, when the locale has no content row,
         // the one the new row is copied from: the default locale's, else any
@@ -50,7 +52,6 @@ export const updateUser = defineServiceMethod({
         const base = current ?? (await userRepository.findOne(id, { fallbackLocale }));
         if (!base) throw new ResourceNotFoundError('user', { id });
 
-        const config = ctx.config;
         if (data.role !== undefined) {
             await assertKeepsAnAdmin(
                 userRepository,
@@ -76,14 +77,13 @@ export const updateUser = defineServiceMethod({
                       {
                           operation: 'update',
                           record: base,
-                          user: ctx.user,
+                          user,
                           scan: () => userRepository.findByLocale(locale),
                           excludeId: id,
                       }
                   );
 
         const { name, email, role } = data;
-        const userId = ctx.user?.id ?? null;
 
         // The version, the `users` row write, the content write and the index write
         // are one transaction: an index that outlived a failed write would name
@@ -97,7 +97,7 @@ export const updateUser = defineServiceMethod({
                     RESOURCE_SPECS.user,
                     userRepository.versions,
                     current,
-                    ctx.user
+                    user
                 );
             }
             if (name !== undefined || email !== undefined || role !== undefined) {
@@ -124,7 +124,7 @@ export const updateUser = defineServiceMethod({
                     fields,
                     patchedFieldNames: patchedNames,
                 });
-                await syncUserRelationships(ctx.config, id);
+                await syncUserRelationships(config, id);
             }
         });
 

@@ -23,9 +23,11 @@ export const getMediaVersion = defineServiceMethod({
     access: 'media:read',
     mutates: false,
     async handler(params, ctx) {
+        const { id, version } = params;
+        const { config } = ctx;
         const current = await getResourceInLocale(
             RESOURCE_SPECS.media,
-            ctx.config,
+            config,
             mediaRepository,
             params
         );
@@ -33,8 +35,8 @@ export const getMediaVersion = defineServiceMethod({
             spec: RESOURCE_SPECS.media,
             versions: mediaRepository.versions,
             record: current,
-            version: params.version,
-            address: { id: params.id },
+            version,
+            address: { id },
         });
     },
 });

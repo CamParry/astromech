@@ -20,16 +20,18 @@ export const getGlobalVersion = defineServiceMethod({
     requires: 'versioning',
     mutates: false,
     async handler(params, ctx) {
-        const { repository, current } = await getCanonicalGlobal(ctx.config, {
-            key: params.key,
+        const { key, version } = params;
+        const { config } = ctx;
+        const { repository, current } = await getCanonicalGlobal(config, {
+            key,
             locale: params.locale,
         });
         return readVersion<z.input<typeof globalSnapshotSchema>>({
             spec: RESOURCE_SPECS.global,
             versions: repository.versions,
             record: current,
-            version: params.version,
-            address: { id: params.key },
+            version,
+            address: { id: key },
         });
     },
 });

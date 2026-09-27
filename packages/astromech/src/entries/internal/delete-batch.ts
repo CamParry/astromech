@@ -40,12 +40,13 @@ export async function trashEntryBatch(
     params: { type: string; ids: readonly string[] },
     ctx: AppContext
 ): Promise<void> {
+    const userId = ctx.user?.id ?? null;
     await removeEntryBatch(params, ctx, {
         permanent: false,
         async write(entry) {
             // Soft delete keeps relationship rows — unlike a permanent
             // delete, a trashed entry can still be restored.
-            await entryRepository.trash.trash(entry.id, ctx.user?.id ?? null);
+            await entryRepository.trash.trash(entry.id, userId);
         },
     });
 }
@@ -65,8 +66,8 @@ async function removeEntryBatch(
 ): Promise<void> {
     const { type, ids } = params;
     const { permanent, write } = options;
+    const { user } = ctx;
     const entries = await getEntryResources(type, ids);
-    const user = ctx.user;
 
     for (const entry of entries) {
         await ctx.runHook('entry:beforeDelete', {

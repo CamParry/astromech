@@ -20,11 +20,11 @@ async function restoreEntryBatch(
     ctx: AppContext
 ): Promise<EntryResource[]> {
     const { type, ids } = params;
+    const userId = ctx.user?.id ?? null;
     const entries = await getEntryResources(type, ids);
-    const user = ctx.user;
 
     return writeBatch(entries, (entry) =>
-        entryRepository.trash.restore(entry.id, user?.id ?? null)
+        entryRepository.trash.restore(entry.id, userId)
     );
 }
 

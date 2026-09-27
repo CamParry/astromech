@@ -25,31 +25,28 @@ export const getEntry = defineServiceMethod({
     access: entryGate('read'),
     mutates: false,
     async handler(params, ctx): Promise<EntryResource | null> {
-        const { type, id } = params;
+        const { type, id, locale, full, previewToken, staged } = params;
+        const { config } = ctx;
 
         // Preview (forward versioning): token-authorized, publish-gate-bypassed.
-        if (params.previewToken) return getPreviewEntry(ctx.config, params);
+        if (previewToken) return getPreviewEntry(config, params);
 
         // Without a token there is no staged read here: answering the canonical row
         // for `staged: true` would silently hand back the wrong content.
-        if (params.staged === true) {
+        if (staged === true) {
             throw ValidationError.fromFieldErrors({}, [
                 `${ctx.method.name}: \`staged\` requires \`previewToken\`; use ` +
                     '`getStaged` to read a staged change without one.',
             ]);
         }
 
-        const record = await entryRepository.findOne({
-            type,
-            id,
-            locale: params.locale,
-        });
+        const record = await entryRepository.findOne({ type, id, locale });
 
         if (!record) return null;
 
-        const shape: VisibilityShape = params.full ? 'full' : 'public';
+        const shape: VisibilityShape = full ? 'full' : 'public';
         const audience = { now: new Date() };
-        const entryType = resolveEntryType(ctx.config, type);
+        const entryType = resolveEntryType(config, type);
         const fields = entryType ? flattenEntryFields(entryType.fields) : [];
 
         return applyVisibility(record, { shape, fields, audience });

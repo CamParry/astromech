@@ -25,10 +25,12 @@ export const restoreUserVersion = defineServiceMethod({
     access: 'users:update',
     mutates: true,
     async handler(params, ctx): Promise<UserResource> {
-        const { id } = params;
+        const { id, version } = params;
+        const { config, user } = ctx;
+        const userId = user?.id ?? null;
         const current = await getResourceInLocale(
             RESOURCE_SPECS.user,
-            ctx.config,
+            config,
             userRepository,
             params
         );
@@ -38,15 +40,15 @@ export const restoreUserVersion = defineServiceMethod({
             spec: RESOURCE_SPECS.user,
             versions: userRepository.versions,
             current,
-            version: params.version,
+            version,
             address: { id },
-            user: ctx.user,
+            user,
             write: async ({ fields }) => {
                 const row = await userRepository.update(
                     { id, locale },
-                    { fields, updatedBy: ctx.user?.id ?? null }
+                    { fields, updatedBy: userId }
                 );
-                await syncUserRelationships(ctx.config, id);
+                await syncUserRelationships(config, id);
                 return row;
             },
         });

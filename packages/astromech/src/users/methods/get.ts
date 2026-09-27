@@ -19,15 +19,17 @@ export const getUser = defineServiceMethod({
     access: 'users:read',
     mutates: false,
     async handler(params, ctx): Promise<UserResource | null> {
+        const { id } = params;
+        const { config } = ctx;
         const locale = resolveResourceLocale(
             RESOURCE_SPECS.user,
-            ctx.config,
+            config,
             undefined,
             params.locale
         );
-        return userRepository.findOne(params.id, {
+        return userRepository.findOne(id, {
             locale,
-            fallbackLocale: defaultContentLocale(ctx.config),
+            fallbackLocale: defaultContentLocale(config),
         });
     },
 });

@@ -54,9 +54,13 @@ export async function updateEntryBatch(
     },
     ctx: AppContext
 ): Promise<EntryResource[]> {
-    const entryType = resolveEntryType(ctx.config, params.type);
+    const { type, ids } = params;
+    const { config, user } = ctx;
+    const staged = params.staged === true;
+
+    const entryType = resolveEntryType(config, type);
     if (!entryType) {
-        throw new UnknownEntryTypeError(params.type);
+        throw new UnknownEntryTypeError(type);
     }
 
     // The caller's patch under the type's own schema, before a hook sees it, so
@@ -66,7 +70,7 @@ export async function updateEntryBatch(
     assertWritableFields(entryType, data);
 
     // A single slug across many ids would violate (type, locale) uniqueness.
-    if (params.ids.length > 1 && data.slug !== undefined) {
+    if (ids.length > 1 && data.slug !== undefined) {
         throw new Error(
             'Bulk update cannot set `slug`: a single value across multiple ids ' +
                 'would violate (type, locale) slug uniqueness. Update slugs individually.'
@@ -75,19 +79,16 @@ export async function updateEntryBatch(
 
     const locale = resolveResourceLocale(
         RESOURCE_SPECS.entry,
-        ctx.config,
+        config,
         entryType.id,
         params.locale
     );
-
-    const user = ctx.user;
-    const staged = params.staged === true;
 
     // Each id is read once, at the top: the record feeds both the before-hook
     // context and the write, so nothing loads twice. An id with no row in this
     // locale becomes a translation, planned here for the same reason.
     const plans: UpdatePlan[] = [];
-    for (const id of params.ids) {
+    for (const id of ids) {
         const record = staged
             ? await getStagedRecord(id, locale)
             : await entryRepository.findOne(
@@ -104,7 +105,7 @@ export async function updateEntryBatch(
                       kind: 'translate',
                       id,
                       write: await planTranslation({
-                          config: ctx.config,
+                          config,
                           entryType,
                           id,
                           locale,
@@ -143,7 +144,7 @@ export async function updateEntryBatch(
     const results = await writeBatch(plans, (plan) =>
         plan.kind === 'update'
             ? updateOne({
-                  config: ctx.config,
+                  config,
                   entryType,
                   currentEntry: plan.record,
                   data: written,
@@ -151,7 +152,7 @@ export async function updateEntryBatch(
                   staged,
               })
             : writeTranslation({
-                  config: ctx.config,
+                  config,
                   type: entryType.id,
                   id: plan.id,
                   locale,

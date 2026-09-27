@@ -9,7 +9,7 @@ same shape, not only to `createUser`.
       input schema reports `data.role`. Check the role in `createUserSchema` and
       `updateUserSchema` against the configured roles, and drop the two handler
       calls.
-- [ ] **A handler reads its inputs at the top.** Take what the handler needs from
+- [x] **A handler reads its inputs at the top.** Take what the handler needs from
       `params` and `ctx` first (`const { config, user } = ctx`, the acting user's
       id, the default locale), rather than reaching into `ctx` partway through.
       Every method under `packages/astromech/src/*/methods/`.

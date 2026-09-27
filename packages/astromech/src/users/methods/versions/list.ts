@@ -19,9 +19,10 @@ export const listUserVersions = defineServiceMethod({
     access: 'users:read',
     mutates: false,
     async handler(params, ctx): Promise<VersionMetadata[]> {
+        const { config } = ctx;
         const current = await getResourceInLocale(
             RESOURCE_SPECS.user,
-            ctx.config,
+            config,
             userRepository,
             params
         );

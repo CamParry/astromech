@@ -19,15 +19,17 @@ export const getMedia = defineServiceMethod({
     access: 'media:read',
     mutates: false,
     async handler(params, ctx): Promise<MediaResource | null> {
+        const { id } = params;
+        const { config } = ctx;
         const locale = resolveResourceLocale(
             RESOURCE_SPECS.media,
-            ctx.config,
+            config,
             undefined,
             params.locale
         );
-        return mediaRepository.findOne(params.id, {
+        return mediaRepository.findOne(id, {
             locale,
-            fallbackLocale: defaultContentLocale(ctx.config),
+            fallbackLocale: defaultContentLocale(config),
         });
     },
 });

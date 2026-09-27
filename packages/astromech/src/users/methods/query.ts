@@ -19,13 +19,14 @@ export const queryUsers = defineServiceMethod({
     access: 'users:read',
     mutates: false,
     async handler(params, ctx): Promise<QueryResult<UserResource>> {
+        const { search, sort } = params;
+        const { config } = ctx;
         const locale = resolveResourceLocale(
             RESOURCE_SPECS.user,
-            ctx.config,
+            config,
             undefined,
             params.locale
         );
-        const { search, sort } = params;
         return queryPage(params, {
             list: (page) => userRepository.findMany({ search, sort, locale, ...page }),
             count: () => userRepository.count({ search }),

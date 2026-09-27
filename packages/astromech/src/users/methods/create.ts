@@ -22,8 +22,8 @@ export const createUser = defineServiceMethod({
     mutates: true,
     async handler(params, ctx): Promise<UserResource> {
         const { data } = params;
-
-        const config = ctx.config;
+        const { config, user } = ctx;
+        const userId = user?.id ?? null;
 
         const fields = await writeFields(
             RESOURCE_SPECS.user,
@@ -32,7 +32,7 @@ export const createUser = defineServiceMethod({
             {
                 operation: 'create',
                 record: null,
-                user: ctx.user,
+                user,
                 scan: () => userRepository.findByLocale(defaultContentLocale(config)),
             }
         );
@@ -44,7 +44,6 @@ export const createUser = defineServiceMethod({
         // The `users` row, its credential, its content row and the index write
         // are one transaction: an index that outlived a failed create would name
         // a user that is not there.
-        const userId = ctx.user?.id ?? null;
         return transaction(async () => {
             const row = await userRepository.create(
                 {
@@ -57,7 +56,7 @@ export const createUser = defineServiceMethod({
             if (passwordHash !== undefined) {
                 await userRepository.createCredentialAccount(row.id, passwordHash);
             }
-            await syncUserRelationships(ctx.config, row.id);
+            await syncUserRelationships(config, row.id);
             return row;
         });
     },

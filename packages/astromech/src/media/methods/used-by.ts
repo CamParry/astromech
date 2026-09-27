@@ -19,8 +19,9 @@ export const listMediaUsage = defineServiceMethod({
     mutates: false,
     async handler(params, ctx): Promise<Usage[]> {
         const { id } = params;
+        const { config } = ctx;
         const row = await mediaRepository.findFile(id);
         if (!row) throw new ResourceNotFoundError('media', { id });
-        return listUsage(ctx.config, { id, kind: 'media' });
+        return listUsage(config, { id, kind: 'media' });
     },
 });

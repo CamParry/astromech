@@ -21,23 +21,26 @@ export const restoreGlobalVersion = defineServiceMethod({
     mutates: true,
     idempotent: true,
     async handler(params, ctx): Promise<GlobalResource> {
-        const { repository, id, locale, current } = await getCanonicalGlobal(ctx.config, {
-            key: params.key,
+        const { key, version } = params;
+        const { config, user } = ctx;
+        const userId = user?.id ?? null;
+        const { repository, id, locale, current } = await getCanonicalGlobal(config, {
+            key,
             locale: params.locale,
         });
         return restoreVersion({
             spec: RESOURCE_SPECS.global,
             versions: repository.versions,
             current,
-            version: params.version,
-            address: { id: params.key },
-            user: ctx.user,
+            version,
+            address: { id: key },
+            user,
             write: async ({ fields }) => {
                 const row = await repository.update(
                     { id, locale },
-                    { fields, updatedBy: ctx.user?.id ?? null }
+                    { fields, updatedBy: userId }
                 );
-                await syncGlobalRelationships(ctx.config, id);
+                await syncGlobalRelationships(config, id);
                 return row;
             },
         });

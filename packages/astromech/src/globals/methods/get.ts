@@ -29,22 +29,24 @@ export const getGlobal = defineServiceMethod({
     access: readGate,
     mutates: false,
     async handler(params, ctx): Promise<GlobalResource | null> {
-        const global = getDeclaredGlobal(ctx.config, params.key);
+        const { key, full, staged } = params;
+        const { config } = ctx;
+        const global = getDeclaredGlobal(config, key);
         const locale = resolveResourceLocale(
             RESOURCE_SPECS.global,
-            ctx.config,
+            config,
             global.id,
             params.locale
         );
 
         // Before the row lookup, so every caller gets the capability's 409 for
         // `staged` whether or not the global has been saved.
-        if (params.staged === true) assertCapability('global', global, 'staging');
+        if (staged === true) assertCapability('global', global, 'staging');
 
         // A staged change is never published, so a public read of one would
         // answer null for every global; asking for it in the public shape is a
         // mistake worth naming rather than an empty result.
-        if (params.staged === true && params.full !== true) {
+        if (staged === true && full !== true) {
             throw new ResourceValidationError([
                 `${ctx.method.name}: \`staged\` requires \`full\`; a staged change is ` +
                     'never part of the public read.',
@@ -52,12 +54,12 @@ export const getGlobal = defineServiceMethod({
         }
 
         const row =
-            params.staged === true
-                ? await findStaged(globalRepository, params.key, locale)
-                : await globalRepository.findByKey(params.key, locale);
+            staged === true
+                ? await findStaged(globalRepository, key, locale)
+                : await globalRepository.findByKey(key, locale);
         if (!row) return null;
 
-        const shape: VisibilityShape = params.full ? 'full' : 'public';
+        const shape: VisibilityShape = full ? 'full' : 'public';
 
         const filtered = applyVisibility(
             {

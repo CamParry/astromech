@@ -25,10 +25,12 @@ export const restoreMediaVersion = defineServiceMethod({
     access: 'media:update',
     mutates: true,
     async handler(params, ctx): Promise<MediaResource> {
-        const { id } = params;
+        const { id, version } = params;
+        const { config, user } = ctx;
+        const userId = user?.id ?? null;
         const current = await getResourceInLocale(
             RESOURCE_SPECS.media,
-            ctx.config,
+            config,
             mediaRepository,
             params
         );
@@ -38,15 +40,15 @@ export const restoreMediaVersion = defineServiceMethod({
             spec: RESOURCE_SPECS.media,
             versions: mediaRepository.versions,
             current,
-            version: params.version,
+            version,
             address: { id },
-            user: ctx.user,
+            user,
             write: async ({ fields, columns }) => {
                 const row = await mediaRepository.update(
                     { id, locale },
-                    { ...columns, fields, updatedBy: ctx.user?.id ?? null }
+                    { ...columns, fields, updatedBy: userId }
                 );
-                await syncMediaRelationships(ctx.config, id);
+                await syncMediaRelationships(config, id);
                 return row;
             },
         });

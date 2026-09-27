@@ -20,7 +20,8 @@ export const listEntryVersions = defineServiceMethod({
     requires: 'versioning',
     mutates: false,
     async handler(params): Promise<VersionMetadata[]> {
-        const entry = await getEntryOfType(params.type, params.id, params.locale);
+        const { type, id } = params;
+        const entry = await getEntryOfType(type, id, params.locale);
         return listVersions(entryRepository.versions, entry);
     },
 });

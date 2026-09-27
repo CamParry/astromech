@@ -19,9 +19,10 @@ export const listMediaVersions = defineServiceMethod({
     access: 'media:read',
     mutates: false,
     async handler(params, ctx): Promise<VersionMetadata[]> {
+        const { config } = ctx;
         const current = await getResourceInLocale(
             RESOURCE_SPECS.media,
-            ctx.config,
+            config,
             mediaRepository,
             params
         );

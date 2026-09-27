@@ -23,9 +23,11 @@ export const getUserVersion = defineServiceMethod({
     access: 'users:read',
     mutates: false,
     async handler(params, ctx) {
+        const { id, version } = params;
+        const { config } = ctx;
         const current = await getResourceInLocale(
             RESOURCE_SPECS.user,
-            ctx.config,
+            config,
             userRepository,
             params
         );
@@ -33,8 +35,8 @@ export const getUserVersion = defineServiceMethod({
             spec: RESOURCE_SPECS.user,
             versions: userRepository.versions,
             record: current,
-            version: params.version,
-            address: { id: params.id },
+            version,
+            address: { id },
         });
     },
 });

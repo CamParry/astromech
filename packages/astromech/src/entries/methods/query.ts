@@ -30,22 +30,23 @@ export const queryEntries = defineServiceMethod({
     access: entryGate('read'),
     mutates: false,
     async handler(params, ctx): Promise<QueryResult<EntryResource>> {
+        const { type: typeParam, where, trashed, search, sort, locale, full } = params;
+        const { config } = ctx;
+
         // Preview (forward versioning): token-authorized read that bypasses the
         // publish gate. Public shape only; diverges enough to take its own path.
-        if (params.previewToken) return queryPreviewEntries(ctx.config, params);
+        if (params.previewToken) return queryPreviewEntries(config, params);
 
-        const config = ctx.config;
-        const typeParam = params.type;
         const types = Array.isArray(typeParam) ? Array.from(typeParam) : [typeParam];
 
         // Absent `full` ⇒ public.
-        const shape: VisibilityShape = params.full ? 'full' : 'public';
+        const shape: VisibilityShape = full ? 'full' : 'public';
 
         // A public read can never return a trashed row: the public shape forces
         // `status: 'published'` below and `applyVisibility` drops every trashed row
         // afterwards. Asking for both would yield an empty list indistinguishable
         // from "nothing is trashed", so reject it instead.
-        if (params.trashed === true && shape === 'public') {
+        if (trashed === true && shape === 'public') {
             throw new PublicTrashedReadError();
         }
 
@@ -64,26 +65,25 @@ export const queryEntries = defineServiceMethod({
             : true;
         const filtersPublished = shape === 'public' && hasStatuses;
         const effectiveWhere = filtersPublished
-            ? { ...params.where, status: 'published' }
-            : params.where;
+            ? { ...where, status: 'published' }
+            : where;
         const now = new Date();
 
-        const references = params.where?.['references'];
+        const references = where?.['references'];
         if (references !== undefined) {
             assertReferencesFilter(references, types, config);
         }
 
         const filters: ListParams = {
             type: singleType ?? types,
-            locale: params.locale,
-            trashed: params.trashed ?? false,
-            search: params.search,
+            locale,
+            trashed: trashed ?? false,
+            search,
             where: effectiveWhere,
             ...(filtersPublished ? { publishedAsOf: now } : {}),
         };
         const { data, pagination } = await queryPage(params, {
-            list: (page) =>
-                entryRepository.findMany({ ...filters, sort: params.sort, ...page }),
+            list: (page) => entryRepository.findMany({ ...filters, sort, ...page }),
             count: () => entryRepository.count(filters),
         });
 

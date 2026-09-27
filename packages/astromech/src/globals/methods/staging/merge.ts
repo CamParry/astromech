@@ -25,14 +25,17 @@ export const mergeStagedGlobal = defineServiceMethod({
     requires: 'staging',
     mutates: true,
     async handler(params, ctx): Promise<GlobalResource> {
+        const { key } = params;
+        const { config, user } = ctx;
+        const userId = user?.id ?? null;
         const { global, repository, id, locale, current } = await getCanonicalGlobal(
-            ctx.config,
+            config,
             params
         );
 
         const staged = await requireStagedChange(repository.staging, 'global', {
             rowId: id,
-            id: params.key,
+            id: key,
             locale,
         });
 
@@ -49,8 +52,8 @@ export const mergeStagedGlobal = defineServiceMethod({
             patch: staged.fields,
             current,
             status: current.status,
-            user: ctx.user,
-            config: ctx.config,
+            user,
+            config,
         });
 
         return transaction(async () => {
@@ -61,17 +64,17 @@ export const mergeStagedGlobal = defineServiceMethod({
                     RESOURCE_SPECS.global,
                     repository.versions,
                     current,
-                    ctx.user
+                    user
                 );
             }
             const row = await repository.update(
                 { id, locale },
-                { fields, updatedBy: ctx.user?.id ?? null }
+                { fields, updatedBy: userId }
             );
             // Discard the staged row before re-indexing, so the references it
             // held on its own do not survive the merge.
             await repository.staging.delete({ id, locale });
-            await syncGlobalRelationships(ctx.config, id);
+            await syncGlobalRelationships(config, id);
             return row;
         });
     },

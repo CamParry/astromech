@@ -23,6 +23,7 @@ export const uploadMedia = defineServiceMethod({
     mutates: true,
     async handler(params, ctx): Promise<MediaResource> {
         const { file } = params;
+        const userId = ctx.user?.id ?? null;
         const driver = getStorageDriver();
 
         // Minted here rather than left to the column's `col.id()` default:
@@ -35,8 +36,6 @@ export const uploadMedia = defineServiceMethod({
 
         const { width, height, metadata } = await storeFile(driver, key, file);
 
-        const actor = ctx.user?.id ?? null;
-
         // The resource row and its default-locale content row are one insert
         // pair: the repository wraps both in a transaction.
         return mediaRepository.create(
@@ -48,10 +47,10 @@ export const uploadMedia = defineServiceMethod({
                 width,
                 height,
                 metadata,
-                createdBy: actor,
-                updatedBy: actor,
+                createdBy: userId,
+                updatedBy: userId,
             },
-            { fields: {}, createdBy: actor, updatedBy: actor }
+            { fields: {}, createdBy: userId, updatedBy: userId }
         );
     },
 });

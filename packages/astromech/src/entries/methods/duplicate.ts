@@ -23,13 +23,14 @@ export const duplicateEntry = defineServiceMethod({
     mutates: true,
     async handler(params, ctx): Promise<EntryResource> {
         const { type, id, overrides } = params;
+        const { config } = ctx;
+        // The copy is a new entry made by whoever duplicated it, not by the author
+        // of the source.
+        const userId = ctx.user?.id ?? null;
 
         const source = overrides?.locale
             ? await getEntryOfType(type, id, overrides.locale)
             : await getEntryResource(type, id);
-        // The copy is a new entry made by whoever duplicated it, not by the author
-        // of the source.
-        const user = ctx.user;
 
         const locales = overrides?.locale ? [overrides.locale] : source.locales;
         const [firstLocale = source.locale, ...restLocales] = locales;
@@ -42,7 +43,7 @@ export const duplicateEntry = defineServiceMethod({
                 source,
                 locale: firstLocale,
                 overrides,
-                createdBy: user?.id ?? null,
+                createdBy: userId,
             });
 
             for (const locale of restLocales) {
@@ -52,13 +53,13 @@ export const duplicateEntry = defineServiceMethod({
                     source,
                     locale,
                     overrides,
-                    createdBy: user?.id ?? null,
+                    createdBy: userId,
                     into: first.id,
                 });
             }
 
             // Once, at the end: the index is per entry and reads every locale back.
-            await syncEntryRelationships(ctx.config, first, type);
+            await syncEntryRelationships(config, first, type);
             // Re-read so `locales` names every copied locale, not just the first.
             return getEntryOfType(type, first.id, firstLocale);
         });

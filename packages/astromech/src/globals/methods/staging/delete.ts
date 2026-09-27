@@ -20,16 +20,18 @@ export const deleteStagedGlobal = defineServiceMethod({
     requires: 'staging',
     mutates: true,
     async handler(params, ctx): Promise<void> {
-        const { repository, id, locale } = await getCanonicalGlobal(ctx.config, params);
+        const { key } = params;
+        const { config } = ctx;
+        const { repository, id, locale } = await getCanonicalGlobal(config, params);
         await requireStagedChange(repository.staging, 'global', {
             rowId: id,
-            id: params.key,
+            id: key,
             locale,
         });
         // The global keeps its other content, so this re-derives rather than deletes.
         await transaction(async () => {
             await repository.staging.delete({ id, locale });
-            await syncGlobalRelationships(ctx.config, id);
+            await syncGlobalRelationships(config, id);
         });
     },
 });

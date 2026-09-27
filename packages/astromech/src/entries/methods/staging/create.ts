@@ -22,9 +22,10 @@ export const createStagedEntry = defineServiceMethod({
     mutates: true,
     async handler(params, ctx): Promise<EntryResource> {
         const { type, id } = params;
+        const { config } = ctx;
+        const userId = ctx.user?.id ?? null;
         const canonical = await getEntryOfType(type, id, params.locale);
         const { staging } = entryRepository;
-        const user = ctx.user;
 
         const existing = await staging.findOne({ id, locale: canonical.locale });
         if (existing) {
@@ -43,11 +44,11 @@ export const createStagedEntry = defineServiceMethod({
                     fields: canonical.fields,
                     status: 'unpublished',
                     publishedAt: null,
-                    createdBy: user?.id ?? null,
-                    updatedBy: user?.id ?? null,
+                    createdBy: userId,
+                    updatedBy: userId,
                 }
             );
-            await syncEntryRelationships(ctx.config, row, type);
+            await syncEntryRelationships(config, row, type);
             return row;
         });
     },

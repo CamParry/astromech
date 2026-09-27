@@ -21,6 +21,7 @@ export const replaceMedia = defineServiceMethod({
     destructive: true,
     async handler(params, ctx): Promise<MediaResource> {
         const { id, file } = params;
+        const userId = ctx.user?.id ?? null;
         const driver = getStorageDriver();
 
         const row = await mediaRepository.findOne(id);
@@ -47,7 +48,7 @@ export const replaceMedia = defineServiceMethod({
             width,
             height,
             metadata,
-            updatedBy: ctx.user?.id ?? null,
+            updatedBy: userId,
         });
 
         const updated = await mediaRepository.findOne(id);

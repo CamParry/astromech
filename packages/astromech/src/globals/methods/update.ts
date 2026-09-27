@@ -48,22 +48,22 @@ export const updateGlobal = defineServiceMethod({
     mutates: true,
     idempotent: true,
     async handler(params, ctx): Promise<GlobalResource> {
-        const global = getDeclaredGlobal(ctx.config, params.key);
+        const { key } = params;
+        const { config, user } = ctx;
+        const userId = user?.id ?? null;
         const staged = params.staged === true;
+        const global = getDeclaredGlobal(config, key);
         if (staged) assertCapability('global', global, 'staging');
         const locale = resolveResourceLocale(
             RESOURCE_SPECS.global,
-            ctx.config,
+            config,
             global.id,
             params.locale
         );
-        const user = ctx.user;
 
-        const canonical = staged
-            ? null
-            : await globalRepository.findByKey(params.key, locale);
+        const canonical = staged ? null : await globalRepository.findByKey(key, locale);
         // A locale with no row yet still needs the id when the global exists.
-        const id = canonical?.id ?? (await globalRepository.findIdByKey(params.key));
+        const id = canonical?.id ?? (await globalRepository.findIdByKey(key));
         const current = staged
             ? id === null
                 ? null
@@ -72,7 +72,7 @@ export const updateGlobal = defineServiceMethod({
         // A staged write addresses a row `createStaged` made; there is nothing
         // here to create one from.
         if (staged && (id === null || !current)) {
-            throw new ResourceNotFoundError('global', { id: params.key, locale });
+            throw new ResourceNotFoundError('global', { id: key, locale });
         }
         /** The staged row this write targets, absent on a canonical write. */
         const stagedRef = staged && id !== null ? { id, locale } : null;
@@ -81,7 +81,7 @@ export const updateGlobal = defineServiceMethod({
         // written — so it runs before the fields are parsed, not just before the
         // transaction opens.
         const context = await ctx.runHook('global:beforeUpdate', {
-            key: params.key,
+            key,
             locale,
             global:
                 current === null
@@ -115,7 +115,7 @@ export const updateGlobal = defineServiceMethod({
             // published global still enforces completeness.
             status: data.status ?? current?.status,
             user,
-            config: ctx.config,
+            config,
         });
 
         // The version, the row write and the index write are one transaction:
@@ -128,9 +128,9 @@ export const updateGlobal = defineServiceMethod({
                 // writes to.
                 const row = await globalRepository.staging.update(stagedRef, {
                     fields,
-                    updatedBy: user?.id ?? null,
+                    updatedBy: userId,
                 });
-                await syncGlobalRelationships(ctx.config, row.id);
+                await syncGlobalRelationships(config, row.id);
                 return row;
             }
             if (current && global.capabilities.versioning) {
@@ -144,25 +144,25 @@ export const updateGlobal = defineServiceMethod({
                 }
             }
             const written = await writeRow({
-                config: ctx.config,
+                config,
                 repository: globalRepository,
                 global,
-                key: params.key,
+                key,
                 id,
                 locale,
                 current,
                 fields,
                 status: data.status,
                 publishedAt: data.publishedAt,
-                userId: user?.id ?? null,
+                userId,
                 patchedNames: patchedFieldNames(patch),
             });
-            await syncGlobalRelationships(ctx.config, written.id);
+            await syncGlobalRelationships(config, written.id);
             return written;
         });
 
         await ctx.runHook('global:afterUpdate', {
-            key: params.key,
+            key,
             locale,
             global: parseOutput(globalSchema, saved, 'The global in global:afterUpdate'),
             data,

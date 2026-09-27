@@ -30,14 +30,17 @@ export const createEntry = defineServiceMethod({
     mutates: true,
     async handler(params, ctx): Promise<EntryResource> {
         const { type, data } = params;
+        const { config, user } = ctx;
+        // Null outside a request: a seed script, the CLI and the scheduler all
+        // write entries with no identity to record.
+        const userId = user?.id ?? null;
 
-        const entryType = resolveEntryType(ctx.config, type);
+        const entryType = resolveEntryType(config, type);
         if (!entryType) {
             throw new UnknownEntryTypeError(type);
         }
 
         assertWritableFields(entryType, data);
-        const user = ctx.user;
 
         const titled = entryType.titleField !== false;
         const validated = parseInput(createEntrySchema({ titled }), {
@@ -52,7 +55,7 @@ export const createEntry = defineServiceMethod({
         const status = validated.status ?? 'unpublished';
         const locale = resolveResourceLocale(
             RESOURCE_SPECS.entry,
-            ctx.config,
+            config,
             entryType.id,
             data.locale
         );
@@ -68,7 +71,7 @@ export const createEntry = defineServiceMethod({
 
         const fields = await toStoredFields({
             kind: 'create',
-            config: ctx.config,
+            config,
             entryType,
             values: validated.fields ?? {},
             locale,
@@ -84,10 +87,8 @@ export const createEntry = defineServiceMethod({
             fields,
             status,
             publishedAt,
-            // Null outside a request: a seed script, the CLI and the scheduler all
-            // write entries with no identity to record.
-            createdBy: user?.id ?? null,
-            updatedBy: user?.id ?? null,
+            createdBy: userId,
+            updatedBy: userId,
         };
 
         await ctx.runHook('entry:beforeCreate', { type, data: row, user });
@@ -95,7 +96,7 @@ export const createEntry = defineServiceMethod({
         // Write the row and its relationship index atomically.
         const entry = await transaction(async () => {
             const created = await entryRepository.create({ type, ...row });
-            await syncEntryRelationships(ctx.config, created, type);
+            await syncEntryRelationships(config, created, type);
             return created;
         });
 

@@ -19,6 +19,7 @@ export const deleteStagedEntry = defineServiceMethod({
     mutates: true,
     async handler(params, ctx): Promise<void> {
         const { type, id } = params;
+        const { config } = ctx;
         const canonical = await getEntryOfType(type, id, params.locale);
         const { staging } = entryRepository;
         await requireStagedChange(staging, 'entry', {
@@ -28,7 +29,7 @@ export const deleteStagedEntry = defineServiceMethod({
         });
         await staging.delete({ id, locale: canonical.locale });
         // The entry keeps its other content, so this re-derives rather than deletes.
-        await syncEntryRelationships(ctx.config, canonical, type);
+        await syncEntryRelationships(config, canonical, type);
     },
 });
 

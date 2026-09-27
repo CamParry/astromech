@@ -19,13 +19,14 @@ export const queryMedia = defineServiceMethod({
     access: 'media:read',
     mutates: false,
     async handler(params, ctx): Promise<QueryResult<MediaResource>> {
+        const { search, where, sort } = params;
+        const { config } = ctx;
         const locale = resolveResourceLocale(
             RESOURCE_SPECS.media,
-            ctx.config,
+            config,
             undefined,
             params.locale
         );
-        const { search, where, sort } = params;
         return queryPage(params, {
             list: (page) =>
                 mediaRepository.findMany({ search, where, sort, locale, ...page }),

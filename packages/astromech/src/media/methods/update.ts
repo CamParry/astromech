@@ -33,9 +33,11 @@ export const updateMedia = defineServiceMethod({
     idempotent: true,
     async handler(params, ctx): Promise<MediaResource> {
         const { id, data } = params;
+        const { config, user } = ctx;
+        const userId = user?.id ?? null;
         const locale = resolveResourceLocale(
             RESOURCE_SPECS.media,
-            ctx.config,
+            config,
             undefined,
             params.locale
         );
@@ -46,7 +48,6 @@ export const updateMedia = defineServiceMethod({
         const base = current ?? (await mediaRepository.findOne(id));
         if (!base) throw new ResourceNotFoundError('media', { id });
 
-        const config = ctx.config;
         const patch = data.fields;
         const patchedNames = patch === undefined ? [] : patchedFieldNames(patch);
 
@@ -61,7 +62,7 @@ export const updateMedia = defineServiceMethod({
                 {
                     operation: 'update',
                     record: base,
-                    user: ctx.user,
+                    user,
                     scan: () => mediaRepository.findByLocale(locale),
                     excludeId: id,
                 }
@@ -78,8 +79,6 @@ export const updateMedia = defineServiceMethod({
             fields,
         };
 
-        const userId = ctx.user?.id ?? null;
-
         // The version, the row write and the index write are one transaction: an
         // index that outlived a failed write would name relations the stored
         // fields do not.
@@ -89,7 +88,7 @@ export const updateMedia = defineServiceMethod({
                     RESOURCE_SPECS.media,
                     mediaRepository.versions,
                     current,
-                    ctx.user
+                    user
                 );
             }
             // The repository stamps `updatedAt` and `updatedBy` on the media

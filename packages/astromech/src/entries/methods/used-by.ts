@@ -17,9 +17,11 @@ export const listEntryUsage = defineServiceMethod({
     access: entryGate('read'),
     mutates: false,
     async handler(params, ctx): Promise<Usage[]> {
+        const { type, id } = params;
+        const { config } = ctx;
         // The entry must exist as this type, so an unknown id answers 404.
-        await getEntryResource(params.type, params.id);
-        return listUsage(ctx.config, { id: params.id, kind: 'entry' });
+        await getEntryResource(type, id);
+        return listUsage(config, { id, kind: 'entry' });
     },
 });
 

@@ -28,6 +28,8 @@ export const mergeStagedEntry = defineServiceMethod({
     mutates: true,
     async handler(params, ctx): Promise<EntryResource> {
         const { type, id } = params;
+        const { config, user } = ctx;
+        const userId = user?.id ?? null;
         const canonical = await getEntryOfType(type, id, params.locale);
         const { staging } = entryRepository;
         const staged = await requireStagedChange(staging, 'entry', {
@@ -42,15 +44,15 @@ export const mergeStagedEntry = defineServiceMethod({
         // BEFORE the transaction opens so a rejection costs no backup version.
         const mergedFields = await toStoredFields({
             kind: 'merge',
-            config: ctx.config,
+            config,
             type,
             canonical,
             staged,
-            user: ctx.user,
+            user,
         });
 
         const versioningOn =
-            resolveEntryType(ctx.config, type)?.capabilities.versioning === true;
+            resolveEntryType(config, type)?.capabilities.versioning === true;
 
         // Backs up the canonical, overwrites it with the staged content, and
         // hard-deletes the staged row — all in one transaction so a partial
@@ -63,7 +65,7 @@ export const mergeStagedEntry = defineServiceMethod({
                     RESOURCE_SPECS.entry,
                     entryRepository.versions,
                     canonical,
-                    ctx.user
+                    user
                 );
             }
 
@@ -76,14 +78,14 @@ export const mergeStagedEntry = defineServiceMethod({
                 {
                     title: staged.title,
                     fields: mergedFields,
-                    updatedBy: ctx.user?.id ?? null,
+                    updatedBy: userId,
                 }
             );
 
             // 3. Cleanup: discard the staged row before re-indexing, so the
             //    references it held on its own do not survive the merge.
             await staging.delete({ id, locale: canonical.locale });
-            await syncEntryRelationships(ctx.config, updated, type);
+            await syncEntryRelationships(config, updated, type);
 
             return updated;
         });

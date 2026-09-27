@@ -23,16 +23,17 @@ export const createStagedGlobal = defineServiceMethod({
     requires: 'staging',
     mutates: true,
     async handler(params, ctx): Promise<GlobalResource> {
-        const { repository, id, locale, current } = await getCanonicalGlobal(ctx.config, {
-            key: params.key,
+        const { key, data } = params;
+        const { config, user } = ctx;
+        const userId = user?.id ?? null;
+        const { repository, id, locale, current } = await getCanonicalGlobal(config, {
+            key,
             locale: params.locale,
         });
 
         const existing = await repository.staging.findOne({ id, locale });
-        if (existing)
-            throw new StagedChangeExistsError('global', { id: params.key, locale });
+        if (existing) throw new StagedChangeExistsError('global', { id: key, locale });
 
-        const user = ctx.user;
         // The staged row copies the canonical's content and is always
         // unpublished: it becomes live by being merged, not by carrying a status
         // of its own.
@@ -41,16 +42,16 @@ export const createStagedGlobal = defineServiceMethod({
             const staged = await repository.staging.create(
                 { id, locale },
                 {
-                    fields: (params.data?.fields !== undefined
-                        ? mergePatch(current.fields, params.data.fields)
+                    fields: (data?.fields !== undefined
+                        ? mergePatch(current.fields, data.fields)
                         : current.fields) as JsonObject,
                     status: 'unpublished',
                     publishedAt: null,
-                    createdBy: user?.id ?? null,
-                    updatedBy: user?.id ?? null,
+                    createdBy: userId,
+                    updatedBy: userId,
                 }
             );
-            await syncGlobalRelationships(ctx.config, id);
+            await syncGlobalRelationships(config, id);
             return staged;
         });
     },

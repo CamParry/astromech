@@ -24,7 +24,9 @@ export const restoreEntryVersion = defineServiceMethod({
     mutates: true,
     idempotent: true,
     async handler(params, ctx): Promise<EntryResource> {
-        const { type, id } = params;
+        const { type, id, version } = params;
+        const { config, user } = ctx;
+        const userId = user?.id ?? null;
 
         const currentEntry = await getEntryOfType(type, id, params.locale);
 
@@ -32,9 +34,9 @@ export const restoreEntryVersion = defineServiceMethod({
             spec: RESOURCE_SPECS.entry,
             versions: entryRepository.versions,
             current: currentEntry,
-            version: params.version,
+            version,
             address: { id },
-            user: ctx.user,
+            user,
             write: async ({ fields, columns }) => {
                 const slug = await uniqueSlugIfChanged({
                     type,
@@ -47,10 +49,10 @@ export const restoreEntryVersion = defineServiceMethod({
                         title: columns['title'] as string,
                         slug: slug ?? currentEntry.slug,
                         fields,
-                        updatedBy: ctx.user?.id ?? null,
+                        updatedBy: userId,
                     }
                 );
-                await syncEntryRelationships(ctx.config, row, type);
+                await syncEntryRelationships(config, row, type);
                 return row;
             },
         });

@@ -22,13 +22,14 @@ export const getEntryVersion = defineServiceMethod({
     requires: 'versioning',
     mutates: false,
     async handler(params) {
-        const entry = await getEntryOfType(params.type, params.id, params.locale);
+        const { type, id, version } = params;
+        const entry = await getEntryOfType(type, id, params.locale);
         return readVersion<z.input<typeof entrySnapshotSchema>>({
             spec: RESOURCE_SPECS.entry,
             versions: entryRepository.versions,
             record: entry,
-            version: params.version,
-            address: { id: params.id },
+            version,
+            address: { id },
         });
     },
 });

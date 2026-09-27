@@ -20,7 +20,8 @@ export const listGlobalVersions = defineServiceMethod({
     requires: 'versioning',
     mutates: false,
     async handler(params, ctx): Promise<VersionMetadata[]> {
-        const { repository, current } = await getCanonicalGlobal(ctx.config, params);
+        const { config } = ctx;
+        const { repository, current } = await getCanonicalGlobal(config, params);
         return listVersions(repository.versions, current);
     },
 });

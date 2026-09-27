@@ -20,9 +20,10 @@ export const getStagedEntry = defineServiceMethod({
     requires: 'staging',
     mutates: false,
     async handler(params): Promise<(EntryResource & { diverged: boolean }) | null> {
-        const canonical = await getEntryOfType(params.type, params.id, params.locale);
+        const { type, id } = params;
+        const canonical = await getEntryOfType(type, id, params.locale);
         const { staging } = entryRepository;
-        const staged = await staging.findOne({ id: params.id, locale: canonical.locale });
+        const staged = await staging.findOne({ id, locale: canonical.locale });
         if (!staged) return null;
         return { ...staged, diverged: hasDiverged(canonical, staged) };
     },
