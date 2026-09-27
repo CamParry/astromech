@@ -7,7 +7,7 @@ import { applyVisibility } from '@/content/visibility';
 import { ResourceValidationError } from '@/errors/resource';
 import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
-import { readGate } from '../internal/access';
+import { globalGetAccess } from '../internal/access';
 import { globalRepository } from '../repository';
 import { getDeclaredGlobal } from '../resolve-global';
 import { globalSchema, localised } from '../schema';
@@ -24,7 +24,7 @@ export const getGlobal = defineServiceMethod({
         staged: z.boolean().optional(),
     }),
     output: globalSchema.nullable(),
-    access: readGate,
+    access: globalGetAccess,
     mutates: false,
     async handler(params, ctx): Promise<GlobalResource | null> {
         const { key, full, staged } = params;

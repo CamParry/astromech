@@ -16,7 +16,7 @@ export function globalAccess(action: GlobalAction): PermissionRule {
  * `get`'s rule. A `public` global's plain read needs no permission; the `full`
  * and `staged` shapes always need `read`.
  */
-export const readGate: PermissionRule = (input) => {
+export const globalGetAccess: PermissionRule = (input) => {
     const key = keyOf(input);
     // The one config read left under `globals/`: an access rule is a function of
     // the input alone, called before a method's handler and so before there is a
