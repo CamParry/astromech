@@ -9,7 +9,7 @@ import type { ContentWrite } from '@/content/repository/types';
 import type { ResolvedConfig, User } from '@/types/index';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../internal/access';
-import { getCanonicalGlobal } from '../internal/global';
+import { getCanonicalGlobal } from '../internal/canonical-global';
 import { globalSchema, localised, scheduleGlobalSchema } from '../schema';
 
 /** Publishes one locale, stamping `publishedAt` when it has none yet. */

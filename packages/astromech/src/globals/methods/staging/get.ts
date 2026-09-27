@@ -2,7 +2,7 @@ import type { GlobalResource } from '../../repository';
 import { hasDiverged } from '@/content/staging';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
-import { getCanonicalGlobal } from '../../internal/global';
+import { getCanonicalGlobal } from '../../internal/canonical-global';
 import { localised, stagedGlobalSchema } from '../../schema';
 
 /**

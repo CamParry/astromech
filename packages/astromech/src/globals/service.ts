@@ -6,7 +6,7 @@
 
 import type { GlobalsService } from '@/types/index';
 import { defineService } from '@/services/define-service';
-import { assertRequiredCapability } from './internal/global';
+import { assertRequiredCapability } from './capabilities';
 import { getGlobal } from './methods/get';
 import { createStagedGlobal } from './methods/staging/create';
 import { deleteStagedGlobal } from './methods/staging/delete';

@@ -11,7 +11,7 @@ import { createTestDb, makeTestConfig, setupTestConfig } from '@tests/harness';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { currentServices } from '@/app-context/services';
 import { relationshipRepository } from '@/content/repository/relationships';
-import { assertRequiredCapability } from '@/globals/internal/global';
+import { assertRequiredCapability } from '@/globals/capabilities';
 import { mediaRepository } from '@/media/repository';
 import { setStorageDriver } from '@/storage/registry';
 import { rebuildRelationshipIndex } from '@/transport/cli/relationship-index';

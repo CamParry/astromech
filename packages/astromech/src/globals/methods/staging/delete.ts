@@ -3,7 +3,7 @@ import { requireStagedChange } from '@/content/staging';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
-import { getCanonicalGlobal } from '../../internal/global';
+import { getCanonicalGlobal } from '../../internal/canonical-global';
 import { syncGlobalRelationships } from '../../relationships';
 import { localised } from '../../schema';
 

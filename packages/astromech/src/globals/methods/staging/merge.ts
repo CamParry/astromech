@@ -5,7 +5,7 @@ import { snapshotVersion } from '@/content/versions';
 import { transaction } from '@/database/transaction';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
-import { getCanonicalGlobal } from '../../internal/global';
+import { getCanonicalGlobal } from '../../internal/canonical-global';
 import { toStoredFields } from '../../internal/stored-fields';
 import { syncGlobalRelationships } from '../../relationships';
 import { globalSchema, localised } from '../../schema';

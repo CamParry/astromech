@@ -4,7 +4,7 @@ import { RESOURCE_SPECS } from '@/content/resources';
 import { readVersion } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
-import { getCanonicalGlobal } from '../../internal/global';
+import { getCanonicalGlobal } from '../../internal/canonical-global';
 import { globalVersionSchema, versionAddress } from '../../schema';
 
 /**

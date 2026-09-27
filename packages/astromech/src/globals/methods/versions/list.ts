@@ -4,7 +4,7 @@ import { versionMetadataSchema } from '@/content/schema';
 import { listVersions } from '@/content/versions';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
-import { getCanonicalGlobal } from '../../internal/global';
+import { getCanonicalGlobal } from '../../internal/canonical-global';
 import { localised } from '../../schema';
 
 /**

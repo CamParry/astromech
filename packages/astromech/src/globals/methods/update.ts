@@ -17,10 +17,10 @@ import { ResourceNotFoundError, ResourceValidationError } from '@/errors/resourc
 import { defineServiceMethod } from '@/services/define-service-method';
 import { parseHookOutput, parseOutput } from '@/services/parse-method-output';
 import { gate } from '../internal/access';
-import { getDeclaredGlobal } from '../internal/global';
 import { toStoredFields } from '../internal/stored-fields';
 import { syncGlobalRelationships } from '../relationships';
 import { globalRepository } from '../repository';
+import { getDeclaredGlobal } from '../resolve-global';
 import { globalSchema, localised, updateGlobalSchema } from '../schema';
 
 /**

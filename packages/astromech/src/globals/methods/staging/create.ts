@@ -5,7 +5,7 @@ import { StagedChangeExistsError } from '@/errors/resource';
 import { mergePatch } from '@/fields/values';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { gate } from '../../internal/access';
-import { getCanonicalGlobal } from '../../internal/global';
+import { getCanonicalGlobal } from '../../internal/canonical-global';
 import { syncGlobalRelationships } from '../../relationships';
 import { createStagedGlobalSchema, globalSchema } from '../../schema';
 

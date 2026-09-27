@@ -9,8 +9,8 @@ import { ResourceValidationError } from '@/errors/resource';
 import { flattenEntryFields } from '@/fields/flatten';
 import { defineServiceMethod } from '@/services/define-service-method';
 import { readGate } from '../internal/access';
-import { getDeclaredGlobal } from '../internal/global';
 import { globalRepository } from '../repository';
+import { getDeclaredGlobal } from '../resolve-global';
 import { globalSchema, localised } from '../schema';
 
 /**
