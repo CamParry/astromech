@@ -23,40 +23,50 @@ Names are not a place to be creative. Before naming anything, find what this exa
 ## Service method files
 
 One method per file under `<module>/methods/`, every file the same shape, so
-reading one teaches the rest. `users/methods/create.ts` is the reference.
+reading one teaches the rest. `users/methods/create.ts` and
+`users/methods/update.ts` are the reference.
 
-- **Layout.** Imports; the method's doc comment; `export const <verbNoun> =
-defineServiceMethod({ … })`; then any private helper the handler uses. No
-  file header and no other export: a helper another file needs lives in
-  `<module>/internal/` or `content/`.
+- **Layout.** Imports; the method's doc comment; the exported
+  `defineServiceMethod` call, named `<verbNoun>`; then any private helper the
+  handler uses. No file header and no other export: a helper another file
+  needs lives in `<module>/internal/` or `content/`. An `internal/` file follows
+  the same comment rule: a doc comment per export, no file header.
 - **Declaration keys in this order:** `summary`, `input`, `binaryInput`,
   `output`, `access`, `requires`, `mutates`, `destructive`, `idempotent`,
   `handler`.
-- **`input` is inline**: `z.strictObject({ … })` over the module's `schema.ts`.
-  No per-method `*Input` builder. A value checked against config (a role, a
-  locale) is checked in the schema (`roleSlugSchema`), not the handler.
+- **`input` is inline**: `z.strictObject({ … })` over the module's `schema.ts`
+  or shared keys from `content/`. No per-method `*Input` builder. A value
+  checked against config (a role, a locale) is checked in the schema
+  (`roleSlugSchema`), not the handler.
 - **`access` is a permission string** (`'users:create'`). When the permission
   depends on the call, such as an entry's `type` or a global's `key`, it is the
   module's rule from `<module>/internal/access.ts`, named `<resource>Access`:
   `entryAccess('create')`.
-- **The handler runs in this order**, skipping steps it has no use for:
-    1. Inputs: destructure `params`, then `const { config, user } = ctx`, then
-       `const userId = user?.id ?? null`, then values derived from config (the
-       locale, the entry type). One value per line; no call nested in a call.
-    2. Load and check: read the rows the write needs; throw not-found or a rule
-       error.
+- **The return type is annotated** with the resource type (`UserResource`), or
+  the public type where there is no resource (`UserVersion`).
+- **The handler runs in this order**, skipping steps it has no use for, with a
+  blank line between steps and none within one:
+    1. Inputs: destructure `params` (and `data`), then
+       `const { config, user } = ctx`, then `const userId = user?.id ?? null`,
+       then values derived from config. The requested locale stays
+       `params.locale`; the resolved one is `locale`. One value per line; no
+       call nested in a call.
+    2. Load and check: read the rows the write needs, then throw not-found or a
+       rule error (`assertKeepsAnAdmin`).
     3. Prepare: build what is written (`prepareFields`, slug, hash). Slow work
        stays outside the transaction.
     4. The before hook.
-    5. The writes, in one `transaction` when there is more than one.
+    5. The writes, in one `transaction` when they touch more than one table,
+       even through one repository call.
     6. The after hook.
     7. Return.
        A batch method's handler delegates to `<module>/internal/*-batch.ts`, which
        keeps the same order.
 - **Comments:** the declaration's doc comment says what the method does beyond
-  its `summary`. Inside the handler, a `//` note only where the code would
-  otherwise read as wrong. Three lines each at most. Don't explain why writes
-  share a transaction, what a named helper does, or what `summary` says.
+  its `summary`, and reads on its own. Inside the handler, a `//` note only
+  where the code would otherwise read as wrong. Three lines each at most.
+  Don't explain why writes share a transaction, what a named helper does, or
+  what `summary` says.
 
 ## Method signatures
 
